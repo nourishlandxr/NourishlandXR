@@ -1,0 +1,8 @@
+{
+  "id": "hillyards",
+  "name": "Hillyards Food Forest",
+  "type": "food_forest",
+  "country": "Australia",
+  "state": "NSW",
+  "version": "0.1.0"
+}

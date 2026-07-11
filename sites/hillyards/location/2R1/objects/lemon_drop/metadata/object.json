@@ -1,0 +1,9 @@
+{
+  "id": "lemon_drop",
+  "type": "plant",
+  "name": "Lemon Drop Garcinia",
+  "scientific_name": "Garcinia intermedia",
+  "location": "2R1",
+  "site": "hillyards",
+  "status": "active"
+}
