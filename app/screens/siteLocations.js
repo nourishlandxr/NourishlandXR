@@ -1,20 +1,23 @@
 import { renderLocationForm } from '../components/locationForm.js';
 import { renderPlaceDetails } from '../components/placeDetails.js';
+import { loadSitePlaces } from '../services/persistence.js';
 
 const locationTypes = [
-    'Garden',
+    'Row',
     'Terrace',
+    'Garden',
     'Collection',
-    'Trail',
-    'Zone',
-    'Building',
+    'Glasshouse',
+    'Orchard Block',
+    'Trail Stop',
     'Habitat',
     'Water Feature',
+    'Operational Area',
     'Other'
 ];
 
-export function renderSiteLocations(app, site) {
-    const locations = site.locations || [];
+export async function renderSiteLocations(app, site) {
+    const locations = await loadSitePlaces(site.projectId, site.id);
 
     let html = `
     <div class="screen">
@@ -57,7 +60,8 @@ export function renderLocationFormScreen(app, site, location = null) {
     const formHtml = renderLocationForm(
         locationTypes,
         `window.renderSiteLocations(${JSON.stringify(site)})`,
-        location ? `window.updateLocation(${JSON.stringify(site)}, ${JSON.stringify(location)})` : `window.createLocation(${JSON.stringify(site)})`
+        location ? `window.updateLocation(${JSON.stringify(site)}, ${JSON.stringify(location)})` : `window.createLocation(${JSON.stringify(site)})`,
+        location || {}
     );
 
     app.innerHTML = `

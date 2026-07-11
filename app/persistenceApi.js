@@ -1,13 +1,19 @@
 import { createPlace, createMarker, deletePlace, deleteMarker, loadSite, loadSiteList, saveSite, updatePlace, updateMarker } from './persistence.js';
 
 export function handlePersistenceAction(action, payload) {
-    const projectName = payload.projectName || 'Hillyards';
+    if (action === 'loadSiteList') {
+        return loadSiteList();
+    }
+
+    const projectName = payload.projectName || payload.siteData?.id;
+
+    if (!projectName) {
+        throw new Error('Project name is required');
+    }
 
     switch (action) {
         case 'loadSite':
             return loadSite(projectName);
-        case 'loadSiteList':
-            return loadSiteList();
         case 'saveSite':
             return saveSite(projectName, payload.siteData);
         case 'createPlace':

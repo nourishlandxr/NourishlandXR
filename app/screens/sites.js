@@ -9,13 +9,13 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
     <div class="screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderStudio()">Back</button>
-            <h1>Sites</h1>
-            <p class="subtitle">Manage authored site projects.</p>
+            <h1>Projects</h1>
+            <p class="subtitle">Manage projects in this workspace.</p>
         </div>
 
         <div class="panel">
             <div class="button-row">
-                <button class="primary" onclick="window.renderSiteForm()">New Site</button>
+                <button class="primary" onclick="window.renderProjectForm()">New Project</button>
             </div>
         </div>
     `;
@@ -26,9 +26,13 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
             <div class="list-item">
                 <div>
                     <strong>${site.name}</strong>
-                    <p>Open this site to manage its content.</p>
+                    <p>Open this project to manage its sites.</p>
                 </div>
-                <button onclick="window.renderSiteDashboard(${JSON.stringify(site)})">Open</button>
+                <div class="button-row">
+                    <button onclick="window.renderProjectSites(${JSON.stringify(site)})">Open</button>
+                    <button onclick="window.renderProjectForm(${JSON.stringify(site)})">Rename</button>
+                    <button onclick="window.deleteProject('${site.id}')">Delete</button>
+                </div>
             </div>
         </div>
         `;
@@ -38,23 +42,27 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
     app.innerHTML = html;
 }
 
-export function renderSiteFormScreen(app, siteManager) {
+export function renderProjectFormScreen(app, project = null) {
     const formHtml = renderSiteForm(
-        siteManager,
-        'window.renderSites()' ,
-        'window.createSiteFromForm()'
+        'window.renderProjects()',
+        project ? `window.renameProjectFromForm(${JSON.stringify(project)})` : 'window.createProjectFromForm()',
+        project
     );
 
     app.innerHTML = `
     <div class="screen">
         <div class="page-header">
-            <button class="ghost" onclick="window.renderSites()">Back</button>
-            <h1>New Site</h1>
-            <p class="subtitle">Create a new site entry.</p>
+            <button class="ghost" onclick="window.renderProjects()">Back</button>
+            <h1>${project ? 'Rename Project' : 'New Project'}</h1>
+            <p class="subtitle">${project ? 'Update the project name.' : 'Create a new project in this workspace.'}</p>
         </div>
         ${formHtml}
     </div>
     `;
+}
+
+export function renderSiteFormScreen(app, siteManager) {
+    return renderProjectFormScreen(app);
 }
 
 export function renderSites(app, siteManager) {

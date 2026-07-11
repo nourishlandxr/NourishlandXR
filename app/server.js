@@ -5,11 +5,13 @@ import { fileURLToPath } from 'url';
 import {
     createMarker,
     createPlace,
+    deleteProject,
     deleteMarker,
     deletePlace,
     loadSite,
     loadSiteList,
     saveSite,
+    renameProject,
     updateMarker,
     updatePlace
 } from './persistence.js';
@@ -88,11 +90,51 @@ const server = http.createServer(async (request, response) => {
     const incomingUrl = new URL(url, `http://${request.headers.host || '127.0.0.1'}`);
     const pathname = incomingUrl.pathname;
 
+    if (!pathname.startsWith('/api/') && (pathname === '/sites' || pathname.startsWith('/sites/') || pathname.split('/').includes('sites'))) {
+        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Not found');
+        return;
+    }
+
     if (pathname.startsWith('/api/')) {
         const pathParts = pathname.split('/').filter(Boolean);
         const [, , siteId, resource, placeId, assetId] = pathParts;
 
         try {
+            if (method === 'GET' && pathname === '/api/projects') {
+                sendJson(response, 200, loadSiteList());
+                return;
+            }
+
+            if (method === 'POST' && pathname === '/api/projects') {
+                const payload = await readJsonBody(request);
+                const projectId = (payload.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                if (!projectId) {
+                    sendJson(response, 400, { error: 'Project name is required' });
+                    return;
+                }
+                sendJson(response, 201, saveSite(projectId, { ...payload, id: projectId, locations: [] }));
+                return;
+            }
+
+            const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);
+            if (projectMatch && method === 'GET') {
+                sendJson(response, 200, loadSite(decodeURIComponent(projectMatch[1])));
+                return;
+            }
+
+            if (projectMatch && method === 'PUT') {
+                const payload = await readJsonBody(request);
+                sendJson(response, 200, renameProject(decodeURIComponent(projectMatch[1]), payload));
+                return;
+            }
+
+            if (projectMatch && method === 'DELETE') {
+                deleteProject(decodeURIComponent(projectMatch[1]));
+                sendJson(response, 200, { ok: true });
+                return;
+            }
+
             if (method === 'GET' && pathname === '/api/sites') {
                 sendJson(response, 200, loadSiteList());
                 return;

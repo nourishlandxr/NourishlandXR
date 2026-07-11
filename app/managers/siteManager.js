@@ -2,11 +2,13 @@ import { createSite } from '../models/site.js';
 import {
     createAssetOnDisk,
     createPlaceOnDisk,
-    createSiteOnDisk,
+    createProjectOnDisk,
     deleteAssetOnDisk,
+    deleteProjectOnDisk,
     deletePlaceOnDisk,
+    loadProjects,
     loadSite,
-    loadSites,
+    renameProjectOnDisk,
     updateAssetOnDisk,
     updatePlaceOnDisk,
     updateSiteOnDisk
@@ -18,7 +20,7 @@ export class SiteManager {
     }
 
     async loadSitesFromDisk() {
-        const persistedSites = await loadSites();
+        const persistedSites = await loadProjects();
         this.sites = (persistedSites || []).map(site => createSite(site));
         return this.sites;
     }
@@ -49,11 +51,29 @@ export class SiteManager {
         return this.sites.find(site => site.id === id) || null;
     }
 
-    async createSite(site) {
-        const createdSite = await createSiteOnDisk(site);
-        const newSite = createSite(createdSite);
-        this.sites.push(newSite);
-        return newSite;
+    async createProject(project) {
+        const createdProject = await createProjectOnDisk(project);
+        const newProject = createSite(createdProject);
+        this.sites.push(newProject);
+        return newProject;
+    }
+
+    async renameProject(projectId, project) {
+        const renamedProject = createSite(await renameProjectOnDisk(projectId, project));
+        const index = this.sites.findIndex(existingSite => existingSite.id === projectId);
+
+        if (index >= 0) {
+            this.sites[index] = renamedProject;
+        } else {
+            this.sites.push(renamedProject);
+        }
+
+        return renamedProject;
+    }
+
+    async deleteProject(projectId) {
+        await deleteProjectOnDisk(projectId);
+        this.sites = this.sites.filter(site => site.id !== projectId);
     }
 
     async updateSite(site) {

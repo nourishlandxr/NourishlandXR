@@ -199,3 +199,47 @@ export function deleteMarker(projectName, placeId, markerId) {
 
     return loadSite(projectName);
 }
+
+function projectIdFromName(name) {
+    return String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+}
+
+export function renameProject(projectName, projectData) {
+    const currentProjectDir = path.join(workspaceRoot, projectName);
+    const projectId = projectIdFromName(projectData.name);
+
+    if (!projectId || !fs.existsSync(currentProjectDir)) {
+        throw new Error('Project not found');
+    }
+
+    const nextProjectDir = path.join(workspaceRoot, projectId);
+    if (projectId !== projectName && fs.existsSync(nextProjectDir)) {
+        throw new Error('A project with this name already exists');
+    }
+
+    if (projectId !== projectName) {
+        fs.renameSync(currentProjectDir, nextProjectDir);
+    }
+
+    const currentSite = readJson(path.join(nextProjectDir, 'site.json'), {});
+    return saveSite(projectId, {
+        ...currentSite,
+        ...projectData,
+        id: projectId,
+        name: projectData.name.trim()
+    });
+}
+
+export function deleteProject(projectName) {
+    const projectDir = path.join(workspaceRoot, projectName);
+
+    if (!fs.existsSync(projectDir)) {
+        throw new Error('Project not found');
+    }
+
+    fs.rmSync(projectDir, { recursive: true, force: true });
+}

@@ -66,7 +66,10 @@ export function renderV1General(site, place, asset) {
     `;
 }
 
-export function renderV1PlantProfile(site, place, asset) {
+export async function renderV1PlantProfile(site, place, asset) {
+    const { loadPlantProfile } = await import('../services/persistence.js');
+    const profile = await loadPlantProfile(site.projectId, site.id, place.id, asset.id);
+    const fields = [['common_name','Common Name'],['scientific_name','Scientific Name'],['overview','Overview'],['identification','Identification'],['edible_uses','Edible Uses'],['propagation','Propagation'],['growing_conditions','Growing Conditions'],['notes','Notes'],['references','References']];
     return `
     <div class="screen">
         <div class="page-header">
@@ -76,14 +79,9 @@ export function renderV1PlantProfile(site, place, asset) {
         </div>
 
         <div class="panel">
-            <div class="field">
-                <label>Common Name</label>
-                <input type="text" value="${asset.name}" />
-            </div>
-            <div class="field">
-                <label>Notes</label>
-                <textarea rows="4">Plant profile notes go here.</textarea>
-            </div>
+            <div id="plantProfileError" class="meta"></div>
+            ${fields.map(([key,label]) => `<div class="field"><label for="profile_${key}">${label}</label>${key === 'common_name' || key === 'scientific_name' ? `<input id="profile_${key}" value="${profile[key] || ''}" />` : `<textarea id="profile_${key}" rows="3">${profile[key] || ''}</textarea>`}</div>`).join('')}
+            <div class="button-row"><button onclick="window.renderAssetWorkspace(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Cancel</button><button class="primary" onclick="window.savePlantProfile(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Save Plant Profile</button></div>
         </div>
     </div>
     `;

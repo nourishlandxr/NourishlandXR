@@ -16,13 +16,13 @@ export function renderAssetWorkspace(app, site, place, asset) {
                     </div>
                     <button onclick="window.renderV1General(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Open</button>
                 </div>
-                <div class="list-item">
+                ${asset.type === 'plant' ? `<div class="list-item">
                     <div>
                         <strong>Plant Profile</strong>
                         <p>Plant reference notes.</p>
                     </div>
                     <button onclick="window.renderV1PlantProfile(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Open</button>
-                </div>
+                </div>` : ''}
                 <div class="list-item">
                     <div>
                         <strong>Anchors</strong>

@@ -1,36 +1,28 @@
 import { renderAssetForm } from '../components/assetForm.js';
+import { loadPlaceMarkers } from '../services/persistence.js';
 
 const assetCategories = [
     'Plant',
-    'Tree',
-    'Shrub',
-    'Sculpture',
-    'Building',
-    'Water Feature',
-    'Habitat',
-    'Artwork',
-    'Sign',
-    'Seat',
-    'Infrastructure',
-    'Other'
+    'Note'
 ];
 
-export function renderPlaceAssets(app, site, place, mode = 'list', asset = null) {
-    const assets = place.assets || [];
+export async function renderPlaceAssets(app, site, place, mode = 'list', asset = null) {
+    const assets = await loadPlaceMarkers(site.projectId, site.id, place.id);
 
     if (mode === 'form') {
         const formHtml = renderAssetForm(
             assetCategories,
             `window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'list')`,
-            asset ? `window.updateAsset(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})` : `window.createAsset(${JSON.stringify(site)}, ${JSON.stringify(place)})`
+            asset ? `window.updateAsset(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})` : `window.createAsset(${JSON.stringify(site)}, ${JSON.stringify(place)})`,
+            asset || {}
         );
 
         app.innerHTML = `
         <div class="screen">
             <div class="page-header">
                 <button class="ghost" onclick="window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'list')">Back</button>
-                <h1>New Asset</h1>
-                <p class="subtitle">Add a new asset to this location.</p>
+                <h1>${asset ? 'Edit Marker' : 'New Marker'}</h1>
+                <p class="subtitle">Add a marker to this place.</p>
             </div>
             ${formHtml}
         </div>
@@ -43,12 +35,12 @@ export function renderPlaceAssets(app, site, place, mode = 'list', asset = null)
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteMap(${JSON.stringify(site)})">Back</button>
             <h1>Assets</h1>
-            <p class="subtitle">Manage objects attached to this place.</p>
+            <p class="subtitle">Manage markers attached to this place.</p>
         </div>
 
         <div class="panel">
             <div class="button-row">
-                <button class="primary" onclick="window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'form')">New Asset</button>
+                <button class="primary" onclick="window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'form')">New Marker</button>
             </div>
         </div>
     `;

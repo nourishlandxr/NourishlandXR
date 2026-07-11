@@ -11,17 +11,12 @@ export function renderStudio(app) {
         </div>
 
         <div class="panel">
-            <h2>Projects</h2>
-            <p>Create and manage XR projects.</p>
-        </div>
-
-        <div class="panel">
             <div class="list-item">
                 <div>
-                    <strong>Sites</strong>
-                    <p>Botanical gardens, parks, and campuses.</p>
+                    <strong>Projects</strong>
+                    <p>Create and manage spatial learning projects.</p>
                 </div>
-                <button class="primary" onclick="window.renderSites()">Open</button>
+                <button class="primary" onclick="window.renderProjects()">Open</button>
             </div>
             <div class="list-item">
                 <div>

@@ -1,4 +1,4 @@
-export function renderSiteForm(siteManager, onCancel, onCreate) {
+export function renderSiteForm(onCancel, onSubmit, project = null) {
     const templates = [
         'Botanical Garden',
         'Food Forest',
@@ -7,25 +7,25 @@ export function renderSiteForm(siteManager, onCancel, onCreate) {
         'Museum'
     ];
 
-    let options = templates.map(template => `<option value="${template}">${template}</option>`).join('');
+    const options = templates.map(template => `<option value="${template}" ${project?.template === template ? 'selected' : ''}>${template}</option>`).join('');
 
     return `
     <div class="panel">
         <div class="field">
-            <label for="siteName">Site name</label>
-            <input type="text" id="siteName" />
+            <label for="projectName">Project name</label>
+            <input type="text" id="projectName" value="${project?.name || ''}" />
         </div>
 
         <div class="field">
-            <label for="siteTemplate">Template</label>
-            <select id="siteTemplate">
+            <label for="projectTemplate">Template</label>
+            <select id="projectTemplate">
                 ${options}
             </select>
         </div>
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>
-            <button class="primary" onclick="${onCreate}">Create Site</button>
+            <button class="primary" onclick="${onSubmit}">${project ? 'Save Project' : 'Create Project'}</button>
         </div>
     </div>
     `;
