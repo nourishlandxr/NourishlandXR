@@ -11,6 +11,18 @@ const packageData = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 
 const builtAt = new Date().toISOString();
 const commit = String(process.env.GITHUB_SHA || 'local').slice(0, 12);
 const buildVersion = `${packageData.version}+${commit}.${builtAt.replace(/[-:.TZ]/g, '').slice(0, 14)}`;
+const protectedDirectoryNames = new Set(['workspace', 'xr-api', 'nourishland-data']);
+const frontendEntries = [
+    'index.html',
+    'main.js',
+    'style.css',
+    'components',
+    'managers',
+    'models',
+    'screens',
+    'services',
+    'templates'
+];
 
 function recreateDirectory(directory) {
     fs.mkdirSync(directory, { recursive: true });
@@ -19,9 +31,29 @@ function recreateDirectory(directory) {
     }
 }
 
+function assertSafeFrontendTree(sourcePath) {
+    const stat = fs.lstatSync(sourcePath);
+    if (stat.isSymbolicLink()) throw new Error(`Frontend source must not contain symbolic links: ${sourcePath}`);
+    if (!stat.isDirectory()) return;
+    if (protectedDirectoryNames.has(path.basename(sourcePath).toLowerCase())) {
+        throw new Error(`Protected directory is not a frontend asset: ${sourcePath}`);
+    }
+    for (const entry of fs.readdirSync(sourcePath)) assertSafeFrontendTree(path.join(sourcePath, entry));
+}
+
+function copyFrontendAssets() {
+    const appRoot = path.join(root, 'app');
+    for (const entry of frontendEntries) {
+        const sourcePath = path.join(appRoot, entry);
+        if (!fs.existsSync(sourcePath)) throw new Error(`Required frontend entry is missing: app/${entry}`);
+        assertSafeFrontendTree(sourcePath);
+        fs.cpSync(sourcePath, path.join(webDist, entry), { recursive: true });
+    }
+}
+
 fs.mkdirSync(dist, { recursive: true });
 recreateDirectory(webDist);
-fs.cpSync(path.join(root, 'app'), webDist, { recursive: true });
+copyFrontendAssets();
 fs.copyFileSync(path.join(root, 'deploy', 'xr.htaccess'), path.join(webDist, '.htaccess'));
 const indexPath = path.join(webDist, 'index.html');
 const versionQuery = encodeURIComponent(buildVersion);
