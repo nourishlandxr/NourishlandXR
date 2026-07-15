@@ -110,4 +110,6 @@ jobs:
           set -euo pipefail
           XR_URL="${XR_URL:-https://nourishland.org/xr/}"
           curl --fail --silent --show-error --location \
+            --user-agent "Mozilla/5.0 (GitHub Actions deployment verification)" \
+            --header "Accept: text/html,application/xhtml+xml" \
             --retry 3 --retry-delay 2 "$XR_URL" > /dev/null
