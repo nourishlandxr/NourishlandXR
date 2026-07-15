@@ -1,12 +1,15 @@
-const API_BASE = `${window.location.protocol}//${window.location.host}/api`;
+import { API_BASE, apiFetch } from './apiClient.js';
 
 async function requestJson(url, options = {}) {
-    const response = await fetch(url, {
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        ...options
-    });
+    let response;
+    try {
+        response = await apiFetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+    } catch (error) {
+        throw new Error(`Persistence server unavailable: ${error.message}`);
+    }
 
     const payload = await response.text();
     let data = null;
@@ -18,19 +21,18 @@ async function requestJson(url, options = {}) {
     }
 
     if (!response.ok) {
-        throw new Error(data?.error || 'Request failed');
+        throw new Error(data?.error || `Request failed (${response.status})`);
     }
 
     return data;
 }
 
-export async function loadSites() {
-    return requestJson(`${API_BASE}/sites`);
-}
+const visitorQuery = visitor => visitor ? '?view=visitor' : '';
 
-export async function loadProjects() {
-    return requestJson(`${API_BASE}/projects`);
+export async function loadProjects(visitor = false) {
+    return requestJson(`${API_BASE}/projects${visitorQuery(visitor)}`);
 }
+export async function loadProjectGpsMarkers(projectId, visitor = false) { return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/gps-markers${visitorQuery(visitor)}`); }
 
 export async function createProjectOnDisk(projectData) {
     return requestJson(`${API_BASE}/projects`, {
@@ -51,9 +53,18 @@ export async function deleteProjectOnDisk(projectId) {
         method: 'DELETE'
     });
 }
+export async function exportProject(projectId) {
+    const response = await apiFetch(`${API_BASE}/projects/${encodeURIComponent(projectId)}/export`);
+    if (!response.ok) throw new Error('Export failed');
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a'); link.href = url; link.download = `${projectId}.zip`; link.click(); URL.revokeObjectURL(url);
+}
+export async function importProject(file, asCopy = false) {
+    return requestJson(`${API_BASE}/projects/import`, { method: 'POST', headers: { 'Content-Type': 'application/zip', 'X-Import-As-Copy': String(asCopy) }, body: await file.arrayBuffer() });
+}
 
-export async function loadProjectSites(projectId) {
-    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites`);
+export async function loadProjectSites(projectId, visitor = false) {
+    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites${visitorQuery(visitor)}`);
 }
 
 export async function createProjectSite(projectId, siteData) {
@@ -68,8 +79,8 @@ export async function deleteProjectSite(projectId, siteId) {
     return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}`, { method: 'DELETE' });
 }
 
-export async function loadSitePlaces(projectId, siteId) {
-    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places`);
+export async function loadSitePlaces(projectId, siteId, visitor = false) {
+    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places${visitorQuery(visitor)}`);
 }
 
 export async function createSitePlace(projectId, siteId, placeData) {
@@ -85,67 +96,20 @@ export async function deleteSitePlace(projectId, siteId, placeId) {
 }
 
 const markerUrl = (projectId, siteId, placeId) => `${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/markers`;
-export async function loadPlaceMarkers(projectId, siteId, placeId) { return requestJson(markerUrl(projectId, siteId, placeId)); }
+export async function loadPlaceMarkers(projectId, siteId, placeId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}${visitorQuery(visitor)}`); }
 export async function createPlaceMarker(projectId, siteId, placeId, marker) { return requestJson(markerUrl(projectId, siteId, placeId), { method: 'POST', body: JSON.stringify(marker) }); }
 export async function updatePlaceMarker(projectId, siteId, placeId, markerId, marker) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}`, { method: 'PUT', body: JSON.stringify(marker) }); }
 export async function deletePlaceMarker(projectId, siteId, placeId, markerId) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}`, { method: 'DELETE' }); }
-export async function loadPlantProfile(projectId, siteId, placeId, markerId) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/plant-profile`); }
+export async function loadPlantProfile(projectId, siteId, placeId, markerId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/plant-profile${visitorQuery(visitor)}`); }
 export async function savePlantProfile(projectId, siteId, placeId, markerId, profile) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/plant-profile`, { method: 'PUT', body: JSON.stringify(profile) }); }
+export async function loadMarkerAnchor(projectId, siteId, placeId, markerId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/anchor${visitorQuery(visitor)}`); }
+export async function saveMarkerAnchor(projectId, siteId, placeId, markerId, anchor) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/anchor`, { method: 'PUT', body: JSON.stringify(anchor) }); }
 
-export async function loadSite(siteId) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}`);
-}
+const demoMarkerUrl = markerId => `${API_BASE}/demo-markers${markerId ? `/${encodeURIComponent(markerId)}` : ''}`;
+export async function loadDemoMarkers(visitor = false) { return requestJson(`${demoMarkerUrl()}${visitorQuery(visitor)}`); }
+export async function createDemoMarker(marker) { return requestJson(demoMarkerUrl(), { method: 'POST', body: JSON.stringify(marker) }); }
+export async function updateDemoMarker(markerId, marker) { return requestJson(demoMarkerUrl(markerId), { method: 'PUT', body: JSON.stringify(marker) }); }
+export async function deleteDemoMarker(markerId) { return requestJson(demoMarkerUrl(markerId), { method: 'DELETE' }); }
+export async function loadDemoPlantProfile(markerId) { return requestJson(`${demoMarkerUrl(markerId)}/plant-profile`); }
+export async function saveDemoPlantProfile(markerId, profile) { return requestJson(`${demoMarkerUrl(markerId)}/plant-profile`, { method: 'PUT', body: JSON.stringify(profile) }); }
 
-export async function createSiteOnDisk(siteData) {
-    return requestJson(`${API_BASE}/sites`, {
-        method: 'POST',
-        body: JSON.stringify(siteData)
-    });
-}
-
-export async function updateSiteOnDisk(siteData) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteData.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(siteData)
-    });
-}
-
-export async function createPlaceOnDisk(siteId, placeData) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations`, {
-        method: 'POST',
-        body: JSON.stringify(placeData)
-    });
-}
-
-export async function updatePlaceOnDisk(siteId, placeData) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations/${encodeURIComponent(placeData.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(placeData)
-    });
-}
-
-export async function deletePlaceOnDisk(siteId, placeId) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations/${encodeURIComponent(placeId)}`, {
-        method: 'DELETE'
-    });
-}
-
-export async function createAssetOnDisk(siteId, placeId, assetData) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations/${encodeURIComponent(placeId)}/assets`, {
-        method: 'POST',
-        body: JSON.stringify(assetData)
-    });
-}
-
-export async function updateAssetOnDisk(siteId, placeId, assetData) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations/${encodeURIComponent(placeId)}/assets/${encodeURIComponent(assetData.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(assetData)
-    });
-}
-
-export async function deleteAssetOnDisk(siteId, placeId, assetId) {
-    return requestJson(`${API_BASE}/sites/${encodeURIComponent(siteId)}/locations/${encodeURIComponent(placeId)}/assets/${encodeURIComponent(assetId)}`, {
-        method: 'DELETE'
-    });
-}

@@ -2,5 +2,12 @@
   "id": "Banyula",
   "name": "Banyula",
   "description": "",
-  "template": "garden"
+  "template": "garden",
+  "sites": [
+    {
+      "id": "banyula",
+      "name": "Banyula",
+      "path": "sites/banyula/site.json"
+    }
+  ]
 }

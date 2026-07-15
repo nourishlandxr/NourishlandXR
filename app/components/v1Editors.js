@@ -87,7 +87,9 @@ export async function renderV1PlantProfile(site, place, asset) {
     `;
 }
 
-export function renderV1Anchors(site, place, asset) {
+export async function renderV1Anchors(site, place, asset) {
+    const { loadMarkerAnchor } = await import('../services/persistence.js');
+    const anchor = await loadMarkerAnchor(site.projectId, site.id, place.id, asset.id);
     return `
     <div class="screen">
         <div class="page-header">
@@ -97,14 +99,14 @@ export function renderV1Anchors(site, place, asset) {
         </div>
 
         <div class="panel">
+            <div id="anchorError" class="meta"></div>
             <div class="field">
-                <label>Anchor Point</label>
-                <input type="text" value="${place.name || ''}" />
+                <label for="anchor_type">Anchor Type</label>
+                <select id="anchor_type" onchange="window.updateAnchorFields()"><option value="gps" ${anchor.type === 'gps' ? 'selected' : ''}>GPS</option><option value="qr" ${anchor.type === 'qr' ? 'selected' : ''}>QR</option></select>
             </div>
-            <div class="field">
-                <label>Notes</label>
-                <textarea rows="4">Anchor notes go here.</textarea>
-            </div>
+            <div id="gpsAnchorFields"><div class="button-row"><button onclick="window.useCurrentAnchorLocation()">Use Current Location</button></div><div class="field"><label for="anchor_latitude">Latitude</label><input id="anchor_latitude" value="${anchor.latitude || ''}" /></div><div class="field"><label for="anchor_longitude">Longitude</label><input id="anchor_longitude" value="${anchor.longitude || ''}" /></div><div class="field"><label for="anchor_altitude">Altitude</label><input id="anchor_altitude" value="${anchor.altitude || ''}" /></div><div class="field"><label for="anchor_accuracy">Accuracy</label><input id="anchor_accuracy" value="${anchor.accuracy || ''}" /></div><div class="field"><label for="anchor_captured_at">Captured Timestamp</label><input id="anchor_captured_at" value="${anchor.captured_at || ''}" /></div></div>
+            <div id="qrAnchorFields"><div class="field"><label for="anchor_qr_code">QR Code</label><input id="anchor_qr_code" value="${anchor.qr_code || ''}" /></div><div class="field"><label for="anchor_description">Description</label><textarea id="anchor_description" rows="3">${anchor.description || ''}</textarea></div></div>
+            <div class="button-row"><button onclick="window.renderAssetWorkspace(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Cancel</button><button class="primary" onclick="window.saveMarkerAnchor(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Save Anchor</button></div>
         </div>
     </div>
     `;

@@ -1,6 +1,18 @@
 {
   "id": "Hillyards",
-  "name": "Hillyards",
+  "name": "Hillyards Food Forest",
   "description": "",
-  "template": "food_forest"
+  "template": "food_forest",
+  "sites": [
+    {
+      "id": "hillyards",
+      "name": "Hillyards",
+      "path": "sites/hillyards/site.json"
+    },
+    {
+      "id": "main_food_forest",
+      "name": "Main Food Forest",
+      "path": "sites/main_food_forest/site.json"
+    }
+  ]
 }

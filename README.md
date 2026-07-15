@@ -1,90 +1,19 @@
-\# Nourishland XR Platform
+# NOURISHLANDXR v0.8
 
-
-
-A reusable spatial learning platform for:
-
-
-
-\- Botanical Gardens
-
-\- Food Forests
-
-\- Public Parks
-
-\- Universities
-
-\- Museums
-
-
-
-\## Principles
-
-
-
-\- One engine
-
-\- Many sites
-
-\- One content structure
-
-\- Multiple devices
-
-
-
-\## First Demonstration
-
-
-
-Hillyards Food Forest
-
-
-
-The first demonstration site used to develop and validate the platform.
-
-
-
-\## Project Structure
-
-
-
-\- app
-
-\- engine
-
-\- content
-
-\- sites
-
-\- templates
-
-\- examples
-
-\- media
-
-\- docs
-
-\- schemas
-
-## Documentation
-
-- [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)
-- [docs/ROADMAP.md](docs/ROADMAP.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md)
-- [docs/DECISIONS.md](docs/DECISIONS.md)
+Fresh v0.8 working copy of the NOURISHLANDXR project.
 
 ## Local development
 
-Do not use Live Server for persistence-backed Studio development. The Studio API and frontend are served together by the persistence server.
-
-From the repository root, run:
-
-```text
-node tools/persistence-server.mjs
+```powershell
+npm start
 ```
 
-Then open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in a browser.
+The application is served from `http://127.0.0.1:8000/app/`.
 
-The server reads and writes the canonical `workspace/` hierarchy.
+## Hosted build
 
+```powershell
+npm run build
+```
+
+This creates the static frontend in `dist/xr/` and the Node API in `dist/xr-api/`. Project workspace data is deliberately excluded from builds and source control.

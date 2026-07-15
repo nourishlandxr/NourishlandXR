@@ -1,0 +1,3 @@
+# Place these rules immediately after RewriteEngine On and before # BEGIN WordPress.
+RewriteRule ^xr(?:/|$) - [L]
+RewriteRule ^xr-api(?:/|$) - [L]

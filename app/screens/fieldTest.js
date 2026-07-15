@@ -1,0 +1,8 @@
+import { loadMarkerAnchor } from '../services/persistence.js';
+export async function renderFieldTest(app, site, place, marker) {
+    const anchor = await loadMarkerAnchor(site.projectId, site.id, place.id, marker.id);
+    const valid = anchor.type === 'gps' && Number.isFinite(Number(anchor.latitude)) && Number.isFinite(Number(anchor.longitude));
+    const appBase = location.pathname === '/xr' || location.pathname.startsWith('/xr/') ? '/xr/' : '/app/';
+    const url = `${location.origin}${appBase}?mode=explorer&project=${encodeURIComponent(site.projectId)}&site=${encodeURIComponent(site.id)}&place=${encodeURIComponent(place.id)}&marker=${encodeURIComponent(marker.id)}`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderAssetWorkspace(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Back</button><h1>Field Test</h1></div><div class="panel"><p>Project: ${site.projectId}</p><p>Site: ${site.name}</p><p>Place: ${place.name}</p><p>Marker: ${marker.name}</p><p>Anchor: ${valid ? 'GPS coordinates valid' : 'GPS coordinates missing or invalid'}</p><p>Latitude: ${anchor.latitude || 'Not set'}</p><p>Longitude: ${anchor.longitude || 'Not set'}</p><p>Accuracy: ${anchor.accuracy || 'Not set'}</p><p>GPS readiness: ${navigator.geolocation ? 'Available' : 'Unavailable'}</p><p>Explorer readiness: ${valid ? 'Ready' : 'Needs GPS anchor'}</p><p>WebXR readiness: ${navigator.xr && window.isSecureContext ? 'Available' : 'Fallback only'}</p><div class="button-row"><button onclick="window.copyFieldTestUrl('${url}')">Copy Test URL</button><button onclick="window.openFieldTestExplorer('${url}')">Open Explorer Test</button></div><p id="fieldTestStatus" class="meta"></p></div></div>`;
+}

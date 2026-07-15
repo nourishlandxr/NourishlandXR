@@ -2,5 +2,12 @@
   "id": "Frankendael",
   "name": "Frankendael",
   "description": "",
-  "template": "park"
+  "template": "park",
+  "sites": [
+    {
+      "id": "frankendael",
+      "name": "Frankendael",
+      "path": "sites/frankendael/site.json"
+    }
+  ]
 }

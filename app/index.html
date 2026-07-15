@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nourishland XR</title>
+    <meta name="description" content="Nourishland XR v0.8 creator and visitor experience">
+    <title>Nourishland XR v0.8</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,6 +12,8 @@
 <body>
 
     <div id="app"></div>
+    <div id="arLaunchDiagnostics" class="ar-launch-diagnostics" role="status" aria-live="polite" hidden></div>
+    <button id="globalArToggle" class="ar-launch-toggle" type="button" onclick="window.toggleGlobalAr()">Start AR</button>
 
     <script type="module" src="main.js"></script>
 

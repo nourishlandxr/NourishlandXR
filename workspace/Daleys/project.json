@@ -2,5 +2,12 @@
   "id": "Daleys",
   "name": "Daleys",
   "description": "",
-  "template": "garden"
+  "template": "garden",
+  "sites": [
+    {
+      "id": "daleys",
+      "name": "Daleys",
+      "path": "sites/daleys/site.json"
+    }
+  ]
 }

@@ -1,13 +1,8 @@
-export function renderSiteForm(onCancel, onSubmit, project = null) {
-    const templates = [
-        'Botanical Garden',
-        'Food Forest',
-        'Public Park',
-        'University',
-        'Museum'
-    ];
+import { projectTemplates } from '../templates/projectTemplates.js';
 
-    const options = templates.map(template => `<option value="${template}" ${project?.template === template ? 'selected' : ''}>${template}</option>`).join('');
+export function renderSiteForm(onCancel, onSubmit, project = null, templateKey = 'blank') {
+    const options = Object.entries(projectTemplates).map(([key, template]) => `<option value="${key}" ${templateKey === key ? 'selected' : ''}>${template.label}</option>`).join('');
+    const suggestions = project ? '' : projectTemplates[templateKey].sites.join('\n');
 
     return `
     <div class="panel">
@@ -18,10 +13,12 @@ export function renderSiteForm(onCancel, onSubmit, project = null) {
 
         <div class="field">
             <label for="projectTemplate">Template</label>
-            <select id="projectTemplate">
+            <select id="projectTemplate" onchange="window.setProjectTemplate(this.value)">
                 ${options}
             </select>
         </div>
+
+        ${project ? '' : `<div class="field"><label for="projectSuggestions">Suggested Sites (one per line; edit or remove as needed)</label><textarea id="projectSuggestions" rows="5">${suggestions}</textarea></div>`}
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>

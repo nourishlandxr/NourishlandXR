@@ -1,0 +1,113 @@
+name: Deploy XR frontend
+
+on:
+  push:
+    branches:
+      - main
+      # Add develop after the staging environment and host path are configured.
+    paths:
+      - "app/**"
+      - "deploy/**"
+      - "tools/build-hosted.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-xr-production.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xr-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.XR_URL }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend only
+        run: npm run build:frontend
+
+      - name: Verify deployment boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/xr/index.html
+          test -f dist/xr/.htaccess
+          if find dist/xr -type l -print -quit | grep -q .; then
+            echo "Deployment artifact contains a symbolic link." >&2
+            exit 1
+          fi
+          if find dist/xr -type d \( -name workspace -o -name xr-api -o -name nourishland-data \) -print -quit | grep -q .; then
+            echo "Deployment artifact contains protected server data or API content." >&2
+            exit 1
+          fi
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTARMADA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTARMADA_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/nourishland_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/nourishland_deploy ~/.ssh/known_hosts
+
+      - name: Deploy XR frontend
+        shell: bash
+        env:
+          REMOTE_HOST: ${{ secrets.HOSTARMADA_HOST }}
+          REMOTE_PORT: ${{ secrets.HOSTARMADA_SSH_PORT }}
+          REMOTE_USER: ${{ secrets.HOSTARMADA_USER }}
+          REMOTE_PATH: ${{ secrets.HOSTARMADA_XR_PATH }}
+        run: |
+          set -euo pipefail
+          test -n "$REMOTE_HOST"
+          test -n "$REMOTE_USER"
+          test -n "$REMOTE_PATH"
+          REMOTE_PORT="${REMOTE_PORT:-22}"
+          REMOTE_PATH="${REMOTE_PATH%/}"
+          EXPECTED_REMOTE_PATH="/home/$REMOTE_USER/public_html/xr"
+          if [[ "$REMOTE_PATH" != "$EXPECTED_REMOTE_PATH" ]]; then
+            echo "Refusing unsafe deployment target: $REMOTE_PATH" >&2
+            echo "Expected exactly: $EXPECTED_REMOTE_PATH" >&2
+            exit 1
+          fi
+          SSH_COMMAND="ssh -i ~/.ssh/nourishland_deploy -p $REMOTE_PORT -o BatchMode=yes"
+          $SSH_COMMAND "$REMOTE_USER@$REMOTE_HOST" \
+            "test -d '$REMOTE_PATH' && test -w '$REMOTE_PATH'"
+          rsync --archive --compress --checksum --delete-delay --itemize-changes \
+            -e "$SSH_COMMAND" \
+            dist/xr/ "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/"
+
+      - name: Verify production URL
+        shell: bash
+        env:
+          XR_URL: ${{ vars.XR_URL }}
+        run: |
+          set -euo pipefail
+          XR_URL="${XR_URL:-https://nourishland.org/xr/}"
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-delay 2 "$XR_URL" > /dev/null

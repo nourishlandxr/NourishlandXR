@@ -1,6 +1,8 @@
-import { SiteManager } from '../managers/siteManager.js';
+﻿import { SiteManager } from '../managers/siteManager.js';
 import { renderSiteForm } from '../components/siteForm.js';
 import { renderSiteDashboard } from './siteDashboard.js';
+
+let selectedTemplate = 'blank';
 
 export function renderSitesScreen(app, siteManager = new SiteManager()) {
     const sites = siteManager.getAllSites();
@@ -16,6 +18,8 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
         <div class="panel">
             <div class="button-row">
                 <button class="primary" onclick="window.renderProjectForm()">New Project</button>
+                <button onclick="document.getElementById('projectImportFile').click()">Import Project</button>
+                <input id="projectImportFile" type="file" accept=".zip,application/zip" style="display:none" onchange="window.importProjectFile(this.files[0])" />
             </div>
         </div>
     `;
@@ -31,6 +35,7 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
                 <div class="button-row">
                     <button onclick="window.renderProjectSites(${JSON.stringify(site)})">Open</button>
                     <button onclick="window.renderProjectForm(${JSON.stringify(site)})">Rename</button>
+                    <button onclick="window.exportProject('${site.id}')">Export</button>
                     <button onclick="window.deleteProject('${site.id}')">Delete</button>
                 </div>
             </div>
@@ -44,21 +49,27 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
 
 export function renderProjectFormScreen(app, project = null) {
     const formHtml = renderSiteForm(
-        'window.renderProjects()',
+        'window.renderDemoProjects()',
         project ? `window.renameProjectFromForm(${JSON.stringify(project)})` : 'window.createProjectFromForm()',
-        project
+        project,
+        selectedTemplate
     );
 
     app.innerHTML = `
     <div class="screen">
         <div class="page-header">
-            <button class="ghost" onclick="window.renderProjects()">Back</button>
+            <button class="ghost" onclick="window.renderDemoProjects()">Back</button>
             <h1>${project ? 'Rename Project' : 'New Project'}</h1>
             <p class="subtitle">${project ? 'Update the project name.' : 'Create a new project in this workspace.'}</p>
         </div>
         ${formHtml}
     </div>
     `;
+}
+
+export function setProjectTemplate(app, templateKey) {
+    selectedTemplate = templateKey;
+    renderProjectFormScreen(app);
 }
 
 export function renderSiteFormScreen(app, siteManager) {
@@ -68,3 +79,4 @@ export function renderSiteFormScreen(app, siteManager) {
 export function renderSites(app, siteManager) {
     return renderSitesScreen(app, siteManager);
 }
+

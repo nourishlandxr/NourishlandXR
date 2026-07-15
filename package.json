@@ -1,0 +1,11 @@
+{
+  "name": "nourishlandxrv0.8",
+  "private": true,
+  "version": "0.8.0",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/persistence-server.mjs",
+    "build": "node tools/build-hosted.mjs",
+    "build:frontend": "node tools/build-hosted.mjs --frontend-only"
+  }
+}

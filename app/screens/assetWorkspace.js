@@ -30,6 +30,7 @@ export function renderAssetWorkspace(app, site, place, asset) {
                     </div>
                     <button onclick="window.renderV1Anchors(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Open</button>
                 </div>
+                <div class="list-item"><div><strong>Field Test</strong><p>Check this marker for an outdoor test.</p></div><button onclick="window.renderFieldTest(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Open</button></div>
             </div>
         </div>
     </div>`;
