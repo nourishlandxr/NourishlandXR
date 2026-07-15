@@ -67,10 +67,14 @@ function writeJson(filePath, data) {
     fs.renameSync(tempPath, filePath);
 }
 
+const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library']);
+
 function normalizeApiPath(pathname) {
     if (pathname === '/xr-api') return '/api';
     if (pathname.startsWith('/xr-api/')) return `/api/${pathname.slice('/xr-api/'.length)}`;
-    if (production && pathname !== '/api' && !pathname.startsWith('/api/')) return `/api${pathname === '/' ? '' : pathname}`;
+    if (production && pathname === '/') return '/api';
+    const rootSegment = pathname.split('/').filter(Boolean)[0];
+    if (production && passengerStrippedApiRoots.has(rootSegment)) return `/api${pathname}`;
     return pathname;
 }
 
@@ -1102,7 +1106,7 @@ function handleApi(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-    const pathname = new URL(req.url, `http://${req.headers.host}`).pathname;
+    const pathname = normalizeApiPath(new URL(req.url, `http://${req.headers.host}`).pathname);
 
     if (pathname === '/' && !production) {
         res.writeHead(302, { Location: '/app/' });
