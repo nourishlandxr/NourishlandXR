@@ -83,7 +83,7 @@ after(async () => {
     fs.rmSync(workspaceDir, { recursive: true, force: true });
 });
 
-test('create → restart → Field Guide list → GPS marker retrieval preserves one linked plant', async () => {
+test('create with or without position -> restart -> Field Guide -> later GPS positioning preserves linked plants', async () => {
     const rejected = await fetch(`${baseUrl}/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,6 +102,20 @@ test('create → restart → Field Guide list → GPS marker retrieval preserves
     assert.equal(created.marker.plantInstanceId, created.instance.id);
     assert.equal(created.instance.markerId, created.marker.id);
     assert.equal(created.instance.placeId, placeId);
+    const unpositioned = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
+        method: 'POST',
+        body: JSON.stringify({ commonName: 'Unpositioned Davidson Plum', scientificName: 'Davidsonia jerseyana', description: 'Saved before its field position is known.', visibility: 'public' })
+    });
+    assert.equal(unpositioned.anchor, null);
+    assert.equal(unpositioned.instance.map.latitude, null);
+    assert.equal(unpositioned.instance.map.longitude, null);
+    const reused = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
+        method: 'POST',
+        body: JSON.stringify({ plantId: created.plant.id, visibility: 'public' })
+    });
+    assert.equal(reused.plant.id, created.plant.id);
+    assert.notEqual(reused.instance.id, created.instance.id);
+    assert.notEqual(reused.marker.id, created.marker.id);
     const draft = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
         method: 'POST',
         body: JSON.stringify({ commonName: 'Creator Draft Plant', scientificName: 'Draftus privatus', description: 'Must not reach Visitor AR.', latitude: -28.6913, longitude: 153.0031, accuracy: 5, visibility: 'draft' })
@@ -130,6 +144,23 @@ test('create → restart → Field Guide list → GPS marker retrieval preserves
     assert.equal(listedMarkers.some(item => item.id === draft.marker.id), false);
     assert.equal(listedPlants.plants.some(item => item.instanceId === draft.instance.id), false);
     assert.equal(gpsMarkers.some(item => item.marker.id === draft.marker.id), false);
+    assert.ok(listedPlants.plants.some(item => item.instanceId === unpositioned.instance.id));
+    assert.equal(gpsMarkers.some(item => item.marker.id === unpositioned.marker.id), false);
+
+    await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers/${unpositioned.marker.id}/anchor`, {
+        method: 'PUT',
+        body: JSON.stringify({ type: 'gps', latitude: -28.69118, longitude: 153.00308, accuracy: 4.5 })
+    });
+    const positionedGpsMarkers = await jsonRequest(`/api/projects/${projectId}/gps-markers?view=visitor`);
+    const positioned = positionedGpsMarkers.find(item => item.marker.id === unpositioned.marker.id);
+    assert.ok(positioned);
+    assert.equal(positioned.marker.plantId, unpositioned.plant.id);
+    assert.equal(positioned.marker.plantInstanceId, unpositioned.instance.id);
+    assert.equal(positioned.anchor.latitude, -28.69118);
+    const updatedPlants = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants?view=visitor`);
+    const updatedInstance = updatedPlants.plants.find(item => item.instanceId === unpositioned.instance.id);
+    assert.equal(updatedInstance.map.latitude, -28.69118);
+    assert.equal(updatedInstance.map.longitude, 153.00308);
 
     const starting = gpsMarkers.find(item => item.marker.type === 'intro_checkpoint');
     const initial = reconstructGpsMarker(starting.anchor, starting.anchor, gpsPlant.anchor, 0);
@@ -139,4 +170,5 @@ test('create → restart → Field Guide list → GPS marker retrieval preserves
     assert.equal(gpsPlant.marker.plantId, fieldGuidePlant.plantId);
     const creatorPlants = await jsonRequest(`/api/plant-library`);
     assert.equal(creatorPlants.plants.some(item => item.commonName === 'Incomplete Plant'), false);
+    assert.equal(creatorPlants.plants.filter(item => item.id === created.plant.id).length, 1);
 });

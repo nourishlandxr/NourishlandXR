@@ -1,4 +1,5 @@
 import { createPlaceMarker, createSpatialPlant, loadProjects, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
+import { loadPlantLibrary } from '../services/plantDataService.js';
 
 let app;
 let projects = [];
@@ -9,6 +10,7 @@ let location;
 let markerType = 'plant';
 let hillyardsMode = false;
 let dashboardProjectId = '';
+let plantProfiles = [];
 
 const options = (list, value, label) => `
     <option value="">Select ${label}</option>
@@ -47,7 +49,7 @@ function draw() {
                     <label>${plant ? 'Common Name' : 'Title'}</label>
                     <input id="fieldName" />
                 </div>
-                ${plant ? '<div class="field"><label>Scientific Name</label><input id="fieldScientific" /></div>' : ''}
+                ${plant ? `<div class="field"><label>Reuse plant profile (optional)</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create a new shared profile</option>${plantProfiles.map(profile => `<option value="${profile.id}">${profile.commonName} · ${profile.scientificName}</option>`).join('')}</select></div><div class="field"><label>Scientific Name</label><input id="fieldScientific" /></div>` : ''}
                 <div class="field">
                     <label>${plant ? 'Description' : 'Text'}</label>
                     <textarea id="fieldDescription" rows="3"></textarea>
@@ -68,6 +70,7 @@ export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
     location = null;
+    plantProfiles = (await loadPlantLibrary(true)).plants || [];
     projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     if (defaults) {
         hillyardsMode = true;
@@ -104,6 +107,14 @@ export async function selectFieldSite(id) {
 
 export function selectFieldPlace(id) { selected.place = id; draw(); }
 
+export function selectFieldPlantProfile(id) {
+    const profile = plantProfiles.find(item => item.id === id);
+    if (!profile) return;
+    document.getElementById('fieldName').value = profile.commonName || '';
+    document.getElementById('fieldScientific').value = profile.scientificName || '';
+    document.getElementById('fieldDescription').value = profile.summary || '';
+}
+
 export function refreshFieldLocation() {
     const error = document.getElementById('fieldError');
     if (!navigator.geolocation) { error.textContent = 'Location is unavailable.'; return; }
@@ -128,6 +139,7 @@ export async function saveFieldMarker() {
     const name = document.getElementById('fieldName').value.trim();
     const description = document.getElementById('fieldDescription').value.trim();
     const scientific = document.getElementById('fieldScientific')?.value.trim();
+    const plantId = document.getElementById('fieldPlantProfile')?.value || '';
 
     if (!selected.project || !selected.site || !selected.place) { error.textContent = 'Select a Location, Site and Place.'; return; }
     if (!name || (type === 'plant' && !scientific) || (type === 'note' && !description)) {
@@ -141,7 +153,7 @@ export async function saveFieldMarker() {
         const place = places.find(item => item.id === selected.place);
         const visibility = document.getElementById('fieldVisibility').value;
         const marker = type === 'plant'
-            ? (await createSpatialPlant(selected.project, selected.site, selected.place, { commonName: name, scientificName: scientific, description, visibility, ...(location || {}) })).marker
+            ? (await createSpatialPlant(selected.project, selected.site, selected.place, { plantId, commonName: name, scientificName: scientific, description, visibility, ...(location || {}) })).marker
             : await createPlaceMarker(selected.project, selected.site, selected.place, { name, type, description, visibility, anchor: { type: 'gps', ...location } });
         const site = sites.find(item => item.id === selected.site);
         if (type === 'plant') window.renderFieldGuide(encodeURIComponent(selected.project), true);

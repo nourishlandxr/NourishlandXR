@@ -25,6 +25,10 @@ export function renderLaunchScreen(app) {
                         <span>Discover plants and stories using Explorer or the Field Guide.</span>
                     </button>
                 </div>
+                <button class="menu-card role-card ar-demo-role" onclick="window.startTemporaryArDemo()">
+                    <strong>TRY AR DEMO</strong>
+                    <span>Experience how NourishlandXR brings plants and places to life. No account or project setup required.</span>
+                </button>
             </section>
 
             <nav class="platform-landing-nav" aria-label="Platform navigation">

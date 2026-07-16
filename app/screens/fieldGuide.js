@@ -1,4 +1,4 @@
-import { loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
+import { loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor } from '../services/persistence.js';
 import { loadResolvedPlantsForPlace } from '../services/plantDataService.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -71,5 +71,21 @@ export function openFieldGuidePlant(app, encodedInstanceId) {
     const plant = currentGuide?.plants.find(item => item.instanceId === instanceId);
     if (!plant) throw new Error('Plant is unavailable.');
     const fields = [['Scientific name', plant.scientificName], ['Family', plant.family], ['Origin', plant.origin], ['Plant type', plant.plantType], ['Layer', plant.layer], ['Uses', Array.isArray(plant.uses) ? plant.uses.join(', ') : plant.uses], ['Propagation', Array.isArray(plant.propagation) ? plant.propagation.join(', ') : plant.propagation], ['Place', plant.placeName || plant.placeId], ['Local status', plant.status], ['Notes', plant.localNotes || plant.summary]];
-    app.innerHTML = `<div class="screen field-guide analog-print-page"><div class="page-header"><button class="ghost analog-navigation" onclick="window.renderFieldGuide('${encoded(currentGuide.project.id)}', ${currentGuide.creator})">Back</button><p class="print-kicker">${escapeHtml(currentGuide.project.name).toUpperCase()} FIELD GUIDE</p><h1>${escapeHtml(plant.commonName || 'Unnamed plant')}</h1><p class="subtitle"><em>${escapeHtml(plant.scientificName || '')}</em></p></div><dl class="analog-profile-grid">${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value || 'Not entered.')}</dd></div>`).join('')}</dl><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button></div></div>`;
+    const positionAction = currentGuide.creator && plant.markerId ? `<section class="panel analog-navigation"><h2>Position</h2><p id="fieldGuidePositionStatus" class="meta">${Number.isFinite(Number(plant.map?.latitude)) ? `${Number(plant.map.latitude).toFixed(6)}, ${Number(plant.map.longitude).toFixed(6)}` : 'No position saved.'}</p><button onclick="window.positionFieldGuidePlant('${encoded(plant.instanceId)}')">Add/update current position</button></section>` : '';
+    app.innerHTML = `<div class="screen field-guide analog-print-page"><div class="page-header"><button class="ghost analog-navigation" onclick="window.renderFieldGuide('${encoded(currentGuide.project.id)}', ${currentGuide.creator})">Back</button><p class="print-kicker">${escapeHtml(currentGuide.project.name).toUpperCase()} FIELD GUIDE</p><h1>${escapeHtml(plant.commonName || 'Unnamed plant')}</h1><p class="subtitle"><em>${escapeHtml(plant.scientificName || '')}</em></p></div><dl class="analog-profile-grid">${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value || 'Not entered.')}</dd></div>`).join('')}</dl>${positionAction}<div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button></div></div>`;
+}
+
+export function positionFieldGuidePlant(encodedInstanceId) {
+    const instanceId = decodeURIComponent(encodedInstanceId);
+    const plant = currentGuide?.creator && currentGuide.plants.find(item => item.instanceId === instanceId);
+    const status = document.getElementById('fieldGuidePositionStatus');
+    if (!plant?.markerId || !navigator.geolocation) { if (status) status.textContent = 'Current location is unavailable.'; return; }
+    status.textContent = 'Capturing current position…';
+    navigator.geolocation.getCurrentPosition(async position => {
+        try {
+            const anchor = await saveMarkerAnchor(currentGuide.project.id, plant.siteId, plant.placeId, plant.markerId, { type: 'gps', latitude: position.coords.latitude, longitude: position.coords.longitude, altitude: position.coords.altitude ?? '', accuracy: position.coords.accuracy, captured_at: new Date(position.timestamp).toISOString() });
+            plant.map = { ...(plant.map || {}), latitude: anchor.latitude, longitude: anchor.longitude };
+            status.textContent = `Position saved: ${Number(anchor.latitude).toFixed(6)}, ${Number(anchor.longitude).toFixed(6)} · accuracy ${Math.round(Number(anchor.accuracy))} m`;
+        } catch (error) { status.textContent = `Position could not be saved: ${error.message}`; }
+    }, error => { status.textContent = error.code === 1 ? 'Location permission was denied.' : 'Current position could not be captured.'; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
 }

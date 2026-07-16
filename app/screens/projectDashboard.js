@@ -320,10 +320,7 @@ export async function saveProjectStartingPoint(event, encodedProjectId) {
         const data = { type: 'intro_checkpoint', name: document.getElementById('projectStartingName').value.trim(), description: document.getElementById('projectStartingDescription').value.trim(), directions: document.getElementById('projectStartingDirections').value.trim(), reference_photo: document.getElementById('projectStartingPhoto').value.trim(), facing_direction: document.getElementById('projectStartingFacing').value.trim(), qr_reference: qrReference, visibility };
         let savedMarker;
         if (context.startingPoint) savedMarker = await updatePlaceMarker(projectId, context.site.id, place.id, context.startingPoint.marker.id, data);
-        else {
-            savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);
-            savedMarker = await updatePlaceMarker(projectId, context.site.id, place.id, savedMarker.id, data);
-        }
+        else savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);
         if (hasCoordinates || qrReference) await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : 'qr', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
         await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
     } catch (failure) {
@@ -347,5 +344,4 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     if (!entry) throw new Error('Entry not found.');
     app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${markerTypeLabel(entry.marker.type)}</p></div><div class="panel"><p>${escapeHtml(entry.marker.description || entry.marker.notes || 'No additional information yet.')}</p><p class="meta">${escapeHtml(entry.place.name)} · ${escapeHtml(entry.marker.visibility || 'draft')}</p></div></div>`;
 }
-
 

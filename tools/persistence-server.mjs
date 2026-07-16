@@ -502,8 +502,11 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     assertSafeId(placeId, 'place id');
     const placeDir = path.join(getCanonicalSitePath(projectId, siteId), 'places', placeId);
     if (!fs.existsSync(path.join(placeDir, 'place.json'))) throw new Error('Place not found');
-    const commonName = String(data.commonName || '').trim();
-    const scientificName = String(data.scientificName || '').trim();
+    const requestedPlantId = String(data.plantId || '').trim();
+    const existingPlant = requestedPlantId ? loadPlantRegistryData().data.plants.find(plant => plant.id === requestedPlantId) : null;
+    if (requestedPlantId && !existingPlant) throw new Error('Selected plant profile was not found');
+    const commonName = String(data.commonName || existingPlant?.commonName || '').trim();
+    const scientificName = String(data.scientificName || existingPlant?.scientificName || '').trim();
     const summary = String(data.description || data.summary || '').trim();
     if (!commonName || !scientificName) throw new Error('Common Name and Scientific Name are required');
     const hasAnyPosition = [data.latitude, data.longitude, data.accuracy].some(value => value !== undefined && value !== null && value !== '');
@@ -514,15 +517,16 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     if (hasAnyPosition && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) throw new Error('Longitude must be between -180 and 180');
     if (hasAnyPosition && (!Number.isFinite(accuracy) || accuracy < 0)) throw new Error('GPS accuracy is required when a position is supplied');
     const visibility = normalizeVisibility(data.visibility);
+    if (existingPlant && visibility === 'public' && !isPublic(existingPlant)) throw new Error('Publish the shared plant profile before using it in a public specimen');
     const libraryFile = path.join(workspaceDir, 'plant-library', 'plants.json');
     const instancesFile = path.join(getCanonicalSitePath(projectId, siteId), 'plant-instances.json');
     const libraryExisted = fs.existsSync(libraryFile);
     const instancesExisted = fs.existsSync(instancesFile);
     const library = loadPlantRegistryData().data;
     const instanceData = loadPlantInstanceData(projectId, siteId).data;
-    const plantBaseId = toPlantId(data.plantId || scientificName || commonName) || 'plant';
-    let plantId = plantBaseId, plantSuffix = 2;
-    while (library.plants.some(plant => plant.id === plantId)) plantId = `${plantBaseId}-${plantSuffix++}`;
+    const plantBaseId = toPlantId(scientificName || commonName) || 'plant';
+    let plantId = existingPlant?.id || plantBaseId, plantSuffix = 2;
+    while (!existingPlant && library.plants.some(plant => plant.id === plantId)) plantId = `${plantBaseId}-${plantSuffix++}`;
     const markerBaseId = toProjectId(data.markerId || commonName) || 'plant_marker';
     let markerId = markerBaseId, markerSuffix = 2;
     const markersDir = path.join(placeDir, 'markers');
@@ -531,13 +535,13 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     let instanceId = instanceBaseId, instanceSuffix = 2;
     while (instanceData.instances.some(instance => instance.id === instanceId)) instanceId = `${instanceBaseId}-${instanceSuffix++}`;
     const now = new Date().toISOString();
-    const plant = { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', visibility, created: now, modified: now };
+    const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', visibility, created: now, modified: now };
     const instance = { id: instanceId, plantId, placeId, zoneId: '', markerId, cultivarOverride: '', status: data.status || '', plantingDate: '', localNotes: '', map: { latitude, longitude, x: null, y: null }, visibility, created: now, modified: now };
     const marker = { id: markerId, type: 'plant', name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
     const anchor = hasAnyPosition ? { type: 'gps', latitude, longitude, altitude: data.altitude ?? '', accuracy, captured_at: data.captured_at || now, qr_code: '', description: '', created: now, modified: now } : null;
     const markerDir = path.join(markersDir, markerId);
     try {
-        library.plants.push(plant);
+        if (!existingPlant) library.plants.push(plant);
         instanceData.instances.push(instance);
         writeJson(libraryFile, library);
         writeJson(instancesFile, instanceData);
@@ -547,8 +551,8 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
         return { plant, instance, marker, anchor, projectId, siteId, placeId };
     } catch (error) {
         fs.rmSync(markerDir, { recursive: true, force: true });
-        if (libraryExisted) writeJson(libraryFile, { ...library, plants: library.plants.filter(item => item.id !== plantId) });
-        else fs.rmSync(libraryFile, { force: true });
+        if (!existingPlant && libraryExisted) writeJson(libraryFile, { ...library, plants: library.plants.filter(item => item.id !== plantId) });
+        else if (!existingPlant) fs.rmSync(libraryFile, { force: true });
         if (instancesExisted) writeJson(instancesFile, { ...instanceData, instances: instanceData.instances.filter(item => item.id !== instanceId) });
         else fs.rmSync(instancesFile, { force: true });
         throw error;
@@ -1073,7 +1077,7 @@ function handleApi(req, res) {
                 if (fs.existsSync(markerDir)) throw new Error('A marker with this name already exists');
                 fs.mkdirSync(markerDir, { recursive: true });
                 const now = new Date().toISOString();
-                const marker = { id: markerId, type, name: data.name.trim(), description: data.description || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const marker = { id: markerId, type, name: data.name.trim(), description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
                 if (['gps', 'qr'].includes(String(data.anchor?.type || '').toLowerCase())) {
                     const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };
@@ -1143,6 +1147,18 @@ function handleApi(req, res) {
             if (type === 'qr' && !String(data.qr_code || '').trim()) return sendJson(res, 400, { error: 'QR Code is required' });
             const anchor = { ...readJson(anchorFile, {}), ...data, type, modified: new Date().toISOString() };
             writeJson(anchorFile, anchor);
+            const marker = readJson(path.join(markerDir, 'marker.json'), null);
+            if (type === 'gps' && marker?.plantInstanceId) {
+                const decodedProjectId = decodeURIComponent(projectId);
+                const decodedSiteId = decodeURIComponent(siteId);
+                const instanceData = loadPlantInstanceData(decodedProjectId, decodedSiteId).data;
+                const instance = instanceData.instances.find(item => item.id === marker.plantInstanceId);
+                if (instance) {
+                    instance.map = { ...(instance.map || {}), latitude: anchor.latitude, longitude: anchor.longitude };
+                    instance.modified = new Date().toISOString();
+                    writeJson(path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'plant-instances.json'), instanceData);
+                }
+            }
             sendJson(res, 200, anchor);
         });
         return true;

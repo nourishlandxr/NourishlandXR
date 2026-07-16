@@ -35,8 +35,19 @@ export async function renderExplorerProjects(app) {
     disableTargetReticle();
     try {
         const projects = (await loadProjects(true)).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong><span>Open visitor welcome</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
+        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationExperience('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong><span>Explore this location</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${escapeHtml(error.message)}`); }
+}
+
+export async function renderVisitorLocationExperience(app, encodedProjectId) {
+    stopGps();
+    disableTargetReticle();
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const project = (await loadProjects(true)).find(item => item.id === projectId);
+        if (!project) throw new Error('This location is not available to visitors.');
+        app.innerHTML = `<div class="screen location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">← Choose another location</button><p class="welcome-label">Visitor experience</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">Choose how you would like to explore.</p></div><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.startLocationAr('${encoded(project.id)}')"><strong>Explore with AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="window.renderFieldGuide('${encoded(project.id)}')"><strong>Field Guide</strong><span>Browse plants, places and stories without using AR.</span></button></section></div>`;
+    } catch (error) { app.innerHTML = errorScreen(`Location could not be opened: ${escapeHtml(error.message)}`); }
 }
 
 export async function renderVisitorLocationIntro(app, encodedProjectId, creatorPreview = false) {
@@ -185,6 +196,7 @@ export async function startLocationAr(encodedProjectId) {
         const plant = item.marker.plantId ? await getPlantById(item.marker.plantId, visitor) : null;
         return {
             ...item,
+            project,
             marker: { ...item.marker, name: plant?.commonName || item.marker.name, description: plant?.summary || item.marker.description },
             placement: reconstructGpsMarker(starting.anchor, currentPosition, item.anchor, heading.degrees)
         };
@@ -196,6 +208,7 @@ export async function startLocationAr(encodedProjectId) {
         placeId: starting.place.id,
         markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
         spatialMarkers: reconstructed,
+        creator,
         calibration: { startingPoint: starting.anchor, currentPosition, heading },
         status: {
             startingPoint: starting.marker.name,

@@ -6,7 +6,7 @@
 // this flow are persisted through the local workspace API. Naming and confirmation are handled through the WebXR
 // DOM Overlay, since text entry inside a WebGL canvas is not practical.
 
-import { createDemoMarker, createPlaceMarker, loadDemoMarkers, updateDemoMarker, updatePlaceMarker } from './persistence.js';
+import { createDemoMarker, createPlaceMarker, loadDemoMarkers, saveMarkerAnchor, updateDemoMarker, updatePlaceMarker } from './persistence.js';
 
 const TYPES = {
     plant: { title: 'Add Plant Marker', nameLabel: 'Marker Name', typeLabel: 'Plant Marker', addLabel: 'Add Information' },
@@ -101,6 +101,7 @@ let tempMarkerCounter = 0;
 let spatialMarkers = [];
 let reconstructedMarkers = [];
 let spatialMarkersInitialized = false;
+let spatialCreator = false;
 
 function updateGlobalArToggle(active) {
     const button = document.getElementById('globalArToggle');
@@ -457,23 +458,23 @@ function drawWelcomeNote() {
 function drawPinCanvas(context, label, placeholder, type = 'note') {
     context.clearRect(0, 0, 480, 220);
     const colour = markerColour(type, placeholder);
-    // Transparent canvas with a strong circular marker and a compact label.
+    context.fillStyle = 'rgba(16,30,22,.78)';
+    context.beginPath();
+    context.roundRect(35, 54, 410, 108, 24);
+    context.fill();
     context.fillStyle = colour;
     context.beginPath();
-    context.arc(240, 72, 54, 0, Math.PI * 2);
+    context.arc(82, 108, 25, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#ffffff';
-    context.lineWidth = 8;
-    context.stroke();
     context.fillStyle = '#ffffff';
-    context.font = '700 24px sans-serif';
+    context.font = '700 25px sans-serif';
     context.textAlign = 'center';
-    context.fillText(type === 'intro_checkpoint' ? 'INTRO' : type === 'sub_checkpoint' ? 'SUB' : type === 'plant' ? 'PLANT' : 'NOTE', 240, 80);
-    context.fillStyle = 'rgba(16,30,22,.88)';
-    context.fillRect(30, 142, 420, 68);
-    context.fillStyle = '#ffffff';
-    context.font = placeholder ? 'italic 28px sans-serif' : '700 29px sans-serif';
-    wrapText2(context, label, 240, 178, 390, 32, 1);
+    context.fillText(type === 'plant' ? '✿' : '•', 82, 117);
+    context.font = placeholder ? 'italic 27px sans-serif' : '700 28px sans-serif';
+    wrapText2(context, label, 270, 116, 315, 31, 1);
+    context.fillStyle = 'rgba(16,30,22,.78)';
+    context.beginPath();
+    context.moveTo(222, 162); context.lineTo(258, 162); context.lineTo(240, 205); context.closePath(); context.fill();
     context.textAlign = 'left';
 }
 
@@ -509,7 +510,7 @@ function initializeReconstructedMarkers(viewerPose) {
     spatialMarkersInitialized = true;
     const base = viewerPose.transform.position;
     const viewerMatrix = viewerPose.transform.matrix;
-    reconstructedMarkers = spatialMarkers.map(item => {
+    reconstructedMarkers = spatialMarkers.filter(item => Number(item.placement?.distance) <= 150).sort((a, b) => a.placement.distance - b.placement.distance).slice(0, 24).map(item => {
         const placement = item.placement;
         const distance = Math.round(Number(placement.distance));
         const uncertainty = Math.round(Number(placement.uncertainty));
@@ -520,11 +521,41 @@ function initializeReconstructedMarkers(viewerPose) {
         return {
             id: item.marker.id,
             marker: item.marker,
+            source: item,
             position: { x: worldX, y: base.y - 0.25, z: worldZ },
             matrix: translationMatrix(worldX, base.y - 0.25, worldZ),
             texture: makeFlagTexture(label, item.marker.type)
         };
     });
+}
+
+function reconstructedMarkerAt(rayMatrix) {
+    if (!rayMatrix) return null;
+    const origin = { x: rayMatrix[12], y: rayMatrix[13], z: rayMatrix[14] };
+    const direction = { x: -rayMatrix[8], y: -rayMatrix[9], z: -rayMatrix[10] };
+    return reconstructedMarkers.map(marker => {
+        const dx = marker.position.x - origin.x, dy = marker.position.y - origin.y, dz = marker.position.z - origin.z;
+        const along = dx * direction.x + dy * direction.y + dz * direction.z;
+        const perpendicular = Math.hypot(dx - direction.x * along, dy - direction.y * along, dz - direction.z * along);
+        return { marker, along, perpendicular };
+    }).filter(hit => hit.along > 0 && hit.perpendicular < Math.max(.45, hit.along * .035)).sort((a, b) => a.along - b.along)[0]?.marker || null;
+}
+
+function showSpatialMarkerActions(item) {
+    const marker = item.marker;
+    mode = 'spatial-marker';
+    modalCard.innerHTML = `<h2>${marker.name}</h2><p class="ar-modal-hint">${typeConfig(marker.type).typeLabel}</p><p>${marker.description || 'No description yet.'}</p><div class="ar-modal-actions ar-modal-actions-stack"><button type="button" class="primary" id="arSpatialView">${spatialCreator ? 'View' : 'Explore Plant'}</button>${spatialCreator ? '<button type="button" id="arSpatialEdit">Edit</button><button type="button" id="arSpatialPosition">Update Position</button>' : ''}<button type="button" id="arSpatialClose">Close</button></div><p id="arSpatialError" class="ar-modal-error"></p>`;
+    showModal();
+    const open = () => { exitAr(); window.renderExplorerMarker(item.source.project || {}, item.source.site, item.source.place, marker); };
+    document.getElementById('arSpatialView').addEventListener('click', open);
+    document.getElementById('arSpatialEdit')?.addEventListener('click', () => { exitAr(); window.renderFieldGuide(encodeURIComponent(activePersistenceContext.projectId), true).then(() => window.openFieldGuidePlant(encodeURIComponent(marker.plantInstanceId))); });
+    document.getElementById('arSpatialPosition')?.addEventListener('click', () => navigator.geolocation.getCurrentPosition(async position => {
+        try {
+            await saveMarkerAnchor(activePersistenceContext.projectId, item.source.site.id, item.source.place.id, marker.id, { type: 'gps', latitude: position.coords.latitude, longitude: position.coords.longitude, altitude: position.coords.altitude ?? '', accuracy: position.coords.accuracy, captured_at: new Date(position.timestamp).toISOString() });
+            document.getElementById('arSpatialError').textContent = 'Position updated.';
+        } catch (error) { document.getElementById('arSpatialError').textContent = error.message; }
+    }, error => { document.getElementById('arSpatialError').textContent = error.code === 1 ? 'Location permission was denied.' : 'Position is unavailable.'; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }));
+    document.getElementById('arSpatialClose').addEventListener('click', () => { hideModal(); mode = 'menu-placed'; });
 }
 
 function updateReconstructedBillboards(viewerPose) {
@@ -1123,6 +1154,7 @@ export async function startArNote(_marker, profile, locationContext = null) {
     activeLocationStatus = locationContext?.status || { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
     suppliedLocationMarkers = Array.isArray(locationContext?.markers) ? locationContext.markers : null;
     spatialMarkers = Array.isArray(locationContext?.spatialMarkers) ? locationContext.spatialMarkers : [];
+    spatialCreator = Boolean(locationContext?.creator);
     reconstructedMarkers = [];
     spatialMarkersInitialized = false;
     activePersistenceContext = locationContext?.projectId ? {
@@ -1212,7 +1244,9 @@ export async function startArNote(_marker, profile, locationContext = null) {
             if (mode === 'menu-placed') {
                 window.clearTimeout(placementMessageTimer);
                 const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, refSpace);
-                handleMenuSelect(rayPose);
+                const spatial = reconstructedMarkerAt(rayPose?.transform.matrix);
+                if (spatial) showSpatialMarkerActions(spatial);
+                else handleMenuSelect(rayPose);
             }
         });
         session.addEventListener('end', () => {
@@ -1304,4 +1338,3 @@ export function exitAr() {
     hideModal();
     if (session) session.end();
 }
-
