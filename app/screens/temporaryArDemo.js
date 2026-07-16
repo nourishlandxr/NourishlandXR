@@ -8,10 +8,21 @@ const SAMPLE = {
 
 let demoSession = null;
 let demoApp = null;
+let demoCanvas = null;
+let demoGl = null;
+let finishingDemo = false;
+
+function removeDemoCanvas() {
+    demoCanvas?.remove();
+    demoCanvas = null;
+    demoGl = null;
+}
 
 function finishDemo() {
     const session = demoSession;
+    finishingDemo = true;
     demoSession = null;
+    removeDemoCanvas();
     if (session) session.end().catch(() => {});
     window.renderLaunchScreen();
 }
@@ -46,10 +57,42 @@ async function tryImmersiveDemo() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
-        demoSession = await navigator.xr.requestSession('immersive-ar', { optionalFeatures: ['dom-overlay'], domOverlay: { root: document.body } });
-        demoSession.addEventListener('end', () => { demoSession = null; });
+        const session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['dom-overlay'], optionalFeatures: ['local-floor'], domOverlay: { root: document.body } });
+        demoSession = session;
+        demoCanvas = document.createElement('canvas');
+        demoCanvas.className = 'temporary-demo-xr-canvas';
+        document.body.append(demoCanvas);
+        const gl = demoCanvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
+        if (!gl) throw new Error('WebGL is unavailable.');
+        await gl.makeXRCompatible();
+        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true }), depthNear: 0.01, depthFar: 50 });
+        try { await session.requestReferenceSpace('local-floor'); } catch { await session.requestReferenceSpace('local'); }
+        demoGl = gl;
+        finishingDemo = false;
+        const draw = (_time, frame) => {
+            if (frame.session !== demoSession || !demoGl) return;
+            frame.session.requestAnimationFrame(draw);
+            const layer = frame.session.renderState.baseLayer;
+            demoGl.bindFramebuffer(demoGl.FRAMEBUFFER, layer.framebuffer);
+            demoGl.clearColor(0, 0, 0, 0);
+            demoGl.clearDepth(1);
+            demoGl.clear(demoGl.COLOR_BUFFER_BIT | demoGl.DEPTH_BUFFER_BIT);
+        };
+        session.requestAnimationFrame(draw);
+        session.addEventListener('end', () => {
+            demoSession = null;
+            removeDemoCanvas();
+            if (!finishingDemo) window.renderLaunchScreen();
+            finishingDemo = false;
+        });
         return true;
-    } catch { return false; }
+    } catch {
+        const session = demoSession;
+        demoSession = null;
+        removeDemoCanvas();
+        if (session) session.end().catch(() => {});
+        return false;
+    }
 }
 
 export async function startTemporaryArDemo(app) {

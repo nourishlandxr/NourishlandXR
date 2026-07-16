@@ -28,5 +28,8 @@ test('temporary AR demo is in-memory and supports placement, profile and exit', 
     assert.match(source, /View Plant Profile/);
     assert.match(source, /Finish Demo/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);
+    assert.match(source, /makeXRCompatible/);
+    assert.match(source, /new XRWebGLLayer/);
+    assert.match(source, /requestAnimationFrame\(draw\)/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
