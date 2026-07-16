@@ -2030,6 +2030,23 @@ body.ar-session-active::after {
     box-shadow: none;
 }
 
+.visitor-welcome-cover {
+    display: block;
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 22px;
+    border: 1px solid rgba(43, 78, 52, .18);
+}
+
+.visitor-welcome-copy {
+    display: grid;
+    gap: 14px;
+    font-size: 1rem;
+}
+
+.visitor-welcome-copy h2 { margin: 4px 0 0; }
+
 .latest-entry-list { display: grid; }
 
 .latest-entry-row {

@@ -1,5 +1,6 @@
 ﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
+import { createProjectSite, renameProjectOnDisk } from '../services/persistence.js';
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 
@@ -164,9 +165,10 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 directions: escapeHtml(startingPoint?.marker.directions || ''),
                 notice: startingConfigured ? '' : 'Setup incomplete: A Starting Point is required before the camera experience can be published.',
                 actions: [
+                    { label: 'Edit Visitor Welcome', action: `window.editVisitorWelcome('${encoded(project.id)}')` },
                     { label: startingPoint ? 'View Starting Point' : 'Set Starting Point', action: `window.openProjectStartingPoint('${encoded(project.id)}')` },
                     { label: 'Manage Starting Point', action: `window.editProjectStartingPoint('${encoded(project.id)}')` },
-                    { label: 'Preview visitor experience', action: `window.renderFieldGuide('${encoded(project.id)}')` }
+                    { label: 'Preview visitor experience', action: `window.renderVisitorLocationIntro('${encoded(project.id)}', true)` }
                 ]
             },
             addAction: { label: '+ Add to this location', description: 'Add a plant, place, story, note or starting point.', action: `window.renderAddToLocation('${encoded(project.id)}')` },
@@ -180,6 +182,40 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Location unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export async function renderVisitorWelcomeEditor(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const { project, startingPoint } = await projectContent(projectId);
+        const marker = startingPoint?.marker || {};
+        app.innerHTML = `<div class="screen visitor-welcome-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Creator</p><h1>Edit Visitor Welcome</h1><p class="subtitle">This is the introduction visitors see after choosing ${escapeHtml(project.name)}.</p></div><form class="panel" onsubmit="window.saveVisitorWelcome(event, '${encoded(project.id)}')"><div class="field"><label for="visitorWelcomeDescription">Location introduction</label><textarea id="visitorWelcomeDescription" rows="5" placeholder="Introduce the landscape and what visitors can discover.">${escapeHtml(project.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeCover">Optional cover image</label><input id="visitorWelcomeCover" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div><div class="field"><label for="visitorWelcomeHeading">Welcome-area heading</label><input id="visitorWelcomeHeading" value="${escapeHtml(marker.name || 'Welcome')}" required /></div><div class="field"><label for="visitorWelcomeText">Welcome message</label><textarea id="visitorWelcomeText" rows="5" placeholder="Welcome visitors and explain how to begin.">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeDirections">Arrival instructions</label><textarea id="visitorWelcomeDirections" rows="4" placeholder="Describe how to find the Starting Point.">${escapeHtml(marker.directions || '')}</textarea></div><div class="field"><label for="visitorWelcomeVisibility">Visitor visibility</label><select id="visitorWelcomeVisibility"><option value="public" ${marker.visibility === 'public' || !startingPoint ? 'selected' : ''}>Published — visible to visitors</option><option value="draft" ${startingPoint && marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft — creator only</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p class="meta">The precise GPS position, accuracy, facing direction and QR reference remain available under Manage Starting Point.</p><p id="visitorWelcomeError" class="meta"></p><div class="button-row"><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')">Manage Starting Point</button><button class="primary" type="submit">Save Visitor Welcome</button></div></form></div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Visitor Welcome unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export async function saveVisitorWelcome(event, encodedProjectId) {
+    event.preventDefault();
+    const projectId = decodeURIComponent(encodedProjectId);
+    const error = document.getElementById('visitorWelcomeError');
+    try {
+        const context = await projectContent(projectId);
+        await renameProjectOnDisk(projectId, { ...context.project, preserveId: true, name: context.project.name, description: document.getElementById('visitorWelcomeDescription').value.trim(), coverImage: document.getElementById('visitorWelcomeCover').value.trim() });
+        const visibility = document.getElementById('visitorWelcomeVisibility').value;
+        const site = context.site || await createProjectSite(projectId, { name: 'Main Area', description: 'Main visitor area.', visibility: 'draft' });
+        let place = context.startingPoint?.place || context.places[0] || null;
+        if (!place) place = await createSitePlace(projectId, site.id, { name: 'Visitor Welcome Area', type: 'Trail Stop', description: 'Where visitors begin the experience.', visibility });
+        const data = { type: 'intro_checkpoint', name: document.getElementById('visitorWelcomeHeading').value.trim(), description: document.getElementById('visitorWelcomeText').value.trim(), directions: document.getElementById('visitorWelcomeDirections').value.trim(), visibility };
+        if (context.startingPoint) await updatePlaceMarker(projectId, site.id, place.id, context.startingPoint.marker.id, data);
+        else {
+            const created = await createPlaceMarker(projectId, site.id, place.id, data);
+            await updatePlaceMarker(projectId, site.id, place.id, created.id, data);
+        }
+        await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
+    } catch (failure) {
+        if (error) error.textContent = `Save failed: ${failure.message}`;
     }
 }
 
@@ -288,7 +324,7 @@ export async function saveProjectStartingPoint(event, encodedProjectId) {
             savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);
             savedMarker = await updatePlaceMarker(projectId, context.site.id, place.id, savedMarker.id, data);
         }
-        await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : qrReference ? 'qr' : '', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
+        if (hasCoordinates || qrReference) await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : 'qr', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
         await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;

@@ -98,6 +98,9 @@ let pendingMarkerMatrix = null;
 let lastConfirmedMarker = null;
 let tempMarkers = []; // in-memory only, cleared on Reset / Exit AR / session end
 let tempMarkerCounter = 0;
+let spatialMarkers = [];
+let reconstructedMarkers = [];
+let spatialMarkersInitialized = false;
 
 function updateGlobalArToggle(active) {
     const button = document.getElementById('globalArToggle');
@@ -495,6 +498,44 @@ function makeFlagTexture(label, type) {
     const tex = gl.createTexture();
     uploadTexture(tex, flagCanvas);
     return tex;
+}
+
+function translationMatrix(x, y, z) {
+    return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+}
+
+function initializeReconstructedMarkers(viewerPose) {
+    if (spatialMarkersInitialized) return;
+    spatialMarkersInitialized = true;
+    const base = viewerPose.transform.position;
+    const viewerMatrix = viewerPose.transform.matrix;
+    reconstructedMarkers = spatialMarkers.map(item => {
+        const placement = item.placement;
+        const distance = Math.round(Number(placement.distance));
+        const uncertainty = Math.round(Number(placement.uncertainty));
+        const label = `${item.marker.name} · ${distance} m`;
+        reportArDiagnostic(`reconstructed ${item.marker.name}: ${distance} m at ${Math.round(placement.bearing)}°, uncertainty ±${uncertainty} m`);
+        const worldX = base.x + viewerMatrix[0] * placement.x + viewerMatrix[8] * placement.z;
+        const worldZ = base.z + viewerMatrix[2] * placement.x + viewerMatrix[10] * placement.z;
+        return {
+            id: item.marker.id,
+            marker: item.marker,
+            position: { x: worldX, y: base.y - 0.25, z: worldZ },
+            matrix: translationMatrix(worldX, base.y - 0.25, worldZ),
+            texture: makeFlagTexture(label, item.marker.type)
+        };
+    });
+}
+
+function updateReconstructedBillboards(viewerPose) {
+    const viewerMatrix = viewerPose.transform.matrix;
+    for (const marker of reconstructedMarkers) {
+        const matrix = new Float32Array(viewerMatrix);
+        matrix[12] = marker.position.x;
+        matrix[13] = marker.position.y;
+        matrix[14] = marker.position.z;
+        marker.matrix = matrix;
+    }
 }
 
 function refreshPendingPinTexture() {
@@ -1055,6 +1096,8 @@ function draw(_time, frame) {
     activeSession.requestAnimationFrame(draw);
     const viewerPose = frame.getViewerPose(refSpace);
     if (!viewerPose) return;
+    initializeReconstructedMarkers(viewerPose);
+    updateReconstructedBillboards(viewerPose);
     updateReticleAndStatus(frame, viewerPose);
     gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
     gl.colorMask(true, true, true, true);
@@ -1068,6 +1111,7 @@ function draw(_time, frame) {
         gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
         if (menuVisible && menuMatrix) drawOne(view, menuMatrix, texture, panelBuffer);
         if (pendingMarkerMatrix) drawOne(view, pendingMarkerMatrix, pendingPinTexture, flagBuffer);
+        for (const marker of reconstructedMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
         for (const marker of tempMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
     }
 }
@@ -1078,6 +1122,9 @@ export async function startArNote(_marker, profile, locationContext = null) {
     activeLocationName = locationContext?.locationName || 'Hillyards Food Forest';
     activeLocationStatus = locationContext?.status || { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
     suppliedLocationMarkers = Array.isArray(locationContext?.markers) ? locationContext.markers : null;
+    spatialMarkers = Array.isArray(locationContext?.spatialMarkers) ? locationContext.spatialMarkers : [];
+    reconstructedMarkers = [];
+    spatialMarkersInitialized = false;
     activePersistenceContext = locationContext?.projectId ? {
         projectId: locationContext.projectId,
         siteId: locationContext.siteId || '',
@@ -1114,6 +1161,7 @@ export async function startArNote(_marker, profile, locationContext = null) {
     try {
         persistedMarkers = suppliedLocationMarkers || await loadDemoMarkers(document.body.dataset.experienceRole === 'visitor');
         reportArDiagnostic(`marker preload result: loaded ${persistedMarkers.length} marker${persistedMarkers.length === 1 ? '' : 's'}`);
+        reportArDiagnostic(`GPS reconstruction input: ${spatialMarkers.length} saved spatial marker${spatialMarkers.length === 1 ? '' : 's'}`);
     } catch (error) {
         persistedMarkers = [];
         reportArDiagnostic('marker preload result: failed; continuing without persisted markers', error);
@@ -1186,7 +1234,11 @@ export async function startArNote(_marker, profile, locationContext = null) {
             pendingMarkerMatrix = null;
             lastConfirmedMarker = null;
             if (gl) tempMarkers.forEach(marker => gl.deleteTexture(marker.texture));
+            if (gl) reconstructedMarkers.forEach(marker => gl.deleteTexture(marker.texture));
             tempMarkers = [];
+            reconstructedMarkers = [];
+            spatialMarkers = [];
+            spatialMarkersInitialized = false;
             ignoreNextSelectAfterFallback = false;
             document.getElementById('arCanvas')?.remove();
             removeArOverlay();
@@ -1217,7 +1269,10 @@ export async function startArNote(_marker, profile, locationContext = null) {
 export function resetArPlacement() {
     window.clearTimeout(placementMessageTimer);
     if (gl) tempMarkers.forEach(marker => gl.deleteTexture(marker.texture));
+    if (gl) reconstructedMarkers.forEach(marker => gl.deleteTexture(marker.texture));
     tempMarkers = [];
+    reconstructedMarkers = [];
+    spatialMarkersInitialized = false;
     menuMatrix = null;
     toolboxMatrix = null;
     menuVisible = false;

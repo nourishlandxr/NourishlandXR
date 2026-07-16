@@ -95,6 +95,10 @@ export async function deleteSitePlace(projectId, siteId, placeId) {
     return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}`, { method: 'DELETE' });
 }
 
+export async function createSpatialPlant(projectId, siteId, placeId, plant) {
+    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/plants`, { method: 'POST', body: JSON.stringify(plant) });
+}
+
 const markerUrl = (projectId, siteId, placeId) => `${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/markers`;
 export async function loadPlaceMarkers(projectId, siteId, placeId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}${visitorQuery(visitor)}`); }
 export async function createPlaceMarker(projectId, siteId, placeId, marker) { return requestJson(markerUrl(projectId, siteId, placeId), { method: 'POST', body: JSON.stringify(marker) }); }

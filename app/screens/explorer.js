@@ -1,13 +1,16 @@
-import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
+import { loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
 import { exitAr, isArActive, resetArPlacement, startArNote } from '../services/arNote.js';
 import { disableTargetReticle, enableTargetReticle } from '../services/targetReticle.js';
 import { getHillyardsExplorerContext } from './v1Navigation.js';
-import { getResolvedPlantInstance } from '../services/plantDataService.js';
+import { getPlantById, getResolvedPlantInstance } from '../services/plantDataService.js';
+import { reconstructGpsMarker, requestAbsoluteHeading, requestCurrentGps } from '../services/spatialPositioning.js';
 
 let gpsWatchId = null;
 let gpsProject = null;
 let gpsApp = null;
 let gpsMarkers = [];
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const encoded = value => encodeURIComponent(String(value));
 
 function stopGps() { if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
 function haversine(lat1, lon1, lat2, lon2) { const r = 6371000, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2; return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
@@ -30,16 +33,37 @@ async function resolveMarkerPlant(marker, project, site) {
 export async function renderExplorerProjects(app) {
     stopGps();
     disableTargetReticle();
-    app.innerHTML = `<div class="screen explorer-entry"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose how you would like to explore.</h1></div><div class="role-grid visitor-mode-grid"><button class="menu-card role-card" onclick="window.renderXrProjects()"><strong>XR Explorer</strong><span>Immersive, location-based learning.</span></button><button class="menu-card role-card" onclick="window.renderFieldGuideProjects()"><strong>Field Guide</strong><span>Browse plants, maps and information.</span></button></div></div>`;
+    try {
+        const projects = (await loadProjects(true)).filter(project => !['plant-library', 'Banyula'].includes(project.id));
+        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong><span>Open visitor welcome</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
+    } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${escapeHtml(error.message)}`); }
+}
+
+export async function renderVisitorLocationIntro(app, encodedProjectId, creatorPreview = false) {
+    stopGps();
+    disableTargetReticle();
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const project = (await loadProjects(!creatorPreview)).find(item => item.id === projectId);
+        if (!project) throw new Error('This location is not available to visitors.');
+        const sites = await loadProjectSites(project.id, !creatorPreview);
+        const groups = await Promise.all(sites.map(async site => {
+            const places = await loadSitePlaces(project.id, site.id, !creatorPreview);
+            return Promise.all(places.map(async place => ({ site, place, markers: await loadPlaceMarkers(project.id, site.id, place.id, !creatorPreview) })));
+        }));
+        const entries = groups.flat().flatMap(group => group.markers.map(marker => ({ ...group, marker })));
+        const starting = entries.find(entry => entry.marker.type === 'intro_checkpoint');
+        const welcome = starting?.marker.description || project.description || `Welcome to ${project.name}.`;
+        const directions = starting?.marker.directions || '';
+        const cover = project.coverImage ? `<img class="visitor-welcome-cover" src="${escapeHtml(project.coverImage)}" alt="${escapeHtml(project.name)}" />` : '';
+        const backAction = creatorPreview ? `window.renderProjectDashboard('${encoded(project.id)}')` : 'window.renderV1Explorer()';
+        const guideAction = creatorPreview ? `window.renderFieldGuide('${encoded(project.id)}', true)` : `window.renderFieldGuide('${encoded(project.id)}')`;
+        app.innerHTML = `<div class="screen visitor-welcome location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="${backAction}">${creatorPreview ? '← Back to dashboard' : '← Choose another location'}</button><p class="welcome-label">${creatorPreview ? 'Visitor welcome preview' : 'Visitor welcome'}</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">${escapeHtml(starting?.marker.name || 'Explore this location')}</p></div>${cover}<section class="panel visitor-welcome-copy"><p>${escapeHtml(welcome)}</p>${directions ? `<h2>When you arrive</h2><p>${escapeHtml(directions)}</p>` : ''}</section><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.startLocationAr('${encoded(project.id)}')"><strong>Explore with AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="${guideAction}"><strong>Field Guide</strong><span>Browse plants, places and stories without using AR.</span></button></section></div>`;
+    } catch (error) { app.innerHTML = errorScreen(`Visitor welcome could not be loaded: ${escapeHtml(error.message)}`); }
 }
 
 export async function renderXrProjects(app) {
-    stopGps();
-    disableTargetReticle();
-    try {
-        const projects = (await loadProjects(true)).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-        app.innerHTML = `<div class="screen explorer-entry"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">Back</button><p class="welcome-label">XR Explorer</p><h1>Choose a location</h1><p class="subtitle">Immersive, location-based learning.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="${project.id === 'Hillyards' ? 'window.openHillyardsExplorer()' : `window.renderExplorerSites(${JSON.stringify(project)})`}"><strong>${project.name}</strong></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
-    } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${error.message}`); }
+    return renderExplorerProjects(app);
 }
 
 export async function renderHillyardsExplorer(app) {
@@ -80,7 +104,8 @@ export async function renderExplorerMarker(app, project, site, place, marker) {
     disableTargetReticle();
     try {
         if (marker.type === 'plant') {
-            const profile = await loadPlantProfile(project.id, site.id, place.id, marker.id, true);
+            let profile = {};
+            try { profile = await loadPlantProfile(project.id, site.id, place.id, marker.id, true); } catch { /* Linked plant-library records do not require a legacy profile file. */ }
             const resolved = await resolveMarkerPlant(marker, project, site);
             app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Back</button><h1>${resolved?.commonName || profile.common_name || marker.name}</h1><p class="subtitle">${resolved?.scientificName || profile.scientific_name || 'Scientific name not available'}</p></div><div class="panel"><h2>Description</h2><p>${resolved?.summary || marker.description || profile.overview || 'No description yet.'}</p>${resolved ? `<p class="meta">${resolved.placeId} · ${resolved.status || 'Status not entered'}</p>` : ''}</div><div class="panel"><button class="primary" onclick="window.renderExplorerPlantProfile(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Learn More</button></div><div id="arStatus" class="meta"></div></div>`;
             return;
@@ -93,7 +118,8 @@ export async function renderExplorerMarker(app, project, site, place, marker) {
 export async function renderExplorerPlantProfile(app, project, site, place, marker) {
     stopGps();
     try {
-        const profile = await loadPlantProfile(project.id, site.id, place.id, marker.id, true);
+        let profile = {};
+        try { profile = await loadPlantProfile(project.id, site.id, place.id, marker.id, true); } catch { /* Linked plant-library records do not require a legacy profile file. */ }
         const resolved = await resolveMarkerPlant(marker, project, site);
         const fields = resolved
             ? [['Scientific Name', resolved.scientificName], ['Cultivar', resolved.cultivar], ['Family', resolved.family], ['Origin', resolved.origin], ['Plant Type', resolved.plantType], ['Layer', resolved.layer], ['Uses', (resolved.uses || []).join(', ')], ['Propagation', (resolved.propagation || []).join(', ')], ['Local Status', resolved.status], ['Local Notes', resolved.localNotes], ['Overview', resolved.summary || profile.overview]]
@@ -126,38 +152,56 @@ export async function startWelcomeAr() {
 
 export async function startLocationAr(encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
-    const project = (await loadProjects()).find(item => item.id === projectId);
+    const creator = document.body.dataset.experienceRole === 'creator';
+    const visitor = !creator;
+    const headingPromise = (navigator.xr ? requestAbsoluteHeading() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    const positionPromise = (navigator.xr ? requestCurrentGps() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    const project = (await loadProjects(visitor)).find(item => item.id === projectId);
     if (!project) throw new Error('Location not found');
-    const sites = await loadProjectSites(project.id);
+    const sites = await loadProjectSites(project.id, visitor);
     const groups = await Promise.all(sites.map(async site => {
-        const places = await loadSitePlaces(project.id, site.id);
+        const places = await loadSitePlaces(project.id, site.id, visitor);
         return Promise.all(places.map(async place => ({
             project,
             site,
             place,
-            markers: await loadPlaceMarkers(project.id, site.id, place.id)
+            markers: await loadPlaceMarkers(project.id, site.id, place.id, visitor)
         })));
     }));
     const entries = groups.flat().flatMap(group => group.markers.map(marker => ({ ...group, marker })));
     entries.sort((left, right) => String(right.marker.modified || right.marker.created || '').localeCompare(String(left.marker.modified || left.marker.created || '')));
-    const starting = entries.find(entry => entry.marker.type === 'intro_checkpoint');
-    let startingAnchor = null;
-    if (starting) {
-        try { startingAnchor = await loadMarkerAnchor(project.id, starting.site.id, starting.place.id, starting.marker.id); }
-        catch { /* An incomplete Starting Point is valid. */ }
-    }
-    const target = groups.flat()[0] || null;
+    const gpsMarkers = await loadProjectGpsMarkers(project.id, visitor);
+    const starting = gpsMarkers.find(item => item.marker.type === 'intro_checkpoint');
+    if (!starting) throw new Error('A GPS Starting Point must be configured before AR can reconstruct saved markers.');
+    const [headingResult, positionResult] = await Promise.all([headingPromise, positionPromise]);
+    if (headingResult.error) throw headingResult.error;
+    if (positionResult.error) throw positionResult.error;
+    const heading = headingResult.value;
+    const currentPosition = positionResult.value;
+    const startDistance = reconstructGpsMarker(starting.anchor, starting.anchor, currentPosition, 0).distance;
+    const startTolerance = Math.max(25, (Number(starting.anchor.accuracy) || 0) + (Number(currentPosition.accuracy) || 0) * 2);
+    if (startDistance > startTolerance) throw new Error(`Move to the configured Starting Point before opening AR. You are approximately ${Math.round(startDistance)} m away.`);
+    const reconstructed = await Promise.all(gpsMarkers.filter(item => item.marker.type !== 'intro_checkpoint').map(async item => {
+        const plant = item.marker.plantId ? await getPlantById(item.marker.plantId, visitor) : null;
+        return {
+            ...item,
+            marker: { ...item.marker, name: plant?.commonName || item.marker.name, description: plant?.summary || item.marker.description },
+            placement: reconstructGpsMarker(starting.anchor, currentPosition, item.anchor, heading.degrees)
+        };
+    }));
     await startArNote(null, null, {
         projectId: project.id,
         locationName: project.name,
-        siteId: target?.site.id || '',
-        placeId: target?.place.id || '',
+        siteId: starting.site.id,
+        placeId: starting.place.id,
         markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
+        spatialMarkers: reconstructed,
+        calibration: { startingPoint: starting.anchor, currentPosition, heading },
         status: {
-            startingPoint: starting?.marker.name || 'Not configured',
-            accuracy: startingAnchor?.accuracy ? `${Math.round(Number(startingAnchor.accuracy))} m` : 'Not available',
+            startingPoint: starting.marker.name,
+            accuracy: starting.anchor.accuracy ? `${Math.round(Number(starting.anchor.accuracy))} m` : 'Not available',
             entries: `${entries.filter(entry => entry.marker.visibility === 'public').length} published · ${entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length} drafts`,
-            label: startingAnchor?.latitude && startingAnchor?.longitude ? 'Ready to preview' : 'Setup incomplete'
+            label: `GPS aligned · heading ${Math.round(heading.degrees)}°`
         }
     });
 }

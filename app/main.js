@@ -9,7 +9,7 @@ import { renderSiteMap } from './screens/siteMap.js';
 import { renderPlaceAssets } from './screens/placeAssets.js';
 import { renderAssetWorkspace, renderAssetGeneral } from './screens/assetWorkspace.js';
 import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from './components/v1Editors.js';
-import { exitAr, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
+import { exitAr, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
@@ -18,7 +18,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderLocationMap, renderNewLocationSetup, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, renderStartingPoints, savePlatformSetting, saveProjectStartingPoint } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderLocationMap, renderNewLocationSetup, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, renderStartingPoints, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
@@ -151,6 +151,8 @@ window.renderNewLocationSetup = projectId => renderNewLocationSetup(app, project
 window.renderAddToLocation = projectId => renderAddToLocation(app, projectId);
 window.renderLocationMap = projectId => renderLocationMap(app, projectId);
 window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
+window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
+window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
 window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
 window.savePlatformSetting = savePlatformSetting;
 window.addProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
@@ -188,12 +190,11 @@ window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, pla
 window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
-window.renderHillyardsFieldMarker = (type) => renderFieldMarker(app, { project: 'Hillyards', site: 'main_food_forest', type }).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
 window.renderLocationFieldMarker = async (projectId, type) => {
     const decodedProjectId = decodeURIComponent(projectId);
     const sites = await loadProjectSites(decodedProjectId);
     if (!sites.length) { window.alert('Add a site before creating location content.'); return; }
-    await renderFieldMarker(app, { project: decodedProjectId, site: sites[0].id, type, dashboardProjectId: decodedProjectId });
+    await renderFieldMarker(app, { project: decodedProjectId, site: '', place: '', type, dashboardProjectId: decodedProjectId });
 };
 window.renderPlaceForLocation = async (projectId) => {
     const decodedProjectId = decodeURIComponent(projectId);
@@ -211,6 +212,7 @@ window.startWelcomeAr = () => startWelcomeAr();
 window.startLocationAr = projectId => startLocationAr(projectId).catch(error => window.alert(`AR could not start: ${error.message}`));
 window.toggleGlobalAr = () => toggleGlobalAr();
 window.renderExplorerProjects = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
+window.renderVisitorLocationIntro = (projectId, creatorPreview = false) => { setExperienceRole(creatorPreview ? 'creator' : 'visitor'); return renderVisitorLocationIntro(app, projectId, creatorPreview); };
 window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
 window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
 window.renderFieldGuide = (projectId, creator = false) => { setExperienceRole(creator ? 'creator' : 'visitor'); return renderFieldGuide(app, projectId, creator); };
@@ -464,4 +466,3 @@ window.addEventListener('nxr:latest-entry-added', async () => {
 });
 
 bootstrap();
-

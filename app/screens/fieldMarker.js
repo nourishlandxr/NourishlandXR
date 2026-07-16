@@ -1,9 +1,10 @@
-import { createPlaceMarker, createSitePlace, loadProjects, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
+import { createPlaceMarker, createSpatialPlant, loadProjects, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
 
 let app;
 let projects = [];
 let sites = [];
-let selected = { project: '', site: '' };
+let places = [];
+let selected = { project: '', site: '', place: '' };
 let location;
 let markerType = 'plant';
 let hillyardsMode = false;
@@ -32,6 +33,10 @@ function draw() {
                     <select onchange="window.selectFieldSite(this.value)">${options(sites, selected.site, 'Site')}</select>
                 </div>
                 <div class="field">
+                    <label>Place</label>
+                    <select onchange="window.selectFieldPlace(this.value)">${options(places, selected.place, 'Place')}</select>
+                </div>
+                <div class="field">
                     <label>Marker Type</label>
                     <select id="fieldType" onchange="window.setFieldMarkerType(this.value)">
                         <option value="plant" ${plant ? 'selected' : ''}>Plant</option>
@@ -47,7 +52,8 @@ function draw() {
                     <label>${plant ? 'Description' : 'Text'}</label>
                     <textarea id="fieldDescription" rows="3"></textarea>
                 </div>
-                <p id="fieldLocation" class="meta">${location ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} · accuracy ${Math.round(location.accuracy)} m` : 'Location not captured.'}</p>
+                <div class="field"><label>Visibility</label><select id="fieldVisibility"><option value="public">Public — Visitor and Creator</option><option value="draft">Draft — Creator only</option><option value="hidden">Hidden</option></select></div>
+                <p id="fieldLocation" class="meta">${location ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} · accuracy ${Math.round(location.accuracy)} m` : plant ? 'Position optional. Add it now or update the plant later.' : 'Location not captured.'}</p>
                 <div class="button-row">
                     <button onclick="window.refreshFieldLocation()">Add current position</button>
                     <button class="primary" onclick="window.saveFieldMarker()">Save Entry</button>
@@ -58,29 +64,18 @@ function draw() {
     `;
 }
 
-async function getFieldPlace() {
-    const places = await loadSitePlaces(selected.project, selected.site);
-    let place = places.find(item => item.id === 'field_markers');
-    if (!place) {
-        place = await createSitePlace(selected.project, selected.site, {
-            name: 'Field Markers',
-            type: 'Operational Area',
-            description: 'Automatic storage area for markers created through the simplified field form.'
-        });
-    }
-    return place;
-}
-
 export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
+    location = null;
     projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     if (defaults) {
         hillyardsMode = true;
         dashboardProjectId = defaults.dashboardProjectId || '';
-        selected = { project: defaults.project || '', site: defaults.site || '' };
+        selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
         markerType = defaults.type === 'note' ? 'note' : 'plant';
         sites = selected.project ? await loadProjectSites(selected.project) : [];
+        places = selected.project && selected.site ? await loadSitePlaces(selected.project, selected.site) : [];
     } else {
         hillyardsMode = false;
         dashboardProjectId = '';
@@ -94,18 +89,20 @@ export function setFieldMarkerType(type) {
 }
 
 export async function selectFieldProject(id) {
-    selected = { project: id, site: '' };
+    selected = { project: id, site: '', place: '' };
     sites = id ? await loadProjectSites(id) : [];
+    places = [];
     draw();
 }
 
 export async function selectFieldSite(id) {
     selected.site = id;
+    selected.place = '';
+    places = id ? await loadSitePlaces(selected.project, id) : [];
     draw();
 }
 
-// Retained for compatibility with older callers; Place selection is no longer shown.
-export function selectFieldPlace() {}
+export function selectFieldPlace(id) { selected.place = id; draw(); }
 
 export function refreshFieldLocation() {
     const error = document.getElementById('fieldError');
@@ -132,24 +129,23 @@ export async function saveFieldMarker() {
     const description = document.getElementById('fieldDescription').value.trim();
     const scientific = document.getElementById('fieldScientific')?.value.trim();
 
-    if (!selected.project || !selected.site) { error.textContent = 'Select a Location and Site.'; return; }
+    if (!selected.project || !selected.site || !selected.place) { error.textContent = 'Select a Location, Site and Place.'; return; }
     if (!name || (type === 'plant' && !scientific) || (type === 'note' && !description)) {
         error.textContent = type === 'plant' ? 'Common Name and Scientific Name are required.' : 'Title and Text are required.';
         return;
     }
 
+    if (type === 'note' && (!location || !Number.isFinite(Number(location.latitude)) || !Number.isFinite(Number(location.longitude)))) { error.textContent = 'Capture a GPS position before saving a note.'; return; }
     try {
         error.textContent = 'Saving…';
-        const place = await getFieldPlace();
-        const marker = await createPlaceMarker(selected.project, selected.site, place.id, {
-            name,
-            type,
-            description,
-            anchor: location ? { type: 'gps', ...location } : { type: '', latitude: '', longitude: '', accuracy: '', description: '' },
-            plant_profile: type === 'plant' ? { common_name: name, scientific_name: scientific } : undefined
-        });
+        const place = places.find(item => item.id === selected.place);
+        const visibility = document.getElementById('fieldVisibility').value;
+        const marker = type === 'plant'
+            ? (await createSpatialPlant(selected.project, selected.site, selected.place, { commonName: name, scientificName: scientific, description, visibility, ...(location || {}) })).marker
+            : await createPlaceMarker(selected.project, selected.site, selected.place, { name, type, description, visibility, anchor: { type: 'gps', ...location } });
         const site = sites.find(item => item.id === selected.site);
-        window.renderAssetWorkspace(site, place, marker);
+        if (type === 'plant') window.renderFieldGuide(encodeURIComponent(selected.project), true);
+        else window.renderAssetWorkspace(site, place, marker);
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;
     }

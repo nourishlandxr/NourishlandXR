@@ -157,9 +157,9 @@ function validateProjectDirectory(projectDir) {
             JSON.parse(fs.readFileSync(path.join(placeDir, 'place.json'), 'utf8'));
             for (const marker of fs.readdirSync(path.join(placeDir, 'markers'), { withFileTypes: true }).filter(entry => entry.isDirectory())) {
                 const markerDir = path.join(placeDir, 'markers', marker.name);
-                if (!fs.existsSync(path.join(markerDir, 'marker.json')) || !fs.existsSync(path.join(markerDir, 'anchor.json'))) throw new Error(`Invalid marker: ${marker.name}`);
+                if (!fs.existsSync(path.join(markerDir, 'marker.json'))) throw new Error(`Invalid marker: ${marker.name}`);
                 JSON.parse(fs.readFileSync(path.join(markerDir, 'marker.json'), 'utf8'));
-                JSON.parse(fs.readFileSync(path.join(markerDir, 'anchor.json'), 'utf8'));
+                if (fs.existsSync(path.join(markerDir, 'anchor.json'))) JSON.parse(fs.readFileSync(path.join(markerDir, 'anchor.json'), 'utf8'));
                 if (fs.existsSync(path.join(markerDir, 'plant_profile.json'))) JSON.parse(fs.readFileSync(path.join(markerDir, 'plant_profile.json'), 'utf8'));
             }
         }
@@ -186,7 +186,7 @@ function normalizeVisibility(value, fallback = 'draft') {
     return visibility;
 }
 
-function isPublic(record) { return record?.visibility === 'public'; }
+function isPublic(record) { return Boolean(record) && !['draft', 'hidden'].includes(record.visibility); }
 function isVisitorRequest(url) { return url.searchParams.get('view') === 'visitor'; }
 
 function isPublicHierarchy(projectId, siteId = '', placeId = '') {
@@ -336,7 +336,7 @@ function renameProject(projectId, projectData) {
     }
 
     const name = String(projectData.name || '').trim();
-    const nextProjectId = toProjectId(name);
+    const nextProjectId = projectData.preserveId === true ? projectId : toProjectId(name);
     if (!nextProjectId) {
         throw new Error('Project name is required');
     }
@@ -351,9 +351,11 @@ function renameProject(projectId, projectData) {
     }
 
     const existing = readJson(path.join(nextDir, 'project.json'), {});
+    const storedProjectData = { ...projectData };
+    delete storedProjectData.preserveId;
     const renamed = {
         ...existing,
-        ...projectData,
+        ...storedProjectData,
         visibility: normalizeVisibility(projectData.visibility, existing.visibility || 'draft'),
         id: nextProjectId,
         name
@@ -489,9 +491,68 @@ function resolvePlantsForPlace(projectId, siteId, placeId, visitor = false) {
         const markerFile = instance.markerId ? path.join(getCanonicalSitePath(projectId, siteId), 'places', String(placeId).toLowerCase(), 'markers', instance.markerId, 'marker.json') : '';
         const marker = markerFile ? readJson(markerFile, null) : null;
         if (visitor && marker && !isPublic(marker)) continue;
-        plants.push({ ...plant, ...instance, instanceId: instance.id, plantId: plant.id, cultivar: instance.cultivarOverride || plant.cultivar || '', commonName: marker?.name || plant.commonName || '', scientificName: plant.scientificName || '', summary: marker?.description || plant.summary || '' });
+        plants.push({ ...instance, ...plant, instanceId: instance.id, plantId: plant.id, markerId: instance.markerId || '', cultivar: instance.cultivarOverride || plant.cultivar || '', commonName: plant.commonName || '', scientificName: plant.scientificName || '', summary: plant.summary || '' });
     }
     return { version: 1, plants, warnings };
+}
+
+function createSpatialPlant(projectId, siteId, placeId, data) {
+    assertSafeId(projectId, 'project id');
+    assertSafeId(siteId, 'site id');
+    assertSafeId(placeId, 'place id');
+    const placeDir = path.join(getCanonicalSitePath(projectId, siteId), 'places', placeId);
+    if (!fs.existsSync(path.join(placeDir, 'place.json'))) throw new Error('Place not found');
+    const commonName = String(data.commonName || '').trim();
+    const scientificName = String(data.scientificName || '').trim();
+    const summary = String(data.description || data.summary || '').trim();
+    if (!commonName || !scientificName) throw new Error('Common Name and Scientific Name are required');
+    const hasAnyPosition = [data.latitude, data.longitude, data.accuracy].some(value => value !== undefined && value !== null && value !== '');
+    const latitude = hasAnyPosition ? Number(data.latitude) : null;
+    const longitude = hasAnyPosition ? Number(data.longitude) : null;
+    const accuracy = hasAnyPosition ? Number(data.accuracy) : null;
+    if (hasAnyPosition && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) throw new Error('Latitude must be between -90 and 90');
+    if (hasAnyPosition && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) throw new Error('Longitude must be between -180 and 180');
+    if (hasAnyPosition && (!Number.isFinite(accuracy) || accuracy < 0)) throw new Error('GPS accuracy is required when a position is supplied');
+    const visibility = normalizeVisibility(data.visibility);
+    const libraryFile = path.join(workspaceDir, 'plant-library', 'plants.json');
+    const instancesFile = path.join(getCanonicalSitePath(projectId, siteId), 'plant-instances.json');
+    const libraryExisted = fs.existsSync(libraryFile);
+    const instancesExisted = fs.existsSync(instancesFile);
+    const library = loadPlantRegistryData().data;
+    const instanceData = loadPlantInstanceData(projectId, siteId).data;
+    const plantBaseId = toPlantId(data.plantId || scientificName || commonName) || 'plant';
+    let plantId = plantBaseId, plantSuffix = 2;
+    while (library.plants.some(plant => plant.id === plantId)) plantId = `${plantBaseId}-${plantSuffix++}`;
+    const markerBaseId = toProjectId(data.markerId || commonName) || 'plant_marker';
+    let markerId = markerBaseId, markerSuffix = 2;
+    const markersDir = path.join(placeDir, 'markers');
+    while (fs.existsSync(path.join(markersDir, markerId))) markerId = `${markerBaseId}_${markerSuffix++}`;
+    const instanceBaseId = toPlantId(`${projectId}-${siteId}-${placeId}-${plantId}`) || 'plant-instance';
+    let instanceId = instanceBaseId, instanceSuffix = 2;
+    while (instanceData.instances.some(instance => instance.id === instanceId)) instanceId = `${instanceBaseId}-${instanceSuffix++}`;
+    const now = new Date().toISOString();
+    const plant = { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', visibility, created: now, modified: now };
+    const instance = { id: instanceId, plantId, placeId, zoneId: '', markerId, cultivarOverride: '', status: data.status || '', plantingDate: '', localNotes: '', map: { latitude, longitude, x: null, y: null }, visibility, created: now, modified: now };
+    const marker = { id: markerId, type: 'plant', name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
+    const anchor = hasAnyPosition ? { type: 'gps', latitude, longitude, altitude: data.altitude ?? '', accuracy, captured_at: data.captured_at || now, qr_code: '', description: '', created: now, modified: now } : null;
+    const markerDir = path.join(markersDir, markerId);
+    try {
+        library.plants.push(plant);
+        instanceData.instances.push(instance);
+        writeJson(libraryFile, library);
+        writeJson(instancesFile, instanceData);
+        fs.mkdirSync(markerDir, { recursive: false });
+        writeJson(path.join(markerDir, 'marker.json'), marker);
+        if (anchor) writeJson(path.join(markerDir, 'anchor.json'), anchor);
+        return { plant, instance, marker, anchor, projectId, siteId, placeId };
+    } catch (error) {
+        fs.rmSync(markerDir, { recursive: true, force: true });
+        if (libraryExisted) writeJson(libraryFile, { ...library, plants: library.plants.filter(item => item.id !== plantId) });
+        else fs.rmSync(libraryFile, { force: true });
+        if (instancesExisted) writeJson(instancesFile, { ...instanceData, instances: instanceData.instances.filter(item => item.id !== instanceId) });
+        else fs.rmSync(instancesFile, { force: true });
+        throw error;
+    }
 }
 
 function handleApi(req, res) {
@@ -663,6 +724,16 @@ function handleApi(req, res) {
     }
 
     const placePlantsMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sites\/([^/]+)\/places\/([^/]+)\/plants$/);
+    if (placePlantsMatch && req.method === 'POST') {
+        readRequestJson(req, (error, data) => {
+            if (error) return sendJson(res, 400, { error: error.message });
+            try {
+                const [ , projectId, siteId, placeId ] = placePlantsMatch;
+                sendJson(res, 201, createSpatialPlant(decodeURIComponent(projectId), decodeURIComponent(siteId), decodeURIComponent(placeId), data));
+            } catch (failure) { sendJson(res, 400, { error: failure.message }); }
+        });
+        return true;
+    }
     if (placePlantsMatch && req.method === 'GET') {
         const projectId = decodeURIComponent(placePlantsMatch[1]);
         const siteId = decodeURIComponent(placePlantsMatch[2]);
@@ -832,6 +903,7 @@ function handleApi(req, res) {
         const projectId = decodeURIComponent(gpsMarkersMatch[1]);
         if (visitor && !isPublicHierarchy(projectId)) return sendJson(res, 200, []);
         const markers = [];
+        const plantsById = new Map(loadPlantRegistryData().data.plants.filter(plant => !visitor || isPublic(plant)).map(plant => [plant.id, plant]));
         for (const site of listProjectSites(projectId, visitor)) {
             const placesDir = path.join(getCanonicalSitePath(projectId, site.id), 'places');
             if (!fs.existsSync(placesDir)) continue;
@@ -844,7 +916,11 @@ function handleApi(req, res) {
                     const markerDir = path.join(markersDir, markerEntry.name);
                     const marker = readJson(path.join(markerDir, 'marker.json'), null);
                     const anchor = readJson(path.join(markerDir, 'anchor.json'), null);
-                    if (marker && (!visitor || isPublic(marker)) && anchor?.type === 'gps') markers.push({ marker, anchor, site: { id: site.id, name: site.name }, place: { id: place.id || placeEntry.name, name: place.name } });
+                    if (marker && (!visitor || isPublic(marker)) && anchor?.type === 'gps') {
+                        const plant = marker.plantId ? plantsById.get(marker.plantId) : null;
+                        const resolvedMarker = plant ? { ...marker, name: plant.commonName || marker.name, description: plant.summary || '' } : marker;
+                        markers.push({ marker: resolvedMarker, anchor, site: { id: site.id, name: site.name }, place: { id: place.id || placeEntry.name, name: place.name } });
+                    }
                 }
             }
         }
@@ -999,8 +1075,10 @@ function handleApi(req, res) {
                 const now = new Date().toISOString();
                 const marker = { id: markerId, type, name: data.name.trim(), description: data.description || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
-                const anchor = { ...(data.anchor || { type: '', latitude: '', longitude: '', altitude: '', qr_code: '', description: '' }), created: data.anchor?.created || now, modified: now };
-                writeJson(path.join(markerDir, 'anchor.json'), anchor);
+                if (['gps', 'qr'].includes(String(data.anchor?.type || '').toLowerCase())) {
+                    const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };
+                    writeJson(path.join(markerDir, 'anchor.json'), anchor);
+                }
                 if (type === 'plant') writeJson(path.join(markerDir, 'plant_profile.json'), { common_name: '', scientific_name: '', overview: '', identification: '', edible_uses: '', propagation: '', growing_conditions: '', notes: '', references: '', ...(data.plant_profile || {}) });
                 sendJson(res, 201, marker);
             } catch (error) { sendJson(res, 400, { error: error.message }); }
@@ -1050,8 +1128,9 @@ function handleApi(req, res) {
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
             const [ , projectId, siteId, placeId, markerId ] = anchorMatch;
-            const anchorFile = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId), 'anchor.json');
-            if (!fs.existsSync(anchorFile)) return sendJson(res, 404, { error: 'Anchor not found' });
+            const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
+            const anchorFile = path.join(markerDir, 'anchor.json');
+            if (!fs.existsSync(path.join(markerDir, 'marker.json'))) return sendJson(res, 404, { error: 'Marker not found' });
             const data = JSON.parse(body || '{}');
             const type = String(data.type || '').toLowerCase();
             if (!['gps', 'qr'].includes(type)) return sendJson(res, 400, { error: 'Anchor type must be GPS or QR' });
