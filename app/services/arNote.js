@@ -599,7 +599,7 @@ function createArOverlay() {
     dashboardRail.id = 'arDashboardRail';
     dashboardRail.setAttribute('aria-label', 'Dashboard menu');
     dashboardRail.innerHTML = `
-        <button type="button" data-panel="Logs"><b>LOG</b><span>Logs</span></button>
+        <button type="button" data-panel="About This Experience"><b>INFO</b><span>About</span></button>
         <button type="button" data-panel="Settings"><b>SET</b><span>Settings</span></button>
         <button type="button" data-panel="Account"><b>ACC</b><span>Account</span></button>`;
     dashboardRail.addEventListener('beforexrselect', event => event.preventDefault());

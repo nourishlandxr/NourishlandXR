@@ -1,4 +1,4 @@
-import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
+import { loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
 import { exitAr, isArActive, resetArPlacement, startArNote } from '../services/arNote.js';
 import { disableTargetReticle, enableTargetReticle } from '../services/targetReticle.js';
 import { getHillyardsExplorerContext } from './v1Navigation.js';
@@ -71,7 +71,7 @@ export async function renderExplorerMarkers(app, project, site, place) {
     stopGps();
     try {
         const markers = await loadPlaceMarkers(project.id, site.id, place.id, true);
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Back</button><h1>${place.name}</h1><p class="subtitle">Choose a marker.</p></div>${markers.length ? markers.map(marker => `<div class="panel" data-target-marker="${marker.name}"><div class="list-item"><div><strong>${marker.name}</strong><p>${marker.type === 'plant' ? 'Plant' : 'Note'}</p></div><button onclick="window.renderExplorerMarker(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No markers are available.</p></div>'}</div>`; enableTargetReticle();
+        app.innerHTML = `<div class="screen location-selected" data-location-id="${place.id}"><div class="page-header"><button class="ghost" onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Back</button><h1>${place.name}</h1><p class="subtitle">Choose a marker.</p></div>${markers.length ? markers.map(marker => `<div class="panel" data-target-marker="${marker.name}"><div class="list-item"><div><strong>${marker.name}</strong><p>${marker.type === 'plant' ? 'Plant' : 'Note'}</p></div><button onclick="window.renderExplorerMarker(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No markers are available.</p></div>'}<div class="panel hint"><p>Select <strong>Start AR</strong> to open the initial spatial dashboard for this location.</p></div></div>`; enableTargetReticle();
     } catch (error) { app.innerHTML = errorScreen(`Marker data could not be loaded: ${error.message}`); }
 }
 
@@ -79,52 +79,16 @@ export async function renderExplorerMarker(app, project, site, place, marker) {
     stopGps();
     disableTargetReticle();
     try {
-        const anchor = await loadMarkerAnchor(project.id, site.id, place.id, marker.id, true);
-        const arAction = `<p id="arCapabilityStatus" class="meta">Use the floating Start AR button to enter AR mode.</p>`;
         if (marker.type === 'plant') {
             const profile = await loadPlantProfile(project.id, site.id, place.id, marker.id, true);
             const resolved = await resolveMarkerPlant(marker, project, site);
-            app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Back</button><h1>${resolved?.commonName || profile.common_name || marker.name}</h1><p class="subtitle">${resolved?.scientificName || profile.scientific_name || 'Scientific name not available'}</p></div><div class="panel"><h2>Description</h2><p>${resolved?.summary || marker.description || profile.overview || 'No description yet.'}</p>${resolved ? `<p class="meta">${resolved.placeId} · ${resolved.status || 'Status not entered'}</p>` : ''}</div><div class="panel"><button class="primary" onclick="window.renderExplorerPlantProfile(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Learn More</button>${arAction}</div><div id="arStatus" class="meta"></div></div>`;
-            updateArCapabilityUi();
+            app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Back</button><h1>${resolved?.commonName || profile.common_name || marker.name}</h1><p class="subtitle">${resolved?.scientificName || profile.scientific_name || 'Scientific name not available'}</p></div><div class="panel"><h2>Description</h2><p>${resolved?.summary || marker.description || profile.overview || 'No description yet.'}</p>${resolved ? `<p class="meta">${resolved.placeId} · ${resolved.status || 'Status not entered'}</p>` : ''}</div><div class="panel"><button class="primary" onclick="window.renderExplorerPlantProfile(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Learn More</button></div><div id="arStatus" class="meta"></div></div>`;
             return;
         }
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Back</button><h1>${marker.name}</h1><p class="subtitle">Note</p></div><div class="panel"><p>${marker.description || 'No note text yet.'}</p>${arAction}</div><div id="arStatus" class="meta"></div></div>`;
-        updateArCapabilityUi();
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Back</button><h1>${marker.name}</h1><p class="subtitle">Note</p></div><div class="panel"><p>${marker.description || 'No note text yet.'}</p></div><div id="arStatus" class="meta"></div></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Marker data could not be loaded: ${error.message}`); }
 }
 
-
-async function updateArCapabilityUi() {
-    const status = document.getElementById('arCapabilityStatus');
-    const button = document.getElementById('startArButton');
-    if (!status || !button) return;
-
-    if (!window.isSecureContext) {
-        status.textContent = 'AR unavailable: this page is not running in a secure HTTPS context.';
-        button.disabled = true;
-        return;
-    }
-
-    if (!navigator.xr) {
-        status.textContent = 'AR unavailable: WebXR is not exposed by this browser.';
-        button.disabled = true;
-        return;
-    }
-
-    try {
-        const supported = await navigator.xr.isSessionSupported('immersive-ar');
-        if (supported) {
-            status.textContent = 'AR available on this device.';
-            button.disabled = false;
-        } else {
-            status.textContent = 'AR unavailable: immersive-ar is not supported on this device or browser.';
-            button.disabled = true;
-        }
-    } catch (error) {
-        status.textContent = `AR support check failed: ${error.message}`;
-        button.disabled = true;
-    }
-}
 
 export async function renderExplorerPlantProfile(app, project, site, place, marker) {
     stopGps();

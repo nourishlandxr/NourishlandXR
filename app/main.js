@@ -18,12 +18,13 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { openProjectEntry, openProjectStartingPoint, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, saveProjectStartingPoint } from './screens/projectDashboard.js';
+import { applyPlatformSettings, openProjectEntry, openProjectStartingPoint, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, savePlatformSetting, saveProjectStartingPoint } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
 const app = document.getElementById('app');
 const siteManager = new SiteManager();
+applyPlatformSettings();
 const setExperienceRole = role => {
     document.body.dataset.experienceRole = role;
     queueMicrotask(syncCreatorTestingWarning);
@@ -141,7 +142,8 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
-window.renderPlatformComingSoon = feature => renderPlatformComingSoon(app, feature);
+window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
+window.savePlatformSetting = savePlatformSetting;
 window.addProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
 window.editProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
 window.saveProjectStartingPoint = (event, projectId) => saveProjectStartingPoint(event, projectId);

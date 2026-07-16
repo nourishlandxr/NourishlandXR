@@ -12,6 +12,33 @@ const PROJECT_NAMES = {
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
 const markerTypeLabel = type => ({ plant: 'Plant Marker', note: 'Custom Note', intro_checkpoint: 'Starting Point', sub_checkpoint: 'Sub Checkpoint' })[type] || 'Marker';
+const SETTINGS_KEY = 'nourishland-xr-settings';
+const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true };
+
+export function readPlatformSettings() {
+    try {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+    } catch {
+        return { ...DEFAULT_SETTINGS };
+    }
+}
+
+export function applyPlatformSettings(settings = readPlatformSettings()) {
+    document.body.dataset.textSize = settings.textSize;
+    document.body.dataset.visualQuality = settings.visualQuality;
+    document.body.dataset.language = settings.language;
+    document.body.dataset.hints = settings.hints ? 'on' : 'off';
+    document.querySelectorAll('audio, video').forEach(media => {
+        media.muted = !settings.sound;
+        media.volume = Math.max(0, Math.min(1, Number(settings.volume) / 100));
+    });
+}
+
+export function savePlatformSetting(name, value) {
+    const settings = { ...readPlatformSettings(), [name]: value };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    applyPlatformSettings(settings);
+}
 
 async function projectById(projectId) {
     const project = (await loadProjects()).find(item => item.id === projectId);
@@ -45,19 +72,34 @@ export async function renderPlatformHome(app) {
             <div class="menu-stack project-selection-list">${cards || '<div class="panel"><p>No projects are available.</p></div>'}<button class="menu-card create-project-action" onclick="window.renderProjectForm()"><strong>Create a new project...</strong></button></div>
         </section>
         <nav class="platform-global-nav platform-utility-nav" aria-label="Platform utilities">
-            <button class="menu-card" onclick="window.renderPlatformComingSoon('Logs')"><strong>Logs</strong><span>Platform activity</span></button>
+            <button class="menu-card" onclick="window.renderPlatformComingSoon('About This Experience')"><strong>About This Experience</strong><span>How Nourishland XR works</span></button>
             <button class="menu-card" onclick="window.renderPlatformComingSoon('Settings')"><strong>Settings</strong><span>Platform preferences</span></button>
             <button class="menu-card" onclick="window.renderPlatformComingSoon('Account')"><strong>Account</strong><span>Local demonstration account</span></button>
         </nav>
     </div>`;
 }
 
-export function renderPlatformComingSoon(app, feature) {
+export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
+    const backAction = returnTo === 'launch' ? 'window.renderLaunchScreen()' : 'window.renderDemoProjects()';
     if (feature === 'Settings') {
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Settings</h1><p class="subtitle">Platform preferences</p></div><div class="panel"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div></div>`;
+        const settings = readPlatformSettings();
+        app.innerHTML = `<div class="screen settings-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Settings</h1><p class="subtitle">Adjust the experience for this device.</p></div>
+            <div class="panel settings-list">
+                <div class="setting-row"><div><strong>Sound</strong><p>Turn experience audio on or off.</p></div><label class="toggle-label"><input type="checkbox" ${settings.sound ? 'checked' : ''} onchange="window.savePlatformSetting('sound', this.checked)"><span>On</span></label></div>
+                <div class="setting-row setting-range"><label for="settingsVolume"><strong>Volume</strong></label><div><input id="settingsVolume" type="range" min="0" max="100" step="5" value="${Number(settings.volume)}" oninput="document.getElementById('settingsVolumeValue').textContent = this.value + '%'; window.savePlatformSetting('volume', Number(this.value))"><output id="settingsVolumeValue" for="settingsVolume">${Number(settings.volume)}%</output></div></div>
+                <div class="setting-row"><label for="settingsTextSize"><strong>Text size</strong></label><select id="settingsTextSize" onchange="window.savePlatformSetting('textSize', this.value)"><option value="small" ${settings.textSize === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${settings.textSize === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${settings.textSize === 'large' ? 'selected' : ''}>Large</option></select></div>
+                <div class="setting-row"><div><strong>Visual quality</strong><p>Balanced automatically for this device.</p></div><span class="setting-value">Automatic</span></div>
+                <div class="setting-row"><label for="settingsLanguage"><strong>Language</strong></label><select id="settingsLanguage" onchange="window.savePlatformSetting('language', this.value)"><option value="en" selected>English</option></select></div>
+                <div class="setting-row"><div><strong>Hints and instructions</strong><p>Show guidance while creating and exploring.</p></div><label class="toggle-label"><input type="checkbox" ${settings.hints ? 'checked' : ''} onchange="window.savePlatformSetting('hints', this.checked)"><span>On</span></label></div>
+            </div>
+            <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div></div>`;
         return;
     }
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>${escapeHtml(feature)}</h1><p class="subtitle">Coming Soon</p></div><div class="panel"><h2>Platform function</h2><p>${escapeHtml(feature)} will remain available from Home and every project dashboard.</p></div></div>`;
+    if (feature === 'About This Experience') {
+        app.innerHTML = `<div class="screen about-experience"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><p class="welcome-label">Nourishland XR · Demo v0.8</p><h1>About This Experience</h1><p class="subtitle">Observe. Explore. Learn in place.</p></div><div class="panel guide"><p><strong>Nourishland XR</strong> turns gardens and landscapes into interactive learning experiences. It connects plants, stories, observations and natural relationships to the real places where they can be discovered.</p><h2>How it works</h2><ol><li><strong>Choose your path.</strong> Create an experience or explore a place.</li><li><strong>Select a place.</strong> Open a garden, food forest, farm or other mapped landscape.</li><li><strong>Learn in context.</strong> Discover markers, plant profiles and stories using Explorer or the Field Guide.</li><li><strong>Use AR at a location.</strong> When a location is selected, Start AR opens the initial spatial dashboard.</li></ol></div><div class="panel"><h2>Demo note</h2><p>This is a V1 Lite release candidate. Some authoring, publishing and device capabilities will continue to evolve.</p></div></div>`;
+        return;
+    }
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>${escapeHtml(feature)}</h1><p class="subtitle">Coming Soon</p></div><div class="panel"><h2>Platform function</h2><p>${escapeHtml(feature)} will remain available from Home and every project dashboard.</p></div></div>`;
 }
 
 export async function renderProjectDashboard(app, encodedProjectId) {
@@ -84,7 +126,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             ],
             latestEntries,
             sideActions: [
-                { label: 'Logs', meta: 'LOG', action: "window.renderPlatformComingSoon('Logs')" },
+                { label: 'About This Experience', meta: 'INFO', action: "window.renderPlatformComingSoon('About This Experience')" },
                 { label: 'Settings', meta: 'SET', action: "window.renderPlatformComingSoon('Settings')" },
                 { label: 'Account', meta: 'ACC', action: "window.renderPlatformComingSoon('Account')" }
             ]

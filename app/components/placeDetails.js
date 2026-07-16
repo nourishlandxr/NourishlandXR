@@ -19,7 +19,7 @@ export function renderPlaceDetails(site, place) {
         : '<div class="panel"><p>No assets yet.</p></div>';
 
     return `
-    <div class="screen">
+    <div class="screen location-selected" data-location-id="${place.id}">
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteLocations(${JSON.stringify(site)})">Back</button>
             <h1>${place.name}</h1>
