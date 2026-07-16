@@ -1582,7 +1582,7 @@ body.ar-session-active::after {
 .intro-launch .intro-heading h1 span { margin-left: .18em; color: #477243; font-size: .58em; vertical-align: top; }
 .intro-launch .intro-heading .subtitle { margin: 7px 0 0; color: #27382b; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; }
 .launch-brand-art { flex: 0 0 auto; width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 9px 18px rgba(27, 53, 29, .16)); }
-.intro-launch .intro-copy { min-height: 0; padding: clamp(30px, 6vw, 70px); border: 1px solid #d8dfd3; border-radius: 4px; background: #fbfcf7; box-shadow: none; }
+.intro-launch .intro-copy { min-height: 0; padding: clamp(18px, 4vw, 38px) 4px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .intro-launch .intro-copy h2 { position: relative; z-index: 1; max-width: 720px; margin-bottom: 20px; color: #101811; font-size: clamp(2.55rem, 7vw, 5.7rem); font-weight: 900; letter-spacing: -.055em; line-height: .88; }
 .intro-launch .intro-copy p { position: relative; z-index: 1; max-width: 610px; color: #354238; font-size: 1rem; }
 .intro-launch .intro-copy p + p { margin-top: 18px; }
@@ -1612,12 +1612,19 @@ body.ar-session-active::after {
 .temporary-launcher-preview > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; color: #fff; background: #416d42; font-size: 1.5rem; }
 .temporary-launcher-preview div { display: grid; gap: 3px; }
 .temporary-launcher-preview small { color: #5a675d; font-style: italic; }
+.tutorial-fade-in { animation: tutorial-fade-in .45s ease-out; }
+.temporary-dashboard-menu, .temporary-plant-choices { display: grid; gap: 10px; margin: 20px 0; }
+.temporary-dashboard-menu button, .temporary-plant-choices button { display: grid; gap: 4px; justify-items: start; min-height: 68px; padding: 14px 18px; border: 1px solid #c4d4c1; border-radius: 14px; text-align: left; background: #edf4e9; }
+.temporary-dashboard-menu button:disabled { opacity: .5; }
+.temporary-dashboard-menu button span, .temporary-plant-choices button span { color: #59675d; font-size: .78rem; }
+.tutorial-success { padding: 12px 14px; border-left: 4px solid #4b814d; border-radius: 5px; background: #e8f3e3; }
 @keyframes temporary-window-in { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes tutorial-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 600px) {
     .intro-launch .intro-heading { gap: 12px; }
     .launch-brand-art { width: 78px; height: 78px; }
-    .intro-launch .intro-copy { min-height: 0; padding: 28px 22px; }
+    .intro-launch .intro-copy { min-height: 0; padding: 18px 4px; }
     .intro-launch .role-grid { grid-template-columns: 1fr; }
 }
 

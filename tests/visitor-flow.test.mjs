@@ -25,15 +25,24 @@ test('visitor project selection proceeds directly to the location experience', (
 
 test('temporary AR demo is in-memory and supports placement, profile and exit', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
+    assert.match(source, /Open My Location Dashboard/);
+    assert.match(source, /My Location/);
+    assert.match(source, /Tag a Nearby Plant/);
+    assert.match(source, /Plant List/);
+    assert.match(source, /Banana Cavendish/);
     assert.match(source, /Lemon Drop Garcinia/);
-    assert.match(source, /Place Sample Plant/);
-    assert.match(source, /View Plant Profile/);
+    assert.match(source, /Myoga Ginger/);
+    assert.match(source, /Jackfruit/);
+    assert.match(source, /This is the end of the demo/);
     assert.match(source, /Finish Demo/);
-    assert.match(source, /Launch AR Demo/);
+    assert.match(source, /AUGMENTED REALITY/);
     assert.match(source, /temporary-demo-launcher/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);
     assert.match(source, /makeXRCompatible/);
     assert.match(source, /new XRWebGLLayer/);
     assert.match(source, /requestAnimationFrame\(draw\)/);
+    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(source, /requestHitTestSource/);
+    assert.match(source, /placedMarker = \{ x: latestHitMatrix/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
