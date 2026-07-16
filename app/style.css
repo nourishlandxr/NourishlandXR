@@ -1582,11 +1582,10 @@ body.ar-session-active::after {
 .intro-launch .intro-heading h1 span { margin-left: .18em; color: #477243; font-size: .58em; vertical-align: top; }
 .intro-launch .intro-heading .subtitle { margin: 7px 0 0; color: #27382b; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; }
 .launch-brand-art { flex: 0 0 auto; width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 9px 18px rgba(27, 53, 29, .16)); }
-.intro-launch .intro-copy { min-height: 380px; padding: clamp(30px, 6vw, 70px); border: 1px solid #d8dfd3; border-radius: 4px; background: #fbfcf7; box-shadow: none; }
-.intro-launch .intro-copy::before { content: ''; position: absolute; right: clamp(-85px, -4vw, -20px); bottom: -145px; width: min(48vw, 470px); aspect-ratio: 1; border: 42px solid rgba(54, 102, 53, .18); border-radius: 50%; box-shadow: inset 0 0 0 38px rgba(113, 143, 69, .13), inset 0 0 0 82px rgba(35, 74, 41, .1); }
-.intro-launch .intro-copy::after { content: 'GROW'; position: absolute; right: clamp(34px, 12vw, 160px); bottom: 70px; color: #315a37; font-size: clamp(1.4rem, 4vw, 3rem); font-weight: 900; letter-spacing: .18em; transform: rotate(-9deg); }
+.intro-launch .intro-copy { min-height: 0; padding: clamp(30px, 6vw, 70px); border: 1px solid #d8dfd3; border-radius: 4px; background: #fbfcf7; box-shadow: none; }
 .intro-launch .intro-copy h2 { position: relative; z-index: 1; max-width: 720px; margin-bottom: 20px; color: #101811; font-size: clamp(2.55rem, 7vw, 5.7rem); font-weight: 900; letter-spacing: -.055em; line-height: .88; }
 .intro-launch .intro-copy p { position: relative; z-index: 1; max-width: 610px; color: #354238; font-size: 1rem; }
+.intro-launch .intro-copy p + p { margin-top: 18px; }
 .intro-launch .role-choice { padding: 4px; }
 .intro-launch .role-choice > h2 { color: #111b13; font-size: clamp(1.35rem, 3vw, 2rem); }
 .intro-launch .role-card, .intro-launch .role-card:nth-child(even) { min-height: 118px; padding: 24px 26px; border-radius: 4px; box-shadow: none; }
@@ -1618,9 +1617,7 @@ body.ar-session-active::after {
 @media (max-width: 600px) {
     .intro-launch .intro-heading { gap: 12px; }
     .launch-brand-art { width: 78px; height: 78px; }
-    .intro-launch .intro-copy { min-height: 330px; padding: 28px 22px; }
-    .intro-launch .intro-copy::before { right: -145px; bottom: -190px; width: 430px; }
-    .intro-launch .intro-copy::after { right: 25px; bottom: 34px; }
+    .intro-launch .intro-copy { min-height: 0; padding: 28px 22px; }
     .intro-launch .role-grid { grid-template-columns: 1fr; }
 }
 
