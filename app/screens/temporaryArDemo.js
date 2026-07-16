@@ -12,6 +12,19 @@ let demoCanvas = null;
 let demoGl = null;
 let finishingDemo = false;
 
+export function openTemporaryArDemoWindow(app) {
+    document.getElementById('temporaryDemoLauncher')?.remove();
+    const launcher = document.createElement('div');
+    launcher.id = 'temporaryDemoLauncher';
+    launcher.className = 'temporary-demo-launcher';
+    launcher.innerHTML = `<section class="temporary-launcher-window" role="dialog" aria-modal="true" aria-labelledby="temporaryLauncherTitle"><header><span class="launcher-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>NourishlandXR · AR Demo</strong><button type="button" id="temporaryLauncherClose" aria-label="Close demo window">×</button></header><div class="temporary-launcher-body"><p class="welcome-label">NO SETUP REQUIRED</p><h2 id="temporaryLauncherTitle">Meet Lemon Drop Garcinia in AR.</h2><p>Place a temporary sample plant, tap its marker and open its plant profile. Nothing will be saved.</p><div class="temporary-launcher-preview" aria-hidden="true"><span>✿</span><div><strong>Lemon Drop Garcinia</strong><small>Garcinia intermedia</small></div></div><div class="button-row"><button type="button" id="temporaryLauncherCancel">Not now</button><button class="primary" type="button" id="temporaryLauncherStart">Launch AR Demo</button></div></div></section>`;
+    document.body.append(launcher);
+    const close = () => launcher.remove();
+    document.getElementById('temporaryLauncherClose').addEventListener('click', close);
+    document.getElementById('temporaryLauncherCancel').addEventListener('click', close);
+    document.getElementById('temporaryLauncherStart').addEventListener('click', () => { close(); startTemporaryArDemo(app); });
+}
+
 function removeDemoCanvas() {
     demoCanvas?.remove();
     demoCanvas = null;

@@ -11,8 +11,9 @@ test('welcome keeps Create and Explore and adds the account-free AR demo', () =>
     renderLaunchScreen(app);
     assert.match(app.innerHTML, /Create an Experience/);
     assert.match(app.innerHTML, /Explore a Place/);
-    assert.match(app.innerHTML, /TRY AR DEMO/);
+    assert.match(app.innerHTML, /TRY IT NOW/);
     assert.match(app.innerHTML, /No account or project setup required/);
+    assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
 });
 
 test('visitor project selection proceeds directly to the location experience', () => {
@@ -27,6 +28,8 @@ test('temporary AR demo is in-memory and supports placement, profile and exit', 
     assert.match(source, /Place Sample Plant/);
     assert.match(source, /View Plant Profile/);
     assert.match(source, /Finish Demo/);
+    assert.match(source, /Launch AR Demo/);
+    assert.match(source, /temporary-demo-launcher/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);
     assert.match(source, /makeXRCompatible/);
     assert.match(source, /new XRWebGLLayer/);

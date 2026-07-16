@@ -2,8 +2,8 @@ export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
             <div class="page-header intro-heading">
-                <h1>Nourishland XR</h1>
-                <p class="subtitle">Spatial learning platform.</p>
+                <div class="launch-brand-mark" aria-hidden="true"><span>NL</span></div>
+                <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p></div>
             </div>
 
             <section class="intro-copy" aria-labelledby="demoWelcomeTitle">
@@ -25,8 +25,8 @@ export function renderLaunchScreen(app) {
                         <span>Discover plants and stories using Explorer or the Field Guide.</span>
                     </button>
                 </div>
-                <button class="menu-card role-card ar-demo-role" onclick="window.startTemporaryArDemo()">
-                    <strong>TRY AR DEMO</strong>
+                <button class="menu-card role-card ar-demo-role" onclick="window.openTemporaryArDemoWindow()">
+                    <strong>TRY IT NOW <span aria-hidden="true">↗</span></strong>
                     <span>Experience how NourishlandXR brings plants and places to life. No account or project setup required.</span>
                 </button>
             </section>
