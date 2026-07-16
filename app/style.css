@@ -1233,7 +1233,7 @@ body:not(.ar-session-active) .ar-launch-toggle {
     }
 }
 
-body:not(.ar-session-active):has(.location-selected) #globalArToggle {
+body:not(.ar-session-active).ar-location-selected #globalArToggle {
     display: block;
 }
 

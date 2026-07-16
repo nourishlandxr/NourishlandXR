@@ -74,9 +74,14 @@ function moveBackButtonsToBottom() {
     });
 }
 
+function syncArLocationAvailability() {
+    document.body.classList.toggle('ar-location-selected', Boolean(app.querySelector('.location-selected')));
+}
+
 const backButtonObserver = new MutationObserver(() => queueMicrotask(() => {
     moveBackButtonsToBottom();
     syncCreatorTestingWarning();
+    syncArLocationAvailability();
 }));
 backButtonObserver.observe(app, { childList: true, subtree: true });
 
