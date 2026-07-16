@@ -18,7 +18,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { applyPlatformSettings, openProjectEntry, openProjectStartingPoint, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, savePlatformSetting, saveProjectStartingPoint } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderLocationMap, renderNewLocationSetup, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderStartingPointForm, renderStartingPoints, savePlatformSetting, saveProjectStartingPoint } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
@@ -90,7 +90,7 @@ async function openDirectExplorer(params) {
     setExperienceRole('visitor');
     const projects = await loadProjects(true);
     const project = projects.find(item => String(item.id).toLowerCase() === String(projectId).toLowerCase());
-    if (!project) throw new Error('Project not found');
+    if (!project) throw new Error('Location not found');
     const sites = await loadProjectSites(project.id, true); const site = sites.find(item => item.id === siteId);
     if (!site) throw new Error('Site not found');
     const places = await loadSitePlaces(project.id, site.id, true); const place = places.find(item => item.id === placeId);
@@ -147,11 +147,17 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
+window.renderNewLocationSetup = projectId => renderNewLocationSetup(app, projectId);
+window.renderAddToLocation = projectId => renderAddToLocation(app, projectId);
+window.renderLocationMap = projectId => renderLocationMap(app, projectId);
+window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
 window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
 window.savePlatformSetting = savePlatformSetting;
 window.addProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
 window.editProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
 window.saveProjectStartingPoint = (event, projectId) => saveProjectStartingPoint(event, projectId);
+window.captureStartingPointLocation = captureStartingPointLocation;
+window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
 window.openProjectEntry = (projectId, markerId) => openProjectEntry(app, projectId, markerId).catch(error => window.alert(error.message));
 window.renderFirstSteps = () => renderFirstSteps(app);
@@ -183,6 +189,18 @@ window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.write
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
 window.renderHillyardsFieldMarker = (type) => renderFieldMarker(app, { project: 'Hillyards', site: 'main_food_forest', type }).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.renderLocationFieldMarker = async (projectId, type) => {
+    const decodedProjectId = decodeURIComponent(projectId);
+    const sites = await loadProjectSites(decodedProjectId);
+    if (!sites.length) { window.alert('Add a site before creating location content.'); return; }
+    await renderFieldMarker(app, { project: decodedProjectId, site: sites[0].id, type, dashboardProjectId: decodedProjectId });
+};
+window.renderPlaceForLocation = async (projectId) => {
+    const decodedProjectId = decodeURIComponent(projectId);
+    const sites = await loadProjectSites(decodedProjectId);
+    if (!sites.length) { window.alert('Add a site before creating a place or zone.'); return; }
+    renderLocationFormScreen(app, sites[0]);
+};
 window.setFieldMarkerType = (type) => setFieldMarkerType(type);
 window.selectFieldProject = (id) => selectFieldProject(id);
 window.selectFieldSite = (id) => selectFieldSite(id);
@@ -317,9 +335,9 @@ window.createProjectFromForm = async () => {
 
         if (name) {
             const suggestions = (document.getElementById('projectSuggestions')?.value || '').split('\n').map(value => value.trim()).filter(Boolean);
-            await siteManager.createProject({ name, template, siteSuggestions: suggestions });
+            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: document.getElementById('projectCoverImage')?.value.trim() || '', visibility: 'draft', siteSuggestions: suggestions });
             await siteManager.loadSitesFromDisk();
-            window.renderDemoProjects();
+            window.renderNewLocationSetup(encodeURIComponent(created.id));
         }
     }
 };
@@ -334,7 +352,9 @@ window.renameProjectFromForm = async (project) => {
         if (name) {
             await siteManager.renameProject(project.id, {
                 name,
-                template: projectTemplate.value
+                template: projectTemplate.value,
+                description: document.getElementById('projectDescription')?.value.trim() || '',
+                coverImage: document.getElementById('projectCoverImage')?.value.trim() || ''
             });
             await siteManager.loadSitesFromDisk();
             window.renderProjects();
@@ -355,7 +375,7 @@ window.importProjectFile = async (file) => {
     if (!file) return;
     try { await importProject(file); }
     catch (error) {
-        if (!error.message.includes('already exists') || !window.confirm('A Project with this ID already exists. Import as Copy?')) { if (!error.message.includes('already exists')) window.alert(`Import failed: ${error.message}`); return; }
+        if (!error.message.includes('already exists') || !window.confirm('A location with this ID already exists. Import as a copy?')) { if (!error.message.includes('already exists')) window.alert(`Import failed: ${error.message}`); return; }
         try { await importProject(file, true); } catch (copyError) { window.alert(`Import failed: ${copyError.message}`); return; }
     }
     await siteManager.loadSitesFromDisk(); window.renderProjects();

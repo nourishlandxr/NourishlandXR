@@ -310,6 +310,7 @@ function createProject(projectData) {
         id: projectId,
         name: projectData.name.trim(),
         description: projectData.description || '',
+        coverImage: projectData.coverImage || '',
         template: projectData.template || '',
         visibility: normalizeVisibility(projectData.visibility)
     };

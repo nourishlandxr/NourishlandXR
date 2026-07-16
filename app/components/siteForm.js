@@ -7,8 +7,18 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
     return `
     <div class="panel">
         <div class="field">
-            <label for="projectName">Project name</label>
+            <label for="projectName">Location name</label>
             <input type="text" id="projectName" value="${project?.name || ''}" />
+        </div>
+
+        <div class="field">
+            <label for="projectDescription">Description</label>
+            <textarea id="projectDescription" rows="4" placeholder="Describe this garden, landscape or learning location.">${project?.description || ''}</textarea>
+        </div>
+
+        <div class="field">
+            <label for="projectCoverImage">Optional cover image</label>
+            <input type="url" id="projectCoverImage" value="${project?.coverImage || ''}" placeholder="https://…" />
         </div>
 
         <div class="field">
@@ -22,7 +32,7 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>
-            <button class="primary" onclick="${onSubmit}">${project ? 'Save Project' : 'Create Project'}</button>
+            <button class="primary" onclick="${onSubmit}">${project ? 'Save Location' : 'Create Location'}</button>
         </div>
     </div>
     `;

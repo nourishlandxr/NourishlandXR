@@ -7,6 +7,7 @@ let selected = { project: '', site: '' };
 let location;
 let markerType = 'plant';
 let hillyardsMode = false;
+let dashboardProjectId = '';
 
 const options = (list, value, label) => `
     <option value="">Select ${label}</option>
@@ -18,13 +19,13 @@ function draw() {
     app.innerHTML = `
         <div class="screen">
             <div class="page-header">
-                <button class="ghost" onclick="${hillyardsMode ? 'window.renderHillyardsProject()' : 'window.renderStudio()'}">Back</button>
-                <h1>Create Field Marker</h1>
+                <button class="ghost" onclick="${dashboardProjectId ? `window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')` : hillyardsMode ? 'window.renderHillyardsProject()' : 'window.renderStudio()'}">Back</button>
+                <h1>Add to this location</h1>
             </div>
             <div class="panel">
                 <div class="field">
-                    <label>Project</label>
-                    <select onchange="window.selectFieldProject(this.value)">${options(projects, selected.project, 'Project')}</select>
+                    <label>Location</label>
+                    <select onchange="window.selectFieldProject(this.value)">${options(projects, selected.project, 'Location')}</select>
                 </div>
                 <div class="field">
                     <label>Site</label>
@@ -48,8 +49,8 @@ function draw() {
                 </div>
                 <p id="fieldLocation" class="meta">${location ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} · accuracy ${Math.round(location.accuracy)} m` : 'Location not captured.'}</p>
                 <div class="button-row">
-                    <button onclick="window.refreshFieldLocation()">Refresh Location</button>
-                    <button class="primary" onclick="window.saveFieldMarker()">Save Marker</button>
+                    <button onclick="window.refreshFieldLocation()">Add current position</button>
+                    <button class="primary" onclick="window.saveFieldMarker()">Save Entry</button>
                 </div>
                 <p id="fieldError" class="meta"></p>
             </div>
@@ -73,14 +74,16 @@ async function getFieldPlace() {
 export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
-    projects = await loadProjects();
+    projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     if (defaults) {
         hillyardsMode = true;
+        dashboardProjectId = defaults.dashboardProjectId || '';
         selected = { project: defaults.project || '', site: defaults.site || '' };
         markerType = defaults.type === 'note' ? 'note' : 'plant';
         sites = selected.project ? await loadProjectSites(selected.project) : [];
     } else {
         hillyardsMode = false;
+        dashboardProjectId = '';
     }
     draw();
 }
@@ -129,8 +132,7 @@ export async function saveFieldMarker() {
     const description = document.getElementById('fieldDescription').value.trim();
     const scientific = document.getElementById('fieldScientific')?.value.trim();
 
-    if (!selected.project || !selected.site) { error.textContent = 'Select a Project and Site.'; return; }
-    if (!location) { error.textContent = 'Capture a location before saving.'; return; }
+    if (!selected.project || !selected.site) { error.textContent = 'Select a Location and Site.'; return; }
     if (!name || (type === 'plant' && !scientific) || (type === 'note' && !description)) {
         error.textContent = type === 'plant' ? 'Common Name and Scientific Name are required.' : 'Title and Text are required.';
         return;
@@ -143,7 +145,7 @@ export async function saveFieldMarker() {
             name,
             type,
             description,
-            anchor: { type: 'gps', ...location },
+            anchor: location ? { type: 'gps', ...location } : { type: '', latitude: '', longitude: '', accuracy: '', description: '' },
             plant_profile: type === 'plant' ? { common_name: name, scientific_name: scientific } : undefined
         });
         const site = sites.find(item => item.id === selected.site);

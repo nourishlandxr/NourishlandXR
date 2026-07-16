@@ -98,7 +98,7 @@ let tempMarkerCounter = 0;
 function updateGlobalArToggle(active) {
     const button = document.getElementById('globalArToggle');
     if (!button) return;
-    button.textContent = active ? 'Stop AR' : 'Start AR';
+    button.textContent = active ? 'Close Camera' : 'Explore with Camera';
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
 }
 
@@ -120,8 +120,7 @@ const CANVAS_H = 800;
 const PROJECT_REGIONS = [
     { id: 'Hillyards', label: 'Hillyards', x: 40, y: 180, w: 1120, h: 105 },
     { id: 'Frankendael', label: 'Frankendael', x: 40, y: 305, w: 1120, h: 105 },
-    { id: 'Daleys', label: 'Daleys', x: 40, y: 430, w: 1120, h: 105 },
-    { id: 'Banyula', label: 'Banyula', x: 40, y: 555, w: 1120, h: 105 }
+    { id: 'Daleys', label: 'Daleys', x: 40, y: 430, w: 1120, h: 105 }
 ];
 
 const TOOLBOX_REGIONS = [
@@ -331,7 +330,7 @@ function drawProjectMenu() {
     const context = panelContext;
     context.fillStyle = 'rgba(255,255,255,.9)';
     context.font = '32px sans-serif';
-    context.fillText('Select Project', 62, 150);
+    context.fillText('Select Location', 62, 150);
 
     for (const region of PROJECT_REGIONS) {
         const active = region.id === 'Hillyards';
@@ -594,20 +593,6 @@ function createArOverlay() {
         if (tool) handleCreateSelection(tool);
     });
     document.body.append(radialToolbox);
-
-    const dashboardRail = document.createElement('nav');
-    dashboardRail.id = 'arDashboardRail';
-    dashboardRail.setAttribute('aria-label', 'Dashboard menu');
-    dashboardRail.innerHTML = `
-        <button type="button" data-panel="About This Experience"><b>INFO</b><span>About</span></button>
-        <button type="button" data-panel="Settings"><b>SET</b><span>Settings</span></button>
-        <button type="button" data-panel="Account"><b>ACC</b><span>Account</span></button>`;
-    dashboardRail.addEventListener('beforexrselect', event => event.preventDefault());
-    dashboardRail.addEventListener('click', event => {
-        const panel = event.target.closest('button')?.dataset.panel;
-        if (panel) showProjectComingSoon(panel);
-    });
-    document.body.append(dashboardRail);
 
     modal = document.createElement('div');
     modal.id = 'arModal';
@@ -895,7 +880,7 @@ function showProjectComingSoon(name) {
     showModal();
     document.getElementById('arProjectBack').addEventListener('click', () => {
         hideModal();
-        message('Select a project.');
+        message('Select a location.');
     });
 }
 
@@ -926,7 +911,7 @@ function handleMenuSelect(rayPose) {
     if (panelView === 'toolbox') {
         if (region.id === 'back_projects') {
             drawProjectMenu();
-            message('Select a project.');
+            message('Select a location.');
             return;
         }
         handleCreateSelection(region.id);

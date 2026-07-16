@@ -11,7 +11,7 @@ function markerTypeLabel(type) {
 
 async function hillyardsContext(visitor = false) {
     const project = (await loadProjects(visitor)).find(item => item.id === PROJECT_ID);
-    if (!project) throw new Error('Hillyards project data is unavailable.');
+    if (!project) throw new Error('Hillyards location data is unavailable.');
     const site = (await loadProjectSites(project.id, visitor)).find(item => item.id === SITE_ID);
     if (!site) throw new Error('Main Food Forest is unavailable.');
     const place = (await loadSitePlaces(project.id, site.id, visitor)).find(item => item.id === PLACE_ID);
@@ -24,7 +24,7 @@ export async function renderDemoProjects(app) {
 }
 
 export function renderFirstSteps(app) {
-    app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a plant marker or custom note.</li><li>Add an anchor.</li><li>Open Explorer.</li><li>Start AR.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a plant marker or custom note.</li><li>Add its position when ready.</li><li>Browse the experience.</li><li>Explore with Camera.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
 }
 
 export function renderComingSoon(app, feature, purpose, how, example, backAction = 'window.renderLaunchScreen()') {
@@ -108,7 +108,7 @@ export async function deleteHillyardsMarker(markerId) {
 }
 
 export function renderHillyardsGuidelines(app) {
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>Project Guidelines</h1><p class="subtitle">Hillyards Food Forest</p></div><div class="panel"><h2>Purpose</h2><p>Keep field knowledge concise, accurate and connected to a real marker.</p></div><div class="panel"><h2>Marker guidance</h2><p>Use Plant Markers for identified plants and Custom Notes for directions, introductions or observations.</p></div><div class="panel"><h2>Anchor guidance</h2><p>Confirm the physical location before saving a GPS anchor. Replace approximate demonstration coordinates with surveyed positions during field testing.</p></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>Location Guidelines</h1><p class="subtitle">Hillyards Food Forest</p></div><div class="panel"><h2>Purpose</h2><p>Keep field knowledge concise, accurate and connected to a real marker.</p></div><div class="panel"><h2>Marker guidance</h2><p>Use Plant Markers for identified plants and Custom Notes for directions, introductions or observations.</p></div><div class="panel"><h2>Anchor guidance</h2><p>Confirm the physical location before saving a GPS anchor. Replace approximate demonstration coordinates with surveyed positions during field testing.</p></div></div>`;
 }
 
 export async function renderGlobalPlantList() {
