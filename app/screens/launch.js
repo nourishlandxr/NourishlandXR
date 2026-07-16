@@ -2,7 +2,7 @@ export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
             <div class="page-header intro-heading">
-                <div class="launch-brand-mark" aria-hidden="true"><span>NL</span></div>
+                <img class="launch-brand-art" src="./assets/herov2.png" alt="" aria-hidden="true" />
                 <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p></div>
             </div>
 

@@ -14,6 +14,7 @@ test('welcome keeps Create and Explore and adds the account-free AR demo', () =>
     assert.match(app.innerHTML, /TRY IT NOW/);
     assert.match(app.innerHTML, /No account or project setup required/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
+    assert.match(app.innerHTML, /assets\/herov2\.png/);
 });
 
 test('visitor project selection proceeds directly to the location experience', () => {
