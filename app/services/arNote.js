@@ -6,7 +6,7 @@
 // this flow are persisted through the local workspace API. Naming and confirmation are handled through the WebXR
 // DOM Overlay, since text entry inside a WebGL canvas is not practical.
 
-import { createDemoMarker, loadDemoMarkers, updateDemoMarker } from './persistence.js';
+import { createDemoMarker, createPlaceMarker, loadDemoMarkers, updateDemoMarker, updatePlaceMarker } from './persistence.js';
 
 const TYPES = {
     plant: { title: 'Add Plant Marker', nameLabel: 'Marker Name', typeLabel: 'Plant Marker', addLabel: 'Add Information' },
@@ -88,6 +88,10 @@ let menuMatrix = null;
 let toolboxMatrix = null;
 let menuVisible = false;
 let persistedMarkers = [];
+let activeLocationName = 'Hillyards Food Forest';
+let activeLocationStatus = { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
+let suppliedLocationMarkers = null;
+let activePersistenceContext = null;
 let pendingType = null;
 let pendingParentName = '';
 let pendingMarkerMatrix = null;
@@ -98,8 +102,23 @@ let tempMarkerCounter = 0;
 function updateGlobalArToggle(active) {
     const button = document.getElementById('globalArToggle');
     if (!button) return;
-    button.textContent = active ? 'Close Camera' : 'Explore with Camera';
+    button.textContent = active ? 'Close AR' : 'Explore with AR';
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
+}
+
+async function createActiveMarker(data) {
+    if (activePersistenceContext?.projectId) {
+        if (!activePersistenceContext.siteId || !activePersistenceContext.placeId) throw new Error('Add a place to this location before creating AR entries.');
+        const marker = await createPlaceMarker(activePersistenceContext.projectId, activePersistenceContext.siteId, activePersistenceContext.placeId, { ...data, visibility: 'draft' });
+        return { ...marker, _siteId: activePersistenceContext.siteId, _placeId: activePersistenceContext.placeId };
+    }
+    return createDemoMarker(data);
+}
+
+async function updateActiveMarker(marker, changes) {
+    if (!activePersistenceContext?.projectId || !marker._siteId || !marker._placeId) return updateDemoMarker(marker.id, changes);
+    const updated = await updatePlaceMarker(activePersistenceContext.projectId, marker._siteId, marker._placeId, marker.id, changes);
+    return { ...updated, _siteId: marker._siteId, _placeId: marker._placeId };
 }
 
 export function isArActive() {
@@ -134,10 +153,10 @@ const TOOLBOX_REGIONS = [
 const BACK_REGION = { id: 'back_toolbox', label: 'Back to Hillyards Tool Box', x: 62, y: 650, w: 1076, h: 76 };
 
 const DASHBOARD_REGIONS = [
-    { id: 'note', label: 'Welcome to Hillyards', x: 40, y: 145, w: 535, h: 100 },
-    { id: 'intro_checkpoint', label: 'Add Starting Point Marker', x: 605, y: 145, w: 535, h: 100 },
-    { id: 'global_plants', label: 'Field Guide', x: 40, y: 265, w: 535, h: 100 },
-    { id: 'map', label: 'Map', x: 605, y: 265, w: 535, h: 100 }
+    { id: 'add', label: '+ Add to this location', x: 40, y: 225, w: 1120, h: 78 },
+    { id: 'global_plants', label: 'Field Guide', x: 40, y: 320, w: 350, h: 80 },
+    { id: 'map', label: 'Map', x: 425, y: 320, w: 350, h: 80 },
+    { id: 'starting_points', label: 'Starting Points', x: 810, y: 320, w: 350, h: 80 }
 ];
 
 const SMALL_TOOLBOX_REGIONS = [
@@ -258,22 +277,36 @@ function drawMenuButton(region, title, subtitle) {
 
 function drawHillyardsDashboard() {
     panelView = 'dashboard';
-    drawPanelBackground('Hillyards Dashboard');
-    drawMenuButton(DASHBOARD_REGIONS[0], 'Welcome to Hillyards');
-    drawMenuButton(DASHBOARD_REGIONS[1], 'Add Starting Point Marker');
-    drawMenuButton(DASHBOARD_REGIONS[2], 'Field Guide');
-    drawMenuButton(DASHBOARD_REGIONS[3], 'Map', 'Coming Soon');
+    const publicCount = persistedMarkers.filter(marker => marker.visibility === 'public').length;
+    const draftCount = persistedMarkers.filter(marker => marker.visibility !== 'public' && marker.visibility !== 'hidden').length;
+    const startingPoint = persistedMarkers.find(marker => marker.type === 'intro_checkpoint');
+    activeLocationStatus.entries = `${publicCount} published · ${draftCount} drafts`;
+    if (startingPoint) activeLocationStatus.startingPoint = startingPoint.name;
+    drawPanelBackground(`${activeLocationName} Dashboard`);
+    panelContext.fillStyle = 'rgba(248, 250, 244, 0.9)';
+    panelContext.fillRect(40, 145, 1120, 62);
+    panelContext.fillStyle = '#173126';
+    panelContext.font = '700 23px sans-serif';
+    panelContext.fillText(activeLocationStatus.label, 60, 183);
+    panelContext.font = '21px sans-serif';
+    panelContext.fillText(`Starting Point: ${activeLocationStatus.startingPoint}`, 330, 183);
+    panelContext.fillText(`Accuracy: ${activeLocationStatus.accuracy}`, 715, 183);
+    panelContext.fillText(activeLocationStatus.entries, 930, 183);
+    drawMenuButton(DASHBOARD_REGIONS[0], '+ Add to this location');
+    drawMenuButton(DASHBOARD_REGIONS[1], 'Field Guide');
+    drawMenuButton(DASHBOARD_REGIONS[2], 'Map');
+    drawMenuButton(DASHBOARD_REGIONS[3], 'Starting Points');
 
     panelContext.fillStyle = '#ffffff';
     panelContext.font = '700 27px sans-serif';
-    panelContext.fillText('LATEST ENTRIES', 45, 414);
+    panelContext.fillText('LATEST ENTRIES', 45, 438);
     latestEntryRegions = persistedMarkers.slice(0, 4).map((marker, index) => ({
         id: `entry:${marker.id}`,
         label: marker.name,
         x: 40,
-        y: 430 + index * 82,
+        y: 454 + index * 72,
         w: 1120,
-        h: 72,
+        h: 62,
         marker
     }));
     if (latestEntryRegions.length) {
@@ -282,14 +315,14 @@ function drawHillyardsDashboard() {
             panelContext.fillRect(region.x, region.y, region.w, region.h);
             panelContext.fillStyle = '#173126';
             panelContext.font = '700 26px sans-serif';
-            panelContext.fillText(region.marker.name, region.x + 22, region.y + 31);
+            panelContext.fillText(region.marker.name, region.x + 22, region.y + 27);
             panelContext.font = '21px sans-serif';
-            panelContext.fillText(`${typeConfig(region.marker.type).typeLabel} Â· ${region.marker.status || 'draft'}`, region.x + 22, region.y + 59);
+            panelContext.fillText(`${typeConfig(region.marker.type).typeLabel} · ${region.marker.visibility || region.marker.status || 'draft'}`, region.x + 22, region.y + 52);
         });
     } else {
         panelContext.fillStyle = 'rgba(255,255,255,.82)';
         panelContext.font = '28px sans-serif';
-        panelContext.fillText('No entries yet. Add a marker from the Tool Box.', 45, 485);
+        panelContext.fillText('No entries yet. Add something to this location.', 45, 500);
     }
     uploadTexture(texture, panelCanvas);
 }
@@ -352,12 +385,12 @@ function drawProjectMenu() {
 
 function drawToolbox() {
     panelView = 'toolbox';
-    drawPanelBackground('Hillyards Food Forest');
+    drawPanelBackground(activeLocationName);
     const context = panelContext;
     context.fillStyle = 'rgba(255,255,255,.9)';
     context.font = '30px sans-serif';
     context.fillText('Tool Box', 62, 145);
-    drawMenuButton(TOOLBOX_REGIONS[0], 'Add Intro Checkpoint');
+    drawMenuButton(TOOLBOX_REGIONS[0], 'Add Starting Point');
     drawMenuButton(TOOLBOX_REGIONS[1], 'Add Plant Marker');
     drawMenuButton(TOOLBOX_REGIONS[2], 'Add Sub Checkpoint');
     drawMenuButton(TOOLBOX_REGIONS[3], 'Add Custom Note');
@@ -369,7 +402,7 @@ function drawToolbox() {
     context.strokeRect(back.x, back.y, back.w, back.h);
     context.fillStyle = '#173126';
     context.font = '700 30px sans-serif';
-    context.fillText('Back to Demo V1', back.x + 24, back.y + 56);
+    context.fillText('Back to Location Dashboard', back.x + 24, back.y + 56);
     uploadTexture(texture, panelCanvas);
 }
 
@@ -751,7 +784,7 @@ function showEditLatestEntry() {
         const name = document.getElementById('arEditMarkerName').value.trim();
         if (!name) { document.getElementById('arEditMarkerError').textContent = 'Marker Name is required.'; return; }
         try {
-            const updated = await updateDemoMarker(marker.id, { name });
+            const updated = await updateActiveMarker(marker, { name });
             persistedMarkers = [updated, ...persistedMarkers.filter(item => item.id !== marker.id)];
             drawHillyardsDashboard();
             finishMarkerFlow();
@@ -775,7 +808,7 @@ async function confirmMarkerName() {
 
 async function finalizeMarker(name) {
     tempMarkerCounter += 1;
-    const marker = await createDemoMarker({ name, type: pendingType });
+    const marker = await createActiveMarker({ name, type: pendingType });
     const flagTexture = makeFlagTexture(name, pendingType);
     tempMarkers.push({ id: marker.id, matrix: pendingMarkerMatrix, texture: flagTexture, type: marker.type, name: marker.name });
     persistedMarkers = [marker, ...persistedMarkers.filter(item => item.id !== marker.id)];
@@ -863,12 +896,12 @@ function drawMarkerEntry(marker) {
     panelContext.fillText(typeConfig(marker.type).typeLabel, 70, 255);
     panelContext.font = '32px sans-serif';
     panelContext.fillText(`Status: ${marker.status || 'draft'}`, 70, 325);
-    panelContext.fillText('Saved to Hillyards Latest Entries', 70, 390);
+    panelContext.fillText(`Saved to ${activeLocationName} Latest Entries`, 70, 390);
     panelContext.fillStyle = 'rgba(220, 235, 220, 0.9)';
     panelContext.fillRect(BACK_REGION.x, BACK_REGION.y, BACK_REGION.w, BACK_REGION.h);
     panelContext.fillStyle = '#173126';
     panelContext.font = '700 28px sans-serif';
-    panelContext.fillText('Back to Hillyards Dashboard', BACK_REGION.x + 30, BACK_REGION.y + 50);
+    panelContext.fillText(`Back to ${activeLocationName} Dashboard`, BACK_REGION.x + 30, BACK_REGION.y + 50);
     uploadTexture(texture, panelCanvas);
 }
 
@@ -891,8 +924,7 @@ function handleMenuSelect(rayPose) {
     if (!region) return;
 
     if (panelView === 'dashboard') {
-        if (region.id === 'note') drawWelcomeNote();
-        else if (region.id === 'intro_checkpoint') handleCreateSelection('intro_checkpoint');
+        if (region.id === 'add') drawToolbox();
         else if (region.id.startsWith('entry:')) drawMarkerEntry(region.marker);
         else showProjectComingSoon(region.label);
         return;
@@ -1042,7 +1074,15 @@ function draw(_time, frame) {
 
 // ---- Session lifecycle ----
 
-export async function startArNote(_marker, profile) {
+export async function startArNote(_marker, profile, locationContext = null) {
+    activeLocationName = locationContext?.locationName || 'Hillyards Food Forest';
+    activeLocationStatus = locationContext?.status || { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
+    suppliedLocationMarkers = Array.isArray(locationContext?.markers) ? locationContext.markers : null;
+    activePersistenceContext = locationContext?.projectId ? {
+        projectId: locationContext.projectId,
+        siteId: locationContext.siteId || '',
+        placeId: locationContext.placeId || ''
+    } : null;
     resetArDiagnostics();
     reportArDiagnostic('START AR clicked');
     reportArDiagnostic(`secure context status: ${window.isSecureContext ? 'secure' : 'not secure'}`);
@@ -1072,7 +1112,7 @@ export async function startArNote(_marker, profile) {
         return;
     }
     try {
-        persistedMarkers = await loadDemoMarkers(document.body.dataset.experienceRole === 'visitor');
+        persistedMarkers = suppliedLocationMarkers || await loadDemoMarkers(document.body.dataset.experienceRole === 'visitor');
         reportArDiagnostic(`marker preload result: loaded ${persistedMarkers.length} marker${persistedMarkers.length === 1 ? '' : 's'}`);
     } catch (error) {
         persistedMarkers = [];

@@ -1,4 +1,4 @@
-import { loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
+import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
 import { exitAr, isArActive, resetArPlacement, startArNote } from '../services/arNote.js';
 import { disableTargetReticle, enableTargetReticle } from '../services/targetReticle.js';
 import { getHillyardsExplorerContext } from './v1Navigation.js';
@@ -71,7 +71,7 @@ export async function renderExplorerMarkers(app, project, site, place) {
     stopGps();
     try {
         const markers = await loadPlaceMarkers(project.id, site.id, place.id, true);
-        app.innerHTML = `<div class="screen location-selected" data-location-id="${place.id}"><div class="page-header"><button class="ghost" onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Back</button><h1>${place.name}</h1><p class="subtitle">Choose a marker.</p></div>${markers.length ? markers.map(marker => `<div class="panel" data-target-marker="${marker.name}"><div class="list-item"><div><strong>${marker.name}</strong><p>${marker.type === 'plant' ? 'Plant' : 'Note'}</p></div><button onclick="window.renderExplorerMarker(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No markers are available.</p></div>'}<div class="panel hint"><p>Select <strong>Explore with Camera</strong> to open the camera experience for this location.</p></div></div>`; enableTargetReticle();
+        app.innerHTML = `<div class="screen location-selected" data-location-id="${place.id}"><div class="page-header"><button class="ghost" onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Back</button><h1>${place.name}</h1><p class="subtitle">Choose a marker.</p></div>${markers.length ? markers.map(marker => `<div class="panel" data-target-marker="${marker.name}"><div class="list-item"><div><strong>${marker.name}</strong><p>${marker.type === 'plant' ? 'Plant' : 'Note'}</p></div><button onclick="window.renderExplorerMarker(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(marker)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No markers are available.</p></div>'}<div class="panel hint"><p>Select <strong>Explore with AR</strong> to open the augmented-reality experience for this location.</p></div></div>`; enableTargetReticle();
     } catch (error) { app.innerHTML = errorScreen(`Marker data could not be loaded: ${error.message}`); }
 }
 
@@ -122,6 +122,44 @@ export async function startExplorerAr(project, site, place, marker) { const prof
 
 export async function startWelcomeAr() {
     await startArNote(null, null);
+}
+
+export async function startLocationAr(encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const project = (await loadProjects()).find(item => item.id === projectId);
+    if (!project) throw new Error('Location not found');
+    const sites = await loadProjectSites(project.id);
+    const groups = await Promise.all(sites.map(async site => {
+        const places = await loadSitePlaces(project.id, site.id);
+        return Promise.all(places.map(async place => ({
+            project,
+            site,
+            place,
+            markers: await loadPlaceMarkers(project.id, site.id, place.id)
+        })));
+    }));
+    const entries = groups.flat().flatMap(group => group.markers.map(marker => ({ ...group, marker })));
+    entries.sort((left, right) => String(right.marker.modified || right.marker.created || '').localeCompare(String(left.marker.modified || left.marker.created || '')));
+    const starting = entries.find(entry => entry.marker.type === 'intro_checkpoint');
+    let startingAnchor = null;
+    if (starting) {
+        try { startingAnchor = await loadMarkerAnchor(project.id, starting.site.id, starting.place.id, starting.marker.id); }
+        catch { /* An incomplete Starting Point is valid. */ }
+    }
+    const target = groups.flat()[0] || null;
+    await startArNote(null, null, {
+        projectId: project.id,
+        locationName: project.name,
+        siteId: target?.site.id || '',
+        placeId: target?.place.id || '',
+        markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
+        status: {
+            startingPoint: starting?.marker.name || 'Not configured',
+            accuracy: startingAnchor?.accuracy ? `${Math.round(Number(startingAnchor.accuracy))} m` : 'Not available',
+            entries: `${entries.filter(entry => entry.marker.visibility === 'public').length} published · ${entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length} drafts`,
+            label: startingAnchor?.latitude && startingAnchor?.longitude ? 'Ready to preview' : 'Setup incomplete'
+        }
+    });
 }
 
 export async function toggleGlobalAr() {

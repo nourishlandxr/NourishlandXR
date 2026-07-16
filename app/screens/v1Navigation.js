@@ -24,7 +24,7 @@ export async function renderDemoProjects(app) {
 }
 
 export function renderFirstSteps(app) {
-    app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a plant marker or custom note.</li><li>Add its position when ready.</li><li>Browse the experience.</li><li>Explore with Camera.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a plant marker or custom note.</li><li>Add its position when ready.</li><li>Browse the experience.</li><li>Explore with AR.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
 }
 
 export function renderComingSoon(app, feature, purpose, how, example, backAction = 'window.renderLaunchScreen()') {
