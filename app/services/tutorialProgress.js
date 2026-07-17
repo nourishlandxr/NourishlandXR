@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'nourishland-xr-tutorial-progress-v1';
 
 export const TUTORIAL_FEATURES = [
+    'dashboardWelcome',
     'arMode',
     'contentMode',
     'quickAccess',
@@ -16,6 +17,7 @@ const EVENT_RULES = {
     content_mode_introduced: ['contentMode', 'learning'],
     content_mode_opened: ['contentMode', 'understood'],
     quick_access_introduced: ['quickAccess', 'learning'],
+    dashboard_opened: ['dashboardWelcome', 'learning'],
     first_item_created: ['quickAccess', 'understood'],
     area_explained: ['area', 'learning'],
     first_area_created_or_selected: ['area', 'understood'],
@@ -32,7 +34,8 @@ function emptyRoot() {
         creator: {
             tutorialMode: true,
             features: {},
-            arTutorial: { state: 'not_started', step: 0, showHints: true }
+            arTutorial: { state: 'not_started', step: 0, showHints: true },
+            arDashboardTutorial: { state: 'not_started', step: 0 }
         },
         projects: {}
     };
@@ -52,12 +55,18 @@ function readRoot(storage) {
                 tutorialMode: true,
                 features: {},
                 arTutorial: { state: 'not_started', step: 0, showHints: true },
+                arDashboardTutorial: { state: 'not_started', step: 0 },
                 ...(parsed?.creator || {}),
                 arTutorial: {
                     state: 'not_started',
                     step: 0,
                     showHints: true,
                     ...(parsed?.creator?.arTutorial || {})
+                },
+                arDashboardTutorial: {
+                    state: 'not_started',
+                    step: 0,
+                    ...(parsed?.creator?.arDashboardTutorial || {})
                 }
             },
             projects: parsed?.projects && typeof parsed.projects === 'object' ? parsed.projects : {}
@@ -148,7 +157,8 @@ export function resetLearningTips(storage) {
     root.creator = {
         tutorialMode: true,
         features: {},
-        arTutorial: { state: 'not_started', step: 0, showHints: true }
+        arTutorial: { state: 'not_started', step: 0, showHints: true },
+        arDashboardTutorial: { state: 'not_started', step: 0 }
     };
     root.projects = {};
     writeRoot(root, storage);
@@ -194,8 +204,22 @@ export function resetArLearningTips(storage) {
         step: 0,
         showHints: root.creator.arTutorial?.showHints !== false
     };
+    root.creator.arDashboardTutorial = { state: 'not_started', step: 0 };
     writeRoot(root, storage);
     return { ...root.creator.arTutorial };
+}
+
+export function getArDashboardTutorialProgress(storage) {
+    const root = readRoot(storage);
+    return { ...root.creator.arDashboardTutorial };
+}
+
+export function setArDashboardTutorialProgress(state, step = 0, storage) {
+    if (!['not_started', 'in_progress', 'completed', 'skipped'].includes(state)) return getArDashboardTutorialProgress(storage);
+    const root = readRoot(storage);
+    root.creator.arDashboardTutorial = { state, step: Math.max(0, Number(step) || 0) };
+    writeRoot(root, storage);
+    return { ...root.creator.arDashboardTutorial };
 }
 
 export function readTutorialProgress(storage) {

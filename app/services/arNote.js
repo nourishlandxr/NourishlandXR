@@ -7,7 +7,7 @@
 // DOM Overlay, since text entry inside a WebGL canvas is not practical.
 
 import { createDemoMarker, createPlaceMarker, createSitePlace, deletePlaceMarker, loadDemoMarkers, saveMarkerAnchor, updateDemoMarker, updatePlaceMarker } from './persistence.js';
-import { getArTutorialProgress, replayArTutorial, setArHintsEnabled, setArTutorialProgress } from './tutorialProgress.js';
+import { getArDashboardTutorialProgress, getArTutorialProgress, replayArTutorial, setArDashboardTutorialProgress, setArHintsEnabled, setArTutorialProgress } from './tutorialProgress.js';
 
 const TYPES = {
     plant: { title: 'Add Plant Marker', nameLabel: 'Marker Name', typeLabel: 'Plant Marker', addLabel: 'Add Information' },
@@ -54,6 +54,7 @@ let refSpace;
 let hitSource;
 let latestHitTransform;
 let latestViewerPosition;
+let latestViewerMatrix;
 let surfaceAvailable = false;
 let pointerFallbackTimer;
 let placementMessageTimer;
@@ -79,6 +80,7 @@ let modalCard;
 let placementReticle;
 let reticleLabel;
 let creatorToolbar;
+let dashboardControls;
 let tutorialPanel;
 let arToast;
 let plantProfile;
@@ -86,6 +88,7 @@ let arDiagnosticLines = [];
 let pendingExitRoute = null;
 let suppressAutomaticRestore = false;
 let arTutorialStep = -1;
+let arDashboardTutorialStep = -1;
 let activeAreas = [];
 let pendingMarkerName = '';
 let pendingPlaceId = '';
@@ -94,6 +97,10 @@ let surfaceGuidanceVisible = false;
 let arHintsEnabled = true;
 let pendingAreaSelection = '';
 let pendingNewAreaName = '';
+let dashboardDistance = 1.2;
+let dashboardPinned = false;
+let dashboardGrabInputSource = null;
+let dashboardHoverRegionId = '';
 const AR_DIAGNOSTICS_KEY = 'nourishland-xr-ar-diagnostics-v1';
 const PLATFORM_SETTINGS_KEY = 'nourishland-xr-settings';
 const AR_RECOVERY_KEY = 'nourishland-xr-active-creator-ar';
@@ -107,6 +114,7 @@ let toolboxMatrix = null;
 let menuVisible = false;
 let persistedMarkers = [];
 let activeLocationName = 'Hillyards Food Forest';
+let activeSiteName = 'Main Location';
 let activeLocationStatus = { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
 let suppliedLocationMarkers = null;
 let activePersistenceContext = null;
@@ -176,10 +184,10 @@ const TOOLBOX_REGIONS = [
 const BACK_REGION = { id: 'back_toolbox', label: 'Back to Hillyards Tool Box', x: 62, y: 650, w: 1076, h: 76 };
 
 const DASHBOARD_REGIONS = [
-    { id: 'add', label: 'Quick Access', x: 40, y: 225, w: 1120, h: 78 },
-    { id: 'global_plants', label: 'Field Guide', x: 40, y: 320, w: 350, h: 80 },
-    { id: 'map', label: 'Map', x: 425, y: 320, w: 350, h: 80 },
-    { id: 'starting_points', label: 'Starting Points', x: 810, y: 320, w: 350, h: 80 }
+    { id: 'move_dashboard', label: 'Move Dashboard', x: 850, y: 28, w: 300, h: 74 },
+    { id: 'plant', label: 'Plant', x: 40, y: 230, w: 350, h: 96 },
+    { id: 'sub_checkpoint', label: 'Checkpoint', x: 425, y: 230, w: 350, h: 96 },
+    { id: 'note', label: 'Note', x: 810, y: 230, w: 350, h: 96 }
 ];
 
 const SMALL_TOOLBOX_REGIONS = [
@@ -295,10 +303,11 @@ function drawPanelBackground(title) {
 
 function drawMenuButton(region, title, subtitle) {
     const context = panelContext;
-    context.fillStyle = 'rgba(220, 235, 220, 0.9)';
+    const highlighted = dashboardHoverRegionId === region.id;
+    context.fillStyle = highlighted ? 'rgba(196, 245, 207, 0.98)' : 'rgba(220, 235, 220, 0.9)';
     context.fillRect(region.x, region.y, region.w, region.h);
     context.strokeStyle = 'rgba(23, 61, 40, 0.35)';
-    context.lineWidth = 2;
+    context.lineWidth = highlighted ? 8 : 2;
     context.strokeRect(region.x, region.y, region.w, region.h);
     context.fillStyle = '#173126';
     context.font = '700 34px sans-serif';
@@ -317,29 +326,41 @@ function drawHillyardsDashboard() {
     const startingPoint = persistedMarkers.find(marker => marker.type === 'intro_checkpoint');
     activeLocationStatus.entries = `${publicCount} published · ${draftCount} drafts`;
     if (startingPoint) activeLocationStatus.startingPoint = startingPoint.name;
-    drawPanelBackground(`${activeLocationName} Dashboard`);
-    panelContext.fillStyle = 'rgba(248, 250, 244, 0.9)';
-    panelContext.fillRect(40, 145, 1120, 62);
+    const currentArea = activeAreas.find(area => area.id === activePersistenceContext?.placeId)?.name || 'Unassigned';
+    const positionedIds = new Set(spatialMarkers.map(item => item.marker?.id).filter(Boolean));
+    const contentMarkers = persistedMarkers.filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type));
+    const unplacedCount = contentMarkers.filter(marker => !positionedIds.has(marker.id)).length;
+    const nearbyCount = spatialMarkers.filter(item => Number(item.placement?.distance) <= 20).length;
+    drawPanelBackground(activeLocationName);
+    panelContext.fillStyle = 'rgba(255,255,255,.16)';
+    panelContext.fillRect(850, 28, 300, 74);
+    panelContext.strokeStyle = dashboardHoverRegionId === 'move_dashboard' ? '#8befa2' : 'rgba(255,255,255,.42)';
+    panelContext.lineWidth = dashboardHoverRegionId === 'move_dashboard' ? 7 : 2;
+    panelContext.strokeRect(850, 28, 300, 74);
+    panelContext.fillStyle = '#ffffff';
+    panelContext.font = '700 26px sans-serif';
+    panelContext.fillText('Move Dashboard', 890, 74);
+    panelContext.fillStyle = 'rgba(248, 250, 244, 0.92)';
+    panelContext.fillRect(40, 145, 1120, 68);
     panelContext.fillStyle = '#173126';
     panelContext.font = '700 23px sans-serif';
-    panelContext.fillText(activeLocationStatus.label, 60, 183);
+    panelContext.fillText(`Project: ${activeLocationName}`, 60, 174);
     panelContext.font = '21px sans-serif';
-    panelContext.fillText(`Starting Point: ${activeLocationStatus.startingPoint}`, 330, 183);
-    panelContext.fillText(`Accuracy: ${activeLocationStatus.accuracy}`, 715, 183);
-    panelContext.fillText(activeLocationStatus.entries, 930, 183);
-    drawMenuButton(DASHBOARD_REGIONS[0], 'Quick Access');
-    drawMenuButton(DASHBOARD_REGIONS[1], 'Field Guide');
-    drawMenuButton(DASHBOARD_REGIONS[2], 'Map');
-    drawMenuButton(DASHBOARD_REGIONS[3], 'Starting Points');
+    panelContext.fillText(`Location: ${activeSiteName}`, 60, 202);
+    panelContext.fillText(`Area: ${currentArea}`, 590, 202);
+    drawMenuButton(DASHBOARD_REGIONS[1], 'Plant', 'Quick Access');
+    drawMenuButton(DASHBOARD_REGIONS[2], 'Checkpoint', 'Quick Access');
+    drawMenuButton(DASHBOARD_REGIONS[3], 'Note', 'Quick Access');
 
     panelContext.fillStyle = '#ffffff';
-    panelContext.font = '700 27px sans-serif';
-    panelContext.fillText('CHANGES', 45, 438);
-    latestEntryRegions = persistedMarkers.slice(0, 4).map((marker, index) => ({
+    panelContext.font = '700 24px sans-serif';
+    panelContext.fillText(`NEARBY ${nearbyCount}    UNPLACED ${unplacedCount}    TRACKING ${surfaceAvailable ? 'SURFACE FOUND' : 'ACTIVE'}`, 45, 372);
+    panelContext.fillText('FIELD INFORMATION', 45, 418);
+    latestEntryRegions = contentMarkers.slice(0, 4).map((marker, index) => ({
         id: `entry:${marker.id}`,
         label: marker.name,
         x: 40,
-        y: 454 + index * 72,
+        y: 438 + index * 72,
         w: 1120,
         h: 62,
         marker
@@ -357,7 +378,7 @@ function drawHillyardsDashboard() {
     } else {
         panelContext.fillStyle = 'rgba(255,255,255,.82)';
         panelContext.font = '28px sans-serif';
-        panelContext.fillText('No entries yet. Add something to this location.', 45, 500);
+        panelContext.fillText('No entries yet. Use Quick Access to add field information.', 45, 490);
     }
     uploadTexture(texture, panelCanvas);
 }
@@ -741,8 +762,8 @@ const AR_TUTORIAL_STEPS = [
         action: 'Next'
     },
     {
-        title: 'Return to the Dashboard',
-        body: 'You can leave AR at any time. Saved work remains connected to this project.',
+        title: 'Open your AR Dashboard',
+        body: 'Dashboard opens your compact field workspace inside AR. Use its separate full-Dashboard action when you are ready to end the camera session.',
         action: 'Got It'
     },
     {
@@ -776,6 +797,8 @@ function showArTutorialStep(step = 0) {
     if (!tutorialPanel || !spatialCreator) return;
     hideModal();
     arTutorialStep = Math.max(0, Math.min(step, AR_TUTORIAL_STEPS.length - 1));
+    if (arTutorialStep === 1) mode = 'tutorial-surface';
+    else if (mode === 'tutorial-surface') mode = 'menu-placed';
     setArTutorialProgress('in_progress', arTutorialStep);
     const item = AR_TUTORIAL_STEPS[arTutorialStep];
     tutorialPanel.innerHTML = `
@@ -816,6 +839,151 @@ function startCreatorArTutorial(force = false) {
     const progress = getArTutorialProgress();
     if (!force && ['completed', 'skipped'].includes(progress.state)) return;
     showArTutorialStep(force ? 0 : progress.state === 'in_progress' ? progress.step : 0);
+}
+
+const AR_DASHBOARD_TUTORIAL_STEPS = [
+    ['Your AR Dashboard', 'This is your field workspace. Add information or manage your current Area without leaving AR.', 'arDashboardButton'],
+    ['Quick Access', 'Choose Plant, Checkpoint or Note directly from the spatial panel.', 'arDashboardControls'],
+    ['Move Dashboard', 'On supported headsets, point a controller at the Move Dashboard handle and hold select or squeeze to reposition it.', 'arDashboardControls'],
+    ['Recenter and close', 'Phone users can bring the panel closer, move it further away, recenter it or close it without ending AR.', 'arDashboardRecenter'],
+    ['Open the full Dashboard', 'Use Exit AR and Open Full Dashboard when you want the complete Creator workspace.', 'arDashboardExitFull']
+];
+
+function showArDashboardTutorialStep(step = 0) {
+    if (!tutorialPanel || !menuVisible) return;
+    arDashboardTutorialStep = Math.max(0, Math.min(step, AR_DASHBOARD_TUTORIAL_STEPS.length - 1));
+    setArDashboardTutorialProgress('in_progress', arDashboardTutorialStep);
+    const [title, body, highlightId] = AR_DASHBOARD_TUTORIAL_STEPS[arDashboardTutorialStep];
+    clearArHighlights();
+    document.getElementById(highlightId)?.classList.add('ar-tutorial-highlight');
+    tutorialPanel.innerHTML = `
+        <div class="ar-tutorial-progress">AR Dashboard · ${arDashboardTutorialStep + 1} of ${AR_DASHBOARD_TUTORIAL_STEPS.length}</div>
+        <h2>${title}</h2><p>${body}</p>
+        <div class="ar-tutorial-actions">
+            <button type="button" id="arDashboardTutorialSkip">Skip Tutorial</button>
+            <button type="button" class="primary" id="arDashboardTutorialNext">${arDashboardTutorialStep === AR_DASHBOARD_TUTORIAL_STEPS.length - 1 ? 'Got It' : 'Next'}</button>
+        </div>`;
+    tutorialPanel.classList.remove('hidden');
+    document.getElementById('arDashboardTutorialSkip').addEventListener('click', () => {
+        setArDashboardTutorialProgress('skipped', arDashboardTutorialStep);
+        arDashboardTutorialStep = -1;
+        hideTutorialPanel();
+    });
+    document.getElementById('arDashboardTutorialNext').addEventListener('click', () => {
+        if (arDashboardTutorialStep === AR_DASHBOARD_TUTORIAL_STEPS.length - 1) {
+            setArDashboardTutorialProgress('completed', AR_DASHBOARD_TUTORIAL_STEPS.length);
+            arDashboardTutorialStep = -1;
+            hideTutorialPanel();
+            return;
+        }
+        showArDashboardTutorialStep(arDashboardTutorialStep + 1);
+    });
+}
+
+function viewerFacingPanelMatrix(viewerMatrix, distance = dashboardDistance) {
+    if (!viewerMatrix) return null;
+    const forwardX = -viewerMatrix[8];
+    const forwardZ = -viewerMatrix[10];
+    const forwardLength = Math.hypot(forwardX, forwardZ) || 1;
+    const directionX = forwardX / forwardLength;
+    const directionZ = forwardZ / forwardLength;
+    const normalX = -directionX;
+    const normalZ = -directionZ;
+    return new Float32Array([
+        normalZ, 0, -normalX, 0,
+        0, 1, 0, 0,
+        normalX, 0, normalZ, 0,
+        viewerMatrix[12] + directionX * distance,
+        viewerMatrix[13] - 0.18,
+        viewerMatrix[14] + directionZ * distance,
+        1
+    ]);
+}
+
+function rayPositionedPanelMatrix(rayMatrix, distance = 1) {
+    if (!rayMatrix) return null;
+    const position = {
+        x: rayMatrix[12] - rayMatrix[8] * distance,
+        y: rayMatrix[13] - rayMatrix[9] * distance,
+        z: rayMatrix[14] - rayMatrix[10] * distance
+    };
+    let normalX = rayMatrix[12] - position.x;
+    let normalZ = rayMatrix[14] - position.z;
+    const length = Math.hypot(normalX, normalZ) || 1;
+    normalX /= length;
+    normalZ /= length;
+    return new Float32Array([
+        normalZ, 0, -normalX, 0,
+        0, 1, 0, 0,
+        normalX, 0, normalZ, 0,
+        position.x, position.y, position.z, 1
+    ]);
+}
+
+function setDashboardControlsVisible(visible) {
+    if (dashboardControls) dashboardControls.hidden = !visible;
+    document.body.classList.toggle('ar-dashboard-open', visible);
+}
+
+function recenterArDashboard(distance = dashboardDistance) {
+    if (!latestViewerMatrix) {
+        message('Look forward, then try Recenter again.');
+        return false;
+    }
+    dashboardDistance = Math.max(0.8, Math.min(1.8, distance));
+    menuMatrix = viewerFacingPanelMatrix(latestViewerMatrix, dashboardDistance);
+    menuVisible = true;
+    dashboardPinned = false;
+    dashboardGrabInputSource = null;
+    mode = 'menu-placed';
+    panelView = 'dashboard';
+    drawHillyardsDashboard();
+    setDashboardControlsVisible(true);
+    message('');
+    return true;
+}
+
+function summonArDashboard() {
+    hideModal();
+    hideTutorialPanel();
+    if (!recenterArDashboard()) return;
+    const progress = getArDashboardTutorialProgress();
+    if (!['completed', 'skipped'].includes(progress.state)) {
+        showArDashboardTutorialStep(progress.state === 'in_progress' ? progress.step : 0);
+    }
+}
+
+function closeArDashboard() {
+    menuVisible = false;
+    menuMatrix = null;
+    dashboardGrabInputSource = null;
+    dashboardHoverRegionId = '';
+    setDashboardControlsVisible(false);
+    hideTutorialPanel();
+    message('');
+}
+
+function pinArDashboard() {
+    dashboardPinned = true;
+    dashboardGrabInputSource = null;
+    message('AR Dashboard pinned here for this session.');
+}
+
+function dashboardRegionForInput(frame, inputSource) {
+    const pose = inputSource?.targetRaySpace ? frame.getPose(inputSource.targetRaySpace, refSpace) : null;
+    return pose ? regionAt(rayPanelHit(pose.transform.matrix), panelView) : null;
+}
+
+function beginDashboardGrab(event) {
+    if (!menuVisible || panelView !== 'dashboard') return;
+    const region = dashboardRegionForInput(event.frame, event.inputSource);
+    if (region?.id !== 'move_dashboard') return;
+    dashboardGrabInputSource = event.inputSource;
+    dashboardPinned = false;
+}
+
+function endDashboardGrab(event) {
+    if (!event?.inputSource || dashboardGrabInputSource === event.inputSource) dashboardGrabInputSource = null;
 }
 
 function updatePlacementAction() {
@@ -892,7 +1060,7 @@ function showQuickEntryForm(type) {
         pendingMarkerName = '';
         pendingType = null;
         hideModal();
-        mode = 'menu-placed';
+        mode = spatialCreator ? 'menu-placed' : 'scanning-menu';
     });
     document.getElementById('arQuickContinue').addEventListener('click', beginQuickPlacement);
     document.getElementById('arQuickName').focus();
@@ -1014,7 +1182,7 @@ function showArSettings() {
         <label class="ar-inline-checkbox"><input id="arHintsToggle" type="checkbox" ${tutorial.showHints === false ? '' : 'checked'} /> <span>Show AR Hints</span></label>
         <button type="button" id="arReplayTutorial">Replay AR Tutorial</button>
         <button type="button" id="arCopyDiagnostics">Copy Diagnostics</button>
-        <button type="button" class="danger" id="arExitFromSettings">Exit AR</button>
+        <button type="button" class="danger" id="arExitFromSettings">Exit AR and Open Full Dashboard</button>
         <div class="ar-modal-actions"><button type="button" id="arSettingsClose">Close</button></div>
         <p id="arTechnicalCopyStatus" class="ar-modal-hint"></p>`;
     showModal();
@@ -1098,19 +1266,41 @@ function createArOverlay() {
             <button type="button" id="arSettingsButton"><span aria-hidden="true">⚙</span><strong>Settings</strong></button>`;
         creatorToolbar.addEventListener('beforexrselect', event => event.preventDefault());
         document.body.append(creatorToolbar);
-        document.getElementById('arDashboardButton').addEventListener('click', requestDashboardExit);
+        document.getElementById('arDashboardButton').addEventListener('click', summonArDashboard);
         document.getElementById('arAddButton').addEventListener('click', showAddMenu);
         document.getElementById('arSettingsButton').addEventListener('click', showArSettings);
+
+        dashboardControls = document.createElement('div');
+        dashboardControls.id = 'arDashboardControls';
+        dashboardControls.hidden = true;
+        dashboardControls.setAttribute('aria-label', 'AR Dashboard positioning controls');
+        dashboardControls.innerHTML = `
+            <button type="button" id="arDashboardRecenter">Recenter</button>
+            <button type="button" id="arDashboardCloser">Bring Closer</button>
+            <button type="button" id="arDashboardFurther">Move Further Away</button>
+            <button type="button" id="arDashboardPin">Pin Here</button>
+            <button type="button" id="arDashboardClose">Close</button>
+            <button type="button" class="danger" id="arDashboardExitFull">Exit AR and Open Full Dashboard</button>`;
+        dashboardControls.addEventListener('beforexrselect', event => event.preventDefault());
+        document.body.append(dashboardControls);
+        document.getElementById('arDashboardRecenter').addEventListener('click', () => recenterArDashboard());
+        document.getElementById('arDashboardCloser').addEventListener('click', () => recenterArDashboard(dashboardDistance - 0.2));
+        document.getElementById('arDashboardFurther').addEventListener('click', () => recenterArDashboard(dashboardDistance + 0.2));
+        document.getElementById('arDashboardPin').addEventListener('click', pinArDashboard);
+        document.getElementById('arDashboardClose').addEventListener('click', closeArDashboard);
+        document.getElementById('arDashboardExitFull').addEventListener('click', requestDashboardExit);
     }
 }
 
 function removeArOverlay() {
     document.body.classList.remove('ar-session-active');
+    document.body.classList.remove('ar-dashboard-open');
     overlay?.remove();
     modal?.remove();
     placementReticle?.remove();
     reticleLabel?.remove();
     creatorToolbar?.remove();
+    dashboardControls?.remove();
     tutorialPanel?.remove();
     arToast?.remove();
     document.getElementById('arRadialToolbox')?.remove();
@@ -1121,12 +1311,18 @@ function removeArOverlay() {
     placementReticle = null;
     reticleLabel = null;
     creatorToolbar = null;
+    dashboardControls = null;
     tutorialPanel = null;
     arToast = null;
     arTutorialStep = -1;
+    arDashboardTutorialStep = -1;
+    dashboardGrabInputSource = null;
+    dashboardHoverRegionId = '';
+    dashboardPinned = false;
 }
 
 function showModal() {
+    if (menuVisible && spatialCreator) closeArDashboard();
     hideTutorialPanel();
     modal?.classList.remove('hidden');
 }
@@ -1212,7 +1408,8 @@ function cancelToMenu() {
     pendingReuseProfile = false;
     pendingParentName = '';
     mode = 'menu-placed';
-    menuVisible = true;
+    menuVisible = !spatialCreator;
+    if (spatialCreator) menuMatrix = null;
     drawHillyardsDashboard();
     hideModal();
     message('Select an option.');
@@ -1220,7 +1417,9 @@ function cancelToMenu() {
 
 function beginPlacement(type) {
     pendingType = type;
-    menuVisible = true;
+    menuVisible = false;
+    menuMatrix = null;
+    setDashboardControlsVisible(false);
     mode = 'scanning-marker';
     surfaceAvailable = false;
     latestHitTransform = null;
@@ -1306,7 +1505,8 @@ async function finalizeMarker(name) {
     pendingParentName = '';
     lastConfirmedMarker = marker;
     mode = 'menu-placed';
-    menuVisible = true;
+    menuVisible = !spatialCreator;
+    if (spatialCreator) menuMatrix = null;
     hideModal();
     updatePlacementAction();
     message('');
@@ -1323,7 +1523,8 @@ function cancelMarkerCreation() {
     pendingReuseProfile = false;
     pendingParentName = '';
     mode = 'menu-placed';
-    menuVisible = true;
+    menuVisible = !spatialCreator;
+    if (spatialCreator) menuMatrix = null;
     drawHillyardsDashboard();
     hideModal();
     message('Select an option.');
@@ -1332,7 +1533,8 @@ function cancelMarkerCreation() {
 function finishMarkerFlow() {
     lastConfirmedMarker = null;
     mode = 'menu-placed';
-    menuVisible = true;
+    menuVisible = !spatialCreator;
+    if (spatialCreator) menuMatrix = null;
     drawHillyardsDashboard();
     hideModal();
     updatePlacementAction();
@@ -1422,7 +1624,8 @@ function handleMenuSelect(rayPose) {
     if (!region) return;
 
     if (panelView === 'dashboard') {
-        if (region.id === 'add') drawToolbox();
+        if (region.id === 'move_dashboard') return;
+        if (['plant', 'sub_checkpoint', 'note'].includes(region.id)) showQuickEntryForm(region.id);
         else if (region.id.startsWith('entry:')) drawMarkerEntry(region.marker);
         else showProjectComingSoon(region.label);
         return;
@@ -1504,7 +1707,7 @@ function placeMarkerFlag(source = 'xr') {
 }
 
 function handlePointerFallback(event) {
-    if (!session || event.target.closest?.('#arOverlayControls') || event.target.closest?.('#arModal') || event.target.closest?.('#arCreatorToolbar') || event.target.closest?.('#arTutorialPanel') || event.target.closest?.('#arToast') || event.target.closest?.('#globalArToggle')) return;
+    if (!session || event.target.closest?.('#arOverlayControls') || event.target.closest?.('#arModal') || event.target.closest?.('#arCreatorToolbar') || event.target.closest?.('#arDashboardControls') || event.target.closest?.('#arTutorialPanel') || event.target.closest?.('#arToast') || event.target.closest?.('#globalArToggle')) return;
     if (mode !== 'scanning-menu' && mode !== 'scanning-marker') return;
     window.clearTimeout(pointerFallbackTimer);
     pointerFallbackTimer = window.setTimeout(() => {
@@ -1531,7 +1734,7 @@ function drawOne(view, matrix, tex, buf) {
 }
 
 function updateReticleAndStatus(frame, viewerPose) {
-    if (mode === 'scanning-menu' || mode === 'scanning-marker') {
+    if (mode === 'scanning-menu' || mode === 'scanning-marker' || mode === 'tutorial-surface') {
         captureTrackingState(frame, viewerPose);
         placementReticle?.classList.toggle('surface-found', surfaceAvailable);
         if (reticleLabel) reticleLabel.textContent = '';
@@ -1546,7 +1749,7 @@ function updateReticleAndStatus(frame, viewerPose) {
         }
         return;
     }
-    if (mode === 'menu-placed') {
+    if (mode === 'menu-placed' && menuVisible) {
         const local = rayPanelHit(viewerPose.transform.matrix);
         const region = regionAt(local, panelView);
         placementReticle?.classList.toggle('surface-found', Boolean(region));
@@ -1557,14 +1760,36 @@ function updateReticleAndStatus(frame, viewerPose) {
     if (reticleLabel) reticleLabel.textContent = '';
 }
 
+function updateDashboardControllerState(frame) {
+    if (!menuVisible || panelView !== 'dashboard') return;
+    if (dashboardGrabInputSource?.targetRaySpace) {
+        const grabPose = frame.getPose(dashboardGrabInputSource.targetRaySpace, refSpace);
+        if (grabPose) menuMatrix = rayPositionedPanelMatrix(grabPose.transform.matrix, 1);
+    }
+    let nextHover = '';
+    for (const inputSource of frame.session.inputSources || []) {
+        const region = dashboardRegionForInput(frame, inputSource);
+        if (region) {
+            nextHover = region.id;
+            break;
+        }
+    }
+    if (nextHover !== dashboardHoverRegionId) {
+        dashboardHoverRegionId = nextHover;
+        drawHillyardsDashboard();
+    }
+}
+
 function draw(_time, frame) {
     const activeSession = frame.session;
     activeSession.requestAnimationFrame(draw);
     const viewerPose = frame.getViewerPose(refSpace);
     if (!viewerPose) return;
+    latestViewerMatrix = new Float32Array(viewerPose.transform.matrix);
     initializeReconstructedMarkers(viewerPose);
     updateReconstructedBillboards(viewerPose);
     updateReticleAndStatus(frame, viewerPose);
+    updateDashboardControllerState(frame);
     gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
     gl.colorMask(true, true, true, true);
     gl.depthMask(true);
@@ -1677,6 +1902,7 @@ function requestDashboardExit() {
 
 export async function startArNote(_marker, profile, locationContext = null) {
     activeLocationName = locationContext?.locationName || 'Hillyards Food Forest';
+    activeSiteName = locationContext?.siteName || 'Main Location';
     activeLocationStatus = locationContext?.status || { startingPoint: 'Not configured', accuracy: 'Not available', entries: '0 published · 0 drafts', label: 'Setup incomplete' };
     suppliedLocationMarkers = Array.isArray(locationContext?.markers) ? locationContext.markers : null;
     spatialMarkers = Array.isArray(locationContext?.spatialMarkers) ? locationContext.spatialMarkers : [];
@@ -1691,6 +1917,10 @@ export async function startArNote(_marker, profile, locationContext = null) {
     } : null;
     pendingExitRoute = null;
     suppressAutomaticRestore = false;
+    dashboardDistance = 1.2;
+    dashboardPinned = false;
+    dashboardGrabInputSource = null;
+    dashboardHoverRegionId = '';
     arHintsEnabled = getArTutorialProgress().showHints !== false;
     resetArDiagnostics();
     reportArDiagnostic('START AR clicked');
@@ -1749,7 +1979,7 @@ export async function startArNote(_marker, profile, locationContext = null) {
         const viewerSpace = await session.requestReferenceSpace('viewer');
         hitSource = await session.requestHitTestSource({ space: viewerSpace });
 
-        mode = 'scanning-menu';
+        mode = 'menu-placed';
         panelView = 'dashboard';
         menuMatrix = null;
         toolboxMatrix = null;
@@ -1761,9 +1991,14 @@ export async function startArNote(_marker, profile, locationContext = null) {
         ignoreNextSelectAfterFallback = false;
         latestHitTransform = null;
         latestViewerPosition = null;
+        latestViewerMatrix = null;
         surfaceAvailable = false;
 
         document.addEventListener('pointerdown', handlePointerFallback, true);
+        session.addEventListener('selectstart', beginDashboardGrab);
+        session.addEventListener('selectend', endDashboardGrab);
+        session.addEventListener('squeezestart', beginDashboardGrab);
+        session.addEventListener('squeezeend', endDashboardGrab);
         session.addEventListener('select', event => {
             window.clearTimeout(pointerFallbackTimer);
             if (ignoreNextSelectAfterFallback) { ignoreNextSelectAfterFallback = false; return; }
@@ -1788,6 +2023,7 @@ export async function startArNote(_marker, profile, locationContext = null) {
             hitSource = null;
             latestHitTransform = null;
             latestViewerPosition = null;
+            latestViewerMatrix = null;
             surfaceAvailable = false;
             mode = 'idle';
             panelView = 'dashboard';
@@ -1802,6 +2038,9 @@ export async function startArNote(_marker, profile, locationContext = null) {
             pendingReuseProfile = false;
             pendingParentName = '';
             pendingMarkerMatrix = null;
+            dashboardGrabInputSource = null;
+            dashboardHoverRegionId = '';
+            dashboardPinned = false;
             lastConfirmedMarker = null;
             if (gl) tempMarkers.forEach(marker => gl.deleteTexture(marker.texture));
             if (gl) reconstructedMarkers.forEach(marker => gl.deleteTexture(marker.texture));
@@ -1823,8 +2062,8 @@ export async function startArNote(_marker, profile, locationContext = null) {
                 window.renderProjectDashboard(encodeURIComponent(restoreProjectId));
             }
         });
-        message('Move slowly to detect a surface.');
-        surfaceGuidanceVisible = true;
+        message(spatialCreator ? '' : 'Move slowly to detect a surface.');
+        surfaceGuidanceVisible = !spatialCreator;
         startCreatorArTutorial();
         session.requestAnimationFrame(draw);
     } catch (error) {
@@ -1864,8 +2103,9 @@ export function resetArPlacement() {
     lastConfirmedMarker = null;
     latestHitTransform = null;
     latestViewerPosition = null;
+    latestViewerMatrix = null;
     surfaceAvailable = false;
-    mode = session ? 'scanning-menu' : 'idle';
+    mode = session ? (spatialCreator ? 'menu-placed' : 'scanning-menu') : 'idle';
     panelView = 'dashboard';
     ignoreNextSelectAfterFallback = false;
     if (gl && texture) {
@@ -1873,12 +2113,13 @@ export function resetArPlacement() {
         drawSmallToolbox();
     }
     document.getElementById('arRadialToolbox')?.classList.add('hidden');
+    setDashboardControlsVisible(false);
     hideModal();
     hideTutorialPanel();
     updatePlacementAction();
     placementReticle?.classList.remove('surface-found');
     if (reticleLabel) reticleLabel.textContent = '';
-    message('Move slowly to detect a surface.');
+    message(spatialCreator ? '' : 'Move slowly to detect a surface.');
 }
 
 export function exitAr(options = {}) {

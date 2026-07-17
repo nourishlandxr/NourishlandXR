@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {
     dismissTutorialFeature,
+    getArDashboardTutorialProgress,
     getArTutorialProgress,
     getTutorialStage,
     readTutorialProgress,
@@ -13,6 +14,7 @@ import {
     resetLearningTips,
     restartProjectTutorial,
     setArHintsEnabled,
+    setArDashboardTutorialProgress,
     setArTutorialProgress
 } from '../app/services/tutorialProgress.js';
 
@@ -86,4 +88,17 @@ test('AR tutorial can be replayed and hints reset without touching creator conte
     resetArLearningTips(storage);
     assert.deepEqual(getArTutorialProgress(storage), { state: 'not_started', step: 0, showHints: false });
     assert.deepEqual(content, before);
+});
+
+test('AR Dashboard tutorial persists separately and resets without project mutations', () => {
+    const storage = memoryStorage();
+    const projectContent = { areas: [{ id: 'area-1' }], markers: [{ id: 'marker-1' }] };
+    const before = structuredClone(projectContent);
+    setArDashboardTutorialProgress('in_progress', 2, storage);
+    assert.deepEqual(getArDashboardTutorialProgress(storage), { state: 'in_progress', step: 2 });
+    setArDashboardTutorialProgress('completed', 5, storage);
+    assert.equal(getArDashboardTutorialProgress(storage).state, 'completed');
+    resetArLearningTips(storage);
+    assert.deepEqual(getArDashboardTutorialProgress(storage), { state: 'not_started', step: 0 });
+    assert.deepEqual(projectContent, before);
 });

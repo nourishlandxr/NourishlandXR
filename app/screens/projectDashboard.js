@@ -229,6 +229,7 @@ export function filterProjectSearch(value) {
 }
 
 const GUIDANCE_EVENTS = {
+    dashboardWelcome: 'dashboard_opened',
     arMode: 'ar_mode_introduced',
     contentMode: 'content_mode_introduced',
     quickAccess: 'quick_access_introduced',
@@ -237,11 +238,12 @@ const GUIDANCE_EVENTS = {
 };
 const forcedGuidanceFeatures = new Map();
 
-function dashboardGuidance(projectId, { hasArea, startingConfigured }) {
+function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProject }) {
     if (!isProjectTutorialEnabled(projectId)) return null;
     const candidates = [
-        !hasArea ? ['area', 'quickAccess'] : null,
+        freshProject ? ['dashboardWelcome', 'header'] : null,
         ['quickAccess', 'quickAccess'],
+        !hasArea ? ['area', 'areas'] : null,
         ['arMode', 'workMode'],
         ['contentMode', 'workMode'],
         !startingConfigured ? ['startingPoint', 'status'] : null
@@ -255,6 +257,13 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured }) {
     const [feature, target] = selected;
     const stage = getTutorialStage(projectId, feature);
     const content = {
+        dashboardWelcome: {
+            title: 'Welcome to your Dashboard',
+            full: 'This is where your project is organized, edited and brought to life. You can build content on screen or work directly in the landscape using AR.',
+            short: 'This Dashboard is your workspace for organizing content and working in AR.',
+            actionLabel: '',
+            action: ''
+        },
         area: {
             title: 'Areas organise your Location',
             full: 'An Area is a meaningful section inside a Location, such as an orchard row, garden bed, fountain, restaurant, propagation area or walking path. Create one now; you can rename or update it later.',
@@ -264,10 +273,10 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured }) {
         },
         quickAccess: {
             title: 'Quick Access',
-            full: 'Quick Access is the fastest way to add a Plant, Area or Note to this project. Choose an item type, assign its Area, then save it with or without a physical AR position.',
-            short: 'Use Quick Access to add a Plant, Area or Note. Physical placement can happen later.',
-            actionLabel: 'Add content',
-            action: `window.renderAddToLocation('${encoded(projectId)}')`
+            full: 'Add a Plant, Checkpoint or Note. You can prepare information now and position it later using a map or AR Mode.',
+            short: 'Add a Plant, Checkpoint or Note now and position it later.',
+            actionLabel: '',
+            action: ''
         },
         arMode: {
             title: 'About AR Mode',
@@ -300,6 +309,7 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured }) {
         actionLabel: content.actionLabel,
         action: content.action,
         dismissAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
+        nextAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
         introducedEvent: GUIDANCE_EVENTS[feature]
     };
 }
@@ -327,6 +337,12 @@ export async function openCreatorContentMode(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     recordTutorialEvent(projectId, 'content_mode_opened');
     await renderContentMode(app, encoded(projectId));
+}
+
+export async function openQuickAccessChoice(app, encodedProjectId, type) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    dismissTutorialFeature(projectId, 'quickAccess');
+    await renderPlacementChoice(app, encoded(projectId), type);
 }
 
 export function openCreatorVisitorPreview(encodedProjectId) {
@@ -419,15 +435,12 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         }
         const hasGps = Number.isFinite(Number(startingAnchor?.latitude)) && Number.isFinite(Number(startingAnchor?.longitude));
         const startingConfigured = Boolean(startingPoint && (hasGps || startingAnchor?.qr_code));
-        const guidance = dashboardGuidance(project.id, { hasArea, startingConfigured });
-        const published = entries.filter(entry => entry.marker.visibility === 'public').length;
-        const drafts = entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length;
-        const latestDate = entries.map(entry => entry.marker.modified || entry.marker.created).filter(Boolean).sort().at(-1);
-        const experienceState = !startingConfigured
-            ? { label: 'Setup incomplete', tone: 'incomplete' }
-            : project.visibility === 'public'
-                ? { label: 'Published', tone: 'published' }
-                : { label: 'Draft', tone: 'draft' };
+        const projectEntries = entries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type));
+        const guidance = dashboardGuidance(project.id, { hasArea, startingConfigured, freshProject: !hasArea && projectEntries.length === 0 });
+        const latestDate = [
+            ...projectEntries.map(entry => entry.marker.modified || entry.marker.created),
+            ...areas.map(area => area.modified || area.created)
+        ].filter(Boolean).sort().at(-1);
         const latestEntries = placedEntries.slice(0, 8).map(({ marker }) => {
             return {
                 label: escapeHtml(marker.name),
@@ -455,33 +468,23 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             searchItems,
             locationName: escapeHtml(project.name),
             siteName: escapeHtml(site?.name || 'No site configured'),
-            introduction: `This is the ${escapeHtml(project.name)} Dashboard—where the project is edited, developed and brought to life.`,
             backAction: 'window.renderDemoProjects()',
             launchActions: [
-                { label: 'AR Mode', description: 'View, create and position content in the physical environment.', action: `window.openCreatorArMode('${encoded(project.id)}')` },
-                { label: 'Content Mode', description: 'Add, edit and organize content without using the camera.', action: `window.openCreatorContentMode('${encoded(project.id)}')` }
+                { label: 'AR Mode', description: 'Position and work with content in the landscape.', action: `window.openCreatorArMode('${encoded(project.id)}')` },
+                { label: 'Content Mode', description: 'Add and organize content without the camera.', action: `window.openCreatorContentMode('${encoded(project.id)}')` }
             ],
             status: {
-                label: experienceState.label,
-                tone: experienceState.tone,
-                startingPoint: escapeHtml(startingPoint?.marker.name || 'Not configured'),
-                accuracy: startingAnchor?.accuracy ? `${Math.round(Number(startingAnchor.accuracy))} m` : startingConfigured ? 'Reference marker configured' : 'Not available',
-                entries: `${published} published · ${drafts} draft${drafts === 1 ? '' : 's'}`,
-                unplaced: `${unplacedEntries.length} item${unplacedEntries.length === 1 ? '' : 's'}`,
+                entries: String(projectEntries.length),
+                unplaced: String(unplacedEntries.length),
+                areas: String(areas.length),
                 lastUpdated: latestDate ? editedLabel(latestDate).replace(/^Edited /, '') : 'No edits yet',
-                directions: escapeHtml(startingPoint?.marker.directions || ''),
-                notice: startingConfigured ? '' : 'Setup incomplete: A Starting Point is required before the camera experience can be published.',
-                actions: [
-                    { label: 'Edit Visitor Welcome', action: `window.editVisitorWelcome('${encoded(project.id)}')` },
-                    { label: startingPoint ? 'View Starting Point' : 'Set Starting Point', action: `window.openProjectStartingPoint('${encoded(project.id)}')` },
-                    { label: 'Manage Starting Point', action: `window.editProjectStartingPoint('${encoded(project.id)}')` },
-                    { label: 'Preview visitor experience', action: `window.openCreatorVisitorPreview('${encoded(project.id)}')` }
-                ]
+                notice: startingConfigured ? '' : 'A Starting Point is required before publishing.',
+                setupAction: `window.editProjectStartingPoint('${encoded(project.id)}')`
             },
             quickActions: [
-                { icon: '🌱', label: 'Plant', action: `window.renderPlacementChoice('${encoded(project.id)}', 'plant')` },
-                { icon: '▧', label: 'Area', action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')` },
-                { icon: '✎', label: 'Note', action: `window.renderPlacementChoice('${encoded(project.id)}', 'note')` }
+                { icon: '🌱', label: 'Plant', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
+                { icon: '⚑', label: 'Checkpoint', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'checkpoint')` },
+                { icon: '✎', label: 'Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` }
             ],
             guidance,
             helpAction: `window.showWorkModeGuidance('${encoded(project.id)}')`,

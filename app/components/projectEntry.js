@@ -2,18 +2,32 @@ function actionCard(item, className = '') {
     return `<button class="${className}" type="button" onclick="${item.action}"><strong>${item.label}</strong>${item.description ? `<span>${item.description}</span>` : ''}</button>`;
 }
 
-function statusItem(label, value, wide = false) {
-    return `<div class="experience-status-item${wide ? ' experience-status-item-wide' : ''}"><span>${label}</span><strong>${value}</strong></div>`;
+function statusItem(label, value) {
+    return `<div class="experience-status-item"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
 const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function contextualGuidance(guidance, target) {
-    if (!guidance || guidance.target !== target) return '';
+    if (!guidance || guidance.target !== target || ['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
     return `<aside class="contextual-guidance contextual-guidance-${guidance.stage}" aria-label="${guidance.title}">
         <div><span class="guidance-stage">${guidance.stage === 'new' ? 'First-use guidance' : 'Helpful reminder'}</span><strong>${guidance.title}</strong><p>${guidance.body}</p></div>
         <div class="contextual-guidance-actions">${guidance.action ? `<button class="guidance-primary-action" type="button" onclick="${guidance.action}">${guidance.actionLabel}</button>` : ''}<button type="button" onclick="${guidance.dismissAction}">Got it</button></div>
     </aside>`;
+}
+
+function tutorialSpotlight(guidance) {
+    if (!guidance || !['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
+    return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
+        <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
+            <span class="guidance-stage">Tutorial Mode</span>
+            <strong>${guidance.title}</strong>
+            <p>${guidance.body}</p>
+            <div class="tutorial-spotlight-actions">
+                <button type="button" onclick="${guidance.dismissAction}">Skip Tutorial</button>
+                <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
+            </div>
+        </aside>`;
 }
 
 function latestEntryRow(item) {
@@ -37,32 +51,36 @@ export function renderProjectEntry(config) {
             <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.type} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
             <span class="project-area-link-meta">${area.hasStartingPoint ? 'Starting Point' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
         </button>`).join('')
-        : '<p class="project-empty-state">No Areas yet. Use Add Area in Quick Access to create one.</p>';
+        : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" onclick="${item.action}" hidden>
         <span class="project-search-result-icon" aria-hidden="true">${item.icon}</span>
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
+    const spotlightTarget = config.guidance?.feature === 'dashboardWelcome'
+        ? 'header'
+        : config.guidance?.feature === 'quickAccess'
+            ? 'quickAccess'
+            : '';
 
-    return `<div class="screen project-entry location-selected" data-location-id="${config.locationId}">
-        <header class="location-dashboard-header">
+    return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
+        <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
             <button class="change-location-control" type="button" onclick="${config.backAction}">← Change location</button>
             <h1>${config.locationName}</h1>
-            <p>${config.siteName} · Dashboard</p>
-            <p class="dashboard-introduction">${config.introduction}</p>
+            <span class="dashboard-identity">Dashboard</span>
+            <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
-        <section class="location-create-section location-create-section-prominent" aria-labelledby="quickAccessTitle">
+        <section class="location-create-section location-create-section-prominent${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="quickAccessTitle">
             <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
-            ${contextualGuidance(config.guidance, 'quickAccess')}
             <div class="quick-access-grid">
-                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>Add ${item.label}</strong></button>`).join('')}
+                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
             </div>
         </section>
 
         <section class="project-search-section" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">
-                <div><h2 id="projectSearchTitle">Search this project</h2><p>Find any Area, Plant, Note, checkpoint or saved information.</p></div>
+                <div><h2 id="projectSearchTitle">Search</h2><p>Find an Area, Plant, Note, checkpoint or saved information.</p></div>
             </div>
             <div class="project-search-box">
                 <span aria-hidden="true">⌕</span>
@@ -74,7 +92,7 @@ export function renderProjectEntry(config) {
         </section>
 
         <section class="work-mode-section" aria-labelledby="workModeTitle">
-            <div class="section-heading-row"><div><h2 id="workModeTitle">Work Mode</h2><p>Choose how you want to work in this project.</p></div><button class="inline-help-action" type="button" onclick="${config.helpAction}">What is this?</button></div>
+            <div class="section-heading-row"><h2 id="workModeTitle">Work Mode</h2><button class="inline-help-action" type="button" onclick="${config.helpAction}">Help</button></div>
             ${contextualGuidance(config.guidance, 'workMode')}
             <div class="experience-launch-grid">
                 ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
@@ -87,20 +105,17 @@ export function renderProjectEntry(config) {
             <div class="project-area-list">${areaListHtml}</div>
         </section>
 
-        <section class="experience-status" aria-labelledby="experienceStatusTitle">
-            <div class="section-heading-row"><h2 id="experienceStatusTitle">Experience status</h2><span class="experience-state experience-state-${config.status.tone}">${config.status.label}</span></div>
-            ${contextualGuidance(config.guidance, 'status')}
+        <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
+            <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
             <div class="experience-status-grid">
-                ${statusItem('Starting Point', config.status.startingPoint)}
-                ${statusItem('Location accuracy', config.status.accuracy)}
                 ${statusItem('Entries', config.status.entries)}
-                ${statusItem('Unplaced Content', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
-                ${statusItem('Last updated', config.status.lastUpdated)}
-                ${config.status.directions ? statusItem('Directions to Starting Point', config.status.directions, true) : ''}
+                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
+                ${statusItem('Areas', config.status.areas)}
+                ${statusItem('Updated', config.status.lastUpdated)}
             </div>
-            ${config.status.notice ? `<p class="setup-notice">${config.status.notice}</p>` : ''}
-            <div class="status-actions">${config.status.actions.map(item => `<button type="button" onclick="${item.action}">${item.label}</button>`).join('')}</div>
         </section>
+
+        ${config.status.notice ? `<aside class="setup-notice compact-setup-notice"><span>${config.status.notice}</span><button type="button" onclick="${config.status.setupAction}">Set Starting Point</button></aside>` : ''}
 
         <nav class="location-tool-grid" aria-label="Location tools">
             ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
@@ -110,5 +125,6 @@ export function renderProjectEntry(config) {
             <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
+        ${tutorialSpotlight(config.guidance)}
     </div>`;
 }

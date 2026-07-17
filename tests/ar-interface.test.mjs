@@ -31,6 +31,39 @@ test('Creator AR exposes the persistent toolbar and compact quick-entry workflow
     assert.match(arSource, /saved and positioned/);
 });
 
+test('Creator Dashboard summons a spatial field panel without ending AR', () => {
+    const arSource = read('app/services/arNote.js');
+    assert.match(arSource, /function summonArDashboard/);
+    assert.match(arSource, /arDashboardButton'\)\.addEventListener\('click', summonArDashboard\)/);
+    assert.match(arSource, /viewerFacingPanelMatrix/);
+    assert.match(arSource, /dashboardDistance = 1\.2/);
+    assert.match(arSource, /Recenter/);
+    assert.match(arSource, /Bring Closer/);
+    assert.match(arSource, /Move Further Away/);
+    assert.match(arSource, /Pin Here/);
+    assert.match(arSource, /Exit AR and Open Full Dashboard/);
+    assert.match(arSource, /Project: \$\{activeLocationName\}/);
+    assert.match(arSource, /Location: \$\{activeSiteName\}/);
+    assert.match(arSource, /Area: \$\{currentArea\}/);
+    assert.match(arSource, /NEARBY/);
+    assert.match(arSource, /UNPLACED/);
+    assert.match(arSource, /TRACKING/);
+});
+
+test('AR Dashboard supports controller rays, grab events and phone positioning controls', () => {
+    const arSource = read('app/services/arNote.js');
+    assert.match(arSource, /targetRaySpace/);
+    assert.match(arSource, /selectstart/);
+    assert.match(arSource, /selectend/);
+    assert.match(arSource, /squeezestart/);
+    assert.match(arSource, /squeezeend/);
+    assert.match(arSource, /move_dashboard/);
+    assert.match(arSource, /dashboardHoverRegionId/);
+    assert.match(arSource, /rayPositionedPanelMatrix/);
+    assert.match(arSource, /AR Dashboard ·/);
+    assert.match(arSource, /Your AR Dashboard/);
+});
+
 test('Creator AR tutorial has eight persisted contextual steps and replay controls', () => {
     const arSource = read('app/services/arNote.js');
     const progressSource = read('app/services/tutorialProgress.js');

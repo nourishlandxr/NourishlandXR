@@ -262,6 +262,7 @@ export async function startLocationAr(encodedProjectId) {
     await startArNote(null, null, {
         projectId: project.id,
         locationName: project.name,
+        siteName: starting.site.name,
         siteId: starting.site.id,
         placeId: starting.place.id,
         markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
@@ -312,7 +313,8 @@ export async function startAreaNavigationAr(encodedProjectId, encodedSiteId, enc
     };
     await startArNote(null, null, {
         projectId: project.id,
-        locationName: place.name,
+        locationName: project.name,
+        siteName: site.name,
         siteId: site.id,
         placeId: place.id,
         markers,
