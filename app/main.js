@@ -19,6 +19,8 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
+import { captureProjectAreaLocation, deleteProjectArea, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation } from './screens/projectDashboard.js';
+import { startAreaNavigationAr } from './screens/explorer.js';
 import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
@@ -158,13 +160,19 @@ window.renderProjectSettings = projectId => renderProjectSettings(app, projectId
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
+window.renderProjectAreaDashboard = (projectId, areaId) => renderProjectAreaDashboard(app, projectId, areaId);
+window.navigateToProjectArea = (projectId, areaId) => navigateToProjectArea(app, projectId, areaId);
+window.renderProjectAreaLocationForm = (projectId, areaId) => renderProjectAreaLocationForm(app, projectId, areaId);
+window.captureProjectAreaLocation = captureProjectAreaLocation;
+window.saveProjectAreaLocation = (event, projectId, areaId) => saveProjectAreaLocation(event, projectId, areaId);
+window.deleteProjectArea = (projectId, areaId) => deleteProjectArea(projectId, areaId);
 window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
 window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
 window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
 window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
 window.savePlatformSetting = savePlatformSetting;
-window.addProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
-window.editProjectStartingPoint = projectId => renderStartingPointForm(app, projectId);
+window.addProjectStartingPoint = (projectId, areaId = '') => renderStartingPointForm(app, projectId, areaId);
+window.editProjectStartingPoint = (projectId, areaId = '') => renderStartingPointForm(app, projectId, areaId);
 window.saveProjectStartingPoint = (event, projectId) => saveProjectStartingPoint(event, projectId);
 window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
@@ -248,6 +256,7 @@ window.beginExistingPlacementAr = async (projectId, markerId, placeId, siteId) =
         window.alert(`Placement could not start: ${error.message}`);
     }
 };
+window.beginAreaNavigationAr = (projectId, siteId, placeId) => startAreaNavigationAr(projectId, siteId, placeId).catch(error => window.alert(`Area navigation could not start: ${error.message}`));
 window.toggleGlobalAr = () => toggleGlobalAr();
 window.renderExplorerProjects = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.renderVisitorLocationExperience = projectId => { setExperienceRole('visitor'); return renderVisitorLocationExperience(app, projectId); };
@@ -501,7 +510,7 @@ window.deleteAsset = async (site, place, assetId) => {
 
 window.addEventListener('nxr:latest-entry-added', async () => {
     // Refresh the hidden Tool Box while AR is active so the saved marker is
-    // already visible in Latest Entries when the session closes.
+    // already visible in Changes when the session closes.
     if (app.querySelector('.project-entry')) {
         await renderHillyardsProject(app);
     }

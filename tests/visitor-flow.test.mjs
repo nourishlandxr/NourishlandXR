@@ -44,6 +44,12 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(source, /Manage entrances and experience starting points/);
     assert.match(entrySource, /Quick Access/);
     assert.match(entrySource, /quick-access-icon/);
+    assert.match(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
+    assert.doesNotMatch(entrySource, /Add content to this location/);
+    assert.match(entrySource, /project-areas-section/);
+    assert.match(entrySource, /project-area-link/);
+    assert.match(source, /areas: areaLinks/);
+    assert.match(source, /renderProjectAreaDashboard/);
     assert.match(entrySource, /Unplaced Content/);
 });
 
@@ -52,11 +58,18 @@ test('fresh projects receive high guidance and Area-required states are actionab
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     assert.match(dashboardSource, /label: 'Area'/);
     assert.match(dashboardSource, /Create your first Area/);
+    assert.match(dashboardSource, /Outdoor Area — garden, park, nursery, farm section/);
+    assert.match(dashboardSource, /Indoor Area — greenhouse, building, covered growing area/);
+    assert.match(dashboardSource, /Bed or Plot — garden bed, terrace, production row/);
+    assert.match(dashboardSource, /Room — classroom, propagation room, restaurant/);
+    assert.match(dashboardSource, /Enclosure — pen, protected garden, fenced compartment/);
+    assert.match(dashboardSource, /Path or Route — trail, tour route, nursery lane/);
+    assert.match(dashboardSource, /Other — anything that doesn’t fit/);
     assert.match(dashboardSource, /renderAreaRequired/);
     assert.match(dashboardSource, /ensureProjectLocation/);
     assert.match(dashboardSource, /Main Location/);
     assert.match(dashboardSource, />Create Area</);
-    assert.match(dashboardSource, /Continue to Starting Point/);
+    assert.match(dashboardSource, /Is this where your Starting Point will be/);
     assert.match(dashboardSource, /Project → Location → Area → Plant or Note/);
     assert.match(entrySource, /Guided setup · Extra help is on/);
     assert.match(entrySource, /Guidance becomes more compact/);

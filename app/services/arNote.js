@@ -303,7 +303,7 @@ function drawHillyardsDashboard() {
 
     panelContext.fillStyle = '#ffffff';
     panelContext.font = '700 27px sans-serif';
-    panelContext.fillText('LATEST ENTRIES', 45, 438);
+    panelContext.fillText('CHANGES', 45, 438);
     latestEntryRegions = persistedMarkers.slice(0, 4).map((marker, index) => ({
         id: `entry:${marker.id}`,
         label: marker.name,
@@ -510,14 +510,15 @@ function initializeReconstructedMarkers(viewerPose) {
     spatialMarkersInitialized = true;
     const base = viewerPose.transform.position;
     const viewerMatrix = viewerPose.transform.matrix;
-    reconstructedMarkers = spatialMarkers.filter(item => Number(item.placement?.distance) <= 150).sort((a, b) => a.placement.distance - b.placement.distance).slice(0, 24).map(item => {
+    reconstructedMarkers = spatialMarkers.filter(item => item.areaDestination || Number(item.placement?.distance) <= 150).sort((a, b) => a.placement.distance - b.placement.distance).slice(0, 24).map(item => {
         const placement = item.placement;
         const distance = Math.round(Number(placement.distance));
         const uncertainty = Math.round(Number(placement.uncertainty));
         const label = `${item.marker.name} · ${distance} m`;
         reportArDiagnostic(`reconstructed ${item.marker.name}: ${distance} m at ${Math.round(placement.bearing)}°, uncertainty ±${uncertainty} m`);
-        const worldX = base.x + viewerMatrix[0] * placement.x + viewerMatrix[8] * placement.z;
-        const worldZ = base.z + viewerMatrix[2] * placement.x + viewerMatrix[10] * placement.z;
+        const navigationScale = item.areaDestination && placement.distance > 40 ? 40 / placement.distance : 1;
+        const worldX = base.x + viewerMatrix[0] * placement.x * navigationScale + viewerMatrix[8] * placement.z * navigationScale;
+        const worldZ = base.z + viewerMatrix[2] * placement.x * navigationScale + viewerMatrix[10] * placement.z * navigationScale;
         return {
             id: item.marker.id,
             marker: item.marker,
@@ -544,6 +545,12 @@ function reconstructedMarkerAt(rayMatrix) {
 function showSpatialMarkerActions(item) {
     const marker = item.marker;
     mode = 'spatial-marker';
+    if (item.source.areaDestination) {
+        modalCard.innerHTML = `<h2>${marker.name}</h2><p class="ar-modal-hint">Area destination</p><p>Approximately ${Math.round(Number(item.source.placement.distance))} m away. Follow the AR marker toward this Area.</p><div class="ar-modal-actions"><button type="button" class="primary" id="arSpatialClose">Continue navigating</button></div>`;
+        showModal();
+        document.getElementById('arSpatialClose').addEventListener('click', () => { hideModal(); mode = 'menu-placed'; });
+        return;
+    }
     modalCard.innerHTML = `<h2>${marker.name}</h2><p class="ar-modal-hint">${typeConfig(marker.type).typeLabel}</p><p>${marker.description || 'No description yet.'}</p><div class="ar-modal-actions ar-modal-actions-stack"><button type="button" class="primary" id="arSpatialView">${spatialCreator ? 'View' : 'Explore Plant'}</button>${spatialCreator ? '<button type="button" id="arSpatialEdit">Edit</button><button type="button" id="arSpatialPosition">Update Position</button>' : ''}<button type="button" id="arSpatialClose">Close</button></div><p id="arSpatialError" class="ar-modal-error"></p>`;
     showModal();
     const open = () => { exitAr(); window.renderExplorerMarker(item.source.project || {}, item.source.site, item.source.place, marker); };
@@ -968,7 +975,7 @@ function drawMarkerEntry(marker) {
     panelContext.fillText(typeConfig(marker.type).typeLabel, 70, 255);
     panelContext.font = '32px sans-serif';
     panelContext.fillText(`Status: ${marker.status || 'draft'}`, 70, 325);
-    panelContext.fillText(`Saved to ${activeLocationName} Latest Entries`, 70, 390);
+    panelContext.fillText(`Saved to ${activeLocationName} Changes`, 70, 390);
     panelContext.fillStyle = 'rgba(220, 235, 220, 0.9)';
     panelContext.fillRect(BACK_REGION.x, BACK_REGION.y, BACK_REGION.w, BACK_REGION.h);
     panelContext.fillStyle = '#173126';

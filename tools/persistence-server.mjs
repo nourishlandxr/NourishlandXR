@@ -15,7 +15,25 @@ const sessionSecret = process.env.NOURISHLAND_SESSION_SECRET || '';
 const creatorAuthDisabled = String(process.env.NOURISHLAND_CREATOR_AUTH_DISABLED || '').trim().toLowerCase() === 'true';
 const publicOrigin = (process.env.NOURISHLAND_PUBLIC_ORIGIN || 'https://nourishland.org').replace(/\/$/, '');
 const sessionTtlMs = 12 * 60 * 60 * 1000;
-const PLACE_TYPES = new Set(['Row', 'Terrace', 'Garden', 'Collection', 'Glasshouse', 'Orchard Block', 'Trail Stop', 'Habitat', 'Water Feature', 'Operational Area', 'Other']);
+const PLACE_TYPES = new Set([
+    'Outdoor Area',
+    'Indoor Area',
+    'Bed or Plot',
+    'Room',
+    'Enclosure',
+    'Path or Route',
+    'Other',
+    'Row',
+    'Terrace',
+    'Garden',
+    'Collection',
+    'Glasshouse',
+    'Orchard Block',
+    'Trail Stop',
+    'Habitat',
+    'Water Feature',
+    'Operational Area'
+]);
 const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoint']);
 const VISIBILITY_VALUES = new Set(['draft', 'public', 'hidden']);
 const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_forest', 'places', 'field_markers');
@@ -1032,6 +1050,17 @@ function handleApi(req, res) {
                 if (!existing) throw new Error('Place not found');
                 const data = JSON.parse(body || '{}');
                 if (data.type && !PLACE_TYPES.has(data.type)) throw new Error('Unsupported place type');
+                if (data.anchor !== undefined) {
+                    const anchor = data.anchor && typeof data.anchor === 'object' ? data.anchor : {};
+                    const latitude = Number(anchor.latitude);
+                    const longitude = Number(anchor.longitude);
+                    const accuracy = Number(anchor.accuracy);
+                    if (anchor.type !== 'gps') throw new Error('Area location must use GPS');
+                    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) throw new Error('Latitude must be between -90 and 90');
+                    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error('Longitude must be between -180 and 180');
+                    if (!Number.isFinite(accuracy) || accuracy < 0) throw new Error('Location accuracy must be zero or greater');
+                    data.anchor = { ...existing.anchor, ...anchor, type: 'gps', latitude, longitude, accuracy };
+                }
                 const nextId = toProjectId(data.name) || decodeURIComponent(placeId);
                 const nextDir = path.join(baseDir, nextId);
                 if (nextId !== placeId && fs.existsSync(nextDir)) throw new Error('A place with this name already exists');
@@ -1045,8 +1074,16 @@ function handleApi(req, res) {
     }
     if (canonicalPlaceMatch && req.method === 'DELETE') {
         const [ , projectId, siteId, placeId ] = canonicalPlaceMatch;
-        const placeDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId));
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        const decodedPlaceId = decodeURIComponent(placeId);
+        const placeDir = path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'places', decodedPlaceId);
         if (!fs.existsSync(placeDir)) return sendJson(res, 404, { error: 'Place not found' });
+        const instanceData = loadPlantInstanceData(decodedProjectId, decodedSiteId).data;
+        const remainingInstances = instanceData.instances.filter(instance => instance.placeId !== decodedPlaceId);
+        if (remainingInstances.length !== instanceData.instances.length) {
+            writeJson(path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'plant-instances.json'), { ...instanceData, instances: remainingInstances });
+        }
         fs.rmSync(placeDir, { recursive: true, force: true });
         sendJson(res, 200, { ok: true });
         return true;

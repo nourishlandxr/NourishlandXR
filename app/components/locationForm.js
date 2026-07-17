@@ -1,5 +1,8 @@
 export function renderLocationForm(locationTypes, onCancel, onCreate, initialValues = {}) {
-    const options = locationTypes.map(type => `<option value="${type}" ${initialValues.type === type ? 'selected' : ''}>${type}</option>`).join('');
+    const availableTypes = initialValues.type && !locationTypes.includes(initialValues.type)
+        ? [initialValues.type, ...locationTypes]
+        : locationTypes;
+    const options = availableTypes.map(type => `<option value="${type}" ${initialValues.type === type ? 'selected' : ''}>${type}</option>`).join('');
 
     return `
     <div class="panel">

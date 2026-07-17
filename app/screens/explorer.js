@@ -77,11 +77,15 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
         ? `window.renderProjectDashboard('${encodedProjectId}')`
         : returnContext === 'placement'
             ? `window.renderPlacementChoice('${encodedProjectId}', '${placementType === 'sub_checkpoint' ? 'checkpoint' : placementType}')`
+            : returnContext === 'area-navigation'
+                ? `window.renderProjectAreaDashboard('${encodedProjectId}', '${encodedPlaceId}')`
             : returnContext === 'existing-placement'
                 ? `window.renderUnplacedContent('${encodedProjectId}')`
             : `window.renderVisitorLocationIntro('${encodedProjectId}', ${returnContext === 'creator-preview'})`;
     const startAction = returnContext === 'existing-placement'
         ? `window.beginExistingPlacementAr('${encodedProjectId}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')`
+        : returnContext === 'area-navigation'
+            ? `window.beginAreaNavigationAr('${encodedProjectId}', '${encodedSiteId}', '${encodedPlaceId}')`
         : returnContext === 'placement'
         ? `window.beginPlacementAr('${encodedProjectId}', '${placementType}')`
         : `window.startLocationAr('${encodedProjectId}')`;
@@ -230,6 +234,55 @@ export async function startLocationAr(encodedProjectId) {
             accuracy: starting.anchor.accuracy ? `${Math.round(Number(starting.anchor.accuracy))} m` : 'Not available',
             entries: `${entries.filter(entry => entry.marker.visibility === 'public').length} published · ${entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length} drafts`,
             label: `GPS aligned · heading ${Math.round(heading.degrees)}°`
+        }
+    });
+}
+
+export async function startAreaNavigationAr(encodedProjectId, encodedSiteId, encodedPlaceId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const siteId = decodeURIComponent(encodedSiteId);
+    const placeId = decodeURIComponent(encodedPlaceId);
+    const project = (await loadProjects()).find(item => item.id === projectId);
+    if (!project) throw new Error('Location not found.');
+    const site = (await loadProjectSites(project.id)).find(item => item.id === siteId);
+    if (!site) throw new Error('The Area’s Location is unavailable.');
+    const place = (await loadSitePlaces(project.id, site.id)).find(item => item.id === placeId);
+    if (!place) throw new Error('Area not found.');
+    const anchor = place.anchor;
+    if (anchor?.type !== 'gps' || !Number.isFinite(Number(anchor.latitude)) || !Number.isFinite(Number(anchor.longitude))) {
+        throw new Error('Assign a GPS location to this Area before opening AR navigation.');
+    }
+    const headingPromise = (navigator.xr ? requestAbsoluteHeading() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    const positionPromise = (navigator.xr ? requestCurrentGps() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    const markers = await loadPlaceMarkers(project.id, site.id, place.id);
+    const [headingResult, positionResult] = await Promise.all([headingPromise, positionPromise]);
+    if (headingResult.error) throw headingResult.error;
+    if (positionResult.error) throw positionResult.error;
+    const heading = headingResult.value;
+    const currentPosition = positionResult.value;
+    const placement = reconstructGpsMarker({ ...currentPosition, accuracy: 0 }, currentPosition, anchor, heading.degrees);
+    const destinationMarker = {
+        id: `area_destination_${place.id}`,
+        type: 'note',
+        name: place.name,
+        description: 'Area destination',
+        visibility: 'draft',
+        _siteId: site.id,
+        _placeId: place.id
+    };
+    await startArNote(null, null, {
+        projectId: project.id,
+        locationName: place.name,
+        siteId: site.id,
+        placeId: place.id,
+        markers,
+        spatialMarkers: [{ areaDestination: true, project, site, place, marker: destinationMarker, anchor, placement }],
+        creator: true,
+        status: {
+            startingPoint: 'Area destination',
+            accuracy: Number.isFinite(Number(anchor.accuracy)) ? `${Math.round(Number(anchor.accuracy))} m` : 'Not available',
+            entries: `${markers.length} item${markers.length === 1 ? '' : 's'} in this Area`,
+            label: `Navigating · ${Math.round(placement.distance)} m away`
         }
     });
 }

@@ -16,9 +16,17 @@ function latestEntryRow(item) {
 
 export function renderProjectEntry(config) {
     const latestEntries = config.latestEntries || [];
+    const areas = config.areas || [];
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
-        : '<p class="project-empty-state">No entries yet. Add something to this location to begin.</p>';
+        : '<p class="project-empty-state">No changes yet. Add something to this location to begin.</p>';
+    const areaListHtml = areas.length
+        ? areas.map(area => `<button class="project-area-link" type="button" onclick="${area.action}">
+            <span class="project-area-link-icon" aria-hidden="true">▧</span>
+            <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.type} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
+            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Starting Point' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
+        </button>`).join('')
+        : '<p class="project-empty-state">No Areas yet. Use Add Area in Quick Access to create one.</p>';
 
     return `<div class="screen project-entry location-selected" data-location-id="${config.locationId}">
         <header class="location-dashboard-header">
@@ -29,9 +37,9 @@ export function renderProjectEntry(config) {
         </header>
 
         <section class="location-create-section location-create-section-prominent" aria-labelledby="quickAccessTitle">
-            <div class="section-heading-row"><div><h2 id="quickAccessTitle">Quick Access</h2><p>Add content to this location.</p></div></div>
+            <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
             <div class="quick-access-grid">
-                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
+                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>Add ${item.label}</strong></button>`).join('')}
             </div>
         </section>
 
@@ -50,6 +58,11 @@ export function renderProjectEntry(config) {
 
         <section class="experience-launch-grid" aria-label="Explore this location">
             ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
+        </section>
+
+        <section class="project-areas-section" aria-labelledby="projectAreasTitle">
+            <div class="section-heading-row"><h2 id="projectAreasTitle">Areas</h2><span class="project-area-count">${areas.length}</span></div>
+            <div class="project-area-list">${areaListHtml}</div>
         </section>
 
         <section class="experience-status" aria-labelledby="experienceStatusTitle">
@@ -71,7 +84,7 @@ export function renderProjectEntry(config) {
         </nav>
 
         <section class="latest-entries-section">
-            <div class="section-heading-row"><h2>Latest entries</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">View all</button></div>
+            <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">View all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
     </div>`;

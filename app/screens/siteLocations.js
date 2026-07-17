@@ -3,16 +3,12 @@ import { renderPlaceDetails } from '../components/placeDetails.js';
 import { loadSitePlaces } from '../services/persistence.js';
 
 const locationTypes = [
-    'Row',
-    'Terrace',
-    'Garden',
-    'Collection',
-    'Glasshouse',
-    'Orchard Block',
-    'Trail Stop',
-    'Habitat',
-    'Water Feature',
-    'Operational Area',
+    'Outdoor Area',
+    'Indoor Area',
+    'Bed or Plot',
+    'Room',
+    'Enclosure',
+    'Path or Route',
     'Other'
 ];
 
