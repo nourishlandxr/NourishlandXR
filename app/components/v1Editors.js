@@ -89,17 +89,20 @@ export async function renderV1PlantProfile(site, place, asset) {
 
 export async function renderV1Anchors(site, place, asset) {
     const { loadMarkerAnchor } = await import('../services/persistence.js');
-    const anchor = await loadMarkerAnchor(site.projectId, site.id, place.id, asset.id);
+    let anchor = {};
+    try { anchor = await loadMarkerAnchor(site.projectId, site.id, place.id, asset.id); }
+    catch { anchor = {}; }
     return `
     <div class="screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderV1Editors(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Back</button>
             <h1>Anchors</h1>
-            <p class="subtitle">Anchor points for this asset</p>
+            <p class="subtitle">Place this item physically within Area ${place.name}</p>
         </div>
 
         <div class="panel">
             <div id="anchorError" class="meta"></div>
+            <p class="placement-status ${anchor.type ? 'is-placed' : 'is-unplaced'}">Placement status: ${anchor.type ? 'Placed' : 'Not yet placed'}</p>
             <div class="field">
                 <label for="anchor_type">Anchor Type</label>
                 <select id="anchor_type" onchange="window.updateAnchorFields()"><option value="gps" ${anchor.type === 'gps' ? 'selected' : ''}>GPS</option><option value="qr" ${anchor.type === 'qr' ? 'selected' : ''}>QR</option></select>

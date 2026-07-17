@@ -17,8 +17,8 @@ export function renderLaunchScreen(app) {
                 <h2 id="roleChoiceTitle">What would you like to do?</h2>
                 <div class="role-grid">
                     <button class="menu-card role-card creator-role" onclick="window.renderDemoProjects()">
-                        <strong>Create an Experience</strong>
-                        <span>Map a place, add plants and share its stories.</span>
+                        <strong>Create &amp; Manage</strong>
+                        <span>Build and manage locations, content and visitor experiences.</span>
                     </button>
                     <button class="menu-card role-card visitor-role" onclick="window.renderV1Explorer()">
                         <strong>Explore a Place</strong>

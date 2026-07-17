@@ -109,6 +109,13 @@ test('create with or without position -> restart -> Field Guide -> later GPS pos
     assert.equal(unpositioned.anchor, null);
     assert.equal(unpositioned.instance.map.latitude, null);
     assert.equal(unpositioned.instance.map.longitude, null);
+    const minimalDraft = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
+        method: 'POST',
+        body: JSON.stringify({ commonName: 'Desktop Seedling', visibility: 'draft' })
+    });
+    assert.equal(minimalDraft.anchor, null);
+    assert.equal(minimalDraft.plant.scientificName, '');
+    assert.equal(minimalDraft.marker.name, 'Desktop Seedling');
     const reused = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
         method: 'POST',
         body: JSON.stringify({ plantId: created.plant.id, visibility: 'public' })

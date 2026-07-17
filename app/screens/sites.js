@@ -30,7 +30,7 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
             <div class="list-item">
                 <div>
                     <strong>${site.name}</strong>
-                    <p>Open this location to manage its sites.</p>
+                    <p>Open this project to manage its Locations and Areas.</p>
                 </div>
                 <div class="button-row">
                     <button onclick="window.renderProjectSites(${JSON.stringify(site)})">Open</button>

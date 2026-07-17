@@ -6,10 +6,11 @@ import { renderLaunchScreen } from '../app/screens/launch.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
-test('welcome keeps Create and Explore and adds the account-free AR demo', () => {
+test('welcome keeps creator and visitor roles separate and adds the account-free AR demo', () => {
     const app = { innerHTML: '' };
     renderLaunchScreen(app);
-    assert.match(app.innerHTML, /Create an Experience/);
+    assert.match(app.innerHTML, /Create &amp; Manage/);
+    assert.match(app.innerHTML, /Build and manage locations, content and visitor experiences/);
     assert.match(app.innerHTML, /Explore a Place/);
     assert.match(app.innerHTML, /TRY IT NOW/);
     assert.match(app.innerHTML, /No account or project setup required/);
@@ -35,11 +36,28 @@ test('AR entry is gated by preparation and only Start AR Mode launches AR', () =
 
 test('creator dashboard exposes quick add, browse, V2 stories and project settings', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     assert.match(source, /Dive straight into AR/);
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
     assert.match(source, /Manage entrances and experience starting points/);
+    assert.match(entrySource, /Quick Access/);
+    assert.match(entrySource, /quick-access-icon/);
+    assert.match(entrySource, /Unplaced Content/);
+});
+
+test('quick access creation is minimal and separates Area assignment from placement', () => {
+    const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
+    assert.match(source, /<label for="fieldArea">Area<\/label>/);
+    assert.match(source, /Reuse Plant Profile/);
+    assert.match(source, /Unassigned — decide later/);
+    assert.match(source, /Create a new Area/);
+    assert.match(source, /Placement status:<\/strong> Not yet placed/);
+    assert.doesNotMatch(source, /<label>Project<\/label>/);
+    assert.doesNotMatch(source, /<label>Location<\/label>/);
+    assert.doesNotMatch(source, /<label>Site<\/label>/);
+    assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
 test('temporary AR demo is in-memory and supports placement, profile and exit', () => {

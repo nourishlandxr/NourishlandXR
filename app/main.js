@@ -11,7 +11,7 @@ import { renderAssetWorkspace, renderAssetGeneral } from './screens/assetWorkspa
 import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from './components/v1Editors.js';
 import { exitAr, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
-import { refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
+import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
 import { deleteHillyardsMarker, openHillyardsEntry, openHillyardsMarkerActions, openHillyardsPlantProfileEditor, openMarkerPlantProfile, renderCheckpointForm, renderComingSoon, renderDemoProjects, renderFirstSteps, renderGlobalPlantList, renderHillyardsGuidelines, renderHillyardsProject, saveCheckpoint, editDraftMarker, saveDraftMarker, editDraftPlantProfile, saveDraftPlantProfile, deleteDraftMarker } from './screens/v1Navigation.js';
@@ -19,7 +19,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
@@ -95,7 +95,7 @@ async function openDirectExplorer(params) {
     const sites = await loadProjectSites(project.id, true); const site = sites.find(item => item.id === siteId);
     if (!site) throw new Error('Site not found');
     const places = await loadSitePlaces(project.id, site.id, true); const place = places.find(item => item.id === placeId);
-    if (!place) throw new Error('Place not found');
+    if (!place) throw new Error('Area not found');
     const markers = await loadPlaceMarkers(project.id, site.id, place.id, true); const marker = markers.find(item => item.id === markerId);
     if (!marker) throw new Error('Marker not found');
     renderExplorerMarker(app, project, site, place, marker);
@@ -134,7 +134,7 @@ window.renderLaunchScreen = () => { setExperienceRole('launch'); renderLaunchScr
 window.renderHillyardsDemo = () => renderDemoHome(app);
 window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${error.message}</p></div>`; }); };
 window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${error.message}</p></div>`; });
-window.renderAnalogPlace = placeId => renderAnalogPlace(app, placeId).catch(error => { app.innerHTML = `<div class="screen"><p>Place unavailable: ${error.message}</p></div>`; });
+window.renderAnalogPlace = placeId => renderAnalogPlace(app, placeId).catch(error => { app.innerHTML = `<div class="screen"><p>Area unavailable: ${error.message}</p></div>`; });
 window.renderAnalogPlant = instanceId => renderAnalogPlant(app, instanceId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${error.message}</p></div>`; });
 window.renderAnalogLibraryPlant = plantId => renderAnalogLibraryPlant(app, plantId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${error.message}</p></div>`; });
 window.applyAnalogFilters = applyAnalogFilters;
@@ -155,6 +155,7 @@ window.renderBrowseContent = (projectId, creator = false) => renderBrowseContent
 window.renderLocationMap = (projectId, creator = true) => renderLocationMap(app, projectId, creator);
 window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
+window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
 window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
 window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
 window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
@@ -195,18 +196,17 @@ window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, pla
 window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
-window.renderLocationFieldMarker = async (projectId, type) => {
+window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar') => {
     const decodedProjectId = decodeURIComponent(projectId);
     const sites = await loadProjectSites(decodedProjectId);
     if (!sites.length) { window.alert('Add a site before creating location content.'); return; }
     const site = sites[0];
-    const places = await loadSitePlaces(decodedProjectId, site.id);
-    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: places[0]?.id || '', type, dashboardProjectId: decodedProjectId });
+    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: '', type, placementMode, dashboardProjectId: decodedProjectId });
 };
 window.renderPlaceForLocation = async (projectId) => {
     const decodedProjectId = decodeURIComponent(projectId);
     const sites = await loadProjectSites(decodedProjectId);
-    if (!sites.length) { window.alert('Add a site before creating a place or zone.'); return; }
+    if (!sites.length) { window.alert('Add a Location before creating an Area.'); return; }
     renderLocationFormScreen(app, sites[0]);
 };
 window.setFieldMarkerType = (type) => setFieldMarkerType(type);
@@ -214,14 +214,32 @@ window.selectFieldProject = (id) => selectFieldProject(id);
 window.selectFieldSite = (id) => selectFieldSite(id);
 window.selectFieldPlace = (id) => selectFieldPlace(id);
 window.selectFieldPlantProfile = (id) => selectFieldPlantProfile(id);
+window.createFieldArea = () => createFieldArea().catch(error => window.alert(`Area could not be created: ${error.message}`));
 window.refreshFieldLocation = () => refreshFieldLocation();
-window.saveFieldMarker = () => saveFieldMarker();
+window.saveFieldMarker = event => saveFieldMarker(event);
 window.startWelcomeAr = () => startWelcomeAr();
 window.startLocationAr = projectId => startLocationAr(projectId).catch(error => window.alert(`AR could not start: ${error.message}`));
-window.renderArPreparation = (projectId, returnContext, placementType) => renderArPreparation(app, projectId, returnContext, placementType);
+window.renderArPreparation = (projectId, returnContext, placementType, placeId, siteId) => renderArPreparation(app, projectId, returnContext, placementType, placeId, siteId);
 window.beginPlacementAr = async (projectId, type) => {
     await startLocationAr(projectId);
-    window.renderLocationFieldMarker(projectId, type);
+    window.renderLocationFieldMarker(projectId, type, 'ar');
+};
+window.beginExistingPlacementAr = async (projectId, markerId, placeId, siteId) => {
+    try {
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        const decodedPlaceId = decodeURIComponent(placeId);
+        const decodedMarkerId = decodeURIComponent(markerId);
+        await startLocationAr(projectId);
+        const site = (await loadProjectSites(decodedProjectId)).find(item => item.id === decodedSiteId);
+        const place = (await loadSitePlaces(decodedProjectId, decodedSiteId)).find(item => item.id === decodedPlaceId);
+        const marker = (await loadPlaceMarkers(decodedProjectId, decodedSiteId, decodedPlaceId)).find(item => item.id === decodedMarkerId);
+        if (!site || !place || !marker) throw new Error('Saved content could not be reopened for placement.');
+        app.innerHTML = await renderV1Anchors(site, place, marker);
+        window.updateAnchorFields();
+    } catch (error) {
+        window.alert(`Placement could not start: ${error.message}`);
+    }
 };
 window.toggleGlobalAr = () => toggleGlobalAr();
 window.renderExplorerProjects = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
@@ -270,7 +288,7 @@ window.saveProjectSite = async (project, site) => {
     window.renderProjectSites(project);
 };
 window.deleteProjectSite = async (project, siteId) => {
-    if (!window.confirm('Delete this site and all of its places and markers?')) return;
+    if (!window.confirm('Delete this Location and all of its Areas and content?')) return;
     await deleteProjectSite(project.id, siteId);
     window.renderProjectSites(project);
 };
@@ -342,7 +360,7 @@ window.selectMapPlace = (placeId, site) => {
     if (container) {
         container.innerHTML = place
             ? `<strong>${place.name}</strong><br />Type: ${place.type}`
-            : 'No place selected';
+            : 'No Area selected';
     }
 };
 window.createProjectFromForm = async () => {
@@ -382,7 +400,7 @@ window.renameProjectFromForm = async (project) => {
     }
 };
 window.deleteProject = async (projectId) => {
-    if (!window.confirm('Delete this project and all of its places and markers?')) {
+    if (!window.confirm('Delete this project and all of its Areas and content?')) {
         return;
     }
 

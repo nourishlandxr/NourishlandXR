@@ -157,7 +157,7 @@ const TOOLBOX_REGIONS = [
 const BACK_REGION = { id: 'back_toolbox', label: 'Back to Hillyards Tool Box', x: 62, y: 650, w: 1076, h: 76 };
 
 const DASHBOARD_REGIONS = [
-    { id: 'add', label: '+ Add to this location', x: 40, y: 225, w: 1120, h: 78 },
+    { id: 'add', label: 'Quick Access', x: 40, y: 225, w: 1120, h: 78 },
     { id: 'global_plants', label: 'Field Guide', x: 40, y: 320, w: 350, h: 80 },
     { id: 'map', label: 'Map', x: 425, y: 320, w: 350, h: 80 },
     { id: 'starting_points', label: 'Starting Points', x: 810, y: 320, w: 350, h: 80 }
@@ -296,7 +296,7 @@ function drawHillyardsDashboard() {
     panelContext.fillText(`Starting Point: ${activeLocationStatus.startingPoint}`, 330, 183);
     panelContext.fillText(`Accuracy: ${activeLocationStatus.accuracy}`, 715, 183);
     panelContext.fillText(activeLocationStatus.entries, 930, 183);
-    drawMenuButton(DASHBOARD_REGIONS[0], '+ Add to this location');
+    drawMenuButton(DASHBOARD_REGIONS[0], 'Quick Access');
     drawMenuButton(DASHBOARD_REGIONS[1], 'Field Guide');
     drawMenuButton(DASHBOARD_REGIONS[2], 'Map');
     drawMenuButton(DASHBOARD_REGIONS[3], 'Starting Points');

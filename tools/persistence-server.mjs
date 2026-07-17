@@ -508,7 +508,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     const commonName = String(data.commonName || existingPlant?.commonName || '').trim();
     const scientificName = String(data.scientificName || existingPlant?.scientificName || '').trim();
     const summary = String(data.description || data.summary || '').trim();
-    if (!commonName || !scientificName) throw new Error('Common Name and Scientific Name are required');
+    if (!commonName) throw new Error('Common Name is required');
     const hasAnyPosition = [data.latitude, data.longitude, data.accuracy].some(value => value !== undefined && value !== null && value !== '');
     const latitude = hasAnyPosition ? Number(data.latitude) : null;
     const longitude = hasAnyPosition ? Number(data.longitude) : null;

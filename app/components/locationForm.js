@@ -4,12 +4,12 @@ export function renderLocationForm(locationTypes, onCancel, onCreate, initialVal
     return `
     <div class="panel">
         <div class="field">
-            <label for="locationName">Place name</label>
+            <label for="locationName">Area name</label>
             <input type="text" id="locationName" value="${initialValues.name || ''}" />
         </div>
 
         <div class="field">
-            <label for="locationType">Place type</label>
+            <label for="locationType">Area type</label>
             <select id="locationType">
                 ${options}
             </select>
@@ -17,7 +17,7 @@ export function renderLocationForm(locationTypes, onCancel, onCreate, initialVal
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>
-            <button class="primary" onclick="${onCreate}">${initialValues.name ? 'Save Place' : 'Create Place'}</button>
+            <button class="primary" onclick="${onCreate}">${initialValues.name ? 'Save Area' : 'Create Area'}</button>
         </div>
     </div>
     `;

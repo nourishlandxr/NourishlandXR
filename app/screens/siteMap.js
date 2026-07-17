@@ -15,7 +15,7 @@ export function renderSiteMap(app, site) {
 
         <div class="two-column">
             <div class="panel">
-                <h2>Places</h2>
+                <h2>Areas</h2>
                 <div class="stack-list">
                     ${places.length ? places.map(place => `
                         <div class="list-item">
@@ -25,13 +25,13 @@ export function renderSiteMap(app, site) {
                             </div>
                             <button onclick="window.selectMapPlace('${place.id}', ${JSON.stringify(site)})">Select</button>
                         </div>
-                    `).join('') : '<p>No places yet.</p>'}
+                    `).join('') : '<p>No Areas yet.</p>'}
                 </div>
             </div>
 
             <div class="panel">
-                <h2>Selected place</h2>
-                <div id="mapPlaceInfo" class="meta">No place selected</div>
+                <h2>Selected Area</h2>
+                <div id="mapPlaceInfo" class="meta">No Area selected</div>
                 <div class="panel" style="margin-top:10px;">
                     <p>Empty workspace</p>
                 </div>

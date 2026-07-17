@@ -1,7 +1,7 @@
 export function renderSiteDashboard(app, site, onBack) {
     const sections = [
         { key: 'overview', label: 'Overview' },
-        { key: 'places', label: 'Places' },
+        { key: 'places', label: 'Areas' },
         { key: 'assets', label: 'Assets' },
         { key: 'experiences', label: 'Experiences' },
         { key: 'map', label: 'Map' },
@@ -13,7 +13,7 @@ export function renderSiteDashboard(app, site, onBack) {
         <div class="page-header">
             <button class="ghost" onclick="${onBack}">Back</button>
             <h1>${site.name}</h1>
-            <p class="subtitle">Site workspace</p>
+            <p class="subtitle">Location workspace</p>
         </div>
 
         <div class="panel">
@@ -64,7 +64,7 @@ export function renderSiteOverview(app, site) {
         <div class="panel">
             <h2>${site.name}</h2>
             <p class="meta">Template: ${site.template || 'None'}</p>
-            <p class="meta">Places: ${(site.locations || []).length}</p>
+            <p class="meta">Areas: ${(site.locations || []).length}</p>
         </div>
     </div>
     `;
@@ -79,7 +79,7 @@ export function renderSiteAssets(app, site) {
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteDashboard(${JSON.stringify(site)})">Back</button>
             <h1>Assets</h1>
-            <p class="subtitle">All authored assets in this site.</p>
+            <p class="subtitle">All authored assets in this Location.</p>
         </div>
 
         <div class="panel">
@@ -133,7 +133,7 @@ export function renderSitePublish(app, site) {
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteDashboard(${JSON.stringify(site)})">Back</button>
             <h1>Publish</h1>
-            <p class="subtitle">Prepare this site for review.</p>
+            <p class="subtitle">Prepare this Location for review.</p>
         </div>
 
         <div class="panel">

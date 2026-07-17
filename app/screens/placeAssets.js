@@ -22,7 +22,7 @@ export async function renderPlaceAssets(app, site, place, mode = 'list', asset =
             <div class="page-header">
                 <button class="ghost" onclick="window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'list')">Back</button>
                 <h1>${asset ? 'Edit Marker' : 'New Marker'}</h1>
-                <p class="subtitle">Add a marker to this place.</p>
+                <p class="subtitle">Add a marker to this Area.</p>
             </div>
             ${formHtml}
         </div>
@@ -35,7 +35,7 @@ export async function renderPlaceAssets(app, site, place, mode = 'list', asset =
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteMap(${JSON.stringify(site)})">Back</button>
             <h1>Assets</h1>
-            <p class="subtitle">Manage markers attached to this place.</p>
+            <p class="subtitle">Manage markers attached to this Area.</p>
         </div>
 
         <div class="panel">

@@ -72,13 +72,17 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
     } catch (error) { app.innerHTML = errorScreen(`Visitor welcome could not be loaded: ${escapeHtml(error.message)}`); }
 }
 
-export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '') {
+export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '', encodedPlaceId = '', encodedSiteId = '') {
     const backAction = returnContext === 'creator'
         ? `window.renderProjectDashboard('${encodedProjectId}')`
         : returnContext === 'placement'
             ? `window.renderPlacementChoice('${encodedProjectId}', '${placementType === 'sub_checkpoint' ? 'checkpoint' : placementType}')`
+            : returnContext === 'existing-placement'
+                ? `window.renderUnplacedContent('${encodedProjectId}')`
             : `window.renderVisitorLocationIntro('${encodedProjectId}', ${returnContext === 'creator-preview'})`;
-    const startAction = returnContext === 'placement'
+    const startAction = returnContext === 'existing-placement'
+        ? `window.beginExistingPlacementAr('${encodedProjectId}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')`
+        : returnContext === 'placement'
         ? `window.beginPlacementAr('${encodedProjectId}', '${placementType}')`
         : `window.startLocationAr('${encodedProjectId}')`;
     app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div><section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
@@ -101,7 +105,7 @@ export async function renderExplorerSites(app, project) {
     stopGps();
     try {
         const sites = await loadProjectSites(project.id, true);
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderXrProjects()">Back</button><h1>${project.name}</h1><p class="subtitle">Choose a site or use GPS mode.</p></div><div class="panel"><button class="primary" onclick="window.renderExplorerGps(${JSON.stringify(project)})">GPS Mode</button></div>${sites.length ? sites.map(site => `<div class="panel"><div class="list-item"><div><strong>${site.name}</strong><p>${site.description || 'Site'}</p></div><button onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No sites are available.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderXrProjects()">Back</button><h1>${project.name}</h1><p class="subtitle">Choose a Location or use GPS mode.</p></div><div class="panel"><button class="primary" onclick="window.renderExplorerGps(${JSON.stringify(project)})">GPS Mode</button></div>${sites.length ? sites.map(site => `<div class="panel"><div class="list-item"><div><strong>${site.name}</strong><p>${site.description || 'Location'}</p></div><button onclick="window.renderExplorerPlaces(${JSON.stringify(project)}, ${JSON.stringify(site)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No Locations are available.</p></div>'}</div>`;
     } catch (error) { app.innerHTML = errorScreen(`Site data could not be loaded: ${error.message}`); }
 }
 
@@ -109,7 +113,7 @@ export async function renderExplorerPlaces(app, project, site) {
     stopGps();
     try {
         const places = await loadSitePlaces(project.id, site.id, true);
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerSites(${JSON.stringify(project)})">Back</button><h1>${site.name}</h1><p class="subtitle">Choose a place.</p></div>${places.length ? places.map(place => `<div class="panel"><div class="list-item"><div><strong>${place.name}</strong><p>${place.type || 'Place'}</p></div><button onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No places are available.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderExplorerSites(${JSON.stringify(project)})">Back</button><h1>${site.name}</h1><p class="subtitle">Choose an Area.</p></div>${places.length ? places.map(place => `<div class="panel"><div class="list-item"><div><strong>${place.name}</strong><p>${place.type || 'Area'}</p></div><button onclick="window.renderExplorerMarkers(${JSON.stringify(project)}, ${JSON.stringify(site)}, ${JSON.stringify(place)})">Open</button></div></div>`).join('') : '<div class="panel"><p>No Areas are available.</p></div>'}</div>`;
     } catch (error) { app.innerHTML = errorScreen(`Place data could not be loaded: ${error.message}`); }
 }
 

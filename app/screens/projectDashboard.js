@@ -12,8 +12,8 @@ const PROJECT_NAMES = {
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
-const markerTypeLabel = type => ({ plant: 'Plant Marker', note: 'Custom Note', intro_checkpoint: 'Starting Point', sub_checkpoint: 'Sub Checkpoint' })[type] || 'Marker';
-const markerIcon = type => ({ plant: '●', note: '✎', intro_checkpoint: '⌖', sub_checkpoint: '⌖' })[type] || '◆';
+const markerTypeLabel = type => ({ plant: 'Plant', note: 'Note', intro_checkpoint: 'Starting Point', sub_checkpoint: 'Checkpoint' })[type] || 'Content';
+const markerIcon = type => ({ plant: '🌱', note: '✎', intro_checkpoint: '⚑', sub_checkpoint: '⚑' })[type] || '◆';
 const entryStatus = marker => marker.visibility === 'public'
     ? { label: 'Published', tone: 'published' }
     : marker.visibility === 'draft' || !marker.visibility
@@ -75,6 +75,18 @@ async function projectContent(projectId) {
     return { project, sites, site, places, entries, startingPoint: entries.find(entry => entry.marker.type === 'intro_checkpoint') || null };
 }
 
+async function entriesWithPlacement(project, site, entries) {
+    if (!site) return entries.map(entry => ({ ...entry, anchor: null, isPlaced: false }));
+    return Promise.all(entries.map(async entry => {
+        try {
+            const anchor = await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id);
+            return { ...entry, anchor, isPlaced: Boolean(anchor?.type || anchor?.qr_code || (Number.isFinite(Number(anchor?.latitude)) && Number.isFinite(Number(anchor?.longitude)))) };
+        } catch {
+            return { ...entry, anchor: null, isPlaced: false };
+        }
+    }));
+}
+
 export async function renderPlatformHome(app) {
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     const cards = projects.map(project => `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>${escapeHtml(PROJECT_NAMES[project.id] || project.name)}</strong></button>`).join('');
@@ -119,6 +131,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project, site, entries, startingPoint } = await projectContent(projectId);
+        const placedEntries = await entriesWithPlacement(project, site, entries);
+        const unplacedEntries = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type) && !entry.isPlaced);
         let startingAnchor = null;
         if (site && startingPoint) {
             try { startingAnchor = await loadMarkerAnchor(project.id, site.id, startingPoint.place.id, startingPoint.marker.id); }
@@ -134,12 +148,15 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             : project.visibility === 'public'
                 ? { label: 'Published', tone: 'published' }
                 : { label: 'Draft', tone: 'draft' };
-        const latestEntries = entries.slice(0, 8).map(({ marker }) => {
+        const latestEntries = placedEntries.slice(0, 8).map(({ marker, place, isPlaced }) => {
             const status = entryStatus(marker);
             return {
                 label: escapeHtml(marker.name),
                 icon: markerIcon(marker.type),
                 type: markerTypeLabel(marker.type),
+                area: escapeHtml(place.name || 'Unassigned'),
+                placement: isPlaced ? 'Placed' : 'Not yet placed',
+                placementTone: isPlaced ? 'is-placed' : 'is-unplaced',
                 status: status.label,
                 statusTone: status.tone,
                 edited: editedLabel(marker.modified || marker.created),
@@ -162,6 +179,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 startingPoint: escapeHtml(startingPoint?.marker.name || 'Not configured'),
                 accuracy: startingAnchor?.accuracy ? `${Math.round(Number(startingAnchor.accuracy))} m` : startingConfigured ? 'Reference marker configured' : 'Not available',
                 entries: `${published} published · ${drafts} draft${drafts === 1 ? '' : 's'}`,
+                unplaced: `${unplacedEntries.length} item${unplacedEntries.length === 1 ? '' : 's'}`,
                 lastUpdated: latestDate ? editedLabel(latestDate).replace(/^Edited /, '') : 'No edits yet',
                 directions: escapeHtml(startingPoint?.marker.directions || ''),
                 notice: startingConfigured ? '' : 'Setup incomplete: A Starting Point is required before the camera experience can be published.',
@@ -172,9 +190,14 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                     { label: 'Preview visitor experience', action: `window.renderVisitorLocationIntro('${encoded(project.id)}', true)` }
                 ]
             },
-            addAction: { label: '+ Add to this location', description: 'Quickly add a plant, checkpoint or note.', action: `window.renderAddToLocation('${encoded(project.id)}')` },
+            quickActions: [
+                { icon: '🌱', label: 'Plant', action: `window.renderPlacementChoice('${encoded(project.id)}', 'plant')` },
+                { icon: '⚑', label: 'Checkpoint', action: `window.renderPlacementChoice('${encoded(project.id)}', 'checkpoint')` },
+                { icon: '✎', label: 'Note', action: `window.renderPlacementChoice('${encoded(project.id)}', 'note')` }
+            ],
+            unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
-                { label: 'Stories and Focus Elements', description: 'Create special checkpoints for stories, guided moments and focused experiences connected to a place.', action: `window.renderStoriesAndFocus('${encoded(project.id)}')` },
+                { label: 'Stories and Focus Elements', description: 'Create special checkpoints for stories, guided moments and focused experiences connected to an Area.', action: `window.renderStoriesAndFocus('${encoded(project.id)}')` },
                 { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` }
             ],
             latestEntries,
@@ -224,7 +247,7 @@ export async function renderNewLocationSetup(app, encodedProjectId) {
     try {
         const { project, entries, startingPoint } = await projectContent(projectId);
         const hasFirstContent = entries.some(entry => !['intro_checkpoint', 'sub_checkpoint'].includes(entry.marker.type));
-        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">New location setup</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">A short checklist to prepare the visitor experience.</p></div><ol class="setup-checklist"><li class="is-complete"><strong>1. Name the location</strong><span>${escapeHtml(project.name)}</span></li><li class="${project.description ? 'is-complete' : ''}"><strong>2. Add a description and optional cover image</strong><span>${escapeHtml(project.description || 'Description can be completed later.')}</span></li><li class="${startingPoint ? 'is-complete' : 'is-current'}"><strong>3. Set the Starting Point</strong><span>Choose where visitors will begin.</span></li><li class="${hasFirstContent ? 'is-complete' : ''}"><strong>4. Add the first plant or place</strong><span>Written information can be added without opening the camera.</span></li><li><strong>5. Preview the visitor experience</strong><span>Review the location before sharing it.</span></li></ol><section class="panel starting-point-explanation"><h2>Set the Starting Point</h2><p>Choose where visitors will begin. This helps Nourishland position the experience correctly when they arrive.</p><div class="setup-choice-grid"><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')"><strong>Set it while standing there</strong><span>Use the phone’s current position.</span></button><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')"><strong>Choose it on the map</strong><span>Useful when creating from a computer.</span></button></div></section><div class="button-row"><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add the first plant or place</button><button class="primary" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Preview location dashboard</button></div></div>`;
+        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">New location setup</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">A short checklist to prepare the visitor experience.</p></div><ol class="setup-checklist"><li class="is-complete"><strong>1. Name the location</strong><span>${escapeHtml(project.name)}</span></li><li class="${project.description ? 'is-complete' : ''}"><strong>2. Add a description and optional cover image</strong><span>${escapeHtml(project.description || 'Description can be completed later.')}</span></li><li class="${startingPoint ? 'is-complete' : 'is-current'}"><strong>3. Set the Starting Point</strong><span>Choose where visitors will begin.</span></li><li class="${hasFirstContent ? 'is-complete' : ''}"><strong>4. Add the first Plant, Checkpoint or Note</strong><span>Content can be created without opening the camera.</span></li><li><strong>5. Preview the visitor experience</strong><span>Review the location before sharing it.</span></li></ol><section class="panel starting-point-explanation"><h2>Set the Starting Point</h2><p>Choose where visitors will begin. This helps Nourishland position the experience correctly when they arrive.</p><div class="setup-choice-grid"><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')"><strong>Set it while standing there</strong><span>Use the phone’s current position.</span></button><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')"><strong>Choose it on the map</strong><span>Useful when creating from a computer.</span></button></div></section><div class="button-row"><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add the first content item</button><button class="primary" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Preview location dashboard</button></div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -234,19 +257,32 @@ export async function renderAddToLocation(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const project = await projectById(projectId);
     const action = (label, description, onclick) => `<button class="content-type-row" type="button" onclick="${onclick}"><strong>${label}</strong><span>${description}</span></button>`;
-    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add to this location</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>What would you like to add?</p></div><div class="content-type-list">${action('Add Plant', 'Add names, description and plant information.', `window.renderPlacementChoice('${encoded(project.id)}', 'plant')`)}${action('Add Checkpoint', 'Add a guided stop or point of interest.', `window.renderPlacementChoice('${encoded(project.id)}', 'checkpoint')`)}${action('Add Note', 'Record an observation or practical detail.', `window.renderPlacementChoice('${encoded(project.id)}', 'note')`)}</div></div>`;
+    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Quick Access</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>What would you like to add?</p></div><div class="content-type-list">${action('Plant', 'Add a plant to an Area.', `window.renderPlacementChoice('${encoded(project.id)}', 'plant')`)}${action('Checkpoint', 'Add a visitor stop within an Area.', `window.renderPlacementChoice('${encoded(project.id)}', 'checkpoint')`)}${action('Note', 'Record a short note within an Area.', `window.renderPlacementChoice('${encoded(project.id)}', 'note')`)}</div></div>`;
 }
 
 export async function renderPlacementChoice(app, encodedProjectId, type) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
     const labels = { plant: 'Plant', checkpoint: 'Checkpoint', note: 'Note' };
     const markerType = type === 'checkpoint' ? 'sub_checkpoint' : type;
-    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderAddToLocation('${encoded(project.id)}')">Back</button><h1>Add ${labels[type] || 'Content'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'placement', '${markerType}')"><strong>Place in AR</strong><span>Use the camera and your current position to place the item in the physical environment.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}')"><strong>Add without AR</strong><span>Create the content now and position or connect it to AR later.</span></button></div></div>`;
+    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add ${labels[type] || 'Content'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'ar')"><strong>Place in AR</strong><span>Use your camera and current position to place it in the landscape.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'without-ar')"><strong>Add without AR</strong><span>Create it now and position it in AR later.</span></button></div></div>`;
+}
+
+export async function renderUnplacedContent(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const { project, site, entries } = await projectContent(projectId);
+        const placementEntries = await entriesWithPlacement(project, site, entries);
+        const unplaced = placementEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type) && !entry.isPlaced);
+        const rows = unplaced.map(({ marker, place }) => `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(marker.type)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(marker.type)} · Area: ${escapeHtml(place.name || 'Unassigned')}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`).join('');
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Unplaced Content</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting physical placement.</p></div><div class="panel"><p>These items already belong to an Area or the Unassigned list. Their content is saved normally and can be positioned later.</p></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Everything has been placed.</p>'}</div></div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
 }
 
 export async function renderStoriesAndFocus(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Planned for V2</p><h1>Stories and Focus Elements</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel guide"><p>Create special checkpoints for stories, guided moments and focused experiences connected to a place.</p><h2>What is planned</h2><ul><li>A story attached to a particular place</li><li>A guided narrative or learning sequence</li><li>A special checkpoint</li><li>Visual effects showing movement, relationships or living processes</li><li>A focused moment that reveals something normally unseen</li></ul><p class="meta">These V2 tools are not active yet. Existing checkpoints continue to work as before.</p></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Planned for V2</p><h1>Stories and Focus Elements</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel guide"><p>Create special checkpoints for stories, guided moments and focused experiences connected to an Area.</p><h2>What is planned</h2><ul><li>A story attached to a particular Area</li><li>A guided narrative or learning sequence</li><li>A special checkpoint</li><li>Visual effects showing movement, relationships or living processes</li><li>A focused moment that reveals something normally unseen</li></ul><p class="meta">These V2 tools are not active yet. Existing checkpoints continue to work as before.</p></div></div>`;
 }
 
 export async function renderProjectSettings(app, encodedProjectId) {
@@ -274,9 +310,9 @@ export async function renderLocationMap(app, encodedProjectId, creator = true) {
         const visiblePlaces = creator ? places : places.filter(place => visibleEntries.some(entry => entry.place.id === place.id));
         const placeRows = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
-            return `<div class="location-map-row"><div><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.type || 'Place')} · ${count} entr${count === 1 ? 'y' : 'ies'}</span></div><span>${escapeHtml(place.mapPosition || 'Position not set')}</span></div>`;
+            return `<div class="location-map-row"><div><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.type || 'Area')} · ${count} entr${count === 1 ? 'y' : 'ies'}</span></div><span>${escapeHtml(place.mapPosition || 'Position not set')}</span></div>`;
         }).join('');
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="window.renderBrowseContent('${encoded(project.id)}', ${creator})">Back</button><h1>Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><div class="panel"><h2>Spatial overview</h2><p>Browse every place and its entries without opening the camera.</p></div><div class="location-map-list">${placeRows || '<div class="panel"><p>No visitor-visible places have been added yet.</p></div>'}</div></div>`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="window.renderBrowseContent('${encoded(project.id)}', ${creator})">Back</button><h1>Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><div class="panel"><h2>Spatial overview</h2><p>Browse every Area and its entries without opening the camera.</p></div><div class="location-map-list">${placeRows || '<div class="panel"><p>No visitor-visible Areas have been added yet.</p></div>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -370,8 +406,9 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
-    const { project, entries } = await projectContent(projectId);
+    const { project, site, entries } = await projectContent(projectId);
     const entry = entries.find(item => item.marker.id === markerId);
     if (!entry) throw new Error('Entry not found.');
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${markerTypeLabel(entry.marker.type)}</p></div><div class="panel"><p>${escapeHtml(entry.marker.description || entry.marker.notes || 'No additional information yet.')}</p><p class="meta">${escapeHtml(entry.place.name)} · ${escapeHtml(entry.marker.visibility || 'draft')}</p></div></div>`;
+    const [placement] = await entriesWithPlacement(project, site, [entry]);
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${markerTypeLabel(entry.marker.type)}</p></div><div class="panel"><p>${escapeHtml(entry.marker.description || entry.marker.notes || 'Detailed information can be added later.')}</p><p class="meta">Area: ${escapeHtml(entry.place.name)} · ${escapeHtml(entry.marker.visibility || 'draft')}</p><p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement status: ${placement.isPlaced ? 'Placed' : 'Not yet placed'}</p>${placement.isPlaced ? '' : `<button class="primary" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}</div></div>`;
 }

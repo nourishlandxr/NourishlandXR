@@ -23,13 +23,13 @@ export async function renderSiteLocations(app, site) {
     <div class="screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteDashboard(${JSON.stringify(site)})">Back</button>
-            <h1>Places</h1>
-            <p class="subtitle">Manage named places in the site.</p>
+            <h1>Areas</h1>
+            <p class="subtitle">Manage mapped subdivisions within this Location.</p>
         </div>
 
         <div class="panel">
             <div class="button-row">
-                <button class="primary" onclick="window.renderLocationForm(${JSON.stringify(site)})">New Place</button>
+                <button class="primary" onclick="window.renderLocationForm(${JSON.stringify(site)})">New Area</button>
             </div>
         </div>
     `;
@@ -68,8 +68,8 @@ export function renderLocationFormScreen(app, site, location = null) {
     <div class="screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteLocations(${JSON.stringify(site)})">Back</button>
-            <h1>${location ? 'Edit Place' : 'New Place'}</h1>
-            <p class="subtitle">Define the place details.</p>
+            <h1>${location ? 'Edit Area' : 'New Area'}</h1>
+            <p class="subtitle">Define this mapped part of the Location.</p>
         </div>
         ${formHtml}
     </div>

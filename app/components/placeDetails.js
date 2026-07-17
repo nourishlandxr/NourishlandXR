@@ -23,7 +23,7 @@ export function renderPlaceDetails(site, place) {
         <div class="page-header">
             <button class="ghost" onclick="window.renderSiteLocations(${JSON.stringify(site)})">Back</button>
             <h1>${place.name}</h1>
-            <p class="subtitle">Place details</p>
+            <p class="subtitle">Area details</p>
         </div>
 
         <div class="panel">

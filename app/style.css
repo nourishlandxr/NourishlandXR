@@ -2237,8 +2237,50 @@ body.ar-session-active::after {
 
 .location-create-section-prominent {
     margin-top: 1rem;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #315f3b, #467a4e);
+    color: #fff;
 }
+
+.location-create-section-prominent .section-heading-row { margin-bottom: 12px; }
+.location-create-section-prominent h2,
+.location-create-section-prominent p { margin: 0; color: #fff; }
+.location-create-section-prominent p { color: rgba(255, 255, 255, .78); font-size: .82rem; }
+
+.quick-access-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.quick-access-action {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    min-height: 86px;
+    border: 1px solid rgba(255, 255, 255, .28);
+    background: rgba(255, 255, 255, .13);
+    color: #fff;
+}
+
+.quick-access-action:hover { background: rgba(255, 255, 255, .2); }
+.quick-access-icon { font-size: 1.45rem; line-height: 1; }
+.status-count-link { padding: 0; border: 0; background: transparent; color: var(--leaf-deep); box-shadow: none; text-decoration: underline; }
+.status-count-link:hover { background: transparent; transform: none; }
+.placement-status { font-weight: 700; }
+.placement-status.is-unplaced { color: #8b5715; }
+.placement-status.is-placed { color: var(--leaf-deep); }
+.minimal-creation-form .inline-form-action { width: fit-content; margin-top: 8px; }
+.unplaced-content-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
 
 .ar-preparation-actions {
     justify-content: space-between;
+}
+
+@media (max-width: 620px) {
+    .quick-access-grid { grid-template-columns: repeat(3, 1fr); }
+    .quick-access-action { min-height: 72px; padding: 10px 6px; }
+    .unplaced-content-row { grid-template-columns: 30px minmax(0, 1fr); }
+    .unplaced-content-row > button { grid-column: 2; justify-self: start; }
 }

@@ -28,7 +28,7 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
             </select>
         </div>
 
-        ${project ? '' : `<div class="field"><label for="projectSuggestions">Suggested Sites (one per line; edit or remove as needed)</label><textarea id="projectSuggestions" rows="5">${suggestions}</textarea></div>`}
+        ${project ? '' : `<div class="field"><label for="projectSuggestions">Suggested Locations (one per line; edit or remove as needed)</label><textarea id="projectSuggestions" rows="5">${suggestions}</textarea></div>`}
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>

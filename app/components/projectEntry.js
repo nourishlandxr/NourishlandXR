@@ -9,7 +9,7 @@ function statusItem(label, value, wide = false) {
 function latestEntryRow(item) {
     return `<button class="latest-entry-row" type="button" onclick="${item.action}">
         <span class="latest-entry-icon" aria-hidden="true">${item.icon}</span>
-        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type} · ${item.edited}</span></span>
+        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type} · ${item.area} · ${item.edited}</span>${item.placement ? `<span class="placement-status ${item.placementTone || ''}">${item.placement}</span>` : ''}</span>
         <span class="entry-status entry-status-${item.statusTone}">${item.status}</span>
     </button>`;
 }
@@ -28,8 +28,11 @@ export function renderProjectEntry(config) {
             <p class="dashboard-introduction">${config.introduction}</p>
         </header>
 
-        <section class="location-create-section location-create-section-prominent">
-            <button class="add-to-location-action" type="button" onclick="${config.addAction.action}"><strong>${config.addAction.label}</strong><span>${config.addAction.description}</span></button>
+        <section class="location-create-section location-create-section-prominent" aria-labelledby="quickAccessTitle">
+            <div class="section-heading-row"><div><h2 id="quickAccessTitle">Quick Access</h2><p>Add content to this location.</p></div></div>
+            <div class="quick-access-grid">
+                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
+            </div>
         </section>
 
         <section class="experience-launch-grid" aria-label="Explore this location">
@@ -42,6 +45,7 @@ export function renderProjectEntry(config) {
                 ${statusItem('Starting Point', config.status.startingPoint)}
                 ${statusItem('Location accuracy', config.status.accuracy)}
                 ${statusItem('Entries', config.status.entries)}
+                ${statusItem('Unplaced Content', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
                 ${statusItem('Last updated', config.status.lastUpdated)}
                 ${config.status.directions ? statusItem('Directions to Starting Point', config.status.directions, true) : ''}
             </div>
