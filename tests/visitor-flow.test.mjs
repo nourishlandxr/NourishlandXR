@@ -6,16 +6,35 @@ import { renderLaunchScreen } from '../app/screens/launch.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
-test('welcome keeps creator and visitor roles separate and adds the account-free AR demo', () => {
+test('welcome keeps primary roles separate and pairs About with the existing AR demo', () => {
     const app = { innerHTML: '' };
     renderLaunchScreen(app);
     assert.match(app.innerHTML, /Create &amp; Manage/);
     assert.match(app.innerHTML, /Build and manage locations, content and visitor experiences/);
     assert.match(app.innerHTML, /Explore a Place/);
-    assert.match(app.innerHTML, /TRY IT NOW/);
-    assert.match(app.innerHTML, /No account or project setup required/);
+    assert.match(app.innerHTML, /welcome-complementary-grid/);
+    assert.match(app.innerHTML, /About This Experience/);
+    assert.match(app.innerHTML, /Understand what NourishlandXR is and what it can help you build/);
+    assert.match(app.innerHTML, /Try It Now/);
+    assert.match(app.innerHTML, /Experience a quick demonstration of information appearing within a real place/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
+    assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
     assert.match(app.innerHTML, /assets\/herov2\.png/);
+});
+
+test('About This Experience explains the concept without tutorial instructions', () => {
+    const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const aboutStart = source.indexOf("if (feature === 'About This Experience')");
+    const aboutEnd = source.indexOf("app.innerHTML = `<div class=\"screen\">", aboutStart);
+    const aboutSource = source.slice(aboutStart, aboutEnd);
+    assert.match(aboutSource, /What is NourishlandXR\?/);
+    assert.match(aboutSource, /dynamic, place-based database that connects information to real environments/);
+    assert.match(aboutSource, /More than a map/);
+    assert.match(aboutSource, /Build from anywhere/);
+    assert.match(aboutSource, /A living record/);
+    assert.match(aboutSource, /helps turn knowledge about a place into something organized, visible and connected to the landscape itself/);
+    assert.doesNotMatch(aboutSource, /How it works|Choose your path|Select a location|Explore with AR|Demo note/);
+    assert.doesNotMatch(aboutSource, /<ol>|<li>/);
 });
 
 test('visitor project selection opens the welcome page without a repeated card action', () => {
@@ -34,10 +53,19 @@ test('AR entry is gated by preparation and only Start AR Mode launches AR', () =
     assert.match(source, />Go Back</);
 });
 
-test('creator dashboard exposes quick add, browse, V2 stories and project settings', () => {
+test('creator dashboard exposes equal AR and Content work modes, quick add, search and project settings', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
-    assert.match(source, /Dive straight into AR/);
+    assert.match(entrySource, />Work Mode</);
+    assert.match(source, /label: 'AR Mode'/);
+    assert.match(source, /View, create and position content in the physical environment/);
+    assert.match(source, /label: 'Content Mode'/);
+    assert.match(source, /Add, edit and organize content without using the camera/);
+    assert.doesNotMatch(source, /label: 'Dive straight into AR'/);
+    assert.match(source, /renderContentMode/);
+    assert.match(source, /Field Guide/);
+    assert.match(source, /Stories &amp; Checkpoints/);
+    assert.match(source, /Unplaced Content/);
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
@@ -53,6 +81,10 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(source, /Coming Soon/);
     assert.match(source, /deleteProjectFromSettings/);
     assert.match(source, /window\.confirm/);
+    assert.match(source, /Restart Tutorial for This Project/);
+    assert.match(source, /Reset Learning Tips/);
+    assert.match(source, /Tutorial Mode/);
+    assert.match(source, /recordTutorialEvent/);
     assert.match(entrySource, /Quick Access/);
     assert.match(entrySource, /quick-access-icon/);
     assert.match(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
@@ -69,6 +101,19 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(source, /loadPlantProfile/);
     assert.match(source, /filterProjectSearch/);
     assert.match(entrySource, /Unplaced Content/);
+    assert.match(entrySource, /contextual-guidance/);
+    assert.match(entrySource, /First-use guidance/);
+    assert.match(entrySource, />Got it</);
+    assert.match(entrySource, />See all</);
+    assert.match(entrySource, /No entries have been added yet/);
+    assert.match(entrySource, />Date</);
+    assert.match(entrySource, />Added by</);
+    assert.match(source, /renderAllProjectEntries/);
+    assert.match(source, /filterAllProjectEntries/);
+    assert.match(source, /Search entries/);
+    assert.match(source, /entryCreatorLabel/);
+    const changesRowSource = entrySource.slice(entrySource.indexOf('function latestEntryRow'), entrySource.indexOf('export function renderProjectEntry'));
+    assert.doesNotMatch(changesRowSource, /\$\{item\.area\}|entry-status-/);
 });
 
 test('fresh projects receive high guidance and Area-required states are actionable', () => {
@@ -89,9 +134,9 @@ test('fresh projects receive high guidance and Area-required states are actionab
     assert.match(dashboardSource, />Create Area</);
     assert.match(dashboardSource, /Is this where your Starting Point will be/);
     assert.match(dashboardSource, /Project → Location → Area → Plant or Note/);
-    assert.match(entrySource, /Guided setup · Extra help is on/);
-    assert.match(entrySource, /Guidance becomes more compact/);
-    assert.match(entrySource, /1\. Create an Area/);
+    assert.match(dashboardSource, /area_explained/);
+    assert.match(dashboardSource, /first_area_created_or_selected/);
+    assert.match(dashboardSource, /meaningful section inside a Location/);
 });
 
 test('quick access creation is minimal and separates Area assignment from placement', () => {

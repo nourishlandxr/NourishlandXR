@@ -21,9 +21,10 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, filterProjectSearch, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAllProjectEntries, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
+import { recordTutorialEvent } from './services/tutorialProgress.js';
 
 const app = document.getElementById('app');
 const siteManager = new SiteManager();
@@ -150,17 +151,28 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
+window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
+window.openCreatorContentMode = projectId => openCreatorContentMode(app, projectId);
+window.openCreatorVisitorPreview = projectId => openCreatorVisitorPreview(projectId);
+window.renderContentMode = projectId => renderContentMode(app, projectId);
+window.dismissProjectGuidance = (projectId, feature) => dismissProjectGuidance(app, projectId, feature);
+window.showWorkModeGuidance = projectId => showWorkModeGuidance(app, projectId);
 window.filterProjectSearch = filterProjectSearch;
 window.renderNewLocationSetup = projectId => renderNewLocationSetup(app, projectId);
 window.renderAddToLocation = projectId => renderAddToLocation(app, projectId);
 window.renderPlacementChoice = (projectId, type) => renderPlacementChoice(app, projectId, type);
 window.renderBrowseContent = (projectId, creator = false) => renderBrowseContent(app, projectId, creator);
-window.renderLocationMap = (projectId, creator = true) => renderLocationMap(app, projectId, creator);
+window.renderLocationMap = (projectId, creator = true, returnContext = '') => renderLocationMap(app, projectId, creator, returnContext);
 window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
 window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, theme);
+window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
+window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
+window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
 window.deleteProjectFromSettings = projectId => deleteProjectFromSettings(projectId);
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
+window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, projectId);
+window.filterAllProjectEntries = filterAllProjectEntries;
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
 window.renderProjectAreaDashboard = (projectId, areaId) => renderProjectAreaDashboard(app, projectId, areaId);
@@ -237,6 +249,14 @@ window.refreshFieldLocation = () => refreshFieldLocation();
 window.saveFieldMarker = event => saveFieldMarker(event);
 window.startWelcomeAr = () => startWelcomeAr();
 window.startLocationAr = projectId => startLocationAr(projectId).catch(error => window.alert(`AR could not start: ${error.message}`));
+window.startCreatorLocationAr = async projectId => {
+    try {
+        await startLocationAr(projectId);
+        recordTutorialEvent(decodeURIComponent(projectId), 'ar_mode_launched');
+    } catch (error) {
+        window.alert(`AR could not start: ${error.message}`);
+    }
+};
 window.renderArPreparation = (projectId, returnContext, placementType, placeId, siteId) => renderArPreparation(app, projectId, returnContext, placementType, placeId, siteId);
 window.beginPlacementAr = async (projectId, type) => {
     await startLocationAr(projectId);

@@ -8,11 +8,19 @@ function statusItem(label, value, wide = false) {
 
 const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
+function contextualGuidance(guidance, target) {
+    if (!guidance || guidance.target !== target) return '';
+    return `<aside class="contextual-guidance contextual-guidance-${guidance.stage}" aria-label="${guidance.title}">
+        <div><span class="guidance-stage">${guidance.stage === 'new' ? 'First-use guidance' : 'Helpful reminder'}</span><strong>${guidance.title}</strong><p>${guidance.body}</p></div>
+        <div class="contextual-guidance-actions">${guidance.action ? `<button class="guidance-primary-action" type="button" onclick="${guidance.action}">${guidance.actionLabel}</button>` : ''}<button type="button" onclick="${guidance.dismissAction}">Got it</button></div>
+    </aside>`;
+}
+
 function latestEntryRow(item) {
-    return `<button class="latest-entry-row" type="button" onclick="${item.action}">
-        <span class="latest-entry-icon" aria-hidden="true">${item.icon}</span>
-        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type} · ${item.area} · ${item.edited}</span>${item.placement ? `<span class="placement-status ${item.placementTone || ''}">${item.placement}</span>` : ''}</span>
-        <span class="entry-status entry-status-${item.statusTone}">${item.status}</span>
+    return `<button class="latest-entry-row change-entry-row" type="button" onclick="${item.action}">
+        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type}</span></span>
+        <span class="latest-entry-detail"><span>Date</span><strong>${item.date}</strong></span>
+        <span class="latest-entry-detail latest-entry-author"><span>Added by</span><strong>${item.creator}</strong></span>
     </button>`;
 }
 
@@ -22,7 +30,7 @@ export function renderProjectEntry(config) {
     const searchItems = config.searchItems || [];
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
-        : '<p class="project-empty-state">No changes yet. Add something to this location to begin.</p>';
+        : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
         ? areas.map(area => `<button class="project-area-link" type="button" onclick="${area.action}">
             <span class="project-area-link-icon" aria-hidden="true">▧</span>
@@ -46,6 +54,7 @@ export function renderProjectEntry(config) {
 
         <section class="location-create-section location-create-section-prominent" aria-labelledby="quickAccessTitle">
             <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
+            ${contextualGuidance(config.guidance, 'quickAccess')}
             <div class="quick-access-grid">
                 ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>Add ${item.label}</strong></button>`).join('')}
             </div>
@@ -64,30 +73,23 @@ export function renderProjectEntry(config) {
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
         </section>
 
-        ${config.onboarding?.show ? `<section class="guided-setup-panel" aria-labelledby="guidedSetupTitle">
-            <p class="welcome-label">Guided setup · Extra help is on</p>
-            <h2 id="guidedSetupTitle">Your next steps</h2>
-            <p>This project is still new, so NourishlandXR will explain each step. Guidance becomes more compact after you have created an Area and added your first content.</p>
-            <ol class="guided-setup-steps">
-                <li class="${config.onboarding.hasArea ? 'is-complete' : 'is-current'}"><strong>1. Create an Area</strong><span>An Area is a smaller mapped part of this Location, such as a garden bed, row, terrace or room.</span></li>
-                <li class="${config.onboarding.hasContent ? 'is-complete' : config.onboarding.hasArea ? 'is-current' : ''}"><strong>2. Add your first Plant or Note</strong><span>Choose its Area now. Its physical AR position can be added later.</span></li>
-                <li class="${config.onboarding.hasStartingPoint ? 'is-complete' : config.onboarding.hasContent ? 'is-current' : ''}"><strong>3. Set the visitor Starting Point</strong><span>Choose the Area visitors enter first, then add arrival information or a physical position.</span></li>
-                <li><strong>4. Preview the visitor experience</strong><span>Check the welcome page, Browse Content and AR preparation before publishing.</span></li>
-            </ol>
-            <button class="primary guided-next-action" type="button" onclick="${config.onboarding.nextAction}">${config.onboarding.nextLabel}</button>
-        </section>` : ''}
-
-        <section class="experience-launch-grid" aria-label="Explore this location">
-            ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
+        <section class="work-mode-section" aria-labelledby="workModeTitle">
+            <div class="section-heading-row"><div><h2 id="workModeTitle">Work Mode</h2><p>Choose how you want to work in this project.</p></div><button class="inline-help-action" type="button" onclick="${config.helpAction}">What is this?</button></div>
+            ${contextualGuidance(config.guidance, 'workMode')}
+            <div class="experience-launch-grid">
+                ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
+            </div>
         </section>
 
         <section class="project-areas-section" aria-labelledby="projectAreasTitle">
             <div class="section-heading-row"><h2 id="projectAreasTitle">Areas</h2><span class="project-area-count">${areas.length}</span></div>
+            ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>
 
         <section class="experience-status" aria-labelledby="experienceStatusTitle">
             <div class="section-heading-row"><h2 id="experienceStatusTitle">Experience status</h2><span class="experience-state experience-state-${config.status.tone}">${config.status.label}</span></div>
+            ${contextualGuidance(config.guidance, 'status')}
             <div class="experience-status-grid">
                 ${statusItem('Starting Point', config.status.startingPoint)}
                 ${statusItem('Location accuracy', config.status.accuracy)}
@@ -105,7 +107,7 @@ export function renderProjectEntry(config) {
         </nav>
 
         <section class="latest-entries-section">
-            <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">View all</button></div>
+            <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
     </div>`;

@@ -1,5 +1,6 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
 import { loadPlantLibrary } from '../services/plantDataService.js';
+import { recordTutorialEvent } from '../services/tutorialProgress.js';
 
 let app;
 let sites = [];
@@ -132,6 +133,8 @@ export async function saveFieldMarker(event) {
         const marker = type === 'plant'
             ? (await createSpatialPlant(selected.project, selected.site, place.id, { plantId, commonName: name, scientificName: profile?.scientificName || '', visibility })).marker
             : await createPlaceMarker(selected.project, selected.site, place.id, { name, type, description: '', visibility });
+        recordTutorialEvent(selected.project, 'first_item_created');
+        if (placementMode === 'without-ar') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
         if (placementMode === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));
         else window.renderProjectDashboard(encodeURIComponent(selected.project));
     } catch (failure) {

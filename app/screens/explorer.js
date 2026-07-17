@@ -4,6 +4,7 @@ import { disableTargetReticle, enableTargetReticle } from '../services/targetRet
 import { getHillyardsExplorerContext } from './v1Navigation.js';
 import { getPlantById, getResolvedPlantInstance } from '../services/plantDataService.js';
 import { reconstructGpsMarker, requestAbsoluteHeading, requestCurrentGps } from '../services/spatialPositioning.js';
+import { getTutorialStage, recordTutorialEvent } from '../services/tutorialProgress.js';
 
 let gpsWatchId = null;
 let gpsProject = null;
@@ -73,6 +74,9 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
 }
 
 export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '', encodedPlaceId = '', encodedSiteId = '') {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const creatorDashboardMode = returnContext === 'creator';
+    const arStage = creatorDashboardMode ? getTutorialStage(projectId, 'arMode') : 'understood';
     const backAction = returnContext === 'creator'
         ? `window.renderProjectDashboard('${encodedProjectId}')`
         : returnContext === 'placement'
@@ -88,8 +92,16 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
             ? `window.beginAreaNavigationAr('${encodedProjectId}', '${encodedSiteId}', '${encodedPlaceId}')`
         : returnContext === 'placement'
         ? `window.beginPlacementAr('${encodedProjectId}', '${placementType}')`
-        : `window.startLocationAr('${encodedProjectId}')`;
-    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div><section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
+        : creatorDashboardMode
+            ? `window.startCreatorLocationAr('${encodedProjectId}')`
+            : `window.startLocationAr('${encodedProjectId}')`;
+    const creatorGuidance = creatorDashboardMode && arStage === 'new'
+        ? '<div class="panel contextual-reminder"><p><strong>AR Mode:</strong> View, create and position content in the physical environment. Camera and location permission will be requested only after you choose Start AR Mode. You can leave AR and continue in Content Mode later.</p></div>'
+        : creatorDashboardMode && arStage === 'learning'
+            ? '<div class="panel contextual-reminder"><p>Camera and location access begins only after you choose Start AR Mode.</p></div>'
+            : '';
+    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
+    if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
 }
 
 export async function renderXrProjects(app) {

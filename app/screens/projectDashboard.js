@@ -5,6 +5,7 @@ import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
+import { dismissTutorialFeature, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, resetLearningTips, restartProjectTutorial, setProjectTutorialMode } from '../services/tutorialProgress.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -33,6 +34,19 @@ const editedLabel = value => {
     if (difference === 1) return 'Edited yesterday';
     return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 };
+const entryDateLabel = value => {
+    if (!value) return 'Date not recorded';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Date not recorded';
+    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+};
+const entryCreatorLabel = marker => marker.createdBy
+    || marker.created_by
+    || marker.author
+    || marker.creator
+    || marker.addedBy
+    || marker.added_by
+    || 'Local creator';
 const SETTINGS_KEY = 'nourishland-xr-settings';
 const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true };
 
@@ -210,6 +224,113 @@ export function filterProjectSearch(value) {
     }
 }
 
+const GUIDANCE_EVENTS = {
+    arMode: 'ar_mode_introduced',
+    contentMode: 'content_mode_introduced',
+    quickAccess: 'quick_access_introduced',
+    area: 'area_explained',
+    startingPoint: 'starting_point_explained'
+};
+const forcedGuidanceFeatures = new Map();
+
+function dashboardGuidance(projectId, { hasArea, startingConfigured }) {
+    if (!isProjectTutorialEnabled(projectId)) return null;
+    const candidates = [
+        !hasArea ? ['area', 'quickAccess'] : null,
+        ['quickAccess', 'quickAccess'],
+        ['arMode', 'workMode'],
+        ['contentMode', 'workMode'],
+        !startingConfigured ? ['startingPoint', 'status'] : null
+    ].filter(Boolean);
+    const forcedFeature = forcedGuidanceFeatures.get(projectId);
+    const selected = forcedFeature
+        ? [forcedFeature, 'workMode']
+        : candidates.find(([feature]) => getTutorialStage(projectId, feature) !== 'understood');
+    forcedGuidanceFeatures.delete(projectId);
+    if (!selected) return null;
+    const [feature, target] = selected;
+    const stage = getTutorialStage(projectId, feature);
+    const content = {
+        area: {
+            title: 'Areas organise your Location',
+            full: 'An Area is a meaningful section inside a Location, such as an orchard row, garden bed, fountain, restaurant, propagation area or walking path. Create one now; you can rename or update it later.',
+            short: 'Create or select an Area before adding content. You can change it later.',
+            actionLabel: hasArea ? 'View Areas' : 'Create Area',
+            action: hasArea ? `window.openCreatorContentMode('${encoded(projectId)}')` : `window.renderProjectAreaForm('${encoded(projectId)}', 'dashboard')`
+        },
+        quickAccess: {
+            title: 'Quick Access',
+            full: 'Quick Access is the fastest way to add a Plant, Area or Note to this project. Choose an item type, assign its Area, then save it with or without a physical AR position.',
+            short: 'Use Quick Access to add a Plant, Area or Note. Physical placement can happen later.',
+            actionLabel: 'Add content',
+            action: `window.renderAddToLocation('${encoded(projectId)}')`
+        },
+        arMode: {
+            title: 'About AR Mode',
+            full: 'AR Mode uses your device’s camera and location to view, create and position content in the physical landscape. Camera and location permission are requested only after you continue through the preparation screen. You can return to Content Mode at any time.',
+            short: 'AR Mode uses the camera and location. Permissions are requested only after the preparation screen.',
+            actionLabel: 'Open AR Mode',
+            action: `window.openCreatorArMode('${encoded(projectId)}')`
+        },
+        contentMode: {
+            title: 'About Content Mode',
+            full: 'Content Mode lets you add, edit and organize the project without using the camera. Content created here can be positioned later using a map or AR Mode.',
+            short: 'Content Mode works without the camera. Position content later when needed.',
+            actionLabel: 'Open Content Mode',
+            action: `window.openCreatorContentMode('${encoded(projectId)}')`
+        },
+        startingPoint: {
+            title: 'Starting Point still needed',
+            full: 'A Starting Point defines where visitors begin and connects the digital experience to the physical Location. Configure its Area and arrival information now; its position can be updated later.',
+            short: 'Set where visitors begin. You can update the Starting Point later.',
+            actionLabel: 'Set Starting Point',
+            action: `window.editProjectStartingPoint('${encoded(projectId)}')`
+        }
+    }[feature];
+    return {
+        feature,
+        target,
+        stage,
+        title: content.title,
+        body: stage === 'new' ? content.full : content.short,
+        actionLabel: content.actionLabel,
+        action: content.action,
+        dismissAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
+        introducedEvent: GUIDANCE_EVENTS[feature]
+    };
+}
+
+export async function dismissProjectGuidance(app, encodedProjectId, feature) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    dismissTutorialFeature(projectId, feature);
+    await renderProjectDashboard(app, encoded(projectId));
+}
+
+export async function showWorkModeGuidance(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    recallTutorialFeatures(projectId, ['arMode', 'contentMode']);
+    forcedGuidanceFeatures.set(projectId, 'arMode');
+    await renderProjectDashboard(app, encoded(projectId));
+}
+
+export function openCreatorArMode(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    recordTutorialEvent(projectId, 'ar_mode_introduced');
+    window.renderArPreparation(encoded(projectId), 'creator');
+}
+
+export async function openCreatorContentMode(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    recordTutorialEvent(projectId, 'content_mode_opened');
+    await renderContentMode(app, encoded(projectId));
+}
+
+export function openCreatorVisitorPreview(encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    recordTutorialEvent(projectId, 'visitor_preview_opened');
+    window.renderVisitorLocationIntro(encoded(projectId), true);
+}
+
 export async function renderPlatformHome(app) {
     applyProjectTheme('forest-light');
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
@@ -245,7 +366,35 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
         return;
     }
     if (feature === 'About This Experience') {
-        app.innerHTML = `<div class="screen about-experience"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><p class="welcome-label">Nourishland XR · Demo v0.8</p><h1>About This Experience</h1><p class="subtitle">Observe. Explore. Learn in place.</p></div><div class="panel guide"><p><strong>Nourishland XR</strong> turns gardens and landscapes into interactive learning experiences. It connects plants, stories, observations and natural relationships to the real places where they can be discovered.</p><h2>How it works</h2><ol><li><strong>Choose your path.</strong> Create an experience or explore a place.</li><li><strong>Select a location.</strong> Open a garden, food forest, farm or other mapped landscape.</li><li><strong>Learn in context.</strong> Discover markers, plant profiles and stories using Explorer or the Field Guide.</li><li><strong>Explore with AR.</strong> When a location is selected, open its optional augmented-reality experience.</li></ol></div><div class="panel"><h2>Demo note</h2><p>This is a V1 Lite release candidate. Some authoring, publishing and device capabilities will continue to evolve.</p></div></div>`;
+        app.innerHTML = `<div class="screen about-experience">
+            <div class="page-header">
+                <button class="ghost" onclick="${backAction}">Back</button>
+                <p class="welcome-label">Nourishland XR</p>
+                <h1>About This Experience</h1>
+            </div>
+            <article class="panel about-experience-content">
+                <section>
+                    <h2>What is NourishlandXR?</h2>
+                    <p>NourishlandXR is a dynamic, place-based database that connects information to real environments.</p>
+                    <p>It can help people document and organize gardens, food forests, orchards, farms, nurseries, parks, community spaces, workplaces and other living or working landscapes.</p>
+                    <p>Plants, observations, stories, tasks and important points can be recorded as part of a location. That information can then be viewed on a normal screen or connected to its physical surroundings using maps, location data and augmented reality.</p>
+                </section>
+                <section>
+                    <h2>More than a map</h2>
+                    <p>NourishlandXR does not only record where something is. It can record what it is, why it matters, how it changes and how it relates to the landscape around it.</p>
+                    <p>A plant can connect to a reusable plant profile. A checkpoint can reveal a story or guide a visitor. A note can record an observation, task or change over time. Areas can organize meaningful sections of a larger location.</p>
+                </section>
+                <section>
+                    <h2>Build from anywhere</h2>
+                    <p>Information can be prepared from a computer without using AR. Plants, checkpoints and notes can be created first, organized into Areas and physically positioned later using a phone, map or AR device.</p>
+                </section>
+                <section>
+                    <h2>A living record</h2>
+                    <p>As more information is added, the project becomes a growing digital record of the place—supporting education, management, discovery, collaboration and long-term observation.</p>
+                </section>
+                <p class="about-experience-conclusion"><strong>NourishlandXR helps turn knowledge about a place into something organized, visible and connected to the landscape itself.</strong></p>
+            </article>
+        </div>`;
         return;
     }
     app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>${escapeHtml(feature)}</h1><p class="subtitle">Coming Soon</p></div><div class="panel"><h2>Platform function</h2><p>${escapeHtml(feature)} will remain available from the welcome page.</p></div></div>`;
@@ -257,8 +406,6 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const { project, site, places, entries, startingPoint } = await projectContent(projectId);
         const areas = places.filter(place => place.name !== 'Unassigned');
         const hasArea = areas.length > 0;
-        const hasContent = entries.some(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type));
-        const showOnboarding = !hasArea || !hasContent;
         const placedEntries = await entriesWithPlacement(project, site, entries);
         const unplacedEntries = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type) && !entry.isPlaced);
         let startingAnchor = null;
@@ -268,6 +415,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         }
         const hasGps = Number.isFinite(Number(startingAnchor?.latitude)) && Number.isFinite(Number(startingAnchor?.longitude));
         const startingConfigured = Boolean(startingPoint && (hasGps || startingAnchor?.qr_code));
+        const guidance = dashboardGuidance(project.id, { hasArea, startingConfigured });
         const published = entries.filter(entry => entry.marker.visibility === 'public').length;
         const drafts = entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length;
         const latestDate = entries.map(entry => entry.marker.modified || entry.marker.created).filter(Boolean).sort().at(-1);
@@ -276,18 +424,12 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             : project.visibility === 'public'
                 ? { label: 'Published', tone: 'published' }
                 : { label: 'Draft', tone: 'draft' };
-        const latestEntries = placedEntries.slice(0, 8).map(({ marker, place, isPlaced }) => {
-            const status = entryStatus(marker);
+        const latestEntries = placedEntries.slice(0, 8).map(({ marker }) => {
             return {
                 label: escapeHtml(marker.name),
-                icon: markerIcon(marker.type),
-                type: markerTypeLabel(marker.type),
-                area: escapeHtml(place.name || 'Unassigned'),
-                placement: isPlaced ? 'Placed' : 'Not yet placed',
-                placementTone: isPlaced ? 'is-placed' : 'is-unplaced',
-                status: status.label,
-                statusTone: status.tone,
-                edited: editedLabel(marker.modified || marker.created),
+                type: escapeHtml(markerTypeLabel(marker.type)),
+                date: escapeHtml(entryDateLabel(marker.created || marker.modified)),
+                creator: escapeHtml(entryCreatorLabel(marker)),
                 action: marker.type === 'intro_checkpoint' ? `window.openProjectStartingPoint('${encoded(project.id)}')` : `window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}')`
             };
         });
@@ -312,8 +454,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             introduction: `This is the ${escapeHtml(project.name)} Dashboard—where the project is edited, developed and brought to life.`,
             backAction: 'window.renderDemoProjects()',
             launchActions: [
-                { label: 'Dive straight into AR', description: 'Discover information as you move through the landscape.', action: `window.renderArPreparation('${encoded(project.id)}', 'creator')` },
-                { label: 'Browse Content', description: 'Access the project’s plants, stories, checkpoints and maps without entering AR.', action: `window.renderBrowseContent('${encoded(project.id)}', true)` }
+                { label: 'AR Mode', description: 'View, create and position content in the physical environment.', action: `window.openCreatorArMode('${encoded(project.id)}')` },
+                { label: 'Content Mode', description: 'Add, edit and organize content without using the camera.', action: `window.openCreatorContentMode('${encoded(project.id)}')` }
             ],
             status: {
                 label: experienceState.label,
@@ -329,7 +471,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                     { label: 'Edit Visitor Welcome', action: `window.editVisitorWelcome('${encoded(project.id)}')` },
                     { label: startingPoint ? 'View Starting Point' : 'Set Starting Point', action: `window.openProjectStartingPoint('${encoded(project.id)}')` },
                     { label: 'Manage Starting Point', action: `window.editProjectStartingPoint('${encoded(project.id)}')` },
-                    { label: 'Preview visitor experience', action: `window.renderVisitorLocationIntro('${encoded(project.id)}', true)` }
+                    { label: 'Preview visitor experience', action: `window.openCreatorVisitorPreview('${encoded(project.id)}')` }
                 ]
             },
             quickActions: [
@@ -337,28 +479,122 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 { icon: '▧', label: 'Area', action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')` },
                 { icon: '✎', label: 'Note', action: `window.renderPlacementChoice('${encoded(project.id)}', 'note')` }
             ],
-            onboarding: {
-                show: showOnboarding,
-                hasArea,
-                hasContent,
-                hasStartingPoint: Boolean(startingPoint),
-                nextLabel: !hasArea ? 'Create your first Area' : !hasContent ? 'Add your first Plant or Note' : 'Set the visitor Starting Point',
-                nextAction: !hasArea
-                    ? `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`
-                    : !hasContent
-                        ? `window.renderAddToLocation('${encoded(project.id)}')`
-                        : `window.editProjectStartingPoint('${encoded(project.id)}')`
-            },
+            guidance,
+            helpAction: `window.showWorkModeGuidance('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
                 { label: 'Stories and Focus Elements', description: 'Create special checkpoints for stories, guided moments and focused experiences connected to an Area.', action: `window.renderStoriesAndFocus('${encoded(project.id)}')` },
                 { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` }
             ],
             latestEntries,
-            viewAllAction: `window.renderFieldGuide('${encoded(project.id)}', true)`
+            viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`
         });
+        if (guidance?.stage === 'new' && guidance.introducedEvent) {
+            recordTutorialEvent(project.id, guidance.introducedEvent);
+        }
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Location unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+function allProjectEntryRow(project, marker) {
+    const action = marker.type === 'intro_checkpoint'
+        ? `window.openProjectStartingPoint('${encoded(project.id)}')`
+        : `window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}')`;
+    const search = searchableText(marker.name, markerTypeLabel(marker.type), marker.description, marker.notes, entryCreatorLabel(marker), entryDateLabel(marker.created || marker.modified));
+    return `<button class="latest-entry-row all-project-entry-row" type="button" data-all-project-entry data-search="${escapeHtml(search)}" onclick="${action}">
+        <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${escapeHtml(markerTypeLabel(marker.type))}</span></span>
+        <span class="latest-entry-detail"><span>Date</span><strong>${escapeHtml(entryDateLabel(marker.created || marker.modified))}</strong></span>
+        <span class="latest-entry-detail latest-entry-author"><span>Added by</span><strong>${escapeHtml(entryCreatorLabel(marker))}</strong></span>
+    </button>`;
+}
+
+export async function renderAllProjectEntries(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const { project, entries } = await projectContent(projectId);
+        const rows = entries.map(({ marker }) => allProjectEntryRow(project, marker)).join('');
+        app.innerHTML = `<div class="screen all-project-entries-screen">
+            <div class="page-header">
+                <button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back to Dashboard</button>
+                <p class="welcome-label">Changes</p>
+                <h1>All entries</h1>
+            </div>
+            <section class="all-entries-list-section" aria-labelledby="allEntriesSearchLabel">
+                <label id="allEntriesSearchLabel" class="sr-only" for="allEntriesSearch">Search entries</label>
+                <div class="project-search-box all-entries-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input id="allEntriesSearch" type="search" placeholder="Search entries…" autocomplete="off" oninput="window.filterAllProjectEntries(this.value)" />
+                </div>
+                <p id="allEntriesSearchSummary" class="project-search-summary" aria-live="polite" ${entries.length ? '' : 'hidden'}>${entries.length ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}` : ''}</p>
+                <div id="allProjectEntryList" class="latest-entry-list">${rows}</div>
+                <p id="allEntriesEmpty" class="project-empty-state" ${entries.length ? 'hidden' : ''}>No entries have been added yet.</p>
+            </section>
+        </div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Entries unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export function filterAllProjectEntries(value) {
+    const query = String(value || '').trim().toLocaleLowerCase();
+    const rows = [...document.querySelectorAll('[data-all-project-entry]')];
+    let matches = 0;
+    rows.forEach(row => {
+        const visible = !query || (row.dataset.search || '').includes(query);
+        row.hidden = !visible;
+        if (visible) matches += 1;
+    });
+    const summary = document.getElementById('allEntriesSearchSummary');
+    const empty = document.getElementById('allEntriesEmpty');
+    if (summary) {
+        summary.hidden = rows.length === 0;
+        summary.textContent = query ? `${matches} matching entr${matches === 1 ? 'y' : 'ies'}` : `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
+    }
+    if (empty) {
+        empty.hidden = matches > 0;
+        empty.textContent = rows.length ? 'No matching entries.' : 'No entries have been added yet.';
+    }
+}
+
+export async function renderContentMode(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const { project, places, entries, site } = await projectContent(projectId);
+        const areas = places.filter(place => place.name !== 'Unassigned');
+        const placedEntries = await entriesWithPlacement(project, site, entries);
+        const unplacedCount = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type) && !entry.isPlaced).length;
+        const areaRows = areas.map(area => {
+            const count = entries.filter(entry => entry.place.id === area.id).length;
+            return `<button class="project-area-link" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')">
+                <span class="project-area-link-icon" aria-hidden="true">▧</span>
+                <span class="project-area-link-copy"><strong>${escapeHtml(area.name)}</strong><span>${escapeHtml(area.type || 'Area')} · ${count} element${count === 1 ? '' : 's'}</span></span>
+                <span class="project-area-link-meta">Open Area</span>
+            </button>`;
+        }).join('');
+        app.innerHTML = `<div class="screen content-mode-screen">
+            <header class="page-header">
+                <button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back to Dashboard</button>
+                <p class="welcome-label">Creator workspace</p>
+                <h1>Content Mode</h1>
+                <p class="subtitle">Add, edit and organize content without using the camera.</p>
+            </header>
+            <section class="content-mode-introduction">
+                <p>Everything here works without camera or location permission. Content can be positioned later using the map or AR Mode.</p>
+            </section>
+            <nav class="content-mode-tool-grid" aria-label="Content Mode tools">
+                <button type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', true)"><strong>Field Guide</strong><span>Browse and edit Plants and their information.</span></button>
+                <button type="button" onclick="window.renderLocationMap('${encoded(project.id)}', true, 'content-mode')"><strong>Map</strong><span>Review Areas and spatial organisation without the camera.</span></button>
+                <button type="button" onclick="window.renderStoriesAndFocus('${encoded(project.id)}')"><strong>Stories &amp; Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></button>
+                <button type="button" onclick="window.renderUnplacedContent('${encoded(project.id)}')"><strong>Unplaced Content</strong><span>${unplacedCount} item${unplacedCount === 1 ? '' : 's'} can be positioned later.</span></button>
+            </nav>
+            <section class="project-areas-section" aria-labelledby="contentModeAreasTitle">
+                <div class="section-heading-row"><div><h2 id="contentModeAreasTitle">Areas</h2><p>Open an Area dashboard to manage its content.</p></div><span class="project-area-count">${areas.length}</span></div>
+                <div class="project-area-list">${areaRows || '<p class="project-empty-state">No Areas yet. Return to the Dashboard and choose Add Area.</p>'}</div>
+            </section>
+        </div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back to Dashboard</button><h1>Content Mode unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
 }
 
@@ -419,7 +655,14 @@ export async function renderPlacementChoice(app, encodedProjectId, type) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
     const labels = { plant: 'Plant', checkpoint: 'Checkpoint', note: 'Note' };
     const markerType = type === 'checkpoint' ? 'sub_checkpoint' : type;
-    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add ${labels[type] || 'Content'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'ar')"><strong>Place in AR</strong><span>Use your camera and current position to place it in the landscape.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'without-ar')"><strong>Add without AR</strong><span>Create it now and position it in AR later.</span></button></div></div>`;
+    const unplacedStage = getTutorialStage(project.id, 'unplacedContent');
+    const unplacedGuidance = unplacedStage === 'new'
+        ? '<div class="panel contextual-reminder"><p><strong>Saving without AR:</strong> This item can be saved now without a physical position. You can assign it to a map or place it in AR later.</p></div>'
+        : unplacedStage === 'learning'
+            ? '<div class="panel contextual-reminder"><p>You can save now and position the item later.</p></div>'
+            : '';
+    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add ${labels[type] || 'Content'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${unplacedGuidance}<div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'ar')"><strong>Place in AR</strong><span>Use your camera and current position to place it in the landscape.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationFieldMarker('${encoded(project.id)}', '${markerType}', 'without-ar')"><strong>Add without AR</strong><span>Create it now and position it in AR later.</span></button></div></div>`;
+    if (unplacedStage === 'new') recordTutorialEvent(project.id, 'unplaced_content_explained');
 }
 
 export async function ensureProjectLocation(projectId) {
@@ -431,10 +674,16 @@ export async function ensureProjectLocation(projectId) {
 export async function renderProjectAreaForm(app, encodedProjectId, intent = 'dashboard') {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
-        const { project, places, entries } = await projectContent(projectId);
+        const { project, places } = await projectContent(projectId);
         const firstArea = !places.some(place => place.name !== 'Unassigned');
-        const highGuidance = firstArea && entries.length === 0;
-        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${highGuidance ? 'Guided setup · Step 1' : 'Project structure'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${highGuidance ? '<div class="panel guide"><h2>What is an Area?</h2><p>An Area is a smaller organisational part of a Location. Examples include a garden bed, orchard row, terrace, room, fountain, grafting area or tubing area.</p><p><strong>Next:</strong> After saving, add a Plant or Note to this Area. Physical AR placement is a separate step and can happen later.</p></div>' : ''}<form class="panel" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Area name</label><input id="projectAreaName" placeholder="For example: 1R1, Front Garden or Grafting Area" required /></div><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area — garden, park, nursery, farm section</option><option value="Indoor Area">Indoor Area — greenhouse, building, covered growing area</option><option value="Bed or Plot">Bed or Plot — garden bed, terrace, production row</option><option value="Room">Room — classroom, propagation room, restaurant</option><option value="Enclosure">Enclosure — pen, protected garden, fenced compartment</option><option value="Path or Route">Path or Route — trail, tour route, nursery lane</option><option value="Other">Other — anything that doesn’t fit</option></select></div><div class="field"><label for="projectAreaDescription">Short description (optional)</label><textarea id="projectAreaDescription" rows="3" placeholder="Explain what this Area contains or how people recognise it."></textarea></div><p id="projectAreaError" class="meta"></p><div class="button-row"><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Cancel</button><button class="primary" type="submit">Save Area</button></div></form></div>`;
+        const areaStage = getTutorialStage(project.id, 'area');
+        const guidance = areaStage === 'new'
+            ? '<div class="panel guide"><h2>What is an Area?</h2><p>An Area is a meaningful section inside a Location, such as an orchard row, garden bed, fountain, restaurant, propagation area or walking path.</p><p><strong>What happens next:</strong> Save the Area, then add Plants, Notes or checkpoints. Physical AR placement can happen later, and the Area can be updated.</p></div>'
+            : areaStage === 'learning'
+                ? '<div class="panel contextual-reminder"><p><strong>Reminder:</strong> Areas organise content inside this Location. Save now and add or position content later.</p></div>'
+                : '';
+        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${areaStage === 'understood' ? 'Project structure' : 'Area guidance'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${guidance}<form class="panel" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Area name</label><input id="projectAreaName" placeholder="For example: 1R1, Front Garden or Grafting Area" required /></div><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area — garden, park, nursery, farm section</option><option value="Indoor Area">Indoor Area — greenhouse, building, covered growing area</option><option value="Bed or Plot">Bed or Plot — garden bed, terrace, production row</option><option value="Room">Room — classroom, propagation room, restaurant</option><option value="Enclosure">Enclosure — pen, protected garden, fenced compartment</option><option value="Path or Route">Path or Route — trail, tour route, nursery lane</option><option value="Other">Other — anything that doesn’t fit</option></select></div><div class="field"><label for="projectAreaDescription">Short description (optional)</label><textarea id="projectAreaDescription" rows="3" placeholder="Explain what this Area contains or how people recognise it."></textarea></div><p id="projectAreaError" class="meta"></p><div class="button-row"><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Cancel</button><button class="primary" type="submit">Save Area</button></div></form></div>`;
+        if (areaStage === 'new') recordTutorialEvent(project.id, 'area_explained');
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Area setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -448,6 +697,7 @@ export async function saveProjectArea(event, encodedProjectId, _encodedIntent = 
         const before = await projectContent(projectId);
         const site = before.site || await ensureProjectLocation(projectId);
         const area = await createSitePlace(projectId, site.id, { name: document.getElementById('projectAreaName').value.trim(), type: document.getElementById('projectAreaType').value, description: document.getElementById('projectAreaDescription').value.trim(), visibility: 'draft' });
+        recordTutorialEvent(projectId, 'first_area_created_or_selected');
         const target = document.getElementById('app');
         if (!before.startingPoint) return renderAreaStartingPointQuestion(target, before.project, area);
         return renderProjectAreaDashboard(target, encoded(projectId), encoded(area.id));
@@ -480,6 +730,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
     const areaId = decodeURIComponent(encodedAreaId);
     try {
         const context = await projectAreaContext(projectId, areaId);
+        recordTutorialEvent(projectId, 'first_area_created_or_selected');
         const areaEntries = await entriesWithPlacement(context.project, context.site, context.areaEntries);
         const rows = areaEntries.map(({ marker, isPlaced }) => {
             const status = entryStatus(marker);
@@ -673,6 +924,7 @@ export async function renderStoriesAndFocus(app, encodedProjectId) {
 export async function renderProjectSettings(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
     const theme = PROJECT_THEMES.has(project.theme) ? project.theme : 'forest-light';
+    const tutorialEnabled = isProjectTutorialEnabled(project.id);
     app.innerHTML = `<div class="screen project-settings-screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button>
@@ -697,6 +949,15 @@ export async function renderProjectSettings(app, encodedProjectId) {
         <div class="content-type-list">
             <button class="content-type-row" type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Manage entrances and experience starting points</strong><span>Manage Master Markers and choose where visitors begin the experience.</span></button>
         </div>
+        <section class="panel tutorial-settings" aria-labelledby="tutorialSettingsTitle">
+            <div class="section-heading-row"><div><h2 id="tutorialSettingsTitle">Tutorial &amp; Guidance</h2><p>First-use explanations become shorter after successful actions.</p></div><span class="tutorial-status">${tutorialEnabled ? 'On' : 'Off'}</span></div>
+            <label class="tutorial-mode-toggle"><span><strong>Tutorial Mode</strong><small>Show contextual guidance beside the feature being learned.</small></span><input type="checkbox" ${tutorialEnabled ? 'checked' : ''} onchange="window.setProjectTutorialMode('${encoded(project.id)}', this.checked)" /></label>
+            <div class="tutorial-settings-actions">
+                <button type="button" onclick="window.restartProjectTutorial('${encoded(project.id)}')">Restart Tutorial for This Project</button>
+                <button type="button" onclick="window.resetLearningTips('${encoded(project.id)}')">Reset Learning Tips</button>
+            </div>
+            <p class="meta">These actions reset guidance only. Plants, Areas, Notes, checkpoints and AR positions are never changed.</p>
+        </section>
         <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle">
             <div class="section-heading-row"><h2 id="backupProjectTitle">Backup Project to File</h2><span class="coming-soon-badge">Coming Soon</span></div>
             <p>Exports a configuration file containing all project data, Areas, content and settings.</p>
@@ -727,6 +988,24 @@ export async function saveProjectTheme(encodedProjectId, theme) {
     }
 }
 
+export async function setProjectTutorialModeFromSettings(app, encodedProjectId, enabled) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    setProjectTutorialMode(projectId, enabled);
+    await renderProjectSettings(app, encoded(projectId));
+}
+
+export async function restartProjectTutorialFromSettings(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    restartProjectTutorial(projectId);
+    await renderProjectSettings(app, encoded(projectId));
+}
+
+export async function resetLearningTipsFromSettings(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    resetLearningTips();
+    await renderProjectSettings(app, encoded(projectId));
+}
+
 export async function deleteProjectFromSettings(encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const status = document.getElementById('deleteProjectSettingsStatus');
@@ -754,7 +1033,7 @@ export async function renderBrowseContent(app, encodedProjectId, creator = false
     app.innerHTML = `<div class="screen browse-content-screen"><div class="page-header"><button class="ghost" onclick="${back}">Back</button><h1>Browse Content</h1><p class="subtitle">Access the project’s plants, stories, checkpoints and maps without entering AR.</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', ${creator})"><strong>Field Guide</strong><span>Browse plants and visitor-visible information.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationMap('${encoded(project.id)}', ${creator})"><strong>Map</strong><span>View content by location without using the camera.</span></button></div>${rows ? `<section class="latest-entries-section"><h2>Stories and checkpoints</h2><div class="latest-entry-list">${rows}</div></section>` : ''}</div>`;
 }
 
-export async function renderLocationMap(app, encodedProjectId, creator = true) {
+export async function renderLocationMap(app, encodedProjectId, creator = true, returnContext = '') {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project, site, places, entries } = await projectContent(projectId);
@@ -769,7 +1048,10 @@ export async function renderLocationMap(app, encodedProjectId, creator = true) {
                 ? `<button class="location-map-row" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')">${content}</button>`
                 : `<div class="location-map-row">${content}</div>`;
         }).join('');
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="window.renderBrowseContent('${encoded(project.id)}', ${creator})">Back</button><h1>Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><div class="panel"><h2>Spatial overview</h2><p>Browse every Area and its entries without opening the camera.</p></div><div class="location-map-list">${placeRows || '<div class="panel"><p>No visitor-visible Areas have been added yet.</p></div>'}</div></div>`;
+        const backAction = creator && returnContext === 'content-mode'
+            ? `window.openCreatorContentMode('${encoded(project.id)}')`
+            : `window.renderBrowseContent('${encoded(project.id)}', ${creator})`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><div class="panel"><h2>Spatial overview</h2><p>Browse every Area and its entries without opening the camera.</p></div><div class="location-map-list">${placeRows || '<div class="panel"><p>No visitor-visible Areas have been added yet.</p></div>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -807,10 +1089,17 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
             try { anchor = await loadMarkerAnchor(project.id, site.id, startingPoint.place.id, marker.id); }
             catch { anchor = {}; }
         }
-        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${startingPoint ? 'Manage' : 'Set'} Starting Point</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel starting-point-explanation"><h2>Set the Starting Point</h2><p>A Starting Point is the visitor’s first checkpoint inside an Area. First choose the Area, then describe how visitors arrive. Physical positioning can be completed later.</p><p><strong>Next:</strong> Save the welcome details, then preview the visitor experience from the Dashboard.</p></div><form class="panel" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}')"><div class="field"><label for="projectStartingArea">Area</label>${startingPoint ? `<p id="projectStartingArea" class="field-readonly-value">${escapeHtml(startingPoint.place.name)}</p>` : `<select id="projectStartingArea" required><option value="">Select an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select>`}</div><div class="field"><label for="projectStartingName">Starting-point name</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Starting Point')}" required /></div><div class="field"><label for="projectStartingDescription">Welcome text</label><textarea id="projectStartingDescription" rows="4">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Set it while standing there</strong><span>Use this phone’s current position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Choose it on the map</strong><span>Enter coordinates from a computer.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Location accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Direction visitors should face</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" placeholder="For example: north toward the orchard" /></div></div><div class="field"><label for="projectStartingPhoto">Optional reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" placeholder="https://…" /></div><div class="field"><label for="projectStartingQr">Optional QR or physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft - Creator only</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? `Position configured${anchor.accuracy ? ` · accuracy ${escapeHtml(anchor.accuracy)} m` : ''}.` : 'Position not configured. You can save and finish it later.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Starting Point</button></form></div>`;
+        const startingStage = getTutorialStage(project.id, 'startingPoint');
+        const startingGuidance = startingStage === 'new'
+            ? '<div class="panel starting-point-explanation"><h2>What is a Starting Point?</h2><p>A Starting Point defines where visitors begin and helps connect the digital experience to the physical Location. Choose its Area and arrival information now; physical positioning can be completed or changed later.</p><p><strong>Next:</strong> Save the welcome details, then preview the visitor experience from the Dashboard.</p></div>'
+            : startingStage === 'learning'
+                ? '<div class="panel contextual-reminder"><p><strong>Reminder:</strong> Choose where visitors begin. Its directions and physical position can be updated later.</p></div>'
+                : '';
+        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${startingPoint ? 'Manage' : 'Set'} Starting Point</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${startingGuidance}<form class="panel" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}')"><div class="field"><label for="projectStartingArea">Area</label>${startingPoint ? `<p id="projectStartingArea" class="field-readonly-value">${escapeHtml(startingPoint.place.name)}</p>` : `<select id="projectStartingArea" required><option value="">Select an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select>`}</div><div class="field"><label for="projectStartingName">Starting-point name</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Starting Point')}" required /></div><div class="field"><label for="projectStartingDescription">Welcome text</label><textarea id="projectStartingDescription" rows="4">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Set it while standing there</strong><span>Use this phone’s current position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Choose it on the map</strong><span>Enter coordinates from a computer.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Location accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Direction visitors should face</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" placeholder="For example: north toward the orchard" /></div></div><div class="field"><label for="projectStartingPhoto">Optional reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" placeholder="https://…" /></div><div class="field"><label for="projectStartingQr">Optional QR or physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft - Creator only</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? `Position configured${anchor.accuracy ? ` · accuracy ${escapeHtml(anchor.accuracy)} m` : ''}.` : 'Position not configured. You can save and finish it later.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Starting Point</button></form></div>`;
         if (!startingPoint && preferredAreaId && areas.some(area => area.id === preferredAreaId)) {
             document.getElementById('projectStartingArea').value = preferredAreaId;
         }
+        if (startingStage === 'new') recordTutorialEvent(project.id, 'starting_point_explained');
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Starting Point unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -854,6 +1143,7 @@ export async function saveProjectStartingPoint(event, encodedProjectId) {
         if (context.startingPoint) savedMarker = await updatePlaceMarker(projectId, context.site.id, place.id, context.startingPoint.marker.id, data);
         else savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);
         if (hasCoordinates || qrReference) await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : 'qr', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
+        recordTutorialEvent(projectId, 'starting_point_configured');
         await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;

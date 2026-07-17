@@ -25,14 +25,19 @@ export function renderLaunchScreen(app) {
                         <span>Discover plants and stories using Explorer or the Field Guide.</span>
                     </button>
                 </div>
-                <button class="menu-card role-card ar-demo-role" onclick="window.openTemporaryArDemoWindow()">
-                    <strong>TRY IT NOW <span aria-hidden="true">↗</span></strong>
-                    <span>Experience how NourishlandXR brings plants and places to life. No account or project setup required.</span>
-                </button>
+                <div class="welcome-complementary-grid">
+                    <button class="menu-card role-card welcome-complementary-card" onclick="window.renderPlatformComingSoon('About This Experience', 'launch')">
+                        <strong>About This Experience</strong>
+                        <span>Understand what NourishlandXR is and what it can help you build.</span>
+                    </button>
+                    <button class="menu-card role-card welcome-complementary-card" onclick="window.openTemporaryArDemoWindow()">
+                        <strong>Try It Now</strong>
+                        <span>Experience a quick demonstration of information appearing within a real place.</span>
+                    </button>
+                </div>
             </section>
 
             <nav class="platform-landing-nav" aria-label="Platform navigation">
-                <button onclick="window.renderPlatformComingSoon('About This Experience', 'launch')"><strong>About This Experience</strong></button>
                 <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
                 <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
             </nav>
