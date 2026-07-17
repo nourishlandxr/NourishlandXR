@@ -1,0 +1,14 @@
+{
+  "id": "purple_guava",
+  "type": "plant",
+  "name": "Purple Guava",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "psidium-guajava",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-purple-guava",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

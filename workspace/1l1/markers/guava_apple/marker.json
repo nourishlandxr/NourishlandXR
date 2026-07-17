@@ -1,0 +1,14 @@
+{
+  "id": "guava_apple",
+  "type": "plant",
+  "name": "Guava apple",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "psidium-guajava-6",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1l1-guava-apple",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

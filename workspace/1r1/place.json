@@ -1,0 +1,113 @@
+{
+  "id": "1r1",
+  "name": "1R1",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "amla_bundy",
+      "name": "Amla Bundy",
+      "type": "plant",
+      "path": "markers/amla_bundy/marker.json"
+    },
+    {
+      "id": "araza_boi",
+      "name": "Araza-boi",
+      "type": "plant",
+      "path": "markers/araza_boi/marker.json"
+    },
+    {
+      "id": "brazilian_cherry_black_beauty",
+      "name": "Brazilian Cherry",
+      "type": "plant",
+      "path": "markers/brazilian_cherry_black_beauty/marker.json"
+    },
+    {
+      "id": "guava_hawaiian_supreme",
+      "name": "Guava",
+      "type": "plant",
+      "path": "markers/guava_hawaiian_supreme/marker.json"
+    },
+    {
+      "id": "guava_ruby",
+      "name": "Guava Ruby",
+      "type": "plant",
+      "path": "markers/guava_ruby/marker.json"
+    },
+    {
+      "id": "jackfruit",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit/marker.json"
+    },
+    {
+      "id": "jackfruit_black_gold",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit_black_gold/marker.json"
+    },
+    {
+      "id": "jackfruit_kyogle_gold",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit_kyogle_gold/marker.json"
+    },
+    {
+      "id": "nangaparie",
+      "name": "Nangaparie",
+      "type": "plant",
+      "path": "markers/nangaparie/marker.json"
+    },
+    {
+      "id": "natal_plum",
+      "name": "Natal Plum",
+      "type": "plant",
+      "path": "markers/natal_plum/marker.json"
+    },
+    {
+      "id": "perfume_guava",
+      "name": "Perfume Guava",
+      "type": "plant",
+      "path": "markers/perfume_guava/marker.json"
+    },
+    {
+      "id": "pintanguinha",
+      "name": "Pintanguinha",
+      "type": "plant",
+      "path": "markers/pintanguinha/marker.json"
+    },
+    {
+      "id": "pitanga_tuba",
+      "name": "Pitanga-tuba",
+      "type": "plant",
+      "path": "markers/pitanga_tuba/marker.json"
+    },
+    {
+      "id": "psidium_cambui",
+      "name": "Psidium Cambui",
+      "type": "plant",
+      "path": "markers/psidium_cambui/marker.json"
+    },
+    {
+      "id": "purple_guava",
+      "name": "Purple Guava",
+      "type": "plant",
+      "path": "markers/purple_guava/marker.json"
+    },
+    {
+      "id": "strawberry_guava",
+      "name": "Strawberry Guava",
+      "type": "plant",
+      "path": "markers/strawberry_guava/marker.json"
+    },
+    {
+      "id": "yellow_cherry_guava",
+      "name": "Yellow Cherry Guava",
+      "type": "plant",
+      "path": "markers/yellow_cherry_guava/marker.json"
+    }
+  ]
+}

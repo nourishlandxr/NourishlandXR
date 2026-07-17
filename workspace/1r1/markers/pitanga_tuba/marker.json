@@ -1,0 +1,14 @@
+{
+  "id": "pitanga_tuba",
+  "type": "plant",
+  "name": "Pitanga-tuba",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "eugenia-selloi",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-pitanga-tuba",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

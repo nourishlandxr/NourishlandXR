@@ -1,0 +1,17 @@
+{
+  "id": "hilyards_food_forest",
+  "name": "Hilyards Food Forest",
+  "description": "Complete orchard data imported from Andres Orchard 2026.",
+  "template": "food_forest",
+  "theme": "forest-light",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "sites": [
+    {
+      "id": "main_food_forest",
+      "name": "Main Food Forest",
+      "path": "sites/main_food_forest/site.json"
+    }
+  ]
+}

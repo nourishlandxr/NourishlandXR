@@ -1,0 +1,53 @@
+{
+  "id": "1r2",
+  "name": "1R2",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "giant_lau_lau",
+      "name": "Giant Lau Lau",
+      "type": "plant",
+      "path": "markers/giant_lau_lau/marker.json"
+    },
+    {
+      "id": "malay_apple",
+      "name": "Malay Apple",
+      "type": "plant",
+      "path": "markers/malay_apple/marker.json"
+    },
+    {
+      "id": "rainforest_plum",
+      "name": "Rainforest Plum",
+      "type": "plant",
+      "path": "markers/rainforest_plum/marker.json"
+    },
+    {
+      "id": "wax_jambu_pink",
+      "name": "Wax Jambu",
+      "type": "plant",
+      "path": "markers/wax_jambu_pink/marker.json"
+    },
+    {
+      "id": "wax_jambu_purple",
+      "name": "Wax Jambu",
+      "type": "plant",
+      "path": "markers/wax_jambu_purple/marker.json"
+    },
+    {
+      "id": "wax_jambu_red",
+      "name": "Wax Jambu",
+      "type": "plant",
+      "path": "markers/wax_jambu_red/marker.json"
+    },
+    {
+      "id": "wax_jambu_white",
+      "name": "Wax Jambu",
+      "type": "plant",
+      "path": "markers/wax_jambu_white/marker.json"
+    }
+  ]
+}

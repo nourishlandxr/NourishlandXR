@@ -1,0 +1,14 @@
+{
+  "id": "cherry_of_rio_grande",
+  "type": "plant",
+  "name": "Cherry of Rio Grande",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "eugenia-aggregata",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r3-cherry-of-rio-grande",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

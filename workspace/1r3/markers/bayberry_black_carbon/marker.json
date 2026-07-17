@@ -1,0 +1,14 @@
+{
+  "id": "bayberry_black_carbon",
+  "type": "plant",
+  "name": "Bayberry Black Carbon",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "myrica-cerifera-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r3-bayberry-black-carbon",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

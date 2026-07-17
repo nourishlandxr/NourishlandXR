@@ -1,0 +1,14 @@
+{
+  "id": "breadnut",
+  "type": "plant",
+  "name": "Breadnut",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "breadnut",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1l1-breadnut",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

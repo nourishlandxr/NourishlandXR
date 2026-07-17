@@ -1,0 +1,14 @@
+{
+  "id": "perfume_guava",
+  "type": "plant",
+  "name": "Perfume Guava",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "psidium-guajava-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-perfume-guava",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

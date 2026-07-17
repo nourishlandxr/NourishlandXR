@@ -1,0 +1,14 @@
+{
+  "id": "araza_boi",
+  "type": "plant",
+  "name": "Araza-boi",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "araza-boi",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-araza-boi",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

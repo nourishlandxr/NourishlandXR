@@ -1,0 +1,14 @@
+{
+  "id": "wax_jambu_pink",
+  "type": "plant",
+  "name": "Wax Jambu",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "syzygium-samarangense",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r2-wax-jambu-pink",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}
