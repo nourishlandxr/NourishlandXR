@@ -5,7 +5,7 @@ import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
-import { dismissTutorialFeature, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, resetLearningTips, restartProjectTutorial, setProjectTutorialMode } from '../services/tutorialProgress.js';
+import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -51,7 +51,7 @@ const entryCreatorLabel = marker => marker.createdBy
     || marker.added_by
     || 'Local creator';
 const SETTINGS_KEY = 'nourishland-xr-settings';
-const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true };
+const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true, developerDiagnostics: false };
 
 export function applyProjectTheme(theme = 'forest-light') {
     const selectedTheme = PROJECT_THEMES.has(theme) ? theme : 'forest-light';
@@ -929,6 +929,14 @@ export async function renderProjectSettings(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
     const theme = PROJECT_THEMES.has(project.theme) ? project.theme : 'forest-light';
     const tutorialEnabled = isProjectTutorialEnabled(project.id);
+    const arTutorial = getArTutorialProgress();
+    const settings = readPlatformSettings();
+    const arTutorialLabel = {
+        not_started: 'Not started',
+        in_progress: 'In progress',
+        completed: 'Completed',
+        skipped: 'Skipped'
+    }[arTutorial.state] || 'Not started';
     app.innerHTML = `<div class="screen project-settings-screen">
         <div class="page-header">
             <button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button>
@@ -961,6 +969,21 @@ export async function renderProjectSettings(app, encodedProjectId) {
                 <button type="button" onclick="window.resetLearningTips('${encoded(project.id)}')">Reset Learning Tips</button>
             </div>
             <p class="meta">These actions reset guidance only. Plants, Areas, Notes, checkpoints and AR positions are never changed.</p>
+        </section>
+        <section class="panel tutorial-settings" aria-labelledby="arTutorialSettingsTitle">
+            <div class="section-heading-row"><div><h2 id="arTutorialSettingsTitle">AR Tutorial &amp; Hints</h2><p>Control the compact guidance shown inside Creator AR Mode.</p></div><span class="tutorial-status">${arTutorialLabel}</span></div>
+            <label class="tutorial-mode-toggle"><span><strong>Show AR Hints</strong><small>Show short surface-detection and placement reminders when they are useful.</small></span><input type="checkbox" ${arTutorial.showHints === false ? '' : 'checked'} onchange="window.setArHints('${encoded(project.id)}', this.checked)" /></label>
+            <div class="tutorial-settings-actions">
+                <button type="button" onclick="window.replayArTutorial('${encoded(project.id)}')">Replay AR Tutorial</button>
+                <button type="button" onclick="window.resetArLearningTips('${encoded(project.id)}')">Reset AR Learning Tips</button>
+            </div>
+            <p class="meta">The tutorial appears once for an experienced creator, can be skipped, and can always be replayed here. Resetting it never changes project content or AR positions.</p>
+        </section>
+        <section class="panel tutorial-settings" aria-labelledby="developerDiagnosticsTitle">
+            <div class="section-heading-row"><div><h2 id="developerDiagnosticsTitle">Developer Diagnostics</h2><p>Keep technical AR launch details hidden during normal use.</p></div><span class="tutorial-status">${settings.developerDiagnostics ? 'Debug on' : 'Debug off'}</span></div>
+            <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
+            <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
+            <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
         </section>
         <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle">
             <div class="section-heading-row"><h2 id="backupProjectTitle">Backup Project to File</h2><span class="coming-soon-badge">Coming Soon</span></div>
@@ -1038,6 +1061,24 @@ export async function restartProjectTutorialFromSettings(app, encodedProjectId) 
 export async function resetLearningTipsFromSettings(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     resetLearningTips();
+    await renderProjectSettings(app, encoded(projectId));
+}
+
+export async function replayArTutorialFromSettings(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    replayArTutorial();
+    await renderProjectSettings(app, encoded(projectId));
+}
+
+export async function resetArLearningTipsFromSettings(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    resetArLearningTips();
+    await renderProjectSettings(app, encoded(projectId));
+}
+
+export async function setArHintsFromSettings(app, encodedProjectId, enabled) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    setArHintsEnabled(enabled);
     await renderProjectSettings(app, encoded(projectId));
 }
 

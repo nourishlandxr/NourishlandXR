@@ -29,7 +29,11 @@ const EVENT_RULES = {
 function emptyRoot() {
     return {
         version: 1,
-        creator: { tutorialMode: true, features: {} },
+        creator: {
+            tutorialMode: true,
+            features: {},
+            arTutorial: { state: 'not_started', step: 0, showHints: true }
+        },
         projects: {}
     };
 }
@@ -44,7 +48,18 @@ function readRoot(storage) {
         return {
             ...emptyRoot(),
             ...(parsed && typeof parsed === 'object' ? parsed : {}),
-            creator: { tutorialMode: true, features: {}, ...(parsed?.creator || {}) },
+            creator: {
+                tutorialMode: true,
+                features: {},
+                arTutorial: { state: 'not_started', step: 0, showHints: true },
+                ...(parsed?.creator || {}),
+                arTutorial: {
+                    state: 'not_started',
+                    step: 0,
+                    showHints: true,
+                    ...(parsed?.creator?.arTutorial || {})
+                }
+            },
             projects: parsed?.projects && typeof parsed.projects === 'object' ? parsed.projects : {}
         };
     } catch {
@@ -130,9 +145,57 @@ export function restartProjectTutorial(projectId, storage) {
 
 export function resetLearningTips(storage) {
     const root = readRoot(storage);
-    root.creator = { tutorialMode: true, features: {} };
+    root.creator = {
+        tutorialMode: true,
+        features: {},
+        arTutorial: { state: 'not_started', step: 0, showHints: true }
+    };
     root.projects = {};
     writeRoot(root, storage);
+}
+
+export function getArTutorialProgress(storage) {
+    const root = readRoot(storage);
+    return { ...root.creator.arTutorial };
+}
+
+export function setArTutorialProgress(state, step = 0, storage) {
+    if (!['not_started', 'in_progress', 'completed', 'skipped'].includes(state)) return getArTutorialProgress(storage);
+    const root = readRoot(storage);
+    root.creator.arTutorial = {
+        ...(root.creator.arTutorial || {}),
+        state,
+        step: Math.max(0, Number(step) || 0)
+    };
+    writeRoot(root, storage);
+    return { ...root.creator.arTutorial };
+}
+
+export function replayArTutorial(storage) {
+    return setArTutorialProgress('not_started', 0, storage);
+}
+
+export function setArHintsEnabled(enabled, storage) {
+    const root = readRoot(storage);
+    root.creator.arTutorial = {
+        state: 'not_started',
+        step: 0,
+        ...(root.creator.arTutorial || {}),
+        showHints: Boolean(enabled)
+    };
+    writeRoot(root, storage);
+    return { ...root.creator.arTutorial };
+}
+
+export function resetArLearningTips(storage) {
+    const root = readRoot(storage);
+    root.creator.arTutorial = {
+        state: 'not_started',
+        step: 0,
+        showHints: root.creator.arTutorial?.showHints !== false
+    };
+    writeRoot(root, storage);
+    return { ...root.creator.arTutorial };
 }
 
 export function readTutorialProgress(storage) {

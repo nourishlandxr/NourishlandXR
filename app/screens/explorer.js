@@ -1,5 +1,5 @@
 import { loadPlaceMarkers, loadPlantProfile, loadProjectGpsMarkers, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
-import { exitAr, isArActive, resetArPlacement, startArNote } from '../services/arNote.js';
+import { copyArDiagnostics, exitAr, getArDiagnostics, isArActive, recordArFailure, resetArPlacement, startArNote } from '../services/arNote.js';
 import { disableTargetReticle, enableTargetReticle } from '../services/targetReticle.js';
 import { getHillyardsExplorerContext } from './v1Navigation.js';
 import { getPlantById, getResolvedPlantInstance } from '../services/plantDataService.js';
@@ -102,6 +102,33 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
             : '';
     app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
     if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
+}
+
+export function toggleArTechnicalDetails() {
+    const details = document.getElementById('arTechnicalDetails');
+    if (details) details.hidden = !details.hidden;
+}
+
+export function renderArFailure(app, encodedProjectId, returnContext, error) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    recordArFailure(error);
+    const creator = returnContext === 'creator';
+    const technical = [...getArDiagnostics(), error?.cause?.message, error?.message].filter(Boolean);
+    const userMessage = /Starting Point/i.test(error?.message || '')
+        ? 'Set a GPS Starting Point for this project, then try AR Mode again.'
+        : 'Check that camera access is allowed and try again.';
+    const retryAction = creator
+        ? `window.startCreatorLocationAr('${encoded(projectId)}')`
+        : `window.startLocationAr('${encoded(projectId)}')`;
+    const backAction = creator
+        ? `window.renderProjectDashboard('${encoded(projectId)}')`
+        : `window.renderVisitorLocationIntro('${encoded(projectId)}')`;
+    app.innerHTML = `<div class="screen ar-failure-screen">
+        <div class="page-header"><p class="welcome-label">AR unavailable</p><h1>AR could not start</h1></div>
+        <section class="panel"><p>${userMessage}</p></section>
+        <div class="button-row"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${retryAction}">Try Again</button><button type="button" onclick="window.toggleArTechnicalDetails()">View Technical Details</button></div>
+        <section id="arTechnicalDetails" class="panel ar-technical-details" hidden><h2>Technical details</h2><pre>${escapeHtml(technical.join('\n') || 'No technical details were recorded.')}</pre><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button><p id="arTechnicalCopyStatus" class="meta"></p></section>
+    </div>`;
 }
 
 export async function renderXrProjects(app) {
@@ -238,6 +265,7 @@ export async function startLocationAr(encodedProjectId) {
         siteId: starting.site.id,
         placeId: starting.place.id,
         markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
+        areas: groups.flat().filter(group => group.site.id === starting.site.id).map(group => group.place),
         spatialMarkers: reconstructed,
         creator,
         calibration: { startingPoint: starting.anchor, currentPosition, heading },
@@ -288,6 +316,7 @@ export async function startAreaNavigationAr(encodedProjectId, encodedSiteId, enc
         siteId: site.id,
         placeId: place.id,
         markers,
+        areas: [place],
         spatialMarkers: [{ areaDestination: true, project, site, place, marker: destinationMarker, anchor, placement }],
         creator: true,
         status: {
@@ -304,4 +333,4 @@ export async function toggleGlobalAr() {
     await startWelcomeAr();
 }
 
-export { resetArPlacement, exitAr };
+export { copyArDiagnostics, resetArPlacement, exitAr };

@@ -4,11 +4,16 @@ import path from 'node:path';
 import test from 'node:test';
 import {
     dismissTutorialFeature,
+    getArTutorialProgress,
     getTutorialStage,
     readTutorialProgress,
     recordTutorialEvent,
+    replayArTutorial,
+    resetArLearningTips,
     resetLearningTips,
-    restartProjectTutorial
+    restartProjectTutorial,
+    setArHintsEnabled,
+    setArTutorialProgress
 } from '../app/services/tutorialProgress.js';
 
 function memoryStorage() {
@@ -55,4 +60,30 @@ test('resetting tutorial state does not touch project content or AR placement da
 
     const serviceSource = fs.readFileSync(path.resolve(import.meta.dirname, '../app/services/tutorialProgress.js'), 'utf8');
     assert.doesNotMatch(serviceSource, /persistence|apiFetch|saveMarkerAnchor|updatePlaceMarker/);
+});
+
+test('creator AR tutorial completion and skipping persist globally', () => {
+    const storage = memoryStorage();
+    assert.deepEqual(getArTutorialProgress(storage), { state: 'not_started', step: 0, showHints: true });
+    setArTutorialProgress('in_progress', 3, storage);
+    assert.equal(getArTutorialProgress(storage).step, 3);
+    setArTutorialProgress('completed', 8, storage);
+    assert.equal(getArTutorialProgress(storage).state, 'completed');
+    assert.equal(getArTutorialProgress(storage).step, 8);
+    setArTutorialProgress('skipped', 4, storage);
+    assert.equal(getArTutorialProgress(storage).state, 'skipped');
+});
+
+test('AR tutorial can be replayed and hints reset without touching creator content', () => {
+    const storage = memoryStorage();
+    const content = { markers: [{ id: 'marker-1' }], anchors: [{ type: 'gps' }] };
+    const before = structuredClone(content);
+    setArTutorialProgress('completed', 8, storage);
+    setArHintsEnabled(false, storage);
+    assert.equal(getArTutorialProgress(storage).showHints, false);
+    replayArTutorial(storage);
+    assert.equal(getArTutorialProgress(storage).state, 'not_started');
+    resetArLearningTips(storage);
+    assert.deepEqual(getArTutorialProgress(storage), { state: 'not_started', step: 0, showHints: false });
+    assert.deepEqual(content, before);
 });

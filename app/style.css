@@ -221,27 +221,6 @@ textarea:focus {
     padding: 2px 7px;
 }
 
-.ar-launch-diagnostics {
-    position: fixed;
-    right: max(14px, calc((100vw - 860px) / 2 + 20px));
-    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 58px);
-    z-index: 10004;
-    max-width: min(420px, calc(100vw - 28px));
-    max-height: min(45vh, 320px);
-    overflow: auto;
-    padding: 8px 10px;
-    border: 1px solid rgba(38, 88, 51, .35);
-    border-radius: 10px;
-    background: rgba(247, 250, 243, .94);
-    color: #173126;
-    font: 600 .72rem/1.4 monospace;
-    box-shadow: 0 8px 24px rgba(19, 45, 27, .14);
-}
-
-.ar-launch-diagnostics[hidden] {
-    display: none !important;
-}
-
 .creator-auth-testing-warning {
     margin-bottom: 12px;
     padding: 10px 12px;
@@ -2653,6 +2632,15 @@ body[data-project-theme="forest-light"] {
     --theme-accent: #315f3b;
     --theme-accent-hover: #254c30;
     --theme-on-accent: #ffffff;
+    --theme-button-bg: #eef4e9;
+    --theme-button-hover: #e1ebdc;
+    --theme-button-text: #173126;
+    --theme-button-muted: #526158;
+    --theme-quick-text: #ffffff;
+    --theme-danger-bg: #fff1ef;
+    --theme-danger-hover: #ffe3df;
+    --theme-danger-text: #8a241e;
+    --theme-danger-border: #c6544b;
     --theme-line: rgba(58, 91, 61, .24);
     --theme-quick-access: linear-gradient(135deg, #315f3b, #467a4e);
     --leaf-ink: #173126;
@@ -2672,6 +2660,15 @@ body[data-project-theme="light"] {
     --theme-accent: #272b28;
     --theme-accent-hover: #111311;
     --theme-on-accent: #ffffff;
+    --theme-button-bg: #f3f4f3;
+    --theme-button-hover: #e4e6e4;
+    --theme-button-text: #151715;
+    --theme-button-muted: #555b56;
+    --theme-quick-text: #151715;
+    --theme-danger-bg: #fff1ef;
+    --theme-danger-hover: #ffe3df;
+    --theme-danger-text: #8a241e;
+    --theme-danger-border: #c6544b;
     --theme-line: rgba(24, 29, 25, .17);
     --theme-quick-access: linear-gradient(135deg, #ecefec, #dfe3df);
     --leaf-ink: #151715;
@@ -2691,6 +2688,15 @@ body[data-project-theme="dark"] {
     --theme-accent: #e8ece8;
     --theme-accent-hover: #ffffff;
     --theme-on-accent: #0a0c0a;
+    --theme-button-bg: #252925;
+    --theme-button-hover: #323632;
+    --theme-button-text: #f4f6f4;
+    --theme-button-muted: #c3c9c4;
+    --theme-quick-text: #f4f6f4;
+    --theme-danger-bg: #4a1d1a;
+    --theme-danger-hover: #612722;
+    --theme-danger-text: #ffd7d2;
+    --theme-danger-border: #d66b61;
     --theme-line: rgba(235, 240, 235, .18);
     --theme-quick-access: linear-gradient(135deg, #090a09, #222522);
     --leaf-ink: #f4f6f4;
@@ -2711,6 +2717,15 @@ body[data-project-theme="forest-dark"] {
     --theme-accent: #58a66c;
     --theme-accent-hover: #69bb7d;
     --theme-on-accent: #07140c;
+    --theme-button-bg: #1a4228;
+    --theme-button-hover: #235535;
+    --theme-button-text: #edf7ea;
+    --theme-button-muted: #bfd3c1;
+    --theme-quick-text: #edf7ea;
+    --theme-danger-bg: #4c211d;
+    --theme-danger-hover: #632b25;
+    --theme-danger-text: #ffe0db;
+    --theme-danger-border: #db7468;
     --theme-line: rgba(144, 199, 150, .25);
     --theme-quick-access: linear-gradient(135deg, #0b2b19, #1d5630);
     --leaf-ink: #edf7ea;
@@ -2731,6 +2746,15 @@ body[data-project-theme="cyber"] {
     --theme-accent: #9b73ff;
     --theme-accent-hover: #ad8bff;
     --theme-on-accent: #17111f;
+    --theme-button-bg: #3a3447;
+    --theme-button-hover: #4a415b;
+    --theme-button-text: #f5f1ff;
+    --theme-button-muted: #d2c7e2;
+    --theme-quick-text: #f5f1ff;
+    --theme-danger-bg: #4b2530;
+    --theme-danger-hover: #62303e;
+    --theme-danger-text: #ffd7df;
+    --theme-danger-border: #d66d83;
     --theme-line: rgba(185, 151, 255, .27);
     --theme-quick-access: linear-gradient(135deg, #3e3158, #6c4fa5);
     --leaf-ink: #f5f1ff;
@@ -2776,7 +2800,18 @@ body[data-project-theme] .project-delete-zone {
     color: var(--theme-text);
 }
 
-body[data-project-theme] button,
+body[data-project-theme] button {
+    border-color: var(--theme-line);
+    background-color: var(--theme-button-bg);
+    color: var(--theme-button-text);
+}
+
+body[data-project-theme] button:hover {
+    border-color: var(--theme-accent);
+    background-color: var(--theme-button-hover);
+    color: var(--theme-button-text);
+}
+
 body[data-project-theme] input,
 body[data-project-theme] select,
 body[data-project-theme] textarea,
@@ -2795,6 +2830,7 @@ body[data-project-theme] .add-to-location-action {
 }
 
 body[data-project-theme] button.primary strong,
+body[data-project-theme] button.primary span,
 body[data-project-theme] .add-to-location-action strong {
     color: var(--theme-on-accent);
 }
@@ -2802,6 +2838,31 @@ body[data-project-theme] .add-to-location-action strong {
 body[data-project-theme] button.primary:hover {
     border-color: var(--theme-accent-hover);
     background: var(--theme-accent-hover);
+    color: var(--theme-on-accent);
+}
+
+body[data-project-theme] button.danger,
+body[data-project-theme] button.danger:hover {
+    border-color: var(--theme-danger-border);
+    background: var(--theme-danger-bg);
+    color: var(--theme-danger-text);
+}
+
+body[data-project-theme] button.danger:hover {
+    background: var(--theme-danger-hover);
+}
+
+body[data-project-theme] button:disabled,
+body[data-project-theme] button[aria-disabled="true"] {
+    border-color: var(--theme-line);
+    background: var(--theme-surface-soft);
+    color: var(--theme-muted);
+    opacity: .72;
+}
+
+body[data-project-theme] button:focus-visible {
+    outline: 3px solid var(--theme-accent);
+    outline-offset: 2px;
 }
 
 body[data-project-theme] .location-create-section-prominent {
@@ -2812,12 +2873,17 @@ body[data-project-theme] .quick-access-action,
 body[data-project-theme] .quick-access-action:hover {
     border-color: transparent;
     background: transparent;
-    color: var(--theme-on-accent);
+    color: var(--theme-quick-text);
 }
 
 body[data-project-theme] .location-create-section-prominent h2,
 body[data-project-theme] .quick-access-action strong {
-    color: var(--theme-on-accent);
+    color: var(--theme-quick-text);
+}
+
+body[data-project-theme] .quick-access-icon {
+    border-color: color-mix(in srgb, var(--theme-quick-text) 38%, transparent);
+    background: color-mix(in srgb, var(--theme-quick-text) 14%, transparent);
 }
 
 body[data-project-theme] .project-search-box {
@@ -2848,10 +2914,17 @@ body[data-project-theme] .project-search-result-open {
 
 body[data-project-theme] .work-mode-section .section-heading-row p,
 body[data-project-theme] .content-mode-introduction p,
+body[data-project-theme] .experience-launch-card > span,
+body[data-project-theme] .location-tool-card > span,
 body[data-project-theme] .content-mode-tool-grid > button span,
+body[data-project-theme] .content-type-row > span,
+body[data-project-theme] .location-map-row span,
+body[data-project-theme] .setup-choice-grid button > span,
+body[data-project-theme] .area-question-actions button:not(.primary) span,
+body[data-project-theme] .area-dashboard-actions button:not(.primary) span,
 body[data-project-theme] .contextual-guidance p,
 body[data-project-theme] .guidance-stage {
-    color: var(--theme-muted);
+    color: var(--theme-button-muted);
 }
 
 body[data-project-theme] .contextual-guidance {
@@ -2865,11 +2938,6 @@ body[data-project-theme] .contextual-guidance-actions .guidance-primary-action {
     border-color: var(--theme-muted);
     background: var(--theme-muted);
     color: var(--theme-bg);
-}
-
-body[data-project-theme="light"] .location-create-section-prominent h2,
-body[data-project-theme="light"] .quick-access-action strong {
-    color: var(--theme-text);
 }
 
 body[data-project-theme] .guided-setup-panel,
@@ -2963,4 +3031,200 @@ body[data-project-theme] .guided-setup-steps li span {
 .project-delete-zone h2,
 .project-delete-zone p {
     margin: 0;
+}
+
+/* Creator AR controls stay legible over camera video, independent of project theme. */
+body.ar-session-active #arOverlayControls {
+    left: 50%;
+    top: max(12px, env(safe-area-inset-top));
+    bottom: auto;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 24px);
+    border: 1px solid rgba(255, 255, 255, .28);
+    background: rgba(10, 15, 12, .82);
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .24);
+}
+
+body.ar-session-active #arOverlayStatus[hidden],
+body.ar-session-active #arPlacementAction[hidden] {
+    display: none !important;
+}
+
+body.ar-session-active #arOverlayControls button,
+body.ar-session-active #arCreatorToolbar button,
+body.ar-session-active .ar-modal-card button,
+body.ar-session-active .ar-tutorial-panel button,
+body.ar-session-active .ar-toast button {
+    border: 1px solid rgba(255, 255, 255, .38);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+}
+
+body.ar-session-active #arOverlayControls button.primary,
+body.ar-session-active .ar-modal-card button.primary,
+body.ar-session-active .ar-tutorial-panel button.primary {
+    border-color: #55d47e;
+    background: #237a43;
+    color: #fff;
+}
+
+body.ar-session-active .ar-modal-card button.danger {
+    border-color: #ffaaa4;
+    background: #8d2924;
+    color: #fff;
+}
+
+body.ar-session-active .ar-modal-card input,
+body.ar-session-active .ar-modal-card select {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 10px;
+    border: 1px solid rgba(255, 255, 255, .42);
+    border-radius: 8px;
+    background: #202922;
+    color: #fff;
+}
+
+body.ar-session-active .ar-modal-card label {
+    color: #fff;
+    font-weight: 750;
+}
+
+#arCreatorToolbar {
+    position: fixed;
+    left: 50%;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 10003;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(82px, 1fr));
+    width: min(390px, calc(100vw - 24px));
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, .26);
+    border-radius: 16px;
+    background: rgba(10, 15, 12, .86);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+    transform: translateX(-50%);
+}
+
+#arCreatorToolbar button {
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 5px 8px;
+    border-radius: 11px;
+    font-size: .72rem;
+}
+
+#arCreatorToolbar button > span {
+    color: #fff;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+#arCreatorToolbar button > strong { color: #fff; }
+
+.ar-add-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+.ar-add-choice-grid button {
+    min-height: 64px;
+    padding: 8px 5px;
+}
+
+.ar-inline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.ar-inline-checkbox input {
+    width: 20px !important;
+    min-height: 20px !important;
+}
+
+.ar-tutorial-panel {
+    position: fixed;
+    left: 50%;
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 78px);
+    z-index: 10004;
+    width: min(420px, calc(100vw - 24px));
+    max-height: min(48vh, 360px);
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 14px;
+    background: rgba(10, 15, 12, .9);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+    transform: translateX(-50%);
+}
+
+.ar-tutorial-panel.hidden { display: none; }
+.ar-tutorial-panel h2 { margin: 4px 0 7px; color: #fff; font-size: 1.05rem; }
+.ar-tutorial-panel p { margin: 0 0 9px; color: rgba(255, 255, 255, .88); line-height: 1.4; }
+.ar-tutorial-progress { color: #a9efbd; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.ar-tutorial-waiting { font-weight: 800; }
+.ar-tutorial-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ar-tutorial-highlight { outline: 3px solid #70ef93; outline-offset: 4px; }
+
+.ar-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 82px);
+    z-index: 10005;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    width: min(420px, calc(100vw - 24px));
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 12px;
+    background: rgba(10, 15, 12, .92);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+    transform: translateX(-50%);
+}
+
+.ar-toast strong { flex: 1 1 180px; color: #fff; }
+.ar-toast button { padding: 6px 8px; }
+
+.ar-technical-details pre {
+    max-height: 280px;
+    overflow: auto;
+    padding: 12px;
+    border-radius: 10px;
+    background: #161b18;
+    color: #eaf6ed;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: 600 .75rem/1.5 monospace;
+}
+
+@media (max-width: 420px) {
+    #arModal {
+        padding-right: 10px;
+        padding-left: 10px;
+        padding-bottom: calc(max(78px, env(safe-area-inset-bottom) + 72px));
+    }
+
+    .ar-modal-card {
+        max-height: 64vh;
+        overflow: auto;
+    }
+
+    .ar-tutorial-panel { max-height: 44vh; }
+}
+
+@media print {
+    #arCreatorToolbar,
+    .ar-tutorial-panel,
+    .ar-toast {
+        display: none !important;
+    }
 }

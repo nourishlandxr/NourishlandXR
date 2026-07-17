@@ -9,7 +9,7 @@ import { renderSiteMap } from './screens/siteMap.js';
 import { renderPlaceAssets } from './screens/placeAssets.js';
 import { renderAssetWorkspace, renderAssetGeneral } from './screens/assetWorkspace.js';
 import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from './components/v1Editors.js';
-import { exitAr, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
+import { copyArDiagnostics, exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
 import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
@@ -21,7 +21,7 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAllProjectEntries, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAllProjectEntries, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent } from './services/tutorialProgress.js';
@@ -108,6 +108,16 @@ async function bootstrap() {
     try {
         await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
+        const recoveryKey = 'nourishland-xr-active-creator-ar';
+        let recovery = null;
+        try { recovery = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null'); }
+        catch { sessionStorage.removeItem(recoveryKey); }
+        if (!params.size && recovery?.projectId) {
+            sessionStorage.removeItem(recoveryKey);
+            setExperienceRole('creator');
+            await renderProjectDashboard(app, encodeURIComponent(recovery.projectId));
+            return;
+        }
         if (!HOSTED_MODE) {
             await siteManager.loadSitesFromDisk();
             await loadDemoMarkers();
@@ -169,6 +179,9 @@ window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, them
 window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
 window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
 window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
+window.replayArTutorial = projectId => replayArTutorialFromSettings(app, projectId);
+window.resetArLearningTips = projectId => resetArLearningTipsFromSettings(app, projectId);
+window.setArHints = (projectId, enabled) => setArHintsFromSettings(app, projectId, enabled);
 window.deleteProjectFromSettings = (projectId, projectName = '') => deleteProjectFromSettings(projectId, projectName);
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
 window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, projectId);
@@ -248,15 +261,20 @@ window.createFieldArea = () => createFieldArea().catch(error => window.alert(`Ar
 window.refreshFieldLocation = () => refreshFieldLocation();
 window.saveFieldMarker = event => saveFieldMarker(event);
 window.startWelcomeAr = () => startWelcomeAr();
-window.startLocationAr = projectId => startLocationAr(projectId).catch(error => window.alert(`AR could not start: ${error.message}`));
+window.startLocationAr = projectId => startLocationAr(projectId).catch(error => renderArFailure(app, projectId, 'visitor', error));
 window.startCreatorLocationAr = async projectId => {
     try {
         await startLocationAr(projectId);
         recordTutorialEvent(decodeURIComponent(projectId), 'ar_mode_launched');
     } catch (error) {
-        window.alert(`AR could not start: ${error.message}`);
+        renderArFailure(app, projectId, 'creator', error);
     }
 };
+window.toggleArTechnicalDetails = toggleArTechnicalDetails;
+window.copyArDiagnostics = () => copyArDiagnostics().catch(error => {
+    const status = document.getElementById('developerDiagnosticsStatus') || document.getElementById('arTechnicalCopyStatus');
+    if (status) status.textContent = `Copy failed: ${error.message}`;
+});
 window.renderArPreparation = (projectId, returnContext, placementType, placeId, siteId) => renderArPreparation(app, projectId, returnContext, placementType, placeId, siteId);
 window.beginPlacementAr = async (projectId, type) => {
     await startLocationAr(projectId);
