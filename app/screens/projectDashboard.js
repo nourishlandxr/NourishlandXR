@@ -1,9 +1,10 @@
-﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
+﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
+import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -114,6 +115,101 @@ async function projectAreaContext(projectId, areaId) {
     };
 }
 
+function searchableText(...values) {
+    const textValues = value => {
+        if (value === null || value === undefined) return [];
+        if (Array.isArray(value)) return value.flatMap(textValues);
+        if (typeof value === 'object') return Object.values(value).flatMap(textValues);
+        return [String(value)];
+    };
+    return values.flatMap(textValues).join(' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+}
+
+async function buildProjectSearchItems(project, site, areas, entries) {
+    let plantsById = new Map();
+    let instancesById = new Map();
+    if (site && entries.some(entry => entry.marker.type === 'plant' && entry.marker.plantId)) {
+        const [library, instanceData] = await Promise.all([
+            loadPlantLibrary(true),
+            loadPlantInstances(project.id, site.id, true)
+        ]);
+        plantsById = new Map((library.plants || []).map(plant => [plant.id, plant]));
+        instancesById = new Map((instanceData.instances || []).map(instance => [instance.id, instance]));
+    }
+
+    const legacyProfiles = new Map();
+    if (site) {
+        await Promise.all(entries.map(async entry => {
+            if (entry.marker.type !== 'plant' || !entry.marker.plant_profile_path) return;
+            try {
+                legacyProfiles.set(entry.marker.id, await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id));
+            } catch {
+                legacyProfiles.set(entry.marker.id, null);
+            }
+        }));
+    }
+
+    const areaItems = areas.map(area => ({
+        icon: '▧',
+        label: escapeHtml(area.name),
+        type: 'Area',
+        area: escapeHtml(area.type || 'Area'),
+        detail: escapeHtml(area.description || 'Open the Area dashboard.'),
+        searchText: searchableText('Area', area),
+        action: `window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')`
+    }));
+
+    const contentItems = entries.map(({ marker, place }) => {
+        const plant = marker.type === 'plant' ? plantsById.get(marker.plantId) : null;
+        const instance = marker.type === 'plant' ? instancesById.get(marker.plantInstanceId) : null;
+        const legacyProfile = marker.type === 'plant' ? legacyProfiles.get(marker.id) : null;
+        const detail = marker.description
+            || marker.notes
+            || plant?.scientificName
+            || plant?.summary
+            || legacyProfile?.scientific_name
+            || legacyProfile?.overview
+            || 'Open saved information.';
+        return {
+            icon: markerIcon(marker.type),
+            label: escapeHtml(marker.name),
+            type: escapeHtml(markerTypeLabel(marker.type)),
+            area: escapeHtml(place.name || 'Unassigned'),
+            detail: escapeHtml(detail),
+            searchText: searchableText(markerTypeLabel(marker.type), place, marker, plant, instance, legacyProfile),
+            action: marker.type === 'intro_checkpoint'
+                ? `window.openProjectStartingPoint('${encoded(project.id)}')`
+                : `window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}')`
+        };
+    });
+
+    return [...areaItems, ...contentItems];
+}
+
+export function filterProjectSearch(value) {
+    const query = String(value || '').trim().toLocaleLowerCase();
+    const terms = query.split(/\s+/).filter(Boolean);
+    const resultList = document.getElementById('projectSearchResults');
+    const emptyState = document.getElementById('projectSearchEmpty');
+    const summary = document.getElementById('projectSearchSummary');
+    const items = [...document.querySelectorAll('[data-project-search-item]')];
+    let visible = 0;
+
+    items.forEach(item => {
+        const matches = terms.length > 0 && terms.every(term => String(item.dataset.search || '').includes(term));
+        item.hidden = !matches;
+        if (matches) visible += 1;
+    });
+
+    if (resultList) resultList.hidden = terms.length === 0 || visible === 0;
+    if (emptyState) emptyState.hidden = terms.length === 0 || visible > 0;
+    if (summary) {
+        summary.textContent = terms.length === 0
+            ? `Start typing to search ${items.length} item${items.length === 1 ? '' : 's'}.`
+            : `${visible} result${visible === 1 ? '' : 's'} for “${String(value).trim()}”.`;
+    }
+}
+
 export async function renderPlatformHome(app) {
     applyProjectTheme('forest-light');
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
@@ -206,9 +302,11 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 action: `window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')`
             };
         });
+        const searchItems = await buildProjectSearchItems(project, site, areas, entries);
         app.innerHTML = renderProjectEntry({
             locationId: escapeHtml(project.id),
             areas: areaLinks,
+            searchItems,
             locationName: escapeHtml(project.name),
             siteName: escapeHtml(site?.name || 'No site configured'),
             introduction: `This is the ${escapeHtml(project.name)} Dashboard—where the project is edited, developed and brought to life.`,

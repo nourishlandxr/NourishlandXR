@@ -21,7 +21,7 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, filterProjectSearch, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
@@ -150,6 +150,7 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
+window.filterProjectSearch = filterProjectSearch;
 window.renderNewLocationSetup = projectId => renderNewLocationSetup(app, projectId);
 window.renderAddToLocation = projectId => renderAddToLocation(app, projectId);
 window.renderPlacementChoice = (projectId, type) => renderPlacementChoice(app, projectId, type);

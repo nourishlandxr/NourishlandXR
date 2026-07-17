@@ -61,6 +61,13 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(entrySource, /project-area-link/);
     assert.match(source, /areas: areaLinks/);
     assert.match(source, /renderProjectAreaDashboard/);
+    assert.match(entrySource, /Search this project/);
+    assert.match(entrySource, /Search Areas, Plants, Notes and information/);
+    assert.match(entrySource, /data-project-search-item/);
+    assert.match(source, /buildProjectSearchItems/);
+    assert.match(source, /loadPlantLibrary/);
+    assert.match(source, /loadPlantProfile/);
+    assert.match(source, /filterProjectSearch/);
     assert.match(entrySource, /Unplaced Content/);
 });
 

@@ -2369,6 +2369,100 @@ body.ar-session-active::after {
 .quick-access-action:nth-child(3n + 2) .quick-access-icon { background: linear-gradient(145deg, rgba(218, 238, 178, .42), rgba(153, 195, 116, .2)); }
 .quick-access-action:nth-child(3n + 3) .quick-access-icon { background: linear-gradient(145deg, rgba(236, 218, 166, .38), rgba(197, 161, 91, .18)); }
 
+.project-search-section {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 18px 20px;
+    border: 1px solid rgba(43, 78, 52, .15);
+    border-radius: 20px;
+    background: rgba(250, 251, 247, .8);
+}
+
+.project-search-section .section-heading-row { margin: 0; }
+.project-search-section h2,
+.project-search-section p { margin: 0; }
+.project-search-section .section-heading-row p { margin-top: 4px; color: #66736a; font-size: .82rem; }
+
+.project-search-box {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    min-height: 48px;
+    overflow: hidden;
+    border: 1px solid rgba(43, 78, 52, .24);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.project-search-box > span {
+    color: var(--leaf-deep);
+    font-size: 1.35rem;
+    font-weight: 800;
+    text-align: right;
+}
+
+.project-search-box input {
+    min-width: 0;
+    min-height: 46px;
+    padding: 10px 12px 10px 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.project-search-box input:focus { outline: 0; }
+.project-search-box:focus-within {
+    border-color: var(--leaf-deep);
+    box-shadow: 0 0 0 3px rgba(49, 95, 59, .14);
+}
+
+.project-search-summary { color: #66736a; font-size: .75rem; }
+.project-search-results { display: grid; }
+.project-search-results[hidden],
+.project-search-result[hidden],
+.project-search-section > .project-empty-state[hidden] { display: none; }
+
+.project-search-result {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 10px 8px;
+    border: 0;
+    border-bottom: 1px solid rgba(43, 78, 52, .12);
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    box-shadow: none;
+}
+
+.project-search-result:last-child { border-bottom: 0; }
+.project-search-result:hover { background: rgba(231, 240, 225, .5); transform: none; }
+.project-search-result-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 13px;
+    background: var(--leaf-soft);
+    color: var(--leaf-deep);
+    font-size: 1.15rem;
+}
+.project-search-result-copy { display: grid; gap: 2px; min-width: 0; }
+.project-search-result-copy strong,
+.project-search-result-copy span,
+.project-search-result-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.project-search-result-copy span,
+.project-search-result-copy small,
+.project-search-result-open { color: #66736a; font-size: .75rem; }
+.project-search-result-open { font-weight: 800; }
+
 .project-areas-section {
     padding: 20px;
     border: 1px solid rgba(43, 78, 52, .15);
@@ -2457,6 +2551,8 @@ body.ar-session-active::after {
     .quick-access-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .quick-access-action { min-height: 90px; }
     .quick-access-icon { width: 54px; height: 54px; border-radius: 17px; }
+    .project-search-result { grid-template-columns: 40px minmax(0, 1fr); }
+    .project-search-result-open { grid-column: 2; }
     .project-area-link { grid-template-columns: 40px minmax(0, 1fr); }
     .project-area-link-meta { grid-column: 2; }
     .unplaced-content-row { grid-template-columns: 30px minmax(0, 1fr); }
@@ -2584,6 +2680,7 @@ body[data-project-theme] .panel,
 body[data-project-theme] .card,
 body[data-project-theme] .experience-status,
 body[data-project-theme] .latest-entries-section,
+body[data-project-theme] .project-search-section,
 body[data-project-theme] .project-areas-section,
 body[data-project-theme] .project-delete-zone {
     border-color: var(--theme-line);
@@ -2626,6 +2723,14 @@ body[data-project-theme] .location-create-section-prominent {
 body[data-project-theme] .location-create-section-prominent h2,
 body[data-project-theme] .quick-access-action strong {
     color: var(--theme-on-accent);
+}
+
+body[data-project-theme] .project-search-section .section-heading-row p,
+body[data-project-theme] .project-search-summary,
+body[data-project-theme] .project-search-result-copy span,
+body[data-project-theme] .project-search-result-copy small,
+body[data-project-theme] .project-search-result-open {
+    color: var(--theme-muted);
 }
 
 body[data-project-theme="light"] .location-create-section-prominent h2,
