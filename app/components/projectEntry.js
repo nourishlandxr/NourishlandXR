@@ -35,6 +35,19 @@ export function renderProjectEntry(config) {
             </div>
         </section>
 
+        ${config.onboarding?.show ? `<section class="guided-setup-panel" aria-labelledby="guidedSetupTitle">
+            <p class="welcome-label">Guided setup · Extra help is on</p>
+            <h2 id="guidedSetupTitle">Your next steps</h2>
+            <p>This project is still new, so NourishlandXR will explain each step. Guidance becomes more compact after you have created an Area and added your first content.</p>
+            <ol class="guided-setup-steps">
+                <li class="${config.onboarding.hasArea ? 'is-complete' : 'is-current'}"><strong>1. Create an Area</strong><span>An Area is a smaller mapped part of this Location, such as a garden bed, row, terrace or room.</span></li>
+                <li class="${config.onboarding.hasContent ? 'is-complete' : config.onboarding.hasArea ? 'is-current' : ''}"><strong>2. Add your first Plant or Note</strong><span>Choose its Area now. Its physical AR position can be added later.</span></li>
+                <li class="${config.onboarding.hasStartingPoint ? 'is-complete' : config.onboarding.hasContent ? 'is-current' : ''}"><strong>3. Set the visitor Starting Point</strong><span>Choose the Area visitors enter first, then add arrival information or a physical position.</span></li>
+                <li><strong>4. Preview the visitor experience</strong><span>Check the welcome page, Browse Content and AR preparation before publishing.</span></li>
+            </ol>
+            <button class="primary guided-next-action" type="button" onclick="${config.onboarding.nextAction}">${config.onboarding.nextLabel}</button>
+        </section>` : ''}
+
         <section class="experience-launch-grid" aria-label="Explore this location">
             ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
         </section>

@@ -47,6 +47,22 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(entrySource, /Unplaced Content/);
 });
 
+test('fresh projects receive high guidance and Area-required states are actionable', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
+    assert.match(dashboardSource, /label: 'Area'/);
+    assert.match(dashboardSource, /Create your first Area/);
+    assert.match(dashboardSource, /renderAreaRequired/);
+    assert.match(dashboardSource, /ensureProjectLocation/);
+    assert.match(dashboardSource, /Main Location/);
+    assert.match(dashboardSource, />Create Area</);
+    assert.match(dashboardSource, /Continue to Starting Point/);
+    assert.match(dashboardSource, /Project → Location → Area → Plant or Note/);
+    assert.match(entrySource, /Guided setup · Extra help is on/);
+    assert.match(entrySource, /Guidance becomes more compact/);
+    assert.match(entrySource, /1\. Create an Area/);
+});
+
 test('quick access creation is minimal and separates Area assignment from placement', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
     assert.match(source, /<label for="fieldArea">Area<\/label>/);

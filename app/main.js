@@ -19,7 +19,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { applyPlatformSettings, captureStartingPointLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 
@@ -156,6 +156,8 @@ window.renderLocationMap = (projectId, creator = true) => renderLocationMap(app,
 window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
+window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
+window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
 window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
 window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
 window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
@@ -196,11 +198,16 @@ window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, pla
 window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
-window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar') => {
+window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false) => {
     const decodedProjectId = decodeURIComponent(projectId);
-    const sites = await loadProjectSites(decodedProjectId);
-    if (!sites.length) { window.alert('Add a site before creating location content.'); return; }
-    const site = sites[0];
+    let sites = await loadProjectSites(decodedProjectId);
+    let site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
+    const areas = site ? await loadSitePlaces(decodedProjectId, site.id) : [];
+    if (!allowUnassigned && !areas.some(area => area.name !== 'Unassigned')) return renderAreaRequired(app, projectId, type, placementMode, 'content');
+    if (!site) {
+        site = await ensureProjectLocation(decodedProjectId);
+        sites = [site];
+    }
     await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: '', type, placementMode, dashboardProjectId: decodedProjectId });
 };
 window.renderPlaceForLocation = async (projectId) => {

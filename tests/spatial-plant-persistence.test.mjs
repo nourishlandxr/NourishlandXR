@@ -84,6 +84,12 @@ after(async () => {
 });
 
 test('create with or without position -> restart -> Field Guide -> later GPS positioning preserves linked plants', async () => {
+    const createdArea = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Tutorial Area', type: 'Other', description: 'Created from guided setup.', visibility: 'draft' })
+    });
+    assert.equal(createdArea.name, 'Tutorial Area');
+    assert.equal(createdArea.type, 'Other');
     const rejected = await fetch(`${baseUrl}/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

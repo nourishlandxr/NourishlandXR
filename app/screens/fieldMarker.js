@@ -99,7 +99,7 @@ export function selectFieldPlantProfile(id) {
 export async function createFieldArea() {
     const name = window.prompt('Name this Area');
     if (!name?.trim()) return;
-    const area = await createSitePlace(selected.project, selected.site, { name: name.trim(), type: 'Area', description: '', visibility: 'draft' });
+    const area = await createSitePlace(selected.project, selected.site, { name: name.trim(), type: 'Other', description: '', visibility: 'draft' });
     places = await loadSitePlaces(selected.project, selected.site);
     selected.place = area.id;
     draw();
@@ -124,7 +124,7 @@ export async function saveFieldMarker(event) {
         error.textContent = 'Saving…';
         let place = places.find(item => item.id === selected.place);
         if (selected.place === '__unassigned__') {
-            place = places.find(item => item.name === 'Unassigned') || await createSitePlace(selected.project, selected.site, { name: 'Unassigned', type: 'Area', description: 'Content awaiting Area assignment.', visibility: 'draft' });
+            place = places.find(item => item.name === 'Unassigned') || await createSitePlace(selected.project, selected.site, { name: 'Unassigned', type: 'Other', description: 'Content awaiting Area assignment.', visibility: 'draft' });
         }
         if (!place) throw new Error('The selected Area could not be found.');
         const profile = plantProfiles.find(item => item.id === plantId);
