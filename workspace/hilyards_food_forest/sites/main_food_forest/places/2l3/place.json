@@ -1,0 +1,83 @@
+{
+  "id": "2l3",
+  "name": "2L3",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "byrosomnia",
+      "name": "Byrosomnia",
+      "type": "plant",
+      "path": "markers/byrosomnia/marker.json"
+    },
+    {
+      "id": "cambui_plinia",
+      "name": "Cambui plinia",
+      "type": "plant",
+      "path": "markers/cambui_plinia/marker.json"
+    },
+    {
+      "id": "cambui_plinia_2",
+      "name": "Cambui plinia",
+      "type": "plant",
+      "path": "markers/cambui_plinia_2/marker.json"
+    },
+    {
+      "id": "eugenia_do_be_defined",
+      "name": "Eugenia (DO BE DEFINED)",
+      "type": "plant",
+      "path": "markers/eugenia_do_be_defined/marker.json"
+    },
+    {
+      "id": "green_sapote_canistel",
+      "name": "Green sapote * canistel",
+      "type": "plant",
+      "path": "markers/green_sapote_canistel/marker.json"
+    },
+    {
+      "id": "grenn_sapote_mamey_sapote",
+      "name": "Grenn sapote * mamey sapote",
+      "type": "plant",
+      "path": "markers/grenn_sapote_mamey_sapote/marker.json"
+    },
+    {
+      "id": "henna",
+      "name": "Henna",
+      "type": "plant",
+      "path": "markers/henna/marker.json"
+    },
+    {
+      "id": "inga_long_leaves",
+      "name": "Inga (LONG LEAVES)",
+      "type": "plant",
+      "path": "markers/inga_long_leaves/marker.json"
+    },
+    {
+      "id": "jaboticaba_giant",
+      "name": "Jaboticaba giant",
+      "type": "plant",
+      "path": "markers/jaboticaba_giant/marker.json"
+    },
+    {
+      "id": "native_bauhinia",
+      "name": "Native bauhinia",
+      "type": "plant",
+      "path": "markers/native_bauhinia/marker.json"
+    },
+    {
+      "id": "snake_jasmine",
+      "name": "Snake jasmine",
+      "type": "plant",
+      "path": "markers/snake_jasmine/marker.json"
+    },
+    {
+      "id": "young_burmese_grape",
+      "name": "Young Burmese grape",
+      "type": "plant",
+      "path": "markers/young_burmese_grape/marker.json"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "apple_tropic_anna",
+  "type": "plant",
+  "name": "Apple Tropic Anna",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "apple-tropic-anna",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-apple-tropic-anna",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

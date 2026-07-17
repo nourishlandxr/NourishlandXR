@@ -1,0 +1,14 @@
+{
+  "id": "jackfruit_brinsmead_special",
+  "type": "plant",
+  "name": "Jackfruit",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "artocarpus-heterophyllus-4",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-jackfruit-brinsmead-special",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

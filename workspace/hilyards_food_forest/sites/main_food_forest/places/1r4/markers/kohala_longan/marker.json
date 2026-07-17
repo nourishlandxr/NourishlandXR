@@ -1,0 +1,14 @@
+{
+  "id": "kohala_longan",
+  "type": "plant",
+  "name": "Kohala Longan",
+  "description": "",
+  "notes": "Propagation: Marcott.",
+  "parent_checkpoint": "",
+  "plantId": "dimocarpus-longan",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r4-kohala-longan",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

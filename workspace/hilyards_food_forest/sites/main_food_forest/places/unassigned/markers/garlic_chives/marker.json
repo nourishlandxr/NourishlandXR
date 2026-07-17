@@ -1,0 +1,14 @@
+{
+  "id": "garlic_chives",
+  "type": "plant",
+  "name": "Garlic Chives",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "allium-tuberosum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-garlic-chives",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

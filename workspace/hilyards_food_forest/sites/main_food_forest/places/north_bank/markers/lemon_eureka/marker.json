@@ -1,0 +1,14 @@
+{
+  "id": "lemon_eureka",
+  "type": "plant",
+  "name": "Lemon Eureka",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "citrus-limon",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-lemon-eureka",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

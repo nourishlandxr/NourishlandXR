@@ -1,0 +1,14 @@
+{
+  "id": "ketembilla_3",
+  "type": "plant",
+  "name": "Ketembilla",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "ketembilla",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r3-ketembilla-3",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

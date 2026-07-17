@@ -1,0 +1,14 @@
+{
+  "id": "guava_hawaiian_supreme",
+  "type": "plant",
+  "name": "Guava",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "psidium-guajava-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-guava-hawaiian-supreme",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

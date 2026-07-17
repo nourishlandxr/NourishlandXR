@@ -1,0 +1,89 @@
+{
+  "id": "1r3",
+  "name": "1R3",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "allspice",
+      "name": "Allspice",
+      "type": "plant",
+      "path": "markers/allspice/marker.json"
+    },
+    {
+      "id": "bayberry_black_carbon",
+      "name": "Bayberry Black Carbon",
+      "type": "plant",
+      "path": "markers/bayberry_black_carbon/marker.json"
+    },
+    {
+      "id": "bayberry_black_carbon_2",
+      "name": "Bayberry Black Carbon",
+      "type": "plant",
+      "path": "markers/bayberry_black_carbon_2/marker.json"
+    },
+    {
+      "id": "bayberry_red_carbon",
+      "name": "Bayberry Red Carbon",
+      "type": "plant",
+      "path": "markers/bayberry_red_carbon/marker.json"
+    },
+    {
+      "id": "bayberry_red_carbon_2",
+      "name": "Bayberry Red Carbon",
+      "type": "plant",
+      "path": "markers/bayberry_red_carbon_2/marker.json"
+    },
+    {
+      "id": "bayberry_red_carbon_3",
+      "name": "Bayberry Red Carbon",
+      "type": "plant",
+      "path": "markers/bayberry_red_carbon_3/marker.json"
+    },
+    {
+      "id": "cherry_of_rio_grande",
+      "name": "Cherry of Rio Grande",
+      "type": "plant",
+      "path": "markers/cherry_of_rio_grande/marker.json"
+    },
+    {
+      "id": "cherry_of_rio_grande_2",
+      "name": "Cherry of Rio Grande",
+      "type": "plant",
+      "path": "markers/cherry_of_rio_grande_2/marker.json"
+    },
+    {
+      "id": "cherry_of_rio_grande_3",
+      "name": "Cherry of Rio Grande",
+      "type": "plant",
+      "path": "markers/cherry_of_rio_grande_3/marker.json"
+    },
+    {
+      "id": "jaboticaba_costada",
+      "name": "Jaboticaba",
+      "type": "plant",
+      "path": "markers/jaboticaba_costada/marker.json"
+    },
+    {
+      "id": "jaboticaba_costada_2",
+      "name": "Jaboticaba",
+      "type": "plant",
+      "path": "markers/jaboticaba_costada_2/marker.json"
+    },
+    {
+      "id": "jambolan_plum",
+      "name": "Jambolan Plum",
+      "type": "plant",
+      "path": "markers/jambolan_plum/marker.json"
+    },
+    {
+      "id": "yellow_jaboticaba",
+      "name": "Yellow Jaboticaba",
+      "type": "plant",
+      "path": "markers/yellow_jaboticaba/marker.json"
+    }
+  ]
+}

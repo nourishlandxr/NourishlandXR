@@ -1,0 +1,14 @@
+{
+  "id": "canistel_whitman",
+  "type": "plant",
+  "name": "Canistel Whitman",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pouteria-campechiana-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-canistel-whitman",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

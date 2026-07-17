@@ -1,0 +1,14 @@
+{
+  "id": "carambola_kembangan",
+  "type": "plant",
+  "name": "Carambola Kembangan",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "averrhoa-carambola-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r3-carambola-kembangan",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

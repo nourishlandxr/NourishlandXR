@@ -1,0 +1,14 @@
+{
+  "id": "soursop",
+  "type": "plant",
+  "name": "Soursop",
+  "description": "",
+  "notes": "Propagation: Seedling.",
+  "parent_checkpoint": "",
+  "plantId": "annona-muricata",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-soursop",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

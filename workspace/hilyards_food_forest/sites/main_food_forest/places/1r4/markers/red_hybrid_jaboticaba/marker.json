@@ -1,0 +1,14 @@
+{
+  "id": "red_hybrid_jaboticaba",
+  "type": "plant",
+  "name": "Red Hybrid Jaboticaba",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "plinia-cauliflora-5",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r4-red-hybrid-jaboticaba",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

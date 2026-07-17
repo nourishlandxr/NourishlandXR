@@ -1,0 +1,14 @@
+{
+  "id": "purple_pea_bush",
+  "type": "plant",
+  "name": "Purple Pea Bush",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "hovea-acutifolia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-purple-pea-bush",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

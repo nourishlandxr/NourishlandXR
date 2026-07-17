@@ -1,0 +1,14 @@
+{
+  "id": "large_jaboticaba",
+  "type": "plant",
+  "name": "Large Jaboticaba",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "plinia-cauliflora-8",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-large-jaboticaba",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

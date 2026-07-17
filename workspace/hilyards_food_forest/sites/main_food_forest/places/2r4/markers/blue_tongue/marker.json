@@ -1,0 +1,14 @@
+{
+  "id": "blue_tongue",
+  "type": "plant",
+  "name": "Blue Tongue",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "ehretia-acuminata",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-blue-tongue",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

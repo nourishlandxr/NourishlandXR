@@ -1,0 +1,14 @@
+{
+  "id": "guabiyu_2",
+  "type": "plant",
+  "name": "Guabiyu",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "guabiyu",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-guabiyu-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

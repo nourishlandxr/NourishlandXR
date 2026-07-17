@@ -1,0 +1,14 @@
+{
+  "id": "cedar_bay_cherry",
+  "type": "plant",
+  "name": "Cedar Bay Cherry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cedar-bay-cherry",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-cedar-bay-cherry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

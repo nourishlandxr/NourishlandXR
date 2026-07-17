@@ -1,0 +1,14 @@
+{
+  "id": "maprang_artocarpus",
+  "type": "plant",
+  "name": "MAPRANG artocarpus",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "maprang-artocarpus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-maprang-artocarpus",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

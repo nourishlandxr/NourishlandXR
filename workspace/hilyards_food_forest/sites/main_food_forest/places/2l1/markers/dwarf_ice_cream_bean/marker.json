@@ -1,0 +1,14 @@
+{
+  "id": "dwarf_ice_cream_bean",
+  "type": "plant",
+  "name": "Dwarf Ice Cream Bean",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "inga-spp",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l1-dwarf-ice-cream-bean",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

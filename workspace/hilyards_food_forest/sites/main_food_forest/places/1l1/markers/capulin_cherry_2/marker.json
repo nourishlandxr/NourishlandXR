@@ -1,0 +1,14 @@
+{
+  "id": "capulin_cherry_2",
+  "type": "plant",
+  "name": "Capulin cherry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "capulin-cherry",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1l1-capulin-cherry-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

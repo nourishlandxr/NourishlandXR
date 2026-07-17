@@ -1,0 +1,14 @@
+{
+  "id": "young_burmese_grape",
+  "type": "plant",
+  "name": "Young Burmese grape",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "young-burmese-grape",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-young-burmese-grape",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

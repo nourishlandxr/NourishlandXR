@@ -1,0 +1,14 @@
+{
+  "id": "giant_lau_lau",
+  "type": "plant",
+  "name": "Giant Lau Lau",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "parinari-spp",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r2-giant-lau-lau",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "plantain_banana",
+  "type": "plant",
+  "name": "Plantain Banana",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "musa-paradisiaca",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-plantain-banana",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,227 @@
+{
+  "id": "unassigned",
+  "name": "Unassigned",
+  "type": "Other",
+  "description": "Support species awaiting Area assignment.",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "albizia",
+      "name": "Albizia",
+      "type": "plant",
+      "path": "markers/albizia/marker.json"
+    },
+    {
+      "id": "bitter_leaf",
+      "name": "Bitter Leaf",
+      "type": "plant",
+      "path": "markers/bitter_leaf/marker.json"
+    },
+    {
+      "id": "black_wattle",
+      "name": "Black Wattle",
+      "type": "plant",
+      "path": "markers/black_wattle/marker.json"
+    },
+    {
+      "id": "blue_java_banana",
+      "name": "Blue Java Banana",
+      "type": "plant",
+      "path": "markers/blue_java_banana/marker.json"
+    },
+    {
+      "id": "brazilian_spinach",
+      "name": "Brazilian Spinach",
+      "type": "plant",
+      "path": "markers/brazilian_spinach/marker.json"
+    },
+    {
+      "id": "cape_gooseberry",
+      "name": "Cape Gooseberry",
+      "type": "plant",
+      "path": "markers/cape_gooseberry/marker.json"
+    },
+    {
+      "id": "cape_york_turmeric",
+      "name": "Cape York Turmeric",
+      "type": "plant",
+      "path": "markers/cape_york_turmeric/marker.json"
+    },
+    {
+      "id": "cassava",
+      "name": "Cassava",
+      "type": "plant",
+      "path": "markers/cassava/marker.json"
+    },
+    {
+      "id": "comfrey",
+      "name": "Comfrey",
+      "type": "plant",
+      "path": "markers/comfrey/marker.json"
+    },
+    {
+      "id": "cranberry_hibiscus",
+      "name": "Cranberry Hibiscus",
+      "type": "plant",
+      "path": "markers/cranberry_hibiscus/marker.json"
+    },
+    {
+      "id": "dwarf_ducasse_banana_musa",
+      "name": "Dwarf Ducasse Banana (*Musa",
+      "type": "plant",
+      "path": "markers/dwarf_ducasse_banana_musa/marker.json"
+    },
+    {
+      "id": "dwarf_red_dacca_banana",
+      "name": "Dwarf Red Dacca Banana",
+      "type": "plant",
+      "path": "markers/dwarf_red_dacca_banana/marker.json"
+    },
+    {
+      "id": "fountain_grass",
+      "name": "Fountain Grass",
+      "type": "plant",
+      "path": "markers/fountain_grass/marker.json"
+    },
+    {
+      "id": "garlic_chives",
+      "name": "Garlic Chives",
+      "type": "plant",
+      "path": "markers/garlic_chives/marker.json"
+    },
+    {
+      "id": "goldfinger_banana",
+      "name": "Goldfinger Banana",
+      "type": "plant",
+      "path": "markers/goldfinger_banana/marker.json"
+    },
+    {
+      "id": "javanese_ginger",
+      "name": "Javanese Ginger",
+      "type": "plant",
+      "path": "markers/javanese_ginger/marker.json"
+    },
+    {
+      "id": "lagos_spinach",
+      "name": "Lagos Spinach",
+      "type": "plant",
+      "path": "markers/lagos_spinach/marker.json"
+    },
+    {
+      "id": "longevity_spinach",
+      "name": "Longevity Spinach",
+      "type": "plant",
+      "path": "markers/longevity_spinach/marker.json"
+    },
+    {
+      "id": "mexican_coriander",
+      "name": "Mexican Coriander",
+      "type": "plant",
+      "path": "markers/mexican_coriander/marker.json"
+    },
+    {
+      "id": "moringa",
+      "name": "Moringa",
+      "type": "plant",
+      "path": "markers/moringa/marker.json"
+    },
+    {
+      "id": "mother_of_all_herbs",
+      "name": "Mother of All Herbs",
+      "type": "plant",
+      "path": "markers/mother_of_all_herbs/marker.json"
+    },
+    {
+      "id": "okinawa_spinach",
+      "name": "Okinawa Spinach",
+      "type": "plant",
+      "path": "markers/okinawa_spinach/marker.json"
+    },
+    {
+      "id": "orange_turmeric",
+      "name": "Orange Turmeric",
+      "type": "plant",
+      "path": "markers/orange_turmeric/marker.json"
+    },
+    {
+      "id": "pigeon_pea",
+      "name": "Pigeon Pea",
+      "type": "plant",
+      "path": "markers/pigeon_pea/marker.json"
+    },
+    {
+      "id": "pisang_ceylon_banana",
+      "name": "Pisang Ceylon Banana",
+      "type": "plant",
+      "path": "markers/pisang_ceylon_banana/marker.json"
+    },
+    {
+      "id": "plantain_banana",
+      "name": "Plantain Banana",
+      "type": "plant",
+      "path": "markers/plantain_banana/marker.json"
+    },
+    {
+      "id": "qld_arrowroot",
+      "name": "QLD Arrowroot",
+      "type": "plant",
+      "path": "markers/qld_arrowroot/marker.json"
+    },
+    {
+      "id": "spiral_ginger_red",
+      "name": "Spiral Ginger Red",
+      "type": "plant",
+      "path": "markers/spiral_ginger_red/marker.json"
+    },
+    {
+      "id": "spiral_ginger_white",
+      "name": "Spiral Ginger White",
+      "type": "plant",
+      "path": "markers/spiral_ginger_white/marker.json"
+    },
+    {
+      "id": "surinam_spinach",
+      "name": "Surinam Spinach",
+      "type": "plant",
+      "path": "markers/surinam_spinach/marker.json"
+    },
+    {
+      "id": "sweet_leaf",
+      "name": "Sweet Leaf",
+      "type": "plant",
+      "path": "markers/sweet_leaf/marker.json"
+    },
+    {
+      "id": "vetiver_grass",
+      "name": "Vetiver Grass",
+      "type": "plant",
+      "path": "markers/vetiver_grass/marker.json"
+    },
+    {
+      "id": "wattle_gossamer",
+      "name": "Wattle Gossamer",
+      "type": "plant",
+      "path": "markers/wattle_gossamer/marker.json"
+    },
+    {
+      "id": "west_indian_arrowroot",
+      "name": "West Indian Arrowroot",
+      "type": "plant",
+      "path": "markers/west_indian_arrowroot/marker.json"
+    },
+    {
+      "id": "west_indian_lemongrass",
+      "name": "West Indian Lemongrass",
+      "type": "plant",
+      "path": "markers/west_indian_lemongrass/marker.json"
+    },
+    {
+      "id": "williams_banana",
+      "name": "Williams Banana",
+      "type": "plant",
+      "path": "markers/williams_banana/marker.json"
+    }
+  ]
+}

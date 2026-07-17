@@ -1,0 +1,14 @@
+{
+  "id": "white_shatooth",
+  "type": "plant",
+  "name": "White Shatooth",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "vangueria-madagascariensis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-white-shatooth",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

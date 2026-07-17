@@ -1,0 +1,185 @@
+{
+  "id": "2r4",
+  "name": "2R4",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "abiu",
+      "name": "Abiu",
+      "type": "plant",
+      "path": "markers/abiu/marker.json"
+    },
+    {
+      "id": "black_bamboo_source_paul_daley",
+      "name": "Black bamboo (source: Paul Daley)",
+      "type": "plant",
+      "path": "markers/black_bamboo_source_paul_daley/marker.json"
+    },
+    {
+      "id": "blackberry_jam_fruit",
+      "name": "Blackberry jam fruit",
+      "type": "plant",
+      "path": "markers/blackberry_jam_fruit/marker.json"
+    },
+    {
+      "id": "blue_tongue",
+      "name": "Blue Tongue",
+      "type": "plant",
+      "path": "markers/blue_tongue/marker.json"
+    },
+    {
+      "id": "breadnut",
+      "name": "Breadnut",
+      "type": "plant",
+      "path": "markers/breadnut/marker.json"
+    },
+    {
+      "id": "broad_leaf_pawpaw",
+      "name": "Broad Leaf Pawpaw",
+      "type": "plant",
+      "path": "markers/broad_leaf_pawpaw/marker.json"
+    },
+    {
+      "id": "cambuca",
+      "name": "Cambuca",
+      "type": "plant",
+      "path": "markers/cambuca/marker.json"
+    },
+    {
+      "id": "cambuca_2",
+      "name": "Cambuca",
+      "type": "plant",
+      "path": "markers/cambuca_2/marker.json"
+    },
+    {
+      "id": "dwarf_ambarella",
+      "name": "Dwarf Ambarella",
+      "type": "plant",
+      "path": "markers/dwarf_ambarella/marker.json"
+    },
+    {
+      "id": "galangal",
+      "name": "Galangal",
+      "type": "plant",
+      "path": "markers/galangal/marker.json"
+    },
+    {
+      "id": "jackfruit_red",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit_red/marker.json"
+    },
+    {
+      "id": "large_jaboticaba",
+      "name": "Large Jaboticaba",
+      "type": "plant",
+      "path": "markers/large_jaboticaba/marker.json"
+    },
+    {
+      "id": "malabar_chestnut",
+      "name": "Malabar Chestnut",
+      "type": "plant",
+      "path": "markers/malabar_chestnut/marker.json"
+    },
+    {
+      "id": "mountain_soursop",
+      "name": "Mountain Soursop",
+      "type": "plant",
+      "path": "markers/mountain_soursop/marker.json"
+    },
+    {
+      "id": "native_currant",
+      "name": "Native currant",
+      "type": "plant",
+      "path": "markers/native_currant/marker.json"
+    },
+    {
+      "id": "native_currant_black",
+      "name": "Native currant – Black",
+      "type": "plant",
+      "path": "markers/native_currant_black/marker.json"
+    },
+    {
+      "id": "orange_berry",
+      "name": "Orange Berry",
+      "type": "plant",
+      "path": "markers/orange_berry/marker.json"
+    },
+    {
+      "id": "papayuello",
+      "name": "Papayuello",
+      "type": "plant",
+      "path": "markers/papayuello/marker.json"
+    },
+    {
+      "id": "papayuello_2",
+      "name": "Papayuello",
+      "type": "plant",
+      "path": "markers/papayuello_2/marker.json"
+    },
+    {
+      "id": "papayuello_3",
+      "name": "Papayuello",
+      "type": "plant",
+      "path": "markers/papayuello_3/marker.json"
+    },
+    {
+      "id": "phalsa",
+      "name": "Phalsa",
+      "type": "plant",
+      "path": "markers/phalsa/marker.json"
+    },
+    {
+      "id": "stripy_jaboticaba",
+      "name": "Stripy Jaboticaba",
+      "type": "plant",
+      "path": "markers/stripy_jaboticaba/marker.json"
+    },
+    {
+      "id": "tamarind",
+      "name": "Tamarind",
+      "type": "plant",
+      "path": "markers/tamarind/marker.json"
+    },
+    {
+      "id": "tamarind_sweet",
+      "name": "Tamarind",
+      "type": "plant",
+      "path": "markers/tamarind_sweet/marker.json"
+    },
+    {
+      "id": "torch_ginger_pink",
+      "name": "Torch ginger Pink",
+      "type": "plant",
+      "path": "markers/torch_ginger_pink/marker.json"
+    },
+    {
+      "id": "torch_ginger_red",
+      "name": "Torch ginger Red",
+      "type": "plant",
+      "path": "markers/torch_ginger_red/marker.json"
+    },
+    {
+      "id": "white_shatooth",
+      "name": "White Shatooth",
+      "type": "plant",
+      "path": "markers/white_shatooth/marker.json"
+    },
+    {
+      "id": "yellow_jaboticaba",
+      "name": "Yellow Jaboticaba",
+      "type": "plant",
+      "path": "markers/yellow_jaboticaba/marker.json"
+    },
+    {
+      "id": "ylang_ylang",
+      "name": "Ylang Ylang",
+      "type": "plant",
+      "path": "markers/ylang_ylang/marker.json"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "japanese_raisin",
+  "type": "plant",
+  "name": "Japanese Raisin",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "hovenia-dulcis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-japanese-raisin",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

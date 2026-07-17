@@ -1,0 +1,14 @@
+{
+  "id": "guana_chestnut",
+  "type": "plant",
+  "name": "Guana chestnut",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "guana-chestnut",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l1-guana-chestnut",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

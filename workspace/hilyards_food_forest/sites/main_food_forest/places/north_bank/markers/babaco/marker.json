@@ -1,0 +1,14 @@
+{
+  "id": "babaco",
+  "type": "plant",
+  "name": "Babaco",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "babaco",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-babaco",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

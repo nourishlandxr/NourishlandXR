@@ -1,0 +1,14 @@
+{
+  "id": "mulberry_red_shatooth",
+  "type": "plant",
+  "name": "Mulberry Red shatooth",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "mulberry-red-shatooth",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-mulberry-red-shatooth",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

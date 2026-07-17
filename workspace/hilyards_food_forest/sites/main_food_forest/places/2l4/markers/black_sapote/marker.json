@@ -1,0 +1,14 @@
+{
+  "id": "black_sapote",
+  "type": "plant",
+  "name": "Black Sapote",
+  "description": "",
+  "notes": "Propagation: Seedling.",
+  "parent_checkpoint": "",
+  "plantId": "black-sapote",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-black-sapote",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

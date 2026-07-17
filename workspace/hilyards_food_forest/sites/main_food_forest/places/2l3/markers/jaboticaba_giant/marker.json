@@ -1,0 +1,14 @@
+{
+  "id": "jaboticaba_giant",
+  "type": "plant",
+  "name": "Jaboticaba giant",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "jaboticaba-giant",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-jaboticaba-giant",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

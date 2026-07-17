@@ -1,0 +1,14 @@
+{
+  "id": "pear_multigraft_hood",
+  "type": "plant",
+  "name": "Pear multigraft HOOD +",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pear-multigraft-hood",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-pear-multigraft-hood",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

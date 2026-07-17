@@ -1,0 +1,14 @@
+{
+  "id": "orange_berry",
+  "type": "plant",
+  "name": "Orange Berry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "muntingia-calabura",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-orange-berry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

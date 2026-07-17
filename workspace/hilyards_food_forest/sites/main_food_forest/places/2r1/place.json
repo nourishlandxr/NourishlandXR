@@ -1,0 +1,89 @@
+{
+  "id": "2r1",
+  "name": "2R1",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "achacha",
+      "name": "Achacha",
+      "type": "plant",
+      "path": "markers/achacha/marker.json"
+    },
+    {
+      "id": "amla",
+      "name": "Amla",
+      "type": "plant",
+      "path": "markers/amla/marker.json"
+    },
+    {
+      "id": "carambola_daleys_sweet",
+      "name": "Carambola",
+      "type": "plant",
+      "path": "markers/carambola_daleys_sweet/marker.json"
+    },
+    {
+      "id": "carambola_giant_sam",
+      "name": "Carambola",
+      "type": "plant",
+      "path": "markers/carambola_giant_sam/marker.json"
+    },
+    {
+      "id": "lemon_drop_garcinia_1_madrono_one_bakupari",
+      "name": "lemon drop garcinia (1 madrono, one bakupari?",
+      "type": "plant",
+      "path": "markers/lemon_drop_garcinia_1_madrono_one_bakupari/marker.json"
+    },
+    {
+      "id": "lemon_drop_garcinia_1_madrono_one_bakupari_2",
+      "name": "lemon drop garcinia (1 madrono, one bakupari?",
+      "type": "plant",
+      "path": "markers/lemon_drop_garcinia_1_madrono_one_bakupari_2/marker.json"
+    },
+    {
+      "id": "peanut_butter",
+      "name": "Peanut Butter",
+      "type": "plant",
+      "path": "markers/peanut_butter/marker.json"
+    },
+    {
+      "id": "sapodilla_bkd110",
+      "name": "Sapodilla",
+      "type": "plant",
+      "path": "markers/sapodilla_bkd110/marker.json"
+    },
+    {
+      "id": "sapodilla_prolific",
+      "name": "Sapodilla",
+      "type": "plant",
+      "path": "markers/sapodilla_prolific/marker.json"
+    },
+    {
+      "id": "soursop",
+      "name": "Soursop",
+      "type": "plant",
+      "path": "markers/soursop/marker.json"
+    },
+    {
+      "id": "soursop_golden",
+      "name": "Soursop GOLDEN",
+      "type": "plant",
+      "path": "markers/soursop_golden/marker.json"
+    },
+    {
+      "id": "sweet_granadilla",
+      "name": "Sweet Granadilla",
+      "type": "plant",
+      "path": "markers/sweet_granadilla/marker.json"
+    },
+    {
+      "id": "sweet_yellow_mangosteen",
+      "name": "Sweet yellow mangosteen",
+      "type": "plant",
+      "path": "markers/sweet_yellow_mangosteen/marker.json"
+    }
+  ]
+}

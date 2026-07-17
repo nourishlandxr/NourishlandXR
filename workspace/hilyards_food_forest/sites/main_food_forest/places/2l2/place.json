@@ -1,0 +1,107 @@
+{
+  "id": "2l2",
+  "name": "2L2",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "african_peach",
+      "name": "African peach",
+      "type": "plant",
+      "path": "markers/african_peach/marker.json"
+    },
+    {
+      "id": "african_peach_2",
+      "name": "African peach",
+      "type": "plant",
+      "path": "markers/african_peach_2/marker.json"
+    },
+    {
+      "id": "african_peach_3",
+      "name": "African peach",
+      "type": "plant",
+      "path": "markers/african_peach_3/marker.json"
+    },
+    {
+      "id": "dwarf_ice_cream_bean",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean/marker.json"
+    },
+    {
+      "id": "dwarf_ice_cream_bean_2",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean_2/marker.json"
+    },
+    {
+      "id": "dwarf_ice_cream_bean_3",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean_3/marker.json"
+    },
+    {
+      "id": "dwarf_pigeon_pea_source_plant",
+      "name": "Dwarf pigeon pea ( SOURCE PLANT)",
+      "type": "plant",
+      "path": "markers/dwarf_pigeon_pea_source_plant/marker.json"
+    },
+    {
+      "id": "garcinia_macrophylia",
+      "name": "Garcinia macrophylia",
+      "type": "plant",
+      "path": "markers/garcinia_macrophylia/marker.json"
+    },
+    {
+      "id": "ice_cream_bean_mountain",
+      "name": "Ice cream bean Mountain",
+      "type": "plant",
+      "path": "markers/ice_cream_bean_mountain/marker.json"
+    },
+    {
+      "id": "javanese_ginger",
+      "name": "Javanese ginger",
+      "type": "plant",
+      "path": "markers/javanese_ginger/marker.json"
+    },
+    {
+      "id": "myoga_ginger",
+      "name": "Myoga ginger",
+      "type": "plant",
+      "path": "markers/myoga_ginger/marker.json"
+    },
+    {
+      "id": "perennial_buckwheat",
+      "name": "Perennial buckwheat",
+      "type": "plant",
+      "path": "markers/perennial_buckwheat/marker.json"
+    },
+    {
+      "id": "perennial_leek",
+      "name": "Perennial leek",
+      "type": "plant",
+      "path": "markers/perennial_leek/marker.json"
+    },
+    {
+      "id": "purple_pea_bush",
+      "name": "Purple Pea Bush",
+      "type": "plant",
+      "path": "markers/purple_pea_bush/marker.json"
+    },
+    {
+      "id": "yellow_mangosteen",
+      "name": "Yellow mangosteen",
+      "type": "plant",
+      "path": "markers/yellow_mangosteen/marker.json"
+    },
+    {
+      "id": "yellow_mangosteen_2",
+      "name": "Yellow mangosteen",
+      "type": "plant",
+      "path": "markers/yellow_mangosteen_2/marker.json"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "african_peach",
+  "type": "plant",
+  "name": "African Peach",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "kiggelaria-africana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-african-peach",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

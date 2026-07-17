@@ -1,0 +1,14 @@
+{
+  "id": "green_jaboticaba",
+  "type": "plant",
+  "name": "Green Jaboticaba",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "plinia-cauliflora-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r4-green-jaboticaba",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

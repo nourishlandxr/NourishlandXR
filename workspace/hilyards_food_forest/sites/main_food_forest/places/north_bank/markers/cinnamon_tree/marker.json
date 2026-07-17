@@ -1,0 +1,14 @@
+{
+  "id": "cinnamon_tree",
+  "type": "plant",
+  "name": "Cinnamon Tree",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cinnamomum-verum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-cinnamon-tree",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

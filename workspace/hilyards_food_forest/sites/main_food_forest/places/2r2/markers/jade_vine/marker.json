@@ -1,0 +1,14 @@
+{
+  "id": "jade_vine",
+  "type": "plant",
+  "name": "Jade vine",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "jade-vine",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-jade-vine",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

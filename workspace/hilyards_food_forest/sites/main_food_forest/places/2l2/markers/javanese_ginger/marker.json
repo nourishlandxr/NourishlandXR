@@ -1,0 +1,14 @@
+{
+  "id": "javanese_ginger",
+  "type": "plant",
+  "name": "Javanese ginger",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "javanese-ginger",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-javanese-ginger",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "malabar_chestnut",
+  "type": "plant",
+  "name": "Malabar Chestnut",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pachira-aquatica",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-malabar-chestnut",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

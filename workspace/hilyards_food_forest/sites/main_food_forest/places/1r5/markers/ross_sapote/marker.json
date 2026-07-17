@@ -1,0 +1,14 @@
+{
+  "id": "ross_sapote",
+  "type": "plant",
+  "name": "Ross Sapote",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pouteria-campechiana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r5-ross-sapote",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

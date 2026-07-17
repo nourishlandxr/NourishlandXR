@@ -1,0 +1,14 @@
+{
+  "id": "qld_arrowroot",
+  "type": "plant",
+  "name": "QLD Arrowroot",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "canna-indica",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-qld-arrowroot",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

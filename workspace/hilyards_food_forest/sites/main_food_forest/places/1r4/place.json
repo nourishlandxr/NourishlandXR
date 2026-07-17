@@ -1,0 +1,71 @@
+{
+  "id": "1r4",
+  "name": "1R4",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "ambarella",
+      "name": "Ambarella",
+      "type": "plant",
+      "path": "markers/ambarella/marker.json"
+    },
+    {
+      "id": "ambarella_2",
+      "name": "Ambarella",
+      "type": "plant",
+      "path": "markers/ambarella_2/marker.json"
+    },
+    {
+      "id": "bayberry",
+      "name": "Bayberry",
+      "type": "plant",
+      "path": "markers/bayberry/marker.json"
+    },
+    {
+      "id": "dwarf_grumichama",
+      "name": "Dwarf Grumichama",
+      "type": "plant",
+      "path": "markers/dwarf_grumichama/marker.json"
+    },
+    {
+      "id": "giant_jaboticaba",
+      "name": "Giant Jaboticaba",
+      "type": "plant",
+      "path": "markers/giant_jaboticaba/marker.json"
+    },
+    {
+      "id": "green_jaboticaba",
+      "name": "Green Jaboticaba",
+      "type": "plant",
+      "path": "markers/green_jaboticaba/marker.json"
+    },
+    {
+      "id": "jaboticaba_scarlet",
+      "name": "Jaboticaba Scarlet",
+      "type": "plant",
+      "path": "markers/jaboticaba_scarlet/marker.json"
+    },
+    {
+      "id": "jaboticaba_small_leaf",
+      "name": "Jaboticaba Small Leaf",
+      "type": "plant",
+      "path": "markers/jaboticaba_small_leaf/marker.json"
+    },
+    {
+      "id": "kohala_longan",
+      "name": "Kohala Longan",
+      "type": "plant",
+      "path": "markers/kohala_longan/marker.json"
+    },
+    {
+      "id": "red_hybrid_jaboticaba",
+      "name": "Red Hybrid Jaboticaba",
+      "type": "plant",
+      "path": "markers/red_hybrid_jaboticaba/marker.json"
+    }
+  ]
+}

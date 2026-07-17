@@ -1,0 +1,14 @@
+{
+  "id": "mango_r2e2",
+  "type": "plant",
+  "name": "Mango",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "mangifera-indica-4",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r5-mango-r2e2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

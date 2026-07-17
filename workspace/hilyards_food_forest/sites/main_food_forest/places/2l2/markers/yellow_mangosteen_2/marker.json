@@ -1,0 +1,14 @@
+{
+  "id": "yellow_mangosteen_2",
+  "type": "plant",
+  "name": "Yellow mangosteen",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "yellow-mangosteen",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-yellow-mangosteen-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

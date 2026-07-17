@@ -1,0 +1,14 @@
+{
+  "id": "spiral_ginger_white",
+  "type": "plant",
+  "name": "Spiral Ginger White",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "costus-woodsonii-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-spiral-ginger-white",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

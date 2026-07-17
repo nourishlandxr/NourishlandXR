@@ -1,0 +1,14 @@
+{
+  "id": "cambui_plinia",
+  "type": "plant",
+  "name": "Cambui plinia",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cambui-plinia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-cambui-plinia",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cambuca_2",
+  "type": "plant",
+  "name": "Cambuca",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "plinia-edulis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-cambuca-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

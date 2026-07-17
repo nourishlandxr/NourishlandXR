@@ -1,0 +1,77 @@
+{
+  "id": "north_bank",
+  "name": "North Bank",
+  "type": "Outdoor Area",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "babaco",
+      "name": "Babaco",
+      "type": "plant",
+      "path": "markers/babaco/marker.json"
+    },
+    {
+      "id": "cinnamon_tree",
+      "name": "Cinnamon Tree",
+      "type": "plant",
+      "path": "markers/cinnamon_tree/marker.json"
+    },
+    {
+      "id": "kaffir_lime",
+      "name": "Kaffir lime",
+      "type": "plant",
+      "path": "markers/kaffir_lime/marker.json"
+    },
+    {
+      "id": "lemon_eureka",
+      "name": "Lemon Eureka",
+      "type": "plant",
+      "path": "markers/lemon_eureka/marker.json"
+    },
+    {
+      "id": "lime_tahitian",
+      "name": "Lime Tahitian",
+      "type": "plant",
+      "path": "markers/lime_tahitian/marker.json"
+    },
+    {
+      "id": "miracle_fruit",
+      "name": "Miracle Fruit",
+      "type": "plant",
+      "path": "markers/miracle_fruit/marker.json"
+    },
+    {
+      "id": "oak_leaf",
+      "name": "Oak Leaf",
+      "type": "plant",
+      "path": "markers/oak_leaf/marker.json"
+    },
+    {
+      "id": "panama_berry",
+      "name": "Panama Berry",
+      "type": "plant",
+      "path": "markers/panama_berry/marker.json"
+    },
+    {
+      "id": "seeds_of_haven",
+      "name": "Seeds of haven",
+      "type": "plant",
+      "path": "markers/seeds_of_haven/marker.json"
+    },
+    {
+      "id": "star_anise",
+      "name": "Star Anise",
+      "type": "plant",
+      "path": "markers/star_anise/marker.json"
+    },
+    {
+      "id": "sweet_lime",
+      "name": "Sweet Lime",
+      "type": "plant",
+      "path": "markers/sweet_lime/marker.json"
+    }
+  ]
+}

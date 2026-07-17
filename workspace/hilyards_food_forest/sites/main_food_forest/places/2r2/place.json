@@ -1,0 +1,137 @@
+{
+  "id": "2r2",
+  "name": "2R2",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "canistel_whitman",
+      "name": "Canistel Whitman",
+      "type": "plant",
+      "path": "markers/canistel_whitman/marker.json"
+    },
+    {
+      "id": "cassomunar_ginger",
+      "name": "cassomunar ginger",
+      "type": "plant",
+      "path": "markers/cassomunar_ginger/marker.json"
+    },
+    {
+      "id": "garcinia_lemoncillo_lucs",
+      "name": "Garcinia Lemoncillo ( lucs )",
+      "type": "plant",
+      "path": "markers/garcinia_lemoncillo_lucs/marker.json"
+    },
+    {
+      "id": "garcinia_lemoncillo_lucs_2",
+      "name": "Garcinia Lemoncillo ( lucs )",
+      "type": "plant",
+      "path": "markers/garcinia_lemoncillo_lucs_2/marker.json"
+    },
+    {
+      "id": "garcinia_lemoncillo_lucs_3",
+      "name": "Garcinia Lemoncillo ( lucs )",
+      "type": "plant",
+      "path": "markers/garcinia_lemoncillo_lucs_3/marker.json"
+    },
+    {
+      "id": "garcinia_lemoncillo_lucs_4",
+      "name": "Garcinia Lemoncillo ( lucs )",
+      "type": "plant",
+      "path": "markers/garcinia_lemoncillo_lucs_4/marker.json"
+    },
+    {
+      "id": "garcinia_lemoncillo_lucs_5",
+      "name": "Garcinia Lemoncillo ( lucs )",
+      "type": "plant",
+      "path": "markers/garcinia_lemoncillo_lucs_5/marker.json"
+    },
+    {
+      "id": "garcinia_macrophylla",
+      "name": "Garcinia Macrophylla",
+      "type": "plant",
+      "path": "markers/garcinia_macrophylla/marker.json"
+    },
+    {
+      "id": "garcinia_mundo",
+      "name": "Garcinia Mundo",
+      "type": "plant",
+      "path": "markers/garcinia_mundo/marker.json"
+    },
+    {
+      "id": "green_sapote",
+      "name": "Green Sapote",
+      "type": "plant",
+      "path": "markers/green_sapote/marker.json"
+    },
+    {
+      "id": "imbe_garcinia",
+      "name": "Imbe (garcinia)",
+      "type": "plant",
+      "path": "markers/imbe_garcinia/marker.json"
+    },
+    {
+      "id": "indian_gooseberry",
+      "name": "Indian Gooseberry",
+      "type": "plant",
+      "path": "markers/indian_gooseberry/marker.json"
+    },
+    {
+      "id": "jackfruit",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit/marker.json"
+    },
+    {
+      "id": "jackfruit_brinsmead_special",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit_brinsmead_special/marker.json"
+    },
+    {
+      "id": "jackfruit_rahjan",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit_rahjan/marker.json"
+    },
+    {
+      "id": "jade_vine",
+      "name": "Jade vine",
+      "type": "plant",
+      "path": "markers/jade_vine/marker.json"
+    },
+    {
+      "id": "persimmon",
+      "name": "Persimmon",
+      "type": "plant",
+      "path": "markers/persimmon/marker.json"
+    },
+    {
+      "id": "poshte",
+      "name": "Poshte",
+      "type": "plant",
+      "path": "markers/poshte/marker.json"
+    },
+    {
+      "id": "shampoo_ginger",
+      "name": "Shampoo ginger",
+      "type": "plant",
+      "path": "markers/shampoo_ginger/marker.json"
+    },
+    {
+      "id": "turmeric_orange",
+      "name": "turmeric orange",
+      "type": "plant",
+      "path": "markers/turmeric_orange/marker.json"
+    },
+    {
+      "id": "yellow_mangosteen",
+      "name": "Yellow Mangosteen",
+      "type": "plant",
+      "path": "markers/yellow_mangosteen/marker.json"
+    }
+  ]
+}

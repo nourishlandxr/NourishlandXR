@@ -1,0 +1,14 @@
+{
+  "id": "pigeon_pea",
+  "type": "plant",
+  "name": "Pigeon Pea",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cajanus-cajan",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-pigeon-pea",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "peanut_butter",
+  "type": "plant",
+  "name": "Peanut Butter",
+  "description": "",
+  "notes": "Propagation: Cutting.",
+  "parent_checkpoint": "",
+  "plantId": "bunchosia-argentea",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-peanut-butter",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

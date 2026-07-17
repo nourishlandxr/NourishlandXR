@@ -1,0 +1,14 @@
+{
+  "id": "placentia_walnut",
+  "type": "plant",
+  "name": "Placentia Walnut",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "juglans-regia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-placentia-walnut",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

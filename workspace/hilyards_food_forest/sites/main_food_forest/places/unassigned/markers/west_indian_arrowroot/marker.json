@@ -1,0 +1,14 @@
+{
+  "id": "west_indian_arrowroot",
+  "type": "plant",
+  "name": "West Indian Arrowroot",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "maranta-arundinacea",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-west-indian-arrowroot",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "chestnut_reily_o",
+  "type": "plant",
+  "name": "Chestnut reily",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "chestnut-reily-o",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-chestnut-reily-o",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "lime_tahitian",
+  "type": "plant",
+  "name": "Lime Tahitian",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "citrus-x-latifolia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-lime-tahitian",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "jambolan_plum",
+  "type": "plant",
+  "name": "Jambolan Plum",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "syzygium-cumini",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r3-jambolan-plum",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

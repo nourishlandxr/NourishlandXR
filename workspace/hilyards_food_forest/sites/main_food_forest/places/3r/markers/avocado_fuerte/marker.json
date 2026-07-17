@@ -1,0 +1,14 @@
+{
+  "id": "avocado_fuerte",
+  "type": "plant",
+  "name": "Avocado",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "persea-americana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-avocado-fuerte",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

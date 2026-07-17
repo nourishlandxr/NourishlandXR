@@ -1,0 +1,14 @@
+{
+  "id": "cranberry_hibiscus",
+  "type": "plant",
+  "name": "Cranberry Hibiscus",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "hibiscus-acetosella",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-cranberry-hibiscus",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

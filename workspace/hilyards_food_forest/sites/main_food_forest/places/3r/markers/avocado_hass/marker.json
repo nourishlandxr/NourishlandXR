@@ -1,0 +1,14 @@
+{
+  "id": "avocado_hass",
+  "type": "plant",
+  "name": "Avocado",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "persea-americana-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-avocado-hass",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

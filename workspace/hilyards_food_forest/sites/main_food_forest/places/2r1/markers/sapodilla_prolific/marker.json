@@ -1,0 +1,14 @@
+{
+  "id": "sapodilla_prolific",
+  "type": "plant",
+  "name": "Sapodilla",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "manilkara-zapota",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-sapodilla-prolific",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

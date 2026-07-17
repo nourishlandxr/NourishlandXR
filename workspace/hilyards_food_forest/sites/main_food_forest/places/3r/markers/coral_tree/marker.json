@@ -1,0 +1,14 @@
+{
+  "id": "coral_tree",
+  "type": "plant",
+  "name": "Coral tree",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "erythrina-spp",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-coral-tree",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "nashi_jienseiki",
+  "type": "plant",
+  "name": "Nashi Jienseiki",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pyrus-pyrifolia-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-nashi-jienseiki",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

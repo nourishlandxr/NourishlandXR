@@ -1,0 +1,14 @@
+{
+  "id": "green_sapote",
+  "type": "plant",
+  "name": "Green Sapote",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pouteria-viridis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-green-sapote",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

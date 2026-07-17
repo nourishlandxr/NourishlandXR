@@ -1,0 +1,14 @@
+{
+  "id": "sandpaper_fig",
+  "type": "plant",
+  "name": "Sandpaper fig",
+  "description": "",
+  "notes": "Propagation: Seedling.",
+  "parent_checkpoint": "",
+  "plantId": "sandpaper-fig",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-sandpaper-fig",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

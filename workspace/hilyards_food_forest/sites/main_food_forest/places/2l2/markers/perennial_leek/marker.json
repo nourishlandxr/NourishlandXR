@@ -1,0 +1,14 @@
+{
+  "id": "perennial_leek",
+  "type": "plant",
+  "name": "Perennial leek",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "perennial-leek",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-perennial-leek",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

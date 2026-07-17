@@ -1,0 +1,14 @@
+{
+  "id": "blackberry_jam_fruit",
+  "type": "plant",
+  "name": "Blackberry jam fruit",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "blackberry-jam-fruit",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-blackberry-jam-fruit",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

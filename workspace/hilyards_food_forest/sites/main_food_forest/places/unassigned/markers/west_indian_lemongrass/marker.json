@@ -1,0 +1,14 @@
+{
+  "id": "west_indian_lemongrass",
+  "type": "plant",
+  "name": "West Indian Lemongrass",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cymbopogon-citratus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-west-indian-lemongrass",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

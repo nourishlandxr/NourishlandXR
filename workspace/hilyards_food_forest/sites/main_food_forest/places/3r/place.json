@@ -1,0 +1,77 @@
+{
+  "id": "3r",
+  "name": "3R",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "acerola",
+      "name": "Acerola",
+      "type": "plant",
+      "path": "markers/acerola/marker.json"
+    },
+    {
+      "id": "avocado_fuerte",
+      "name": "Avocado",
+      "type": "plant",
+      "path": "markers/avocado_fuerte/marker.json"
+    },
+    {
+      "id": "avocado_hass",
+      "name": "Avocado",
+      "type": "plant",
+      "path": "markers/avocado_hass/marker.json"
+    },
+    {
+      "id": "avocado_secondo",
+      "name": "Avocado",
+      "type": "plant",
+      "path": "markers/avocado_secondo/marker.json"
+    },
+    {
+      "id": "avocado_wurtz",
+      "name": "Avocado",
+      "type": "plant",
+      "path": "markers/avocado_wurtz/marker.json"
+    },
+    {
+      "id": "coral_tree",
+      "name": "Coral tree",
+      "type": "plant",
+      "path": "markers/coral_tree/marker.json"
+    },
+    {
+      "id": "governor_s_plum",
+      "name": "Governor's Plum",
+      "type": "plant",
+      "path": "markers/governor_s_plum/marker.json"
+    },
+    {
+      "id": "mombin",
+      "name": "mombin",
+      "type": "plant",
+      "path": "markers/mombin/marker.json"
+    },
+    {
+      "id": "native_mulberry",
+      "name": "Native Mulberry",
+      "type": "plant",
+      "path": "markers/native_mulberry/marker.json"
+    },
+    {
+      "id": "santol",
+      "name": "Santol",
+      "type": "plant",
+      "path": "markers/santol/marker.json"
+    },
+    {
+      "id": "tinctoria_indica",
+      "name": "Tinctoria indica",
+      "type": "plant",
+      "path": "markers/tinctoria_indica/marker.json"
+    }
+  ]
+}

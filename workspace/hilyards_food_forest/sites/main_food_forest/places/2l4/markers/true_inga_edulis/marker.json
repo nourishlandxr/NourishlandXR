@@ -1,0 +1,14 @@
+{
+  "id": "true_inga_edulis",
+  "type": "plant",
+  "name": "True Inga Edulis",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "inga-edulis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-true-inga-edulis",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

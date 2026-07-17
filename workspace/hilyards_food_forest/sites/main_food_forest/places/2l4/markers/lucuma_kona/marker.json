@@ -1,0 +1,14 @@
+{
+  "id": "lucuma_kona",
+  "type": "plant",
+  "name": "Lucuma kona",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "lucuma-kona",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-lucuma-kona",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

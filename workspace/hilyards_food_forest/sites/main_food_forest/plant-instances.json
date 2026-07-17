@@ -1,0 +1,5625 @@
+{
+  "version": 1,
+  "instances": [
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-natal-plum",
+      "plantId": "carissa-macrocarpa",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "natal_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-amla-bundy",
+      "plantId": "phyllanthus-emblica",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "amla_bundy",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-jackfruit-black-gold",
+      "plantId": "artocarpus-heterophyllus",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "jackfruit_black_gold",
+      "cultivarOverride": "Black Gold",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-jackfruit-kyogle-gold",
+      "plantId": "artocarpus-heterophyllus-2",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "jackfruit_kyogle_gold",
+      "cultivarOverride": "Kyogle Gold",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-jackfruit",
+      "plantId": "artocarpus-heterophyllus-3",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "jackfruit",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-yellow-cherry-guava",
+      "plantId": "psidium-littorale",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "yellow_cherry_guava",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-strawberry-guava",
+      "plantId": "psidium-cattleianum",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "strawberry_guava",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-purple-guava",
+      "plantId": "psidium-guajava",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "purple_guava",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-guava-hawaiian-supreme",
+      "plantId": "psidium-guajava-2",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "guava_hawaiian_supreme",
+      "cultivarOverride": "Hawaiian Supreme",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-perfume-guava",
+      "plantId": "psidium-guajava-3",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "perfume_guava",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-guava-ruby",
+      "plantId": "psidium-guajava-4",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "guava_ruby",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-brazilian-cherry-black-beauty",
+      "plantId": "eugenia-uniflora",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "brazilian_cherry_black_beauty",
+      "cultivarOverride": "Black Beauty",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-nangaparie",
+      "plantId": "syzygium-malaccense",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "nangaparie",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-pintanguinha",
+      "plantId": "eugenia-brasiliensis",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "pintanguinha",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-pitanga-tuba",
+      "plantId": "eugenia-selloi",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "pitanga_tuba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-psidium-cambui",
+      "plantId": "psidium-sp",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "psidium_cambui",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r1-araza-boi",
+      "plantId": "araza-boi",
+      "placeId": "1r1",
+      "zoneId": "1r1",
+      "markerId": "araza_boi",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-capulin-cherry",
+      "plantId": "capulin-cherry",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "capulin_cherry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-capulin-cherry-2",
+      "plantId": "capulin-cherry",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "capulin_cherry_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-guava-brazilian",
+      "plantId": "psidium-guajava-5",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "guava_brazilian",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-guava-apple",
+      "plantId": "psidium-guajava-6",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "guava_apple",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-guava-purple",
+      "plantId": "psidium-guajava-7",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "guava_purple",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-breadnut",
+      "plantId": "breadnut",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "breadnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-guava-starling-white",
+      "plantId": "psidium-guajava-8",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "guava_starling_white",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-babaco",
+      "plantId": "babaco",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "babaco",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-jackfruit",
+      "plantId": "artocarpus-heterophyllus-3",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "jackfruit",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-kwai-muk",
+      "plantId": "kwai-muk",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "kwai_muk",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1l1-kwai-muk-rihcmond",
+      "plantId": "kwai-muk-rihcmond",
+      "placeId": "1l1",
+      "zoneId": "1l1",
+      "markerId": "kwai_muk_rihcmond",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-wax-jambu-pink",
+      "plantId": "syzygium-samarangense",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "wax_jambu_pink",
+      "cultivarOverride": "Pink",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-wax-jambu-red",
+      "plantId": "syzygium-samarangense-2",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "wax_jambu_red",
+      "cultivarOverride": "Red",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-giant-lau-lau",
+      "plantId": "parinari-spp",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "giant_lau_lau",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-wax-jambu-white",
+      "plantId": "syzygium-samarangense-3",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "wax_jambu_white",
+      "cultivarOverride": "White",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-rainforest-plum",
+      "plantId": "flacourtia-indica",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "rainforest_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-malay-apple",
+      "plantId": "syzygium-malaccense-2",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "malay_apple",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r2-wax-jambu-purple",
+      "plantId": "syzygium-samarangense-4",
+      "placeId": "1r2",
+      "zoneId": "1r2",
+      "markerId": "wax_jambu_purple",
+      "cultivarOverride": "Purple",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-bayberry-red-carbon",
+      "plantId": "myrica-cerifera",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "bayberry_red_carbon",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-bayberry-red-carbon-2",
+      "plantId": "myrica-cerifera",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "bayberry_red_carbon_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-bayberry-red-carbon-3",
+      "plantId": "myrica-cerifera",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "bayberry_red_carbon_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-bayberry-black-carbon",
+      "plantId": "myrica-cerifera-2",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "bayberry_black_carbon",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-bayberry-black-carbon-2",
+      "plantId": "myrica-cerifera-2",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "bayberry_black_carbon_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-allspice",
+      "plantId": "pimenta-dioica",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "allspice",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-cherry-of-rio-grande",
+      "plantId": "eugenia-aggregata",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "cherry_of_rio_grande",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-cherry-of-rio-grande-2",
+      "plantId": "eugenia-aggregata",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "cherry_of_rio_grande_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-cherry-of-rio-grande-3",
+      "plantId": "eugenia-aggregata",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "cherry_of_rio_grande_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-jaboticaba-costada",
+      "plantId": "plinia-cauliflora",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "jaboticaba_costada",
+      "cultivarOverride": "Costada",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-jaboticaba-costada-2",
+      "plantId": "plinia-cauliflora",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "jaboticaba_costada_2",
+      "cultivarOverride": "Costada",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-jambolan-plum",
+      "plantId": "syzygium-cumini",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "jambolan_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r3-yellow-jaboticaba",
+      "plantId": "plinia-cauliflora-2",
+      "placeId": "1r3",
+      "zoneId": "1r3",
+      "markerId": "yellow_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-kohala-longan",
+      "plantId": "dimocarpus-longan",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "kohala_longan",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Marcott.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-ambarella",
+      "plantId": "spondias-dulcis",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "ambarella",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-ambarella-2",
+      "plantId": "spondias-dulcis",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "ambarella_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-dwarf-grumichama",
+      "plantId": "eugenia-brasiliensis-2",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "dwarf_grumichama",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-green-jaboticaba",
+      "plantId": "plinia-cauliflora-3",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "green_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-giant-jaboticaba",
+      "plantId": "plinia-cauliflora-4",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "giant_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-red-hybrid-jaboticaba",
+      "plantId": "plinia-cauliflora-5",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "red_hybrid_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-jaboticaba-scarlet",
+      "plantId": "plinia-cauliflora-6",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "jaboticaba_scarlet",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-jaboticaba-small-leaf",
+      "plantId": "plinia-cauliflora-7",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "jaboticaba_small_leaf",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r4-bayberry",
+      "plantId": "myrica-cerifera-3",
+      "placeId": "1r4",
+      "zoneId": "1r4",
+      "markerId": "bayberry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-king-thai",
+      "plantId": "mangifera-indica",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_king_thai",
+      "cultivarOverride": "King Thai",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-irwin",
+      "plantId": "mangifera-indica-2",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_irwin",
+      "cultivarOverride": "Irwin",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-nam-doc-mai",
+      "plantId": "mangifera-indica-3",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_nam_doc_mai",
+      "cultivarOverride": "Nam Doc Mai",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-r2e2",
+      "plantId": "mangifera-indica-4",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_r2e2",
+      "cultivarOverride": "R2E2",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-bowen",
+      "plantId": "mangifera-indica-5",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_bowen",
+      "cultivarOverride": "Bowen",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-mango-valencia-pride",
+      "plantId": "mangifera-indica-6",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "mango_valencia_pride",
+      "cultivarOverride": "Valencia pride",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-coffee-dwarf-catui",
+      "plantId": "coffea-arabica",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "coffee_dwarf_catui",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-coffee-k7",
+      "plantId": "coffea-arabica-2",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "coffee_k7",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-ross-sapote",
+      "plantId": "pouteria-campechiana",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "ross_sapote",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-longan-kohala",
+      "plantId": "dimocarpus-longan-2",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "longan_kohala",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Marcott.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-kei-apple",
+      "plantId": "dovyalis-caffra",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "kei_apple",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-kei-apple-2",
+      "plantId": "dovyalis-caffra",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "kei_apple_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-1r5-kei-apple-3",
+      "plantId": "dovyalis-caffra",
+      "placeId": "1r5",
+      "zoneId": "1r5",
+      "markerId": "kei_apple_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l1-guana-chestnut",
+      "plantId": "guana-chestnut",
+      "placeId": "2l1",
+      "zoneId": "2l1",
+      "markerId": "guana_chestnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l1-dwarf-ice-cream-bean",
+      "plantId": "inga-spp",
+      "placeId": "2l1",
+      "zoneId": "2l1",
+      "markerId": "dwarf_ice_cream_bean",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l1-dwarf-ice-cream-bean-2",
+      "plantId": "inga-spp",
+      "placeId": "2l1",
+      "zoneId": "2l1",
+      "markerId": "dwarf_ice_cream_bean_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l1-dwarf-ice-cream-bean-3",
+      "plantId": "inga-spp",
+      "placeId": "2l1",
+      "zoneId": "2l1",
+      "markerId": "dwarf_ice_cream_bean_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l1-peanut-butter",
+      "plantId": "bunchosia-argentea",
+      "placeId": "2l1",
+      "zoneId": "2l1",
+      "markerId": "peanut_butter",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Cutting.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-amla",
+      "plantId": "phyllanthus-emblica-2",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "amla",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-sweet-granadilla",
+      "plantId": "passiflora-ligularis",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "sweet_granadilla",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-lemon-drop-garcinia-1-madrono-one-bakupari",
+      "plantId": "garcinia-madrono",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "lemon_drop_garcinia_1_madrono_one_bakupari",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Source identification requires confirmation.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-lemon-drop-garcinia-1-madrono-one-bakupari-2",
+      "plantId": "garcinia-madrono",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "lemon_drop_garcinia_1_madrono_one_bakupari_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Source identification requires confirmation.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-carambola-giant-sam",
+      "plantId": "averrhoa-carambola",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "carambola_giant_sam",
+      "cultivarOverride": "Giant Sam",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-sapodilla-prolific",
+      "plantId": "manilkara-zapota",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "sapodilla_prolific",
+      "cultivarOverride": "Prolific",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-sapodilla-bkd110",
+      "plantId": "manilkara-zapota-2",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "sapodilla_bkd110",
+      "cultivarOverride": "BKD110",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-peanut-butter",
+      "plantId": "bunchosia-argentea",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "peanut_butter",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Cutting.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-soursop",
+      "plantId": "annona-muricata",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "soursop",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-achacha",
+      "plantId": "garcinia-humilis",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "achacha",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Madrono rootstock Propagation: Grafted.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-carambola-daleys-sweet",
+      "plantId": "averrhoa-carambola-2",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "carambola_daleys_sweet",
+      "cultivarOverride": "daleys sweet",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-sweet-yellow-mangosteen",
+      "plantId": "sweet-yellow-mangosteen",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "sweet_yellow_mangosteen",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r1-soursop-golden",
+      "plantId": "soursop-golden",
+      "placeId": "2r1",
+      "zoneId": "2r1",
+      "markerId": "soursop_golden",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-dwarf-ice-cream-bean",
+      "plantId": "inga-spp",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "dwarf_ice_cream_bean",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-dwarf-ice-cream-bean-2",
+      "plantId": "inga-spp",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "dwarf_ice_cream_bean_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-dwarf-ice-cream-bean-3",
+      "plantId": "inga-spp",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "dwarf_ice_cream_bean_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-ice-cream-bean-mountain",
+      "plantId": "ice-cream-bean-mountain",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "ice_cream_bean_mountain",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-african-peach",
+      "plantId": "african-peach",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "african_peach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-african-peach-2",
+      "plantId": "african-peach",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "african_peach_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-african-peach-3",
+      "plantId": "african-peach",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "african_peach_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-perennial-leek",
+      "plantId": "perennial-leek",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "perennial_leek",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-perennial-buckwheat",
+      "plantId": "perennial-buckwheat",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "perennial_buckwheat",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-yellow-mangosteen",
+      "plantId": "yellow-mangosteen",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "yellow_mangosteen",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-javanese-ginger",
+      "plantId": "javanese-ginger",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "javanese_ginger",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-myoga-ginger",
+      "plantId": "myoga-ginger",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "myoga_ginger",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-garcinia-macrophylia",
+      "plantId": "garcinia-macrophylia",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "garcinia_macrophylia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-yellow-mangosteen-2",
+      "plantId": "yellow-mangosteen",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "yellow_mangosteen_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-purple-pea-bush",
+      "plantId": "hovea-acutifolia",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "purple_pea_bush",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l2-dwarf-pigeon-pea-source-plant",
+      "plantId": "dwarf-pigeon-pea-source-plant",
+      "placeId": "2l2",
+      "zoneId": "2l2",
+      "markerId": "dwarf_pigeon_pea_source_plant",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-mundo",
+      "plantId": "garcinia-brasiliensis",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_mundo",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-lemoncillo-lucs",
+      "plantId": "garcinia-intermedia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_lemoncillo_lucs",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-lemoncillo-lucs-2",
+      "plantId": "garcinia-intermedia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_lemoncillo_lucs_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-lemoncillo-lucs-3",
+      "plantId": "garcinia-intermedia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_lemoncillo_lucs_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-lemoncillo-lucs-4",
+      "plantId": "garcinia-intermedia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_lemoncillo_lucs_4",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-lemoncillo-lucs-5",
+      "plantId": "garcinia-intermedia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_lemoncillo_lucs_5",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-persimmon",
+      "plantId": "annona-squamosa",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "persimmon",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-yellow-mangosteen",
+      "plantId": "garcinia-xanthochymus",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "yellow_mangosteen",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-poshte",
+      "plantId": "annona-mucosa",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "poshte",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-jackfruit-brinsmead-special",
+      "plantId": "artocarpus-heterophyllus-4",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "jackfruit_brinsmead_special",
+      "cultivarOverride": "Brinsmead Special",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-jackfruit",
+      "plantId": "jackfruit",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "jackfruit",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-jade-vine",
+      "plantId": "jade-vine",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "jade_vine",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-shampoo-ginger",
+      "plantId": "shampoo-ginger",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "shampoo_ginger",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-cassomunar-ginger",
+      "plantId": "cassomunar-ginger",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "cassomunar_ginger",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-indian-gooseberry",
+      "plantId": "phyllanthus-emblica-3",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "indian_gooseberry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-garcinia-macrophylla",
+      "plantId": "garcinia-macrophylla",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "garcinia_macrophylla",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-green-sapote",
+      "plantId": "pouteria-viridis",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "green_sapote",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-jackfruit-rahjan",
+      "plantId": "artocarpus-heterophyllus-5",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "jackfruit_rahjan",
+      "cultivarOverride": "Rahjan",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-canistel-whitman",
+      "plantId": "pouteria-campechiana-2",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "canistel_whitman",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-imbe-garcinia",
+      "plantId": "imbe-garcinia",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "imbe_garcinia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r2-turmeric-orange",
+      "plantId": "turmeric-orange",
+      "placeId": "2r2",
+      "zoneId": "2r2",
+      "markerId": "turmeric_orange",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-byrosomnia",
+      "plantId": "diploglottis-australis",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "byrosomnia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-green-sapote-canistel",
+      "plantId": "green-sapote-canistel",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "green_sapote_canistel",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Grafted.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-grenn-sapote-mamey-sapote",
+      "plantId": "grenn-sapote-mamey-sapote",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "grenn_sapote_mamey_sapote",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Grafted.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-eugenia-do-be-defined",
+      "plantId": "eugenia-do-be-defined",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "eugenia_do_be_defined",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-cambui-plinia",
+      "plantId": "cambui-plinia",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "cambui_plinia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-cambui-plinia-2",
+      "plantId": "cambui-plinia",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "cambui_plinia_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-snake-jasmine",
+      "plantId": "snake-jasmine",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "snake_jasmine",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-young-burmese-grape",
+      "plantId": "young-burmese-grape",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "young_burmese_grape",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-jaboticaba-giant",
+      "plantId": "jaboticaba-giant",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "jaboticaba_giant",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-inga-long-leaves",
+      "plantId": "inga-long-leaves",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "inga_long_leaves",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-native-bauhinia",
+      "plantId": "native-bauhinia",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "native_bauhinia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l3-henna",
+      "plantId": "lawsonia-inermis",
+      "placeId": "2l3",
+      "zoneId": "2l3",
+      "markerId": "henna",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-carambola-kembangan",
+      "plantId": "averrhoa-carambola-3",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "carambola_kembangan",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-midyim-berry",
+      "plantId": "austromyrtus-dulcis",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "midyim_berry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-canistel",
+      "plantId": "pouteria-campechiana-3",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "canistel",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-lychee-red-ball",
+      "plantId": "litchi-chinensis",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "lychee_red_ball",
+      "cultivarOverride": "Red Ball",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-lychee-red-ball-2",
+      "plantId": "litchi-chinensis",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "lychee_red_ball_2",
+      "cultivarOverride": "Red Ball",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-wampee",
+      "plantId": "clausena-lansium",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "wampee",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-burmese-grape",
+      "plantId": "baccaurea-ramiflora",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "burmese_grape",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-maprang-mango-plum",
+      "plantId": "bouea-macrophylla",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "maprang_mango_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-ketembilla",
+      "plantId": "ketembilla",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "ketembilla",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-ketembilla-2",
+      "plantId": "ketembilla",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "ketembilla_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r3-ketembilla-3",
+      "plantId": "ketembilla",
+      "placeId": "2r3",
+      "zoneId": "2r3",
+      "markerId": "ketembilla_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-chinese-chestnut",
+      "plantId": "castanea-chinensis",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "chinese_chestnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-cambuca-jaboticaba",
+      "plantId": "cambuca-jaboticaba",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "cambuca_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-jaboticaba",
+      "plantId": "jaboticaba",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-jaboticaba-2",
+      "plantId": "jaboticaba",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "jaboticaba_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-elephant-apple",
+      "plantId": "dillenia-indica",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "elephant_apple",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-dwarf-acerola-pixie",
+      "plantId": "dwarf-acerola-pixie",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "dwarf_acerola_pixie",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-japanese-raisin",
+      "plantId": "hovenia-dulcis",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "japanese_raisin",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-cedar-bay-cherry",
+      "plantId": "cedar-bay-cherry",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "cedar_bay_cherry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-cedar-bay-cherry-2",
+      "plantId": "cedar-bay-cherry",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "cedar_bay_cherry_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-african-peach",
+      "plantId": "kiggelaria-africana",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "african_peach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-true-inga-edulis",
+      "plantId": "inga-edulis",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "true_inga_edulis",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-keffir-plum",
+      "plantId": "keffir-plum",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "keffir_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-keffir-plum-2",
+      "plantId": "keffir-plum",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "keffir_plum_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-keffir-plum-3",
+      "plantId": "keffir-plum",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "keffir_plum_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-keffir-plum-4",
+      "plantId": "keffir-plum",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "keffir_plum_4",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-guabiyu",
+      "plantId": "guabiyu",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "guabiyu",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-guabiyu-2",
+      "plantId": "guabiyu",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "guabiyu_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-black-sapote",
+      "plantId": "black-sapote",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "black_sapote",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-maprang-artocarpus",
+      "plantId": "maprang-artocarpus",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "maprang_artocarpus",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-mulberry-red-shatooth",
+      "plantId": "mulberry-red-shatooth",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "mulberry_red_shatooth",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-sandpaper-fig",
+      "plantId": "sandpaper-fig",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "sandpaper_fig",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-lucuma-kona",
+      "plantId": "lucuma-kona",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "lucuma_kona",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-pouteria-torta",
+      "plantId": "pouteria-torta",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "pouteria_torta",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-lucuma-ross-creek-tropicals",
+      "plantId": "lucuma-ross-creek-tropicals",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "lucuma_ross_creek_tropicals",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-jaboticaba-white",
+      "plantId": "jaboticaba-white",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "jaboticaba_white",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-jaboticaba-white-2",
+      "plantId": "jaboticaba-white",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "jaboticaba_white_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-jaboticaba-white-3",
+      "plantId": "jaboticaba-white",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "jaboticaba_white_3",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2l4-black-wattle",
+      "plantId": "black-wattle",
+      "placeId": "2l4",
+      "zoneId": "2l4",
+      "markerId": "black_wattle",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-malabar-chestnut",
+      "plantId": "pachira-aquatica",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "malabar_chestnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-papayuello",
+      "plantId": "vasconcellea-pubescens",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "papayuello",
+      "cultivarOverride": "",
+      "status": "male",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-papayuello-2",
+      "plantId": "vasconcellea-pubescens",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "papayuello_2",
+      "cultivarOverride": "",
+      "status": "female",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-papayuello-3",
+      "plantId": "vasconcellea-pubescens",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "papayuello_3",
+      "cultivarOverride": "",
+      "status": "female",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-cambuca",
+      "plantId": "plinia-edulis",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "cambuca",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-cambuca-2",
+      "plantId": "plinia-edulis",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "cambuca_2",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-large-jaboticaba",
+      "plantId": "plinia-cauliflora-8",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "large_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-stripy-jaboticaba",
+      "plantId": "plinia-cauliflora-9",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "stripy_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-yellow-jaboticaba",
+      "plantId": "plinia-cauliflora-2",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "yellow_jaboticaba",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-broad-leaf-pawpaw",
+      "plantId": "carica-papaya",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "broad_leaf_pawpaw",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-dwarf-ambarella",
+      "plantId": "spondias-dulcis-2",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "dwarf_ambarella",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-jackfruit-red",
+      "plantId": "jackfruit-red",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "jackfruit_red",
+      "cultivarOverride": "Red",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-tamarind",
+      "plantId": "tamarind",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "tamarind",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-blackberry-jam-fruit",
+      "plantId": "blackberry-jam-fruit",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "blackberry_jam_fruit",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-phalsa",
+      "plantId": "grewia-asiatica",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "phalsa",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-breadnut",
+      "plantId": "artocarpus-camansi",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "breadnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-blue-tongue",
+      "plantId": "ehretia-acuminata",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "blue_tongue",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-mountain-soursop",
+      "plantId": "annona-montana",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "mountain_soursop",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-ylang-ylang",
+      "plantId": "cananga-odorata",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "ylang_ylang",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-abiu",
+      "plantId": "pouteria-caimito",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "abiu",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-black-bamboo-source-paul-daley",
+      "plantId": "black-bamboo-source-paul-daley",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "black_bamboo_source_paul_daley",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-white-shatooth",
+      "plantId": "vangueria-madagascariensis",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "white_shatooth",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-orange-berry",
+      "plantId": "muntingia-calabura",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "orange_berry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-torch-ginger-pink",
+      "plantId": "torch-ginger-pink",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "torch_ginger_pink",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-torch-ginger-red",
+      "plantId": "torch-ginger-red",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "torch_ginger_red",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-galangal",
+      "plantId": "galangal",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "galangal",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-native-currant-black",
+      "plantId": "native-currant-black",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "native_currant_black",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-native-currant",
+      "plantId": "native-currant",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "native_currant",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-2r4-tamarind-sweet",
+      "plantId": "tamarindus-indica",
+      "placeId": "2r4",
+      "zoneId": "2r4",
+      "markerId": "tamarind_sweet",
+      "cultivarOverride": "Sweet",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Grafted.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-coral-tree",
+      "plantId": "erythrina-spp",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "coral_tree",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-avocado-fuerte",
+      "plantId": "persea-americana",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "avocado_fuerte",
+      "cultivarOverride": "Fuerte",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-avocado-secondo",
+      "plantId": "persea-americana-2",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "avocado_secondo",
+      "cultivarOverride": "Secondo",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-avocado-hass",
+      "plantId": "persea-americana-3",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "avocado_hass",
+      "cultivarOverride": "Hass",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-avocado-wurtz",
+      "plantId": "persea-americana-4",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "avocado_wurtz",
+      "cultivarOverride": "Wurtz",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-santol",
+      "plantId": "sandoricum-koetjape",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "santol",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-acerola",
+      "plantId": "malpighia-emarginata",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "acerola",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-tinctoria-indica",
+      "plantId": "clitoria-ternatea",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "tinctoria_indica",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-native-mulberry",
+      "plantId": "pipturus-argenteus",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "native_mulberry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-mombin",
+      "plantId": "mombin",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "mombin",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-3r-governor-s-plum",
+      "plantId": "flacourtia-indica-2",
+      "placeId": "3r",
+      "zoneId": "3r",
+      "markerId": "governor_s_plum",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-panama-berry",
+      "plantId": "muntingia-calabura-2",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "panama_berry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-lemon-eureka",
+      "plantId": "citrus-limon",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "lemon_eureka",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-sweet-lime",
+      "plantId": "citrus-limetta",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "sweet_lime",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-lime-tahitian",
+      "plantId": "citrus-x-latifolia",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "lime_tahitian",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-oak-leaf",
+      "plantId": "quercus-spp",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "oak_leaf",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-cinnamon-tree",
+      "plantId": "cinnamomum-verum",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "cinnamon_tree",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-star-anise",
+      "plantId": "illicium-verum",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "star_anise",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-miracle-fruit",
+      "plantId": "synsepalum-dulcificum",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "miracle_fruit",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-kaffir-lime",
+      "plantId": "kaffir-lime",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "kaffir_lime",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-babaco",
+      "plantId": "babaco",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "babaco",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-north-bank-seeds-of-haven",
+      "plantId": "seeds-of-haven",
+      "placeId": "north_bank",
+      "zoneId": "north_bank",
+      "markerId": "seeds_of_haven",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-native-gardenia",
+      "plantId": "gardenia-taitensis",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "native_gardenia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-pink-euodia",
+      "plantId": "melicope-elleryana",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "pink_euodia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-red-cedar",
+      "plantId": "toona-ciliata",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "red_cedar",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-nashi-tropical-shunshu",
+      "plantId": "pyrus-pyrifolia",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "nashi_tropical_shunshu",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-nashi-jienseiki",
+      "plantId": "pyrus-pyrifolia-2",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "nashi_jienseiki",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-okinawa-peach",
+      "plantId": "prunus-persica",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "okinawa_peach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-coastal-peach",
+      "plantId": "prunus-persica-2",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "coastal_peach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-flowering-peach",
+      "plantId": "prunus-persica-3",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "flowering_peach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-myrobolan",
+      "plantId": "prunus-cerasifera",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "myrobolan",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "Propagation: Seedling.",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-placentia-walnut",
+      "plantId": "juglans-regia",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "placentia_walnut",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-chestnut-reily-o",
+      "plantId": "chestnut-reily-o",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "chestnut_reily_o",
+      "cultivarOverride": "o",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-cassia-pendula",
+      "plantId": "senna-pendula",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "cassia_pendula",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-sal-apricot",
+      "plantId": "prunus-armeniaca",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "sal_apricot",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-apple-dorsett-golden",
+      "plantId": "apple-dorsett-golden",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "apple_dorsett_golden",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-apple-tropic-anna",
+      "plantId": "apple-tropic-anna",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "apple_tropic_anna",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-apple-redlove",
+      "plantId": "apple-redlove",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "apple_redlove",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-bottom-dam-area-pear-multigraft-hood",
+      "plantId": "pear-multigraft-hood",
+      "placeId": "bottom_dam_area",
+      "zoneId": "bottom_dam_area",
+      "markerId": "pear_multigraft_hood",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-moringa",
+      "plantId": "moringa-oleifera",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "moringa",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-bitter-leaf",
+      "plantId": "vernonia-amygdalina",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "bitter_leaf",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-qld-arrowroot",
+      "plantId": "canna-indica",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "qld_arrowroot",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-west-indian-arrowroot",
+      "plantId": "maranta-arundinacea",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "west_indian_arrowroot",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-west-indian-lemongrass",
+      "plantId": "cymbopogon-citratus",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "west_indian_lemongrass",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-wattle-gossamer",
+      "plantId": "acacia-floribunda",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "wattle_gossamer",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-albizia",
+      "plantId": "albizia-spp",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "albizia",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-pigeon-pea",
+      "plantId": "cajanus-cajan",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "pigeon_pea",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-mother-of-all-herbs",
+      "plantId": "coleus-amboinicus",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "mother_of_all_herbs",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-black-wattle",
+      "plantId": "acacia-mearnsii",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "black_wattle",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-cape-gooseberry",
+      "plantId": "physalis-peruviana",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "cape_gooseberry",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-garlic-chives",
+      "plantId": "allium-tuberosum",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "garlic_chives",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-vetiver-grass",
+      "plantId": "chrysopogon-zizanioides",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "vetiver_grass",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-fountain-grass",
+      "plantId": "pennisetum-setaceum",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "fountain_grass",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-spiral-ginger-red",
+      "plantId": "costus-woodsonii",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "spiral_ginger_red",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-spiral-ginger-white",
+      "plantId": "costus-woodsonii-2",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "spiral_ginger_white",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-cassava",
+      "plantId": "manihot-esculenta",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "cassava",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-comfrey",
+      "plantId": "symphytum-officinale",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "comfrey",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-sweet-leaf",
+      "plantId": "sauropus-androgynus",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "sweet_leaf",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-longevity-spinach",
+      "plantId": "gynura-procumbens",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "longevity_spinach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-mexican-coriander",
+      "plantId": "eryngium-foetidum",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "mexican_coriander",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-okinawa-spinach",
+      "plantId": "gynura-bicolor",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "okinawa_spinach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-lagos-spinach",
+      "plantId": "celosia-argentea",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "lagos_spinach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-cranberry-hibiscus",
+      "plantId": "hibiscus-acetosella",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "cranberry_hibiscus",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-javanese-ginger",
+      "plantId": "curcuma-xanthorrhiza",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "javanese_ginger",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-cape-york-turmeric",
+      "plantId": "curcuma-australasica",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "cape_york_turmeric",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-orange-turmeric",
+      "plantId": "curcuma-longa",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "orange_turmeric",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-brazilian-spinach",
+      "plantId": "alternanthera-sissoo",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "brazilian_spinach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-surinam-spinach",
+      "plantId": "talinum-fruticosum",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "surinam_spinach",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-plantain-banana",
+      "plantId": "musa-paradisiaca",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "plantain_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-goldfinger-banana",
+      "plantId": "musa-acuminata",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "goldfinger_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-blue-java-banana",
+      "plantId": "musa-acuminata-2",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "blue_java_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-williams-banana",
+      "plantId": "musa-acuminata-3",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "williams_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-pisang-ceylon-banana",
+      "plantId": "musa-acuminata-4",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "pisang_ceylon_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-dwarf-red-dacca-banana",
+      "plantId": "musa-acuminata-5",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "dwarf_red_dacca_banana",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    },
+    {
+      "id": "hilyards-food-forest-main-food-forest-unassigned-dwarf-ducasse-banana-musa",
+      "plantId": "dwarf-ducasse-banana-musa",
+      "placeId": "unassigned",
+      "zoneId": "unassigned",
+      "markerId": "dwarf_ducasse_banana_musa",
+      "cultivarOverride": "",
+      "status": "",
+      "plantingDate": "",
+      "localNotes": "",
+      "map": {
+        "latitude": null,
+        "longitude": null,
+        "x": null,
+        "y": null
+      },
+      "visibility": "draft",
+      "created": "2026-07-17T09:36:29.957Z",
+      "modified": "2026-07-17T09:36:29.957Z"
+    }
+  ]
+}

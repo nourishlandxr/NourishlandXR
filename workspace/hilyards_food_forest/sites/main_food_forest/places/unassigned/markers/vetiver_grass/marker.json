@@ -1,0 +1,14 @@
+{
+  "id": "vetiver_grass",
+  "type": "plant",
+  "name": "Vetiver Grass",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "chrysopogon-zizanioides",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-vetiver-grass",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

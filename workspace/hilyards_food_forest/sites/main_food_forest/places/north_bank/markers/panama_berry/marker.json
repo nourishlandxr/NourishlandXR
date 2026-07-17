@@ -1,0 +1,14 @@
+{
+  "id": "panama_berry",
+  "type": "plant",
+  "name": "Panama Berry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "muntingia-calabura-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-panama-berry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

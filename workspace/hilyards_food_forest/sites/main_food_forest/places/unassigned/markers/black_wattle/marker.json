@@ -1,0 +1,14 @@
+{
+  "id": "black_wattle",
+  "type": "plant",
+  "name": "Black Wattle",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "acacia-mearnsii",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-black-wattle",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

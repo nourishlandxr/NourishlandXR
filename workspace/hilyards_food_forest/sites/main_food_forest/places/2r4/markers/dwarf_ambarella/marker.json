@@ -1,0 +1,14 @@
+{
+  "id": "dwarf_ambarella",
+  "type": "plant",
+  "name": "Dwarf Ambarella",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "spondias-dulcis-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-dwarf-ambarella",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

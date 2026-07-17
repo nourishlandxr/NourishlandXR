@@ -1,0 +1,14 @@
+{
+  "id": "african_peach_2",
+  "type": "plant",
+  "name": "African peach",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "african-peach",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-african-peach-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

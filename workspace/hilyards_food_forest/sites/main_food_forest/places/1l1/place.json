@@ -1,0 +1,77 @@
+{
+  "id": "1l1",
+  "name": "1L1",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "babaco",
+      "name": "Babaco",
+      "type": "plant",
+      "path": "markers/babaco/marker.json"
+    },
+    {
+      "id": "breadnut",
+      "name": "Breadnut",
+      "type": "plant",
+      "path": "markers/breadnut/marker.json"
+    },
+    {
+      "id": "capulin_cherry",
+      "name": "Capulin cherry",
+      "type": "plant",
+      "path": "markers/capulin_cherry/marker.json"
+    },
+    {
+      "id": "capulin_cherry_2",
+      "name": "Capulin cherry",
+      "type": "plant",
+      "path": "markers/capulin_cherry_2/marker.json"
+    },
+    {
+      "id": "guava_apple",
+      "name": "Guava apple",
+      "type": "plant",
+      "path": "markers/guava_apple/marker.json"
+    },
+    {
+      "id": "guava_brazilian",
+      "name": "Guava brazilian",
+      "type": "plant",
+      "path": "markers/guava_brazilian/marker.json"
+    },
+    {
+      "id": "guava_purple",
+      "name": "Guava purple",
+      "type": "plant",
+      "path": "markers/guava_purple/marker.json"
+    },
+    {
+      "id": "guava_starling_white",
+      "name": "Guava starling white",
+      "type": "plant",
+      "path": "markers/guava_starling_white/marker.json"
+    },
+    {
+      "id": "jackfruit",
+      "name": "Jackfruit",
+      "type": "plant",
+      "path": "markers/jackfruit/marker.json"
+    },
+    {
+      "id": "kwai_muk",
+      "name": "Kwai muk –",
+      "type": "plant",
+      "path": "markers/kwai_muk/marker.json"
+    },
+    {
+      "id": "kwai_muk_rihcmond",
+      "name": "Kwai muk rihcmond",
+      "type": "plant",
+      "path": "markers/kwai_muk_rihcmond/marker.json"
+    }
+  ]
+}

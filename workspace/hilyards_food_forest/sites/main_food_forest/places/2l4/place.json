@@ -1,0 +1,179 @@
+{
+  "id": "2l4",
+  "name": "2L4",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "african_peach",
+      "name": "African Peach",
+      "type": "plant",
+      "path": "markers/african_peach/marker.json"
+    },
+    {
+      "id": "black_sapote",
+      "name": "Black Sapote",
+      "type": "plant",
+      "path": "markers/black_sapote/marker.json"
+    },
+    {
+      "id": "black_wattle",
+      "name": "Black wattle",
+      "type": "plant",
+      "path": "markers/black_wattle/marker.json"
+    },
+    {
+      "id": "cambuca_jaboticaba",
+      "name": "Cambuca jaboticaba",
+      "type": "plant",
+      "path": "markers/cambuca_jaboticaba/marker.json"
+    },
+    {
+      "id": "cedar_bay_cherry",
+      "name": "Cedar Bay Cherry",
+      "type": "plant",
+      "path": "markers/cedar_bay_cherry/marker.json"
+    },
+    {
+      "id": "cedar_bay_cherry_2",
+      "name": "Cedar Bay Cherry",
+      "type": "plant",
+      "path": "markers/cedar_bay_cherry_2/marker.json"
+    },
+    {
+      "id": "chinese_chestnut",
+      "name": "Chinese Chestnut",
+      "type": "plant",
+      "path": "markers/chinese_chestnut/marker.json"
+    },
+    {
+      "id": "dwarf_acerola_pixie",
+      "name": "Dwarf acerola Pixie",
+      "type": "plant",
+      "path": "markers/dwarf_acerola_pixie/marker.json"
+    },
+    {
+      "id": "elephant_apple",
+      "name": "Elephant Apple",
+      "type": "plant",
+      "path": "markers/elephant_apple/marker.json"
+    },
+    {
+      "id": "guabiyu",
+      "name": "Guabiyu",
+      "type": "plant",
+      "path": "markers/guabiyu/marker.json"
+    },
+    {
+      "id": "guabiyu_2",
+      "name": "Guabiyu",
+      "type": "plant",
+      "path": "markers/guabiyu_2/marker.json"
+    },
+    {
+      "id": "jaboticaba",
+      "name": "Jaboticaba",
+      "type": "plant",
+      "path": "markers/jaboticaba/marker.json"
+    },
+    {
+      "id": "jaboticaba_2",
+      "name": "Jaboticaba",
+      "type": "plant",
+      "path": "markers/jaboticaba_2/marker.json"
+    },
+    {
+      "id": "jaboticaba_white",
+      "name": "Jaboticaba white",
+      "type": "plant",
+      "path": "markers/jaboticaba_white/marker.json"
+    },
+    {
+      "id": "jaboticaba_white_2",
+      "name": "Jaboticaba white",
+      "type": "plant",
+      "path": "markers/jaboticaba_white_2/marker.json"
+    },
+    {
+      "id": "jaboticaba_white_3",
+      "name": "Jaboticaba white",
+      "type": "plant",
+      "path": "markers/jaboticaba_white_3/marker.json"
+    },
+    {
+      "id": "japanese_raisin",
+      "name": "Japanese Raisin",
+      "type": "plant",
+      "path": "markers/japanese_raisin/marker.json"
+    },
+    {
+      "id": "keffir_plum",
+      "name": "Keffir plum",
+      "type": "plant",
+      "path": "markers/keffir_plum/marker.json"
+    },
+    {
+      "id": "keffir_plum_2",
+      "name": "Keffir plum",
+      "type": "plant",
+      "path": "markers/keffir_plum_2/marker.json"
+    },
+    {
+      "id": "keffir_plum_3",
+      "name": "Keffir plum",
+      "type": "plant",
+      "path": "markers/keffir_plum_3/marker.json"
+    },
+    {
+      "id": "keffir_plum_4",
+      "name": "Keffir plum",
+      "type": "plant",
+      "path": "markers/keffir_plum_4/marker.json"
+    },
+    {
+      "id": "lucuma_kona",
+      "name": "Lucuma kona",
+      "type": "plant",
+      "path": "markers/lucuma_kona/marker.json"
+    },
+    {
+      "id": "lucuma_ross_creek_tropicals",
+      "name": "Lucuma (ross creek tropicals)",
+      "type": "plant",
+      "path": "markers/lucuma_ross_creek_tropicals/marker.json"
+    },
+    {
+      "id": "maprang_artocarpus",
+      "name": "MAPRANG artocarpus",
+      "type": "plant",
+      "path": "markers/maprang_artocarpus/marker.json"
+    },
+    {
+      "id": "mulberry_red_shatooth",
+      "name": "Mulberry Red shatooth",
+      "type": "plant",
+      "path": "markers/mulberry_red_shatooth/marker.json"
+    },
+    {
+      "id": "pouteria_torta",
+      "name": "Pouteria torta",
+      "type": "plant",
+      "path": "markers/pouteria_torta/marker.json"
+    },
+    {
+      "id": "sandpaper_fig",
+      "name": "Sandpaper fig",
+      "type": "plant",
+      "path": "markers/sandpaper_fig/marker.json"
+    },
+    {
+      "id": "true_inga_edulis",
+      "name": "True Inga Edulis",
+      "type": "plant",
+      "path": "markers/true_inga_edulis/marker.json"
+    }
+  ]
+}

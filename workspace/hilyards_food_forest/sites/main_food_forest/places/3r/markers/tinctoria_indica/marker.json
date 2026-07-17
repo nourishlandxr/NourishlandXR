@@ -1,0 +1,14 @@
+{
+  "id": "tinctoria_indica",
+  "type": "plant",
+  "name": "Tinctoria indica",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "clitoria-ternatea",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-tinctoria-indica",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

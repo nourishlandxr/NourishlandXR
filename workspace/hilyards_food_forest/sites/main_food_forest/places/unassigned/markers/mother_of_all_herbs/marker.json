@@ -1,0 +1,14 @@
+{
+  "id": "mother_of_all_herbs",
+  "type": "plant",
+  "name": "Mother of All Herbs",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "coleus-amboinicus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-mother-of-all-herbs",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

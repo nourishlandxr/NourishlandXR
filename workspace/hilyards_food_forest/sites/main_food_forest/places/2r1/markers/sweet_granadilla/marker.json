@@ -1,0 +1,14 @@
+{
+  "id": "sweet_granadilla",
+  "type": "plant",
+  "name": "Sweet Granadilla",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "passiflora-ligularis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-sweet-granadilla",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

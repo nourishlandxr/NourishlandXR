@@ -1,0 +1,14 @@
+{
+  "id": "burmese_grape",
+  "type": "plant",
+  "name": "Burmese Grape",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "baccaurea-ramiflora",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r3-burmese-grape",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

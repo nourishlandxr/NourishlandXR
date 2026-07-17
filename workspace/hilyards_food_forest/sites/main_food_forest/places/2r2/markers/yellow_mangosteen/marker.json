@@ -1,0 +1,14 @@
+{
+  "id": "yellow_mangosteen",
+  "type": "plant",
+  "name": "Yellow Mangosteen",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "garcinia-xanthochymus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-yellow-mangosteen",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "coffee_dwarf_catui",
+  "type": "plant",
+  "name": "Coffee Dwarf Catui",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "coffea-arabica",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r5-coffee-dwarf-catui",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "achacha",
+  "type": "plant",
+  "name": "Achacha",
+  "description": "",
+  "notes": "Madrono rootstock Propagation: Grafted.",
+  "parent_checkpoint": "",
+  "plantId": "garcinia-humilis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-achacha",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

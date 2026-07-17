@@ -1,0 +1,14 @@
+{
+  "id": "papayuello",
+  "type": "plant",
+  "name": "Papayuello",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "vasconcellea-pubescens",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-papayuello",
+  "status": "male",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

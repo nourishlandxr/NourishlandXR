@@ -1,0 +1,14 @@
+{
+  "id": "pink_euodia",
+  "type": "plant",
+  "name": "Pink Euodia",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "melicope-elleryana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-pink-euodia",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

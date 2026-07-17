@@ -1,0 +1,14 @@
+{
+  "id": "santol",
+  "type": "plant",
+  "name": "Santol",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "sandoricum-koetjape",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-santol",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

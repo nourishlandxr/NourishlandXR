@@ -1,0 +1,41 @@
+{
+  "id": "2l1",
+  "name": "2L1",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "dwarf_ice_cream_bean",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean/marker.json"
+    },
+    {
+      "id": "dwarf_ice_cream_bean_2",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean_2/marker.json"
+    },
+    {
+      "id": "dwarf_ice_cream_bean_3",
+      "name": "Dwarf Ice Cream Bean",
+      "type": "plant",
+      "path": "markers/dwarf_ice_cream_bean_3/marker.json"
+    },
+    {
+      "id": "guana_chestnut",
+      "name": "Guana chestnut",
+      "type": "plant",
+      "path": "markers/guana_chestnut/marker.json"
+    },
+    {
+      "id": "peanut_butter",
+      "name": "Peanut Butter",
+      "type": "plant",
+      "path": "markers/peanut_butter/marker.json"
+    }
+  ]
+}

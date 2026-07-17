@@ -1,0 +1,14 @@
+{
+  "id": "seeds_of_haven",
+  "type": "plant",
+  "name": "Seeds of haven",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "seeds-of-haven",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-seeds-of-haven",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

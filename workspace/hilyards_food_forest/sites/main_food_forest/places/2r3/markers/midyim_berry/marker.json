@@ -1,0 +1,14 @@
+{
+  "id": "midyim_berry",
+  "type": "plant",
+  "name": "Midyim Berry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "austromyrtus-dulcis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r3-midyim-berry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

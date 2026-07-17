@@ -1,0 +1,14 @@
+{
+  "id": "nashi_tropical_shunshu",
+  "type": "plant",
+  "name": "Nashi Tropical Shunshu",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pyrus-pyrifolia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-nashi-tropical-shunshu",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

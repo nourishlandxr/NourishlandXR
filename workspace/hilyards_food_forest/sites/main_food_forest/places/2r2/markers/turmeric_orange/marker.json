@@ -1,0 +1,14 @@
+{
+  "id": "turmeric_orange",
+  "type": "plant",
+  "name": "turmeric orange",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "turmeric-orange",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-turmeric-orange",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,89 @@
+{
+  "id": "1r5",
+  "name": "1R5",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "coffee_dwarf_catui",
+      "name": "Coffee Dwarf Catui",
+      "type": "plant",
+      "path": "markers/coffee_dwarf_catui/marker.json"
+    },
+    {
+      "id": "coffee_k7",
+      "name": "Coffee K7",
+      "type": "plant",
+      "path": "markers/coffee_k7/marker.json"
+    },
+    {
+      "id": "kei_apple",
+      "name": "Kei Apple",
+      "type": "plant",
+      "path": "markers/kei_apple/marker.json"
+    },
+    {
+      "id": "kei_apple_2",
+      "name": "Kei Apple",
+      "type": "plant",
+      "path": "markers/kei_apple_2/marker.json"
+    },
+    {
+      "id": "kei_apple_3",
+      "name": "Kei Apple",
+      "type": "plant",
+      "path": "markers/kei_apple_3/marker.json"
+    },
+    {
+      "id": "longan_kohala",
+      "name": "Longan Kohala",
+      "type": "plant",
+      "path": "markers/longan_kohala/marker.json"
+    },
+    {
+      "id": "mango_bowen",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_bowen/marker.json"
+    },
+    {
+      "id": "mango_irwin",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_irwin/marker.json"
+    },
+    {
+      "id": "mango_king_thai",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_king_thai/marker.json"
+    },
+    {
+      "id": "mango_nam_doc_mai",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_nam_doc_mai/marker.json"
+    },
+    {
+      "id": "mango_r2e2",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_r2e2/marker.json"
+    },
+    {
+      "id": "mango_valencia_pride",
+      "name": "Mango",
+      "type": "plant",
+      "path": "markers/mango_valencia_pride/marker.json"
+    },
+    {
+      "id": "ross_sapote",
+      "name": "Ross Sapote",
+      "type": "plant",
+      "path": "markers/ross_sapote/marker.json"
+    }
+  ]
+}

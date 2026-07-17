@@ -1,0 +1,14 @@
+{
+  "id": "green_sapote_canistel",
+  "type": "plant",
+  "name": "Green sapote * canistel",
+  "description": "",
+  "notes": "Propagation: Grafted.",
+  "parent_checkpoint": "",
+  "plantId": "green-sapote-canistel",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-green-sapote-canistel",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

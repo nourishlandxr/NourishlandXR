@@ -1,0 +1,14 @@
+{
+  "id": "torch_ginger_red",
+  "type": "plant",
+  "name": "Torch ginger Red",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "torch-ginger-red",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-torch-ginger-red",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

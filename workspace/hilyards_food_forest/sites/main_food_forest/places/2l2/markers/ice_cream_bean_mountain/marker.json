@@ -1,0 +1,14 @@
+{
+  "id": "ice_cream_bean_mountain",
+  "type": "plant",
+  "name": "Ice cream bean Mountain",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "ice-cream-bean-mountain",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-ice-cream-bean-mountain",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

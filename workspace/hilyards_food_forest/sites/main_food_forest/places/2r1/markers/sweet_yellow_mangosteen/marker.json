@@ -1,0 +1,14 @@
+{
+  "id": "sweet_yellow_mangosteen",
+  "type": "plant",
+  "name": "Sweet yellow mangosteen",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "sweet-yellow-mangosteen",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-sweet-yellow-mangosteen",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

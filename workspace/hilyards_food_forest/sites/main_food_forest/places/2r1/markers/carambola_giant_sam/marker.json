@@ -1,0 +1,14 @@
+{
+  "id": "carambola_giant_sam",
+  "type": "plant",
+  "name": "Carambola",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "averrhoa-carambola",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r1-carambola-giant-sam",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

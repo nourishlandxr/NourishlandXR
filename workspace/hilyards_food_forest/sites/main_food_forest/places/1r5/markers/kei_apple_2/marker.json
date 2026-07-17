@@ -1,0 +1,14 @@
+{
+  "id": "kei_apple_2",
+  "type": "plant",
+  "name": "Kei Apple",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "dovyalis-caffra",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r5-kei-apple-2",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

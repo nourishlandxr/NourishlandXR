@@ -1,0 +1,14 @@
+{
+  "id": "perennial_buckwheat",
+  "type": "plant",
+  "name": "Perennial buckwheat",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "perennial-buckwheat",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l2-perennial-buckwheat",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

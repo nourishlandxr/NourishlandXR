@@ -1,0 +1,14 @@
+{
+  "id": "broad_leaf_pawpaw",
+  "type": "plant",
+  "name": "Broad Leaf Pawpaw",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "carica-papaya",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-broad-leaf-pawpaw",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

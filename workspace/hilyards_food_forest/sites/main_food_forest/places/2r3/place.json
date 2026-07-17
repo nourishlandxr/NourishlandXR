@@ -1,0 +1,77 @@
+{
+  "id": "2r3",
+  "name": "2R3",
+  "type": "Bed or Plot",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "burmese_grape",
+      "name": "Burmese Grape",
+      "type": "plant",
+      "path": "markers/burmese_grape/marker.json"
+    },
+    {
+      "id": "canistel",
+      "name": "Canistel",
+      "type": "plant",
+      "path": "markers/canistel/marker.json"
+    },
+    {
+      "id": "carambola_kembangan",
+      "name": "Carambola Kembangan",
+      "type": "plant",
+      "path": "markers/carambola_kembangan/marker.json"
+    },
+    {
+      "id": "ketembilla",
+      "name": "Ketembilla",
+      "type": "plant",
+      "path": "markers/ketembilla/marker.json"
+    },
+    {
+      "id": "ketembilla_2",
+      "name": "Ketembilla",
+      "type": "plant",
+      "path": "markers/ketembilla_2/marker.json"
+    },
+    {
+      "id": "ketembilla_3",
+      "name": "Ketembilla",
+      "type": "plant",
+      "path": "markers/ketembilla_3/marker.json"
+    },
+    {
+      "id": "lychee_red_ball",
+      "name": "Lychee",
+      "type": "plant",
+      "path": "markers/lychee_red_ball/marker.json"
+    },
+    {
+      "id": "lychee_red_ball_2",
+      "name": "Lychee",
+      "type": "plant",
+      "path": "markers/lychee_red_ball_2/marker.json"
+    },
+    {
+      "id": "maprang_mango_plum",
+      "name": "Maprang Mango Plum",
+      "type": "plant",
+      "path": "markers/maprang_mango_plum/marker.json"
+    },
+    {
+      "id": "midyim_berry",
+      "name": "Midyim Berry",
+      "type": "plant",
+      "path": "markers/midyim_berry/marker.json"
+    },
+    {
+      "id": "wampee",
+      "name": "Wampee",
+      "type": "plant",
+      "path": "markers/wampee/marker.json"
+    }
+  ]
+}

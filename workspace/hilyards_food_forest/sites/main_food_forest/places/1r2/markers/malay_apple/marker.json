@@ -1,0 +1,14 @@
+{
+  "id": "malay_apple",
+  "type": "plant",
+  "name": "Malay Apple",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "syzygium-malaccense-2",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r2-malay-apple",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

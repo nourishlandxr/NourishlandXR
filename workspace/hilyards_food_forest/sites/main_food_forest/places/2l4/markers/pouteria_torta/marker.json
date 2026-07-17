@@ -1,0 +1,14 @@
+{
+  "id": "pouteria_torta",
+  "type": "plant",
+  "name": "Pouteria torta",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pouteria-torta",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-pouteria-torta",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

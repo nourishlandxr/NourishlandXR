@@ -1,0 +1,14 @@
+{
+  "id": "miracle_fruit",
+  "type": "plant",
+  "name": "Miracle Fruit",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "synsepalum-dulcificum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-miracle-fruit",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

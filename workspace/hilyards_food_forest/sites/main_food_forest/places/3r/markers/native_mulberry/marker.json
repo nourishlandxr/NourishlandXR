@@ -1,0 +1,14 @@
+{
+  "id": "native_mulberry",
+  "type": "plant",
+  "name": "Native Mulberry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pipturus-argenteus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-3r-native-mulberry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

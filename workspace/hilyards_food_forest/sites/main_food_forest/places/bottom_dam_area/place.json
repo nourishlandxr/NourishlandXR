@@ -1,0 +1,113 @@
+{
+  "id": "bottom_dam_area",
+  "name": "Bottom Dam Area",
+  "type": "Outdoor Area",
+  "description": "",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "markers": [
+    {
+      "id": "apple_dorsett_golden",
+      "name": "Apple Dorsett Golden",
+      "type": "plant",
+      "path": "markers/apple_dorsett_golden/marker.json"
+    },
+    {
+      "id": "apple_redlove",
+      "name": "Apple Redlove",
+      "type": "plant",
+      "path": "markers/apple_redlove/marker.json"
+    },
+    {
+      "id": "apple_tropic_anna",
+      "name": "Apple Tropic Anna",
+      "type": "plant",
+      "path": "markers/apple_tropic_anna/marker.json"
+    },
+    {
+      "id": "cassia_pendula",
+      "name": "Cassia Pendula",
+      "type": "plant",
+      "path": "markers/cassia_pendula/marker.json"
+    },
+    {
+      "id": "chestnut_reily_o",
+      "name": "Chestnut reily",
+      "type": "plant",
+      "path": "markers/chestnut_reily_o/marker.json"
+    },
+    {
+      "id": "coastal_peach",
+      "name": "Coastal Peach",
+      "type": "plant",
+      "path": "markers/coastal_peach/marker.json"
+    },
+    {
+      "id": "flowering_peach",
+      "name": "Flowering Peach",
+      "type": "plant",
+      "path": "markers/flowering_peach/marker.json"
+    },
+    {
+      "id": "myrobolan",
+      "name": "Myrobolan",
+      "type": "plant",
+      "path": "markers/myrobolan/marker.json"
+    },
+    {
+      "id": "nashi_jienseiki",
+      "name": "Nashi Jienseiki",
+      "type": "plant",
+      "path": "markers/nashi_jienseiki/marker.json"
+    },
+    {
+      "id": "nashi_tropical_shunshu",
+      "name": "Nashi Tropical Shunshu",
+      "type": "plant",
+      "path": "markers/nashi_tropical_shunshu/marker.json"
+    },
+    {
+      "id": "native_gardenia",
+      "name": "Native Gardenia",
+      "type": "plant",
+      "path": "markers/native_gardenia/marker.json"
+    },
+    {
+      "id": "okinawa_peach",
+      "name": "Okinawa Peach",
+      "type": "plant",
+      "path": "markers/okinawa_peach/marker.json"
+    },
+    {
+      "id": "pear_multigraft_hood",
+      "name": "Pear multigraft HOOD +",
+      "type": "plant",
+      "path": "markers/pear_multigraft_hood/marker.json"
+    },
+    {
+      "id": "pink_euodia",
+      "name": "Pink Euodia",
+      "type": "plant",
+      "path": "markers/pink_euodia/marker.json"
+    },
+    {
+      "id": "placentia_walnut",
+      "name": "Placentia Walnut",
+      "type": "plant",
+      "path": "markers/placentia_walnut/marker.json"
+    },
+    {
+      "id": "red_cedar",
+      "name": "Red Cedar",
+      "type": "plant",
+      "path": "markers/red_cedar/marker.json"
+    },
+    {
+      "id": "sal_apricot",
+      "name": "Sal Apricot",
+      "type": "plant",
+      "path": "markers/sal_apricot/marker.json"
+    }
+  ]
+}

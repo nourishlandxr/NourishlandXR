@@ -1,0 +1,14 @@
+{
+  "id": "sal_apricot",
+  "type": "plant",
+  "name": "Sal Apricot",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "prunus-armeniaca",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-sal-apricot",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "jackfruit_black_gold",
+  "type": "plant",
+  "name": "Jackfruit",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "artocarpus-heterophyllus",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r1-jackfruit-black-gold",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

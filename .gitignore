@@ -5,6 +5,8 @@ dist/
 *.log
 
 # Hosted project data is maintained outside this application repository.
-workspace/
+workspace/*
+!workspace/hilyards_food_forest/
+!workspace/hilyards_food_forest/**
 workspace.zip
 nourishland-data/

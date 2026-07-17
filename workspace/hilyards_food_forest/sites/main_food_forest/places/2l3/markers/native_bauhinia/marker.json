@@ -1,0 +1,14 @@
+{
+  "id": "native_bauhinia",
+  "type": "plant",
+  "name": "Native bauhinia",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "native-bauhinia",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-native-bauhinia",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

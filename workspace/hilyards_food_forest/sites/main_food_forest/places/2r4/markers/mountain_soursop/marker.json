@@ -1,0 +1,14 @@
+{
+  "id": "mountain_soursop",
+  "type": "plant",
+  "name": "Mountain Soursop",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "annona-montana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-mountain-soursop",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

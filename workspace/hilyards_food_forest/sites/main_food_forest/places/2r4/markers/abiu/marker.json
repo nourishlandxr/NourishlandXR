@@ -1,0 +1,14 @@
+{
+  "id": "abiu",
+  "type": "plant",
+  "name": "Abiu",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pouteria-caimito",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r4-abiu",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

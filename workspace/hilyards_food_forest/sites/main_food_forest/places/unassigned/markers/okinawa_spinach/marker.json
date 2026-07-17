@@ -1,0 +1,14 @@
+{
+  "id": "okinawa_spinach",
+  "type": "plant",
+  "name": "Okinawa Spinach",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "gynura-bicolor",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-okinawa-spinach",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

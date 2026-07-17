@@ -1,0 +1,14 @@
+{
+  "id": "snake_jasmine",
+  "type": "plant",
+  "name": "Snake jasmine",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "snake-jasmine",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l3-snake-jasmine",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

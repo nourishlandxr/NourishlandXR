@@ -1,0 +1,14 @@
+{
+  "id": "mexican_coriander",
+  "type": "plant",
+  "name": "Mexican Coriander",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "eryngium-foetidum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-mexican-coriander",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

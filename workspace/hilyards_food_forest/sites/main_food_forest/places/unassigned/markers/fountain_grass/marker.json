@@ -1,0 +1,14 @@
+{
+  "id": "fountain_grass",
+  "type": "plant",
+  "name": "Fountain Grass",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "pennisetum-setaceum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-fountain-grass",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

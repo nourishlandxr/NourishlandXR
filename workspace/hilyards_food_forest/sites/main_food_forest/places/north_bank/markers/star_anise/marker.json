@@ -1,0 +1,14 @@
+{
+  "id": "star_anise",
+  "type": "plant",
+  "name": "Star Anise",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "illicium-verum",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-north-bank-star-anise",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "black_wattle",
+  "type": "plant",
+  "name": "Black wattle",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "black-wattle",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-black-wattle",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

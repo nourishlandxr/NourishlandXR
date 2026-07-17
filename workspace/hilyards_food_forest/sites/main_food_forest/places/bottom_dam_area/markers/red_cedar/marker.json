@@ -1,0 +1,14 @@
+{
+  "id": "red_cedar",
+  "type": "plant",
+  "name": "Red Cedar",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "toona-ciliata",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-red-cedar",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

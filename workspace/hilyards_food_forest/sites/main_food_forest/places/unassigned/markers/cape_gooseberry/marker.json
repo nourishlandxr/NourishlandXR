@@ -1,0 +1,14 @@
+{
+  "id": "cape_gooseberry",
+  "type": "plant",
+  "name": "Cape Gooseberry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "physalis-peruviana",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-cape-gooseberry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

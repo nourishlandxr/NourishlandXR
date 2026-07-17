@@ -1,0 +1,14 @@
+{
+  "id": "guava_starling_white",
+  "type": "plant",
+  "name": "Guava starling white",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "psidium-guajava-8",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1l1-guava-starling-white",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

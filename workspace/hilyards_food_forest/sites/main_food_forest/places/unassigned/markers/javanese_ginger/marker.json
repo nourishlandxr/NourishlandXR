@@ -1,0 +1,14 @@
+{
+  "id": "javanese_ginger",
+  "type": "plant",
+  "name": "Javanese Ginger",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "curcuma-xanthorrhiza",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-unassigned-javanese-ginger",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

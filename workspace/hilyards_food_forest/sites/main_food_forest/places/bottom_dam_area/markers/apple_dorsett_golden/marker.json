@@ -1,0 +1,14 @@
+{
+  "id": "apple_dorsett_golden",
+  "type": "plant",
+  "name": "Apple Dorsett Golden",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "apple-dorsett-golden",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-apple-dorsett-golden",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

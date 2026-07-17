@@ -1,0 +1,107 @@
+{
+  "id": "main_food_forest",
+  "projectId": "hilyards_food_forest",
+  "name": "Main Food Forest",
+  "description": "",
+  "template": "food_forest",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z",
+  "places": [
+    {
+      "id": "1r1",
+      "name": "1R1",
+      "path": "places/1r1/place.json"
+    },
+    {
+      "id": "1l1",
+      "name": "1L1",
+      "path": "places/1l1/place.json"
+    },
+    {
+      "id": "1r2",
+      "name": "1R2",
+      "path": "places/1r2/place.json"
+    },
+    {
+      "id": "1r3",
+      "name": "1R3",
+      "path": "places/1r3/place.json"
+    },
+    {
+      "id": "1r4",
+      "name": "1R4",
+      "path": "places/1r4/place.json"
+    },
+    {
+      "id": "1r5",
+      "name": "1R5",
+      "path": "places/1r5/place.json"
+    },
+    {
+      "id": "2l0",
+      "name": "2L0",
+      "path": "places/2l0/place.json"
+    },
+    {
+      "id": "2l1",
+      "name": "2L1",
+      "path": "places/2l1/place.json"
+    },
+    {
+      "id": "2r1",
+      "name": "2R1",
+      "path": "places/2r1/place.json"
+    },
+    {
+      "id": "2l2",
+      "name": "2L2",
+      "path": "places/2l2/place.json"
+    },
+    {
+      "id": "2r2",
+      "name": "2R2",
+      "path": "places/2r2/place.json"
+    },
+    {
+      "id": "2l3",
+      "name": "2L3",
+      "path": "places/2l3/place.json"
+    },
+    {
+      "id": "2r3",
+      "name": "2R3",
+      "path": "places/2r3/place.json"
+    },
+    {
+      "id": "2l4",
+      "name": "2L4",
+      "path": "places/2l4/place.json"
+    },
+    {
+      "id": "2r4",
+      "name": "2R4",
+      "path": "places/2r4/place.json"
+    },
+    {
+      "id": "3r",
+      "name": "3R",
+      "path": "places/3r/place.json"
+    },
+    {
+      "id": "north_bank",
+      "name": "North Bank",
+      "path": "places/north_bank/place.json"
+    },
+    {
+      "id": "bottom_dam_area",
+      "name": "Bottom Dam Area",
+      "path": "places/bottom_dam_area/place.json"
+    },
+    {
+      "id": "unassigned",
+      "name": "Unassigned",
+      "path": "places/unassigned/place.json"
+    }
+  ]
+}

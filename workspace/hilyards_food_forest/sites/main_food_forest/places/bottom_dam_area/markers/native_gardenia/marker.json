@@ -1,0 +1,14 @@
+{
+  "id": "native_gardenia",
+  "type": "plant",
+  "name": "Native Gardenia",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "gardenia-taitensis",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-bottom-dam-area-native-gardenia",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

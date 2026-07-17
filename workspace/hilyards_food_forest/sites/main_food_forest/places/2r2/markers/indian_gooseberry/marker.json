@@ -1,0 +1,14 @@
+{
+  "id": "indian_gooseberry",
+  "type": "plant",
+  "name": "Indian Gooseberry",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "phyllanthus-emblica-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2r2-indian-gooseberry",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

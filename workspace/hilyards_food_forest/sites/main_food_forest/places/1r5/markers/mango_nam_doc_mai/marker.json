@@ -1,0 +1,14 @@
+{
+  "id": "mango_nam_doc_mai",
+  "type": "plant",
+  "name": "Mango",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "mangifera-indica-3",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-1r5-mango-nam-doc-mai",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}

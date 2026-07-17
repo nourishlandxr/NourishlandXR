@@ -1,0 +1,14 @@
+{
+  "id": "cambuca_jaboticaba",
+  "type": "plant",
+  "name": "Cambuca jaboticaba",
+  "description": "",
+  "notes": "",
+  "parent_checkpoint": "",
+  "plantId": "cambuca-jaboticaba",
+  "plantInstanceId": "hilyards-food-forest-main-food-forest-2l4-cambuca-jaboticaba",
+  "status": "ready",
+  "visibility": "draft",
+  "created": "2026-07-17T09:36:29.957Z",
+  "modified": "2026-07-17T09:36:29.957Z"
+}
