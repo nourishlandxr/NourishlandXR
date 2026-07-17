@@ -13,6 +13,9 @@ const PROJECT_NAMES = {
     Daleys: 'Daleys Fruit Tree Nursery'
 };
 const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 'cyber']);
+const DARK_PROJECT_THEMES = new Set(['dark', 'forest-dark', 'cyber']);
+const projectThemeSaveQueues = new Map();
+const requestedProjectThemes = new Map();
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
@@ -53,6 +56,7 @@ const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQu
 export function applyProjectTheme(theme = 'forest-light') {
     const selectedTheme = PROJECT_THEMES.has(theme) ? theme : 'forest-light';
     document.body.dataset.projectTheme = selectedTheme;
+    document.body.style.colorScheme = DARK_PROJECT_THEMES.has(selectedTheme) ? 'dark' : 'light';
     return selectedTheme;
 }
 
@@ -966,26 +970,57 @@ export async function renderProjectSettings(app, encodedProjectId) {
         <section class="project-delete-zone" aria-labelledby="deleteProjectTitle">
             <h2 id="deleteProjectTitle">Delete Project</h2>
             <p>Permanently deletes this project, all Areas and all content. This cannot be undone.</p>
-            <button class="danger" type="button" onclick="window.deleteProjectFromSettings('${encoded(project.id)}')">Delete Project</button>
+            <button class="danger" type="button" onclick="window.deleteProjectFromSettings('${encoded(project.id)}', '${encoded(project.name)}')">Delete Project</button>
             <p id="deleteProjectSettingsStatus" class="meta"></p>
         </section>
     </div>`;
 }
 
-export async function saveProjectTheme(encodedProjectId, theme) {
-    const projectId = decodeURIComponent(encodedProjectId);
+function updateProjectThemeControls(theme, message) {
+    const select = document.getElementById('projectTheme');
+    const preview = document.querySelector('.theme-preview-strip');
     const status = document.getElementById('projectThemeStatus');
-    try {
-        if (!PROJECT_THEMES.has(theme)) throw new Error('Choose a supported project theme.');
-        const project = await projectById(projectId);
-        await renameProjectOnDisk(projectId, { ...project, preserveId: true, name: project.name, theme });
-        applyProjectTheme(theme);
-        const preview = document.querySelector('.theme-preview-strip');
-        if (preview) preview.dataset.themePreview = theme;
-        if (status) status.textContent = `Theme saved: ${theme.replace('-', ' ')}.`;
-    } catch (error) {
-        if (status) status.textContent = `Theme could not be saved: ${error.message}`;
+    if (select && select.value !== theme) select.value = theme;
+    if (preview) preview.dataset.themePreview = theme;
+    if (status) status.textContent = message;
+}
+
+export function saveProjectTheme(encodedProjectId, theme) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    if (!PROJECT_THEMES.has(theme)) {
+        updateProjectThemeControls(applyProjectTheme('forest-light'), 'Theme could not be saved: Choose a supported project theme.');
+        return Promise.resolve();
     }
+
+    requestedProjectThemes.set(projectId, theme);
+    applyProjectTheme(theme);
+    updateProjectThemeControls(theme, `Applying ${theme.replace('-', ' ')} theme…`);
+
+    const previousSave = projectThemeSaveQueues.get(projectId) || Promise.resolve();
+    const queuedSave = previousSave.catch(() => {}).then(async () => {
+        const project = (await loadProjects()).find(item => item.id === projectId);
+        if (!project) throw new Error('Location data is unavailable.');
+        await renameProjectOnDisk(projectId, { preserveId: true, name: project.name, theme });
+        if (requestedProjectThemes.get(projectId) === theme) {
+            applyProjectTheme(theme);
+            updateProjectThemeControls(theme, `Theme saved: ${theme.replace('-', ' ')}.`);
+        }
+    }).catch(async error => {
+        if (requestedProjectThemes.get(projectId) !== theme) return;
+        try {
+            const project = (await loadProjects()).find(item => item.id === projectId);
+            const savedTheme = PROJECT_THEMES.has(project?.theme) ? project.theme : 'forest-light';
+            applyProjectTheme(savedTheme);
+            updateProjectThemeControls(savedTheme, `Theme could not be saved: ${error.message}`);
+        } catch {
+            updateProjectThemeControls(theme, `Theme could not be saved: ${error.message}`);
+        }
+    }).finally(() => {
+        if (projectThemeSaveQueues.get(projectId) === queuedSave) projectThemeSaveQueues.delete(projectId);
+    });
+
+    projectThemeSaveQueues.set(projectId, queuedSave);
+    return queuedSave;
 }
 
 export async function setProjectTutorialModeFromSettings(app, encodedProjectId, enabled) {
@@ -1006,14 +1041,18 @@ export async function resetLearningTipsFromSettings(app, encodedProjectId) {
     await renderProjectSettings(app, encoded(projectId));
 }
 
-export async function deleteProjectFromSettings(encodedProjectId) {
+export async function deleteProjectFromSettings(encodedProjectId, encodedProjectName = '') {
     const projectId = decodeURIComponent(encodedProjectId);
+    const projectName = encodedProjectName ? decodeURIComponent(encodedProjectName) : projectId;
     const status = document.getElementById('deleteProjectSettingsStatus');
     try {
-        const project = await projectById(projectId);
-        if (!window.confirm(`Delete ${project.name} and all of its Areas and content? This cannot be undone.`)) return;
+        if (!window.confirm(`Delete ${projectName} and all of its Areas and content? This cannot be undone.`)) return;
         if (status) status.textContent = 'Deleting project…';
+        const pendingThemeSave = projectThemeSaveQueues.get(projectId);
+        if (pendingThemeSave) await pendingThemeSave;
         await deleteProjectOnDisk(projectId);
+        projectThemeSaveQueues.delete(projectId);
+        requestedProjectThemes.delete(projectId);
         applyProjectTheme('forest-light');
         await renderPlatformHome(document.getElementById('app'));
     } catch (error) {

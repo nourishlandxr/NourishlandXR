@@ -198,3 +198,16 @@ test('create with or without position -> restart -> Field Guide -> later GPS pos
     assert.equal(creatorPlants.plants.some(item => item.commonName === 'Incomplete Plant'), false);
     assert.equal(creatorPlants.plants.filter(item => item.id === created.plant.id).length, 1);
 });
+
+test('a newly created project can be deleted by its stable project id', async () => {
+    const createdProject = await jsonRequest('/api/projects', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Home Test Delete', visibility: 'draft' })
+    });
+    assert.equal(createdProject.id, 'home_test_delete');
+
+    await jsonRequest(`/api/projects/${encodeURIComponent(createdProject.id)}`, { method: 'DELETE' });
+
+    const missingProject = await fetch(`${baseUrl}/api/projects/${encodeURIComponent(createdProject.id)}`);
+    assert.equal(missingProject.status, 404);
+});

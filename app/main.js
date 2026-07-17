@@ -169,7 +169,7 @@ window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, them
 window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
 window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
 window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
-window.deleteProjectFromSettings = projectId => deleteProjectFromSettings(projectId);
+window.deleteProjectFromSettings = (projectId, projectName = '') => deleteProjectFromSettings(projectId, projectName);
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
 window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, projectId);
 window.filterAllProjectEntries = filterAllProjectEntries;
