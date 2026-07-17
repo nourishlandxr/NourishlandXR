@@ -17,10 +17,29 @@ test('welcome keeps Create and Explore and adds the account-free AR demo', () =>
     assert.match(app.innerHTML, /assets\/herov2\.png/);
 });
 
-test('visitor project selection proceeds directly to the location experience', () => {
+test('visitor project selection opens the welcome page without a repeated card action', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/explorer.js'), 'utf8');
-    assert.doesNotMatch(source, /<span>Open visitor welcome<\/span>/);
-    assert.match(source, /renderVisitorLocationExperience/);
+    assert.doesNotMatch(source, /<span>Explore this location<\/span>/i);
+    assert.match(source, /renderVisitorLocationIntro/);
+    assert.match(source, /Explore in AR/);
+    assert.match(source, /Browse Content/);
+});
+
+test('AR entry is gated by preparation and only Start AR Mode launches AR', () => {
+    const source = fs.readFileSync(path.join(root, 'app/screens/explorer.js'), 'utf8');
+    assert.match(source, /NourishlandXR uses your phone’s camera/);
+    assert.match(source, /When prompted, please allow access to your camera and location/);
+    assert.match(source, />Start AR Mode</);
+    assert.match(source, />Go Back</);
+});
+
+test('creator dashboard exposes quick add, browse, V2 stories and project settings', () => {
+    const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    assert.match(source, /Dive straight into AR/);
+    assert.match(source, /Add without AR/);
+    assert.match(source, /Stories and Focus Elements/);
+    assert.match(source, /Project Settings/);
+    assert.match(source, /Manage entrances and experience starting points/);
 });
 
 test('temporary AR demo is in-memory and supports placement, profile and exit', () => {

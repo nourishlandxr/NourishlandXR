@@ -25,7 +25,12 @@ export function renderProjectEntry(config) {
             <button class="change-location-control" type="button" onclick="${config.backAction}">← Change location</button>
             <h1>${config.locationName}</h1>
             <p>${config.siteName} · Dashboard</p>
+            <p class="dashboard-introduction">${config.introduction}</p>
         </header>
+
+        <section class="location-create-section location-create-section-prominent">
+            <button class="add-to-location-action" type="button" onclick="${config.addAction.action}"><strong>${config.addAction.label}</strong><span>${config.addAction.description}</span></button>
+        </section>
 
         <section class="experience-launch-grid" aria-label="Explore this location">
             ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
@@ -42,10 +47,6 @@ export function renderProjectEntry(config) {
             </div>
             ${config.status.notice ? `<p class="setup-notice">${config.status.notice}</p>` : ''}
             <div class="status-actions">${config.status.actions.map(item => `<button type="button" onclick="${item.action}">${item.label}</button>`).join('')}</div>
-        </section>
-
-        <section class="location-create-section">
-            <button class="add-to-location-action" type="button" onclick="${config.addAction.action}"><strong>${config.addAction.label}</strong><span>${config.addAction.description}</span></button>
         </section>
 
         <nav class="location-tool-grid" aria-label="Location tools">

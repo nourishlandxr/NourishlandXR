@@ -35,7 +35,7 @@ export async function renderExplorerProjects(app) {
     disableTargetReticle();
     try {
         const projects = (await loadProjects(true)).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationExperience('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong><span>Explore this location</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
+        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${escapeHtml(error.message)}`); }
 }
 
@@ -46,7 +46,7 @@ export async function renderVisitorLocationExperience(app, encodedProjectId) {
     try {
         const project = (await loadProjects(true)).find(item => item.id === projectId);
         if (!project) throw new Error('This location is not available to visitors.');
-        app.innerHTML = `<div class="screen location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">← Choose another location</button><p class="welcome-label">Visitor experience</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">Choose how you would like to explore.</p></div><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.startLocationAr('${encoded(project.id)}')"><strong>Explore with AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="window.renderFieldGuide('${encoded(project.id)}')"><strong>Field Guide</strong><span>Browse plants, places and stories without using AR.</span></button></section></div>`;
+        return renderVisitorLocationIntro(app, encoded(project.id));
     } catch (error) { app.innerHTML = errorScreen(`Location could not be opened: ${escapeHtml(error.message)}`); }
 }
 
@@ -68,9 +68,20 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
         const directions = starting?.marker.directions || '';
         const cover = project.coverImage ? `<img class="visitor-welcome-cover" src="${escapeHtml(project.coverImage)}" alt="${escapeHtml(project.name)}" />` : '';
         const backAction = creatorPreview ? `window.renderProjectDashboard('${encoded(project.id)}')` : 'window.renderV1Explorer()';
-        const guideAction = creatorPreview ? `window.renderFieldGuide('${encoded(project.id)}', true)` : `window.renderFieldGuide('${encoded(project.id)}')`;
-        app.innerHTML = `<div class="screen visitor-welcome location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="${backAction}">${creatorPreview ? '← Back to dashboard' : '← Choose another location'}</button><p class="welcome-label">${creatorPreview ? 'Visitor welcome preview' : 'Visitor welcome'}</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">${escapeHtml(starting?.marker.name || 'Explore this location')}</p></div>${cover}<section class="panel visitor-welcome-copy"><p>${escapeHtml(welcome)}</p>${directions ? `<h2>When you arrive</h2><p>${escapeHtml(directions)}</p>` : ''}</section><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.startLocationAr('${encoded(project.id)}')"><strong>Explore with AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="${guideAction}"><strong>Field Guide</strong><span>Browse plants, places and stories without using AR.</span></button></section></div>`;
+        app.innerHTML = `<div class="screen visitor-welcome location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="${backAction}">${creatorPreview ? '← Back to dashboard' : '← Choose another location'}</button><p class="welcome-label">${creatorPreview ? 'Visitor welcome preview' : 'Visitor welcome'}</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">${escapeHtml(starting?.marker.name || 'Explore this location')}</p></div>${cover}<section class="panel visitor-welcome-copy"><p>${escapeHtml(welcome)}</p>${directions ? `<h2>When you arrive</h2><p>${escapeHtml(directions)}</p>` : ''}</section><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.renderArPreparation('${encoded(project.id)}', '${creatorPreview ? 'creator-preview' : 'visitor'}')"><strong>Explore in AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="window.renderBrowseContent('${encoded(project.id)}', ${creatorPreview})"><strong>Browse Content</strong><span>Open the Field Guide, map and published visitor content without using the camera.</span></button></section></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Visitor welcome could not be loaded: ${escapeHtml(error.message)}`); }
+}
+
+export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '') {
+    const backAction = returnContext === 'creator'
+        ? `window.renderProjectDashboard('${encodedProjectId}')`
+        : returnContext === 'placement'
+            ? `window.renderPlacementChoice('${encodedProjectId}', '${placementType === 'sub_checkpoint' ? 'checkpoint' : placementType}')`
+            : `window.renderVisitorLocationIntro('${encodedProjectId}', ${returnContext === 'creator-preview'})`;
+    const startAction = returnContext === 'placement'
+        ? `window.beginPlacementAr('${encodedProjectId}', '${placementType}')`
+        : `window.startLocationAr('${encodedProjectId}')`;
+    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div><section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
 }
 
 export async function renderXrProjects(app) {

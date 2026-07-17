@@ -2229,3 +2229,16 @@ body.ar-session-active::after {
     .setup-choice-grid { grid-template-columns: 1fr; }
     .location-map-row { grid-template-columns: 1fr; }
 }
+.dashboard-introduction {
+    max-width: 48rem;
+    margin-top: .75rem;
+    line-height: 1.55;
+}
+
+.location-create-section-prominent {
+    margin-top: 1rem;
+}
+
+.ar-preparation-actions {
+    justify-content: space-between;
+}
