@@ -1,7 +1,7 @@
 ﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
-import { createProjectSite, renameProjectOnDisk } from '../services/persistence.js';
+import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 
@@ -10,6 +10,7 @@ const PROJECT_NAMES = {
     Frankendael: 'Frankendael Park',
     Daleys: 'Daleys Fruit Tree Nursery'
 };
+const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 'cyber']);
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
@@ -33,6 +34,12 @@ const editedLabel = value => {
 };
 const SETTINGS_KEY = 'nourishland-xr-settings';
 const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true };
+
+export function applyProjectTheme(theme = 'forest-light') {
+    const selectedTheme = PROJECT_THEMES.has(theme) ? theme : 'forest-light';
+    document.body.dataset.projectTheme = selectedTheme;
+    return selectedTheme;
+}
 
 export function readPlatformSettings() {
     try {
@@ -62,7 +69,9 @@ export function savePlatformSetting(name, value) {
 async function projectById(projectId) {
     const project = (await loadProjects()).find(item => item.id === projectId);
     if (!project) throw new Error('Location data is unavailable.');
-    return { ...project, name: PROJECT_NAMES[project.id] || project.name };
+    const resolvedProject = { ...project, name: PROJECT_NAMES[project.id] || project.name };
+    applyProjectTheme(resolvedProject.theme);
+    return resolvedProject;
 }
 
 async function projectContent(projectId) {
@@ -106,6 +115,7 @@ async function projectAreaContext(projectId, areaId) {
 }
 
 export async function renderPlatformHome(app) {
+    applyProjectTheme('forest-light');
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     const cards = projects.map(project => `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>${escapeHtml(PROJECT_NAMES[project.id] || project.name)}</strong></button>`).join('');
     app.innerHTML = `<div class="screen platform-home creator-project-menu">
@@ -564,7 +574,74 @@ export async function renderStoriesAndFocus(app, encodedProjectId) {
 
 export async function renderProjectSettings(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Project Settings</h1><p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Manage entrances and experience starting points</strong><span>Manage Master Markers and choose where visitors begin the experience.</span></button></div></div>`;
+    const theme = PROJECT_THEMES.has(project.theme) ? project.theme : 'forest-light';
+    app.innerHTML = `<div class="screen project-settings-screen">
+        <div class="page-header">
+            <button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button>
+            <h1>Project Settings</h1>
+            <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
+        </div>
+        <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle">
+            <div class="section-heading-row"><div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div></div>
+            <div class="field">
+                <label for="projectTheme">Project theme</label>
+                <select id="projectTheme" onchange="window.saveProjectTheme('${encoded(project.id)}', this.value)">
+                    <option value="light" ${theme === 'light' ? 'selected' : ''}>LIGHT (White)</option>
+                    <option value="dark" ${theme === 'dark' ? 'selected' : ''}>DARK (Black)</option>
+                    <option value="forest-dark" ${theme === 'forest-dark' ? 'selected' : ''}>FOREST DARK (Green)</option>
+                    <option value="forest-light" ${theme === 'forest-light' ? 'selected' : ''}>FOREST LIGHT</option>
+                    <option value="cyber" ${theme === 'cyber' ? 'selected' : ''}>CYBER (Gray / Purple)</option>
+                </select>
+            </div>
+            <div class="theme-preview-strip" data-theme-preview="${theme}" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <p id="projectThemeStatus" class="meta">Current theme: ${escapeHtml(theme.replace('-', ' '))}.</p>
+        </section>
+        <div class="content-type-list">
+            <button class="content-type-row" type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Manage entrances and experience starting points</strong><span>Manage Master Markers and choose where visitors begin the experience.</span></button>
+        </div>
+        <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle">
+            <div class="section-heading-row"><h2 id="backupProjectTitle">Backup Project to File</h2><span class="coming-soon-badge">Coming Soon</span></div>
+            <p>Exports a configuration file containing all project data, Areas, content and settings.</p>
+            <button type="button" disabled aria-disabled="true">Backup Project</button>
+        </section>
+        <section class="project-delete-zone" aria-labelledby="deleteProjectTitle">
+            <h2 id="deleteProjectTitle">Delete Project</h2>
+            <p>Permanently deletes this project, all Areas and all content. This cannot be undone.</p>
+            <button class="danger" type="button" onclick="window.deleteProjectFromSettings('${encoded(project.id)}')">Delete Project</button>
+            <p id="deleteProjectSettingsStatus" class="meta"></p>
+        </section>
+    </div>`;
+}
+
+export async function saveProjectTheme(encodedProjectId, theme) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const status = document.getElementById('projectThemeStatus');
+    try {
+        if (!PROJECT_THEMES.has(theme)) throw new Error('Choose a supported project theme.');
+        const project = await projectById(projectId);
+        await renameProjectOnDisk(projectId, { ...project, preserveId: true, name: project.name, theme });
+        applyProjectTheme(theme);
+        const preview = document.querySelector('.theme-preview-strip');
+        if (preview) preview.dataset.themePreview = theme;
+        if (status) status.textContent = `Theme saved: ${theme.replace('-', ' ')}.`;
+    } catch (error) {
+        if (status) status.textContent = `Theme could not be saved: ${error.message}`;
+    }
+}
+
+export async function deleteProjectFromSettings(encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const status = document.getElementById('deleteProjectSettingsStatus');
+    try {
+        const project = await projectById(projectId);
+        if (!window.confirm(`Delete ${project.name} and all of its Areas and content? This cannot be undone.`)) return;
+        if (status) status.textContent = 'Deleting project…';
+        await deleteProjectOnDisk(projectId);
+        applyProjectTheme('forest-light');
+        await renderPlatformHome(document.getElementById('app'));
+    } catch (error) {
+        if (status) status.textContent = `Project could not be deleted: ${error.message}`;
+    }
 }
 
 export async function renderBrowseContent(app, encodedProjectId, creator = false) {

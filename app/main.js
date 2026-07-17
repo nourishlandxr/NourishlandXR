@@ -19,7 +19,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { captureProjectAreaLocation, deleteProjectArea, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation } from './screens/projectDashboard.js';
+import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
 import { applyPlatformSettings, captureStartingPointLocation, ensureProjectLocation, focusStartingPointMapFields, openProjectEntry, openProjectStartingPoint, renderAddToLocation, renderAreaRequired, renderBrowseContent, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
@@ -157,6 +157,8 @@ window.renderBrowseContent = (projectId, creator = false) => renderBrowseContent
 window.renderLocationMap = (projectId, creator = true) => renderLocationMap(app, projectId, creator);
 window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
+window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, theme);
+window.deleteProjectFromSettings = projectId => deleteProjectFromSettings(projectId);
 window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);

@@ -84,6 +84,17 @@ after(async () => {
 });
 
 test('create with or without position -> restart -> Field Guide -> later GPS positioning preserves linked plants', async () => {
+    const themedProject = await jsonRequest(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Hillyards Food Forest', preserveId: true, theme: 'cyber' })
+    });
+    assert.equal(themedProject.theme, 'cyber');
+    const invalidTheme = await fetch(`${baseUrl}/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Hillyards Food Forest', preserveId: true, theme: 'neon-orange' })
+    });
+    assert.equal(invalidTheme.status, 400);
     const createdArea = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places`, {
         method: 'POST',
         body: JSON.stringify({ name: 'Tutorial Area', type: 'Outdoor Area', description: 'Created from guided setup.', visibility: 'draft' })
@@ -137,6 +148,8 @@ test('create with or without position -> restart -> Field Guide -> later GPS pos
     await stopServer();
     await startServer();
 
+    const restartedProject = await jsonRequest(`/api/projects/${projectId}`);
+    assert.equal(restartedProject.theme, 'cyber');
     const listedMarkers = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers?view=visitor`);
     const listedPlants = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants?view=visitor`);
     const gpsMarkers = await jsonRequest(`/api/projects/${projectId}/gps-markers?view=visitor`);

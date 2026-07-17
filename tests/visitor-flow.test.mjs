@@ -42,6 +42,17 @@ test('creator dashboard exposes quick add, browse, V2 stories and project settin
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
     assert.match(source, /Manage entrances and experience starting points/);
+    assert.match(source, /Change Theme/);
+    assert.match(source, /LIGHT \(White\)/);
+    assert.match(source, /DARK \(Black\)/);
+    assert.match(source, /FOREST DARK \(Green\)/);
+    assert.match(source, /FOREST LIGHT/);
+    assert.match(source, /CYBER \(Gray \/ Purple\)/);
+    assert.match(source, /Backup Project to File/);
+    assert.match(source, /Exports a configuration file containing all project data/);
+    assert.match(source, /Coming Soon/);
+    assert.match(source, /deleteProjectFromSettings/);
+    assert.match(source, /window\.confirm/);
     assert.match(entrySource, /Quick Access/);
     assert.match(entrySource, /quick-access-icon/);
     assert.match(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);

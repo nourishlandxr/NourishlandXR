@@ -34,6 +34,7 @@ const PLACE_TYPES = new Set([
     'Water Feature',
     'Operational Area'
 ]);
+const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 'cyber']);
 const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoint']);
 const VISIBILITY_VALUES = new Set(['draft', 'public', 'hidden']);
 const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_forest', 'places', 'field_markers');
@@ -330,6 +331,7 @@ function createProject(projectData) {
         description: projectData.description || '',
         coverImage: projectData.coverImage || '',
         template: projectData.template || '',
+        theme: PROJECT_THEMES.has(projectData.theme) ? projectData.theme : 'forest-light',
         visibility: normalizeVisibility(projectData.visibility)
     };
     writeJson(path.join(projectDir, 'project.json'), project);
@@ -351,6 +353,9 @@ function renameProject(projectId, projectData) {
     const currentDir = getSitePath(projectId);
     if (!fs.existsSync(currentDir)) {
         throw new Error('Project not found');
+    }
+    if (projectData.theme !== undefined && !PROJECT_THEMES.has(projectData.theme)) {
+        throw new Error('Unsupported project theme');
     }
 
     const name = String(projectData.name || '').trim();
