@@ -9,8 +9,6 @@ let spatialDashboardMatrix = null;
 let program = null;
 let dashboardBuffer = null;
 let dashboardTexture = null;
-let panelContext = null;
-let panelCanvas = null;
 const PANEL_W = 0.72;
 const PANEL_H = 0.52;
 
@@ -32,9 +30,7 @@ function createShader(type, src) {
 function renderDashboardToCanvas(ctx, w, h) {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = 'rgba(20,55,34,.92)';
-    ctx.beginPath();
-    ctx.roundRect(0, 0, w, h, 16);
-    ctx.fill();
+    ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = '#fff';
     ctx.font = '700 28px sans-serif';
     ctx.textAlign = 'center';
@@ -46,45 +42,38 @@ function renderDashboardToCanvas(ctx, w, h) {
     ctx.font = '16px sans-serif';
     ctx.fillText('Create a marker or note to get started.', w / 2, 96);
     ctx.fillStyle = '#dcef95';
-    ctx.beginPath();
-    ctx.roundRect(20, 120, w - 40, 44, 10);
-    ctx.fill();
+    ctx.fillRect(20, 120, w - 40, 44);
     ctx.fillStyle = '#173522';
     ctx.font = '700 18px sans-serif';
     ctx.fillText('Add Marker', w / 2, 148);
     ctx.fillStyle = '#28c840';
-    ctx.beginPath();
-    ctx.roundRect(20, 178, w - 40, 44, 10);
-    ctx.fill();
+    ctx.fillRect(20, 178, w - 40, 44);
     ctx.fillStyle = '#fff';
     ctx.font = '700 18px sans-serif';
     ctx.fillText('Add Note', w / 2, 206);
-    // Web Mode button at bottom
     ctx.fillStyle = '#c43636';
-    ctx.beginPath();
-    ctx.roundRect(20, h - 56, w - 40, 40, 10);
-    ctx.fill();
+    ctx.fillRect(20, h - 56, w - 40, 40);
     ctx.fillStyle = '#fff';
     ctx.font = '700 16px sans-serif';
     ctx.fillText('Web Mode', w / 2, h - 32);
 }
 
-function buildDashboardTexture() {
-    if (panelCanvas) {
-        renderDashboardToCanvas(panelContext, panelCanvas.width, panelCanvas.height);
-        if (dashboardTexture) gl.deleteTexture(dashboardTexture);
-        dashboardTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, dashboardTexture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panelCanvas);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    }
+function updateTexture() {
+    if (!dashboardTexture || !gl) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    renderDashboardToCanvas(ctx, 400, 300);
+    gl.bindTexture(gl.TEXTURE_2D, dashboardTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
 }
 
-function drawSpatialPanel(view, matrix) {
+function drawPanel(view, matrix) {
     if (!dashboardTexture || !matrix) return;
-    const mvp = multiplyMat4(view.projectionMatrix, multiplyMat4(view.transform.inverse.matrix, matrix));
+    const vp = multiplyMat4(view.transform.inverse.matrix, matrix);
+    const mvp = multiplyMat4(view.projectionMatrix, vp);
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, dashboardBuffer);
     const pLoc = gl.getAttribLocation(program, 'p');
@@ -122,11 +111,13 @@ function setupRenderer() {
         -PANEL_W / 2, PANEL_H / 2, 0, 0, 0
     ]), gl.STATIC_DRAW);
 
-    panelCanvas = document.createElement('canvas');
-    panelCanvas.width = 400;
-    panelCanvas.height = 300;
-    panelContext = panelCanvas.getContext('2d');
-    buildDashboardTexture();
+    dashboardTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, dashboardTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    updateTexture();
 }
 
 function removeCanvas() {
@@ -134,8 +125,6 @@ function removeCanvas() {
     dashboardTexture = null;
     program = null;
     dashboardBuffer = null;
-    panelCanvas = null;
-    panelContext = null;
     hitSource?.cancel();
     hitSource = null;
     refSpace = null;
@@ -167,8 +156,7 @@ export async function startArMode(projectId = '') {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
         session = await navigator.xr.requestSession('immersive-ar', {
             requiredFeatures: ['hit-test'],
-            optionalFeatures: ['local-floor'],
-            domOverlay: { root: document.body }
+            optionalFeatures: ['local-floor']
         });
         canvas = document.createElement('canvas');
         canvas.style.position = 'fixed';
@@ -193,14 +181,15 @@ export async function startArMode(projectId = '') {
         setupRenderer();
         finishingDemo = false;
 
-        // Add reticle and guide text
-        const reticle = document.createElement('div');
-        reticle.className = 'temporary-demo-reticle';
-        document.body.append(reticle);
+        const container = document.createElement('div');
+        container.id = 'arOverlayRoot';
+        container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:12001;display:grid;place-items:center;';
         const guide = document.createElement('div');
-        guide.className = 'temporary-demo-guide fade-in';
+        guide.className = 'temporary-demo-guide';
         guide.textContent = 'Tap a surface to place your dashboard';
-        document.body.append(guide);
+        guide.style.cssText = 'color:rgba(255,255,255,.92);font-size:.9rem;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;';
+        container.appendChild(guide);
+        document.body.append(container);
 
         const draw = (_time, frame) => {
             if (frame.session !== session || !gl) return;
@@ -211,6 +200,8 @@ export async function startArMode(projectId = '') {
             const hitPose = hit?.getPose(refSpace);
             latestHitMatrix = hitPose ? new Float32Array(hitPose.transform.matrix) : null;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+            gl.useProgram(program);
+            gl.depthMask(true);
             gl.clearColor(0, 0, 0, 0);
             gl.clearDepth(1);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -218,7 +209,7 @@ export async function startArMode(projectId = '') {
                 for (const view of pose.views) {
                     const viewport = layer.getViewport(view);
                     gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-                    drawSpatialPanel(view, spatialDashboardMatrix);
+                    drawPanel(view, spatialDashboardMatrix);
                 }
             }
         };
@@ -239,8 +230,7 @@ export async function startArMode(projectId = '') {
                 spatialDashboardMatrix[12] = pos[0];
                 spatialDashboardMatrix[13] = pos[1];
                 spatialDashboardMatrix[14] = pos[2];
-                buildDashboardTexture();
-                reticle.remove();
+                updateTexture();
                 guide.textContent = 'Dashboard placed! Tap Web Mode to exit.';
                 setTimeout(() => guide.remove(), 3000);
             }
@@ -253,8 +243,8 @@ export async function startArMode(projectId = '') {
             finishingDemo = false;
             session = null;
             removeCanvas();
-            document.querySelector('.temporary-demo-reticle')?.remove();
-            document.querySelector('.temporary-demo-guide')?.remove();
+            const root = document.getElementById('arOverlayRoot');
+            if (root) root.remove();
         });
         return true;
     } catch {
