@@ -105,6 +105,54 @@ const AR_DIAGNOSTICS_KEY = 'nourishland-xr-ar-diagnostics-v1';
 const PLATFORM_SETTINGS_KEY = 'nourishland-xr-settings';
 const AR_RECOVERY_KEY = 'nourishland-xr-active-creator-ar';
 
+let windowZIndex = 100;
+
+function makeDraggable(element, handle) {
+    let isDragging = false;
+    let startX, startY, origX, origY;
+    const header = handle || element;
+    if (!header) return;
+
+    function onStart(e) {
+        const ev = e.touches ? e.touches[0] : e;
+        isDragging = true;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        origX = element.offsetLeft || 0;
+        origY = element.offsetTop || 0;
+        element.style.zIndex = ++windowZIndex;
+        element.classList.add('is-dragging');
+        if (e.touches) document.addEventListener('touchmove', onMove, { passive: true });
+        else document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchend', onEnd, { passive: true });
+        document.addEventListener('mouseup', onEnd);
+        e.preventDefault();
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+        const ev = e.touches ? e.touches[0] : e;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        element.style.left = (parseInt(element.style.left) || origX) + dx + 'px';
+        element.style.top = (parseInt(element.style.top) || origY) + dy + 'px';
+        startX = ev.clientX;
+        startY = ev.clientY;
+    }
+
+    function onEnd() {
+        isDragging = false;
+        element.classList.remove('is-dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchend', onEnd);
+    }
+
+    header.addEventListener('mousedown', onStart);
+    header.addEventListener('touchstart', onStart, { passive: true });
+}
+
 // ---- Demo / menu state machine ----
 // mode: 'scanning-menu' | 'menu-placed' | 'parent-prompt' | 'scanning-marker' | 'naming-marker' | 'marker-confirmed' | 'add-information'
 let mode = 'idle';
@@ -1267,8 +1315,15 @@ function createArOverlay() {
         creatorToolbar.addEventListener('beforexrselect', event => event.preventDefault());
         document.body.append(creatorToolbar);
         document.getElementById('arDashboardButton').addEventListener('click', summonArDashboard);
-        document.getElementById('arAddButton').addEventListener('click', showAddMenu);
-        document.getElementById('arSettingsButton').addEventListener('click', showArSettings);
+    document.getElementById('arAddButton').addEventListener('click', showAddMenu);
+    document.getElementById('arSettingsButton').addEventListener('click', showArSettings);
+
+    // Make AR UI elements draggable for fine-tuning placement
+    makeDraggable(creatorToolbar);
+    makeDraggable(modal);
+    makeDraggable(overlay);
+    makeDraggable(tutorialPanel);
+    makeDraggable(dashboardControls);
 
         dashboardControls = document.createElement('div');
         dashboardControls.id = 'arDashboardControls';
