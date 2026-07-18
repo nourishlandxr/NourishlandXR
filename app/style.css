@@ -3229,6 +3229,24 @@ body.ar-session-active::after {
 .ar-preparation-actions {
     justify-content: space-between;
 }
+.ar-preparation-skip-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: rgba(250, 252, 248, .76);
+    border: 1px solid var(--earth-line);
+    cursor: pointer;
+    font-size: .85rem;
+    user-select: none;
+}
+.ar-preparation-skip-toggle input {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    cursor: pointer;
+}
 
 @media (max-width: 620px) {
     .contextual-guidance { grid-template-columns: 1fr; }

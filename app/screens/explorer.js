@@ -100,8 +100,25 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
         : creatorDashboardMode && arStage === 'learning'
             ? '<div class="panel contextual-reminder"><p>Camera and location access begins only after you choose Start AR Mode.</p></div>'
             : '';
-    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${startAction}">Start AR Mode</button></div></div>`;
+    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><label class="ar-preparation-skip-toggle"><input type="checkbox" id="arSkipWarning" /> <span>Don't show this message again</span></label><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="window.startArWithSkipCheck('${encodedProjectId}', '${returnContext}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')">Start AR Mode</button></div></div>`;
     if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
+}
+
+export function startArWithSkipCheck(_app, encodedProjectId, returnContext, placementType, encodedPlaceId, encodedSiteId) {
+    const skip = document.getElementById('arSkipWarning')?.checked;
+    if (skip) {
+        try { localStorage.setItem('nxr-skip-ar-warning', 'true'); } catch {}
+    }
+    const startAction = returnContext === 'existing-placement'
+        ? `window.beginExistingPlacementAr('${encodedProjectId}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')`
+        : returnContext === 'area-navigation'
+            ? `window.beginAreaNavigationAr('${encodedProjectId}', '${encodedSiteId}', '${encodedPlaceId}')`
+        : returnContext === 'placement'
+        ? `window.beginPlacementAr('${encodedProjectId}', '${placementType}')`
+        : returnContext === 'creator'
+            ? `window.startCreatorLocationAr('${encodedProjectId}')`
+            : `window.startLocationAr('${encodedProjectId}')`;
+    eval(startAction.replace('window.', ''));
 }
 
 export function toggleArTechnicalDetails() {
