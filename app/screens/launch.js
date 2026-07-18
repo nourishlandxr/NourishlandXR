@@ -37,10 +37,11 @@ export function renderLaunchScreen(app) {
                 </div>
             </section>
 
-            <nav class="platform-landing-nav" aria-label="Platform navigation">
-                <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
-                <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
-            </nav>
+        <nav class="platform-landing-nav" aria-label="Platform navigation">
+            <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
+            <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
+            <span class="version-badge" aria-label="Version">V0.8122</span>
+        </nav>
 
             <p class="collaboration-credit"><strong>NourishlandXR</strong> is a collaboration between <strong>Nourishland</strong> and <strong>CyberLotus</strong>, combining regenerative education with immersive technology to transform real landscapes into interactive learning experiences through spatial computing and augmented reality.</p>
             <p class="collaboration-credit"><strong>Nourishland</strong> is committed to providing educational tools and hands-on solutions that help green our planet, growing more sustainable and engaging food systems for the world around us. Through food forests, plant literacy, and immersive learning experiences, we bring people closer to how food is grown, cared for, and shared — making sustainability something practical, adaptable, and genuinely enjoyable to be part of.</p>

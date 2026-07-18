@@ -2273,6 +2273,7 @@ body.ar-session-active::after {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
     gap: 8px;
 }
 
@@ -2282,6 +2283,16 @@ body.ar-session-active::after {
     border-color: rgba(47, 109, 66, .22);
     background: rgba(247, 250, 243, .7);
     color: var(--leaf-deep);
+}
+.version-badge {
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(47, 109, 66, .12);
+    color: var(--leaf-deep);
+    user-select: none;
 }
 
 .platform-utility-nav {
