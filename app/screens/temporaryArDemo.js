@@ -451,9 +451,8 @@ async function tryImmersiveDemo() {
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
         const session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['dom-overlay', 'hit-test'],
-            optionalFeatures: ['local-floor'],
-            domOverlay: { root: document.body }
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['local-floor']
         });
         demoSession = session;
         demoCanvas = document.createElement('canvas');
