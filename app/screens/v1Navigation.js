@@ -13,7 +13,7 @@ async function hillyardsContext(visitor = false) {
     const project = (await loadProjects(visitor)).find(item => item.id === PROJECT_ID);
     if (!project) throw new Error('Hillyards location data is unavailable.');
     const site = (await loadProjectSites(project.id, visitor)).find(item => item.id === SITE_ID);
-    if (!site) throw new Error('Main Food Forest is unavailable.');
+    if (!site) throw new Error('Main site is unavailable.');
     const place = (await loadSitePlaces(project.id, site.id, visitor)).find(item => item.id === PLACE_ID);
     if (!place) throw new Error('The internal Hillyards marker place is unavailable.');
     return { project, site, place };

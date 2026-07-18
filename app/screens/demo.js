@@ -9,7 +9,7 @@ export async function renderDemoHome(app) {
         const project = (await loadProjects()).find(item => item.id === PROJECT_ID);
         if (!project) throw new Error('The Hillyards project is missing.');
         const site = (await loadProjectSites(project.id)).find(item => item.id === SITE_ID);
-        if (!site) throw new Error('The Main Food Forest site is missing.');
+        if (!site) throw new Error('The main site is missing.');
         const place = (await loadSitePlaces(project.id, site.id)).find(item => item.id === PLACE_ID);
         if (!place) throw new Error('The Hillyards demo place is missing.');
         const markers = await loadPlaceMarkers(project.id, site.id, place.id);
