@@ -314,7 +314,7 @@ window.applyFieldGuideFilter = () => applyFieldGuideFilter();
 window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
 window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
-window.startArMode = () => startArMode();
+window.startArMode = (projectId) => startArMode(projectId);
 window.exitArMode = () => exitArMode();
 window.isArModeActive = () => isArModeActive();
 window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };

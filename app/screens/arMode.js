@@ -160,7 +160,8 @@ export function isArModeActive() {
     return Boolean(session);
 }
 
-export async function startArMode() {
+export async function startArMode(projectId = '') {
+    if (projectId) window._arProjectId = projectId;
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
