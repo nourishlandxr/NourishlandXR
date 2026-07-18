@@ -481,8 +481,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 setupAction: `window.editProjectStartingPoint('${encoded(project.id)}')`
             },
             quickActions: [
-                { icon: '🌱', label: 'Add Plant', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
+                { icon: '📍', label: 'Add Marker', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
                 { icon: '✎', label: 'Add Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` },
+                { icon: '✦', label: 'Spec. Marker', action: `window.renderPlatformComingSoon('Special Marker', 'creator')` },
                 { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
             ],
             guidance,
@@ -491,7 +492,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
-                { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` }
+                { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` },
+                { label: 'NourishlandXR Settings', description: 'Platform settings, text size, hints, diagnostics and build information from the welcome page.', action: `window.renderPlatformComingSoon('Settings', 'creator')` }
             ],
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`
