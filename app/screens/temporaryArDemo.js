@@ -538,21 +538,32 @@ async function tryImmersiveDemo() {
 
         session.addEventListener('select', event => {
             // Handle dashboard placement on first tap
-            if (!spatialDashboardMatrix && latestHitMatrix) {
+            if (!spatialDashboardMatrix) {
                 const viewerPose = event.frame.getViewerPose(demoRefSpace);
-                if (!viewerPose) return;
-                const pos = new Float32Array([
-                    latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]
-                ]);
-                // Use the viewer pose matrix for proper billboard orientation
-                spatialDashboardMatrix = new Float32Array(viewerPose.transform.matrix);
-                spatialDashboardMatrix[12] = pos[0];
-                spatialDashboardMatrix[13] = pos[1];
-                spatialDashboardMatrix[14] = pos[2];
-                buildSpatialPanel('dashboard');
-                // Update guide text
-                const guide = document.querySelector('.temporary-demo-guide');
-                if (guide) { guide.textContent = 'Dashboard placed. Tap the marker to interact.'; setTimeout(() => { if(guide) guide.textContent = ''; }, 3000); }
+                if (viewerPose) {
+                    let pos;
+                    if (latestHitMatrix) {
+                        // Use detected surface position
+                        pos = [
+                            latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]
+                        ];
+                    } else {
+                        // Place 1.2m in front of the viewer as fallback
+                        const m = viewerPose.transform.matrix;
+                        pos = [
+                            m[12] - m[8] * 1.2,
+                            m[13] - m[9] * 1.2 + 0.1,
+                            m[14] - m[10] * 1.2
+                        ];
+                    }
+                    spatialDashboardMatrix = new Float32Array(viewerPose.transform.matrix);
+                    spatialDashboardMatrix[12] = pos[0];
+                    spatialDashboardMatrix[13] = pos[1];
+                    spatialDashboardMatrix[14] = pos[2];
+                    buildSpatialPanel('dashboard');
+                    const guide = document.querySelector('.temporary-demo-guide');
+                    if (guide) { guide.textContent = 'Dashboard placed!'; setTimeout(() => { if(guide) guide.textContent = ''; }, 2500); }
+                }
                 return;
             }
 
