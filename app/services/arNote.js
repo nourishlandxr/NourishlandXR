@@ -107,14 +107,29 @@ const AR_RECOVERY_KEY = 'nourishland-xr-active-creator-ar';
 
 let windowZIndex = 100;
 
-function makeDraggable(element, handle) {
+function makeDraggable(element, handle, onMoved = null) {
     let isDragging = false;
     let startX, startY, origX, origY;
     const header = handle || element;
     if (!header) return;
 
+    // Edge glow detection: highlight borders when cursor nears edges
+    function edgeAt(e) {
+        const ev = e.touches ? e.touches[0] : e;
+        const rect = element.getBoundingClientRect();
+        const margin = 18;
+        const nearLeft = ev.clientX - rect.left < margin;
+        const nearRight = rect.right - ev.clientX < margin;
+        const nearTop = ev.clientY - rect.top < margin;
+        const nearBottom = rect.bottom - ev.clientY < margin;
+        const nearEdge = nearLeft || nearRight || nearTop || nearBottom;
+        element.classList.toggle('drag-edge', nearEdge);
+        return nearEdge;
+    }
+
     function onStart(e) {
         const ev = e.touches ? e.touches[0] : e;
+        if (!edgeAt(e) && !element.classList.contains('modal-card') && !element.closest('.ar-modal-card')) return;
         isDragging = true;
         startX = ev.clientX;
         startY = ev.clientY;
@@ -122,6 +137,7 @@ function makeDraggable(element, handle) {
         origY = element.offsetTop || 0;
         element.style.zIndex = ++windowZIndex;
         element.classList.add('is-dragging');
+        element.classList.remove('drag-edge');
         if (e.touches) document.addEventListener('touchmove', onMove, { passive: true });
         else document.addEventListener('mousemove', onMove);
         document.addEventListener('touchend', onEnd, { passive: true });
@@ -147,6 +163,13 @@ function makeDraggable(element, handle) {
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('mouseup', onEnd);
         document.removeEventListener('touchend', onEnd);
+        if (onMoved) onMoved(element);
+    }
+
+    // Hover listener for edge glow - only on non-touch
+    if (!('ontouchstart' in window)) {
+        element.addEventListener('mousemove', edgeAt);
+        element.addEventListener('mouseleave', () => element.classList.remove('drag-edge'));
     }
 
     header.addEventListener('mousedown', onStart);

@@ -26,8 +26,8 @@ export function renderLaunchScreen(app) {
                     </button>
                 </div>
                 <div class="welcome-complementary-grid">
-                    <button class="menu-card role-card welcome-complementary-card" onclick="window.renderPlatformComingSoon('About This Experience', 'launch')">
-                        <strong>About This Experience</strong>
+                    <button class="menu-card role-card welcome-complementary-card" onclick="window.renderPlatformComingSoon('About This Tool', 'launch')">
+                        <strong>About This Tool</strong>
                         <span>Understand what NourishlandXR is and what it can help you build.</span>
                     </button>
                     <button class="menu-card role-card welcome-complementary-card" onclick="window.openTemporaryArDemoWindow()">

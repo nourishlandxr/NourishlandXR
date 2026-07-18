@@ -114,8 +114,11 @@ export function renderProjectEntry(config) {
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
         </section>
 
-        <section class="project-areas-section" aria-labelledby="projectAreasTitle">
-            <div class="section-heading-row"><h2 id="projectAreasTitle">Areas</h2><span class="project-area-count">${areas.length}</span></div>
+        <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
+            <button class="section-heading-row areas-toggle" type="button" onclick="window.toggleAreas(event)">
+                <h2 id="projectAreasTitle">Areas</h2>
+                <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
+            </button>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>

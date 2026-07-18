@@ -204,6 +204,15 @@ async function buildProjectSearchItems(project, site, areas, entries) {
     return [...areaItems, ...contentItems];
 }
 
+export function toggleAreas(event) {
+    const section = event.currentTarget.closest('[data-areas-expanded]');
+    if (!section) return;
+    const expanded = section.dataset.areasExpanded === 'true';
+    section.dataset.areasExpanded = expanded ? 'false' : 'true';
+    const arrow = section.querySelector('.areas-arrow');
+    if (arrow) arrow.textContent = expanded ? '▾' : '▴';
+}
+
 export function filterProjectSearch(value) {
     const query = String(value || '').trim().toLocaleLowerCase();
     const terms = query.split(/\s+/).filter(Boolean);
@@ -385,34 +394,28 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
             <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div></div>`;
         return;
     }
-    if (feature === 'About This Experience') {
+    if (feature === 'About This Tool') {
         app.innerHTML = `<div class="screen about-experience">
             <div class="page-header">
                 <button class="ghost" onclick="${backAction}">Back</button>
                 <p class="welcome-label">Nourishland XR</p>
-                <h1>About This Experience</h1>
+                <h1>About This Tool</h1>
             </div>
             <article class="panel about-experience-content">
                 <section>
                     <h2>What is NourishlandXR?</h2>
-                    <p>NourishlandXR is a dynamic, place-based database that connects information to real environments.</p>
-                    <p>It can help people document and organize gardens, food forests, orchards, farms, nurseries, parks, community spaces, workplaces and other living or working landscapes.</p>
-                    <p>Plants, observations, stories, tasks and important points can be recorded as part of a location. That information can then be viewed on a normal screen or connected to its physical surroundings using maps, location data and augmented reality.</p>
+                    <p>NourishlandXR is a place-based tool that connects information directly to real environments — gardens, food forests, farms, parks and nurseries.</p>
+                    <p>It helps you record plants, observations, stories and tasks as part of a location. That information can be viewed on a normal screen or experienced in AR through spatial computing and augmented reality.</p>
                 </section>
                 <section>
-                    <h2>More than a map</h2>
-                    <p>NourishlandXR does not only record where something is. It can record what it is, why it matters, how it changes and how it relates to the landscape around it.</p>
-                    <p>A plant can connect to a reusable plant profile. A checkpoint can reveal a story or guide a visitor. A note can record an observation, task or change over time. Areas can organize meaningful sections of a larger location.</p>
+                    <h2>How it works</h2>
+                    <p>Every plant, note or checkpoint belongs to a Location and Area. The same content works in both content mode (on-screen) and AR mode (in the landscape), so you can enter data efficiently and explore it spatially when you're ready.</p>
                 </section>
                 <section>
-                    <h2>Build from anywhere</h2>
-                    <p>Information can be prepared from a computer without using AR. Plants, checkpoints and notes can be created first, organized into Areas and physically positioned later using a phone, map or AR device.</p>
+                    <h2>Built for food literacy</h2>
+                    <p>NourishlandXR is built by Nourishland — an organisation dedicated to helping people grow food, understand plants and build resilient food systems. This tool is part of a larger mission to make sustainability practical, engaging and accessible.</p>
                 </section>
-                <section>
-                    <h2>A living record</h2>
-                    <p>As more information is added, the project becomes a growing digital record of the place—supporting education, management, discovery, collaboration and long-term observation.</p>
-                </section>
-                <p class="about-experience-conclusion"><strong>NourishlandXR helps turn knowledge about a place into something organized, visible and connected to the landscape itself.</strong></p>
+                <p class="about-experience-conclusion"><strong>NourishlandXR turns knowledge about a place into something you can see, edit and share — on screen and in the landscape.</strong></p>
             </article>
         </div>`;
         return;
