@@ -109,8 +109,8 @@ export function renderProjectEntry(config) {
                 <span aria-hidden="true">⌕</span>
                 <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="Search Areas, Plants, Notes and information…" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
             </div>
-            <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Start typing to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
-            <div id="projectSearchResults" class="project-search-results" hidden>${searchResultsHtml}</div>
+            <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Type to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
+            <div id="projectSearchResults" class="project-search-results">${searchResultsHtml}</div>
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
         </section>
 
