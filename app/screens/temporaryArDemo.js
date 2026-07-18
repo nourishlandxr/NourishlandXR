@@ -277,7 +277,28 @@ function renderDemo(simulated) {
     profileLinked = false;
     markerName = 'My Plant';
     demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div></div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
-    setTimeout(showDashboard, 2000);
+    setTimeout(showPlacementPrompt, 2000);
+}
+
+function showPlacementPrompt() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    const overlay = document.querySelector('.breathing-overlay');
+    if (overlay) overlay.remove();
+    container.innerHTML = '';
+    const win = document.createElement('div');
+    win.className = 'ar-window draggable-window placement-prompt-window';
+    win.style.left = 'calc(50% - 250px)';
+    win.style.top = '25vh';
+    win.style.zIndex = ++windowZIndex;
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Place Your Dashboard</strong></div><div class="window-body"><p class="welcome-label">STEP 1</p><h2>Choose a location for your dashboard</h2><p>Point at a flat surface near you — a table, counter or the ground — and tap to place your interactive dashboard there. You'll be able to move it later by dragging.</p><div class="tutorial-success">${demoSession ? 'Aim at a surface and tap.' : 'Tap anywhere to place your dashboard.'}</div><div class="button-row"><button class="primary" type="button" id="demoPlaceDashboard">Place Dashboard</button></div></div>`;
+    container.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    document.getElementById('demoPlaceDashboard').addEventListener('click', () => { win.remove(); showDashboard(); });
+    if (!demoSession) {
+        win.querySelector('.window-header').style.cursor = 'default';
+        document.getElementById('demoPlaceDashboard').focus();
+    }
 }
 
 function drawSpatialMarker(view) {
