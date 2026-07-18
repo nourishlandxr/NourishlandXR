@@ -40,7 +40,7 @@ export function renderLaunchScreen(app) {
         <nav class="platform-landing-nav" aria-label="Platform navigation">
             <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
             <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
-            <span class="version-badge" aria-label="Version">V0.8125</span>
+            <span class="version-badge" aria-label="Version">V0.8126</span>
         </nav>
 
             <p class="collaboration-credit"><strong>NourishlandXR</strong> is a collaboration between <strong>Nourishland</strong> and <strong>CyberLotus</strong>, combining regenerative education with immersive technology to transform real landscapes into interactive learning experiences through spatial computing and augmented reality.</p>

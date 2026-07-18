@@ -11,6 +11,7 @@ import { renderAssetWorkspace, renderAssetGeneral } from './screens/assetWorkspa
 import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from './components/v1Editors.js';
 import { copyArDiagnostics, exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, startArWithSkipCheck, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
+import { startArMode, exitArMode, isArModeActive } from './screens/arMode.js';
 import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
@@ -313,6 +314,9 @@ window.applyFieldGuideFilter = () => applyFieldGuideFilter();
 window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
 window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
+window.startArMode = () => startArMode();
+window.exitArMode = () => exitArMode();
+window.isArModeActive = () => isArModeActive();
 window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };
 window.openHillyardsExplorer = () => renderHillyardsExplorer(app);
 window.openHostedProjectPrompt = () => { const url = window.prompt('Hosted project.json URL'); if (url) openHostedProject(app, url); };

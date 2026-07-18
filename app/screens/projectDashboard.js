@@ -336,10 +336,16 @@ export async function showWorkModeGuidance(app, encodedProjectId) {
     await renderProjectDashboard(app, encoded(projectId));
 }
 
-export function openCreatorArMode(app, encodedProjectId) {
+export async function openCreatorArMode(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     recordTutorialEvent(projectId, 'ar_mode_introduced');
-    window.renderArPreparation(encoded(projectId), 'creator');
+    window._arProjectId = projectId;
+    // Store the current project context for the AR mode to use when returning
+    const started = await window.startArMode();
+    if (!started) {
+        // Fallback to original AR preparation if immersive AR is not available
+        window.renderArPreparation(encoded(projectId), 'creator');
+    }
 }
 
 export async function openCreatorContentMode(app, encodedProjectId) {
