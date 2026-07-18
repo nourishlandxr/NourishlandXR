@@ -10,7 +10,7 @@
   "sites": [
     {
       "id": "main_food_forest",
-      "name": "Main Food Forest",
+      "name": "HILLYARDS food forest loaded",
       "path": "sites/main_food_forest/site.json"
     }
   ]
