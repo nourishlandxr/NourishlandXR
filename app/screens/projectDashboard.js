@@ -469,10 +469,6 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             locationName: escapeHtml(project.name),
             siteName: escapeHtml(site?.name || 'No site configured'),
             backAction: 'window.renderDemoProjects()',
-            launchActions: [
-                { label: 'AR Mode', description: 'Position and work with content in the landscape.', action: `window.openCreatorArMode('${encoded(project.id)}')` },
-                { label: 'Content Mode', description: 'Add and organize content without the camera.', action: `window.openCreatorContentMode('${encoded(project.id)}')` }
-            ],
             status: {
                 entries: String(projectEntries.length),
                 unplaced: String(unplacedEntries.length),
@@ -482,15 +478,16 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 setupAction: `window.editProjectStartingPoint('${encoded(project.id)}')`
             },
             quickActions: [
-                { icon: '🌱', label: 'Plant', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
-                { icon: '⚑', label: 'Checkpoint', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'checkpoint')` },
-                { icon: '✎', label: 'Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` }
+                { icon: '🌱', label: 'Add Plant', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
+                { icon: '✎', label: 'Add Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` },
+                { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
             ],
             guidance,
-            helpAction: `window.showWorkModeGuidance('${encoded(project.id)}')`,
+            fieldGuideAction: `window.renderFieldGuide('${encoded(project.id)}', true)`,
+            mapAction: `window.renderLocationMap('${encoded(project.id)}', true)`,
+            storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
-                { label: 'Stories and Focus Elements', description: 'Create special checkpoints for stories, guided moments and focused experiences connected to an Area.', action: `window.renderStoriesAndFocus('${encoded(project.id)}')` },
                 { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` }
             ],
             latestEntries,
