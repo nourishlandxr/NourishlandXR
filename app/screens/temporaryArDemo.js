@@ -539,14 +539,20 @@ async function tryImmersiveDemo() {
         session.addEventListener('select', event => {
             // Handle dashboard placement on first tap
             if (!spatialDashboardMatrix && latestHitMatrix) {
+                const viewerPose = event.frame.getViewerPose(demoRefSpace);
+                if (!viewerPose) return;
                 const pos = new Float32Array([
                     latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]
                 ]);
-                spatialDashboardMatrix = new Float32Array(viewerSpace.transform.matrix);
+                // Use the viewer pose matrix for proper billboard orientation
+                spatialDashboardMatrix = new Float32Array(viewerPose.transform.matrix);
                 spatialDashboardMatrix[12] = pos[0];
                 spatialDashboardMatrix[13] = pos[1];
                 spatialDashboardMatrix[14] = pos[2];
                 buildSpatialPanel('dashboard');
+                // Update guide text
+                const guide = document.querySelector('.temporary-demo-guide');
+                if (guide) { guide.textContent = 'Dashboard placed. Tap the marker to interact.'; setTimeout(() => { if(guide) guide.textContent = ''; }, 3000); }
                 return;
             }
 
@@ -555,6 +561,8 @@ async function tryImmersiveDemo() {
                 const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, demoRefSpace);
                 if (selectedSpatialMarker(rayPose?.transform.matrix)) {
                     profileLinked ? buildSpatialPanel('plantProfile') : buildSpatialPanel('tag');
+                    const guide = document.querySelector('.temporary-demo-guide');
+                    if (guide) { guide.textContent = profileLinked ? 'Plant profile loaded.' : 'Tag prompt loaded.'; setTimeout(() => { if(guide) guide.textContent = ''; }, 2000); }
                 }
             }
         });
