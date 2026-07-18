@@ -269,22 +269,28 @@ function selectPlantProfile(index) {
 function renderDemo(simulated) {
     profileLinked = false;
     markerName = 'My Plant';
-    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div></div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
+    const reticle = demoSession ? '<div class="temporary-demo-reticle"></div><div class="temporary-demo-guide fade-in">Choose a location to load your dashboard</div>' : '';
+    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div>${reticle}</div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
     setTimeout(showPlacementPrompt, 2000);
 }
 
 function showPlacementPrompt() {
-    const container = document.getElementById('temporaryDemoCard');
-    if (!container) return;
     const overlay = document.querySelector('.breathing-overlay');
     if (overlay) overlay.remove();
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    if (demoSession) {
+        const guide = document.querySelector('.temporary-demo-guide');
+        if (guide) guide.textContent = 'Tap a surface to place your dashboard';
+        return;
+    }
     container.innerHTML = '';
     const win = document.createElement('div');
     win.className = 'ar-window draggable-window placement-prompt-window';
-    win.style.left = 'calc(50% - 250px)';
-    win.style.top = '25vh';
+    win.style.left = 'calc(50% - 220px)';
+    win.style.top = 'calc(50% + 10vh)';
     win.style.zIndex = ++windowZIndex;
-    win.innerHTML = `<div class="window-header"><span class="window-dots"><i></i><i></i><i></i></span><strong>Place Your Dashboard</strong></div><div class="window-body"><p class="welcome-label">STEP 1</p><h2>Choose a location for your dashboard</h2><p>Point at a flat surface near you and tap to place your interactive dashboard in the real world. You can move it later by dragging.</p><div class="tutorial-success">${demoSession ? 'In AR mode, aim at a surface and tap.' : 'Tap below to place your dashboard.'}</div><div class="button-row"><button class="primary" type="button" id="demoPlaceDashboard">Place Dashboard</button></div></div>`;
+    win.innerHTML = `<div class="window-header"><span class="window-dots"><i></i><i></i><i></i></span><strong>Place Your Dashboard</strong></div><div class="window-body"><p class="welcome-label">STEP 1</p><h2>Choose a location</h2><p>Tap below, then tap a surface in the scene to place your dashboard.</p><div class="button-row"><button class="primary" type="button" id="demoPlaceDashboard">Place Dashboard</button></div></div>`;
     container.appendChild(win);
     makeDraggable(win, win.querySelector('.window-header'));
     if (!demoSession) {
