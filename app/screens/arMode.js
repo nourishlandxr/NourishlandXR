@@ -23,6 +23,7 @@ let activeProjectId = '';
 let preparedDashboardSource = null;
 let preparedDashboardSnapshot = null;
 let preparedDashboardPromise = null;
+let startPromise = null;
 
 const PANEL_DISTANCE = 1.2;
 
@@ -338,6 +339,21 @@ export function isArModeActive() {
 }
 
 export async function startArMode(projectId) {
+    if (session) return true;
+    if (startPromise) return startPromise;
+
+    // Start the launch immediately. On some phones, waiting for a capability
+    // check before requestSession() causes the browser to lose the tap that
+    // authorises opening immersive AR.
+    startPromise = launchArMode(projectId);
+    try {
+        return await startPromise;
+    } finally {
+        startPromise = null;
+    }
+}
+
+async function launchArMode(projectId) {
     if (projectId) {
         window._arProjectId = projectId;
         activeProjectId = projectId;
@@ -350,11 +366,6 @@ export async function startArMode(projectId) {
     createOverlay();
 
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) {
-            cleanup();
-            return false;
-        }
-
         session = await navigator.xr.requestSession('immersive-ar', {
             requiredFeatures: ['dom-overlay'],
             optionalFeatures: ['local-floor'],

@@ -146,3 +146,14 @@ test('Creator project AR uses an upright spatial dashboard without a debug overl
     assert.match(styles, /\.creator-ar-taskbar/);
     assert.match(styles, /\.creator-ar-toolbox\.is-open/);
 });
+
+test('Quick Access keeps its tap activation until the Creator AR session is requested', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    assert.match(arSource, /let startPromise = null/);
+    assert.match(arSource, /startPromise = launchArMode\(projectId\)/);
+    assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
+    assert.match(arSource, /session = await navigator\.xr\.requestSession\('immersive-ar'/);
+    assert.match(dashboardSource, /await window\.startArMode\(projectId\)/);
+    assert.match(dashboardSource, /Quick Access launch failed/);
+});

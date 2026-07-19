@@ -340,7 +340,14 @@ export async function showWorkModeGuidance(app, encodedProjectId) {
 export async function openCreatorArMode(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     recordTutorialEvent(projectId, 'ar_mode_introduced');
-    const started = await window.startArMode(projectId);
+    let started = false;
+    try {
+        // Call the AR request directly from the quick-action tap. This keeps
+        // the browser's user-activation permission intact on mobile devices.
+        started = await window.startArMode(projectId);
+    } catch (error) {
+        console.warn('[Creator AR] Quick Access launch failed.', error);
+    }
     if (!started) {
         // Fallback to original AR preparation if immersive AR is not available
         window.renderArPreparation(encoded(projectId), 'creator');
