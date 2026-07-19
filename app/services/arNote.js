@@ -252,35 +252,22 @@ function draw(time, frame) {
         const activeSession = frame.session;
         activeSession.requestAnimationFrame(draw);
 
-        // DIAGNOSTIC 1: XR session started
-        dlog('XR session started: frame received');
-
-        // Get viewer pose for camera/view transforms only (NOT for placement)
         const viewerPose = frame.getViewerPose(refSpace);
+        if (!viewerPose) return;
 
-        // DIAGNOSTIC 2: Reference space created
-        dlog('Ref space: ' + (refSpace ? 'OK' : 'NULL'));
+        // Re-bind layer framebuffer each frame (XR may swap)
+        const layer = activeSession.renderState.baseLayer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
 
-        if (!viewerPose) {
-            dlog('No viewer pose yet, skipping frame');
-            return;
-        }
-
-        // DIAGNOSTIC 3: Viewer pose received
-        dlog('Viewer pose received');
-
-        // DIAGNOSTIC 4: Panel matrix (fixed)
-        dlog('Panel matrix: x=' + FIXED_MODEL_MATRIX[12].toFixed(1) +
-            ' y=' + FIXED_MODEL_MATRIX[13].toFixed(1) +
-            ' z=' + FIXED_MODEL_MATRIX[14].toFixed(1));
-
-        const layers = activeSession.renderState.baseLayer;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, layers.framebuffer);
-        gl.colorMask(true, true, true, true);
+        // Reset GL state each frame (XR compositor may change it)
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(true);
+        gl.colorMask(true, true, true, true);
         gl.clearColor(0, 0, 0, 0);
-        gl.clearDepth(1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
         gl.useProgram(program);
 
         const pLoc = gl.getAttribLocation(program, 'position');
@@ -288,54 +275,29 @@ function draw(time, frame) {
         const mvpLoc = gl.getUniformLocation(program, 'mvp');
         const texLoc = gl.getUniformLocation(program, 'tex');
 
-        // Bind buffer and texture once
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.enableVertexAttribArray(pLoc);
         gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 20, 0);
         gl.enableVertexAttribArray(tLoc);
         gl.vertexAttribPointer(tLoc, 2, gl.FLOAT, false, 20, 12);
+
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(texLoc, 0);
 
-        // DIAGNOSTIC 5: Vertex buffer bound, Texture uploaded
-        dlog('VBO bound | TEX bound');
-
-        let drawCalls = 0;
-
         for (const view of viewerPose.views) {
-            const vp = layers.getViewport(view);
+            const vp = layer.getViewport(view);
             gl.viewport(vp.x, vp.y, vp.width, vp.height);
 
-            // DIAGNOSTIC 6: Viewport dimensions
-            dlog('Viewport: ' + vp.width + 'x' + vp.height);
-
-            // DIAGNOSTIC 7: Projection matrix valid
-            const proj = view.projectionMatrix;
-            dlog('Proj[0]=' + proj[0].toFixed(2) + ' Proj[5]=' + proj[5].toFixed(2) +
-                ' Proj[10]=' + proj[10].toFixed(2) + ' Proj[14]=' + proj[14].toFixed(2));
-
-            // Model-view: view.inverse * FIXED_MODEL_MATRIX
             const vm = view.transform.inverse.matrix;
             const mv = multiplyMat4(vm, FIXED_MODEL_MATRIX);
             const mvp = multiplyMat4(view.projectionMatrix, mv);
 
             gl.uniformMatrix4fv(mvpLoc, false, mvp);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
-            drawCalls++;
         }
 
-        // DIAGNOSTIC 8: Draw call executed
-        dlog('Draw call executed: ' + drawCalls + ' view(s)');
-
-        // DIAGNOSTIC 9: Scene contains
-        dlog('Scene: ' + drawCalls + ' draw calls, 6 verts per quad (' + (drawCalls * 6) + ' total)');
-
-        // DIAGNOSTIC 10: Panel visible
-        dlog('Panel visible=true frustumCulled=false renderOrder=1000');
-
     } catch (error) {
-        dlog('DRAW ERROR: ' + (error?.message || String(error)).slice(0, 60));
         console.error('[AR] draw error:', error);
     }
 }

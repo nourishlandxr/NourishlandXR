@@ -239,6 +239,17 @@ export async function startLocationAr(encodedProjectId) {
     console.log('[AR] startLocationAr: basic mode (no GPS required)');
     // DISABLED: GPS, heading and spatial reconstruction removed for basic AR mode
     // All content is now rendered on a single panel at a fixed position in front of the viewer.
+    // ─── PRE-DIAGNOSTIC: Create visible element BEFORE startArNote ───
+    try {
+        if (!document.getElementById('nxrPreDiag')) {
+            const d = document.createElement('div');
+            d.id = 'nxrPreDiag';
+            d.style.cssText = 'position:fixed;left:0;bottom:0;z-index:2147483647;color:#ff0;font:16px monospace;background:#000;padding:10px;border:4px solid #ff0;';
+            d.textContent = 'PRE-AR: startLocationAr called';
+            document.documentElement.append(d);
+        }
+    } catch(e) { console.error('[AR] pre-diag failed:', e); }
+    // ─── End pre-diag ───
     await startArNote(null, null);
 }
 
