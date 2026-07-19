@@ -19,6 +19,9 @@ let panelWidth = 0.66;
 let panelHeight = 0.82;
 let dashboardVisible = true;
 let recenterDashboard = null;
+let preparedDashboardSource = null;
+let preparedDashboardSnapshot = null;
+let preparedDashboardPromise = null;
 
 const PANEL_DISTANCE = 1.2;
 
@@ -151,10 +154,39 @@ async function captureDashboardSnapshot(dashboardRoot) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" id="creatorArSnapshot" data-project-theme="${theme}" data-text-size="${textSize}" style="width:${width}px;height:${height}px;overflow:hidden;background:#edf3e9;"><style><![CDATA[${snapshotStyles}]]></style><div id="app" style="width:${width}px;transform:translateY(-${window.scrollY}px);transform-origin:top left;">${sourceMarkup}</div></div></foreignObject></svg>`;
     const image = await loadSnapshotImage(svg);
     const snapshot = document.createElement('canvas');
-    snapshot.width = 900;
+    snapshot.width = Math.max(540, Math.min(900, Math.floor(1800 * width / height)));
     snapshot.height = Math.round(snapshot.width * height / width);
-    snapshot.getContext('2d').drawImage(image, 0, 0, snapshot.width, snapshot.height);
+    const context = snapshot.getContext('2d');
+    context.drawImage(image, 0, 0, snapshot.width, snapshot.height);
+    if (context.getImageData(Math.floor(snapshot.width / 2), Math.floor(snapshot.height / 2), 1, 1).data[3] === 0) {
+        throw new Error('The dashboard snapshot was blank.');
+    }
     return snapshot;
+}
+
+export function prepareArDashboardSnapshot(dashboardRoot) {
+    const source = dashboardRoot?.querySelector('.project-entry') || dashboardRoot;
+    if (!source) return Promise.reject(new Error('The project dashboard is unavailable.'));
+    if (preparedDashboardSource === source) {
+        if (preparedDashboardSnapshot) return Promise.resolve(preparedDashboardSnapshot);
+        if (preparedDashboardPromise) return preparedDashboardPromise;
+    }
+
+    preparedDashboardSource = source;
+    preparedDashboardSnapshot = null;
+    preparedDashboardPromise = captureDashboardSnapshot(dashboardRoot).then(snapshot => {
+        if (preparedDashboardSource === source) preparedDashboardSnapshot = snapshot;
+        return snapshot;
+    }).catch(error => {
+        if (preparedDashboardSource === source) preparedDashboardPromise = null;
+        throw error;
+    });
+    return preparedDashboardPromise;
+}
+
+function preparedSnapshotFor(dashboardRoot) {
+    const source = dashboardRoot?.querySelector('.project-entry') || dashboardRoot;
+    return preparedDashboardSource === source ? preparedDashboardSnapshot : null;
 }
 
 function fallbackDashboardCanvas() {
@@ -165,11 +197,25 @@ function fallbackDashboardCanvas() {
     return fallback;
 }
 
+function updatePanelGeometry() {
+    if (!buffer) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
+         panelWidth / 2, -panelHeight / 2, 0, 1, 1,
+         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
+        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
+         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
+        -panelWidth / 2,  panelHeight / 2, 0, 0, 0
+    ]), gl.STATIC_DRAW);
+}
+
 function bakeTexture(panelCanvas) {
     const source = panelCanvas || fallbackDashboardCanvas();
     panelWidth = 0.66;
     panelHeight = panelWidth * source.height / source.width;
 
+    if (texture) gl.deleteTexture(texture);
     texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -178,6 +224,7 @@ function bakeTexture(panelCanvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    updatePanelGeometry();
 }
 
 function initGl(panelCanvas) {
@@ -191,17 +238,8 @@ function initGl(panelCanvas) {
         throw new Error(gl.getProgramInfoLog(program) || 'Shader program could not be linked.');
     }
 
-    bakeTexture(panelCanvas);
     buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
-         panelWidth / 2, -panelHeight / 2, 0, 1, 1,
-         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
-        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
-         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
-        -panelWidth / 2,  panelHeight / 2, 0, 0, 0
-    ]), gl.STATIC_DRAW);
+    bakeTexture(panelCanvas);
 }
 
 function syncTaskbar() {
@@ -295,13 +333,6 @@ export async function startArMode(projectId) {
         });
         document.body.classList.add('creator-ar-session-active');
 
-        let dashboardSnapshot;
-        try {
-            dashboardSnapshot = await captureDashboardSnapshot(dashboardRoot);
-        } catch (error) {
-            console.warn('[Creator AR] Dashboard snapshot unavailable; using the AR dashboard fallback.', error);
-        }
-
         canvas = document.createElement('canvas');
         canvas.className = 'creator-ar-canvas';
         document.body.append(canvas);
@@ -316,7 +347,15 @@ export async function startArMode(projectId) {
         } catch {
             refSpace = await session.requestReferenceSpace('local');
         }
-        initGl(dashboardSnapshot);
+        const preparedSnapshot = preparedSnapshotFor(dashboardRoot);
+        initGl(preparedSnapshot);
+        if (!preparedSnapshot) {
+            prepareArDashboardSnapshot(dashboardRoot).then(snapshot => {
+                if (session && gl) bakeTexture(snapshot);
+            }).catch(error => {
+                console.warn('[Creator AR] Dashboard snapshot unavailable; keeping the AR dashboard fallback.', error);
+            });
+        }
 
         const position = [0, 1.5, -PANEL_DISTANCE];
         let placed = false;

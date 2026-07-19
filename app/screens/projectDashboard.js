@@ -6,6 +6,7 @@ import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
+import { prepareArDashboardSnapshot } from './arMode.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -502,6 +503,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`
         });
+        prepareArDashboardSnapshot(app).catch(() => {});
         if (guidance?.stage === 'new' && guidance.introducedEvent) {
             recordTutorialEvent(project.id, guidance.introducedEvent);
         }
