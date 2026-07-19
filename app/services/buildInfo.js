@@ -13,7 +13,7 @@ const ts = now.getFullYear().toString() +
 
 // Base version — bump this number for significant releases.
 // The timestamp suffix ensures every load produces a unique version.
-const BASE = '0.8127';
+const BASE = '0.88';
 
 export const BUILD_INFO = Object.freeze({
     version: `${BASE}@${ts}`,
