@@ -169,10 +169,10 @@ function drawWelcomeNote() {
 function setPanelGeometry(w, h) {
     const hw = w / 2, hh = h / 2;
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    // Texcoords: (0,1) at top, (1,0) at bottom — matches canvas (0,0)=top-left with NO flip
+    // U=0 left, U=1 right; V=0 bottom, V=1 top (UNPACK_FLIP_Y_WEBGL flips V during upload)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -hw, -hh, 0, 0, 1, hw, -hh, 0, 1, 1, hw, hh, 0, 1, 0,
-        -hw, -hh, 0, 0, 1, hw, hh, 0, 1, 0, -hw, hh, 0, 0, 0
+        -hw, -hh, 0, 0, 0, hw, -hh, 0, 1, 0, hw, hh, 0, 1, 1,
+        -hw, -hh, 0, 0, 0, hw, hh, 0, 1, 1, -hw, hh, 0, 0, 1
     ]), gl.STATIC_DRAW);
     dlog('Buffer set: ' + w + 'x' + h);
 }
