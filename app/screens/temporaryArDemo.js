@@ -511,11 +511,13 @@ async function tryImmersiveDemo() {
             -.18, .08, 0, 0, 0
         ]), demoGl.STATIC_DRAW);
 
+        let latestViewerMatrix = null;
         const draw = (_time, frame) => {
             if (frame.session !== demoSession || !demoGl) return;
             frame.session.requestAnimationFrame(draw);
             const layer = frame.session.renderState.baseLayer;
             const pose = frame.getViewerPose(demoRefSpace);
+            latestViewerMatrix = pose ? new Float32Array(pose.transform.matrix) : null;
             const hit = demoHitSource ? frame.getHitTestResults(demoHitSource)[0] : null;
             const hitPose = hit?.getPose(demoRefSpace);
             latestHitMatrix = hitPose ? new Float32Array(hitPose.transform.matrix) : null;
@@ -546,8 +548,7 @@ async function tryImmersiveDemo() {
         session.addEventListener('select', event => {
             // Handle dashboard placement on first tap
             if (!spatialDashboardMatrix) {
-                const viewerPose = event.frame.getViewerPose(demoRefSpace);
-                if (viewerPose) {
+                if (latestViewerMatrix) {
                     let pos;
                     if (latestHitMatrix) {
                         // Use detected surface position
@@ -556,14 +557,14 @@ async function tryImmersiveDemo() {
                         ];
                     } else {
                         // Place 1.2m in front of the viewer as fallback
-                        const m = viewerPose.transform.matrix;
+                        const m = latestViewerMatrix;
                         pos = [
                             m[12] - m[8] * 1.2,
                             m[13] - m[9] * 1.2 + 0.1,
                             m[14] - m[10] * 1.2
                         ];
                     }
-                    spatialDashboardMatrix = new Float32Array(viewerPose.transform.matrix);
+                    spatialDashboardMatrix = new Float32Array(latestViewerMatrix);
                     spatialDashboardMatrix[12] = pos[0];
                     spatialDashboardMatrix[13] = pos[1];
                     spatialDashboardMatrix[14] = pos[2];
