@@ -6,7 +6,7 @@ function statusItem(label, value) {
     return `<div class="experience-status-item"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
-const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#39;' })[character]);
 
 function contextualGuidance(guidance, target) {
     if (!guidance || guidance.target !== target || ['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
@@ -63,6 +63,27 @@ export function renderProjectEntry(config) {
             ? 'quickAccess'
             : '';
 
+    // Content mode sections displayed below Quick Access
+    const contentSections = `
+        <section class="content-mode-section">
+            <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
+                <span class="content-mode-icon" aria-hidden="true">🌿</span>
+                <div><strong>Field Guide</strong><span>Browse and edit Plants and their information.</span></div>
+            </button>
+            <button class="content-mode-card" type="button" onclick="${config.mapAction}">
+                <span class="content-mode-icon" aria-hidden="true">⌕</span>
+                <div><strong>Map</strong><span>Review Areas and spatial organisation without the camera.</span></div>
+            </button>
+            <button class="content-mode-card" type="button" onclick="${config.storiesAction}">
+                <span class="content-mode-icon" aria-hidden="true">⚑</span>
+                <div><strong>Stories & Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></div>
+            </button>
+            <button class="content-mode-card" type="button" onclick="${config.unplacedAction}">
+                <span class="content-mode-icon" aria-hidden="true">📦</span>
+                <div><strong>Unplaced Content</strong><span>${config.status.unplaced} items can be positioned later.</span></div>
+            </button>
+        </section>`;
+
     return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
             <button class="change-location-control" type="button" onclick="${config.backAction}">← Change location</button>
@@ -78,6 +99,8 @@ export function renderProjectEntry(config) {
             </div>
         </section>
 
+        ${contentSections}
+
         <section class="project-search-section" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">
                 <div><h2 id="projectSearchTitle">Search</h2><p>Find an Area, Plant, Note, checkpoint or saved information.</p></div>
@@ -86,21 +109,16 @@ export function renderProjectEntry(config) {
                 <span aria-hidden="true">⌕</span>
                 <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="Search Areas, Plants, Notes and information…" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
             </div>
-            <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Start typing to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
-            <div id="projectSearchResults" class="project-search-results" hidden>${searchResultsHtml}</div>
+            <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Type to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
+            <div id="projectSearchResults" class="project-search-results">${searchResultsHtml}</div>
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
         </section>
 
-        <section class="work-mode-section" aria-labelledby="workModeTitle">
-            <div class="section-heading-row"><h2 id="workModeTitle">Work Mode</h2><button class="inline-help-action" type="button" onclick="${config.helpAction}">Help</button></div>
-            ${contextualGuidance(config.guidance, 'workMode')}
-            <div class="experience-launch-grid">
-                ${config.launchActions.map(item => actionCard(item, 'experience-launch-card')).join('')}
-            </div>
-        </section>
-
-        <section class="project-areas-section" aria-labelledby="projectAreasTitle">
-            <div class="section-heading-row"><h2 id="projectAreasTitle">Areas</h2><span class="project-area-count">${areas.length}</span></div>
+        <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
+            <button class="section-heading-row areas-toggle" type="button" onclick="window.toggleAreas(event)">
+                <h2 id="projectAreasTitle">Areas</h2>
+                <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
+            </button>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>
