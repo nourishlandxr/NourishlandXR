@@ -1,171 +1,58 @@
-﻿// AR Note / Hillyards Main AR Menu
-//
-// This module renders the Hillyards XR main AR menu on a world-anchored
-// panel, plus a marker-first mock creation workflow (Add Intro Checkpoint,
-// Add Sub Checkpoint, Add Plant Marker, Add Custom Note). Created markers in
-// this flow are persisted through the local workspace API. Naming and confirmation are handled through the WebXR
-// DOM Overlay, since text entry inside a WebGL canvas is not practical.
-
-import { createDemoMarker, loadDemoMarkers, updateDemoMarker } from './persistence.js';
-
-const TYPES = {
-    plant: { title: 'Add Plant Marker', nameLabel: 'Marker Name', typeLabel: 'Plant Marker', addLabel: 'Add Information' },
-    note: { title: 'Add Custom Note', nameLabel: 'Marker Name', typeLabel: 'Custom Note', addLabel: 'Add Information' },
-    intro_checkpoint: { title: 'Add Intro Checkpoint', nameLabel: 'Marker Name', typeLabel: 'Intro Checkpoint', addLabel: 'Add Information' },
-    sub_checkpoint: { title: 'Add Sub Checkpoint', nameLabel: 'Marker Name', typeLabel: 'Sub Checkpoint', addLabel: 'Add Information' }
-};
-
-const ADD_INFO_FIELDS = {
-    plant: ['Common Name', 'Scientific Name', 'Description', 'Plant Profile', 'Anchor'],
-    note: ['Title', 'Text', 'Directions', 'Anchor'],
-    intro_checkpoint: ['Introduction text', 'Written directions', 'Anchor'],
-    sub_checkpoint: ['Introduction text', 'Written directions', 'Anchor']
-};
-
-function typeConfig(type) { return TYPES[type] || TYPES.note; }
-
-function recordLatestEntry(entry) {
-    const completeEntry = {
-        id: entry.id,
-        name: entry.name,
-        type: entry.type,
-        persisted: true,
-        created: entry.created || new Date().toISOString(),
-        modified: new Date().toISOString()
-    };
-    window.dispatchEvent(new CustomEvent('nxr:latest-entry-added', { detail: completeEntry }));
-}
-
-function markerColour(type, placeholder = false) {
-    const colours = {
-        plant: placeholder ? 'rgba(47,109,66,.62)' : '#2f6d42',
-        intro_checkpoint: placeholder ? 'rgba(196,54,54,.62)' : '#c43636',
-        sub_checkpoint: placeholder ? 'rgba(232,190,35,.68)' : '#e8be23',
-        note: placeholder ? 'rgba(55,105,180,.62)' : '#3769b4'
-    };
-    return colours[type] || colours.note;
-}
-
-// ---- WebXR / WebGL session state ----
-let session;
+﻿let session;
 let gl;
 let refSpace;
-// let hitSource; // DISABLED: hit testing removed for basic AR mode
+let hitSource;
+let placedMatrix;
 let latestHitTransform;
 let latestViewerPosition;
 let surfaceAvailable = false;
+let placementState = 'idle';
 let pointerFallbackTimer;
 let placementMessageTimer;
 let ignoreNextSelectAfterFallback = false;
-let program;
-let positionLocation, texCoordLocation, mvpLocation, textureUniformLocation;
-let panelBuffer;
-let toolboxBuffer;
-let flagBuffer;
+let rootMenuMatrix;
+let temporaryMarkerMatrix;
+let mockFlow;
+let mockOverlay;
+let reticleLabel;
+let targetedOption;
 let texture;
-let toolboxTexture;
-let pendingPinTexture;
 let panelCanvas;
 let panelContext;
-let toolboxCanvas;
-let toolboxContext;
-let flagCanvas;
-let flagContext;
+let program;
+let buffer;
 let canvas;
 let overlay;
-let modal;
-let modalCard;
 let placementReticle;
-let reticleLabel;
 let plantProfile;
+let panelView = 'root';
 
-// ---- Demo / menu state machine ----
-// mode: 'scanning-menu' | 'menu-placed' | 'parent-prompt' | 'scanning-marker' | 'naming-marker' | 'marker-confirmed' | 'add-information'
-let mode = 'idle';
-let panelView = 'projects'; // 'projects' | 'toolbox' | 'plant' | 'note'
-let menuMatrix = null;
-let toolboxMatrix = null;
-let menuVisible = false;
-let persistedMarkers = [];
-let pendingType = null;
-let pendingParentName = '';
-let pendingMarkerMatrix = null;
-let lastConfirmedMarker = null;
-let tempMarkers = []; // in-memory only, cleared on Reset / Exit AR / session end
-let tempMarkerCounter = 0;
+const PANEL_WIDTH = 0.92;
+const PANEL_HEIGHT = 1.06;
 
-function updateGlobalArToggle(active) {
-    const button = document.getElementById('globalArToggle');
-    if (!button) return;
-    button.textContent = active ? 'Stop AR' : 'Start AR';
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-}
-
-export function isArActive() {
-    return Boolean(session);
-}
-
-// Diagnostics helpers (stubs - minimal version of previously removed features)
+// ─── Compatibility stubs required by current explorer.js ───
 const arDiagnosticLines = [];
 function reportArDiagnostic(stage, error = null) {
     const detail = error ? `${error.name || 'Error'}: ${error.message || String(error)}` : stage;
     arDiagnosticLines.push(error ? `${stage}: ${detail}` : stage);
 }
-export function getArDiagnostics() {
-    return [...arDiagnosticLines];
-}
-export function recordArFailure(error, stage = 'AR start failed') {
-    reportArDiagnostic(stage, error);
-}
+export function getArDiagnostics() { return [...arDiagnosticLines]; }
+export function recordArFailure(error, stage = 'AR start failed') { reportArDiagnostic(stage, error); }
 export async function copyArDiagnostics() {
     const text = getArDiagnostics().join('\n') || 'No AR diagnostics recorded.';
     await navigator.clipboard.writeText(text);
 }
+export function isArActive() { return Boolean(session); }
+// ─── End compatibility stubs ───
 
-const PANEL_WIDTH = 0.92;
-const PANEL_HEIGHT = 0.62;
-const TOOLBOX_WIDTH = 0.42;
-const TOOLBOX_HEIGHT = 0.50;
-const FLAG_WIDTH = 0.30;
-const FLAG_HEIGHT = 0.14;
-const CANVAS_W = 1200;
-const CANVAS_H = 800;
-
-// Hit regions for the permanent Demo V1 project selector and the
-// Hillyards Food Forest Tool Box, in panel-canvas pixel space.
-const PROJECT_REGIONS = [
-    { id: 'Hillyards', label: 'Hillyards', x: 40, y: 180, w: 1120, h: 105 },
-    { id: 'Frankendael', label: 'Frankendael', x: 40, y: 305, w: 1120, h: 105 },
-    { id: 'Daleys', label: 'Daleys', x: 40, y: 430, w: 1120, h: 105 },
-    { id: 'Banyula', label: 'Banyula', x: 40, y: 555, w: 1120, h: 105 }
+const ROOT_OPTIONS = [
+    { key: 'intro_checkpoint', label: 'Add Intro Checkpoint', range: [180, 350] },
+    { key: 'sub_checkpoint', label: 'Add Sub Checkpoint', range: [370, 540] },
+    { key: 'plant', label: 'Add Plant Marker', range: [560, 730] },
+    { key: 'note', label: 'Add Custom Note', range: [750, 920] },
+    { key: 'lemon_drop', label: 'Lemon Drop Garcinia', range: [970, 1150] },
+    { key: 'welcome', label: 'Welcome to Hillyards XR', range: [1170, 1350] }
 ];
-
-const TOOLBOX_REGIONS = [
-    { id: 'intro_checkpoint', label: 'Add Intro Checkpoint', x: 40, y: 165, w: 535, h: 125 },
-    { id: 'plant', label: 'Add Plant Marker', x: 605, y: 165, w: 535, h: 125 },
-    { id: 'sub_checkpoint', label: 'Add Sub Checkpoint', x: 40, y: 315, w: 535, h: 125 },
-    { id: 'note', label: 'Add Custom Note', x: 605, y: 315, w: 535, h: 125 },
-    { id: 'back_projects', label: 'Back to Demo V1', x: 40, y: 640, w: 1120, h: 90 }
-];
-
-const BACK_REGION = { id: 'back_toolbox', label: 'Back to Hillyards Tool Box', x: 62, y: 650, w: 1076, h: 76 };
-
-const DASHBOARD_REGIONS = [
-    { id: 'note', label: 'Welcome to Hillyards', x: 40, y: 145, w: 535, h: 100 },
-    { id: 'intro_checkpoint', label: 'Add Starting Point Marker', x: 605, y: 145, w: 535, h: 100 },
-    { id: 'global_plants', label: 'Global Plant List', x: 40, y: 265, w: 535, h: 100 },
-    { id: 'map', label: 'Map', x: 605, y: 265, w: 535, h: 100 }
-];
-
-const SMALL_TOOLBOX_REGIONS = [
-    { id: 'intro_checkpoint', label: 'Add Intro Checkpoint', x: 45, y: 135, w: 1110, h: 105 },
-    { id: 'plant', label: 'Add Plant Marker', x: 45, y: 255, w: 1110, h: 105 },
-    { id: 'sub_checkpoint', label: 'Add Sub Checkpoint', x: 45, y: 375, w: 1110, h: 105 },
-    { id: 'note', label: 'Add Custom Note', x: 45, y: 495, w: 1110, h: 105 },
-    { id: 'edit_latest', label: 'Edit Latest Entry', x: 45, y: 615, w: 1110, h: 105 }
-];
-
-let latestEntryRegions = [];
 
 function message(text) {
     const overlayStatus = document.getElementById('arOverlayStatus');
@@ -218,157 +105,38 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxLines) {
     if (line && lineNumber < maxLines) context.fillText(line, x, y + lineNumber * lineHeight);
 }
 
-// ---- Main panel (menu / plant profile / note) rendering ----
-
 function drawPanelBackground(title) {
     const context = panelContext;
-    context.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    context.clearRect(0, 0, 1200, 800);
     context.fillStyle = 'rgba(16, 30, 22, 0.68)';
-    context.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    context.fillRect(0, 0, 1200, 1400);
     context.fillStyle = 'rgba(23, 61, 40, 0.82)';
-    context.fillRect(0, 0, CANVAS_W, 130);
+    context.fillRect(0, 0, 1200, 150);
     context.fillStyle = '#ffffff';
-    context.font = '700 56px sans-serif';
-    context.fillText(title, 62, 84);
+    context.font = '700 60px sans-serif';
+    context.fillText(title, 62, 96);
 }
 
-function drawMenuButton(region, title, subtitle) {
-    const context = panelContext;
-    context.fillStyle = 'rgba(220, 235, 220, 0.9)';
-    context.fillRect(region.x, region.y, region.w, region.h);
-    context.strokeStyle = 'rgba(23, 61, 40, 0.35)';
-    context.lineWidth = 2;
-    context.strokeRect(region.x, region.y, region.w, region.h);
-    context.fillStyle = '#173126';
-    context.font = '700 34px sans-serif';
-    wrapText(context, title, region.x + 24, region.y + 48, region.w - 48, 40, 2);
-    if (subtitle) {
-        context.font = '24px sans-serif';
-        context.fillStyle = 'rgba(23, 61, 40, 0.72)';
-        context.fillText(subtitle, region.x + 24, region.y + region.h - 20);
-    }
-}
-
-function drawHillyardsDashboard() {
-    panelView = 'dashboard';
-    drawPanelBackground('Hillyards Dashboard');
-    drawMenuButton(DASHBOARD_REGIONS[0], 'Welcome to Hillyards');
-    drawMenuButton(DASHBOARD_REGIONS[1], 'Add Starting Point Marker');
-    drawMenuButton(DASHBOARD_REGIONS[2], 'Global Plant List');
-    drawMenuButton(DASHBOARD_REGIONS[3], 'Map', 'Coming Soon');
-
-    panelContext.fillStyle = '#ffffff';
-    panelContext.font = '700 27px sans-serif';
-    panelContext.fillText('LATEST ENTRIES', 45, 414);
-    latestEntryRegions = persistedMarkers.slice(0, 4).map((marker, index) => ({
-        id: `entry:${marker.id}`,
-        label: marker.name,
-        x: 40,
-        y: 430 + index * 82,
-        w: 1120,
-        h: 72,
-        marker
-    }));
-    if (latestEntryRegions.length) {
-        latestEntryRegions.forEach(region => {
-            panelContext.fillStyle = 'rgba(220, 235, 220, 0.92)';
-            panelContext.fillRect(region.x, region.y, region.w, region.h);
-            panelContext.fillStyle = '#173126';
-            panelContext.font = '700 26px sans-serif';
-            panelContext.fillText(region.marker.name, region.x + 22, region.y + 31);
-            panelContext.font = '21px sans-serif';
-            panelContext.fillText(`${typeConfig(region.marker.type).typeLabel} · ${region.marker.status || 'draft'}`, region.x + 22, region.y + 59);
-        });
-    } else {
-        panelContext.fillStyle = 'rgba(255,255,255,.82)';
-        panelContext.font = '28px sans-serif';
-        panelContext.fillText('No entries yet. Add a marker from the Tool Box.', 45, 485);
-    }
-    uploadTexture(texture, panelCanvas);
-}
-
-function drawSmallToolbox() {
-    const context = toolboxContext;
-    context.clearRect(0, 0, CANVAS_W, CANVAS_H);
-    context.fillStyle = 'rgba(16, 30, 22, 0.68)';
-    context.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    context.fillStyle = 'rgba(23, 61, 40, 0.86)';
-    context.fillRect(0, 0, CANVAS_W, 120);
-    context.fillStyle = '#ffffff';
-    context.font = '700 54px sans-serif';
-    context.fillText('Tool Box', 45, 78);
-    for (const region of SMALL_TOOLBOX_REGIONS) {
-        context.fillStyle = 'rgba(220, 235, 220, 0.92)';
-        context.fillRect(region.x, region.y, region.w, region.h);
-        context.fillStyle = '#173126';
-        context.font = '700 38px sans-serif';
-        context.fillText(region.label, region.x + 28, region.y + 66);
-    }
-    uploadTexture(toolboxTexture, toolboxCanvas);
-}
-
-function uploadTexture(tex, sourceCanvas) {
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+function uploadPanelTexture() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvas);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panelCanvas);
 }
 
-function drawProjectMenu() {
-    panelView = 'projects';
-    drawPanelBackground('Demo V1');
-    const context = panelContext;
-    context.fillStyle = 'rgba(255,255,255,.9)';
-    context.font = '32px sans-serif';
-    context.fillText('Select Project', 62, 150);
-
-    for (const region of PROJECT_REGIONS) {
-        const active = region.id === 'Hillyards';
-        context.fillStyle = active ? 'rgba(220, 235, 220, 0.94)' : 'rgba(230, 232, 226, 0.82)';
-        context.fillRect(region.x, region.y, region.w, region.h);
-        context.strokeStyle = active ? 'rgba(23, 61, 40, 0.55)' : 'rgba(23, 61, 40, 0.22)';
-        context.lineWidth = 2;
-        context.strokeRect(region.x, region.y, region.w, region.h);
-        context.fillStyle = active ? '#173126' : '#5f675f';
-        context.font = '700 40px sans-serif';
-        context.fillText(region.label, region.x + 24, region.y + 62);
-        if (!active) {
-            context.font = '26px sans-serif';
-            context.fillText('Coming Soon', region.x + region.w - 190, region.y + 62);
-        }
-    }
-    uploadTexture(texture, panelCanvas);
-}
-
-function drawToolbox() {
-    panelView = 'toolbox';
-    drawPanelBackground('Hillyards Food Forest');
-    const context = panelContext;
-    context.fillStyle = 'rgba(255,255,255,.9)';
-    context.font = '30px sans-serif';
-    context.fillText('Tool Box', 62, 145);
-    drawMenuButton(TOOLBOX_REGIONS[0], 'Add Intro Checkpoint');
-    drawMenuButton(TOOLBOX_REGIONS[1], 'Add Plant Marker');
-    drawMenuButton(TOOLBOX_REGIONS[2], 'Add Sub Checkpoint');
-    drawMenuButton(TOOLBOX_REGIONS[3], 'Add Custom Note');
-
-    const back = TOOLBOX_REGIONS[4];
-    context.fillStyle = 'rgba(242, 244, 238, 0.88)';
-    context.fillRect(back.x, back.y, back.w, back.h);
-    context.strokeStyle = 'rgba(23, 61, 40, 0.35)';
-    context.strokeRect(back.x, back.y, back.w, back.h);
-    context.fillStyle = '#173126';
-    context.font = '700 30px sans-serif';
-    context.fillText('Back to Demo V1', back.x + 24, back.y + 56);
-    uploadTexture(texture, panelCanvas);
-}
-
-// Compatibility alias used by marker creation flows: return to the Hillyards Tool Box.
 function drawMenu() {
-    drawHillyardsDashboard();
+    panelView = 'root';
+    drawPanelBackground('Hillyards XR');
+    const context = panelContext;
+    ROOT_OPTIONS.forEach((option, index) => {
+        context.fillStyle = index < 4 ? 'rgba(220, 235, 220, 0.82)' : 'rgba(242, 220, 141, 0.82)';
+        context.fillRect(45, option.range[0], 1110, option.range[1] - option.range[0]);
+        context.fillStyle = '#173126';
+        context.font = `700 ${index < 4 ? 45 : 48}px sans-serif`;
+        context.fillText(option.label, 85, option.range[0] + 70);
+        if (option.key === 'lemon_drop') { context.font = 'italic 34px sans-serif'; context.fillText('Garcinia intermedia', 85, option.range[0] + 125); }
+        if (option.key === 'welcome') { context.font = '31px sans-serif'; context.fillText('Spatial Text Marker', 85, option.range[0] + 125); }
+    });
+    uploadPanelTexture();
 }
 
 function drawPlantProfile() {
@@ -376,20 +144,20 @@ function drawPlantProfile() {
     drawPanelBackground('Plant Profile');
     const context = panelContext;
     context.fillStyle = 'rgba(248, 250, 244, 0.84)';
-    context.fillRect(45, 180, 1110, 560);
+    context.fillRect(45, 180, 1110, 1130);
     context.fillStyle = '#173126';
     context.font = '700 55px sans-serif';
-    context.fillText(plantProfile?.common_name || 'Plant Profile', 62, 245);
+    context.fillText(plantProfile?.common_name || 'Lemon Drop Garcinia', 62, 245);
     context.font = 'italic 40px sans-serif';
-    context.fillText(plantProfile?.scientific_name || 'Scientific name not entered', 62, 310);
+    context.fillText(plantProfile?.scientific_name || 'Garcinia intermedia', 62, 310);
     context.font = '34px sans-serif';
     wrapText(context, plantProfile?.overview || 'A tropical fruit species in the Hillyards collection.', 62, 410, 1070, 50, 5);
     context.fillStyle = 'rgba(220, 235, 220, 0.84)';
-    context.fillRect(BACK_REGION.x, BACK_REGION.y, BACK_REGION.w, BACK_REGION.h);
+    context.fillRect(62, 1190, 1076, 90);
     context.fillStyle = '#173126';
     context.font = '700 28px sans-serif';
-    context.fillText('Back to Hillyards Menu', BACK_REGION.x + 30, BACK_REGION.y + 50);
-    uploadTexture(texture, panelCanvas);
+    context.fillText('Back to Hillyards Menu', 92, 1248);
+    uploadPanelTexture();
 }
 
 function drawWelcomeNote() {
@@ -397,83 +165,39 @@ function drawWelcomeNote() {
     drawPanelBackground('Spatial Text Marker');
     const context = panelContext;
     context.fillStyle = 'rgba(248, 250, 244, 0.84)';
-    context.fillRect(45, 180, 1110, 560);
+    context.fillRect(45, 180, 1110, 1130);
     context.fillStyle = '#173126';
     context.font = '700 66px sans-serif';
     wrapText(context, 'Welcome to Hillyards XR', 62, 290, 1070, 80, 3);
     context.fillStyle = 'rgba(220, 235, 220, 0.84)';
-    context.fillRect(BACK_REGION.x, BACK_REGION.y, BACK_REGION.w, BACK_REGION.h);
+    context.fillRect(62, 1190, 1076, 90);
     context.fillStyle = '#173126';
     context.font = '700 28px sans-serif';
-    context.fillText('Back to Hillyards Menu', BACK_REGION.x + 30, BACK_REGION.y + 50);
-    uploadTexture(texture, panelCanvas);
+    context.fillText('Back to Hillyards Menu', 92, 1248);
+    uploadPanelTexture();
 }
 
-// ---- Flag / pin rendering for freshly placed (mock) markers ----
-
-function drawPinCanvas(context, label, placeholder, type = 'note') {
-    context.clearRect(0, 0, 480, 220);
-    const colour = markerColour(type, placeholder);
-    // Transparent canvas with a strong circular marker and a compact label.
-    context.fillStyle = colour;
-    context.beginPath();
-    context.arc(240, 72, 54, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = '#ffffff';
-    context.lineWidth = 8;
-    context.stroke();
-    context.fillStyle = '#ffffff';
-    context.font = '700 24px sans-serif';
-    context.textAlign = 'center';
-    context.fillText(type === 'intro_checkpoint' ? 'INTRO' : type === 'sub_checkpoint' ? 'SUB' : type === 'plant' ? 'PLANT' : 'NOTE', 240, 80);
-    context.fillStyle = 'rgba(16,30,22,.88)';
-    context.fillRect(30, 142, 420, 68);
-    context.fillStyle = '#ffffff';
-    context.font = placeholder ? 'italic 28px sans-serif' : '700 29px sans-serif';
-    wrapText2(context, label, 240, 178, 390, 32, 1);
-    context.textAlign = 'left';
-}
-
-function wrapText2(context, text, cx, y, maxWidth, lineHeight, maxLines) {
-    const words = String(text || '').split(/\s+/).filter(Boolean);
-    let line = '';
-    const lines = [];
-    for (const word of words) {
-        const candidate = line ? `${line} ${word}` : word;
-        if (context.measureText(candidate).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-            if (lines.length >= maxLines) break;
-        } else line = candidate;
-    }
-    if (line && lines.length < maxLines) lines.push(line);
-    lines.forEach((value, index) => context.fillText(value, cx, y + index * lineHeight));
-}
-
-function makeFlagTexture(label, type) {
-    drawPinCanvas(flagContext, label, false, type);
-    const tex = gl.createTexture();
-    uploadTexture(tex, flagCanvas);
-    return tex;
-}
-
-function refreshPendingPinTexture() {
-    drawPinCanvas(flagContext, typeConfig(pendingType).typeLabel, true, pendingType);
-    uploadTexture(pendingPinTexture, flagCanvas);
-}
-
-// ---- GL setup ----
-
-function createQuadBuffer(width, height) {
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+function setPanelGeometry(width, height) {
     const halfWidth = width / 2;
     const halfHeight = height / 2;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
         -halfWidth, -halfHeight, 0, 0, 0, halfWidth, -halfHeight, 0, 1, 0, halfWidth, halfHeight, 0, 1, 1,
         -halfWidth, -halfHeight, 0, 0, 0, halfWidth, halfHeight, 0, 1, 1, -halfWidth, halfHeight, 0, 0, 1
     ]), gl.STATIC_DRAW);
-    return buf;
+}
+
+function drawMarkerFlag(label) {
+    panelView = 'marker_flag';
+    panelContext.clearRect(0, 0, 1200, 1400);
+    panelContext.fillStyle = 'rgba(23, 61, 40, 0.86)';
+    panelContext.fillRect(0, 0, 1200, 1400);
+    panelContext.fillStyle = '#ffffff';
+    panelContext.textAlign = 'center';
+    panelContext.font = '700 80px sans-serif';
+    wrapText(panelContext, label, 600, 620, 1050, 100, 3);
+    panelContext.textAlign = 'left';
+    uploadPanelTexture();
 }
 
 function setupGl(nextCanvas, profile) {
@@ -493,36 +217,20 @@ function setupGl(nextCanvas, profile) {
         uniform sampler2D panelTexture;
         void main() { gl_FragColor = texture2D(panelTexture, uv); }
     `);
-    gl.useProgram(program);
-    positionLocation = gl.getAttribLocation(program, 'position');
-    texCoordLocation = gl.getAttribLocation(program, 'texCoord');
-    mvpLocation = gl.getUniformLocation(program, 'modelViewProjection');
-    textureUniformLocation = gl.getUniformLocation(program, 'panelTexture');
-
-    panelBuffer = createQuadBuffer(PANEL_WIDTH, PANEL_HEIGHT);
-    toolboxBuffer = createQuadBuffer(TOOLBOX_WIDTH, TOOLBOX_HEIGHT);
-    flagBuffer = createQuadBuffer(FLAG_WIDTH, FLAG_HEIGHT);
-
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    setPanelGeometry(PANEL_WIDTH, PANEL_HEIGHT);
     texture = gl.createTexture();
-    toolboxTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     panelCanvas = document.createElement('canvas');
-    panelCanvas.width = CANVAS_W;
-    panelCanvas.height = CANVAS_H;
+    panelCanvas.width = 1200;
+    panelCanvas.height = 1400;
     panelContext = panelCanvas.getContext('2d');
-
-    toolboxCanvas = document.createElement('canvas');
-    toolboxCanvas.width = CANVAS_W;
-    toolboxCanvas.height = CANVAS_H;
-    toolboxContext = toolboxCanvas.getContext('2d');
-
-    flagCanvas = document.createElement('canvas');
-    flagCanvas.width = 480;
-    flagCanvas.height = 220;
-    flagContext = flagCanvas.getContext('2d');
-    pendingPinTexture = gl.createTexture();
-
-    drawHillyardsDashboard();
-    drawSmallToolbox();
+    drawMenu();
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.DEPTH_TEST);
@@ -530,7 +238,7 @@ function setupGl(nextCanvas, profile) {
     gl.disable(gl.CULL_FACE);
 }
 
-function makePlacement(hitTransform, viewerPosition, heightOffset) {
+function makeVerticalPlacement(hitTransform, viewerPosition) {
     const hitX = hitTransform[12];
     const hitY = hitTransform[13];
     const hitZ = hitTransform[14];
@@ -545,286 +253,143 @@ function makePlacement(hitTransform, viewerPosition, heightOffset) {
         towardViewerZ, 0, -towardViewerX, 0,
         0, 1, 0, 0,
         towardViewerX, 0, towardViewerZ, 0,
-        centreX, hitY + heightOffset, centreZ, 1
+        centreX, hitY + 0.48, centreZ, 1
     ]);
 }
 
-function offsetPlacement(matrix, localX, localY) {
-    const shifted = new Float32Array(matrix);
-    shifted[12] += matrix[0] * localX;
-    shifted[13] += localY;
-    shifted[14] += matrix[2] * localX;
-    return shifted;
+function makeMarkerPlacement(hitTransform, viewerPosition) {
+    const matrix = makeVerticalPlacement(hitTransform, viewerPosition);
+    matrix[13] -= 0.3;
+    return matrix;
 }
 
-// ---- Overlay (DOM) ----
+function removeMockOverlay() {
+    mockOverlay?.remove();
+    mockOverlay = null;
+}
+
+function showMockOverlay(html) {
+    removeMockOverlay();
+    mockOverlay = document.createElement('div');
+    mockOverlay.id = 'arMockOverlay';
+    mockOverlay.innerHTML = html;
+    mockOverlay.addEventListener('beforexrselect', event => event.preventDefault());
+    document.body.append(mockOverlay);
+}
+
+function beginMarkerScanning() {
+    removeMockOverlay();
+    placedMatrix = null;
+    temporaryMarkerMatrix = null;
+    latestHitTransform = null;
+    surfaceAvailable = false;
+    placementState = 'marker-scanning';
+    placementReticle?.classList.remove('placed', 'surface-found', 'item-targeted');
+    message('Move to the desired location. Press and hold the green dot to place the marker.');
+}
+
+function startMockFlow(type) {
+    rootMenuMatrix = new Float32Array(placedMatrix);
+    mockFlow = { type, parent: '', name: '', id: '' };
+    targetedOption = null;
+    reticleLabel.textContent = '';
+    if (type === 'sub_checkpoint') {
+        placementState = 'marker-parent';
+        placedMatrix = null;
+        showMockOverlay(`<label for="arMockParent">Parent Checkpoint</label><input id="arMockParent" placeholder="Parent checkpoint" /><div><button id="arMockContinue">Continue</button><button id="arMockCancel">Cancel</button></div>`);
+        document.getElementById('arMockContinue').onclick = () => { const value = document.getElementById('arMockParent').value.trim(); if (!value) return; mockFlow.parent = value; beginMarkerScanning(); };
+        document.getElementById('arMockCancel').onclick = returnToRoot;
+        message('Select a parent checkpoint.');
+        return;
+    }
+    beginMarkerScanning();
+}
+
+function showMarkerNameForm() {
+    placementState = 'marker-name';
+    message('Enter marker name.');
+    showMockOverlay(`<label for="arMockName">Marker Name</label><input id="arMockName" placeholder="Marker name" /><div><button id="arMockConfirm">Confirm</button><button id="arMockCancel">Cancel</button></div>`);
+    document.getElementById('arMockConfirm').onclick = () => {
+        const name = document.getElementById('arMockName').value.trim();
+        if (!name) return;
+        mockFlow.name = name;
+        mockFlow.id = `mock_${Date.now().toString(36)}`;
+        drawMarkerFlag(name);
+        placementState = 'marker-confirmed';
+        message('Marker placed.');
+        showMockOverlay(`<strong>Marker placed</strong><div><button id="arMockInfo">Add Information</button><button id="arMockDone">Done</button></div>`);
+        document.getElementById('arMockInfo').onclick = showMockInformation;
+        document.getElementById('arMockDone').onclick = returnToRoot;
+    };
+    document.getElementById('arMockCancel').onclick = () => { temporaryMarkerMatrix = null; returnToRoot(); };
+}
+
+function showMockInformation() {
+    const fields = {
+        plant: ['Common Name', 'Scientific Name', 'Description', 'Plant Profile', 'Anchor'],
+        note: ['Title', 'Text', 'Directions', 'Anchor'],
+        intro_checkpoint: ['Introduction text', 'Written directions', 'Anchor'],
+        sub_checkpoint: ['Text', 'Written directions', 'Anchor']
+    }[mockFlow.type] || [];
+    message('Optional information can be added later.');
+    showMockOverlay(`<strong>Add Information</strong><p>${fields.join(' · ')}</p><div><button id="arMockInfoBack">Back</button><button id="arMockDone">Done</button></div>`);
+    document.getElementById('arMockInfoBack').onclick = () => {
+        showMockOverlay(`<strong>Marker placed</strong><div><button id="arMockInfo">Add Information</button><button id="arMockDone">Done</button></div>`);
+        document.getElementById('arMockInfo').onclick = showMockInformation;
+        document.getElementById('arMockDone').onclick = returnToRoot;
+    };
+    document.getElementById('arMockDone').onclick = returnToRoot;
+}
+
+function returnToRoot() {
+    removeMockOverlay();
+    mockFlow = null;
+    temporaryMarkerMatrix = null;
+    placedMatrix = rootMenuMatrix ? new Float32Array(rootMenuMatrix) : null;
+    placementState = placedMatrix ? 'placed' : 'scanning';
+    setPanelGeometry(PANEL_WIDTH, PANEL_HEIGHT);
+    drawMenu();
+    placementReticle?.classList.remove('surface-found', 'item-targeted');
+    placementReticle?.classList.toggle('placed', Boolean(placedMatrix));
+    reticleLabel.textContent = '';
+    targetedOption = null;
+    message(placedMatrix ? 'Select an option.' : 'Move slowly to detect a surface.');
+}
 
 function createArOverlay() {
     document.body.classList.add('ar-session-active');
     overlay = document.createElement('div');
     overlay.id = 'arOverlayControls';
-    overlay.innerHTML = `<div class="ar-overlay-copy"><div id="arOverlayStatus">Nourishland AR active</div></div><div class="ar-overlay-buttons"><button type="button" id="arResetButton">Reset</button></div>`;
+    overlay.innerHTML = `<div class="ar-overlay-copy"><div id="arOverlayStatus">Move slowly to detect a surface.</div></div><div class="ar-overlay-buttons"><button type="button" onclick="window.resetArPlacement()">Reset</button><button type="button" onclick="window.exitAr()">Exit AR</button></div>`;
     overlay.addEventListener('beforexrselect', event => event.preventDefault());
     document.body.append(overlay);
-    document.getElementById('globalArToggle')?.addEventListener('beforexrselect', event => event.preventDefault());
-    document.getElementById('arResetButton').addEventListener('click', resetArPlacement);
-
-    const radialToolbox = document.createElement('div');
-    radialToolbox.id = 'arRadialToolbox';
-    radialToolbox.className = 'hidden';
-    radialToolbox.setAttribute('aria-label', 'Marker Tool Box');
-    radialToolbox.innerHTML = `
-        <div class="ar-radial-title">TOOL BOX</div>
-        <button type="button" data-tool="intro_checkpoint" aria-label="Add starting point marker">START</button>
-        <button type="button" data-tool="plant" aria-label="Add plant marker">PLANT</button>
-        <button type="button" data-tool="note" aria-label="Add custom note">NOTE</button>
-        <button type="button" data-tool="edit_latest" aria-label="Edit latest entry">EDIT</button>
-        <span class="ar-radial-centre" aria-hidden="true"></span>`;
-    radialToolbox.addEventListener('beforexrselect', event => event.preventDefault());
-    radialToolbox.addEventListener('click', event => {
-        const tool = event.target.closest('button')?.dataset.tool;
-        if (tool) handleCreateSelection(tool);
-    });
-    document.body.append(radialToolbox);
-
-    const dashboardRail = document.createElement('nav');
-    dashboardRail.id = 'arDashboardRail';
-    dashboardRail.setAttribute('aria-label', 'Dashboard menu');
-    dashboardRail.innerHTML = `
-        <button type="button" data-panel="Logs"><b>LOG</b><span>Logs</span></button>
-        <button type="button" data-panel="Settings"><b>SET</b><span>Settings</span></button>
-        <button type="button" data-panel="Account"><b>ACC</b><span>Account</span></button>`;
-    dashboardRail.addEventListener('beforexrselect', event => event.preventDefault());
-    dashboardRail.addEventListener('click', event => {
-        const panel = event.target.closest('button')?.dataset.panel;
-        if (panel) showProjectComingSoon(panel);
-    });
-    document.body.append(dashboardRail);
-
-    modal = document.createElement('div');
-    modal.id = 'arModal';
-    modal.className = 'ar-modal hidden';
-    modalCard = document.createElement('div');
-    modalCard.id = 'arModalCard';
-    modalCard.className = 'ar-modal-card';
-    modal.append(modalCard);
-    modal.addEventListener('beforexrselect', event => event.preventDefault());
-    document.body.append(modal);
-
-    // DISABLED: placement reticle not needed in basic AR mode
-    // placementReticle = document.createElement('div');
-    // placementReticle.id = 'arPlacementReticle';
-    // document.body.append(placementReticle);
-    // reticleLabel = document.createElement('div');
-    // reticleLabel.id = 'arReticleLabel';
-    // document.body.append(reticleLabel);
+    placementReticle = document.createElement('div');
+    placementReticle.id = 'arPlacementReticle';
+    document.body.append(placementReticle);
+    reticleLabel = document.createElement('div');
+    reticleLabel.id = 'arReticleLabel';
+    document.body.append(reticleLabel);
 }
 
 function removeArOverlay() {
     document.body.classList.remove('ar-session-active');
     overlay?.remove();
-    modal?.remove();
     placementReticle?.remove();
     reticleLabel?.remove();
-    document.getElementById('arRadialToolbox')?.remove();
-    document.getElementById('arDashboardRail')?.remove();
+    removeMockOverlay();
     overlay = null;
-    modal = null;
-    modalCard = null;
     placementReticle = null;
     reticleLabel = null;
 }
 
-function showModal() { modal?.classList.remove('hidden'); }
-function hideModal() { modal?.classList.add('hidden'); if (modalCard) modalCard.innerHTML = ''; }
-
-function showParentPrompt() {
-    mode = 'parent-prompt';
-    modalCard.innerHTML = `
-        <h2>Parent Checkpoint</h2>
-        <p class="ar-modal-hint">Which checkpoint does this sub checkpoint belong to?</p>
-        <input id="arParentInput" type="text" placeholder="Parent Checkpoint" autocomplete="off" />
-        <p id="arParentError" class="ar-modal-error"></p>
-        <div class="ar-modal-actions">
-            <button type="button" id="arParentCancel">Cancel</button>
-            <button type="button" class="primary" id="arParentContinue">Continue</button>
-        </div>`;
-    showModal();
-    document.getElementById('arParentContinue').addEventListener('click', () => {
-        const value = document.getElementById('arParentInput').value.trim();
-        if (!value) { document.getElementById('arParentError').textContent = 'Parent Checkpoint is required.'; return; }
-        pendingParentName = value;
-        beginPlacement('sub_checkpoint');
-    });
-    document.getElementById('arParentCancel').addEventListener('click', cancelToMenu);
-    document.getElementById('arParentInput')?.focus();
-}
-
-function showNamePrompt(type) {
-    mode = 'naming-marker';
-    const config = typeConfig(type);
-    modalCard.innerHTML = `
-        <h2>${config.nameLabel}</h2>
-        <p class="ar-modal-hint">Enter marker name</p>
-        <input id="arMarkerNameInput" type="text" placeholder="${config.nameLabel}" autocomplete="off" />
-        <p id="arMarkerNameError" class="ar-modal-error"></p>
-        <div class="ar-modal-actions">
-            <button type="button" id="arNameCancel">Cancel</button>
-            <button type="button" class="primary" id="arNameConfirm">Confirm</button>
-        </div>`;
-    showModal();
-    message('Enter marker name.');
-    document.getElementById('arNameConfirm').addEventListener('click', confirmMarkerName);
-    document.getElementById('arNameCancel').addEventListener('click', cancelMarkerCreation);
-    document.getElementById('arMarkerNameInput')?.focus();
-}
-
-function showConfirmedPanel(marker) {
-    mode = 'marker-confirmed';
-    const config = typeConfig(marker.type);
-    modalCard.innerHTML = `
-        <h2>${marker.name}</h2>
-        <p class="ar-modal-hint">${config.typeLabel} &middot; Marker placed</p>
-        <div class="ar-modal-actions ar-modal-actions-stack">
-            <button type="button" class="primary" id="arAddInfoButton">${config.addLabel}</button>
-            <button type="button" id="arDoneButton">Done</button>
-        </div>`;
-    showModal();
-    message('Marker placed.');
-    document.getElementById('arAddInfoButton').addEventListener('click', () => showAddInformation(marker));
-    document.getElementById('arDoneButton').addEventListener('click', finishMarkerFlow);
-}
-
-function showAddInformation(marker) {
-    mode = 'add-information';
-    const fields = ADD_INFO_FIELDS[marker.type] || ADD_INFO_FIELDS.note;
-    modalCard.innerHTML = `
-        <h2>${marker.name}</h2>
-        <p class="ar-modal-hint">What can be added later. Nothing here is required now.</p>
-        <div class="ar-modal-field-list">${fields.map(field => `<div class="ar-modal-field-row"><span>${field}</span><span class="ar-modal-field-tag">Optional</span></div>`).join('')}</div>
-        <div class="ar-modal-actions">
-            <button type="button" id="arAddInfoBack">Back</button>
-        </div>`;
-    showModal();
-    document.getElementById('arAddInfoBack').addEventListener('click', () => showConfirmedPanel(marker));
-}
-
-function cancelToMenu() {
-    pendingType = null;
-    pendingParentName = '';
-    mode = 'menu-placed';
-    menuVisible = true;
-    drawHillyardsDashboard();
-    hideModal();
-    message('Select an option.');
-}
-
-function beginPlacement(type) {
-    pendingType = type;
-    menuVisible = true;
-    mode = 'scanning-marker';
-    surfaceAvailable = false;
-    latestHitTransform = null;
-    pendingMarkerMatrix = null;
-    // DISABLED: placementReticle?.classList.remove('surface-found');
-    hideModal();
-    message('Move to the desired location. Press and hold the green dot to place the marker.');
-}
-
-function handleCreateSelection(type) {
-    if (type === 'edit_latest') { showEditLatestEntry(); return; }
-    if (type === 'sub_checkpoint') { showParentPrompt(); return; }
-    beginPlacement(type);
-}
-
-function showEditLatestEntry() {
-    const marker = persistedMarkers[0];
-    if (!marker) {
-        message('There are no saved entries to edit.');
-        return;
-    }
-    mode = 'editing-marker';
-    modalCard.innerHTML = `
-        <h2>Edit Latest Entry</h2>
-        <p class="ar-modal-hint">${typeConfig(marker.type).typeLabel}</p>
-        <input id="arEditMarkerName" type="text" value="${String(marker.name).replace(/&/g, '&').replace(/"/g, '"')}" autocomplete="off" />
-        <p id="arEditMarkerError" class="ar-modal-error"></p>
-        <div class="ar-modal-actions">
-            <button type="button" id="arEditCancel">Cancel</button>
-            <button type="button" class="primary" id="arEditSave">Save</button>
-        </div>`;
-    showModal();
-    document.getElementById('arEditCancel').addEventListener('click', finishMarkerFlow);
-    document.getElementById('arEditSave').addEventListener('click', async () => {
-        const name = document.getElementById('arEditMarkerName').value.trim();
-        if (!name) { document.getElementById('arEditMarkerError').textContent = 'Marker Name is required.'; return; }
-        try {
-            const updated = await updateDemoMarker(marker.id, { name });
-            persistedMarkers = [updated, ...persistedMarkers.filter(item => item.id !== marker.id)];
-            drawHillyardsDashboard();
-            finishMarkerFlow();
-            window.dispatchEvent(new CustomEvent('nxr:latest-entry-added', { detail: updated }));
-        } catch (error) {
-            document.getElementById('arEditMarkerError').textContent = `Save failed: ${error.message}`;
-        }
-    });
-}
-
-async function confirmMarkerName() {
-    const input = document.getElementById('arMarkerNameInput');
-    const error = document.getElementById('arMarkerNameError');
-    const name = (input?.value || '').trim();
-    if (!name) { if (error) error.textContent = 'Marker Name is required.'; return; }
-    const confirm = document.getElementById('arNameConfirm');
-    confirm.disabled = true;
-    try { await finalizeMarker(name); }
-    catch (failure) { if (error) error.textContent = `Save failed: ${failure.message}`; confirm.disabled = false; }
-}
-
-async function finalizeMarker(name) {
-    tempMarkerCounter += 1;
-    const marker = await createDemoMarker({ name, type: pendingType });
-    const flagTexture = makeFlagTexture(name, pendingType);
-    tempMarkers.push({ id: marker.id, matrix: pendingMarkerMatrix, texture: flagTexture, type: marker.type, name: marker.name });
-    persistedMarkers = [marker, ...persistedMarkers.filter(item => item.id !== marker.id)];
-    drawHillyardsDashboard();
-    recordLatestEntry(marker);
-    pendingMarkerMatrix = null;
-    pendingType = null;
-    pendingParentName = '';
-    lastConfirmedMarker = marker;
-    showConfirmedPanel(marker);
-}
-
-function cancelMarkerCreation() {
-    pendingMarkerMatrix = null;
-    pendingType = null;
-    pendingParentName = '';
-    mode = 'menu-placed';
-    menuVisible = true;
-    drawHillyardsDashboard();
-    hideModal();
-    message('Select an option.');
-}
-
-function finishMarkerFlow() {
-    lastConfirmedMarker = null;
-    mode = 'menu-placed';
-    menuVisible = true;
-    drawHillyardsDashboard();
-    hideModal();
-    message('Select an option.');
-}
-
-// ---- Ray / hit-region helpers ----
-
-function rayPanelHit(matrix, panelMatrix = menuMatrix, width = PANEL_WIDTH, height = PANEL_HEIGHT) {
-    if (!matrix || !panelMatrix) return null;
+function rayPanelHit(rayPose) {
+    if (!rayPose || !placedMatrix) return null;
+    const matrix = rayPose.transform.matrix;
     const origin = [matrix[12], matrix[13], matrix[14]];
     const direction = [-matrix[8], -matrix[9], -matrix[10]];
-    const centre = [panelMatrix[12], panelMatrix[13], panelMatrix[14]];
-    const xAxis = [panelMatrix[0], panelMatrix[1], panelMatrix[2]];
-    const normal = [panelMatrix[8], panelMatrix[9], panelMatrix[10]];
+    const centre = [placedMatrix[12], placedMatrix[13], placedMatrix[14]];
+    const xAxis = [placedMatrix[0], placedMatrix[1], placedMatrix[2]];
+    const normal = [placedMatrix[8], placedMatrix[9], placedMatrix[10]];
     const denominator = direction[0] * normal[0] + direction[1] * normal[1] + direction[2] * normal[2];
     if (Math.abs(denominator) < 0.0001) return null;
     const t = ((centre[0] - origin[0]) * normal[0] + (centre[1] - origin[1]) * normal[1] + (centre[2] - origin[2]) * normal[2]) / denominator;
@@ -833,107 +398,35 @@ function rayPanelHit(matrix, panelMatrix = menuMatrix, width = PANEL_WIDTH, heig
     const relative = [point[0] - centre[0], point[1] - centre[1], point[2] - centre[2]];
     const localX = relative[0] * xAxis[0] + relative[1] * xAxis[1] + relative[2] * xAxis[2];
     const localY = relative[1];
-    if (Math.abs(localX) > width / 2 || Math.abs(localY) > height / 2) return null;
+    if (Math.abs(localX) > PANEL_WIDTH / 2 || Math.abs(localY) > PANEL_HEIGHT / 2) return null;
     return { x: localX, y: localY };
 }
 
-function localToCanvas(local, width = PANEL_WIDTH, height = PANEL_HEIGHT) {
-    return {
-        px: (local.x / width + 0.5) * CANVAS_W,
-        py: (0.5 - local.y / height) * CANVAS_H
-    };
+function selectPanel(event) {
+    const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, refSpace);
+    const hit = rayPanelHit(rayPose);
+    if (panelView !== 'root') { if (hit) returnToRoot(); return; }
+    const option = targetedOption || optionFromHit(hit);
+    if (!option) return;
+    if (['intro_checkpoint', 'sub_checkpoint', 'plant', 'note'].includes(option.key)) startMockFlow(option.key);
+    else if (option.key === 'lemon_drop') drawPlantProfile();
+    else if (option.key === 'welcome') drawWelcomeNote();
 }
 
-function regionAt(local, view) {
-    if (!local) return null;
-    const { px, py } = localToCanvas(local);
-    let regions = [];
-    if (view === 'dashboard') regions = [...DASHBOARD_REGIONS, ...latestEntryRegions];
-    else if (view === 'projects') regions = PROJECT_REGIONS;
-    else if (view === 'toolbox') regions = TOOLBOX_REGIONS;
-    else regions = [BACK_REGION];
-    return regions.find(region => px >= region.x && px <= region.x + region.w && py >= region.y && py <= region.y + region.h) || null;
+function optionFromHit(hit) {
+    if (!hit) return null;
+    const canvasY = (0.5 - hit.y / PANEL_HEIGHT) * 1400;
+    return ROOT_OPTIONS.find(option => canvasY >= option.range[0] && canvasY <= option.range[1]) || null;
 }
 
-function toolboxRegionAt(local) {
-    if (!local) return null;
-    const { px, py } = localToCanvas(local, TOOLBOX_WIDTH, TOOLBOX_HEIGHT);
-    return SMALL_TOOLBOX_REGIONS.find(region => px >= region.x && px <= region.x + region.w && py >= region.y && py <= region.y + region.h) || null;
+function updateMenuTarget(viewerPose) {
+    if (!placedMatrix || !['root', 'plant', 'note'].includes(panelView)) { targetedOption = null; reticleLabel.textContent = ''; placementReticle?.classList.remove('item-targeted'); return; }
+    const hit = rayPanelHit({ transform: viewerPose.transform });
+    targetedOption = panelView === 'root' ? optionFromHit(hit) : hit ? { key: 'back', label: 'Back to Hillyards Menu' } : null;
+    placementReticle?.classList.toggle('item-targeted', Boolean(targetedOption));
+    reticleLabel.textContent = targetedOption?.label || '';
 }
 
-function drawMarkerEntry(marker) {
-    panelView = 'entry';
-    drawPanelBackground(marker.name);
-    panelContext.fillStyle = 'rgba(248, 250, 244, 0.88)';
-    panelContext.fillRect(45, 175, 1110, 450);
-    panelContext.fillStyle = '#173126';
-    panelContext.font = '700 46px sans-serif';
-    panelContext.fillText(typeConfig(marker.type).typeLabel, 70, 255);
-    panelContext.font = '32px sans-serif';
-    panelContext.fillText(`Status: ${marker.status || 'draft'}`, 70, 325);
-    panelContext.fillText('Saved to Hillyards Latest Entries', 70, 390);
-    panelContext.fillStyle = 'rgba(220, 235, 220, 0.9)';
-    panelContext.fillRect(BACK_REGION.x, BACK_REGION.y, BACK_REGION.w, BACK_REGION.h);
-    panelContext.fillStyle = '#173126';
-    panelContext.font = '700 28px sans-serif';
-    panelContext.fillText('Back to Hillyards Dashboard', BACK_REGION.x + 30, BACK_REGION.y + 50);
-    uploadTexture(texture, panelCanvas);
-}
-
-function showProjectComingSoon(name) {
-    modalCard.innerHTML = `
-        <h2>${name}</h2>
-        <p class="ar-modal-hint">Coming Soon. Hillyards is the active V1 Lite demonstration.</p>
-        <div class="ar-modal-actions"><button type="button" id="arProjectBack">Back</button></div>`;
-    showModal();
-    document.getElementById('arProjectBack').addEventListener('click', () => {
-        hideModal();
-        message('Select a project.');
-    });
-}
-
-function handleMenuSelect(rayPose) {
-    const rayMatrix = rayPose?.transform.matrix;
-    const local = rayMatrix ? rayPanelHit(rayMatrix) : null;
-    const region = regionAt(local, panelView);
-    if (!region) return;
-
-    if (panelView === 'dashboard') {
-        if (region.id === 'note') drawWelcomeNote();
-        else if (region.id === 'intro_checkpoint') handleCreateSelection('intro_checkpoint');
-        else if (region.id.startsWith('entry:')) drawMarkerEntry(region.marker);
-        else showProjectComingSoon(region.label);
-        return;
-    }
-
-    if (panelView === 'projects') {
-        if (region.id === 'Hillyards') {
-            drawToolbox();
-            message('Hillyards Food Forest Tool Box.');
-        } else {
-            showProjectComingSoon(region.label);
-        }
-        return;
-    }
-
-    if (panelView === 'toolbox') {
-        if (region.id === 'back_projects') {
-            drawProjectMenu();
-            message('Select a project.');
-            return;
-        }
-        handleCreateSelection(region.id);
-        return;
-    }
-
-    drawHillyardsDashboard();
-    message('Hillyards Dashboard.');
-}
-
-// ---- Placement handlers (shared by scanning-menu and scanning-marker) ----
-
-// DISABLED: captureTrackingState removed - no hit testing in basic AR mode
-/*
 function captureTrackingState(frame, viewerPose) {
     latestViewerPosition = {
         x: viewerPose.transform.position.x,
@@ -945,163 +438,94 @@ function captureTrackingState(frame, viewerPose) {
     surfaceAvailable = Boolean(hitPose);
     if (hitPose) latestHitTransform = new Float32Array(hitPose.transform.matrix);
 }
-*/
 
-// DISABLED: placeMenu removed - no surface placement in basic AR mode
-/*
-function placeMenu(source = 'xr') {
-    if (mode !== 'scanning-menu') return false;
+function placeFromLatest(source = 'xr') {
+    if (!['scanning', 'marker-scanning'].includes(placementState)) return false;
     if (!surfaceAvailable || !latestHitTransform || !latestViewerPosition) {
         message('No surface detected. Move slowly until the centre dot turns bright green.');
         return false;
     }
-    menuMatrix = makePlacement(new Float32Array(latestHitTransform), { ...latestViewerPosition }, 0.48);
-    toolboxMatrix = null;
-    mode = 'menu-placed';
-    menuVisible = true;
-    panelView = 'dashboard';
+    const placingMarker = placementState === 'marker-scanning';
+    placedMatrix = placingMarker ? makeMarkerPlacement(new Float32Array(latestHitTransform), { ...latestViewerPosition }) : makeVerticalPlacement(new Float32Array(latestHitTransform), { ...latestViewerPosition });
+    placementState = placingMarker ? 'marker-name' : 'placed';
     surfaceAvailable = false;
-    drawHillyardsDashboard();
-    document.getElementById('arRadialToolbox')?.classList.remove('hidden');
+    if (placingMarker) {
+        temporaryMarkerMatrix = new Float32Array(placedMatrix);
+        setPanelGeometry(0.38, 0.2);
+        drawMarkerFlag('New Marker');
+    } else {
+        rootMenuMatrix = new Float32Array(placedMatrix);
+        setPanelGeometry(PANEL_WIDTH, PANEL_HEIGHT);
+        drawMenu();
+    }
     ignoreNextSelectAfterFallback = source === 'pointer';
-    message('Menu placed.');
+    placementReticle?.classList.add('placed');
+    message(placingMarker ? 'Marker placed.' : 'Menu placed.');
     window.clearTimeout(placementMessageTimer);
-    placementMessageTimer = window.setTimeout(() => { if (mode === 'menu-placed') message('Select an option.'); }, 1400);
+    placementMessageTimer = window.setTimeout(() => {
+        if (placementState === 'placed') message('Select an option.');
+    }, 1400);
+    if (placingMarker) showMarkerNameForm();
     return true;
 }
-*/
 
-// DISABLED: placeMarkerFlag removed - no surface placement in basic AR mode
-/*
-function placeMarkerFlag(source = 'xr') {
-    if (mode !== 'scanning-marker') return false;
-    if (!surfaceAvailable || !latestHitTransform || !latestViewerPosition) {
-        message('No surface detected. Move slowly until the centre dot turns bright green.');
-        return false;
-    }
-    pendingMarkerMatrix = makePlacement(new Float32Array(latestHitTransform), { ...latestViewerPosition }, 0.06);
-    refreshPendingPinTexture();
-    surfaceAvailable = false;
-    ignoreNextSelectAfterFallback = source === 'pointer';
-    message('Marker placed.');
-    showNamePrompt(pendingType);
-    return true;
-}
-*/
-
-// DISABLED: handlePointerFallback removed - no pointer fallback in basic AR mode
-/*
 function handlePointerFallback(event) {
-    if (!session || event.target.closest?.('#arOverlayControls') || event.target.closest?.('#arModal') || event.target.closest?.('#globalArToggle')) return;
-    if (mode !== 'scanning-menu' && mode !== 'scanning-marker') return;
+    if (!session || !['scanning', 'marker-scanning'].includes(placementState) || event.target.closest?.('#arOverlayControls') || event.target.closest?.('#arMockOverlay')) return;
     window.clearTimeout(pointerFallbackTimer);
     pointerFallbackTimer = window.setTimeout(() => {
-        if (mode === 'scanning-menu') placeMenu('pointer');
-        else if (mode === 'scanning-marker') placeMarkerFlag('pointer');
+        placeFromLatest('pointer');
     }, 450);
 }
-*/
 
-// ---- Render loop ----
-
-function drawOne(view, matrix, tex, buf) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+function draw(_time, frame) {
+    const activeSession = frame.session;
+    activeSession.requestAnimationFrame(draw);
+    const viewerPose = frame.getViewerPose(refSpace);
+    if (!viewerPose) return;
+    if (['scanning', 'marker-scanning'].includes(placementState)) {
+        captureTrackingState(frame, viewerPose);
+        placementReticle?.classList.toggle('surface-found', surfaceAvailable);
+        if (placementState === 'scanning') message(surfaceAvailable ? 'Press and hold to place menu.' : 'Move slowly to detect a surface.');
+        else message(surfaceAvailable ? 'Press and hold the green dot to place the marker.' : 'Move to the desired location.');
+    } else {
+        updateMenuTarget(viewerPose);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
+    gl.colorMask(true, true, true, true);
+    gl.depthMask(true);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clearDepth(1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (!placedMatrix) return;
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    const positionLocation = gl.getAttribLocation(program, 'position');
+    const texCoordLocation = gl.getAttribLocation(program, 'texCoord');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 20, 0);
     gl.enableVertexAttribArray(texCoordLocation);
     gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 20, 12);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.uniform1i(textureUniformLocation, 0);
-    const modelViewMatrix = multiplyMat4(view.transform.inverse.matrix, matrix);
-    const mvp = multiplyMat4(view.projectionMatrix, modelViewMatrix);
-    gl.uniformMatrix4fv(mvpLocation, false, mvp);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-}
-
-// DISABLED: updateReticleAndStatus simplified - no scanning feedback in basic AR mode
-function updateReticleAndStatus(frame, viewerPose) {
-    // No scanning needed - menu is already placed
-    // DISABLED: placementReticle?.classList.remove('surface-found');
-    // DISABLED: if (reticleLabel) reticleLabel.textContent = '';
-}
-
-let arNoteFirstRenderDone = false;
-function draw(_time, frame) {
-    try {
-        const activeSession = frame.session;
-        if (activeSession !== session) { console.warn('[AR] Stale frame, skipping'); return; }
-        activeSession.requestAnimationFrame(draw);
-        const viewerPose = frame.getViewerPose(refSpace);
-
-        // Wait for a valid viewer pose before rendering anything.
-        // Clearing the framebuffer without drawing leaves the screen blank.
-        if (!viewerPose) {
-            if (!arNoteFirstRenderDone) console.warn('[AR] No viewer pose, waiting...');
-            return;
-        }
-
-        // On very first valid frame, refine panel position using actual viewer pose
-        if (window.__nxrArPanelNeedsReposition) {
-            window.__nxrArPanelNeedsReposition = false;
-            const m = viewerPose.transform.matrix;
-            menuMatrix = new Float32Array([
-                m[0], m[1], m[2], 0,
-                m[4], m[5], m[6], 0,
-                m[8], m[9], m[10], 0,
-                m[12] - m[8] * 1.5,
-                m[13] - m[9] * 1.5,
-                m[14] - m[10] * 1.5,
-                1
-            ]);
-            console.log('[AR] Panel positioned 1.5m in front of viewer');
-        }
-
-        if (!gl) { console.error('[AR] WebGL context lost'); return; }
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
-        gl.colorMask(true, true, true, true);
-        gl.depthMask(true);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clearDepth(1);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.useProgram(program);
-
-        for (const view of viewerPose.views) {
-            const viewport = activeSession.renderState.baseLayer.getViewport(view);
-            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-            if (menuVisible && menuMatrix) drawOne(view, menuMatrix, texture, panelBuffer);
-            if (pendingMarkerMatrix) drawOne(view, pendingMarkerMatrix, pendingPinTexture, flagBuffer);
-            for (const marker of tempMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
-        }
-
-        if (!arNoteFirstRenderDone) {
-            arNoteFirstRenderDone = true;
-            console.log('[AR] Render Complete — content visible');
-        }
-    } catch (error) {
-        console.error('[AR] Render error:', error);
-        // Don't re-request frame on error to avoid spin loops
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(gl.getUniformLocation(program, 'panelTexture'), 0);
+    for (const view of viewerPose.views) {
+        const viewport = activeSession.renderState.baseLayer.getViewport(view);
+        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        const modelViewMatrix = multiplyMat4(view.transform.inverse.matrix, placedMatrix);
+        const mvp = multiplyMat4(view.projectionMatrix, modelViewMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, 'modelViewProjection'), false, mvp);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }
 
-// ---- Session lifecycle ----
-
 export async function startArNote(_marker, profile) {
-    console.log('[AR] XR Session Started');
+    console.log('[AR] startArNote — OLD ENGINE v0.8402');
     if (!window.isSecureContext) { message('AR requires HTTPS or localhost.'); return; }
     if (!navigator.xr) { message('WebXR is unavailable in this browser.'); return; }
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) { message('immersive-ar is not supported on this device or browser.'); return; }
-        console.log('[AR] Assets Loaded');
-        persistedMarkers = await loadDemoMarkers();
-        // DISABLED: hit-test removed from required features for basic AR mode
-        session = await navigator.xr.requestSession('immersive-ar', { 
-            // requiredFeatures: ['hit-test'], // DISABLED: no hit testing in basic AR mode
-            optionalFeatures: ['local-floor', 'dom-overlay'], 
-            domOverlay: { root: document.body } 
-        });
-        updateGlobalArToggle(true);
+        session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay', 'local-floor'], domOverlay: { root: document.body } });
+        console.log('[AR] Session acquired, creating canvas...');
         const nextCanvas = document.createElement('canvas');
         nextCanvas.id = 'arCanvas';
         nextCanvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
@@ -1111,132 +535,92 @@ export async function startArNote(_marker, profile) {
         await gl.makeXRCompatible();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }), depthNear: 0.01, depthFar: 100 });
         try { refSpace = await session.requestReferenceSpace('local-floor'); } catch { refSpace = await session.requestReferenceSpace('local'); }
-        
-        // DISABLED: hit-test removed for basic AR mode
-        // const viewerSpace = await session.requestReferenceSpace('viewer');
-        // hitSource = await session.requestHitTestSource({ space: viewerSpace });
-
-        console.log('[AR] Root Created');
-
-        // ---- IMMEDIATE PLACEMENT: position panel 1.5 metres in front of viewer at eye level ----
-        // Use a sensible default. The first draw frame will refine this using the actual viewer pose.
-        menuMatrix = new Float32Array([
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 1.5, -1.5, 1
-        ]);
-        // Track whether we've refined the position from a real viewer pose
-        let panelPositionedFromViewer = false;
-        // Store the flag on the draw closure for one-time repositioning
-        window.__nxrArPanelNeedsReposition = true;
-
-        console.log('[AR] Content Added');
-        
-        mode = 'menu-placed';
-        panelView = 'dashboard';
-        toolboxMatrix = null;
-        menuVisible = true;
-        pendingType = null;
-        pendingParentName = '';
-        pendingMarkerMatrix = null;
-        tempMarkers = [];
+        const viewerSpace = await session.requestReferenceSpace('viewer');
+        hitSource = await session.requestHitTestSource({ space: viewerSpace });
+        placementState = 'scanning';
+        panelView = 'root';
         ignoreNextSelectAfterFallback = false;
+        rootMenuMatrix = null;
+        temporaryMarkerMatrix = null;
+        mockFlow = null;
+        targetedOption = null;
         latestHitTransform = null;
         latestViewerPosition = null;
         surfaceAvailable = false;
-
-        console.log('[AR] Render Complete');
-
-        // DISABLED: pointerdown event listener for fallback - not needed in basic AR mode
-        // document.addEventListener('pointerdown', handlePointerFallback, true);
-        
+        document.addEventListener('pointerdown', handlePointerFallback, true);
         session.addEventListener('select', event => {
             window.clearTimeout(pointerFallbackTimer);
-            if (ignoreNextSelectAfterFallback) { ignoreNextSelectAfterFallback = false; return; }
-            // DISABLED: scanning-menu and scanning-marker modes not used in basic AR mode
-            // if (mode === 'scanning-menu') { placeMenu('xr'); return; }
-            // if (mode === 'scanning-marker') { placeMarkerFlag('xr'); return; }
-            if (mode === 'menu-placed') {
+            if (placedMatrix) {
+                if (ignoreNextSelectAfterFallback) { ignoreNextSelectAfterFallback = false; return; }
                 window.clearTimeout(placementMessageTimer);
-                const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, refSpace);
-                handleMenuSelect(rayPose);
+                selectPanel(event);
+                return;
             }
+            const viewerPose = event.frame.getViewerPose(refSpace);
+            if (viewerPose) {
+                latestViewerPosition = {
+                    x: viewerPose.transform.position.x,
+                    y: viewerPose.transform.position.y,
+                    z: viewerPose.transform.position.z
+                };
+            }
+            placeFromLatest('xr');
         });
         session.addEventListener('end', () => {
             window.clearTimeout(pointerFallbackTimer);
-            window.clearTimeout(placementMessageTimer);
-            // DISABLED: hitSource?.cancel?.();
-            // hitSource = null;
+            document.removeEventListener('pointerdown', handlePointerFallback, true);
+            hitSource?.cancel?.();
+            hitSource = null;
             latestHitTransform = null;
             latestViewerPosition = null;
             surfaceAvailable = false;
-            mode = 'idle';
-            panelView = 'dashboard';
-            menuMatrix = null;
-            toolboxMatrix = null;
-            menuVisible = false;
-            pendingType = null;
-            pendingParentName = '';
-            pendingMarkerMatrix = null;
-            lastConfirmedMarker = null;
-            if (gl) tempMarkers.forEach(marker => gl.deleteTexture(marker.texture));
-            tempMarkers = [];
+            placementState = 'idle';
+            panelView = 'root';
             ignoreNextSelectAfterFallback = false;
+            rootMenuMatrix = null;
+            temporaryMarkerMatrix = null;
+            mockFlow = null;
+            targetedOption = null;
+            placedMatrix = null;
             document.getElementById('arCanvas')?.remove();
             removeArOverlay();
             session = null;
-            updateGlobalArToggle(false);
             gl = null;
             canvas = null;
+            window.renderLaunchScreen?.();
         });
-        message('Nourishland AR is active. Tap the panel to interact.');
+        message('Move slowly to detect a surface.');
         session.requestAnimationFrame(draw);
     } catch (error) {
-        console.error('[AR] Error:', error);
         window.clearTimeout(pointerFallbackTimer);
         window.clearTimeout(placementMessageTimer);
-        // DISABLED: document.removeEventListener('pointerdown', handlePointerFallback, true);
+        document.removeEventListener('pointerdown', handlePointerFallback, true);
         document.getElementById('arCanvas')?.remove();
         removeArOverlay();
         session = null;
-        updateGlobalArToggle(false);
         message(`AR could not start: ${error.message}`);
     }
 }
 
 export function resetArPlacement() {
     window.clearTimeout(placementMessageTimer);
-    if (gl) tempMarkers.forEach(marker => gl.deleteTexture(marker.texture));
-    tempMarkers = [];
-    menuMatrix = null;
-    toolboxMatrix = null;
-    menuVisible = false;
-    pendingType = null;
-    pendingParentName = '';
-    pendingMarkerMatrix = null;
-    lastConfirmedMarker = null;
+    placedMatrix = null;
     latestHitTransform = null;
     latestViewerPosition = null;
     surfaceAvailable = false;
-    mode = session ? 'menu-placed' : 'idle';
-    panelView = 'dashboard';
+    placementState = session ? 'scanning' : 'idle';
+    panelView = 'root';
     ignoreNextSelectAfterFallback = false;
-    if (gl && texture) {
-        drawHillyardsDashboard();
-        drawSmallToolbox();
-    }
-    document.getElementById('arRadialToolbox')?.classList.add('hidden');
-    hideModal();
-    // DISABLED: placementReticle?.classList.remove('surface-found');
-    // DISABLED: if (reticleLabel) reticleLabel.textContent = '';
-    message('Menu reset.');
+    rootMenuMatrix = null;
+    temporaryMarkerMatrix = null;
+    mockFlow = null;
+    targetedOption = null;
+    removeMockOverlay();
+    if (reticleLabel) reticleLabel.textContent = '';
+    if (gl && buffer) setPanelGeometry(PANEL_WIDTH, PANEL_HEIGHT);
+    if (gl && texture) drawMenu();
+    placementReticle?.classList.remove('placed', 'surface-found', 'item-targeted');
+    message('Move slowly to detect a surface.');
 }
 
-export function exitAr() {
-    mode = 'idle';
-    panelView = 'projects';
-    ignoreNextSelectAfterFallback = false;
-    hideModal();
-    if (session) session.end();
-}
+export function exitAr() { panelView = 'root'; ignoreNextSelectAfterFallback = false; rootMenuMatrix = null; temporaryMarkerMatrix = null; mockFlow = null; targetedOption = null; removeMockOverlay(); if (session) session.end(); }
