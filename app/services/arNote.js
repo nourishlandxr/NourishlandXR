@@ -1,9 +1,10 @@
-﻿let session;
+﻿import { initPanelRenderer, createPanelTexture, renderARPanel } from './arPanel.js';
+
+let session;
 let gl;
 let refSpace;
-let canvas;
-let overlay;
-let savedAppHtml = '';
+let renderer = null;
+let panelTex = null;
 
 // ─── Compatibility stubs ───
 const arDiagnosticLines = [];
@@ -21,120 +22,108 @@ export function isArActive() { return Boolean(session); }
 
 function removeArOverlay() {
     document.body.classList.remove('ar-session-active');
-    overlay?.remove(); overlay = null;
+    const o = document.getElementById('arOverlayControls');
+    if (o) o.remove();
 }
 
 function createArOverlay() {
     document.body.classList.add('ar-session-active');
-    overlay = document.createElement('div');
+    const overlay = document.createElement('div');
     overlay.id = 'arOverlayControls';
     overlay.innerHTML = '<div class="ar-overlay-copy"><div id="arOverlayStatus">AR active</div></div><div class="ar-overlay-buttons"><button type="button" onclick="window.exitAr()">Exit AR</button></div>';
     overlay.addEventListener('beforexrselect', e => e.preventDefault());
     document.body.append(overlay);
 }
 
-// ─── Inject keyframes ───
-if (!document.getElementById('arBreathingStyle')) {
-    const s = document.createElement('style');
-    s.id = 'arBreathingStyle';
-    s.textContent = '@keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}@keyframes fade-in{from{opacity:0}to{opacity:1}}';
-    document.documentElement.append(s);
+// ─── Draw dashboard panel content ───
+function drawDashboard(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(20,55,34,.92)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nourishland XR', w / 2, 42);
+    ctx.fillStyle = '#dcef95';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('DASHBOARD', w / 2, 62);
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Panel placed — always facing you', w / 2, 96);
+    ctx.fillStyle = '#dcef95';
+    ctx.fillRect(20, 120, w - 40, 44);
+    ctx.fillStyle = '#173522';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText('Quick Access', w / 2, 148);
+    ctx.fillStyle = '#28c840';
+    ctx.fillRect(20, 178, w - 40, 44);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText('Content', w / 2, 206);
+    ctx.fillStyle = '#c43636';
+    ctx.fillRect(20, h - 56, w - 40, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 16px sans-serif';
+    ctx.fillText('Exit AR', w / 2, h - 32);
 }
 
 export async function startArNote(_marker, profile) {
-    console.log('[AR] startArNote');
     if (!window.isSecureContext) { alert('AR requires HTTPS.'); return; }
     if (!navigator.xr) { alert('WebXR unavailable.'); return; }
-    
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) { alert('AR not supported.'); return; }
-        
-        // Save current app state so we can restore it
-        savedAppHtml = document.getElementById('app')?.innerHTML || '';
         
         session = await navigator.xr.requestSession('immersive-ar', {
             optionalFeatures: ['local-floor'],
             domOverlay: { root: document.body }
         });
 
-        const nextCanvas = document.createElement('canvas');
-        nextCanvas.id = 'arCanvas';
-        nextCanvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
-        document.body.append(nextCanvas);
+        const canvas = document.createElement('canvas');
+        canvas.id = 'arCanvas';
+        canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
+        document.body.append(canvas);
         createArOverlay();
-        
-        // Simple WebGL for camera pass-through
-        gl = nextCanvas.getContext('webgl', { alpha: true, antialias: true, xrCompatible: true });
+
+        gl = canvas.getContext('webgl', { alpha: true, antialias: true, xrCompatible: true });
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
-        
+
         session.updateRenderState({
             baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }),
             depthNear: 0.01, depthFar: 100
         });
-        
         try { refSpace = await session.requestReferenceSpace('local-floor'); }
         catch { refSpace = await session.requestReferenceSpace('local'); }
-        
-        // Show dashboard overlay
-        const dashContainer = document.createElement('div');
-        dashContainer.id = 'arDashboardContainer';
-        dashContainer.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:11000;width:92vw;max-width:800px;max-height:80vh;overflow-y:auto;background:#f7f7f4;border-radius:16px;padding:20px;color:#1f241f;box-shadow:0 8px 32px rgba(0,0,0,.5);display:block;';
-        document.documentElement.append(dashContainer);
-        
-        // Capture dashboard HTML by rendering into a temp container
-        const dashId = window._arProjectId || '';
-        dashContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#555"><div class="breathing-circle" style="width:40px;height:40px;border:2px solid #2f6d42;border-radius:50%;margin:0 auto 16px;animation:breathe 1.5s ease-in-out infinite;"></div><p>Loading dashboard…</p></div>';
-        
-        // Render the full project dashboard into the floating container
-        // We render to the #app element temporarily, capture HTML, then restore
-        const appEl = document.getElementById('app');
-        const savedDashHtml = appEl?.innerHTML || '';
-        
-        // Load the project dashboard - this sets app.innerHTML via window.renderProjectDashboard
-        if (dashId && window.renderProjectDashboard) {
-            try {
-                await window.renderProjectDashboard(dashId);
-                // Now app.innerHTML has the dashboard. Copy it to our container.
-                dashContainer.innerHTML = appEl.innerHTML;
-                // Restore app to original state (hidden behind AR anyway)
-                appEl.innerHTML = savedDashHtml;
-            } catch(e) {
-                console.error('[AR] Dashboard render error:', e);
-                dashContainer.innerHTML = '<h2 style="text-align:center;padding:30px">Nourishland XR</h2><p style="text-align:center;color:#666">Dashboard unavailable.</p>';
-                appEl.innerHTML = savedDashHtml;
-            }
-        } else {
-            dashContainer.innerHTML = '<h2 style="text-align:center;padding:30px">Nourishland XR</h2><p style="text-align:center;color:#666">Tap to interact. Exit AR to return.</p>';
-        }
-        
-        session.addEventListener('select', () => {
-            const dc = document.getElementById('arDashboardContainer');
-            if (dc) dc.style.display = dc.style.display === 'none' ? 'block' : 'none';
-        });
-        
+
+        // Initialize shared panel renderer
+        renderer = initPanelRenderer(gl);
+        panelTex = createPanelTexture(gl, drawDashboard);
+
         session.addEventListener('end', () => {
             document.getElementById('arCanvas')?.remove();
-            document.getElementById('arDashboardContainer')?.remove();
             removeArOverlay();
-            session = null; gl = null;
-            // Restore app
-            if (savedAppHtml && appEl) appEl.innerHTML = savedAppHtml;
+            session = null; gl = null; renderer = null; panelTex = null;
+            window.renderLaunchScreen?.();
         });
-        
-        // Simple draw loop - pass camera through
+
+        // Draw loop with billboard rendering
         session.requestAnimationFrame(function draw(time, frame) {
-            if (!session || !gl) return;
+            if (!session || !gl) { return; }
             session.requestAnimationFrame(draw);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer);
-            gl.clearColor(0, 0, 0, 0);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            try {
+                renderARPanel(gl, frame, refSpace, panelTex, {
+                    program: renderer.program,
+                    buffer: renderer.buffer,
+                    position: [0, 1.5, -2],
+                    width: 0.92,
+                    height: 0.65
+                });
+            } catch(e) { console.error('[AR] render error:', e); }
         });
-        
+
     } catch (error) {
         console.error('[AR] error:', error);
         document.getElementById('arCanvas')?.remove();
-        document.getElementById('arDashboardContainer')?.remove();
         removeArOverlay();
         session = null;
         alert('AR error: ' + (error?.message || 'unknown'));
