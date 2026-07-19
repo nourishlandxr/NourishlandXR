@@ -1,49 +1,48 @@
 /**
- * AR Mode - Lightweight WebXR AR panel for the creator dashboard.
- * Renders a floating dashboard panel entirely through WebGL.
- * No dom-overlay dependency — everything visible in-headset from frame 1.
+ * AR Mode — BASIC — Fixed-position WebXR panel.
+ * Renders a solid panel 1.5m in front of the viewer.
+ * No hit testing. No anchors. No interaction.
  */
 
 let session = null;
 let gl = null;
 let refSpace = null;
-let hitSource = null;
 let canvas = null;
-let finishingDemo = false;
-let latestHitMatrix = null;
-let spatialMatrix = null;
-let panelLocked = false;
+let debugEl = null;
 let program = null;
 let buffer = null;
 let texture = null;
-let statusEl = null;  // on-screen status element
 const PW = 0.72;
 const PH = 0.52;
 
+// Debug logger visible on screen
+function dlog(msg) {
+    console.log('[AR]', msg);
+    if (debugEl) {
+        debugEl.textContent = (debugEl.textContent || '') + msg + '\n';
+        debugEl.scrollTop = debugEl.scrollHeight;
+    }
+}
+
 function mult4(a, b) {
     const o = new Float32Array(16);
-    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++)
-        o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+    for (let c = 0; c < 4; c++)
+        for (let r = 0; r < 4; r++)
+            o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
     return o;
 }
 
-function makeShader(t, s) {
-    const sh = gl.createShader(t);
-    gl.shaderSource(sh, s);
+function makeShader(type, source) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, source);
     gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(sh));
     return sh;
 }
 
-function showStatus(msg) {
-    if (statusEl) { statusEl.textContent = msg; statusEl.hidden = false; }
-}
-
-function hideStatus() {
-    if (statusEl) statusEl.hidden = true;
-}
-
 function renderPanel(ctx, w, h) {
+    // Bright background so it's impossible to miss in AR
     ctx.fillStyle = 'rgba(20,55,34,.92)';
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = '#fff';
@@ -53,17 +52,9 @@ function renderPanel(ctx, w, h) {
     ctx.fillStyle = '#dcef95';
     ctx.font = '13px sans-serif';
     ctx.fillText('DASHBOARD', w / 2, 62);
-
-    if (!panelLocked) {
-        ctx.fillStyle = 'rgba(255,255,255,.8)';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('Tap a surface to place this panel.', w / 2, 96);
-    } else {
-        ctx.fillStyle = 'rgba(255,255,255,.8)';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('Panel placed at selected position.', w / 2, 96);
-    }
-
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Panel placed at selected position.', w / 2, 96);
     ctx.fillStyle = '#dcef95';
     ctx.fillRect(20, 120, w - 40, 44);
     ctx.fillStyle = '#173522';
@@ -87,195 +78,237 @@ function bakeTexture() {
     c.width = 400; c.height = 300;
     renderPanel(c.getContext('2d'), 400, 300);
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
-}
-
-function drawQuad(view, m) {
-    if (!texture || !m) return;
-    const vp = mult4(view.transform.inverse.matrix, m);
-    const mvp = mult4(view.projectionMatrix, vp);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.enableVertexAttribArray(gl.getAttribLocation(program, 'p'));
-    gl.vertexAttribPointer(gl.getAttribLocation(program, 'p'), 3, gl.FLOAT, false, 20, 0);
-    gl.enableVertexAttribArray(gl.getAttribLocation(program, 't'));
-    gl.vertexAttribPointer(gl.getAttribLocation(program, 't'), 2, gl.FLOAT, false, 20, 12);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'tex'), 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    dlog('Texture baked: ' + c.width + 'x' + c.height);
 }
 
 function initGL() {
-    const vs = 'attribute vec3 p;attribute vec2 t;uniform mat4 mvp;varying vec2 uv;void main(){gl_Position=mvp*vec4(p,1.0);uv=t;}';
+    const vs = 'attribute vec3 p;attribute vec2 t;varying vec2 uv;uniform mat4 mvp;void main(){gl_Position=mvp*vec4(p,1.0);uv=t;}';
     const fs = 'precision mediump float;varying vec2 uv;uniform sampler2D tex;void main(){gl_FragColor=texture2D(tex,uv);}';
     program = gl.createProgram();
     gl.attachShader(program, makeShader(gl.VERTEX_SHADER, vs));
     gl.attachShader(program, makeShader(gl.FRAGMENT_SHADER, fs));
     gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error('Program link failed: ' + gl.getProgramInfoLog(program));
+    }
+    dlog('Program linked OK');
+    dlog('  p attrib: ' + gl.getAttribLocation(program, 'p'));
+    dlog('  t attrib: ' + gl.getAttribLocation(program, 't'));
+    dlog('  mvp uniform: ' + gl.getUniformLocation(program, 'mvp'));
+    dlog('  tex uniform: ' + gl.getUniformLocation(program, 'tex'));
+
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -PW / 2, -PH / 2, 0, 0, 1, PW / 2, -PH / 2, 0, 1, 1,
-        PW / 2, PH / 2, 0, 1, 0, -PW / 2, -PH / 2, 0, 0, 1,
-        PW / 2, PH / 2, 0, 1, 0, -PW / 2, PH / 2, 0, 0, 0
+        -PW/2, -PH/2, 0, 0, 1,   PW/2, -PH/2, 0, 1, 1,   PW/2, PH/2, 0, 1, 0,
+        -PW/2, -PH/2, 0, 0, 1,   PW/2, PH/2, 0, 1, 0,   -PW/2, PH/2, 0, 0, 0
     ]), gl.STATIC_DRAW);
+    dlog('Buffer created');
+
     texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     bakeTexture();
 }
 
 function cleanup() {
     if (texture) gl?.deleteTexture(texture);
-    texture = null; program = null; buffer = null;
-    hitSource?.cancel(); hitSource = null; refSpace = null;
-    latestHitMatrix = null; spatialMatrix = null;
-    canvas?.remove(); canvas = null; gl = null;
-    if (statusEl) { statusEl.remove(); statusEl = null; }
+    texture = null;
+    program = null;
+    buffer = null;
+    refSpace = null;
+    canvas?.remove();
+    canvas = null;
+    gl = null;
+    debugEl?.remove();
+    debugEl = null;
 }
 
 export function exitArMode() {
-    finishingDemo = true;
-    const s = session; session = null; cleanup();
+    const s = session;
+    session = null;
+    cleanup();
     if (s) s.end().catch(() => {});
 }
 
-export function isArModeActive() { return Boolean(session); }
+export function isArModeActive() {
+    return Boolean(session);
+}
 
-export async function startArMode(projectId = '') {
+export async function startArMode(projectId) {
     if (projectId) window._arProjectId = projectId;
-    if (!navigator.xr || !window.isSecureContext) return false;
+    if (!navigator.xr || !window.isSecureContext) {
+        console.error('[AR] WebXR not available');
+        return false;
+    }
 
-    // Create visible status element for Android users (no console access)
-    statusEl = document.createElement('div');
-    statusEl.id = 'arModeStatus';
-    statusEl.style.cssText = 'position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:13000;color:#fff;font-size:14px;font-weight:600;text-shadow:0 2px 6px rgba(0,0,0,.9);text-align:center;background:rgba(0,0,0,.7);padding:8px 16px;border-radius:8px;max-width:90%;pointer-events:none;';
-    statusEl.textContent = 'Initializing AR...';
-    document.body.append(statusEl);
+    // Visible debug log on screen
+    debugEl = document.createElement('div');
+    debugEl.id = 'arDebugLog';
+    debugEl.style.cssText = 'position:fixed;left:12px;top:12px;z-index:15000;color:#0f0;font-size:12px;font-family:monospace;background:rgba(0,0,0,.85);padding:8px 12px;border-radius:6px;max-width:95vw;max-height:50vh;overflow-y:auto;pointer-events:none;white-space:pre-wrap;line-height:1.4;';
+    document.body.append(debugEl);
 
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) {
-            showStatus('AR not supported on this device/browser');
+        dlog('=== AR Mode Start ===');
+
+        const supported = await navigator.xr.isSessionSupported('immersive-ar');
+        dlog('immersive-ar supported: ' + supported);
+        if (!supported) {
+            dlog('ERROR: AR not supported');
             return false;
         }
-        showStatus('Requesting camera...');
-        // DISABLED: hit-test removed for basic AR mode
+
+        dlog('Requesting session...');
         session = await navigator.xr.requestSession('immersive-ar', {
-            // requiredFeatures: ['hit-test'],
             optionalFeatures: ['local-floor']
         });
-        showStatus('Camera active, setting up...');
+        dlog('Session acquired: ' + session.mode);
+
         canvas = document.createElement('canvas');
-        canvas.id = 'arCanvas';
-        canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:11999';
+        canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:11999;';
         document.body.append(canvas);
+
         gl = canvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
+        dlog('WebGL context: ' + !!gl);
         if (!gl) throw new Error('WebGL unavailable');
+
         await gl.makeXRCompatible();
-        session.updateRenderState({
-            baseLayer: new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true }),
-            depthNear: 0.01, depthFar: 50
-        });
-        try { refSpace = await session.requestReferenceSpace('local-floor'); }
-        catch { refSpace = await session.requestReferenceSpace('local'); }
+        dlog('makeXRCompatible done');
+
+        const layer = new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true });
+        dlog('Layer: ' + layer.framebufferWidth + 'x' + layer.framebufferHeight);
+        session.updateRenderState({ baseLayer: layer, depthNear: 0.01, depthFar: 50 });
+
+        try {
+            refSpace = await session.requestReferenceSpace('local-floor');
+            dlog('Ref space: local-floor');
+        } catch {
+            refSpace = await session.requestReferenceSpace('local');
+            dlog('Ref space: local (fallback)');
+        }
+
         initGL();
-        finishingDemo = false;
-        panelLocked = true; // DISABLED: Always locked - no hit testing needed
-        spatialMatrix = null;
 
-        // DISABLED: hit test removed for basic AR mode
-        // hitSource = null;
-
-        showStatus('AR ready');
-
-        // ---- IMMEDIATE PLACEMENT: position panel 1.5 metres in front of viewer ----
-        // Use a sensible default. The first draw frame will refine this using actual viewer pose.
-        spatialMatrix = new Float32Array([
+        // Fixed position: 1.5m forward from origin, at eye height
+        let spatialMatrix = new Float32Array([
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             0, 1.5, -1.5, 1
         ]);
-        // Track whether we've refined the position from a real viewer pose
-        // Store flag for one-time repositioning on first frame
-        window.__nxrArModePanelNeedsReposition = true;
-        hideStatus();
+        dlog('Default spatialMatrix set');
 
-        const draw = (t, frame) => {
-            try {
-                if (frame.session !== session || !gl) return;
-                frame.session.requestAnimationFrame(draw);
-                const layer = frame.session.renderState.baseLayer;
-                const pose = frame.getViewerPose(refSpace);
-                if (!pose && !spatialMatrix) return;
+        let firstPoseAcquired = false;
+        let frameCount = 0;
+        let renderCount = 0;
 
-                // On very first frame, refine panel position using actual viewer pose
-                if (pose && window.__nxrArModePanelNeedsReposition) {
-                    window.__nxrArModePanelNeedsReposition = false;
-                    const m = pose.transform.matrix;
-                    spatialMatrix = new Float32Array([
-                        m[0], m[1], m[2], 0,
-                        m[4], m[5], m[6], 0,
-                        m[8], m[9], m[10], 0,
-                        m[12] - m[8] * 1.5,
-                        m[13] - m[9] * 1.5 + 0.0,
-                        m[14] - m[10] * 1.5,
-                        1
-                    ]);
-                    console.log('[AR] Panel positioned 1.5m in front of viewer');
-                }
+        const pLoc = gl.getAttribLocation(program, 'p');
+        const tLoc = gl.getAttribLocation(program, 't');
+        const mvpLoc = gl.getUniformLocation(program, 'mvp');
+        const texLoc = gl.getUniformLocation(program, 'tex');
 
-                gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-                gl.useProgram(program);
-                gl.depthMask(true);
-                gl.clearColor(0, 0, 0, 0);
-                gl.clearDepth(1);
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-                if (pose && spatialMatrix) for (const view of pose.views) {
-                    const vp = layer.getViewport(view);
-                    gl.viewport(vp.x, vp.y, vp.width, vp.height);
-                    drawQuad(view, spatialMatrix);
-                }
-            } catch (error) {
-                console.error('[AR] Render error:', error);
+        function draw(timestamp, frame) {
+            if (!session || !gl) {
+                dlog('Draw: session or gl gone, stopping');
+                return;
             }
-        };
-        session.requestAnimationFrame(draw);
+            session.requestAnimationFrame(draw);
+            frameCount++;
 
-        // DISABLED: select event for hit testing not needed in basic AR mode
-        // session.addEventListener('select', event => {
-        //     if (!panelLocked) {
-        //         const pose = event.frame.getViewerPose(refSpace);
-        //         if (pose && latestHitMatrix) {
-        //             const p = [latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]];
-        //             spatialMatrix = new Float32Array(pose.transform.matrix);
-        //             spatialMatrix[12] = p[0]; spatialMatrix[13] = p[1]; spatialMatrix[14] = p[2];
-        //         }
-        //         panelLocked = true;
-        //         bakeTexture();
-        //         showStatus('Panel placed!');
-        //         setTimeout(() => { if (panelLocked) hideStatus(); }, 2000);
-        //     }
-        // });
+            const pose = frame.getViewerPose(refSpace);
+
+            if (!pose) {
+                if (frameCount <= 10 || frameCount % 60 === 0) {
+                    dlog('Frame ' + frameCount + ': no viewer pose');
+                }
+                return;
+            }
+
+            if (!firstPoseAcquired) {
+                firstPoseAcquired = true;
+                dlog('Frame ' + frameCount + ': FIRST POSE ACQUIRED');
+
+                // Position 1.5m in front of current viewer location
+                const m = pose.transform.matrix;
+                spatialMatrix = new Float32Array([
+                    m[0], m[1], m[2], 0,
+                    m[4], m[5], m[6], 0,
+                    m[8], m[9], m[10], 0,
+                    m[12] - m[8] * 1.5,
+                    m[13] - m[9] * 1.5,
+                    m[14] - m[10] * 1.5,
+                    1
+                ]);
+                dlog('  Viewer pos: (' +
+                    m[12].toFixed(2) + ', ' +
+                    m[13].toFixed(2) + ', ' +
+                    m[14].toFixed(2) + ')');
+                dlog('  Panel pos:  (' +
+                    spatialMatrix[12].toFixed(2) + ', ' +
+                    spatialMatrix[13].toFixed(2) + ', ' +
+                    spatialMatrix[14].toFixed(2) + ')');
+            }
+
+            renderCount++;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.useProgram(program);
+            gl.depthMask(true);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clearDepth(1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            for (const view of pose.views) {
+                const vp = layer.getViewport(view);
+                if (!vp) continue;
+                gl.viewport(vp.x, vp.y, vp.width, vp.height);
+
+                // Model-view-projection matrix
+                const vm = view.transform.inverse.matrix;
+                const mv = mult4(vm, spatialMatrix);
+                const mvp = mult4(view.projectionMatrix, mv);
+
+                gl.uniformMatrix4fv(mvpLoc, false, mvp);
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.enableVertexAttribArray(pLoc);
+                gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 20, 0);
+                gl.enableVertexAttribArray(tLoc);
+                gl.vertexAttribPointer(tLoc, 2, gl.FLOAT, false, 20, 12);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.uniform1i(texLoc, 0);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+            }
+
+            if (renderCount === 1) {
+                dlog('RENDER COMPLETE — ' + pose.views.length + ' view(s)');
+                dlog('Viewport: ' + layer.getViewport(pose.views[0]).width + 'x' + layer.getViewport(pose.views[0]).height);
+            }
+        }
 
         session.addEventListener('end', () => {
-            if (!finishingDemo) window.renderProjectDashboard(encodeURIComponent(window._arProjectId || ''));
-            finishingDemo = false; session = null; cleanup();
+            dlog('Session ended');
+            session = null;
+            cleanup();
         });
 
-        hideStatus();
+        session.requestAnimationFrame(draw);
+        dlog('Draw loop requested');
         return true;
+
     } catch (error) {
-        showStatus(`AR error: ${error?.message || 'unknown'}`);
-        window._lastArModeError = error;
+        dlog('ERROR: ' + (error?.message || String(error)));
+        console.error('[AR]', error);
         try { session?.end(); } catch {}
-        session = null; cleanup();
+        session = null;
+        cleanup();
         return false;
     }
 }

@@ -1026,15 +1026,22 @@ function updateReticleAndStatus(frame, viewerPose) {
     // DISABLED: if (reticleLabel) reticleLabel.textContent = '';
 }
 
+let arNoteFirstRenderDone = false;
 function draw(_time, frame) {
     try {
         const activeSession = frame.session;
         if (activeSession !== session) { console.warn('[AR] Stale frame, skipping'); return; }
         activeSession.requestAnimationFrame(draw);
         const viewerPose = frame.getViewerPose(refSpace);
-        if (!viewerPose) { console.warn('[AR] No viewer pose, skipping frame'); return; }
-        
-        // On very first frame, refine panel position using actual viewer pose
+
+        // Wait for a valid viewer pose before rendering anything.
+        // Clearing the framebuffer without drawing leaves the screen blank.
+        if (!viewerPose) {
+            if (!arNoteFirstRenderDone) console.warn('[AR] No viewer pose, waiting...');
+            return;
+        }
+
+        // On very first valid frame, refine panel position using actual viewer pose
         if (window.__nxrArPanelNeedsReposition) {
             window.__nxrArPanelNeedsReposition = false;
             const m = viewerPose.transform.matrix;
@@ -1043,7 +1050,7 @@ function draw(_time, frame) {
                 m[4], m[5], m[6], 0,
                 m[8], m[9], m[10], 0,
                 m[12] - m[8] * 1.5,
-                m[13] - m[9] * 1.5 + 0.0,
+                m[13] - m[9] * 1.5,
                 m[14] - m[10] * 1.5,
                 1
             ]);
@@ -1051,7 +1058,7 @@ function draw(_time, frame) {
         }
 
         if (!gl) { console.error('[AR] WebGL context lost'); return; }
-        
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
         gl.colorMask(true, true, true, true);
         gl.depthMask(true);
@@ -1059,13 +1066,18 @@ function draw(_time, frame) {
         gl.clearDepth(1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.useProgram(program);
-        
+
         for (const view of viewerPose.views) {
             const viewport = activeSession.renderState.baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
             if (menuVisible && menuMatrix) drawOne(view, menuMatrix, texture, panelBuffer);
             if (pendingMarkerMatrix) drawOne(view, pendingMarkerMatrix, pendingPinTexture, flagBuffer);
             for (const marker of tempMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
+        }
+
+        if (!arNoteFirstRenderDone) {
+            arNoteFirstRenderDone = true;
+            console.log('[AR] Render Complete — content visible');
         }
     } catch (error) {
         console.error('[AR] Render error:', error);
