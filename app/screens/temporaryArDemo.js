@@ -1,11 +1,12 @@
 const PLANTS = [
-    { commonName: 'Banana Cavendish', scientificName: 'Musa acuminata', summary: 'A productive tropical banana grown for its familiar sweet fruit and broad sheltering leaves.', family: 'Musaceae', origin: 'Southeast Asia' },
-    { commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', summary: 'A compact tropical fruit tree with bright yellow fruit and a pleasantly sharp, citrus-like flavour.', family: 'Clusiaceae', origin: 'Central America' },
-    { commonName: 'Myoga Ginger', scientificName: 'Zingiber mioga', summary: 'A shade-loving perennial ginger valued for its aromatic flower buds and young shoots.', family: 'Zingiberaceae', origin: 'East Asia' },
-    { commonName: 'Jackfruit', scientificName: 'Artocarpus heterophyllus', summary: 'A vigorous tropical tree producing exceptionally large fruit with sweet edible bulbs.', family: 'Moraceae', origin: 'South and Southeast Asia' }
+    { commonName: 'Banana Cavendish', scientificName: 'Musa acuminata', summary: 'A productive tropical banana grown for its familiar sweet fruit and broad sheltering leaves.', family: 'Musaceae', origin: 'Southeast Asia', uses: ['Food', 'Cooking', 'Dessert'], image: '' },
+    { commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', summary: 'A compact tropical fruit tree with bright yellow fruit and a pleasantly sharp, citrus-like flavour.', family: 'Clusiaceae', origin: 'Central America', uses: ['Food', 'Flavour'], image: '' },
+    { commonName: 'Myoga Ginger', scientificName: 'Zingiber mioga', summary: 'A shade-loving perennial ginger valued for its aromatic flower buds and young shoots.', family: 'Zingiberaceae', origin: 'East Asia', uses: ['Culinary', 'Medicinal'], image: '' },
+    { commonName: 'Jackfruit', scientificName: 'Artocarpus heterophyllus', summary: 'A vigorous tropical tree producing exceptionally large fruit with sweet edible bulbs.', family: 'Moraceae', origin: 'South and Southeast Asia', uses: ['Food', 'Cooking'], image: '' }
 ];
 let SAMPLE = PLANTS[1];
 let markerName = 'My Plant';
+let windowZIndex = 100;
 
 let demoSession = null;
 let demoApp = null;
@@ -61,12 +62,55 @@ function setupMarkerRenderer() {
     demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, canvas);
 }
 
+function makeDraggable(element, handle) {
+    let isDragging = false;
+    let startX, startY, origX, origY;
+    const header = handle || element;
+
+    function onStart(e) {
+        const ev = e.touches ? e.touches[0] : e;
+        isDragging = true;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        origX = element.offsetLeft || 0;
+        origY = element.offsetTop || 0;
+        element.style.zIndex = ++windowZIndex;
+        element.classList.add('is-dragging');
+        if (e.touches) document.addEventListener('touchmove', onMove, { passive: true });
+        else document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchend', onEnd, { passive: true });
+        document.addEventListener('mouseup', onEnd);
+        e.preventDefault();
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+        const ev = e.touches ? e.touches[0] : e;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        element.style.left = (origX + dx) + 'px';
+        element.style.top = (origY + dy) + 'px';
+    }
+
+    function onEnd() {
+        isDragging = false;
+        element.classList.remove('is-dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchend', onEnd);
+    }
+
+    header.addEventListener('mousedown', onStart);
+    header.addEventListener('touchstart', onStart, { passive: true });
+}
+
 export function openTemporaryArDemoWindow(app) {
     document.getElementById('temporaryDemoLauncher')?.remove();
     const launcher = document.createElement('div');
     launcher.id = 'temporaryDemoLauncher';
     launcher.className = 'temporary-demo-launcher';
-    launcher.innerHTML = `<section class="temporary-launcher-window tutorial-fade-in" role="dialog" aria-modal="true" aria-labelledby="temporaryLauncherTitle"><header><span class="launcher-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>NourishlandXR · AR Tutorial</strong><button type="button" id="temporaryLauncherClose" aria-label="Close demo window">×</button></header><div class="temporary-launcher-body"><p class="welcome-label">AUGMENTED REALITY</p><h2 id="temporaryLauncherTitle">This is AR.</h2><p>Augmented reality adds useful digital information to the real world around you, creating an immersive way to explore and interact.</p><p>Press the button below to load your temporary dashboard. Nothing in this tutorial will be saved.</p><div class="button-row"><button type="button" id="temporaryLauncherCancel">Not now</button><button class="primary" type="button" id="temporaryLauncherStart">Open My Location Dashboard</button></div></div></section>`;
+    launcher.innerHTML = `<section class="temporary-launcher-window tutorial-fade-in" role="dialog" aria-modal="true" aria-labelledby="temporaryLauncherTitle"><header><span class="launcher-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>NourishlandXR · AR Tutorial</strong><button type="button" id="temporaryLauncherClose" aria-label="Close demo window">×</button></header><div class="temporary-launcher-body"><p class="welcome-label">AUGMENTED REALITY</p><h2 id="temporaryLauncherTitle">This is AR.</h2><p>Augmented reality adds useful digital information to the real world around you, creating an immersive way to explore and interact.</p><p>Press the button below to load your dashboard and see how spatial content works.</p><div class="button-row"><button type="button" id="temporaryLauncherCancel">Go back</button><button class="primary" type="button" id="temporaryLauncherStart">Proceed</button></div></div></section>`;
     document.body.append(launcher);
     const close = () => launcher.remove();
     document.getElementById('temporaryLauncherClose').addEventListener('click', close);
@@ -97,22 +141,41 @@ function finishDemo() {
     window.renderLaunchScreen();
 }
 
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#39;' })[character]);
 
-function renderDashboard(markerPlaced = Boolean(placedMarker || document.getElementById('temporaryPlantMarker'))) {
-    const card = document.getElementById('temporaryDemoCard');
-    if (!card) return;
-    card.innerHTML = `<p class="welcome-label">TUTORIAL · MY LOCATION</p><h1>My Location</h1><p>This is your dashboard. Here you can create markers, add information, build plant profiles and create relationships between things in your landscape.</p>${markerPlaced ? `<p class="tutorial-success">✓ “${escapeHtml(markerName)}” is tagged. Now open Plant List and identify it.</p>` : '<p>Is there a plant near you? Tag it with a temporary marker.</p>'}<div class="temporary-dashboard-menu"><button type="button" id="temporaryTagPlant"><strong>${markerPlaced ? 'Update Plant Marker' : 'Tag a Nearby Plant'}</strong><span>Place a marker in the real world</span></button><button type="button" id="temporaryPlantList" ${markerPlaced ? '' : 'disabled'}><strong>Plant List</strong><span>${markerPlaced ? 'Choose a plant profile' : 'Available after tagging a plant'}</span></button></div><div class="button-row"><button type="button" id="temporaryDemoExit">Return to Welcome</button></div>`;
-    document.getElementById('temporaryTagPlant').addEventListener('click', renderTagPrompt);
-    document.getElementById('temporaryPlantList').addEventListener('click', renderPlantList);
-    document.getElementById('temporaryDemoExit').addEventListener('click', finishDemo);
+function showDashboard() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    const overlay = document.querySelector('.breathing-overlay');
+    if (overlay) overlay.remove();
+    container.innerHTML = '';
+    const win = document.createElement('div');
+    win.className = 'ar-window draggable-window';
+    win.style.left = 'calc(50% - 200px)';
+    win.style.top = '30px';
+    win.style.zIndex = ++windowZIndex;
+    const placed = Boolean(placedMarker || document.getElementById('temporaryPlantMarker'));
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>My Project</strong></div><div class="window-body"><p class="welcome-label">DASHBOARD</p><h2>My Project</h2><p>Create a plant marker to tag something nearby, then assign a plant profile with details and images.</p>${placed ? `<p class="tutorial-success">✓ "${escapeHtml(markerName)}" marker is placed. Open it to see plant details.</p>` : '<p>Is there a plant near you? Tap below to place a marker.</p>'}<div class="dashboard-menu"><button type="button" class="dashboard-action" id="demoTagPlant"><strong>Tag a Plant</strong><span>Place a marker at a real-world position</span></button><button type="button" class="dashboard-action" id="demoCreateMarker" ${placed ? '' : 'disabled'}><strong>Create Plant Marker</strong><span>${placed ? 'Link a plant profile to the marker' : 'Place a marker first'}</span></button></div><div class="button-row"><button type="button" class="window-close-btn" id="demoExitAr">Exit AR</button></div></div>`;
+    container.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    document.getElementById('demoTagPlant').addEventListener('click', showTagPrompt);
+    const createBtn = document.getElementById('demoCreateMarker');
+    if (createBtn) createBtn.addEventListener('click', showPlantList);
+    document.getElementById('demoExitAr').addEventListener('click', finishDemo);
 }
 
-function renderTagPrompt() {
-    const card = document.getElementById('temporaryDemoCard');
-    card.innerHTML = `<p class="welcome-label">STEP 1 · TAG A PLANT</p><h2>Is there a plant near you?</h2><p>Point at the ground beside it, give the marker a short name, then press Tag This Plant.</p><label class="field"><span>Marker name</span><input id="temporaryMarkerName" value="${escapeHtml(markerName)}" maxlength="40" /></label><p id="temporaryTagStatus" class="meta">${demoSession ? 'Move slowly until a surface is detected.' : 'Simulation will place the marker in the scene.'}</p><div class="button-row"><button type="button" id="temporaryTagBack">Back</button><button class="primary" type="button" id="temporaryTagConfirm">Tag This Plant</button></div>`;
-    document.getElementById('temporaryTagBack').addEventListener('click', () => renderDashboard());
-    document.getElementById('temporaryTagConfirm').addEventListener('click', tagPlant);
+function showTagPrompt() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    const win = document.createElement('div');
+    win.className = 'ar-window draggable-window';
+    win.style.left = 'calc(50% - 200px)';
+    win.style.top = '40px';
+    win.style.zIndex = ++windowZIndex;
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Tag a Plant</strong></div><div class="window-body"><p class="welcome-label">STEP 1</p><h2>Tag a Plant</h2><p>Point at the ground beside a real plant, give it a name, and press Tag.</p><label class="field"><span>Marker name</span><input id="temporaryMarkerName" value="${escapeHtml(markerName)}" maxlength="40" /></label><p id="temporaryTagStatus" class="meta">${demoSession ? 'Move slowly until a surface is detected.' : 'Marker will appear in the scene.'}</p><div class="button-row"><button type="button" class="window-close-btn" onclick="showDashboard()">Cancel</button><button class="primary" type="button" id="demoTagConfirm">Tag This Plant</button></div></div>`;
+    container.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    document.getElementById('demoTagConfirm').addEventListener('click', tagPlant);
 }
 
 function tagPlant() {
@@ -129,15 +192,23 @@ function tagPlant() {
         stage.classList.add('has-marker');
         stage.innerHTML = `<button type="button" class="temporary-plant-marker" id="temporaryPlantMarker"><span aria-hidden="true">✿</span><strong>${escapeHtml(markerName)}</strong><small>Unidentified plant marker</small><i aria-hidden="true"></i></button>`;
     }
-    renderDashboard(true);
+    document.querySelectorAll('.draggable-window').forEach(w => w.remove());
+    showDashboard();
 }
 
-function renderPlantList() {
-    const card = document.getElementById('temporaryDemoCard');
-    if (!placedMarker && !document.getElementById('temporaryPlantMarker')) return renderDashboard(false);
-    card.innerHTML = `<p class="welcome-label">STEP 2 · PLANT LIST</p><h2>Choose the matching plant</h2><p>Select a shared plant profile. Watch your simple marker become useful plant knowledge.</p><div class="temporary-plant-choices">${PLANTS.map((plant, index) => `<button type="button" data-demo-plant="${index}"><strong>${plant.commonName}</strong><span><em>${plant.scientificName}</em></span></button>`).join('')}</div><div class="button-row"><button type="button" id="temporaryPlantListBack">Back to dashboard</button></div>`;
-    card.querySelectorAll('[data-demo-plant]').forEach(button => button.addEventListener('click', () => selectPlantProfile(Number(button.dataset.demoPlant))));
-    document.getElementById('temporaryPlantListBack').addEventListener('click', () => renderDashboard(true));
+function showPlantList() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    if (!placedMarker && !document.getElementById('temporaryPlantMarker')) return showDashboard();
+    const win = document.createElement('div');
+    win.className = 'ar-window draggable-window';
+    win.style.left = 'calc(50% - 220px)';
+    win.style.top = '50px';
+    win.style.zIndex = ++windowZIndex;
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Select Plant Profile</strong></div><div class="window-body"><p class="welcome-label">STEP 2</p><h2>Choose the matching plant</h2><p>Select a plant profile to attach to your marker. Watch it transform into useful plant knowledge.</p><div class="plant-choices">${PLANTS.map((plant, index) => `<button type="button" class="plant-choice" data-plant-index="${index}"><strong>${plant.commonName}</strong><span><em>${plant.scientificName}</em></span></button>`).join('')}</div><div class="button-row"><button type="button" class="window-close-btn" onclick="showDashboard()">Back</button></div></div>`;
+    container.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    win.querySelectorAll('[data-plant-index]').forEach(btn => btn.addEventListener('click', () => selectPlantProfile(Number(btn.dataset.plantIndex))));
 }
 
 function selectPlantProfile(index) {
@@ -147,17 +218,24 @@ function selectPlantProfile(index) {
     else {
         const stage = document.getElementById('temporaryDemoStage');
         stage.innerHTML = `<button type="button" class="temporary-plant-marker" id="temporaryPlantMarker"><span aria-hidden="true">✿</span><strong>${SAMPLE.commonName}</strong><small>${SAMPLE.scientificName}</small><i aria-hidden="true"></i></button>`;
-        document.getElementById('temporaryPlantMarker').addEventListener('click', showProfile);
     }
-    showProfile();
+    document.querySelectorAll('.draggable-window').forEach(w => w.remove());
+    showPlantProfile();
 }
 
-function showProfile() {
-    const card = document.getElementById('temporaryDemoCard');
-    if (!card) return;
-    card.innerHTML = `<p class="welcome-label">PROFILE CREATED · DEMO COMPLETE</p><h2>${SAMPLE.commonName}</h2><p><em>${SAMPLE.scientificName}</em></p><p>${SAMPLE.summary}</p><dl class="temporary-demo-profile"><div><dt>Family</dt><dd>${SAMPLE.family}</dd></div><div><dt>Origin</dt><dd>${SAMPLE.origin}</dd></div></dl><p class="tutorial-success">Your spatial marker is now connected to a reusable plant profile. This is the end of the demo.</p><div class="button-row"><button type="button" id="temporaryDemoDashboard">View Dashboard</button><button class="primary" type="button" id="temporaryDemoFinish">Finish Demo</button></div>`;
-    document.getElementById('temporaryDemoDashboard').addEventListener('click', () => renderDashboard(true));
-    document.getElementById('temporaryDemoFinish').addEventListener('click', finishDemo);
+function showPlantProfile() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    const win = document.createElement('div');
+    win.className = 'ar-window ar-window-wide draggable-window';
+    win.style.left = 'calc(50% - 260px)';
+    win.style.top = '20px';
+    win.style.zIndex = ++windowZIndex;
+    const uses = SAMPLE.uses?.length ? SAMPLE.uses.join(', ') : 'Not recorded';
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Plant Profile</strong></div><div class="window-body"><p class="welcome-label">PLANT PROFILE</p><h2>${SAMPLE.commonName}</h2><p><em>${SAMPLE.scientificName}</em></p><hr class="profile-divider" /><p>${SAMPLE.summary}</p><dl class="profile-grid"><div><dt>Family</dt><dd>${SAMPLE.family}</dd></div><div><dt>Origin</dt><dd>${SAMPLE.origin}</dd></div><div><dt>Uses</dt><dd>${uses}</dd></div></dl><p class="tutorial-success">✓ Plant profile linked to spatial marker</p><div class="button-row"><button type="button" class="window-close-btn" onclick="showDashboard()">Dashboard</button><button class="primary" type="button" id="demoFinishAr">Finish</button></div></div>`;
+    container.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    document.getElementById('demoFinishAr').addEventListener('click', finishDemo);
 }
 
 function showPlacedMarker() {
@@ -165,27 +243,41 @@ function showPlacedMarker() {
     const card = document.getElementById('temporaryDemoCard');
     if (!stage || !card) return;
     if (demoSession) {
-        if (!latestHitMatrix) { card.querySelector('p:last-of-type').textContent = 'Move slowly and point at a floor or table until a surface is found.'; return; }
+        if (!latestHitMatrix) return;
         placedMarker = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .42, z: latestHitMatrix[14] };
         stage.innerHTML = '';
-        card.innerHTML = `<p class="welcome-label">Spatial marker placed</p><h2>${SAMPLE.commonName}</h2><p>The plant is fixed to the detected surface. Aim at the marker and tap it, or open the profile below.</p><div class="button-row"><button type="button" id="temporaryDemoProfile">View Plant Profile</button><button class="primary" type="button" id="temporaryDemoFinish">Finish Demo</button></div>`;
-        document.getElementById('temporaryDemoProfile').addEventListener('click', showProfile);
+        const win = document.createElement('div');
+        win.className = 'ar-window draggable-window';
+        win.style.left = 'calc(50% - 200px)';
+        win.style.top = '40px';
+        win.style.zIndex = ++windowZIndex;
+        win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Marker Placed</strong></div><div class="window-body"><p class="welcome-label">SPATIAL MARKER</p><h2>${SAMPLE.commonName}</h2><p>The plant is fixed to the detected surface. Aim at the marker and tap it to open the profile.</p><div class="button-row"><button type="button" id="temporaryDemoProfile">View Plant Profile</button><button class="primary" type="button" id="temporaryDemoFinish">Finish</button></div></div>`;
+        card.appendChild(win);
+        makeDraggable(win, win.querySelector('.window-header'));
+        document.getElementById('temporaryDemoProfile').addEventListener('click', showPlantProfile);
         document.getElementById('temporaryDemoFinish').addEventListener('click', finishDemo);
         return;
     }
     stage.classList.add('has-marker');
     stage.innerHTML = `<button type="button" class="temporary-plant-marker" id="temporaryPlantMarker" aria-label="Open Lemon Drop Garcinia"><span aria-hidden="true">✿</span><strong>${SAMPLE.commonName}</strong><small>Tap to explore</small><i aria-hidden="true"></i></button>`;
-    card.innerHTML = `<p class="welcome-label">Marker placed</p><h2>${SAMPLE.commonName}</h2><p>Tap the plant marker to discover more.</p><div class="button-row"><button type="button" id="temporaryDemoProfile">View Plant Profile</button><button class="primary" type="button" id="temporaryDemoFinish">Finish Demo</button></div>`;
-    document.getElementById('temporaryPlantMarker').addEventListener('click', showProfile);
-    document.getElementById('temporaryDemoProfile').addEventListener('click', showProfile);
+    const win = document.createElement('div');
+    win.className = 'ar-window draggable-window';
+    win.style.left = 'calc(50% - 200px)';
+    win.style.top = '40px';
+    win.style.zIndex = ++windowZIndex;
+    win.innerHTML = `<div class="window-header"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Marker Placed</strong></div><div class="window-body"><p class="welcome-label">SPATIAL MARKER</p><h2>${SAMPLE.commonName}</h2><p>Tap the plant marker to discover more.</p><div class="button-row"><button type="button" id="temporaryDemoProfile">View Plant Profile</button><button class="primary" type="button" id="temporaryDemoFinish">Finish</button></div></div>`;
+    card.appendChild(win);
+    makeDraggable(win, win.querySelector('.window-header'));
+    document.getElementById('temporaryPlantMarker').addEventListener('click', showPlantProfile);
+    document.getElementById('temporaryDemoProfile').addEventListener('click', showPlantProfile);
     document.getElementById('temporaryDemoFinish').addEventListener('click', finishDemo);
 }
 
 function renderDemo(simulated) {
     profileLinked = false;
     markerName = 'My Plant';
-    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="temporary-demo-reticle" aria-hidden="true"></div></div><section id="temporaryDemoCard" class="temporary-demo-card tutorial-fade-in"></section></div>`;
-    renderDashboard(false);
+    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div></div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
+    setTimeout(showDashboard, 2000);
 }
 
 function drawSpatialMarker(view) {
@@ -256,7 +348,7 @@ async function tryImmersiveDemo() {
         session.addEventListener('select', event => {
             if (!placedMarker || !demoRefSpace) return;
             const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, demoRefSpace);
-            if (selectedSpatialMarker(rayPose?.transform.matrix)) profileLinked ? showProfile() : renderDashboard(true);
+            if (selectedSpatialMarker(rayPose?.transform.matrix)) profileLinked ? showPlantProfile() : showDashboard();
         });
         session.addEventListener('end', () => {
             demoSession = null;
