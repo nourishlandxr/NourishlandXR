@@ -10,7 +10,14 @@ const frontendOnly = process.argv.includes('--frontend-only');
 const packageData = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const builtAt = new Date().toISOString();
 const commit = String(process.env.GITHUB_SHA || 'local').slice(0, 12);
-const buildVersion = `${packageData.version}+${commit}.${builtAt.replace(/[-:.TZ]/g, '').slice(0, 14)}`;
+// Read the simplified version from app/services/buildInfo.js
+let simpleVersion = packageData.version;
+try {
+    const buildInfoContent = fs.readFileSync(path.join(root, 'app', 'services', 'buildInfo.js'), 'utf8');
+    const match = buildInfoContent.match(/const VERSION\s*=\s*'([^']+)'/);
+    if (match) simpleVersion = match[1];
+} catch {}
+const buildVersion = simpleVersion;
 const protectedDirectoryNames = new Set(['workspace', 'xr-api', 'nourishland-data']);
 const frontendEntries = [
     'index.html',
