@@ -341,12 +341,13 @@ function draw(time, frame) {
 }
 
 export async function startArNote(_marker, profile) {
-    // ─── Create diagnostic element IMMEDIATELY, before any XR call ───
+    // ─── Create diagnostic element on <html> (NOT body — body is domOverlay root!) ───
     if (!document.getElementById('nxrArDiag')) {
         const diag = document.createElement('div');
         diag.id = 'nxrArDiag';
         diag.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;color:#0f0;font:14px/1.4 monospace;background:rgba(0,0,0,.92);padding:8px 12px;max-width:100vw;pointer-events:none;white-space:pre-wrap;border:3px solid #f00;display:block;visibility:visible;opacity:1;';
-        document.body.append(diag);
+        // Append to <html> to stay outside domOverlay root
+        document.documentElement.append(diag);
     }
     function prelog(msg) {
         console.log('[AR]', msg);
@@ -356,9 +357,7 @@ export async function startArNote(_marker, profile) {
     prelog('=== AR DIAGNOSTIC START ===');
     prelog('1. SecureContext: ' + window.isSecureContext);
     prelog('2. navigator.xr: ' + Boolean(navigator.xr));
-    // Create diagnostic before any XR operations
 
-    // Now proceed with XR session
     if (!window.isSecureContext) { prelog('FAIL: not HTTPS'); message('AR requires HTTPS.'); return; }
     if (!navigator.xr) { prelog('FAIL: no navigator.xr'); message('WebXR unavailable.'); return; }
 
