@@ -128,12 +128,10 @@ export function toggleArTechnicalDetails() {
 
 export function renderArFailure(app, encodedProjectId, returnContext, error) {
     const projectId = decodeURIComponent(encodedProjectId);
-    recordArFailure(error);
     const creator = returnContext === 'creator';
-    const technical = [...getArDiagnostics(), error?.cause?.message, error?.message].filter(Boolean);
     const userMessage = /Starting Point/i.test(error?.message || '')
         ? 'Set a GPS Starting Point for this project, then try AR Mode again.'
-        : 'Check that camera access is allowed and try again.';
+        : `AR could not start: ${error?.message || 'Unknown error'}. Check that camera access is allowed and try again.`;
     const retryAction = creator
         ? `window.startCreatorLocationAr('${encoded(projectId)}')`
         : `window.startLocationAr('${encoded(projectId)}')`;
@@ -143,8 +141,7 @@ export function renderArFailure(app, encodedProjectId, returnContext, error) {
     app.innerHTML = `<div class="screen ar-failure-screen">
         <div class="page-header"><p class="welcome-label">AR unavailable</p><h1>AR could not start</h1></div>
         <section class="panel"><p>${userMessage}</p></section>
-        <div class="button-row"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${retryAction}">Try Again</button><button type="button" onclick="window.toggleArTechnicalDetails()">View Technical Details</button></div>
-        <section id="arTechnicalDetails" class="panel ar-technical-details" hidden><h2>Technical details</h2><pre>${escapeHtml(technical.join('\n') || 'No technical details were recorded.')}</pre><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button><p id="arTechnicalCopyStatus" class="meta"></p></section>
+        <div class="button-row"><button type="button" onclick="${backAction}">Go Back</button><button class="primary" type="button" onclick="${retryAction}">Try Again</button></div>
     </div>`;
 }
 
@@ -240,8 +237,9 @@ export async function startLocationAr(encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const creator = document.body.dataset.experienceRole === 'creator';
     const visitor = !creator;
-    const headingPromise = (navigator.xr ? requestAbsoluteHeading() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
-    const positionPromise = (navigator.xr ? requestCurrentGps() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    console.log('[AR] startLocationAr: requesting GPS and heading...');
+    const headingPromise = requestAbsoluteHeading().then(value => ({ value }), error => ({ error, source: 'heading' }));
+    const positionPromise = requestCurrentGps().then(value => ({ value }), error => ({ error, source: 'gps' }));
     const project = (await loadProjects(visitor)).find(item => item.id === projectId);
     if (!project) throw new Error('Location not found');
     const sites = await loadProjectSites(project.id, visitor);
@@ -310,8 +308,9 @@ export async function startAreaNavigationAr(encodedProjectId, encodedSiteId, enc
     if (anchor?.type !== 'gps' || !Number.isFinite(Number(anchor.latitude)) || !Number.isFinite(Number(anchor.longitude))) {
         throw new Error('Assign a GPS location to this Area before opening AR navigation.');
     }
-    const headingPromise = (navigator.xr ? requestAbsoluteHeading() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
-    const positionPromise = (navigator.xr ? requestCurrentGps() : Promise.reject(new Error('WebXR is unavailable.'))).then(value => ({ value }), error => ({ error }));
+    console.log('[AR] startAreaNavigationAr: requesting GPS and heading...');
+    const headingPromise = requestAbsoluteHeading().then(value => ({ value }), error => ({ error, source: 'heading' }));
+    const positionPromise = requestCurrentGps().then(value => ({ value }), error => ({ error, source: 'gps' }));
     const markers = await loadPlaceMarkers(project.id, site.id, place.id);
     const [headingResult, positionResult] = await Promise.all([headingPromise, positionPromise]);
     if (headingResult.error) throw headingResult.error;
@@ -352,4 +351,4 @@ export async function toggleGlobalAr() {
     await startWelcomeAr();
 }
 
-export { copyArDiagnostics, resetArPlacement, exitAr };
+export { resetArPlacement, exitAr };

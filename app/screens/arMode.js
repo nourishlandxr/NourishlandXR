@@ -1,3 +1,9 @@
+/**
+ * AR Mode - Lightweight WebXR AR panel for the creator dashboard.
+ * Renders a floating dashboard panel entirely through WebGL.
+ * No dom-overlay dependency — everything visible in-headset from frame 1.
+ */
+
 let session = null;
 let gl = null;
 let refSpace = null;
@@ -6,9 +12,11 @@ let canvas = null;
 let finishingDemo = false;
 let latestHitMatrix = null;
 let spatialMatrix = null;
+let panelLocked = false;
 let program = null;
 let buffer = null;
 let texture = null;
+let statusEl = null;  // on-screen status element
 const PW = 0.72;
 const PH = 0.52;
 
@@ -27,6 +35,14 @@ function makeShader(t, s) {
     return sh;
 }
 
+function showStatus(msg) {
+    if (statusEl) { statusEl.textContent = msg; statusEl.hidden = false; }
+}
+
+function hideStatus() {
+    if (statusEl) statusEl.hidden = true;
+}
+
 function renderPanel(ctx, w, h) {
     ctx.fillStyle = 'rgba(20,55,34,.92)';
     ctx.fillRect(0, 0, w, h);
@@ -37,9 +53,17 @@ function renderPanel(ctx, w, h) {
     ctx.fillStyle = '#dcef95';
     ctx.font = '13px sans-serif';
     ctx.fillText('DASHBOARD', w / 2, 62);
-    ctx.fillStyle = 'rgba(255,255,255,.8)';
-    ctx.font = '16px sans-serif';
-    ctx.fillText('Create a marker or note to get started.', w / 2, 96);
+
+    if (!panelLocked) {
+        ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('Tap a surface to place this panel.', w / 2, 96);
+    } else {
+        ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('Panel placed at selected position.', w / 2, 96);
+    }
+
     ctx.fillStyle = '#dcef95';
     ctx.fillRect(20, 120, w - 40, 44);
     ctx.fillStyle = '#173522';
@@ -112,13 +136,13 @@ function cleanup() {
     hitSource?.cancel(); hitSource = null; refSpace = null;
     latestHitMatrix = null; spatialMatrix = null;
     canvas?.remove(); canvas = null; gl = null;
+    if (statusEl) { statusEl.remove(); statusEl = null; }
 }
 
 export function exitArMode() {
     finishingDemo = true;
     const s = session; session = null; cleanup();
     if (s) s.end().catch(() => {});
-    document.getElementById('arGuide')?.remove();
 }
 
 export function isArModeActive() { return Boolean(session); }
@@ -126,13 +150,27 @@ export function isArModeActive() { return Boolean(session); }
 export async function startArMode(projectId = '') {
     if (projectId) window._arProjectId = projectId;
     if (!navigator.xr || !window.isSecureContext) return false;
+
+    // Create visible status element for Android users (no console access)
+    statusEl = document.createElement('div');
+    statusEl.id = 'arModeStatus';
+    statusEl.style.cssText = 'position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:13000;color:#fff;font-size:14px;font-weight:600;text-shadow:0 2px 6px rgba(0,0,0,.9);text-align:center;background:rgba(0,0,0,.7);padding:8px 16px;border-radius:8px;max-width:90%;pointer-events:none;';
+    statusEl.textContent = 'Initializing AR...';
+    document.body.append(statusEl);
+
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
+        if (!await navigator.xr.isSessionSupported('immersive-ar')) {
+            showStatus('AR not supported on this device/browser');
+            return false;
+        }
+        showStatus('Requesting camera...');
         session = await navigator.xr.requestSession('immersive-ar', {
             requiredFeatures: ['hit-test'],
             optionalFeatures: ['local-floor']
         });
+        showStatus('Camera active, setting up...');
         canvas = document.createElement('canvas');
+        canvas.id = 'arCanvas';
         canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:11999';
         document.body.append(canvas);
         gl = canvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
@@ -144,32 +182,51 @@ export async function startArMode(projectId = '') {
         });
         try { refSpace = await session.requestReferenceSpace('local-floor'); }
         catch { refSpace = await session.requestReferenceSpace('local'); }
-        hitSource = await session.requestHitTestSource({ space: await session.requestReferenceSpace('viewer') });
         initGL();
         finishingDemo = false;
+        panelLocked = false;
+        spatialMatrix = null;
 
-        // Guide text overlay
-        const guide = document.createElement('div');
-        guide.id = 'arGuide';
-        guide.style.cssText = 'position:fixed;left:50%;top:calc(50% + 36px);transform:translateX(-50%);z-index:12001;pointer-events:none;color:rgba(255,255,255,.92);font-size:.9rem;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.5);text-align:center;';
-        guide.textContent = 'Tap a surface to place your dashboard';
-        document.body.append(guide);
+        // Try to create hit source, but don't fail if unavailable
+        try {
+            const viewerSpace = await session.requestReferenceSpace('viewer');
+            hitSource = await session.requestHitTestSource({ space: viewerSpace });
+        } catch (e) {
+            // Hit-test is optional - we fall back to placing the panel in front of the viewer
+            console.warn('[arMode] Hit-test unavailable, using fallback placement');
+        }
+
+        showStatus('AR ready - tap to place panel');
 
         const draw = (t, frame) => {
             if (frame.session !== session || !gl) return;
             frame.session.requestAnimationFrame(draw);
             const layer = frame.session.renderState.baseLayer;
             const pose = frame.getViewerPose(refSpace);
-            const hit = hitSource ? frame.getHitTestResults(hitSource)[0] : null;
-            latestHitMatrix = hit?.getPose(refSpace)?.transform?.matrix
-                ? new Float32Array(hit.getPose(refSpace).transform.matrix) : null;
+            const hit = hitSource && frame.session.visibilityState !== 'hidden'
+                ? frame.getHitTestResults(hitSource)[0] : null;
+            if (hit) {
+                const hitPose = hit.getPose(refSpace);
+                if (hitPose) latestHitMatrix = new Float32Array(hitPose.transform.matrix);
+            }
+
+            // Compute panel position: locked position or floating in front of viewer
+            if (!panelLocked && pose) {
+                const m = pose.transform.matrix;
+                spatialMatrix = new Float32Array(m);
+                spatialMatrix[12] = m[12] - m[8] * 1.2;
+                spatialMatrix[13] = m[13] - m[9] * 1.2 - 0.2;
+                spatialMatrix[14] = m[14] - m[10] * 1.2;
+            }
+
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.useProgram(program);
             gl.depthMask(true);
             gl.clearColor(0, 0, 0, 0);
             gl.clearDepth(1);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            if (pose) for (const view of pose.views) {
+
+            if (pose && spatialMatrix) for (const view of pose.views) {
                 const vp = layer.getViewport(view);
                 gl.viewport(vp.x, vp.y, vp.width, vp.height);
                 drawQuad(view, spatialMatrix);
@@ -178,30 +235,32 @@ export async function startArMode(projectId = '') {
         session.requestAnimationFrame(draw);
 
         session.addEventListener('select', event => {
-            if (!spatialMatrix) {
-                const vp = event.frame.getViewerPose(refSpace);
-                if (!vp) return;
-                let p;
-                if (latestHitMatrix) p = [latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]];
-                else p = [vp.transform.matrix[12] - vp.transform.matrix[8] * 1.2, vp.transform.matrix[13] - vp.transform.matrix[9] * 1.2 + 0.1, vp.transform.matrix[14] - vp.transform.matrix[10] * 1.2];
-                spatialMatrix = new Float32Array(vp.transform.matrix);
-                spatialMatrix[12] = p[0]; spatialMatrix[13] = p[1]; spatialMatrix[14] = p[2];
+            if (!panelLocked) {
+                const pose = event.frame.getViewerPose(refSpace);
+                if (pose && latestHitMatrix) {
+                    const p = [latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]];
+                    spatialMatrix = new Float32Array(pose.transform.matrix);
+                    spatialMatrix[12] = p[0]; spatialMatrix[13] = p[1]; spatialMatrix[14] = p[2];
+                }
+                panelLocked = true;
                 bakeTexture();
-                guide.textContent = 'Dashboard placed!';
-                setTimeout(() => { guide.textContent = ''; }, 3000);
+                showStatus('Panel placed!');
+                setTimeout(() => { if (panelLocked) hideStatus(); }, 2000);
             }
         });
 
         session.addEventListener('end', () => {
             if (!finishingDemo) window.renderProjectDashboard(encodeURIComponent(window._arProjectId || ''));
             finishingDemo = false; session = null; cleanup();
-            document.getElementById('arGuide')?.remove();
         });
+
+        hideStatus();
         return true;
-    } catch {
+    } catch (error) {
+        showStatus(`AR error: ${error?.message || 'unknown'}`);
+        window._lastArModeError = error;
         try { session?.end(); } catch {}
         session = null; cleanup();
-        document.getElementById('arGuide')?.remove();
         return false;
     }
 }

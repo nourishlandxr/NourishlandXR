@@ -1,3 +1,5 @@
+import { BUILD_INFO } from '../services/buildInfo.js';
+
 export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
@@ -7,7 +9,7 @@ export function renderLaunchScreen(app) {
             </div>
 
             <section class="intro-copy" aria-labelledby="demoWelcomeTitle">
-                <div class="welcome-label">NOURISHLAND XR · DEMO V0.8</div>
+                <div class="welcome-label">NOURISHLAND XR · DEMO</div>
                 <h2 id="demoWelcomeTitle">MAP. GROW. LEARN IN PLACE.</h2>
                 <p><strong>Nourishland XR</strong> turns real gardens and landscapes into interactive learning experiences, helping people discover the plants, stories and natural relationships found around them.</p>
                 <p>Using a suitable device—such as your phone—you can map and explore plant-rich places, including home gardens, food forests, community gardens, farms and native forests. Add plants, mark important locations, create relationships, record observations and create information that others can discover while visiting the landscape.</p>
@@ -40,7 +42,7 @@ export function renderLaunchScreen(app) {
         <nav class="platform-landing-nav" aria-label="Platform navigation">
             <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
             <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
-            <span class="version-badge" aria-label="Version">V0.8126</span>
+            <span class="version-badge" aria-label="Version">V${BUILD_INFO.version}</span>
         </nav>
 
             <p class="collaboration-credit"><strong>NourishlandXR</strong> is a collaboration between <strong>Nourishland</strong> and <strong>CyberLotus</strong>, combining regenerative education with immersive technology to transform real landscapes into interactive learning experiences through spatial computing and augmented reality.</p>
