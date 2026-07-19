@@ -45,6 +45,18 @@ export async function copyArDiagnostics() {
 export function isArActive() { return Boolean(session); }
 // ─── End compatibility stubs ───
 
+// ─── On-screen diagnostic overlay (visible on phone, no USB debugging needed) ───
+let diagnosticEl = null;
+function dlog(msg) {
+    console.log('[AR]', msg);
+    const status = document.getElementById('arOverlayStatus');
+    if (status) {
+        const existing = status.textContent || '';
+        status.textContent = msg.length > 60 ? msg.slice(0, 60) + '…' : msg;
+    }
+}
+// ─── End diagnostic ───
+
 const ROOT_OPTIONS = [
     { key: 'intro_checkpoint', label: 'Add Intro Checkpoint', range: [180, 350] },
     { key: 'sub_checkpoint', label: 'Add Sub Checkpoint', range: [370, 540] },
@@ -519,15 +531,15 @@ function draw(_time, frame) {
 }
 
 export async function startArNote(_marker, profile) {
-    console.log('[AR] ✅ CHECK 1: startArNote called');
-    if (!window.isSecureContext) { console.log('[AR] ❌ CHECK: not secure context'); message('AR requires HTTPS or localhost.'); return; }
-    if (!navigator.xr) { console.log('[AR] ❌ CHECK: navigator.xr missing'); message('WebXR is unavailable in this browser.'); return; }
+    dlog('CHECK 1: startArNote');
+    if (!window.isSecureContext) { dlog('FAIL: not secure'); message('AR requires HTTPS or localhost.'); return; }
+    if (!navigator.xr) { dlog('FAIL: no navigator.xr'); message('WebXR is unavailable.'); return; }
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) { console.log('[AR] ❌ CHECK: immersive-ar not supported'); message('immersive-ar is not supported on this device or browser.'); return; }
-        console.log('[AR] ✅ CHECK 2: immersive-ar supported');
+        if (!await navigator.xr.isSessionSupported('immersive-ar')) { dlog('FAIL: immersive-ar unsupported'); message('AR not supported.'); return; }
+        dlog('CHECK 2: immersive-ar OK');
         
-        session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay', 'local-floor'], domOverlay: { root: document.body } });
-        console.log('[AR] ✅ CHECK 3: requestSession() succeeded, mode=' + session.mode);
+        session = await navigator.xr.requestSession('immersive-ar', { optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'], domOverlay: { root: document.body } });
+        dlog('CHECK 3: session=' + session.mode);
         
         const nextCanvas = document.createElement('canvas');
         nextCanvas.id = 'arCanvas';
@@ -537,21 +549,20 @@ export async function startArNote(_marker, profile) {
         setupGl(nextCanvas, profile);
         
         await gl.makeXRCompatible();
-        console.log('[AR] ✅ CHECK 4: makeXRCompatible done');
+        dlog('CHECK 4: makeXRCompatible');
         
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }), depthNear: 0.01, depthFar: 100 });
         try { refSpace = await session.requestReferenceSpace('local-floor'); } catch { refSpace = await session.requestReferenceSpace('local'); }
-        console.log('[AR] ✅ CHECK 5: refSpace = ' + (refSpace ? refSpace.session?.mode || 'local' : 'null'));
+        dlog('CHECK 5: refSpace OK');
         
         let fallbackTimer = null;
         
-        // Try to get hit-test source; if not available, go straight to fallback
         try {
             const viewerSpace = await session.requestReferenceSpace('viewer');
             hitSource = await session.requestHitTestSource({ space: viewerSpace });
-            console.log('[AR] ✅ CHECK 6a: hitSource created');
+            dlog('CHECK 6a: hitSource OK');
         } catch (e) {
-            console.log('[AR] ❌ CHECK 6a: hitSource FAILED — ' + e.message);
+            dlog('WARN: hitSource failed - ' + e.message.slice(0, 40));
             hitSource = null;
         }
         
@@ -611,21 +622,16 @@ export async function startArNote(_marker, profile) {
             window.renderLaunchScreen?.();
         });
         
-        // ✅ CHECK 7: Start draw loop
         message('Move slowly to detect a surface.');
         session.requestAnimationFrame(draw);
-        console.log('[AR] ✅ CHECK 7: animation loop started via requestAnimationFrame(draw)');
+        dlog('CHECK 7: draw loop started');
         
-        // ─── 2-second fallback: if no surface detected, place panel at (0, 0, -2) ───
+        // ─── 2-second fallback: auto-place if no hit test result ───
         fallbackTimer = window.setTimeout(() => {
-            console.log('[AR] ⏱ 2-second fallback triggered — no hit test result yet');
-            if (placedMatrix) {
-                console.log('[AR] ⏱ fallback skipped — already placed');
-                return;
-            }
+            dlog('TIMEOUT: 2s no hit-test result');
+            if (placedMatrix) { dlog('skipped: already placed'); return; }
             if (!latestViewerPosition) {
-                // No viewer position yet either — use hardcoded position
-                console.log('[AR] ⏱ no viewer position — placing at default (-2 on Z, 1.5 up)');
+                dlog('placing at default (0,1.5,-1.5)');
                 placedMatrix = new Float32Array([
                     1, 0, 0, 0,
                     0, 1, 0, 0,
@@ -633,7 +639,7 @@ export async function startArNote(_marker, profile) {
                     0, 1.5, -1.5, 1
                 ]);
             } else {
-                // Place 2m in front of viewer
+                dlog('placing at viewer-relative');
                 const m = latestViewerPosition;
                 placedMatrix = new Float32Array([
                     1, 0, 0, 0,
@@ -641,7 +647,6 @@ export async function startArNote(_marker, profile) {
                     0, 0, 1, 0,
                     m.x, m.y + 0.48, m.z - 2.0, 1
                 ]);
-                console.log('[AR] ⏱ placing at viewer-relative position');
             }
             rootMenuMatrix = new Float32Array(placedMatrix);
             placementState = 'placed';
@@ -649,23 +654,20 @@ export async function startArNote(_marker, profile) {
             setPanelGeometry(PANEL_WIDTH, PANEL_HEIGHT);
             drawMenu();
             placementReticle?.classList.add('placed');
-            message('Menu placed (auto). Select an option.');
-            console.log('[AR] ✅ CHECK 8: fallback panel placed at (' +
-                placedMatrix[12].toFixed(2) + ', ' +
-                placedMatrix[13].toFixed(2) + ', ' +
-                placedMatrix[14].toFixed(2) + ')');
+            message('Menu placed. Select an option.');
+            dlog('PLACED: x=' + placedMatrix[12].toFixed(1) + ' y=' + placedMatrix[13].toFixed(1) + ' z=' + placedMatrix[14].toFixed(1));
         }, 2000);
-        console.log('[AR] ✅ CHECK 6b: 2-second fallback timer set');
+        dlog('CHECK 6b: fallback timer set');
         
     } catch (error) {
-        console.log('[AR] ❌ FATAL ERROR in startArNote: ' + (error?.message || String(error)));
+        dlog('FATAL: ' + (error?.message || String(error)).slice(0, 60));
         window.clearTimeout(pointerFallbackTimer);
         window.clearTimeout(placementMessageTimer);
         document.removeEventListener('pointerdown', handlePointerFallback, true);
         document.getElementById('arCanvas')?.remove();
         removeArOverlay();
         session = null;
-        message(`AR could not start: ${error.message}`);
+        message(`AR error: ${error.message}`);
     }
 }
 
