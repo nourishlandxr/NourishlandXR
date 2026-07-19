@@ -12,6 +12,7 @@ let debugEl = null;
 let program = null;
 let buffer = null;
 let texture = null;
+let dashboardOverlayMode = false;
 const PW = 0.72;
 const PH = 0.52;
 
@@ -121,6 +122,7 @@ function cleanup() {
     program = null;
     buffer = null;
     refSpace = null;
+    dashboardOverlayMode = false;
     canvas?.remove();
     canvas = null;
     gl = null;
@@ -145,12 +147,17 @@ export async function startArMode(projectId) {
         console.error('[AR] WebXR not available');
         return false;
     }
+    const dashboardRoot = document.getElementById('app');
+    if (!dashboardRoot) {
+        console.error('[AR] Dashboard root is unavailable');
+        return false;
+    }
 
     // Visible debug log on screen
     debugEl = document.createElement('div');
     debugEl.id = 'arDebugLog';
     debugEl.style.cssText = 'position:fixed;left:12px;top:12px;z-index:15000;color:#0f0;font-size:12px;font-family:monospace;background:rgba(0,0,0,.85);padding:8px 12px;border-radius:6px;max-width:95vw;max-height:50vh;overflow-y:auto;pointer-events:none;white-space:pre-wrap;line-height:1.4;';
-    document.body.append(debugEl);
+    dashboardRoot.append(debugEl);
 
     try {
         dlog('=== AR Mode Start ===');
@@ -164,9 +171,13 @@ export async function startArMode(projectId) {
 
         dlog('Requesting session...');
         session = await navigator.xr.requestSession('immersive-ar', {
-            optionalFeatures: ['local-floor']
+            requiredFeatures: ['dom-overlay'],
+            optionalFeatures: ['local-floor'],
+            domOverlay: { root: dashboardRoot }
         });
         dlog('Session acquired: ' + session.mode);
+        dashboardOverlayMode = true;
+        dlog('Project dashboard retained as DOM overlay');
 
         canvas = document.createElement('canvas');
         canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:11999;';
@@ -265,26 +276,28 @@ export async function startArMode(projectId) {
             gl.clearDepth(1);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            for (const view of pose.views) {
-                const vp = layer.getViewport(view);
-                if (!vp) continue;
-                gl.viewport(vp.x, vp.y, vp.width, vp.height);
+            if (!dashboardOverlayMode) {
+                for (const view of pose.views) {
+                    const vp = layer.getViewport(view);
+                    if (!vp) continue;
+                    gl.viewport(vp.x, vp.y, vp.width, vp.height);
 
-                // Model-view-projection matrix
-                const vm = view.transform.inverse.matrix;
-                const mv = mult4(vm, spatialMatrix);
-                const mvp = mult4(view.projectionMatrix, mv);
+                    // Model-view-projection matrix
+                    const vm = view.transform.inverse.matrix;
+                    const mv = mult4(vm, spatialMatrix);
+                    const mvp = mult4(view.projectionMatrix, mv);
 
-                gl.uniformMatrix4fv(mvpLoc, false, mvp);
-                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-                gl.enableVertexAttribArray(pLoc);
-                gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 20, 0);
-                gl.enableVertexAttribArray(tLoc);
-                gl.vertexAttribPointer(tLoc, 2, gl.FLOAT, false, 20, 12);
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, texture);
-                gl.uniform1i(texLoc, 0);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                    gl.uniformMatrix4fv(mvpLoc, false, mvp);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                    gl.enableVertexAttribArray(pLoc);
+                    gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 20, 0);
+                    gl.enableVertexAttribArray(tLoc);
+                    gl.vertexAttribPointer(tLoc, 2, gl.FLOAT, false, 20, 12);
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.uniform1i(texLoc, 0);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                }
             }
 
             if (renderCount === 1) {

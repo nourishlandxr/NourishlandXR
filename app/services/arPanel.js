@@ -38,8 +38,12 @@ export function initPanelRenderer(gl) {
     
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    // V=0 at quad bottom (vertex -hh), V=1 at quad top (vertex +hh)
-    // With UNPACK_FLIP_Y_WEBGL=true, canvas Y=0 (top/title) → V=1, canvas Y=max → V=0
+    // Texture coordinate convention (WebGL default, NO flip):
+    //   V=0 = canvas bottom (Y=H), V=1 = canvas top (Y=0)
+    // Quad builds in XY plane:
+    //   y=-1 = bottom of quad, y=+1 = top of quad
+    // We want quad bottom → canvas bottom, quad top → canvas top:
+    //   quad bottom (y=-1) → V=0, quad top (y=+1) → V=1
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
         -1, -1, 0, 0, 0,
          1, -1, 0, 1, 0,

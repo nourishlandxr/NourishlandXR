@@ -232,8 +232,6 @@ textarea:focus {
     font-weight: 700;
 }
 
-body.ar-session-active #app,
-body.ar-session-active .ar-launch-status,
 body.ar-session-active #targetReticle,
 body.ar-session-active #targetReticleLabel {
     display: none !important;
@@ -1668,10 +1666,6 @@ textarea {
 
 body.ar-session-active {
     background: transparent !important;
-}
-
-body.ar-session-active #app {
-    display: none !important;
 }
 
 #arOverlayControls {
