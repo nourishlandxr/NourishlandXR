@@ -110,7 +110,18 @@ test('welcome Try It Now AR keeps its guidance visible and places an upright das
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: demoApp \}/);
     assert.match(source, /makeUprightPanelMatrix\(pos, latestViewerMatrix\)/);
+    assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /Move your phone slowly to find a flat surface/);
     assert.match(styles, /\.temporary-ar-demo\.is-immersive \.temporary-demo-stage,[\s\S]*pointer-events: none;/);
     assert.match(styles, /\.temporary-demo-exit[\s\S]*pointer-events: auto;/);
+});
+
+test('Creator project AR uses an upright spatial dashboard without a debug overlay', () => {
+    const source = read('app/screens/arMode.js');
+    assert.doesNotMatch(source, /arDebugLog|dashboardOverlayMode|function dlog/);
+    assert.match(source, /makeViewerFacingMatrix/);
+    assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
+    assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
+    assert.match(source, /id = 'creatorArOverlay'/);
+    assert.match(source, /PROJECT DASHBOARD/);
 });

@@ -43,7 +43,9 @@ function createPanelTexture(width, height, drawFn) {
     drawFn(ctx, canvas.width, canvas.height);
     const tex = demoGl.createTexture();
     demoGl.bindTexture(demoGl.TEXTURE_2D, tex);
-    demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, true);
+    // The quad uses V=0 at its top edge. Canvas pixels are already uploaded
+    // top-first, so flipping here turns every dashboard upside down.
+    demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
     demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, canvas);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
@@ -522,7 +524,7 @@ async function tryImmersiveDemo() {
         mCtx.fillText(profileLinked ? SAMPLE.scientificName : 'Plant marker', 70, 78);
         demoTextures['marker'] = demoGl.createTexture();
         demoGl.bindTexture(demoGl.TEXTURE_2D, demoTextures['marker']);
-        demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, true);
+        demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
         demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, markerCanvas);
         demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
         demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
