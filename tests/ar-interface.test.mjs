@@ -128,5 +128,11 @@ test('Creator project AR uses an upright spatial dashboard without a debug overl
     assert.match(source, /captureDashboardSnapshot\(dashboardRoot\)/);
     assert.match(source, /source\.cloneNode\(true\)/);
     assert.match(source, /dashboardStylesForSnapshot/);
+    assert.match(source, /data-ar-window="dashboard"/);
+    assert.match(source, /dashboardVisible = !dashboardVisible/);
+    assert.match(source, /data-ar-recenter/);
+    assert.match(source, /recenterDashboard = \(\) => \{ placed = false; \}/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
+    assert.match(styles, /\.creator-ar-taskbar/);
+    assert.match(styles, /\.creator-ar-toolbox\.is-open/);
 });

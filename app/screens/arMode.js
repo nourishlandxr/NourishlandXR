@@ -17,6 +17,8 @@ let texture = null;
 let activeProjectName = 'Project';
 let panelWidth = 0.66;
 let panelHeight = 0.82;
+let dashboardVisible = true;
+let recenterDashboard = null;
 
 const PANEL_DISTANCE = 1.2;
 
@@ -202,12 +204,45 @@ function initGl(panelCanvas) {
     ]), gl.STATIC_DRAW);
 }
 
+function syncTaskbar() {
+    const dashboardButton = overlayRoot?.querySelector('[data-ar-window="dashboard"]');
+    if (dashboardButton) {
+        dashboardButton.classList.toggle('is-active', dashboardVisible);
+        dashboardButton.setAttribute('aria-pressed', String(dashboardVisible));
+        dashboardButton.querySelector('span').textContent = dashboardVisible ? 'Hide dashboard' : 'Open dashboard';
+    }
+}
+
 function createOverlay() {
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
-    overlayRoot.innerHTML = '<button type="button" class="creator-ar-exit">Exit AR</button>';
-    overlayRoot.querySelector('.creator-ar-exit').addEventListener('click', exitArMode);
+    overlayRoot.innerHTML = `
+        <section class="creator-ar-toolbox" aria-label="AR toolbox" aria-hidden="true">
+            <button type="button" data-ar-recenter>Recenter dashboard</button>
+            <button type="button" data-ar-exit>Exit AR</button>
+        </section>
+        <nav class="creator-ar-taskbar" aria-label="AR windows">
+            <button type="button" class="is-active" data-ar-window="dashboard" aria-pressed="true"><b aria-hidden="true">▣</b><span>Hide dashboard</span></button>
+            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">⋯</b><span>Tools</span></button>
+        </nav>`;
+    overlayRoot.querySelector('[data-ar-window="dashboard"]').addEventListener('click', () => {
+        dashboardVisible = !dashboardVisible;
+        syncTaskbar();
+    });
+    overlayRoot.querySelector('[data-ar-window="tools"]').addEventListener('click', event => {
+        const toolbox = overlayRoot.querySelector('.creator-ar-toolbox');
+        const open = !toolbox.classList.contains('is-open');
+        toolbox.classList.toggle('is-open', open);
+        toolbox.setAttribute('aria-hidden', String(!open));
+        event.currentTarget.setAttribute('aria-expanded', String(open));
+    });
+    overlayRoot.querySelector('[data-ar-recenter]').addEventListener('click', () => {
+        dashboardVisible = true;
+        recenterDashboard?.();
+        syncTaskbar();
+    });
+    overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     document.body.append(overlayRoot);
 }
 
@@ -222,6 +257,8 @@ function cleanup() {
     overlayRoot?.remove();
     overlayRoot = null;
     document.body.classList.remove('creator-ar-session-active');
+    dashboardVisible = true;
+    recenterDashboard = null;
     gl = null;
 }
 
@@ -283,6 +320,7 @@ export async function startArMode(projectId) {
 
         const position = [0, 1.5, -PANEL_DISTANCE];
         let placed = false;
+        recenterDashboard = () => { placed = false; };
         const positionAttribute = gl.getAttribLocation(program, 'position');
         const textureAttribute = gl.getAttribLocation(program, 'texCoord');
         const mvpUniform = gl.getUniformLocation(program, 'mvp');
@@ -320,13 +358,15 @@ export async function startArMode(projectId) {
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.uniform1i(textureUniform, 0);
 
-            for (const view of pose.views) {
-                const viewport = layer.getViewport(view);
-                if (!viewport) continue;
-                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-                const modelView = multiplyMat4(view.transform.inverse.matrix, modelMatrix);
-                gl.uniformMatrix4fv(mvpUniform, false, multiplyMat4(view.projectionMatrix, modelView));
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
+            if (dashboardVisible) {
+                for (const view of pose.views) {
+                    const viewport = layer.getViewport(view);
+                    if (!viewport) continue;
+                    gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+                    const modelView = multiplyMat4(view.transform.inverse.matrix, modelMatrix);
+                    gl.uniformMatrix4fv(mvpUniform, false, multiplyMat4(view.projectionMatrix, modelView));
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                }
             }
         };
 
