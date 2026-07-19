@@ -38,19 +38,16 @@ export function initPanelRenderer(gl) {
     
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    // Texture coordinate convention (WebGL default, NO flip):
-    //   V=0 = canvas bottom (Y=H), V=1 = canvas top (Y=0)
-    // Quad builds in XY plane:
-    //   y=-1 = bottom of quad, y=+1 = top of quad
-    // We want quad bottom → canvas bottom, quad top → canvas top:
-    //   quad bottom (y=-1) → V=0, quad top (y=+1) → V=1
+    // With UNPACK_FLIP_Y_WEBGL=true: canvas Y=0 (title top) → texture V=0
+    // Quad top (y=+1) must use V=0 to show title at top of panel
+    // Quad bottom (y=-1) must use V=1 to show canvas bottom
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -1, -1, 0, 0, 0,
-         1, -1, 0, 1, 0,
-         1,  1, 0, 1, 1,
-        -1, -1, 0, 0, 0,
-         1,  1, 0, 1, 1,
-        -1,  1, 0, 0, 1
+        -1, -1, 0, 0, 1,
+         1, -1, 0, 1, 1,
+         1,  1, 0, 1, 0,
+        -1, -1, 0, 0, 1,
+         1,  1, 0, 1, 0,
+        -1,  1, 0, 0, 0
     ]), gl.STATIC_DRAW);
     
     return { program: p, buffer: buf, pLoc: gl.getAttribLocation(p, 'position'), tLoc: gl.getAttribLocation(p, 'texCoord'), mvpLoc: gl.getUniformLocation(p, 'mvp') };

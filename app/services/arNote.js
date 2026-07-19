@@ -1,13 +1,10 @@
-﻿/**
- * arNote.js — Visitor/Explorer AR via WebXR DOM overlay.
- * Keeps existing #app content visible over camera feed.
- * No WebGL panel — just transparent clear + DOM overlay.
- */
+﻿import { initPanelRenderer, createPanelTexture, renderARPanel } from './arPanel.js';
 
 let session;
 let gl;
 let refSpace;
-let canvas;
+let renderer = null;
+let panelTex = null;
 
 // ─── Compatibility stubs ───
 const arDiagnosticLines = [];
@@ -23,6 +20,37 @@ export async function copyArDiagnostics() {
 }
 export function isArActive() { return Boolean(session); }
 
+function drawMenuPanel(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(20,55,34,.92)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nourishland XR', w / 2, 42);
+    ctx.fillStyle = '#dcef95';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('EXPLORER', w / 2, 62);
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Explore in augmented reality', w / 2, 100);
+    ctx.fillStyle = '#dcef95';
+    ctx.fillRect(20, 130, w - 40, 44);
+    ctx.fillStyle = '#173522';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText('Browse Plants', w / 2, 158);
+    ctx.fillStyle = '#28c840';
+    ctx.fillRect(20, 188, w - 40, 44);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText('View Markers', w / 2, 216);
+    ctx.fillStyle = '#c43636';
+    ctx.fillRect(20, h - 56, w - 40, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 16px sans-serif';
+    ctx.fillText('Exit', w / 2, h - 32);
+}
+
 export async function startArNote(_marker, profile) {
     if (!window.isSecureContext) { alert('AR requires HTTPS.'); return; }
     if (!navigator.xr) { alert('WebXR unavailable.'); return; }
@@ -34,7 +62,7 @@ export async function startArNote(_marker, profile) {
             domOverlay: { root: document.body }
         });
 
-        canvas = document.createElement('canvas');
+        const canvas = document.createElement('canvas');
         canvas.id = 'arCanvas';
         canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
         document.body.append(canvas);
@@ -47,22 +75,31 @@ export async function startArNote(_marker, profile) {
             baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }),
             depthNear: 0.01, depthFar: 100
         });
-
         try { refSpace = await session.requestReferenceSpace('local-floor'); }
         catch { refSpace = await session.requestReferenceSpace('local'); }
 
+        // Initialize shared billboard renderer
+        renderer = initPanelRenderer(gl);
+        panelTex = createPanelTexture(gl, drawMenuPanel);
+
         session.addEventListener('end', () => {
             document.getElementById('arCanvas')?.remove();
-            session = null; gl = null;
+            session = null; gl = null; renderer = null; panelTex = null;
         });
 
-        // Minimal draw - transparent pass-through
+        // Draw loop with billboard panel
         session.requestAnimationFrame(function draw(time, frame) {
             if (!session || !gl) return;
             session.requestAnimationFrame(draw);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer);
-            gl.clearColor(0, 0, 0, 0);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            try {
+                renderARPanel(gl, frame, refSpace, panelTex, {
+                    program: renderer.program,
+                    buffer: renderer.buffer,
+                    position: [0, 1.5, -2],
+                    width: 0.92,
+                    height: 0.65
+                });
+            } catch(e) { console.error('[AR] render error:', e); }
         });
 
     } catch (error) {
