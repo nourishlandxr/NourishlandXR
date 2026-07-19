@@ -193,71 +193,57 @@ export async function startArMode(projectId = '') {
 
         showStatus('AR ready');
 
-        // ---- IMMEDIATE PLACEMENT: position panel 2 metres in front of viewer ----
-        try {
-            // Get initial viewer pose to place the panel immediately without scanning
-            const viewerPose = await new Promise((resolve, reject) => {
-                const tryGetPose = () => {
-                    if (!session) { reject(new Error('Session ended')); return; }
-                    session.requestAnimationFrame((time, frame) => {
-                        const pose = frame.getViewerPose(refSpace);
-                        if (pose) resolve(pose);
-                        else setTimeout(tryGetPose, 50);
-                    });
-                };
-                tryGetPose();
-            });
-            if (viewerPose) {
-                const m = viewerPose.transform.matrix;
-                spatialMatrix = new Float32Array(m);
-                spatialMatrix[12] = m[12] - m[8] * 2.0;
-                spatialMatrix[13] = m[13] - m[9] * 2.0;
-                spatialMatrix[14] = m[14] - m[10] * 2.0;
-            }
-        } catch (e) {
-            // Fallback: place at origin -2 on z
-            spatialMatrix = new Float32Array([
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, -2, 1
-            ]);
-        }
+        // ---- IMMEDIATE PLACEMENT: position panel 1.5 metres in front of viewer ----
+        // Use a sensible default. The first draw frame will refine this using actual viewer pose.
+        spatialMatrix = new Float32Array([
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 1.5, -1.5, 1
+        ]);
+        // Track whether we've refined the position from a real viewer pose
+        // Store flag for one-time repositioning on first frame
+        window.__nxrArModePanelNeedsReposition = true;
         hideStatus();
 
         const draw = (t, frame) => {
-            if (frame.session !== session || !gl) return;
-            frame.session.requestAnimationFrame(draw);
-            const layer = frame.session.renderState.baseLayer;
-            const pose = frame.getViewerPose(refSpace);
-            // DISABLED: hit testing not needed in basic AR mode
-            // const hit = hitSource && frame.session.visibilityState !== 'hidden'
-            //     ? frame.getHitTestResults(hitSource)[0] : null;
-            // if (hit) {
-            //     const hitPose = hit.getPose(refSpace);
-            //     if (hitPose) latestHitMatrix = new Float32Array(hitPose.transform.matrix);
-            // }
+            try {
+                if (frame.session !== session || !gl) return;
+                frame.session.requestAnimationFrame(draw);
+                const layer = frame.session.renderState.baseLayer;
+                const pose = frame.getViewerPose(refSpace);
+                if (!pose && !spatialMatrix) return;
 
-            // DISABLED: floating panel tracking not needed - panel stays at placed position
-            // if (!panelLocked && pose) {
-            //     const m = pose.transform.matrix;
-            //     spatialMatrix = new Float32Array(m);
-            //     spatialMatrix[12] = m[12] - m[8] * 1.2;
-            //     spatialMatrix[13] = m[13] - m[9] * 1.2 - 0.2;
-            //     spatialMatrix[14] = m[14] - m[10] * 1.2;
-            // }
+                // On very first frame, refine panel position using actual viewer pose
+                if (pose && window.__nxrArModePanelNeedsReposition) {
+                    window.__nxrArModePanelNeedsReposition = false;
+                    const m = pose.transform.matrix;
+                    spatialMatrix = new Float32Array([
+                        m[0], m[1], m[2], 0,
+                        m[4], m[5], m[6], 0,
+                        m[8], m[9], m[10], 0,
+                        m[12] - m[8] * 1.5,
+                        m[13] - m[9] * 1.5 + 0.0,
+                        m[14] - m[10] * 1.5,
+                        1
+                    ]);
+                    console.log('[AR] Panel positioned 1.5m in front of viewer');
+                }
 
-            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-            gl.useProgram(program);
-            gl.depthMask(true);
-            gl.clearColor(0, 0, 0, 0);
-            gl.clearDepth(1);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+                gl.useProgram(program);
+                gl.depthMask(true);
+                gl.clearColor(0, 0, 0, 0);
+                gl.clearDepth(1);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            if (pose && spatialMatrix) for (const view of pose.views) {
-                const vp = layer.getViewport(view);
-                gl.viewport(vp.x, vp.y, vp.width, vp.height);
-                drawQuad(view, spatialMatrix);
+                if (pose && spatialMatrix) for (const view of pose.views) {
+                    const vp = layer.getViewport(view);
+                    gl.viewport(vp.x, vp.y, vp.width, vp.height);
+                    drawQuad(view, spatialMatrix);
+                }
+            } catch (error) {
+                console.error('[AR] Render error:', error);
             }
         };
         session.requestAnimationFrame(draw);

@@ -1027,24 +1027,49 @@ function updateReticleAndStatus(frame, viewerPose) {
 }
 
 function draw(_time, frame) {
-    const activeSession = frame.session;
-    activeSession.requestAnimationFrame(draw);
-    const viewerPose = frame.getViewerPose(refSpace);
-    if (!viewerPose) return;
-    // DISABLED: updateReticleAndStatus(frame, viewerPose); // No reticle updates in basic AR mode
-    gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
-    gl.colorMask(true, true, true, true);
-    gl.depthMask(true);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clearDepth(1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(program);
-    for (const view of viewerPose.views) {
-        const viewport = activeSession.renderState.baseLayer.getViewport(view);
-        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-        if (menuVisible && menuMatrix) drawOne(view, menuMatrix, texture, panelBuffer);
-        if (pendingMarkerMatrix) drawOne(view, pendingMarkerMatrix, pendingPinTexture, flagBuffer);
-        for (const marker of tempMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
+    try {
+        const activeSession = frame.session;
+        if (activeSession !== session) { console.warn('[AR] Stale frame, skipping'); return; }
+        activeSession.requestAnimationFrame(draw);
+        const viewerPose = frame.getViewerPose(refSpace);
+        if (!viewerPose) { console.warn('[AR] No viewer pose, skipping frame'); return; }
+        
+        // On very first frame, refine panel position using actual viewer pose
+        if (window.__nxrArPanelNeedsReposition) {
+            window.__nxrArPanelNeedsReposition = false;
+            const m = viewerPose.transform.matrix;
+            menuMatrix = new Float32Array([
+                m[0], m[1], m[2], 0,
+                m[4], m[5], m[6], 0,
+                m[8], m[9], m[10], 0,
+                m[12] - m[8] * 1.5,
+                m[13] - m[9] * 1.5 + 0.0,
+                m[14] - m[10] * 1.5,
+                1
+            ]);
+            console.log('[AR] Panel positioned 1.5m in front of viewer');
+        }
+
+        if (!gl) { console.error('[AR] WebGL context lost'); return; }
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
+        gl.colorMask(true, true, true, true);
+        gl.depthMask(true);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clearDepth(1);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.useProgram(program);
+        
+        for (const view of viewerPose.views) {
+            const viewport = activeSession.renderState.baseLayer.getViewport(view);
+            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+            if (menuVisible && menuMatrix) drawOne(view, menuMatrix, texture, panelBuffer);
+            if (pendingMarkerMatrix) drawOne(view, pendingMarkerMatrix, pendingPinTexture, flagBuffer);
+            for (const marker of tempMarkers) drawOne(view, marker.matrix, marker.texture, flagBuffer);
+        }
+    } catch (error) {
+        console.error('[AR] Render error:', error);
+        // Don't re-request frame on error to avoid spin loops
     }
 }
 
@@ -1081,45 +1106,18 @@ export async function startArNote(_marker, profile) {
 
         console.log('[AR] Root Created');
 
-        // ---- IMMEDIATE PLACEMENT: position panel 2 metres in front of viewer ----
-        // Get initial viewer pose to place the panel immediately without scanning
-        const viewerPose = await new Promise((resolve, reject) => {
-            const tryGetPose = () => {
-                if (!session) { reject(new Error('Session ended before pose could be acquired')); return; }
-                // Request a single frame to get initial viewer pose
-                session.requestAnimationFrame((time, frame) => {
-                    const pose = frame.getViewerPose(refSpace);
-                    if (pose) resolve(pose);
-                    else {
-                        // Retry on next frame
-                        setTimeout(tryGetPose, 50);
-                    }
-                });
-            };
-            tryGetPose();
-        });
-
-        if (viewerPose) {
-            const m = viewerPose.transform.matrix;
-            // Place panel 2 metres in front of the viewer (z = -2 in view space)
-            menuMatrix = new Float32Array([
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                m[12] - m[8] * 2.0,
-                m[13] - m[9] * 2.0 + 0.0,
-                m[14] - m[10] * 2.0,
-                1
-            ]);
-        } else {
-            // Fallback: identity matrix at origin -2 on z
-            menuMatrix = new Float32Array([
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, -2, 1
-            ]);
-        }
+        // ---- IMMEDIATE PLACEMENT: position panel 1.5 metres in front of viewer at eye level ----
+        // Use a sensible default. The first draw frame will refine this using the actual viewer pose.
+        menuMatrix = new Float32Array([
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 1.5, -1.5, 1
+        ]);
+        // Track whether we've refined the position from a real viewer pose
+        let panelPositionedFromViewer = false;
+        // Store the flag on the draw closure for one-time repositioning
+        window.__nxrArPanelNeedsReposition = true;
 
         console.log('[AR] Content Added');
         
@@ -1186,7 +1184,7 @@ export async function startArNote(_marker, profile) {
         console.error('[AR] Error:', error);
         window.clearTimeout(pointerFallbackTimer);
         window.clearTimeout(placementMessageTimer);
-        document.removeEventListener('pointerdown', handlePointerFallback, true);
+        // DISABLED: document.removeEventListener('pointerdown', handlePointerFallback, true);
         document.getElementById('arCanvas')?.remove();
         removeArOverlay();
         session = null;
