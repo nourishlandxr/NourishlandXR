@@ -118,10 +118,13 @@ test('welcome Try It Now AR keeps its guidance visible and places an upright das
 
 test('Creator project AR uses an upright spatial dashboard without a debug overlay', () => {
     const source = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
     assert.doesNotMatch(source, /arDebugLog|dashboardOverlayMode|function dlog/);
     assert.match(source, /makeViewerFacingMatrix/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /id = 'creatorArOverlay'/);
+    assert.match(source, /creator-ar-session-active/);
     assert.match(source, /PROJECT DASHBOARD/);
+    assert.match(styles, /body\.creator-ar-session-active #app/);
 });
