@@ -103,3 +103,14 @@ test('AR launch failures use concise recovery controls with hidden technical det
     assert.match(explorerSource, /View Technical Details/);
     assert.match(explorerSource, /id="arTechnicalDetails"[^>]*hidden/);
 });
+
+test('welcome Try It Now AR keeps its guidance visible and places an upright dashboard', () => {
+    const source = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/style.css');
+    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(source, /domOverlay: \{ root: demoApp \}/);
+    assert.match(source, /makeUprightPanelMatrix\(pos, latestViewerMatrix\)/);
+    assert.match(source, /Move your phone slowly to find a flat surface/);
+    assert.match(styles, /\.temporary-ar-demo\.is-immersive \.temporary-demo-stage,[\s\S]*pointer-events: none;/);
+    assert.match(styles, /\.temporary-demo-exit[\s\S]*pointer-events: auto;/);
+});

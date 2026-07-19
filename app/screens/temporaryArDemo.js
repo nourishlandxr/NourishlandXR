@@ -198,6 +198,29 @@ function multiplyMat4(a, b) {
     return out;
 }
 
+function makeUprightPanelMatrix(position, viewerMatrix) {
+    const camera = [viewerMatrix[12], viewerMatrix[13], viewerMatrix[14]];
+    let forwardX = camera[0] - position[0];
+    let forwardZ = camera[2] - position[2];
+    const forwardLength = Math.hypot(forwardX, forwardZ);
+    if (forwardLength < 0.001) {
+        forwardX = viewerMatrix[8];
+        forwardZ = viewerMatrix[10];
+    } else {
+        forwardX /= forwardLength;
+        forwardZ /= forwardLength;
+    }
+
+    // Keep the panel level with the real world instead of copying the phone's
+    // portrait/landscape roll. Local +Z faces the viewer and local +Y stays up.
+    return new Float32Array([
+        forwardZ, 0, -forwardX, 0,
+        0, 1, 0, 0,
+        forwardX, 0, forwardZ, 0,
+        position[0], position[1], position[2], 1
+    ]);
+}
+
 function makeDraggable(element, handle) {
     let isDragging = false;
     let startX, startY, origX, origY;
@@ -312,8 +335,9 @@ function selectPlantProfile(index) {
 function renderDemo(simulated) {
     profileLinked = false;
     markerName = 'My Plant';
-    const reticle = demoSession ? '<div class="temporary-demo-reticle"></div><div class="temporary-demo-guide fade-in">Choose a location to load your dashboard</div>' : '';
+    const reticle = demoSession ? '<div class="temporary-demo-reticle" aria-hidden="true"></div><div class="temporary-demo-guide fade-in" role="status">Move your phone to find a flat surface</div><button class="temporary-demo-exit" type="button">Exit AR</button>' : '';
     demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div>${reticle}</div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
+    document.querySelector('.temporary-demo-exit')?.addEventListener('click', finishDemo);
     setTimeout(showPlacementPrompt, 2000);
 }
 
@@ -324,7 +348,9 @@ function showPlacementPrompt() {
     if (!container) return;
     if (demoSession) {
         const guide = document.querySelector('.temporary-demo-guide');
-        if (guide) guide.textContent = 'Tap a surface to place your dashboard';
+        if (guide) guide.textContent = latestHitMatrix
+            ? 'Tap the circle to place your dashboard'
+            : 'Move your phone slowly to find a flat surface';
         return;
     }
     container.innerHTML = '';
@@ -459,8 +485,9 @@ async function tryImmersiveDemo() {
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
         const session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['hit-test'],
-            optionalFeatures: ['local-floor']
+            requiredFeatures: ['dom-overlay', 'hit-test'],
+            optionalFeatures: ['local-floor'],
+            domOverlay: { root: demoApp }
         });
         demoSession = session;
         demoCanvas = document.createElement('canvas');
@@ -521,6 +548,7 @@ async function tryImmersiveDemo() {
             const hit = demoHitSource ? frame.getHitTestResults(demoHitSource)[0] : null;
             const hitPose = hit?.getPose(demoRefSpace);
             latestHitMatrix = hitPose ? new Float32Array(hitPose.transform.matrix) : null;
+            document.querySelector('.temporary-demo-reticle')?.classList.toggle('has-surface', Boolean(latestHitMatrix));
 
             demoGl.bindFramebuffer(demoGl.FRAMEBUFFER, layer.framebuffer);
             demoGl.clearColor(0, 0, 0, 0);
@@ -564,10 +592,7 @@ async function tryImmersiveDemo() {
                             m[14] - m[10] * 1.2
                         ];
                     }
-                    spatialDashboardMatrix = new Float32Array(latestViewerMatrix);
-                    spatialDashboardMatrix[12] = pos[0];
-                    spatialDashboardMatrix[13] = pos[1];
-                    spatialDashboardMatrix[14] = pos[2];
+                    spatialDashboardMatrix = makeUprightPanelMatrix(pos, latestViewerMatrix);
                     buildSpatialPanel('dashboard');
                     const guide = document.querySelector('.temporary-demo-guide');
                     if (guide) { guide.textContent = 'Dashboard placed!'; setTimeout(() => { if(guide) guide.textContent = ''; }, 2500); }
