@@ -566,9 +566,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-taskbar button { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 6px 7px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: rgba(255,255,255,.78); font-size: .66rem; white-space: nowrap; }
 .creator-ar-taskbar button b { font-size: .95rem; line-height: 1; }
 .creator-ar-taskbar button.is-active { border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.16); color: #fff; }
-.creator-ar-toolbox { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); display: grid; gap: 5px; min-width: 174px; padding: 6px; transform: translate(-50%, 8px); border: 1px solid rgba(255,255,255,.24); border-radius: 14px; background: rgba(12,27,18,.78); box-shadow: 0 8px 26px rgba(0,0,0,.22); backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
+.creator-ar-toolbox { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 52px); display: flex; gap: 4px; max-width: calc(100vw - 20px); padding: 5px; transform: translate(-50%, 8px); border: 1px solid rgba(255,255,255,.24); border-radius: 14px; background: rgba(12,27,18,.78); box-shadow: 0 8px 26px rgba(0,0,0,.22); backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
 .creator-ar-toolbox.is-open { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
-.creator-ar-toolbox button { min-height: 34px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; font-size: .75rem; }
+.creator-ar-toolbox button { min-height: 34px; padding: 6px 8px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; font-size: .68rem; white-space: nowrap; }
 body.creator-ar-session-active #app { visibility: hidden; pointer-events: none; }
 .temporary-demo-guide.fade-in { animation: demo-guide-fade 1s ease-out 1s forwards; opacity: 0; }
 @keyframes demo-guide-fade { from { opacity: 0; transform: translateX(-50%) translateY(6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

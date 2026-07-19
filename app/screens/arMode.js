@@ -19,7 +19,6 @@ let panelWidth = 0.66;
 let panelHeight = 0.82;
 let dashboardVisible = true;
 let recenterDashboard = null;
-let dashboardFollowsViewer = false;
 let activeProjectId = '';
 let preparedDashboardSource = null;
 let preparedDashboardSnapshot = null;
@@ -279,7 +278,7 @@ function createOverlay() {
         <section class="creator-ar-toolbox" aria-label="AR toolbox" aria-hidden="true">
             <button type="button" data-ar-add-marker>Add marker</button>
             <button type="button" data-ar-add-note>Add note</button>
-            <button type="button" data-ar-grab>Grab dashboard</button>
+            <button type="button" data-ar-add-special>Add special marker</button>
         </section>
         <nav class="creator-ar-taskbar" aria-label="AR windows">
             <button type="button" class="is-active" data-ar-window="dashboard" aria-pressed="true"><b aria-hidden="true">▣</b><span>Hide dashboard</span></button>
@@ -305,10 +304,7 @@ function createOverlay() {
     });
     overlayRoot.querySelector('[data-ar-add-marker]').addEventListener('click', () => openFieldTool('plant'));
     overlayRoot.querySelector('[data-ar-add-note]').addEventListener('click', () => openFieldTool('note'));
-    overlayRoot.querySelector('[data-ar-grab]').addEventListener('click', event => {
-        dashboardFollowsViewer = !dashboardFollowsViewer;
-        event.currentTarget.textContent = dashboardFollowsViewer ? 'Release dashboard' : 'Grab dashboard';
-    });
+    overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', () => openFieldTool('sub_checkpoint'));
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     document.body.append(overlayRoot);
 }
@@ -326,7 +322,6 @@ function cleanup() {
     document.body.classList.remove('creator-ar-session-active');
     dashboardVisible = true;
     recenterDashboard = null;
-    dashboardFollowsViewer = false;
     activeProjectId = '';
     gl = null;
 }
@@ -406,7 +401,7 @@ export async function startArMode(projectId) {
             if (!pose) return;
 
             const viewer = pose.transform.matrix;
-            if (!placed || dashboardFollowsViewer) {
+            if (!placed) {
                 position[0] = viewer[12] - viewer[8] * PANEL_DISTANCE;
                 position[1] = viewer[13] - viewer[9] * PANEL_DISTANCE;
                 position[2] = viewer[14] - viewer[10] * PANEL_DISTANCE;

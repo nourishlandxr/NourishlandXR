@@ -138,7 +138,8 @@ test('Creator project AR uses an upright spatial dashboard without a debug overl
     assert.match(source, /EXIT AR/);
     assert.match(source, /data-ar-add-marker/);
     assert.match(source, /data-ar-add-note/);
-    assert.match(source, /data-ar-grab/);
+    assert.match(source, /data-ar-add-special/);
+    assert.match(source, /Add special marker/);
     assert.match(source, /WEB MODE/);
     assert.match(source, /recenterDashboard = \(\) => \{ placed = false; \}/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
