@@ -236,62 +236,10 @@ export async function startWelcomeAr() {
 export async function startLocationAr(encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const creator = document.body.dataset.experienceRole === 'creator';
-    const visitor = !creator;
-    console.log('[AR] startLocationAr: requesting GPS and heading...');
-    const headingPromise = requestAbsoluteHeading().then(value => ({ value }), error => ({ error, source: 'heading' }));
-    const positionPromise = requestCurrentGps().then(value => ({ value }), error => ({ error, source: 'gps' }));
-    const project = (await loadProjects(visitor)).find(item => item.id === projectId);
-    if (!project) throw new Error('Location not found');
-    const sites = await loadProjectSites(project.id, visitor);
-    const groups = await Promise.all(sites.map(async site => {
-        const places = await loadSitePlaces(project.id, site.id, visitor);
-        return Promise.all(places.map(async place => ({
-            project,
-            site,
-            place,
-            markers: await loadPlaceMarkers(project.id, site.id, place.id, visitor)
-        })));
-    }));
-    const entries = groups.flat().flatMap(group => group.markers.map(marker => ({ ...group, marker })));
-    entries.sort((left, right) => String(right.marker.modified || right.marker.created || '').localeCompare(String(left.marker.modified || left.marker.created || '')));
-    const gpsMarkers = await loadProjectGpsMarkers(project.id, visitor);
-    const starting = gpsMarkers.find(item => item.marker.type === 'intro_checkpoint');
-    if (!starting) throw new Error('A GPS Starting Point must be configured before AR can reconstruct saved markers.');
-    const [headingResult, positionResult] = await Promise.all([headingPromise, positionPromise]);
-    if (headingResult.error) throw headingResult.error;
-    if (positionResult.error) throw positionResult.error;
-    const heading = headingResult.value;
-    const currentPosition = positionResult.value;
-    const startDistance = reconstructGpsMarker(starting.anchor, starting.anchor, currentPosition, 0).distance;
-    const startTolerance = Math.max(25, (Number(starting.anchor.accuracy) || 0) + (Number(currentPosition.accuracy) || 0) * 2);
-    if (startDistance > startTolerance) throw new Error(`Move to the configured Starting Point before opening AR. You are approximately ${Math.round(startDistance)} m away.`);
-    const reconstructed = await Promise.all(gpsMarkers.filter(item => item.marker.type !== 'intro_checkpoint').map(async item => {
-        const plant = item.marker.plantId ? await getPlantById(item.marker.plantId, visitor) : null;
-        return {
-            ...item,
-            project,
-            marker: { ...item.marker, name: plant?.commonName || item.marker.name, description: plant?.summary || item.marker.description },
-            placement: reconstructGpsMarker(starting.anchor, currentPosition, item.anchor, heading.degrees)
-        };
-    }));
-    await startArNote(null, null, {
-        projectId: project.id,
-        locationName: project.name,
-        siteName: starting.site.name,
-        siteId: starting.site.id,
-        placeId: starting.place.id,
-        markers: entries.map(entry => ({ ...entry.marker, _siteId: entry.site.id, _placeId: entry.place.id })),
-        areas: groups.flat().filter(group => group.site.id === starting.site.id).map(group => group.place),
-        spatialMarkers: reconstructed,
-        creator,
-        calibration: { startingPoint: starting.anchor, currentPosition, heading },
-        status: {
-            startingPoint: starting.marker.name,
-            accuracy: starting.anchor.accuracy ? `${Math.round(Number(starting.anchor.accuracy))} m` : 'Not available',
-            entries: `${entries.filter(entry => entry.marker.visibility === 'public').length} published · ${entries.filter(entry => entry.marker.visibility !== 'public' && entry.marker.visibility !== 'hidden').length} drafts`,
-            label: `GPS aligned · heading ${Math.round(heading.degrees)}°`
-        }
-    });
+    console.log('[AR] startLocationAr: basic mode (no GPS required)');
+    // DISABLED: GPS, heading and spatial reconstruction removed for basic AR mode
+    // All content is now rendered on a single panel at a fixed position in front of the viewer.
+    await startArNote(null, null);
 }
 
 export async function startAreaNavigationAr(encodedProjectId, encodedSiteId, encodedPlaceId) {

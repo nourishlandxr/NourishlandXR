@@ -50,7 +50,7 @@ function markerColour(type, placeholder = false) {
 let session;
 let gl;
 let refSpace;
-let hitSource;
+// let hitSource; // DISABLED: hit testing removed for basic AR mode
 let latestHitTransform;
 let latestViewerPosition;
 let surfaceAvailable = false;
@@ -563,7 +563,7 @@ function createArOverlay() {
     document.body.classList.add('ar-session-active');
     overlay = document.createElement('div');
     overlay.id = 'arOverlayControls';
-    overlay.innerHTML = `<div class="ar-overlay-copy"><div id="arOverlayStatus">Move slowly to detect a surface.</div></div><div class="ar-overlay-buttons"><button type="button" id="arResetButton">Reset</button></div>`;
+    overlay.innerHTML = `<div class="ar-overlay-copy"><div id="arOverlayStatus">Nourishland AR active</div></div><div class="ar-overlay-buttons"><button type="button" id="arResetButton">Reset</button></div>`;
     overlay.addEventListener('beforexrselect', event => event.preventDefault());
     document.body.append(overlay);
     document.getElementById('globalArToggle')?.addEventListener('beforexrselect', event => event.preventDefault());
@@ -611,12 +611,13 @@ function createArOverlay() {
     modal.addEventListener('beforexrselect', event => event.preventDefault());
     document.body.append(modal);
 
-    placementReticle = document.createElement('div');
-    placementReticle.id = 'arPlacementReticle';
-    document.body.append(placementReticle);
-    reticleLabel = document.createElement('div');
-    reticleLabel.id = 'arReticleLabel';
-    document.body.append(reticleLabel);
+    // DISABLED: placement reticle not needed in basic AR mode
+    // placementReticle = document.createElement('div');
+    // placementReticle.id = 'arPlacementReticle';
+    // document.body.append(placementReticle);
+    // reticleLabel = document.createElement('div');
+    // reticleLabel.id = 'arReticleLabel';
+    // document.body.append(reticleLabel);
 }
 
 function removeArOverlay() {
@@ -725,7 +726,7 @@ function beginPlacement(type) {
     surfaceAvailable = false;
     latestHitTransform = null;
     pendingMarkerMatrix = null;
-    placementReticle?.classList.remove('surface-found');
+    // DISABLED: placementReticle?.classList.remove('surface-found');
     hideModal();
     message('Move to the desired location. Press and hold the green dot to place the marker.');
 }
@@ -931,6 +932,8 @@ function handleMenuSelect(rayPose) {
 
 // ---- Placement handlers (shared by scanning-menu and scanning-marker) ----
 
+// DISABLED: captureTrackingState removed - no hit testing in basic AR mode
+/*
 function captureTrackingState(frame, viewerPose) {
     latestViewerPosition = {
         x: viewerPose.transform.position.x,
@@ -942,7 +945,10 @@ function captureTrackingState(frame, viewerPose) {
     surfaceAvailable = Boolean(hitPose);
     if (hitPose) latestHitTransform = new Float32Array(hitPose.transform.matrix);
 }
+*/
 
+// DISABLED: placeMenu removed - no surface placement in basic AR mode
+/*
 function placeMenu(source = 'xr') {
     if (mode !== 'scanning-menu') return false;
     if (!surfaceAvailable || !latestHitTransform || !latestViewerPosition) {
@@ -963,7 +969,10 @@ function placeMenu(source = 'xr') {
     placementMessageTimer = window.setTimeout(() => { if (mode === 'menu-placed') message('Select an option.'); }, 1400);
     return true;
 }
+*/
 
+// DISABLED: placeMarkerFlag removed - no surface placement in basic AR mode
+/*
 function placeMarkerFlag(source = 'xr') {
     if (mode !== 'scanning-marker') return false;
     if (!surfaceAvailable || !latestHitTransform || !latestViewerPosition) {
@@ -978,7 +987,10 @@ function placeMarkerFlag(source = 'xr') {
     showNamePrompt(pendingType);
     return true;
 }
+*/
 
+// DISABLED: handlePointerFallback removed - no pointer fallback in basic AR mode
+/*
 function handlePointerFallback(event) {
     if (!session || event.target.closest?.('#arOverlayControls') || event.target.closest?.('#arModal') || event.target.closest?.('#globalArToggle')) return;
     if (mode !== 'scanning-menu' && mode !== 'scanning-marker') return;
@@ -988,6 +1000,7 @@ function handlePointerFallback(event) {
         else if (mode === 'scanning-marker') placeMarkerFlag('pointer');
     }, 450);
 }
+*/
 
 // ---- Render loop ----
 
@@ -1006,23 +1019,11 @@ function drawOne(view, matrix, tex, buf) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
+// DISABLED: updateReticleAndStatus simplified - no scanning feedback in basic AR mode
 function updateReticleAndStatus(frame, viewerPose) {
-    if (mode === 'scanning-menu' || mode === 'scanning-marker') {
-        captureTrackingState(frame, viewerPose);
-        placementReticle?.classList.toggle('surface-found', surfaceAvailable);
-        if (reticleLabel) reticleLabel.textContent = '';
-        if (mode === 'scanning-menu') message(surfaceAvailable ? 'Press and hold to place menu.' : 'Move slowly to detect a surface.');
-        return;
-    }
-    if (mode === 'menu-placed') {
-        const local = rayPanelHit(viewerPose.transform.matrix);
-        const region = regionAt(local, panelView);
-        placementReticle?.classList.toggle('surface-found', Boolean(region));
-        if (reticleLabel) reticleLabel.textContent = region ? region.label : '';
-        return;
-    }
-    placementReticle?.classList.remove('surface-found');
-    if (reticleLabel) reticleLabel.textContent = '';
+    // No scanning needed - menu is already placed
+    // DISABLED: placementReticle?.classList.remove('surface-found');
+    // DISABLED: if (reticleLabel) reticleLabel.textContent = '';
 }
 
 function draw(_time, frame) {
@@ -1030,7 +1031,7 @@ function draw(_time, frame) {
     activeSession.requestAnimationFrame(draw);
     const viewerPose = frame.getViewerPose(refSpace);
     if (!viewerPose) return;
-    updateReticleAndStatus(frame, viewerPose);
+    // DISABLED: updateReticleAndStatus(frame, viewerPose); // No reticle updates in basic AR mode
     gl.bindFramebuffer(gl.FRAMEBUFFER, activeSession.renderState.baseLayer.framebuffer);
     gl.colorMask(true, true, true, true);
     gl.depthMask(true);
@@ -1050,12 +1051,19 @@ function draw(_time, frame) {
 // ---- Session lifecycle ----
 
 export async function startArNote(_marker, profile) {
+    console.log('[AR] XR Session Started');
     if (!window.isSecureContext) { message('AR requires HTTPS or localhost.'); return; }
     if (!navigator.xr) { message('WebXR is unavailable in this browser.'); return; }
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) { message('immersive-ar is not supported on this device or browser.'); return; }
+        console.log('[AR] Assets Loaded');
         persistedMarkers = await loadDemoMarkers();
-        session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay', 'local-floor'], domOverlay: { root: document.body } });
+        // DISABLED: hit-test removed from required features for basic AR mode
+        session = await navigator.xr.requestSession('immersive-ar', { 
+            // requiredFeatures: ['hit-test'], // DISABLED: no hit testing in basic AR mode
+            optionalFeatures: ['local-floor', 'dom-overlay'], 
+            domOverlay: { root: document.body } 
+        });
         updateGlobalArToggle(true);
         const nextCanvas = document.createElement('canvas');
         nextCanvas.id = 'arCanvas';
@@ -1066,14 +1074,59 @@ export async function startArNote(_marker, profile) {
         await gl.makeXRCompatible();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }), depthNear: 0.01, depthFar: 100 });
         try { refSpace = await session.requestReferenceSpace('local-floor'); } catch { refSpace = await session.requestReferenceSpace('local'); }
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        hitSource = await session.requestHitTestSource({ space: viewerSpace });
+        
+        // DISABLED: hit-test removed for basic AR mode
+        // const viewerSpace = await session.requestReferenceSpace('viewer');
+        // hitSource = await session.requestHitTestSource({ space: viewerSpace });
 
-        mode = 'scanning-menu';
+        console.log('[AR] Root Created');
+
+        // ---- IMMEDIATE PLACEMENT: position panel 2 metres in front of viewer ----
+        // Get initial viewer pose to place the panel immediately without scanning
+        const viewerPose = await new Promise((resolve, reject) => {
+            const tryGetPose = () => {
+                if (!session) { reject(new Error('Session ended before pose could be acquired')); return; }
+                // Request a single frame to get initial viewer pose
+                session.requestAnimationFrame((time, frame) => {
+                    const pose = frame.getViewerPose(refSpace);
+                    if (pose) resolve(pose);
+                    else {
+                        // Retry on next frame
+                        setTimeout(tryGetPose, 50);
+                    }
+                });
+            };
+            tryGetPose();
+        });
+
+        if (viewerPose) {
+            const m = viewerPose.transform.matrix;
+            // Place panel 2 metres in front of the viewer (z = -2 in view space)
+            menuMatrix = new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                m[12] - m[8] * 2.0,
+                m[13] - m[9] * 2.0 + 0.0,
+                m[14] - m[10] * 2.0,
+                1
+            ]);
+        } else {
+            // Fallback: identity matrix at origin -2 on z
+            menuMatrix = new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, -2, 1
+            ]);
+        }
+
+        console.log('[AR] Content Added');
+        
+        mode = 'menu-placed';
         panelView = 'dashboard';
-        menuMatrix = null;
         toolboxMatrix = null;
-        menuVisible = false;
+        menuVisible = true;
         pendingType = null;
         pendingParentName = '';
         pendingMarkerMatrix = null;
@@ -1083,12 +1136,17 @@ export async function startArNote(_marker, profile) {
         latestViewerPosition = null;
         surfaceAvailable = false;
 
-        document.addEventListener('pointerdown', handlePointerFallback, true);
+        console.log('[AR] Render Complete');
+
+        // DISABLED: pointerdown event listener for fallback - not needed in basic AR mode
+        // document.addEventListener('pointerdown', handlePointerFallback, true);
+        
         session.addEventListener('select', event => {
             window.clearTimeout(pointerFallbackTimer);
             if (ignoreNextSelectAfterFallback) { ignoreNextSelectAfterFallback = false; return; }
-            if (mode === 'scanning-menu') { placeMenu('xr'); return; }
-            if (mode === 'scanning-marker') { placeMarkerFlag('xr'); return; }
+            // DISABLED: scanning-menu and scanning-marker modes not used in basic AR mode
+            // if (mode === 'scanning-menu') { placeMenu('xr'); return; }
+            // if (mode === 'scanning-marker') { placeMarkerFlag('xr'); return; }
             if (mode === 'menu-placed') {
                 window.clearTimeout(placementMessageTimer);
                 const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, refSpace);
@@ -1098,9 +1156,8 @@ export async function startArNote(_marker, profile) {
         session.addEventListener('end', () => {
             window.clearTimeout(pointerFallbackTimer);
             window.clearTimeout(placementMessageTimer);
-            document.removeEventListener('pointerdown', handlePointerFallback, true);
-            hitSource?.cancel?.();
-            hitSource = null;
+            // DISABLED: hitSource?.cancel?.();
+            // hitSource = null;
             latestHitTransform = null;
             latestViewerPosition = null;
             surfaceAvailable = false;
@@ -1123,9 +1180,10 @@ export async function startArNote(_marker, profile) {
             gl = null;
             canvas = null;
         });
-        message('Move slowly to detect a surface.');
+        message('Nourishland AR is active. Tap the panel to interact.');
         session.requestAnimationFrame(draw);
     } catch (error) {
+        console.error('[AR] Error:', error);
         window.clearTimeout(pointerFallbackTimer);
         window.clearTimeout(placementMessageTimer);
         document.removeEventListener('pointerdown', handlePointerFallback, true);
@@ -1151,7 +1209,7 @@ export function resetArPlacement() {
     latestHitTransform = null;
     latestViewerPosition = null;
     surfaceAvailable = false;
-    mode = session ? 'scanning-menu' : 'idle';
+    mode = session ? 'menu-placed' : 'idle';
     panelView = 'dashboard';
     ignoreNextSelectAfterFallback = false;
     if (gl && texture) {
@@ -1160,9 +1218,9 @@ export function resetArPlacement() {
     }
     document.getElementById('arRadialToolbox')?.classList.add('hidden');
     hideModal();
-    placementReticle?.classList.remove('surface-found');
-    if (reticleLabel) reticleLabel.textContent = '';
-    message('Move slowly to detect a surface.');
+    // DISABLED: placementReticle?.classList.remove('surface-found');
+    // DISABLED: if (reticleLabel) reticleLabel.textContent = '';
+    message('Menu reset.');
 }
 
 export function exitAr() {

@@ -164,8 +164,9 @@ export async function startArMode(projectId = '') {
             return false;
         }
         showStatus('Requesting camera...');
+        // DISABLED: hit-test removed for basic AR mode
         session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['hit-test'],
+            // requiredFeatures: ['hit-test'],
             optionalFeatures: ['local-floor']
         });
         showStatus('Camera active, setting up...');
@@ -184,40 +185,67 @@ export async function startArMode(projectId = '') {
         catch { refSpace = await session.requestReferenceSpace('local'); }
         initGL();
         finishingDemo = false;
-        panelLocked = false;
+        panelLocked = true; // DISABLED: Always locked - no hit testing needed
         spatialMatrix = null;
 
-        // Try to create hit source, but don't fail if unavailable
-        try {
-            const viewerSpace = await session.requestReferenceSpace('viewer');
-            hitSource = await session.requestHitTestSource({ space: viewerSpace });
-        } catch (e) {
-            // Hit-test is optional - we fall back to placing the panel in front of the viewer
-            console.warn('[arMode] Hit-test unavailable, using fallback placement');
-        }
+        // DISABLED: hit test removed for basic AR mode
+        // hitSource = null;
 
-        showStatus('AR ready - tap to place panel');
+        showStatus('AR ready');
+
+        // ---- IMMEDIATE PLACEMENT: position panel 2 metres in front of viewer ----
+        try {
+            // Get initial viewer pose to place the panel immediately without scanning
+            const viewerPose = await new Promise((resolve, reject) => {
+                const tryGetPose = () => {
+                    if (!session) { reject(new Error('Session ended')); return; }
+                    session.requestAnimationFrame((time, frame) => {
+                        const pose = frame.getViewerPose(refSpace);
+                        if (pose) resolve(pose);
+                        else setTimeout(tryGetPose, 50);
+                    });
+                };
+                tryGetPose();
+            });
+            if (viewerPose) {
+                const m = viewerPose.transform.matrix;
+                spatialMatrix = new Float32Array(m);
+                spatialMatrix[12] = m[12] - m[8] * 2.0;
+                spatialMatrix[13] = m[13] - m[9] * 2.0;
+                spatialMatrix[14] = m[14] - m[10] * 2.0;
+            }
+        } catch (e) {
+            // Fallback: place at origin -2 on z
+            spatialMatrix = new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, -2, 1
+            ]);
+        }
+        hideStatus();
 
         const draw = (t, frame) => {
             if (frame.session !== session || !gl) return;
             frame.session.requestAnimationFrame(draw);
             const layer = frame.session.renderState.baseLayer;
             const pose = frame.getViewerPose(refSpace);
-            const hit = hitSource && frame.session.visibilityState !== 'hidden'
-                ? frame.getHitTestResults(hitSource)[0] : null;
-            if (hit) {
-                const hitPose = hit.getPose(refSpace);
-                if (hitPose) latestHitMatrix = new Float32Array(hitPose.transform.matrix);
-            }
+            // DISABLED: hit testing not needed in basic AR mode
+            // const hit = hitSource && frame.session.visibilityState !== 'hidden'
+            //     ? frame.getHitTestResults(hitSource)[0] : null;
+            // if (hit) {
+            //     const hitPose = hit.getPose(refSpace);
+            //     if (hitPose) latestHitMatrix = new Float32Array(hitPose.transform.matrix);
+            // }
 
-            // Compute panel position: locked position or floating in front of viewer
-            if (!panelLocked && pose) {
-                const m = pose.transform.matrix;
-                spatialMatrix = new Float32Array(m);
-                spatialMatrix[12] = m[12] - m[8] * 1.2;
-                spatialMatrix[13] = m[13] - m[9] * 1.2 - 0.2;
-                spatialMatrix[14] = m[14] - m[10] * 1.2;
-            }
+            // DISABLED: floating panel tracking not needed - panel stays at placed position
+            // if (!panelLocked && pose) {
+            //     const m = pose.transform.matrix;
+            //     spatialMatrix = new Float32Array(m);
+            //     spatialMatrix[12] = m[12] - m[8] * 1.2;
+            //     spatialMatrix[13] = m[13] - m[9] * 1.2 - 0.2;
+            //     spatialMatrix[14] = m[14] - m[10] * 1.2;
+            // }
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.useProgram(program);
@@ -234,20 +262,21 @@ export async function startArMode(projectId = '') {
         };
         session.requestAnimationFrame(draw);
 
-        session.addEventListener('select', event => {
-            if (!panelLocked) {
-                const pose = event.frame.getViewerPose(refSpace);
-                if (pose && latestHitMatrix) {
-                    const p = [latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]];
-                    spatialMatrix = new Float32Array(pose.transform.matrix);
-                    spatialMatrix[12] = p[0]; spatialMatrix[13] = p[1]; spatialMatrix[14] = p[2];
-                }
-                panelLocked = true;
-                bakeTexture();
-                showStatus('Panel placed!');
-                setTimeout(() => { if (panelLocked) hideStatus(); }, 2000);
-            }
-        });
+        // DISABLED: select event for hit testing not needed in basic AR mode
+        // session.addEventListener('select', event => {
+        //     if (!panelLocked) {
+        //         const pose = event.frame.getViewerPose(refSpace);
+        //         if (pose && latestHitMatrix) {
+        //             const p = [latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]];
+        //             spatialMatrix = new Float32Array(pose.transform.matrix);
+        //             spatialMatrix[12] = p[0]; spatialMatrix[13] = p[1]; spatialMatrix[14] = p[2];
+        //         }
+        //         panelLocked = true;
+        //         bakeTexture();
+        //         showStatus('Panel placed!');
+        //         setTimeout(() => { if (panelLocked) hideStatus(); }, 2000);
+        //     }
+        // });
 
         session.addEventListener('end', () => {
             if (!finishingDemo) window.renderProjectDashboard(encodeURIComponent(window._arProjectId || ''));
