@@ -30,20 +30,19 @@ export function isArActive() { return Boolean(session); }
 // ─── End compat stubs ───
 
 // ─── Hard diagnostic logger ───
+// Uses a standalone element outside #app with max z-index to survive CSS hiding
 let diagnosticEl = null;
 function dlog(msg) {
     console.log('[AR]', msg);
-    const el = document.getElementById('arOverlayStatus');
-    if (el) el.textContent = (msg.length > 80 ? msg.slice(0, 80) : msg);
-    // Also try a floating element if overlay not visible
-    if (!el) {
-        if (!diagnosticEl) {
-            diagnosticEl = document.createElement('div');
-            diagnosticEl.style.cssText = 'position:fixed;left:12px;top:12px;z-index:99999;color:#0f0;font:13px monospace;background:rgba(0,0,0,.85);padding:6px 10px;border-radius:6px;pointer-events:none;white-space:pre-wrap;max-width:95vw;';
-            document.body.append(diagnosticEl);
-        }
-        diagnosticEl.textContent = msg;
+    // Always create/use our own diagnostic element — never rely on #arOverlayStatus
+    if (!diagnosticEl) {
+        diagnosticEl = document.createElement('div');
+        diagnosticEl.id = 'nxrArDiag';
+        // Inline styles only, no CSS class — cannot be hidden by style.css
+        diagnosticEl.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;color:#0f0;font:14px/1.4 monospace;background:rgba(0,0,0,.92);padding:8px 12px;max-width:100vw;max-height:100vh;overflow-y:auto;pointer-events:none;white-space:pre-wrap;word-break:break-word;border:2px solid #0f0;display:block;visibility:visible;opacity:1;';
+        document.body.append(diagnosticEl);
     }
+    diagnosticEl.textContent = msg;
 }
 // ─── End diag ───
 
@@ -342,18 +341,36 @@ function draw(time, frame) {
 }
 
 export async function startArNote(_marker, profile) {
-    dlog('=== startArNote DIAGNOSTIC ===');
-    if (!window.isSecureContext) { dlog('FAIL: not HTTPS'); message('AR requires HTTPS.'); return; }
-    if (!navigator.xr) { dlog('FAIL: no navigator.xr'); message('WebXR unavailable.'); return; }
+    // ─── Create diagnostic element IMMEDIATELY, before any XR call ───
+    if (!document.getElementById('nxrArDiag')) {
+        const diag = document.createElement('div');
+        diag.id = 'nxrArDiag';
+        diag.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;color:#0f0;font:14px/1.4 monospace;background:rgba(0,0,0,.92);padding:8px 12px;max-width:100vw;pointer-events:none;white-space:pre-wrap;border:3px solid #f00;display:block;visibility:visible;opacity:1;';
+        document.body.append(diag);
+    }
+    function prelog(msg) {
+        console.log('[AR]', msg);
+        const e = document.getElementById('nxrArDiag');
+        if (e) e.textContent += '\n' + msg;
+    }
+    prelog('=== AR DIAGNOSTIC START ===');
+    prelog('1. SecureContext: ' + window.isSecureContext);
+    prelog('2. navigator.xr: ' + Boolean(navigator.xr));
+    // Create diagnostic before any XR operations
+
+    // Now proceed with XR session
+    if (!window.isSecureContext) { prelog('FAIL: not HTTPS'); message('AR requires HTTPS.'); return; }
+    if (!navigator.xr) { prelog('FAIL: no navigator.xr'); message('WebXR unavailable.'); return; }
 
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) { dlog('FAIL: immersive-ar unsupported'); message('AR not supported.'); return; }
-        dlog('immersive-ar supported');
+        if (!await navigator.xr.isSessionSupported('immersive-ar')) { prelog('FAIL: immersive-ar unsupported'); message('AR not supported.'); return; }
+        prelog('3. immersive-ar supported');
 
         session = await navigator.xr.requestSession('immersive-ar', {
             optionalFeatures: ['local-floor'],
             domOverlay: { root: document.body }
         });
+        prelog('4. Session: ' + session.mode);
         dlog('Session: ' + session.mode + ' hit-test NOT requested');
 
         const nextCanvas = document.createElement('canvas');
