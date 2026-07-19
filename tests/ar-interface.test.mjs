@@ -125,6 +125,8 @@ test('Creator project AR uses an upright spatial dashboard without a debug overl
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
-    assert.match(source, /PROJECT DASHBOARD/);
+    assert.match(source, /captureDashboardSnapshot\(dashboardRoot\)/);
+    assert.match(source, /source\.cloneNode\(true\)/);
+    assert.match(source, /dashboardStylesForSnapshot/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
 });

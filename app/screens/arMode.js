@@ -15,9 +15,9 @@ let program = null;
 let buffer = null;
 let texture = null;
 let activeProjectName = 'Project';
+let panelWidth = 0.66;
+let panelHeight = 0.82;
 
-const PANEL_WIDTH = 0.84;
-const PANEL_HEIGHT = 0.62;
 const PANEL_DISTANCE = 1.2;
 
 function multiplyMat4(a, b) {
@@ -111,23 +111,74 @@ function drawDashboard(ctx, width, height) {
     ctx.fillText('Use Exit AR to return to the full project dashboard.', width / 2, height - 34);
 }
 
-function bakeTexture() {
-    const panelCanvas = document.createElement('canvas');
-    panelCanvas.width = 720;
-    panelCanvas.height = 540;
-    drawDashboard(panelCanvas.getContext('2d'), panelCanvas.width, panelCanvas.height);
+function dashboardStylesForSnapshot() {
+    const styles = Array.from(document.styleSheets).map(styleSheet => {
+        try {
+            return Array.from(styleSheet.cssRules).map(rule => rule.cssText).join('\n');
+        } catch {
+            return '';
+        }
+    }).join('\n');
+    return styles.replace(/\bbody(?=[\s.#[:{])/g, '#creatorArSnapshot');
+}
+
+function loadSnapshotImage(svg) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+        const image = new Image();
+        image.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(image);
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('The project dashboard snapshot could not be drawn.'));
+        };
+        image.src = url;
+    });
+}
+
+async function captureDashboardSnapshot(dashboardRoot) {
+    const source = dashboardRoot.querySelector('.project-entry') || dashboardRoot;
+    const width = Math.max(360, window.innerWidth);
+    const height = Math.max(640, window.innerHeight);
+    const theme = document.body.dataset.projectTheme || '';
+    const textSize = document.body.dataset.textSize || '';
+    const sourceMarkup = new XMLSerializer().serializeToString(source.cloneNode(true));
+    const snapshotStyles = dashboardStylesForSnapshot();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" id="creatorArSnapshot" data-project-theme="${theme}" data-text-size="${textSize}" style="width:${width}px;height:${height}px;overflow:hidden;background:#edf3e9;"><style><![CDATA[${snapshotStyles}]]></style><div id="app" style="width:${width}px;transform:translateY(-${window.scrollY}px);transform-origin:top left;">${sourceMarkup}</div></div></foreignObject></svg>`;
+    const image = await loadSnapshotImage(svg);
+    const snapshot = document.createElement('canvas');
+    snapshot.width = 900;
+    snapshot.height = Math.round(snapshot.width * height / width);
+    snapshot.getContext('2d').drawImage(image, 0, 0, snapshot.width, snapshot.height);
+    return snapshot;
+}
+
+function fallbackDashboardCanvas() {
+    const fallback = document.createElement('canvas');
+    fallback.width = 720;
+    fallback.height = 900;
+    drawDashboard(fallback.getContext('2d'), fallback.width, fallback.height);
+    return fallback;
+}
+
+function bakeTexture(panelCanvas) {
+    const source = panelCanvas || fallbackDashboardCanvas();
+    panelWidth = 0.66;
+    panelHeight = panelWidth * source.height / source.width;
 
     texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panelCanvas);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
-function initGl() {
+function initGl(panelCanvas) {
     const vertexSource = 'attribute vec3 position;attribute vec2 texCoord;uniform mat4 mvp;varying vec2 uv;void main(){gl_Position=mvp*vec4(position,1.0);uv=texCoord;}';
     const fragmentSource = 'precision mediump float;varying vec2 uv;uniform sampler2D tex;void main(){gl_FragColor=texture2D(tex,uv);}';
     program = gl.createProgram();
@@ -138,17 +189,17 @@ function initGl() {
         throw new Error(gl.getProgramInfoLog(program) || 'Shader program could not be linked.');
     }
 
+    bakeTexture(panelCanvas);
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -PANEL_WIDTH / 2, -PANEL_HEIGHT / 2, 0, 0, 1,
-         PANEL_WIDTH / 2, -PANEL_HEIGHT / 2, 0, 1, 1,
-         PANEL_WIDTH / 2,  PANEL_HEIGHT / 2, 0, 1, 0,
-        -PANEL_WIDTH / 2, -PANEL_HEIGHT / 2, 0, 0, 1,
-         PANEL_WIDTH / 2,  PANEL_HEIGHT / 2, 0, 1, 0,
-        -PANEL_WIDTH / 2,  PANEL_HEIGHT / 2, 0, 0, 0
+        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
+         panelWidth / 2, -panelHeight / 2, 0, 1, 1,
+         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
+        -panelWidth / 2, -panelHeight / 2, 0, 0, 1,
+         panelWidth / 2,  panelHeight / 2, 0, 1, 0,
+        -panelWidth / 2,  panelHeight / 2, 0, 0, 0
     ]), gl.STATIC_DRAW);
-    bakeTexture();
 }
 
 function createOverlay() {
@@ -207,6 +258,13 @@ export async function startArMode(projectId) {
         });
         document.body.classList.add('creator-ar-session-active');
 
+        let dashboardSnapshot;
+        try {
+            dashboardSnapshot = await captureDashboardSnapshot(dashboardRoot);
+        } catch (error) {
+            console.warn('[Creator AR] Dashboard snapshot unavailable; using the AR dashboard fallback.', error);
+        }
+
         canvas = document.createElement('canvas');
         canvas.className = 'creator-ar-canvas';
         document.body.append(canvas);
@@ -221,7 +279,7 @@ export async function startArMode(projectId) {
         } catch {
             refSpace = await session.requestReferenceSpace('local');
         }
-        initGl();
+        initGl(dashboardSnapshot);
 
         const position = [0, 1.5, -PANEL_DISTANCE];
         let placed = false;
