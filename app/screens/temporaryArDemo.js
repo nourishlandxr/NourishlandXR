@@ -445,41 +445,6 @@ function drawSpatialMarker(view) {
     demoGl.drawArrays(demoGl.TRIANGLES, 0, 6);
 }
 
-function makeDraggable(element, handle) {
-    let isDragging = false;
-    let startX, startY, origX, origY;
-    const header = handle || element;
-    function onStart(e) {
-        const ev = e.touches ? e.touches[0] : e;
-        isDragging = true;
-        startX = ev.clientX; startY = ev.clientY;
-        origX = element.offsetLeft || 0; origY = element.offsetTop || 0;
-        element.style.zIndex = ++windowZIndex;
-        element.classList.add('is-dragging');
-        if (e.touches) document.addEventListener('touchmove', onMove, { passive: true });
-        else document.addEventListener('mousemove', onMove);
-        document.addEventListener('touchend', onEnd, { passive: true });
-        document.addEventListener('mouseup', onEnd);
-        e.preventDefault();
-    }
-    function onMove(e) {
-        if (!isDragging) return;
-        const ev = e.touches ? e.touches[0] : e;
-        element.style.left = (origX + ev.clientX - startX) + 'px';
-        element.style.top = (origY + ev.clientY - startY) + 'px';
-    }
-    function onEnd() {
-        isDragging = false;
-        element.classList.remove('is-dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('mouseup', onEnd);
-        document.removeEventListener('touchend', onEnd);
-    }
-    header.addEventListener('mousedown', onStart);
-    header.addEventListener('touchstart', onStart, { passive: true });
-}
-
 function selectedSpatialMarker(rayMatrix) {
     if (!placedMarker || !rayMatrix) return false;
     const dx = placedMarker.x - rayMatrix[12], dy = placedMarker.y - rayMatrix[13], dz = placedMarker.z - rayMatrix[14];
