@@ -19,6 +19,8 @@ let panelWidth = 0.66;
 let panelHeight = 0.82;
 let dashboardVisible = true;
 let recenterDashboard = null;
+let dashboardFollowsViewer = false;
+let activeProjectId = '';
 let preparedDashboardSource = null;
 let preparedDashboardSnapshot = null;
 let preparedDashboardPromise = null;
@@ -149,7 +151,13 @@ async function captureDashboardSnapshot(dashboardRoot) {
     const height = Math.max(640, window.innerHeight);
     const theme = document.body.dataset.projectTheme || '';
     const textSize = document.body.dataset.textSize || '';
-    const sourceMarkup = new XMLSerializer().serializeToString(source.cloneNode(true));
+    const dashboardClone = source.cloneNode(true);
+    const arModeButton = [...dashboardClone.querySelectorAll('button')].find(button => button.textContent.trim() === 'AR Mode');
+    if (arModeButton) {
+        const label = arModeButton.querySelector('strong') || arModeButton;
+        label.textContent = 'WEB MODE';
+    }
+    const sourceMarkup = new XMLSerializer().serializeToString(dashboardClone);
     const snapshotStyles = dashboardStylesForSnapshot();
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" id="creatorArSnapshot" data-project-theme="${theme}" data-text-size="${textSize}" style="width:${width}px;height:${height}px;overflow:hidden;background:#edf3e9;"><style><![CDATA[${snapshotStyles}]]></style><div id="app" style="width:${width}px;transform:translateY(-${window.scrollY}px);transform-origin:top left;">${sourceMarkup}</div></div></foreignObject></svg>`;
     const image = await loadSnapshotImage(svg);
@@ -158,8 +166,14 @@ async function captureDashboardSnapshot(dashboardRoot) {
     snapshot.height = Math.round(snapshot.width * height / width);
     const context = snapshot.getContext('2d');
     context.drawImage(image, 0, 0, snapshot.width, snapshot.height);
-    if (context.getImageData(Math.floor(snapshot.width / 2), Math.floor(snapshot.height / 2), 1, 1).data[3] === 0) {
-        throw new Error('The dashboard snapshot was blank.');
+    try {
+        if (context.getImageData(Math.floor(snapshot.width / 2), Math.floor(snapshot.height / 2), 1, 1).data[3] === 0) {
+            throw new Error('The dashboard snapshot was blank.');
+        }
+    } catch (error) {
+        // Reading a canvas containing same-origin dashboard assets can still be
+        // restricted by some mobile browsers. The rendered texture is usable.
+        if (error.name !== 'SecurityError') throw error;
     }
     return snapshot;
 }
@@ -251,18 +265,27 @@ function syncTaskbar() {
     }
 }
 
+function openFieldTool(type) {
+    const projectId = activeProjectId;
+    exitArMode();
+    window.setTimeout(() => window.beginPlacementAr?.(encodeURIComponent(projectId), type), 0);
+}
+
 function createOverlay() {
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <section class="creator-ar-toolbox" aria-label="AR toolbox" aria-hidden="true">
-            <button type="button" data-ar-recenter>Recenter dashboard</button>
-            <button type="button" data-ar-exit>Exit AR</button>
+            <button type="button" data-ar-add-marker>Add marker</button>
+            <button type="button" data-ar-add-note>Add note</button>
+            <button type="button" data-ar-grab>Grab dashboard</button>
         </section>
         <nav class="creator-ar-taskbar" aria-label="AR windows">
             <button type="button" class="is-active" data-ar-window="dashboard" aria-pressed="true"><b aria-hidden="true">▣</b><span>Hide dashboard</span></button>
-            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">⋯</b><span>Tools</span></button>
+            <button type="button" data-ar-recenter><b aria-hidden="true">◎</b><span>Recenter DB</span></button>
+            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">⋯</b><span>Tool Box</span></button>
+            <button type="button" data-ar-exit><b aria-hidden="true">×</b><span>EXIT AR</span></button>
         </nav>`;
     overlayRoot.querySelector('[data-ar-window="dashboard"]').addEventListener('click', () => {
         dashboardVisible = !dashboardVisible;
@@ -275,10 +298,16 @@ function createOverlay() {
         toolbox.setAttribute('aria-hidden', String(!open));
         event.currentTarget.setAttribute('aria-expanded', String(open));
     });
-    overlayRoot.querySelector('[data-ar-recenter]').addEventListener('click', () => {
+    overlayRoot.querySelector('.creator-ar-taskbar [data-ar-recenter]').addEventListener('click', () => {
         dashboardVisible = true;
         recenterDashboard?.();
         syncTaskbar();
+    });
+    overlayRoot.querySelector('[data-ar-add-marker]').addEventListener('click', () => openFieldTool('plant'));
+    overlayRoot.querySelector('[data-ar-add-note]').addEventListener('click', () => openFieldTool('note'));
+    overlayRoot.querySelector('[data-ar-grab]').addEventListener('click', event => {
+        dashboardFollowsViewer = !dashboardFollowsViewer;
+        event.currentTarget.textContent = dashboardFollowsViewer ? 'Release dashboard' : 'Grab dashboard';
     });
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     document.body.append(overlayRoot);
@@ -297,6 +326,8 @@ function cleanup() {
     document.body.classList.remove('creator-ar-session-active');
     dashboardVisible = true;
     recenterDashboard = null;
+    dashboardFollowsViewer = false;
+    activeProjectId = '';
     gl = null;
 }
 
@@ -312,7 +343,10 @@ export function isArModeActive() {
 }
 
 export async function startArMode(projectId) {
-    if (projectId) window._arProjectId = projectId;
+    if (projectId) {
+        window._arProjectId = projectId;
+        activeProjectId = projectId;
+    }
     if (!navigator.xr || !window.isSecureContext) return false;
 
     const dashboardRoot = document.getElementById('app');
@@ -372,7 +406,7 @@ export async function startArMode(projectId) {
             if (!pose) return;
 
             const viewer = pose.transform.matrix;
-            if (!placed) {
+            if (!placed || dashboardFollowsViewer) {
                 position[0] = viewer[12] - viewer[8] * PANEL_DISTANCE;
                 position[1] = viewer[13] - viewer[9] * PANEL_DISTANCE;
                 position[2] = viewer[14] - viewer[10] * PANEL_DISTANCE;
