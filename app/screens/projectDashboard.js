@@ -1391,14 +1391,17 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
             const point = mapLayout.markerPoints.get(mapEntryKey(entry));
             if (!point) return '';
             const label = `${entry.marker.name} · ${markerTypeLabel(entry.marker.type)}`;
-            const pin = `<span class="site-map-pin-icon" aria-hidden="true">${markerIcon(entry.marker.type)}</span><span class="sr-only">${escapeHtml(label)}</span>`;
+            const pin = `<span class="sr-only">${escapeHtml(label)}</span>`;
+            const pinClass = `site-map-pin site-map-pin-${escapeHtml(entry.marker.type)}`;
             return creator
-                ? `<button class="site-map-pin" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.openProjectEntry('${encoded(project.id)}', '${encoded(entry.marker.id)}')" aria-label="Open ${escapeHtml(label)}">${pin}</button>`
-                : `<span class="site-map-pin" style="--map-x:${point.x}%;--map-y:${point.y}%">${pin}</span>`;
+                ? `<button class="${pinClass}" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.openProjectEntry('${encoded(project.id)}', '${encoded(entry.marker.id)}')" aria-label="Open ${escapeHtml(label)}">${pin}</button>`
+                : `<span class="${pinClass}" style="--map-x:${point.x}%;--map-y:${point.y}%">${pin}</span>`;
         }).join('');
         const backAction = creator && returnContext === 'content-mode'
             ? `window.openCreatorContentMode('${encoded(project.id)}')`
-            : `window.renderBrowseContent('${encoded(project.id)}', ${creator})`;
+            : creator
+                ? `window.renderProjectDashboard('${encoded(project.id)}')`
+                : `window.renderBrowseContent('${encoded(project.id)}', false)`;
         app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas" aria-label="${escapeHtml(project.name)} site map"><img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" /><div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;

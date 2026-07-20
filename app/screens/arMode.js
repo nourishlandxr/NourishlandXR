@@ -146,12 +146,20 @@ function closePlacePicker() {
     overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'false');
 }
 
+function openPlacePicker() {
+    const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
+    if (picker) picker.hidden = false;
+    overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'true');
+}
+
 function resetArControls() {
     cleanupDrag();
     interactionMode = '';
     closeInlineEditor();
     closeAreaChooser();
     closePlacePicker();
+    readyPlacementType = '';
+    updateReadyPlacementControl();
     updateInteractionControls();
     setPlacementStatus('AR controls reset. Choose an Area or Place when you are ready.');
 }
@@ -329,7 +337,13 @@ function showAreaChooser(areas) {
         }
         closeAreaChooser();
         setAreaButtonLabel();
-        setPlacementStatus(`${area.name} selected.${changedArea ? ' Checkpoint origin reset for this Area.' : ''} Choose Place to add a draft.`);
+        if (readyPlacementType) {
+            updateReadyPlacementControl();
+            setPlacementStatus(`${readyPlacementLabel(readyPlacementType)} ready in ${area.name}. Tap the centre circle to place it.`);
+        } else {
+            openPlacePicker();
+            setPlacementStatus(`${area.name} selected.${changedArea ? ' Checkpoint origin reset for this Area.' : ''} Choose what to place.`);
+        }
     }));
 }
 
@@ -364,6 +378,16 @@ async function choosePlacementArea() {
         setPlacementStatus('Choose an Area. Reset closes this panel if you need to start again.');
     } catch (error) {
         setPlacementStatus(`Area selection is unavailable: ${error.message}`);
+    }
+}
+
+async function armPlacement(type) {
+    closeInlineEditor();
+    closePlacePicker();
+    readyPlacementType = type;
+    updateReadyPlacementControl();
+    if (await ensurePlacementArea()) {
+        setPlacementStatus(`${readyPlacementLabel(type)} ready. Tap the centre circle to place it.`);
     }
 }
 
@@ -428,7 +452,7 @@ function createOverlay() {
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
-        <p class="creator-ar-placement-status" data-ar-placement-status>${initialStatus}</p>
+        <p class="sr-only" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <button class="creator-ar-ready-placement" type="button" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></button>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
@@ -453,9 +477,8 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-web-mode]').addEventListener('click', returnToWeb);
     overlayRoot.querySelector('[data-ar-window="tools"]').addEventListener('click', event => {
         const picker = overlayRoot.querySelector('[data-ar-place-picker]');
-        const open = picker.hidden;
-        picker.hidden = !open;
-        event.currentTarget.setAttribute('aria-expanded', String(open));
+        if (picker.hidden) openPlacePicker();
+        else closePlacePicker();
     });
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
@@ -472,9 +495,9 @@ function createOverlay() {
     });
     overlayRoot.querySelector('[data-ar-select-area]').addEventListener('click', () => { closePlacePicker(); void choosePlacementArea(); });
     overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', () => { closePlacePicker(); openCheckpointSetup(); });
-    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => { closePlacePicker(); void quickPlace('plant'); });
-    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => { closePlacePicker(); void quickPlace('sub_checkpoint'); });
-    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => { closePlacePicker(); void quickPlace('note'); });
+    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => { void armPlacement('plant'); });
+    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => { void armPlacement('sub_checkpoint'); });
+    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => { void armPlacement('note'); });
     overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
         if (readyPlacementType) void quickPlace(readyPlacementType);
     });

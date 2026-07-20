@@ -17,10 +17,13 @@ test('dashboard Site Map renders a visual plan with areas and placed content', (
     assert.match(dashboard, /terrace-marking\.png/);
     assert.match(dashboard, /site-map-area/);
     assert.match(dashboard, /onclick="window\.renderProjectAreaDashboard/);
+    assert.match(dashboard, /window\.renderProjectDashboard/);
     assert.match(dashboard, /site-map-pin/);
+    assert.match(dashboard, /site-map-pin-\$\{escapeHtml\(entry\.marker\.type\)\}/);
     assert.match(dashboard, /GPS positions are shown relative to one another/);
     assert.match(styles, /\.site-map-canvas/);
     assert.match(styles, /\.site-map-area/);
     assert.match(styles, /\.site-map-pin/);
+    assert.match(styles, /\.site-map-pin::after/);
     assert.equal(fs.existsSync(path.join(root, 'app/assets/terrace-marking.png')), true);
 });
