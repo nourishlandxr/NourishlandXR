@@ -2,8 +2,9 @@
  * Creator AR placement mode
  *
  * Creator workflows stay in the web dashboard. AR is deliberately limited to
- * a checkpoint-linked placement session, so there is no second dashboard to
- * maintain or manipulate in the camera view.
+ * a focused placement session, so there is no second dashboard to maintain or
+ * manipulate in the camera view. A physical checkpoint improves repeat visits,
+ * but is not required to start a test session.
  */
 
 let session = null;
@@ -37,18 +38,29 @@ function openFieldTool(type) {
     ), 0);
 }
 
+function openCheckpointSetup() {
+    const projectId = activeProjectId;
+    exitArMode();
+    window.setTimeout(() => window.openCreatorArCheckpointSetup?.(encodeURIComponent(projectId)), 0);
+}
+
 function setPlacementStatus(message) {
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
     if (status) status.textContent = message;
 }
 
 function createOverlay() {
+    const hasCheckpoint = Boolean(activeAreaId && activeCheckpointId);
+    const initialStatus = hasCheckpoint
+        ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
+        : 'Test session — no physical code is needed. Use Place to add content or set an Area checkpoint.';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
-        <p class="creator-ar-placement-status" data-ar-placement-status>Checkpoint linked. Stand at the physical marker, then recenter before placing.</p>
+        <p class="creator-ar-placement-status" data-ar-placement-status>${initialStatus}</p>
         <section class="creator-ar-toolbox" aria-label="Place content" aria-hidden="true">
+            <button type="button" data-ar-add-checkpoint>Add Area checkpoint</button>
             <button type="button" data-ar-place-tree>Place tree</button>
             <button type="button" data-ar-place-marker>Place marker</button>
             <button type="button" data-ar-place-note>Place note</button>
@@ -74,8 +86,11 @@ function createOverlay() {
             return;
         }
         checkpointSessionOrigin = Float32Array.from(latestViewerMatrix);
-        setPlacementStatus('Checkpoint origin set for this placement session.');
+        setPlacementStatus(activeCheckpointId
+            ? 'Checkpoint origin set for this placement session.'
+            : 'Temporary test origin set for this session. Add an Area checkpoint when you install one.');
     });
+    overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', openCheckpointSetup);
     overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => openFieldTool('plant'));
     overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => openFieldTool('sub_checkpoint'));
     overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => openFieldTool('note'));
@@ -124,7 +139,7 @@ export async function startArMode(projectId, areaId = '', checkpointId = '') {
 }
 
 async function launchArMode(projectId, areaId, checkpointId) {
-    if (!projectId || !areaId || !checkpointId || !navigator.xr || !window.isSecureContext) return false;
+    if (!projectId || !navigator.xr || !window.isSecureContext) return false;
     activeProjectId = projectId;
     activeAreaId = areaId;
     activeCheckpointId = checkpointId;
