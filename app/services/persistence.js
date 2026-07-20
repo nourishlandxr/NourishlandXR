@@ -96,7 +96,28 @@ export async function deleteSitePlace(projectId, siteId, placeId) {
 }
 
 export async function createSpatialPlant(projectId, siteId, placeId, plant) {
-    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/plants`, { method: 'POST', body: JSON.stringify(plant) });
+    try {
+        return await requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/plants`, { method: 'POST', body: JSON.stringify(plant) });
+    } catch (error) {
+        // Older hosted API deployments do not yet expose the specialised plant
+        // route. A plant marker is a complete editable draft in V1, so retain
+        // the placement flow instead of making AR depend on that newer route.
+        if (!/route not found/i.test(error.message || '')) throw error;
+        const name = String(plant.commonName || plant.name || 'New plant').trim() || 'New plant';
+        const marker = await createPlaceMarker(projectId, siteId, placeId, {
+            name,
+            type: 'plant',
+            description: plant.description || plant.summary || '',
+            plantId: plant.plantId || '',
+            plant_profile: {
+                common_name: name,
+                scientific_name: plant.scientificName || ''
+            },
+            visibility: plant.visibility || 'draft',
+            status: plant.status || 'draft'
+        });
+        return { marker };
+    }
 }
 
 const markerUrl = (projectId, siteId, placeId) => `${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/markers`;
@@ -116,4 +137,3 @@ export async function updateDemoMarker(markerId, marker) { return requestJson(de
 export async function deleteDemoMarker(markerId) { return requestJson(demoMarkerUrl(markerId), { method: 'DELETE' }); }
 export async function loadDemoPlantProfile(markerId) { return requestJson(`${demoMarkerUrl(markerId)}/plant-profile`); }
 export async function saveDemoPlantProfile(markerId, profile) { return requestJson(`${demoMarkerUrl(markerId)}/plant-profile`, { method: 'PUT', body: JSON.stringify(profile) }); }
-

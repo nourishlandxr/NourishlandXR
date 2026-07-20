@@ -18,9 +18,9 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
 
 test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
-    assert.match(arSource, /WEB MODE/);
+    assert.match(arSource, /WEB/);
     assert.match(arSource, /data-ar-window="tools"/);
-    assert.match(arSource, /Recenter/);
+    assert.match(arSource, /Recenter checkpoint/);
     assert.match(arSource, /EXIT AR/);
     assert.match(arSource, /Add Area Marker/);
     assert.match(arSource, /Place tree/);
@@ -38,7 +38,6 @@ test('Creator AR exposes the compact placement toolbar', () => {
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
     const arSource = read('app/screens/arMode.js');
     const serverSource = read('tools/persistence-server.mjs');
-    assert.match(arSource, /createSpatialPlant/);
     assert.match(arSource, /createPlaceMarker/);
     assert.match(arSource, /saveMarkerAnchor/);
     assert.match(arSource, /type: 'spatial'/);
@@ -47,6 +46,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /Interaction is off/);
     assert.match(arSource, /openInlineEditor/);
+    assert.match(arSource, /openInlineEditor\(record, true\)/);
+    assert.match(arSource, /requestAnimationFrame\(\(\) => editor\.querySelector\('textarea'\)\?\.focus\(\)\)/);
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
@@ -58,6 +59,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /activeCheckpointId = ''/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
+    assert.match(serverSource, /markerName = `\$\{requestedName\} \(\$\{suffix\}\)`/);
 });
 
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {

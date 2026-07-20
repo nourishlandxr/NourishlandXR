@@ -1113,13 +1113,22 @@ function handleApi(req, res) {
                 const data = JSON.parse(body || '{}');
                 const type = String(data.type || '').toLowerCase();
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
-                const markerId = toProjectId(data.id || data.name);
-                if (!markerId) throw new Error('Marker name is required');
-                const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', markerId);
-                if (fs.existsSync(markerDir)) throw new Error('A marker with this name already exists');
+                const requestedName = String(data.name || '').trim();
+                const baseMarkerId = toProjectId(data.id || requestedName);
+                if (!baseMarkerId || !requestedName) throw new Error('Marker name is required');
+                const markersDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers');
+                let markerId = baseMarkerId;
+                let markerName = requestedName;
+                let suffix = 1;
+                while (fs.existsSync(path.join(markersDir, markerId))) {
+                    markerId = `${baseMarkerId}_${suffix}`;
+                    markerName = `${requestedName} (${suffix})`;
+                    suffix += 1;
+                }
+                const markerDir = path.join(markersDir, markerId);
                 fs.mkdirSync(markerDir, { recursive: true });
                 const now = new Date().toISOString();
-                const marker = { id: markerId, type, name: data.name.trim(), description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
                 if (['gps', 'qr', 'spatial'].includes(String(data.anchor?.type || '').toLowerCase())) {
                     const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };
@@ -1226,11 +1235,19 @@ function handleApi(req, res) {
                 const data = JSON.parse(body || '{}');
                 const type = String(data.type || existing.type).toLowerCase();
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
-                const nextId = toProjectId(data.name) || decodeURIComponent(markerId);
+                const requestedName = String(data.name || existing.name).trim();
+                const baseId = toProjectId(requestedName) || decodeURIComponent(markerId);
+                let nextId = baseId;
+                let nextName = requestedName;
+                let suffix = 1;
+                while (nextId !== markerId && fs.existsSync(path.join(baseDir, nextId))) {
+                    nextId = `${baseId}_${suffix}`;
+                    nextName = `${requestedName} (${suffix})`;
+                    suffix += 1;
+                }
                 const nextDir = path.join(baseDir, nextId);
-                if (nextId !== markerId && fs.existsSync(nextDir)) throw new Error('A marker with this name already exists');
                 if (nextId !== markerId) fs.renameSync(currentDir, nextDir);
-                const marker = { ...existing, ...data, visibility: normalizeVisibility(data.visibility, existing.visibility || 'draft'), id: nextId, type, name: data.name || existing.name, modified: new Date().toISOString() };
+                const marker = { ...existing, ...data, visibility: normalizeVisibility(data.visibility, existing.visibility || 'draft'), id: nextId, type, name: nextName, modified: new Date().toISOString() };
                 writeJson(path.join(nextDir, 'marker.json'), marker);
                 sendJson(res, 200, marker);
             } catch (error) { sendJson(res, 400, { error: error.message }); }

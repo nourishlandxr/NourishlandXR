@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createSpatialPlant, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 
 let session = null;
 let gl = null;
@@ -192,13 +192,14 @@ function closeInlineEditor() {
     }
 }
 
-function openInlineEditor(record) {
-    if (interactionMode !== 'select') return;
+function openInlineEditor(record, force = false) {
+    if (!force && interactionMode !== 'select') return;
     const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
     if (!editor) return;
     const plant = record.marker.type === 'plant';
     editor.hidden = false;
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">${plant ? 'Plant profile' : 'Marker details'}</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>${plant ? 'Quick description' : 'Note'}<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label><div class="button-row"><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-editor-form]').addEventListener('submit', async event => {
         event.preventDefault();
@@ -370,18 +371,31 @@ async function quickPlace(type) {
     const label = markerLabel(type);
     setPlacementStatus(`Placing ${label}...`);
     try {
-        const response = type === 'plant'
-            ? await createSpatialPlant(activeProjectId, activeSiteId, activeAreaId, { commonName: defaults[type], visibility: 'draft', status: 'draft' })
-            : await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, { name: defaults[type], type, description: '', visibility: 'draft', status: 'draft' });
+        // AR drafts intentionally use the stable marker route. Plant markers
+        // include a profile file and can be completed later from Pointer/Web.
+        const response = await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, {
+            name: defaults[type],
+            type,
+            description: '',
+            plant_profile: type === 'plant' ? { common_name: defaults[type] } : undefined,
+            visibility: 'draft',
+            status: 'draft'
+        });
         const marker = response.marker || response;
         await saveMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id, spatialAnchor(position));
-        sessionMarkers.push({ marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName });
+        const record = { marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName };
+        sessionMarkers.push(record);
         renderSessionMarkers();
         if (readyPlacementType === type) {
             readyPlacementType = '';
             updateReadyPlacementControl();
         }
-        setPlacementStatus(`${marker.name} placed as a draft. Enable Pointer to edit or Hand to move it.`);
+        if (type === 'note') {
+            setPlacementStatus(`${marker.name} placed. Add your note now, or save it as a draft for later.`);
+            openInlineEditor(record, true);
+        } else {
+            setPlacementStatus(`${marker.name} placed as a draft. Enable Pointer to edit or Hand to move it.`);
+        }
     } catch (error) {
         setPlacementStatus(`Could not place ${label}: ${error.message}`);
     }
@@ -411,12 +425,12 @@ function createOverlay() {
             <button type="button" data-ar-place-note>Place note</button>
         </section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button type="button" data-ar-web-mode><b aria-hidden="true">&#x21B7;</b><span>WEB MODE</span></button>
-            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">&#xFF0B;</b><span>Place</span></button>
+            <button type="button" data-ar-web-mode><b aria-hidden="true">&#x21B7;</b><span>WEB</span></button>
+            <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place content" aria-expanded="false"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place content</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: move markers" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button type="button" data-ar-reset aria-label="Reset AR controls"><b aria-hidden="true">&#x21BA;</b><span>Reset</span></button>
-            <button type="button" data-ar-recenter><b aria-hidden="true">&#x25CE;</b><span>Recenter</span></button>
+            <button class="creator-ar-icon-control" type="button" data-ar-reset aria-label="Reset AR controls"><b aria-hidden="true">&#x21BA;</b><span class="sr-only">Reset AR controls</span></button>
+            <button class="creator-ar-icon-control" type="button" data-ar-recenter aria-label="Recenter checkpoint"><b aria-hidden="true">&#x25CE;</b><span class="sr-only">Recenter checkpoint</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
 
