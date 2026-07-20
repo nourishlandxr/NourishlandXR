@@ -35,7 +35,7 @@ const PLACE_TYPES = new Set([
     'Operational Area'
 ]);
 const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 'cyber']);
-const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoint']);
+const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoint', 'area_checkpoint']);
 const VISIBILITY_VALUES = new Set(['draft', 'public', 'hidden']);
 const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_forest', 'places', 'field_markers');
 const demoMarkersDir = path.join(demoPlaceDir, 'markers');

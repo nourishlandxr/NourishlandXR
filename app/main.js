@@ -22,7 +22,7 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, renderAddToLocation, renderAllProjectEntries, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, renderAddToLocation, renderAllProjectEntries, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent } from './services/tutorialProgress.js';
@@ -190,6 +190,8 @@ window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, proje
 window.filterAllProjectEntries = filterAllProjectEntries;
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
+window.renderAreaCheckpointForm = (projectId, areaId) => renderAreaCheckpointForm(app, projectId, areaId);
+window.saveAreaCheckpoint = (event, projectId, areaId) => saveAreaCheckpoint(event, projectId, areaId);
 window.renderProjectAreaDashboard = (projectId, areaId) => renderProjectAreaDashboard(app, projectId, areaId);
 window.navigateToProjectArea = (projectId, areaId) => navigateToProjectArea(app, projectId, areaId);
 window.renderProjectAreaLocationForm = (projectId, areaId) => renderProjectAreaLocationForm(app, projectId, areaId);
@@ -236,7 +238,7 @@ window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, pla
 window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
-window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false) => {
+window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false, preferredAreaId = '') => {
     const decodedProjectId = decodeURIComponent(projectId);
     let sites = await loadProjectSites(decodedProjectId);
     let site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
@@ -246,7 +248,9 @@ window.renderLocationFieldMarker = async (projectId, type, placementMode = 'with
         site = await ensureProjectLocation(decodedProjectId);
         sites = [site];
     }
-    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: '', type, placementMode, dashboardProjectId: decodedProjectId });
+    const decodedAreaId = preferredAreaId ? decodeURIComponent(preferredAreaId) : '';
+    const selectedArea = areas.some(area => area.id === decodedAreaId) ? decodedAreaId : '';
+    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: selectedArea, type, placementMode, dashboardProjectId: decodedProjectId });
 };
 window.renderPlaceForLocation = async (projectId) => {
     const decodedProjectId = decodeURIComponent(projectId);
@@ -314,7 +318,7 @@ window.applyFieldGuideFilter = () => applyFieldGuideFilter();
 window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
 window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
-window.startArMode = (projectId) => startArMode(projectId);
+window.startArMode = (projectId, areaId, checkpointId) => startArMode(projectId, areaId, checkpointId);
 window.exitArMode = () => exitArMode();
 window.isArModeActive = () => isArModeActive();
 window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };

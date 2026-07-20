@@ -116,44 +116,41 @@ test('welcome Try It Now AR keeps its guidance visible and places an upright das
     assert.match(styles, /\.temporary-demo-exit[\s\S]*pointer-events: auto;/);
 });
 
-test('Creator project AR uses an upright spatial dashboard without a debug overlay', () => {
+test('Creator project AR is a checkpoint-linked placement session without a dashboard overlay', () => {
     const source = read('app/screens/arMode.js');
     const styles = read('app/style.css');
-    assert.doesNotMatch(source, /arDebugLog|dashboardOverlayMode|function dlog/);
-    assert.match(source, /makeViewerFacingMatrix/);
-    assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
+    assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
+    assert.match(source, /if \(!projectId \|\| !areaId \|\| !checkpointId/);
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
-    assert.match(source, /captureDashboardSnapshot\(dashboardRoot\)/);
-    assert.match(source, /export function prepareArDashboardSnapshot/);
-    assert.match(source, /preparedSnapshotFor\(dashboardRoot\)/);
-    assert.match(source, /source\.cloneNode\(true\)/);
-    assert.match(source, /dashboardStylesForSnapshot/);
-    assert.match(source, /data-ar-window="dashboard"/);
-    assert.match(source, /dashboardVisible = !dashboardVisible/);
-    assert.match(source, /data-ar-recenter/);
-    assert.match(source, /Recenter DB/);
-    assert.match(source, /Tool Box/);
-    assert.match(source, /EXIT AR/);
-    assert.match(source, /data-ar-add-marker/);
-    assert.match(source, /data-ar-add-note/);
-    assert.match(source, /data-ar-add-special/);
-    assert.match(source, /Add special marker/);
+    assert.match(source, /data-ar-web-mode/);
     assert.match(source, /WEB MODE/);
-    assert.match(source, /recenterDashboard = \(\) => \{ placed = false; \}/);
+    assert.match(source, /data-ar-recenter/);
+    assert.match(source, /Recenter checkpoint/);
+    assert.match(source, /EXIT AR/);
+    assert.match(source, /Place tree/);
+    assert.match(source, /Place marker/);
+    assert.match(source, /Place note/);
+    assert.match(source, /returnToWeb/);
+    assert.match(source, /checkpointSessionOrigin = Float32Array\.from\(latestViewerMatrix\)/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
     assert.match(styles, /\.creator-ar-toolbox\.is-open/);
 });
 
-test('Quick Access keeps its tap activation until the Creator AR session is requested', () => {
+test('Creator AR requires a physical checkpoint for each Area', () => {
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
+    const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /let startPromise = null/);
-    assert.match(arSource, /startPromise = launchArMode\(projectId\)/);
+    assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(arSource, /session = await navigator\.xr\.requestSession\('immersive-ar'/);
-    assert.match(dashboardSource, /await window\.startArMode\(projectId\)/);
-    assert.match(dashboardSource, /Quick Access launch failed/);
+    assert.match(dashboardSource, /renderArAreaPicker/);
+    assert.match(dashboardSource, /renderAreaCheckpointForm/);
+    assert.match(dashboardSource, /saveAreaCheckpoint/);
+    assert.match(dashboardSource, /type: 'area_checkpoint'/);
+    assert.match(dashboardSource, /Set Area Checkpoint/);
+    assert.match(serverSource, /'area_checkpoint'/);
 });
