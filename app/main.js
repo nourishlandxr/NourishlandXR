@@ -22,7 +22,7 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance } from './screens/projectDashboard.js';
+import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectName, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent } from './services/tutorialProgress.js';
@@ -162,8 +162,10 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
+window.toggleAreas = toggleAreas;
 window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);
+window.openCheckpointQuickSetup = projectId => openCheckpointQuickSetup(app, projectId);
 window.openCreatorContentMode = projectId => openCreatorContentMode(app, projectId);
 window.openQuickAccessChoice = (projectId, type) => openQuickAccessChoice(app, projectId, type);
 window.openCreatorVisitorPreview = projectId => openCreatorVisitorPreview(projectId);
@@ -179,6 +181,7 @@ window.renderLocationMap = (projectId, creator = true, returnContext = '') => re
 window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
 window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, theme);
+window.saveProjectName = (event, projectId) => saveProjectName(app, event, projectId);
 window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
 window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
 window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
@@ -191,8 +194,9 @@ window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, proje
 window.filterAllProjectEntries = filterAllProjectEntries;
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
-window.renderAreaCheckpointForm = (projectId, areaId) => renderAreaCheckpointForm(app, projectId, areaId);
-window.saveAreaCheckpoint = (event, projectId, areaId) => saveAreaCheckpoint(event, projectId, areaId);
+window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => renderAreaCheckpointForm(app, projectId, areaId, flow);
+window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
+window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
 window.renderProjectAreaDashboard = (projectId, areaId) => renderProjectAreaDashboard(app, projectId, areaId);
 window.navigateToProjectArea = (projectId, areaId) => navigateToProjectArea(app, projectId, areaId);
 window.renderProjectAreaLocationForm = (projectId, areaId) => renderProjectAreaLocationForm(app, projectId, areaId);
@@ -204,9 +208,9 @@ window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, project
 window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
 window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
 window.savePlatformSetting = savePlatformSetting;
-window.addProjectStartingPoint = (projectId, areaId = '') => renderStartingPointForm(app, projectId, areaId);
-window.editProjectStartingPoint = (projectId, areaId = '') => renderStartingPointForm(app, projectId, areaId);
-window.saveProjectStartingPoint = (event, projectId) => saveProjectStartingPoint(event, projectId);
+window.addProjectStartingPoint = (projectId, areaId = '', flow = '') => renderStartingPointForm(app, projectId, areaId, flow);
+window.editProjectStartingPoint = (projectId, areaId = '', flow = '') => renderStartingPointForm(app, projectId, areaId, flow);
+window.saveProjectStartingPoint = (event, projectId, flow = '') => saveProjectStartingPoint(event, projectId, flow);
 window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);

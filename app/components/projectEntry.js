@@ -115,7 +115,7 @@ export function renderProjectEntry(config) {
         </section>
 
         <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
-            <button class="section-heading-row areas-toggle" type="button" onclick="window.toggleAreas(event)">
+            <button class="section-heading-row areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
                 <h2 id="projectAreasTitle">Areas</h2>
                 <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
             </button>

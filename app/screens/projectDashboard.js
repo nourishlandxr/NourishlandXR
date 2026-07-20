@@ -16,6 +16,7 @@ const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 
 const DARK_PROJECT_THEMES = new Set(['dark', 'forest-dark', 'cyber']);
 const projectThemeSaveQueues = new Map();
 const requestedProjectThemes = new Map();
+const checkpointSetupFlows = new Map();
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
@@ -88,7 +89,7 @@ export function savePlatformSetting(name, value) {
 async function projectById(projectId) {
     const project = (await loadProjects()).find(item => item.id === projectId);
     if (!project) throw new Error('Location data is unavailable.');
-    const resolvedProject = { ...project, name: PROJECT_NAMES[project.id] || project.name };
+    const resolvedProject = { ...project, name: project.name || PROJECT_NAMES[project.id] || project.id };
     applyProjectTheme(resolvedProject.theme);
     return resolvedProject;
 }
@@ -223,11 +224,13 @@ async function buildProjectSearchItems(project, site, areas, entries) {
     return [...areaItems, ...contentItems];
 }
 
-export function toggleAreas(event) {
-    const section = event.currentTarget.closest('[data-areas-expanded]');
+export function toggleAreas(trigger) {
+    const button = trigger?.currentTarget || trigger;
+    const section = button?.closest?.('[data-areas-expanded]');
     if (!section) return;
     const expanded = section.dataset.areasExpanded === 'true';
     section.dataset.areasExpanded = expanded ? 'false' : 'true';
+    button.setAttribute('aria-expanded', String(!expanded));
     const arrow = section.querySelector('.areas-arrow');
     if (arrow) arrow.textContent = expanded ? '▾' : '▴';
 }
@@ -377,6 +380,36 @@ export async function openCreatorArMode(app, encodedProjectId) {
     if (!started) await renderArAreaPicker(app, encoded(projectId));
 }
 
+export async function openCheckpointQuickSetup(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const context = await projectContent(projectId);
+        const areas = context.places.filter(place => place.name !== 'Unassigned');
+        const startingPoint = context.startingPoint;
+        const startingStep = startingPoint
+            ? `<section class="panel guide"><h2>Starting Point</h2><p><strong>${escapeHtml(startingPoint.marker.name)}</strong> is already set in ${escapeHtml(startingPoint.place.name)}.</p></section>`
+            : `<section class="panel guide"><h2>Starting Point</h2><p>A visitor Starting Point has not been set. You can set it now, or continue with an Area checkpoint for your own testing.</p><div class="button-row"><button type="button" onclick="window.renderStartingPointForm('${encoded(context.project.id)}', '', 'checkpoint-quick')">Set Starting Point</button><button type="button" onclick="window.openCheckpointQuickSetup('${encoded(context.project.id)}')">Continue with Area Checkpoint</button></div></section>`;
+        const areaChoices = areas.map(area => `<button class="content-type-row" type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(area.id)}', 'quick')"><strong>${escapeHtml(area.name)}</strong><span>${escapeHtml(area.type || 'Area')} · add a named checkpoint for this Area.</span></button>`).join('');
+        app.innerHTML = `<div class="screen checkpoint-quick-setup"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button><p class="welcome-label">Quick Access</p><h1>Add Checkpoint</h1><p class="subtitle">Choose a visitor Starting Point or create a named Area checkpoint.</p></div>${startingStep}<section class="panel"><h2>Area Checkpoint</h2><p>Choose an existing Area, or create a new Area first. The checkpoint is a simple named marker associated with that one Area.</p></section><div class="content-type-list">${areaChoices || '<p class="project-empty-state">No Areas have been created yet.</p>'}<button class="content-type-row" type="button" onclick="window.renderProjectAreaForm('${encoded(context.project.id)}', 'checkpoint-quick')"><strong>Create New Area</strong><span>Name an Area, then add its checkpoint.</span></button></div></div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>Checkpoint setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export async function renderCheckpointPlacementChoice(app, encodedProjectId, encodedAreaId, encodedMarkerId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const areaId = decodeURIComponent(encodedAreaId);
+    const markerId = decodeURIComponent(encodedMarkerId);
+    try {
+        const context = await projectAreaContext(projectId, areaId);
+        const marker = context.areaEntries.find(entry => entry.marker.id === markerId)?.marker;
+        if (!marker) throw new Error('Checkpoint marker is unavailable.');
+        app.innerHTML = `<div class="screen checkpoint-placement-choice"><div class="page-header"><button class="ghost" type="button" onclick="window.openCheckpointQuickSetup('${encoded(context.project.id)}')">Back to Checkpoints</button><p class="welcome-label">Checkpoint saved</p><h1>${escapeHtml(marker.name)}</h1><p class="subtitle">${escapeHtml(context.area.name)} · Area checkpoint</p></div><section class="panel guide"><p>Your checkpoint is saved as a draft. Choose whether to place it with the camera now or return to the dashboard and do that later.</p></section><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(marker.id)}')"><strong>Add in AR now</strong><span>Open AR at this Area, recenter the checkpoint, then place related content.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')"><strong>Add location later</strong><span>Keep the checkpoint and complete spatial placement another time.</span></button></div></div>`;
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.openCheckpointQuickSetup('${encoded(projectId)}')">Back to Checkpoints</button><h1>Checkpoint unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
 export async function renderArAreaPicker(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
@@ -396,11 +429,14 @@ export async function renderArAreaPicker(app, encodedProjectId) {
     }
 }
 
-export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAreaId) {
+export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAreaId, flow = '') {
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     try {
         const context = await projectAreaContext(projectId, areaId);
+        const flowKey = `${projectId}:${areaId}`;
+        if (flow) checkpointSetupFlows.set(flowKey, flow);
+        else checkpointSetupFlows.delete(flowKey);
         const existing = context.areaEntries.find(entry => entry.marker.type === 'area_checkpoint');
         let savedCode = existing?.marker.qr_reference || '';
         if (existing && !savedCode) {
@@ -410,18 +446,24 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const title = existing ? `Edit ${context.area.name} Area Marker` : `Add ${context.area.name} Area Marker`;
         const submitLabel = existing ? 'Save Area Marker Changes' : 'Save Temporary Area Marker';
         app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Back to AR Areas</button><p class="welcome-label">Area checkpoint</p><h1>${escapeHtml(title)}</h1><p class="subtitle">This is a named marker associated with one Area. A physical code can be added later.</p></div><section class="panel guide"><p>For home testing, use a stable object and give this marker a clear label, such as Kitchen CP-01 or Living Room Table.</p><p>This Area Marker becomes the local origin for items placed in this Area. GPS can still help find the Area, but it does not determine individual plant positions.</p></section><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Area Marker label</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} checkpoint`)}" required /></div><div class="field"><label for="areaCheckpointCode">Physical marker code <span class="meta">(optional for testing)</span></label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="For example: HOME-KITCHEN-CP01" /></div><p class="meta">Leave the code blank to test now. Add the exact QR or physical marker code later when it is installed.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Cancel</button><button class="primary" type="submit">${submitLabel}</button></div></form></div>`;
+        if (flow === 'quick') {
+            app.querySelector('.page-header .ghost').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
+            app.querySelector('.button-row button[type="button"]').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
+        }
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>Checkpoint unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
 }
 
-export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId) {
+export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId, flow = '') {
     event.preventDefault();
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     const status = document.getElementById('areaCheckpointStatus');
     try {
         const context = await projectAreaContext(projectId, areaId);
+        const flowKey = `${projectId}:${areaId}`;
+        const nextFlow = flow || checkpointSetupFlows.get(flowKey) || '';
         const name = document.getElementById('areaCheckpointName').value.trim();
         const qrCode = document.getElementById('areaCheckpointCode').value.trim();
         if (!name) throw new Error('Checkpoint name is required.');
@@ -442,7 +484,9 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId)
             qr_code: qrCode,
             description: `Physical Area Marker for ${context.area.name}.`
         });
-        await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
+        checkpointSetupFlows.delete(flowKey);
+        if (nextFlow === 'quick') await renderCheckpointPlacementChoice(document.getElementById('app'), encoded(projectId), encoded(areaId), encoded(savedMarker.id));
+        else await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
     } catch (error) {
         if (status) status.textContent = `Area Marker could not be saved: ${error.message}`;
     }
@@ -589,7 +633,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             quickActions: [
                 { icon: '📍', label: 'Add Marker', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
                 { icon: '✎', label: 'Add Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` },
-                { icon: '⌖', label: 'Area Marker', action: `window.openCreatorArCheckpointSetup('${encoded(project.id)}')` },
+                { icon: '⌖', label: 'Add Checkpoint', action: `window.openCheckpointQuickSetup('${encoded(project.id)}')` },
                 { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
             ],
             guidance,
@@ -797,7 +841,10 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
             : areaStage === 'learning'
                 ? '<div class="panel contextual-reminder"><p><strong>Reminder:</strong> Areas organise content inside this Location. Save now and add or position content later.</p></div>'
                 : '';
-        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${areaStage === 'understood' ? 'Project structure' : 'Area guidance'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${guidance}<form class="panel" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Area name</label><input id="projectAreaName" placeholder="For example: 1R1, Front Garden or Grafting Area" required /></div><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area — garden, park, nursery, farm section</option><option value="Indoor Area">Indoor Area — greenhouse, building, covered growing area</option><option value="Bed or Plot">Bed or Plot — garden bed, terrace, production row</option><option value="Room">Room — classroom, propagation room, restaurant</option><option value="Enclosure">Enclosure — pen, protected garden, fenced compartment</option><option value="Path or Route">Path or Route — trail, tour route, nursery lane</option><option value="Other">Other — anything that doesn’t fit</option></select></div><div class="field"><label for="projectAreaDescription">Short description (optional)</label><textarea id="projectAreaDescription" rows="3" placeholder="Explain what this Area contains or how people recognise it."></textarea></div><p id="projectAreaError" class="meta"></p><div class="button-row"><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Cancel</button><button class="primary" type="submit">Save Area</button></div></form></div>`;
+        const returnAction = intent === 'checkpoint-quick'
+            ? `window.openCheckpointQuickSetup('${encoded(project.id)}')`
+            : `window.renderProjectDashboard('${encoded(project.id)}')`;
+        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">${areaStage === 'understood' ? 'Project structure' : 'Area guidance'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${guidance}<form class="panel" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Area name</label><input id="projectAreaName" placeholder="For example: 1R1, Front Garden or Grafting Area" required /></div><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area — garden, park, nursery, farm section</option><option value="Indoor Area">Indoor Area — greenhouse, building, covered growing area</option><option value="Bed or Plot">Bed or Plot — garden bed, terrace, production row</option><option value="Room">Room — classroom, propagation room, restaurant</option><option value="Enclosure">Enclosure — pen, protected garden, fenced compartment</option><option value="Path or Route">Path or Route — trail, tour route, nursery lane</option><option value="Other">Other — anything that doesn’t fit</option></select></div><div class="field"><label for="projectAreaDescription">Short description (optional)</label><textarea id="projectAreaDescription" rows="3" placeholder="Explain what this Area contains or how people recognise it."></textarea></div><p id="projectAreaError" class="meta"></p><div class="button-row"><button type="button" onclick="${returnAction}">Cancel</button><button class="primary" type="submit">Save Area</button></div></form></div>`;
         if (areaStage === 'new') recordTutorialEvent(project.id, 'area_explained');
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Area setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
@@ -807,6 +854,7 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
 export async function saveProjectArea(event, encodedProjectId, _encodedIntent = 'dashboard') {
     event.preventDefault();
     const projectId = decodeURIComponent(encodedProjectId);
+    const intent = decodeURIComponent(_encodedIntent || 'dashboard');
     const error = document.getElementById('projectAreaError');
     try {
         const before = await projectContent(projectId);
@@ -814,6 +862,7 @@ export async function saveProjectArea(event, encodedProjectId, _encodedIntent = 
         const area = await createSitePlace(projectId, site.id, { name: document.getElementById('projectAreaName').value.trim(), type: document.getElementById('projectAreaType').value, description: document.getElementById('projectAreaDescription').value.trim(), visibility: 'draft' });
         recordTutorialEvent(projectId, 'first_area_created_or_selected');
         const target = document.getElementById('app');
+        if (intent === 'checkpoint-quick') return renderAreaCheckpointForm(target, encoded(projectId), encoded(area.id), 'quick');
         if (!before.startingPoint) return renderAreaStartingPointQuestion(target, before.project, area);
         return renderProjectAreaDashboard(target, encoded(projectId), encoded(area.id));
     } catch (failure) {
@@ -1061,6 +1110,14 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <h1>Project Settings</h1>
             <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
         </div>
+        <section class="panel project-name-setting" aria-labelledby="projectNameTitle">
+            <div class="section-heading-row"><div><h2 id="projectNameTitle">Project Name</h2><p>Rename this project without changing its saved ID, Areas or content.</p></div></div>
+            <form onsubmit="window.saveProjectName(event, '${encoded(project.id)}')">
+                <div class="field"><label for="projectSettingsName">Project name</label><input id="projectSettingsName" value="${escapeHtml(project.name)}" required /></div>
+                <div class="button-row"><button class="primary" type="submit">Save Project Name</button></div>
+                <p id="projectNameStatus" class="meta"></p>
+            </form>
+        </section>
         <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle">
             <div class="section-heading-row"><div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div></div>
             <div class="field">
@@ -1162,6 +1219,25 @@ export function saveProjectTheme(encodedProjectId, theme) {
 
     projectThemeSaveQueues.set(projectId, queuedSave);
     return queuedSave;
+}
+
+export async function saveProjectName(app, event, encodedProjectId) {
+    event.preventDefault();
+    const projectId = decodeURIComponent(encodedProjectId);
+    const status = document.getElementById('projectNameStatus');
+    const name = document.getElementById('projectSettingsName')?.value.trim() || '';
+    if (!name) {
+        if (status) status.textContent = 'Project name is required.';
+        return;
+    }
+    try {
+        if (status) status.textContent = 'Saving project name...';
+        const project = await projectById(projectId);
+        await renameProjectOnDisk(projectId, { ...project, preserveId: true, name });
+        await renderProjectSettings(app, encoded(projectId));
+    } catch (error) {
+        if (status) status.textContent = `Project name could not be saved: ${error.message}`;
+    }
 }
 
 export async function setProjectTutorialModeFromSettings(app, encodedProjectId, enabled) {
@@ -1273,7 +1349,7 @@ async function startingContext(projectId) {
     return context;
 }
 
-export async function renderStartingPointForm(app, encodedProjectId, encodedPreferredAreaId = '') {
+export async function renderStartingPointForm(app, encodedProjectId, encodedPreferredAreaId = '', flow = '') {
     const projectId = decodeURIComponent(encodedProjectId);
     const preferredAreaId = encodedPreferredAreaId ? decodeURIComponent(encodedPreferredAreaId) : '';
     try {
@@ -1293,7 +1369,10 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
             : startingStage === 'learning'
                 ? '<div class="panel contextual-reminder"><p><strong>Reminder:</strong> Choose where visitors begin. Its directions and physical position can be updated later.</p></div>'
                 : '';
-        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${startingPoint ? 'Manage' : 'Set'} Starting Point</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${startingGuidance}<form class="panel" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}')"><div class="field"><label for="projectStartingArea">Area</label>${startingPoint ? `<p id="projectStartingArea" class="field-readonly-value">${escapeHtml(startingPoint.place.name)}</p>` : `<select id="projectStartingArea" required><option value="">Select an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select>`}</div><div class="field"><label for="projectStartingName">Starting-point name</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Starting Point')}" required /></div><div class="field"><label for="projectStartingDescription">Welcome text</label><textarea id="projectStartingDescription" rows="4">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Set it while standing there</strong><span>Use this phone’s current position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Choose it on the map</strong><span>Enter coordinates from a computer.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Location accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Direction visitors should face</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" placeholder="For example: north toward the orchard" /></div></div><div class="field"><label for="projectStartingPhoto">Optional reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" placeholder="https://…" /></div><div class="field"><label for="projectStartingQr">Optional QR or physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft - Creator only</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? `Position configured${anchor.accuracy ? ` · accuracy ${escapeHtml(anchor.accuracy)} m` : ''}.` : 'Position not configured. You can save and finish it later.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Starting Point</button></form></div>`;
+        const returnAction = flow === 'checkpoint-quick'
+            ? `window.openCheckpointQuickSetup('${encoded(project.id)}')`
+            : `window.renderProjectDashboard('${encoded(project.id)}')`;
+        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><h1>${startingPoint ? 'Manage' : 'Set'} Starting Point</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${startingGuidance}<form class="panel" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow)}')"><div class="field"><label for="projectStartingArea">Area</label>${startingPoint ? `<p id="projectStartingArea" class="field-readonly-value">${escapeHtml(startingPoint.place.name)}</p>` : `<select id="projectStartingArea" required><option value="">Select an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select>`}</div><div class="field"><label for="projectStartingName">Starting-point name</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Starting Point')}" required /></div><div class="field"><label for="projectStartingDescription">Welcome text</label><textarea id="projectStartingDescription" rows="4">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Set it while standing there</strong><span>Use this phone’s current position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Choose it on the map</strong><span>Enter coordinates from a computer.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Location accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Direction visitors should face</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" placeholder="For example: north toward the orchard" /></div></div><div class="field"><label for="projectStartingPhoto">Optional reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" placeholder="https://…" /></div><div class="field"><label for="projectStartingQr">Optional QR or physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft - Creator only</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? `Position configured${anchor.accuracy ? ` · accuracy ${escapeHtml(anchor.accuracy)} m` : ''}.` : 'Position not configured. You can save and finish it later.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Starting Point</button></form></div>`;
         if (!startingPoint && preferredAreaId && areas.some(area => area.id === preferredAreaId)) {
             document.getElementById('projectStartingArea').value = preferredAreaId;
         }
@@ -1321,9 +1400,10 @@ export function focusStartingPointMapFields() {
     if (status) status.textContent = 'Enter the latitude and longitude selected on your map.';
 }
 
-export async function saveProjectStartingPoint(event, encodedProjectId) {
+export async function saveProjectStartingPoint(event, encodedProjectId, flow = '') {
     event.preventDefault();
     const projectId = decodeURIComponent(encodedProjectId);
+    const nextFlow = decodeURIComponent(flow || '');
     const error = document.getElementById('projectStartingError');
     try {
         const context = await startingContext(projectId);
@@ -1342,7 +1422,8 @@ export async function saveProjectStartingPoint(event, encodedProjectId) {
         else savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);
         if (hasCoordinates || qrReference) await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : 'qr', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
         recordTutorialEvent(projectId, 'starting_point_configured');
-        await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
+        if (nextFlow === 'checkpoint-quick') await openCheckpointQuickSetup(document.getElementById('app'), encoded(projectId));
+        else await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;
     }

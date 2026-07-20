@@ -73,9 +73,26 @@ test('Creator AR setup guide covers welcome, checkpoint and placement', () => {
     assert.match(dashboardSource, /Plants, markers and notes/);
     assert.match(dashboardSource, /Set Welcome Marker/);
     assert.match(dashboardSource, /Open Test AR/);
-    assert.match(dashboardSource, /label: 'Area Marker'/);
-    assert.match(dashboardSource, /openCreatorArCheckpointSetup/);
+    assert.match(dashboardSource, /label: 'Add Checkpoint'/);
+    assert.match(dashboardSource, /openCheckpointQuickSetup/);
+    assert.match(dashboardSource, /Create New Area/);
+    assert.match(dashboardSource, /Add in AR now/);
+    assert.match(dashboardSource, /Add location later/);
     assert.match(dashboardSource, /Area Marker label/);
+});
+
+test('project settings can rename a project and Areas toggle from the dashboard', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const entrySource = read('app/components/projectEntry.js');
+    const mainSource = read('app/main.js');
+    assert.match(dashboardSource, /Project Name/);
+    assert.match(dashboardSource, /projectSettingsName/);
+    assert.match(dashboardSource, /saveProjectName/);
+    assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name \}\)/);
+    assert.match(dashboardSource, /const button = trigger\?\.currentTarget \|\| trigger/);
+    assert.match(entrySource, /onclick="window\.toggleAreas\(this\)"/);
+    assert.match(entrySource, /aria-expanded="false"/);
+    assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
