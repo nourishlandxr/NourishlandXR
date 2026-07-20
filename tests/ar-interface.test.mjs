@@ -44,6 +44,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Interaction is off/);
     assert.match(arSource, /openInlineEditor/);
     assert.match(arSource, /finishMarkerDrag/);
+    assert.match(arSource, /pointercancel/);
+    assert.match(arSource, /setPointerCapture/);
+    assert.match(arSource, /Hand mode is now off/);
+    assert.match(arSource, /Move cancelled\. Hand mode is now off/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
 });

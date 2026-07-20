@@ -92,6 +92,7 @@ function spatialAnchor(position) {
 function cleanupDrag() {
     window.removeEventListener('pointermove', moveMarkerDrag);
     window.removeEventListener('pointerup', finishMarkerDrag);
+    window.removeEventListener('pointercancel', cancelMarkerDrag);
     dragState = null;
 }
 
@@ -108,6 +109,7 @@ function updateInteractionControls() {
 function setInteractionMode(mode) {
     interactionMode = interactionMode === mode ? '' : mode;
     cleanupDrag();
+    if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
@@ -204,33 +206,52 @@ function beginMarkerInteraction(record, event) {
     }
     dragState = {
         record,
+        pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         position: { ...record.position }
     };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
-    window.addEventListener('pointerup', finishMarkerDrag, { once: true });
+    window.addEventListener('pointerup', finishMarkerDrag);
+    window.addEventListener('pointercancel', cancelMarkerDrag);
     setPlacementStatus(`Moving ${record.marker.name}. Release to save its new position.`);
 }
 
 function moveMarkerDrag(event) {
     if (!dragState) return;
+    if (event.pointerId !== dragState.pointerId) return;
     const scale = 2.2 / Math.max(window.innerWidth, 320);
     dragState.record.position.x = dragState.position.x + (event.clientX - dragState.startX) * scale;
     dragState.record.position.y = dragState.position.y - (event.clientY - dragState.startY) * scale;
     positionSessionMarkers();
 }
 
-async function finishMarkerDrag() {
+async function finishMarkerDrag(event) {
     const state = dragState;
+    if (!state || event?.pointerId !== state.pointerId) return;
     cleanupDrag();
-    if (!state) return;
     try {
         await saveMarkerAnchor(activeProjectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position));
-        setPlacementStatus(`${state.record.marker.name} moved. Hand mode remains on.`);
+        interactionMode = '';
+        updateInteractionControls();
+        setPlacementStatus(`${state.record.marker.name} moved. Hand mode is now off.`);
     } catch (error) {
+        interactionMode = '';
+        updateInteractionControls();
         setPlacementStatus(`Could not save the move: ${error.message}`);
     }
+}
+
+function cancelMarkerDrag(event) {
+    const state = dragState;
+    if (!state || event?.pointerId !== state.pointerId) return;
+    state.record.position = state.position;
+    cleanupDrag();
+    interactionMode = '';
+    updateInteractionControls();
+    positionSessionMarkers();
+    setPlacementStatus('Move cancelled. Hand mode is now off.');
 }
 
 async function loadPlacementAreas() {
