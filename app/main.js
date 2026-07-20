@@ -323,7 +323,7 @@ window.applyFieldGuideFilter = () => applyFieldGuideFilter();
 window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
 window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
-window.startArMode = (projectId, areaId, checkpointId) => startArMode(projectId, areaId, checkpointId);
+window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '') => startArMode(projectId, areaId, checkpointId, initialPlacementType);
 window.exitArMode = () => exitArMode();
 window.isArModeActive = () => isArModeActive();
 window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };

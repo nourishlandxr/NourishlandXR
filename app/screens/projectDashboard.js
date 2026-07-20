@@ -631,8 +631,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 setupAction: `window.editProjectStartingPoint('${encoded(project.id)}')`
             },
             quickActions: [
-                { icon: '📍', label: 'Add Marker', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'plant')` },
-                { icon: '✎', label: 'Add Note', action: `window.openQuickAccessChoice('${encoded(project.id)}', 'note')` },
+                { icon: '📍', label: 'Add Marker', action: `window.startArMode('${encoded(project.id)}', '', '', 'sub_checkpoint')` },
+                { icon: '✎', label: 'Add Note', action: `window.startArMode('${encoded(project.id)}', '', '', 'note')` },
                 { icon: '⌖', label: 'Add Checkpoint', action: `window.openCheckpointQuickSetup('${encoded(project.id)}')` },
                 { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
             ],

@@ -28,6 +28,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /Place note/);
     assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
+    assert.match(arSource, /data-ar-reset/);
+    assert.match(arSource, /Reset AR controls/);
+    assert.match(arSource, /data-ar-ready-place/);
+    assert.match(arSource, /creator-ar-ready-ring/);
     assert.match(arSource, /Add Area Marker/);
 });
 
@@ -48,6 +52,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /setPointerCapture/);
     assert.match(arSource, /Hand mode is now off/);
     assert.match(arSource, /Move cancelled\. Hand mode is now off/);
+    assert.match(arSource, /function resetArControls\(\)/);
+    assert.match(arSource, /AR controls reset\. Choose an Area or Place when you are ready/);
+    assert.match(arSource, /chooser\.querySelectorAll\('\[data-ar-area-id\]'\)/);
+    assert.match(arSource, /activeCheckpointId = ''/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
 });
@@ -145,7 +153,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     const dashboardSource = read('app/screens/projectDashboard.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /let startPromise = null/);
-    assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId\)/);
+    assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(arSource, /session = await navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
@@ -156,6 +164,21 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /optional for testing/);
     assert.match(dashboardSource, /Edit Area Marker/);
     assert.match(serverSource, /'area_checkpoint'/);
+});
+
+test('dashboard quick marker and note actions open AR with a ready centre placement control', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const mainSource = read('app/main.js');
+    const styles = read('app/style.css');
+    assert.match(dashboardSource, /label: 'Add Marker', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'sub_checkpoint'\)`/);
+    assert.match(dashboardSource, /label: 'Add Note', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'note'\)`/);
+    assert.match(arSource, /readyPlacementType = \['plant', 'sub_checkpoint', 'note'\]\.includes\(initialPlacementType\)/);
+    assert.match(arSource, /Aim the centre circle, then tap it to place/);
+    assert.match(arSource, /if \(readyPlacementType === type\)/);
+    assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = ''\)/);
+    assert.match(styles, /\.creator-ar-ready-placement/);
+    assert.match(styles, /creator-ar-ready-pulse/);
 });
 
 test('dashboard search indexes readable content and ranks name matches', () => {

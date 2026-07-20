@@ -26,9 +26,11 @@ let checkpointSessionOrigin = null;
 let interactionMode = '';
 let sessionMarkers = [];
 let dragState = null;
+let readyPlacementType = '';
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;' })[type] || '&#x25C6;';
+const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function returnToWeb() {
@@ -51,6 +53,18 @@ function setPlacementStatus(message) {
 function setAreaButtonLabel() {
     const button = overlayRoot?.querySelector('[data-ar-select-area]');
     if (button) button.textContent = activeAreaName ? `Area: ${activeAreaName}` : 'Choose Area';
+}
+
+function updateReadyPlacementControl() {
+    const control = overlayRoot?.querySelector('[data-ar-ready-place]');
+    if (!control) return;
+    const ready = Boolean(readyPlacementType);
+    control.hidden = !ready;
+    if (!ready) return;
+    const label = readyPlacementLabel(readyPlacementType);
+    control.setAttribute('aria-label', `Place ${label}`);
+    const text = control.querySelector('[data-ar-ready-place-label]');
+    if (text) text.textContent = `Place ${label}`;
 }
 
 function placementPoint() {
@@ -109,11 +123,29 @@ function updateInteractionControls() {
 function setInteractionMode(mode) {
     interactionMode = interactionMode === mode ? '' : mode;
     cleanupDrag();
+    closeAreaChooser();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
+}
+
+function closeAreaChooser() {
+    const chooser = overlayRoot?.querySelector('[data-ar-area-chooser]');
+    if (chooser) {
+        chooser.hidden = true;
+        chooser.innerHTML = '';
+    }
+}
+
+function resetArControls() {
+    cleanupDrag();
+    interactionMode = '';
+    closeInlineEditor();
+    closeAreaChooser();
+    updateInteractionControls();
+    setPlacementStatus('AR controls reset. Choose an Area or Place when you are ready.');
 }
 
 function multiplyMatrixVector(matrix, vector) {
@@ -275,13 +307,20 @@ function showAreaChooser(areas) {
     if (!chooser) return;
     chooser.hidden = false;
     chooser.innerHTML = `<div><strong>Choose an Area</strong><button type="button" aria-label="Close Area chooser" data-ar-close-area>&times;</button></div><p>New drafts will be saved to this Area.</p><div class="creator-ar-area-options">${areas.map(area => `<button type="button" data-ar-area-id="${escapeHtml(area.id)}">${escapeHtml(area.name)}</button>`).join('')}</div>`;
-    chooser.querySelector('[data-ar-close-area]').addEventListener('click', () => { chooser.hidden = true; });
-    areas.forEach(area => chooser.querySelector(`[data-ar-area-id="${CSS.escape(area.id)}"]`)?.addEventListener('click', () => {
+    chooser.querySelector('[data-ar-close-area]').addEventListener('click', closeAreaChooser);
+    chooser.querySelectorAll('[data-ar-area-id]').forEach((button, index) => button.addEventListener('click', () => {
+        const area = areas[index];
+        if (!area) return;
+        const changedArea = Boolean(activeAreaId && activeAreaId !== area.id);
         activeAreaId = area.id;
         activeAreaName = area.name;
-        chooser.hidden = true;
+        if (changedArea) {
+            activeCheckpointId = '';
+            checkpointSessionOrigin = null;
+        }
+        closeAreaChooser();
         setAreaButtonLabel();
-        setPlacementStatus(`${area.name} selected. Choose Place to add a draft.`);
+        setPlacementStatus(`${area.name} selected.${changedArea ? ' Checkpoint origin reset for this Area.' : ''} Choose Place to add a draft.`);
     }));
 }
 
@@ -303,12 +342,17 @@ async function ensurePlacementArea() {
 
 async function choosePlacementArea() {
     try {
+        cleanupDrag();
+        interactionMode = '';
+        closeInlineEditor();
+        updateInteractionControls();
         const areas = await loadPlacementAreas();
         if (!areas.length) {
             setPlacementStatus('Create an Area in Web Mode before placing content.');
             return;
         }
         showAreaChooser(areas);
+        setPlacementStatus('Choose an Area. Reset closes this panel if you need to start again.');
     } catch (error) {
         setPlacementStatus(`Area selection is unavailable: ${error.message}`);
     }
@@ -333,6 +377,10 @@ async function quickPlace(type) {
         await saveMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id, spatialAnchor(position));
         sessionMarkers.push({ marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName });
         renderSessionMarkers();
+        if (readyPlacementType === type) {
+            readyPlacementType = '';
+            updateReadyPlacementControl();
+        }
         setPlacementStatus(`${marker.name} placed as a draft. Enable Pointer to edit or Hand to move it.`);
     } catch (error) {
         setPlacementStatus(`Could not place ${label}: ${error.message}`);
@@ -341,7 +389,9 @@ async function quickPlace(type) {
 
 function createOverlay() {
     const hasCheckpoint = Boolean(activeAreaId && activeCheckpointId);
-    const initialStatus = hasCheckpoint
+    const initialStatus = readyPlacementType
+        ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
+        : hasCheckpoint
         ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
         : 'Test session - no physical code is needed. Place drafts now, then edit them in AR or Web Mode.';
     overlayRoot = document.createElement('div');
@@ -350,6 +400,7 @@ function createOverlay() {
     overlayRoot.innerHTML = `
         <p class="creator-ar-placement-status" data-ar-placement-status>${initialStatus}</p>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
+        <button class="creator-ar-ready-placement" type="button" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></button>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
         <section class="creator-ar-toolbox" aria-label="Place content" aria-hidden="true">
@@ -364,6 +415,7 @@ function createOverlay() {
             <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">&#xFF0B;</b><span>Place</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: move markers" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
+            <button type="button" data-ar-reset aria-label="Reset AR controls"><b aria-hidden="true">&#x21BA;</b><span>Reset</span></button>
             <button type="button" data-ar-recenter><b aria-hidden="true">&#x25CE;</b><span>Recenter</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
@@ -378,6 +430,7 @@ function createOverlay() {
     });
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
+    overlayRoot.querySelector('[data-ar-reset]').addEventListener('click', resetArControls);
     overlayRoot.querySelector('[data-ar-recenter]').addEventListener('click', () => {
         if (!latestViewerMatrix) {
             setPlacementStatus('Move your phone briefly, then recenter the checkpoint.');
@@ -393,7 +446,11 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => quickPlace('plant'));
     overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => quickPlace('sub_checkpoint'));
     overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => quickPlace('note'));
+    overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
+        if (readyPlacementType) void quickPlace(readyPlacementType);
+    });
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
+    updateReadyPlacementControl();
     document.body.append(overlayRoot);
 }
 
@@ -415,6 +472,7 @@ function cleanup() {
     checkpointSessionOrigin = null;
     interactionMode = '';
     sessionMarkers = [];
+    readyPlacementType = '';
     gl = null;
 }
 
@@ -429,10 +487,10 @@ export function isArModeActive() {
     return Boolean(session);
 }
 
-export async function startArMode(projectId, areaId = '', checkpointId = '') {
+export async function startArMode(projectId, areaId = '', checkpointId = '', initialPlacementType = '') {
     if (session) return true;
     if (startPromise) return startPromise;
-    startPromise = launchArMode(projectId, areaId, checkpointId);
+    startPromise = launchArMode(projectId, areaId, checkpointId, initialPlacementType);
     try {
         return await startPromise;
     } finally {
@@ -440,11 +498,12 @@ export async function startArMode(projectId, areaId = '', checkpointId = '') {
     }
 }
 
-async function launchArMode(projectId, areaId, checkpointId) {
+async function launchArMode(projectId, areaId, checkpointId, initialPlacementType) {
     if (!projectId || !navigator.xr || !window.isSecureContext) return false;
     activeProjectId = projectId;
     activeAreaId = areaId;
     activeCheckpointId = checkpointId;
+    readyPlacementType = ['plant', 'sub_checkpoint', 'note'].includes(initialPlacementType) ? initialPlacementType : '';
     createOverlay();
 
     try {

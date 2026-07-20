@@ -574,6 +574,11 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-toolbox button { min-height: 34px; padding: 6px 8px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; font-size: .68rem; white-space: nowrap; }
 .creator-ar-marker-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive { pointer-events: auto; }
+.creator-ar-ready-placement { position: fixed; left: 50%; top: 50%; z-index: 2; display: grid; justify-items: center; gap: 8px; min-width: 132px; padding: 0; transform: translate(-50%, -50%); border: 0; background: transparent; color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .02em; text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: auto; }
+.creator-ar-ready-placement[hidden] { display: none; }
+.creator-ar-ready-ring { width: 46px; height: 46px; border: 2px solid rgba(220,239,149,.98); border-radius: 50%; background: rgba(220,239,149,.16); box-shadow: 0 0 0 8px rgba(220,239,149,.14), 0 0 24px rgba(220,239,149,.5); animation: creator-ar-ready-pulse 1.55s ease-in-out infinite; }
+.creator-ar-ready-placement:active .creator-ar-ready-ring { transform: scale(.9); }
+@keyframes creator-ar-ready-pulse { 0%, 100% { transform: scale(.9); opacity: .72; } 50% { transform: scale(1.12); opacity: 1; } }
 .creator-ar-marker { position: fixed; display: inline-flex; align-items: center; gap: 4px; min-height: 30px; max-width: 160px; padding: 5px 8px; border: 1px solid rgba(220,239,149,.85); border-radius: 999px; background: rgba(18,52,31,.86); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.3); font-size: .7rem; font-weight: 700; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker { pointer-events: auto; }
 .creator-ar-marker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
