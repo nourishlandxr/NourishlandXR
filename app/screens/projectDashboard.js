@@ -350,7 +350,8 @@ export async function renderArAreaPicker(app, encodedProjectId) {
         const cards = areas.map(area => {
             const checkpoint = context.entries.find(entry => entry.place.id === area.id && entry.marker.type === 'area_checkpoint');
             if (checkpoint) {
-                return `<section class="panel ar-area-card is-ready"><h2>${escapeHtml(area.name)}</h2><p>Physical checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong></p><button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(area.id)}', '${encoded(checkpoint.marker.id)}')">Open placement AR</button></section>`;
+                const checkpointStatus = checkpoint.marker.qr_reference ? `Physical checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong>` : `Temporary checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong> · add the physical marker code later.`;
+                return `<section class="panel ar-area-card is-ready"><h2>${escapeHtml(area.name)}</h2><p>${checkpointStatus}</p><div class="button-row"><button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(area.id)}', '${encoded(checkpoint.marker.id)}')">Open placement AR</button><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(area.id)}')">Edit Checkpoint</button></div></section>`;
             }
             return `<section class="panel ar-area-card"><h2>${escapeHtml(area.name)}</h2><p>Set this Area’s physical checkpoint before using spatial AR.</p><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(area.id)}')">Set Area Checkpoint</button></section>`;
         }).join('');
@@ -366,8 +367,14 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
     try {
         const context = await projectAreaContext(projectId, areaId);
         const existing = context.areaEntries.find(entry => entry.marker.type === 'area_checkpoint');
-        if (existing) return renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId));
-        app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Back to AR Areas</button><p class="welcome-label">Physical anchor</p><h1>Set ${escapeHtml(context.area.name)} checkpoint</h1><p class="subtitle">Give the permanent on-site marker a unique code.</p></div><section class="panel guide"><p>This checkpoint is the local origin for every item placed in this Area. GPS can still help find the Area, but it does not determine the positions of individual plants.</p></section><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Checkpoint name</label><input id="areaCheckpointName" value="${escapeHtml(context.area.name)} checkpoint" required /></div><div class="field"><label for="areaCheckpointCode">Physical marker code</label><input id="areaCheckpointCode" placeholder="For example: HFF-1R1-CP01" required /></div><p class="meta">Use this exact code on the physical QR or marker installed at the Area.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Cancel</button><button class="primary" type="submit">Save Checkpoint</button></div></form></div>`;
+        let savedCode = existing?.marker.qr_reference || '';
+        if (existing && !savedCode) {
+            try { savedCode = (await loadMarkerAnchor(projectId, context.site.id, areaId, existing.marker.id)).qr_code || ''; }
+            catch { savedCode = ''; }
+        }
+        const title = existing ? `Edit ${context.area.name} checkpoint` : `Set ${context.area.name} checkpoint`;
+        const submitLabel = existing ? 'Save Checkpoint Changes' : 'Save Temporary Checkpoint';
+        app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Back to AR Areas</button><p class="welcome-label">Physical anchor</p><h1>${escapeHtml(title)}</h1><p class="subtitle">A physical marker code can be added when the marker is installed.</p></div><section class="panel guide"><p>This checkpoint is the local origin for every item placed in this Area. GPS can still help find the Area, but it does not determine the positions of individual plants.</p><p>You can create a temporary checkpoint now for testing, then return here to add or replace the physical marker code later.</p></section><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Checkpoint name</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} checkpoint`)}" required /></div><div class="field"><label for="areaCheckpointCode">Physical marker code <span class="meta">(optional for testing)</span></label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="For example: HFF-1R1-CP01" /></div><p class="meta">Leave the code blank to test now. Add the exact QR or physical marker code later when it is installed.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Cancel</button><button class="primary" type="submit">${submitLabel}</button></div></form></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>Checkpoint unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -382,16 +389,23 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId)
         const context = await projectAreaContext(projectId, areaId);
         const name = document.getElementById('areaCheckpointName').value.trim();
         const qrCode = document.getElementById('areaCheckpointCode').value.trim();
-        if (!name || !qrCode) throw new Error('Checkpoint name and physical marker code are required.');
-        if (context.areaEntries.some(entry => entry.marker.type === 'area_checkpoint')) throw new Error('This Area already has a checkpoint.');
+        if (!name) throw new Error('Checkpoint name is required.');
+        const existing = context.areaEntries.find(entry => entry.marker.type === 'area_checkpoint');
         if (status) status.textContent = 'Saving checkpoint…';
-        await createPlaceMarker(projectId, context.site.id, areaId, {
+        const checkpointData = {
             name,
             type: 'area_checkpoint',
             description: `Physical anchor for ${context.area.name}.`,
             qr_reference: qrCode,
-            visibility: 'draft',
-            anchor: { type: 'qr', qr_code: qrCode, description: `Physical checkpoint for ${context.area.name}.` }
+            visibility: existing?.marker.visibility || 'draft'
+        };
+        const savedMarker = existing
+            ? await updatePlaceMarker(projectId, context.site.id, areaId, existing.marker.id, checkpointData)
+            : await createPlaceMarker(projectId, context.site.id, areaId, checkpointData);
+        if (qrCode) await saveMarkerAnchor(projectId, context.site.id, areaId, savedMarker.id, {
+            type: 'qr',
+            qr_code: qrCode,
+            description: `Physical checkpoint for ${context.area.name}.`
         });
         await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
     } catch (error) {
@@ -829,8 +843,8 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </section>
             <section class="panel area-checkpoint-summary">
                 <h2>AR Checkpoint</h2>
-                <p>${checkpoint ? `Physical checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong>. Use it as the local origin for placement in this Area.` : 'This Area needs a physical checkpoint before spatial AR can be used.'}</p>
-                <div class="button-row">${checkpoint ? `<button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint.marker.id)}')">Open placement AR</button>` : `<button class="primary" type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Set Area Checkpoint</button>`}</div>
+                <p>${checkpoint ? checkpoint.marker.qr_reference ? `Physical checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong>. Use it as the local origin for placement in this Area.` : `Temporary checkpoint: <strong>${escapeHtml(checkpoint.marker.name)}</strong>. Add its physical marker code later.` : 'Create a temporary or physical checkpoint before spatial AR can be used.'}</p>
+                <div class="button-row">${checkpoint ? `<button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint.marker.id)}')">Open placement AR</button><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Edit Checkpoint</button>` : `<button class="primary" type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Create Temporary Checkpoint</button>`}</div>
             </section>
             <div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>

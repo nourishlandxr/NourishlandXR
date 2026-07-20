@@ -151,6 +151,7 @@ test('Creator AR requires a physical checkpoint for each Area', () => {
     assert.match(dashboardSource, /renderAreaCheckpointForm/);
     assert.match(dashboardSource, /saveAreaCheckpoint/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
-    assert.match(dashboardSource, /Set Area Checkpoint/);
+    assert.match(dashboardSource, /optional for testing/);
+    assert.match(dashboardSource, /Edit Checkpoint/);
     assert.match(serverSource, /'area_checkpoint'/);
 });
