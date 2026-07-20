@@ -20,6 +20,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /WEB/);
     assert.match(arSource, /data-ar-window="tools"/);
+    assert.match(arSource, /data-ar-place-picker/);
+    assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /Recenter checkpoint/);
     assert.match(arSource, /EXIT AR/);
     assert.match(arSource, /Add Area Marker/);
@@ -39,6 +41,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     const arSource = read('app/screens/arMode.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /createPlaceMarker/);
+    assert.match(arSource, /loadPlaceMarkers/);
+    assert.match(arSource, /draftName = `\$\{baseName\} \(\$\{suffix\+\+\}\)`/);
     assert.match(arSource, /saveMarkerAnchor/);
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /interactionMode = interactionMode === mode \? '' : mode/);
@@ -147,7 +151,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /checkpointSessionOrigin = Float32Array\.from\(latestViewerMatrix\)/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
-    assert.match(styles, /\.creator-ar-toolbox\.is-open/);
+    assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
 });
 
 test('Creator AR supports temporary checkpoints and direct test sessions', () => {

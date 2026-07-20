@@ -32,6 +32,9 @@ const visitorQuery = visitor => visitor ? '?view=visitor' : '';
 export async function loadProjects(visitor = false) {
     return requestJson(`${API_BASE}/projects${visitorQuery(visitor)}`);
 }
+export async function loadProject(projectId, visitor = false) {
+    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}${visitorQuery(visitor)}`);
+}
 export async function loadProjectGpsMarkers(projectId, visitor = false) { return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/gps-markers${visitorQuery(visitor)}`); }
 
 export async function createProjectOnDisk(projectData) {

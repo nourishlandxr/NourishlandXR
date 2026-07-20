@@ -3,6 +3,7 @@ import { renderProjectEntry } from '../components/projectEntry.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
+import { loadProject } from '../services/persistence.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
@@ -87,7 +88,13 @@ export function savePlatformSetting(name, value) {
 }
 
 async function projectById(projectId) {
-    const project = (await loadProjects()).find(item => item.id === projectId);
+    let project = null;
+    try {
+        project = (await loadProjects()).find(item => item.id === projectId) || null;
+    } catch {
+        // The direct project endpoint below gives the more useful error.
+    }
+    if (!project) project = await loadProject(projectId);
     if (!project) throw new Error('Location data is unavailable.');
     const resolvedProject = { ...project, name: project.name || PROJECT_NAMES[project.id] || project.id };
     applyProjectTheme(resolvedProject.theme);
@@ -1233,8 +1240,10 @@ export async function saveProjectName(app, event, encodedProjectId) {
     try {
         if (status) status.textContent = 'Saving project name...';
         const project = await projectById(projectId);
-        await renameProjectOnDisk(projectId, { ...project, preserveId: true, name });
-        await renderProjectSettings(app, encoded(projectId));
+        const savedProject = await renameProjectOnDisk(projectId, { ...project, preserveId: true, name });
+        const subtitle = document.querySelector('.project-settings-screen .page-header .subtitle');
+        if (subtitle) subtitle.textContent = `${savedProject.name} · Project-wide configuration`;
+        if (status) status.textContent = `Project name saved as ${savedProject.name}.`;
     } catch (error) {
         if (status) status.textContent = `Project name could not be saved: ${error.message}`;
     }

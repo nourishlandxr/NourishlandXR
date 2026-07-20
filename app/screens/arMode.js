@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 
 let session = null;
 let gl = null;
@@ -124,6 +124,7 @@ function setInteractionMode(mode) {
     interactionMode = interactionMode === mode ? '' : mode;
     cleanupDrag();
     closeAreaChooser();
+    closePlacePicker();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
@@ -139,11 +140,18 @@ function closeAreaChooser() {
     }
 }
 
+function closePlacePicker() {
+    const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
+    if (picker) picker.hidden = true;
+    overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'false');
+}
+
 function resetArControls() {
     cleanupDrag();
     interactionMode = '';
     closeInlineEditor();
     closeAreaChooser();
+    closePlacePicker();
     updateInteractionControls();
     setPlacementStatus('AR controls reset. Choose an Area or Place when you are ready.');
 }
@@ -371,13 +379,21 @@ async function quickPlace(type) {
     const label = markerLabel(type);
     setPlacementStatus(`Placing ${label}...`);
     try {
+        const existingMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, activeAreaId).catch(() => []);
+        const existingNames = new Set(existingMarkers.map(marker => String(marker.name || '').trim().toLocaleLowerCase()));
+        const baseName = defaults[type];
+        let draftName = baseName;
+        let suffix = 1;
+        while (existingNames.has(draftName.toLocaleLowerCase())) {
+            draftName = `${baseName} (${suffix++})`;
+        }
         // AR drafts intentionally use the stable marker route. Plant markers
         // include a profile file and can be completed later from Pointer/Web.
         const response = await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, {
-            name: defaults[type],
+            name: draftName,
             type,
             description: '',
-            plant_profile: type === 'plant' ? { common_name: defaults[type] } : undefined,
+            plant_profile: type === 'plant' ? { common_name: draftName } : undefined,
             visibility: 'draft',
             status: 'draft'
         });
@@ -417,7 +433,7 @@ function createOverlay() {
         <button class="creator-ar-ready-placement" type="button" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></button>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
-        <section class="creator-ar-toolbox" aria-label="Place content" aria-hidden="true">
+        <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Place content" hidden>
             <button type="button" data-ar-select-area>Choose Area</button>
             <button type="button" data-ar-add-checkpoint>Add Area Marker</button>
             <button type="button" data-ar-place-tree>Place tree</button>
@@ -436,10 +452,9 @@ function createOverlay() {
 
     overlayRoot.querySelector('[data-ar-web-mode]').addEventListener('click', returnToWeb);
     overlayRoot.querySelector('[data-ar-window="tools"]').addEventListener('click', event => {
-        const toolbox = overlayRoot.querySelector('.creator-ar-toolbox');
-        const open = !toolbox.classList.contains('is-open');
-        toolbox.classList.toggle('is-open', open);
-        toolbox.setAttribute('aria-hidden', String(!open));
+        const picker = overlayRoot.querySelector('[data-ar-place-picker]');
+        const open = picker.hidden;
+        picker.hidden = !open;
         event.currentTarget.setAttribute('aria-expanded', String(open));
     });
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
@@ -455,11 +470,11 @@ function createOverlay() {
             ? 'Checkpoint origin set for this placement session.'
             : 'Temporary test origin set for this session. Add an Area Marker when you install one.');
     });
-    overlayRoot.querySelector('[data-ar-select-area]').addEventListener('click', choosePlacementArea);
-    overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', openCheckpointSetup);
-    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => quickPlace('plant'));
-    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => quickPlace('sub_checkpoint'));
-    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => quickPlace('note'));
+    overlayRoot.querySelector('[data-ar-select-area]').addEventListener('click', () => { closePlacePicker(); void choosePlacementArea(); });
+    overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', () => { closePlacePicker(); openCheckpointSetup(); });
+    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => { closePlacePicker(); void quickPlace('plant'); });
+    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => { closePlacePicker(); void quickPlace('sub_checkpoint'); });
+    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => { closePlacePicker(); void quickPlace('note'); });
     overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
         if (readyPlacementType) void quickPlace(readyPlacementType);
     });

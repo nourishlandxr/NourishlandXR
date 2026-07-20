@@ -569,10 +569,10 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-taskbar button.is-active { border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.16); color: #fff; }
 .creator-ar-mode-control, .creator-ar-icon-control { min-width: 34px; justify-content: center; padding-inline: 6px !important; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
-.creator-ar-toolbox { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(88vw, 340px); gap: 5px; padding: 7px; transform: translate(-50%, 8px); border: 1px solid rgba(255,255,255,.5); border-radius: 14px; background: rgba(250,253,247,.96); box-shadow: 0 8px 26px rgba(0,0,0,.24); backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity .16s ease, transform .16s ease; }
-.creator-ar-toolbox.is-open { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
-.creator-ar-toolbox button { min-height: 34px; padding: 6px 8px; border-color: rgba(20,61,37,.18); background: rgba(20,61,37,.07); color: #163d25; font-size: .68rem; white-space: nowrap; }
-.creator-ar-toolbox button:first-child { grid-column: span 2; }
+.creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(88vw, 340px); gap: 5px; padding: 7px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.5); border-radius: 14px; background: rgba(250,253,247,.96); box-shadow: 0 8px 26px rgba(0,0,0,.24); backdrop-filter: blur(12px); pointer-events: auto; }
+.creator-ar-place-picker[hidden] { display: none; }
+.creator-ar-place-picker button { min-height: 34px; padding: 6px 8px; border-color: rgba(20,61,37,.18); background: rgba(20,61,37,.07); color: #163d25; font-size: .68rem; white-space: nowrap; }
+.creator-ar-place-picker button:first-child { grid-column: span 2; }
 .creator-ar-marker-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive { pointer-events: auto; }
 .creator-ar-ready-placement { position: fixed; left: 50%; top: 50%; z-index: 2; display: grid; justify-items: center; gap: 8px; min-width: 132px; padding: 0; transform: translate(-50%, -50%); border: 0; background: transparent; color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .02em; text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: auto; }
