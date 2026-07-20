@@ -1121,7 +1121,7 @@ function handleApi(req, res) {
                 const now = new Date().toISOString();
                 const marker = { id: markerId, type, name: data.name.trim(), description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
-                if (['gps', 'qr'].includes(String(data.anchor?.type || '').toLowerCase())) {
+                if (['gps', 'qr', 'spatial'].includes(String(data.anchor?.type || '').toLowerCase())) {
                     const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };
                     writeJson(path.join(markerDir, 'anchor.json'), anchor);
                 }
@@ -1179,7 +1179,7 @@ function handleApi(req, res) {
             if (!fs.existsSync(path.join(markerDir, 'marker.json'))) return sendJson(res, 404, { error: 'Marker not found' });
             const data = JSON.parse(body || '{}');
             const type = String(data.type || '').toLowerCase();
-            if (!['gps', 'qr'].includes(type)) return sendJson(res, 400, { error: 'Anchor type must be GPS or QR' });
+            if (!['gps', 'qr', 'spatial'].includes(type)) return sendJson(res, 400, { error: 'Anchor type must be GPS, QR or spatial' });
             if (type === 'gps') {
                 const latitude = Number(data.latitude);
                 const longitude = Number(data.longitude);
@@ -1187,6 +1187,12 @@ function handleApi(req, res) {
                 if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return sendJson(res, 400, { error: 'Longitude must be between -180 and 180' });
             }
             if (type === 'qr' && !String(data.qr_code || '').trim()) return sendJson(res, 400, { error: 'QR Code is required' });
+            if (type === 'spatial') {
+                const position = data.position && typeof data.position === 'object' ? data.position : {};
+                if (![position.x, position.y, position.z].every(value => Number.isFinite(Number(value)))) {
+                    return sendJson(res, 400, { error: 'Spatial anchors require finite x, y and z coordinates' });
+                }
+            }
             const anchor = { ...readJson(anchorFile, {}), ...data, type, modified: new Date().toISOString() };
             writeJson(anchorFile, anchor);
             const marker = readJson(path.join(markerDir, 'marker.json'), null);

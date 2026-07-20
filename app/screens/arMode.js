@@ -1,11 +1,13 @@
 /*
  * Creator AR placement mode
  *
- * Creator workflows stay in the web dashboard. AR is deliberately limited to
- * a focused placement session, so there is no second dashboard to maintain or
- * manipulate in the camera view. A physical checkpoint improves repeat visits,
- * but is not required to start a test session.
+ * The dashboard remains the full web workspace. AR is for fast capture:
+ * place a draft, then select it to refine its details or move it without
+ * leaving the camera session. Physical checkpoints improve repeat visits but
+ * are not required for a test session.
  */
+
+import { createPlaceMarker, createSpatialPlant, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 
 let session = null;
 let gl = null;
@@ -13,29 +15,26 @@ let refSpace = null;
 let canvas = null;
 let overlayRoot = null;
 let activeProjectId = '';
+let activeSiteId = '';
 let activeAreaId = '';
+let activeAreaName = '';
 let activeCheckpointId = '';
 let startPromise = null;
 let latestViewerMatrix = null;
+let latestView = null;
 let checkpointSessionOrigin = null;
+let interactionMode = '';
+let sessionMarkers = [];
+let dragState = null;
+
+const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note' })[type] || 'item';
+const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;' })[type] || '&#x25C6;';
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function returnToWeb() {
     const projectId = activeProjectId;
     exitArMode();
     window.setTimeout(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)), 0);
-}
-
-function openFieldTool(type) {
-    const projectId = activeProjectId;
-    const areaId = activeAreaId;
-    exitArMode();
-    window.setTimeout(() => window.renderLocationFieldMarker?.(
-        encodeURIComponent(projectId),
-        type,
-        'ar',
-        false,
-        encodeURIComponent(areaId)
-    ), 0);
 }
 
 function openCheckpointSetup() {
@@ -49,27 +48,303 @@ function setPlacementStatus(message) {
     if (status) status.textContent = message;
 }
 
+function setAreaButtonLabel() {
+    const button = overlayRoot?.querySelector('[data-ar-select-area]');
+    if (button) button.textContent = activeAreaName ? `Area: ${activeAreaName}` : 'Choose Area';
+}
+
+function placementPoint() {
+    if (!latestViewerMatrix) return null;
+    const distance = 1.2;
+    return {
+        x: latestViewerMatrix[12] - latestViewerMatrix[8] * distance,
+        y: latestViewerMatrix[13] - latestViewerMatrix[9] * distance,
+        z: latestViewerMatrix[14] - latestViewerMatrix[10] * distance
+    };
+}
+
+function roundCoordinate(value) {
+    return Math.round(Number(value) * 1000) / 1000;
+}
+
+function spatialAnchor(position) {
+    const origin = checkpointSessionOrigin;
+    const checkpointPosition = origin
+        ? {
+            x: roundCoordinate(position.x - origin[12]),
+            y: roundCoordinate(position.y - origin[13]),
+            z: roundCoordinate(position.z - origin[14])
+        }
+        : null;
+    return {
+        type: 'spatial',
+        coordinate_space: activeCheckpointId && checkpointPosition ? 'checkpoint-local' : 'session-local',
+        checkpoint_id: activeCheckpointId || '',
+        position: checkpointPosition || {
+            x: roundCoordinate(position.x),
+            y: roundCoordinate(position.y),
+            z: roundCoordinate(position.z)
+        },
+        captured_at: new Date().toISOString()
+    };
+}
+
+function cleanupDrag() {
+    window.removeEventListener('pointermove', moveMarkerDrag);
+    window.removeEventListener('pointerup', finishMarkerDrag);
+    dragState = null;
+}
+
+function updateInteractionControls() {
+    const hand = overlayRoot?.querySelector('[data-ar-grab-mode]');
+    const pointer = overlayRoot?.querySelector('[data-ar-select-mode]');
+    hand?.classList.toggle('is-active', interactionMode === 'grab');
+    pointer?.classList.toggle('is-active', interactionMode === 'select');
+    hand?.setAttribute('aria-pressed', String(interactionMode === 'grab'));
+    pointer?.setAttribute('aria-pressed', String(interactionMode === 'select'));
+    overlayRoot?.querySelector('[data-ar-marker-layer]')?.classList.toggle('is-interactive', Boolean(interactionMode));
+}
+
+function setInteractionMode(mode) {
+    interactionMode = interactionMode === mode ? '' : mode;
+    cleanupDrag();
+    updateInteractionControls();
+    if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
+    else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
+    else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
+}
+
+function multiplyMatrixVector(matrix, vector) {
+    return [0, 1, 2, 3].map(row => matrix[row] * vector[0] + matrix[row + 4] * vector[1] + matrix[row + 8] * vector[2] + matrix[row + 12] * vector[3]);
+}
+
+function positionSessionMarkers(view = latestView) {
+    if (!view || !overlayRoot) return;
+    const inverse = view.transform?.inverse?.matrix;
+    if (!inverse || !view.projectionMatrix) return;
+    sessionMarkers.forEach(record => {
+        const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
+        if (!element) return;
+        const eye = multiplyMatrixVector(inverse, [record.position.x, record.position.y, record.position.z, 1]);
+        const clip = multiplyMatrixVector(view.projectionMatrix, eye);
+        if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
+            element.hidden = true;
+            return;
+        }
+        const x = (clip[0] / clip[3] * 0.5 + 0.5) * window.innerWidth;
+        const y = (-clip[1] / clip[3] * 0.5 + 0.5) * window.innerHeight;
+        const visible = x > -40 && x < window.innerWidth + 40 && y > -40 && y < window.innerHeight + 40;
+        element.hidden = !visible;
+        if (visible) element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
+    });
+}
+
+function renderSessionMarkers() {
+    const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
+    if (!layer) return;
+    layer.innerHTML = sessionMarkers.map(record => `<button class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" type="button" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}">${markerIcon(record.marker.type)}<span>${escapeHtml(record.marker.name)}</span></button>`).join('');
+    sessionMarkers.forEach(record => {
+        layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
+    });
+    updateInteractionControls();
+    positionSessionMarkers();
+}
+
+function closeInlineEditor() {
+    const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
+    if (editor) {
+        editor.hidden = true;
+        editor.innerHTML = '';
+    }
+}
+
+function openInlineEditor(record) {
+    if (interactionMode !== 'select') return;
+    const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
+    if (!editor) return;
+    const plant = record.marker.type === 'plant';
+    editor.hidden = false;
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">${plant ? 'Plant profile' : 'Marker details'}</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>${plant ? 'Quick description' : 'Note'}<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label><div class="button-row"><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
+    editor.querySelector('[data-ar-editor-form]').addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const status = form.querySelector('[data-ar-editor-status]');
+        const name = form.elements.name.value.trim();
+        const description = form.elements.description.value.trim();
+        if (!name) {
+            status.textContent = 'A name is required.';
+            return;
+        }
+        try {
+            status.textContent = 'Saving...';
+            const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
+                ...record.marker,
+                name,
+                description,
+                notes: record.marker.type === 'note' ? description : record.marker.notes || ''
+            });
+            record.marker = updated;
+            renderSessionMarkers();
+            closeInlineEditor();
+            setPlacementStatus(`${updated.name} updated. Continue in Pointer mode or turn interaction off.`);
+        } catch (error) {
+            status.textContent = `Could not save: ${error.message}`;
+        }
+    });
+}
+
+function beginMarkerInteraction(record, event) {
+    if (!interactionMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (interactionMode === 'select') {
+        openInlineEditor(record);
+        return;
+    }
+    dragState = {
+        record,
+        startX: event.clientX,
+        startY: event.clientY,
+        position: { ...record.position }
+    };
+    window.addEventListener('pointermove', moveMarkerDrag);
+    window.addEventListener('pointerup', finishMarkerDrag, { once: true });
+    setPlacementStatus(`Moving ${record.marker.name}. Release to save its new position.`);
+}
+
+function moveMarkerDrag(event) {
+    if (!dragState) return;
+    const scale = 2.2 / Math.max(window.innerWidth, 320);
+    dragState.record.position.x = dragState.position.x + (event.clientX - dragState.startX) * scale;
+    dragState.record.position.y = dragState.position.y - (event.clientY - dragState.startY) * scale;
+    positionSessionMarkers();
+}
+
+async function finishMarkerDrag() {
+    const state = dragState;
+    cleanupDrag();
+    if (!state) return;
+    try {
+        await saveMarkerAnchor(activeProjectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position));
+        setPlacementStatus(`${state.record.marker.name} moved. Hand mode remains on.`);
+    } catch (error) {
+        setPlacementStatus(`Could not save the move: ${error.message}`);
+    }
+}
+
+async function loadPlacementAreas() {
+    const sites = await loadProjectSites(activeProjectId);
+    const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0];
+    if (!site) return [];
+    activeSiteId = site.id;
+    const areas = (await loadSitePlaces(activeProjectId, site.id)).filter(area => area.name !== 'Unassigned');
+    const selected = areas.find(area => area.id === activeAreaId);
+    if (selected) activeAreaName = selected.name;
+    else if (areas.length === 1) {
+        activeAreaId = areas[0].id;
+        activeAreaName = areas[0].name;
+    }
+    setAreaButtonLabel();
+    return areas;
+}
+
+function showAreaChooser(areas) {
+    const chooser = overlayRoot?.querySelector('[data-ar-area-chooser]');
+    if (!chooser) return;
+    chooser.hidden = false;
+    chooser.innerHTML = `<div><strong>Choose an Area</strong><button type="button" aria-label="Close Area chooser" data-ar-close-area>&times;</button></div><p>New drafts will be saved to this Area.</p><div class="creator-ar-area-options">${areas.map(area => `<button type="button" data-ar-area-id="${escapeHtml(area.id)}">${escapeHtml(area.name)}</button>`).join('')}</div>`;
+    chooser.querySelector('[data-ar-close-area]').addEventListener('click', () => { chooser.hidden = true; });
+    areas.forEach(area => chooser.querySelector(`[data-ar-area-id="${CSS.escape(area.id)}"]`)?.addEventListener('click', () => {
+        activeAreaId = area.id;
+        activeAreaName = area.name;
+        chooser.hidden = true;
+        setAreaButtonLabel();
+        setPlacementStatus(`${area.name} selected. Choose Place to add a draft.`);
+    }));
+}
+
+async function ensurePlacementArea() {
+    try {
+        const areas = await loadPlacementAreas();
+        if (areas.some(area => area.id === activeAreaId)) return true;
+        if (!areas.length) {
+            setPlacementStatus('Create an Area in Web Mode before placing content.');
+            return false;
+        }
+        showAreaChooser(areas);
+        setPlacementStatus('Choose an Area, then place the draft.');
+    } catch (error) {
+        setPlacementStatus(`Area selection is unavailable: ${error.message}`);
+    }
+    return false;
+}
+
+async function choosePlacementArea() {
+    try {
+        const areas = await loadPlacementAreas();
+        if (!areas.length) {
+            setPlacementStatus('Create an Area in Web Mode before placing content.');
+            return;
+        }
+        showAreaChooser(areas);
+    } catch (error) {
+        setPlacementStatus(`Area selection is unavailable: ${error.message}`);
+    }
+}
+
+async function quickPlace(type) {
+    closeInlineEditor();
+    if (!await ensurePlacementArea()) return;
+    const position = placementPoint();
+    if (!position) {
+        setPlacementStatus('Move your phone briefly, then use Place again.');
+        return;
+    }
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
+    const label = markerLabel(type);
+    setPlacementStatus(`Placing ${label}...`);
+    try {
+        const response = type === 'plant'
+            ? await createSpatialPlant(activeProjectId, activeSiteId, activeAreaId, { commonName: defaults[type], visibility: 'draft', status: 'draft' })
+            : await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, { name: defaults[type], type, description: '', visibility: 'draft', status: 'draft' });
+        const marker = response.marker || response;
+        await saveMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id, spatialAnchor(position));
+        sessionMarkers.push({ marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName });
+        renderSessionMarkers();
+        setPlacementStatus(`${marker.name} placed as a draft. Enable Pointer to edit or Hand to move it.`);
+    } catch (error) {
+        setPlacementStatus(`Could not place ${label}: ${error.message}`);
+    }
+}
+
 function createOverlay() {
     const hasCheckpoint = Boolean(activeAreaId && activeCheckpointId);
     const initialStatus = hasCheckpoint
         ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
-        : 'Test session — no physical code is needed. Use Place to add content or set an Area checkpoint.';
+        : 'Test session - no physical code is needed. Place drafts now, then edit them in AR or Web Mode.';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <p class="creator-ar-placement-status" data-ar-placement-status>${initialStatus}</p>
+        <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
+        <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
+        <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
         <section class="creator-ar-toolbox" aria-label="Place content" aria-hidden="true">
-            <button type="button" data-ar-add-checkpoint>Add Area checkpoint</button>
+            <button type="button" data-ar-select-area>Choose Area</button>
+            <button type="button" data-ar-add-checkpoint>Add Area Marker</button>
             <button type="button" data-ar-place-tree>Place tree</button>
             <button type="button" data-ar-place-marker>Place marker</button>
             <button type="button" data-ar-place-note>Place note</button>
         </section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button type="button" data-ar-web-mode><b aria-hidden="true">↗</b><span>WEB MODE</span></button>
-            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">＋</b><span>Place</span></button>
-            <button type="button" data-ar-recenter><b aria-hidden="true">◎</b><span>Recenter checkpoint</span></button>
-            <button type="button" data-ar-exit><b aria-hidden="true">×</b><span>EXIT AR</span></button>
+            <button type="button" data-ar-web-mode><b aria-hidden="true">&#x21B7;</b><span>WEB MODE</span></button>
+            <button type="button" data-ar-window="tools" aria-expanded="false"><b aria-hidden="true">&#xFF0B;</b><span>Place</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: move markers" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
+            <button type="button" data-ar-recenter><b aria-hidden="true">&#x25CE;</b><span>Recenter</span></button>
+            <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
 
     overlayRoot.querySelector('[data-ar-web-mode]').addEventListener('click', returnToWeb);
@@ -80,6 +355,8 @@ function createOverlay() {
         toolbox.setAttribute('aria-hidden', String(!open));
         event.currentTarget.setAttribute('aria-expanded', String(open));
     });
+    overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
+    overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-recenter]').addEventListener('click', () => {
         if (!latestViewerMatrix) {
             setPlacementStatus('Move your phone briefly, then recenter the checkpoint.');
@@ -88,17 +365,19 @@ function createOverlay() {
         checkpointSessionOrigin = Float32Array.from(latestViewerMatrix);
         setPlacementStatus(activeCheckpointId
             ? 'Checkpoint origin set for this placement session.'
-            : 'Temporary test origin set for this session. Add an Area checkpoint when you install one.');
+            : 'Temporary test origin set for this session. Add an Area Marker when you install one.');
     });
+    overlayRoot.querySelector('[data-ar-select-area]').addEventListener('click', choosePlacementArea);
     overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', openCheckpointSetup);
-    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => openFieldTool('plant'));
-    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => openFieldTool('sub_checkpoint'));
-    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => openFieldTool('note'));
+    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => quickPlace('plant'));
+    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => quickPlace('sub_checkpoint'));
+    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => quickPlace('note'));
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     document.body.append(overlayRoot);
 }
 
 function cleanup() {
+    cleanupDrag();
     refSpace = null;
     canvas?.remove();
     canvas = null;
@@ -106,10 +385,15 @@ function cleanup() {
     overlayRoot = null;
     document.body.classList.remove('creator-ar-session-active');
     activeProjectId = '';
+    activeSiteId = '';
     activeAreaId = '';
+    activeAreaName = '';
     activeCheckpointId = '';
     latestViewerMatrix = null;
+    latestView = null;
     checkpointSessionOrigin = null;
+    interactionMode = '';
+    sessionMarkers = [];
     gl = null;
 }
 
@@ -127,9 +411,6 @@ export function isArModeActive() {
 export async function startArMode(projectId, areaId = '', checkpointId = '') {
     if (session) return true;
     if (startPromise) return startPromise;
-
-    // Request the session directly from the tap that launched AR. Awaiting a
-    // capability preflight first can lose that user activation on phones.
     startPromise = launchArMode(projectId, areaId, checkpointId);
     try {
         return await startPromise;
@@ -152,6 +433,7 @@ async function launchArMode(projectId, areaId, checkpointId) {
             domOverlay: { root: overlayRoot }
         });
         document.body.classList.add('creator-ar-session-active');
+        void loadPlacementAreas().catch(() => {});
 
         canvas = document.createElement('canvas');
         canvas.className = 'creator-ar-canvas';
@@ -174,6 +456,8 @@ async function launchArMode(projectId, areaId, checkpointId) {
             const pose = frame.getViewerPose(refSpace);
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
+            latestView = pose.views[0] || null;
+            positionSessionMarkers(latestView);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, 0);

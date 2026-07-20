@@ -23,7 +23,7 @@ function draw() {
                 <button class="ghost" type="button" onclick="window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')">Back</button>
                 <p class="welcome-label">Quick Access</p>
                 <h1>Add ${typeLabel}</h1>
-                <p class="subtitle">${placementMode === 'ar' ? 'Create the item, then continue to AR placement.' : 'Create the item now and place it later.'}</p>
+                <p class="subtitle">${placementMode === 'ar' ? 'Create a draft now, then continue to AR placement.' : 'Save a draft now and complete its details later.'}</p>
             </div>
             <form class="panel minimal-creation-form" onsubmit="window.saveFieldMarker(event)">
                 <div class="field">
@@ -37,14 +37,14 @@ function draw() {
                 </div>
                 <div class="field">
                     <label for="fieldName">${plant ? 'Common name' : markerType === 'note' ? 'Name or short title' : 'Name'}</label>
-                    <input id="fieldName" required />
+                    <input id="fieldName" placeholder="Optional - an untitled draft will be created" />
                 </div>
                 ${plant ? `<div class="field"><label for="fieldPlantProfile">Reuse Plant Profile</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create a new profile to complete later</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}${profile.scientificName ? ` · ${escapeHtml(profile.scientificName)}` : ''}</option>`).join('')}</select></div>` : ''}
                 <p class="placement-status is-unplaced"><strong>Placement status:</strong> Not yet placed</p>
-                <p class="meta">Area assignment records where this item belongs. Its physical AR position can be added separately.</p>
+                <p class="meta">Area assignment records where this item belongs. You can leave the name blank, save a draft, and add details or an AR position later.</p>
                 <div class="button-row">
                     <button type="button" onclick="window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')">Cancel</button>
-                    <button class="primary" type="submit">Save</button>
+                    <button class="primary" type="submit">Save draft</button>
                 </div>
                 <p id="fieldError" class="meta"></p>
             </form>
@@ -114,13 +114,12 @@ export async function saveFieldMarker(event) {
     event?.preventDefault();
     const error = document.getElementById('fieldError');
     const type = markerType;
-    const name = document.getElementById('fieldName').value.trim();
+    const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: 'Untitled marker' };
+    const name = document.getElementById('fieldName').value.trim() || defaults[type];
     const plantId = document.getElementById('fieldPlantProfile')?.value || '';
 
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
     if (!selected.place) { error.textContent = 'Select an Area or choose Unassigned.'; return; }
-    if (!name) { error.textContent = type === 'plant' ? 'Common name is required.' : 'Name is required.'; return; }
-
     try {
         error.textContent = 'Saving…';
         let place = places.find(item => item.id === selected.place);

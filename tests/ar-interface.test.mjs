@@ -20,12 +20,32 @@ test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /WEB MODE/);
     assert.match(arSource, /data-ar-window="tools"/);
-    assert.match(arSource, /Recenter checkpoint/);
+    assert.match(arSource, /Recenter/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /Add Area checkpoint/);
+    assert.match(arSource, /Add Area Marker/);
     assert.match(arSource, /Place tree/);
     assert.match(arSource, /Place marker/);
     assert.match(arSource, /Place note/);
+    assert.match(arSource, /data-ar-grab-mode/);
+    assert.match(arSource, /data-ar-select-mode/);
+    assert.match(arSource, /Add Area Marker/);
+});
+
+test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
+    const arSource = read('app/screens/arMode.js');
+    const serverSource = read('tools/persistence-server.mjs');
+    assert.match(arSource, /createSpatialPlant/);
+    assert.match(arSource, /createPlaceMarker/);
+    assert.match(arSource, /saveMarkerAnchor/);
+    assert.match(arSource, /type: 'spatial'/);
+    assert.match(arSource, /interactionMode = interactionMode === mode \? '' : mode/);
+    assert.match(arSource, /Hand mode is on/);
+    assert.match(arSource, /Pointer mode is on/);
+    assert.match(arSource, /Interaction is off/);
+    assert.match(arSource, /openInlineEditor/);
+    assert.match(arSource, /finishMarkerDrag/);
+    assert.match(serverSource, /'gps', 'qr', 'spatial'/);
+    assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
 });
 
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {
@@ -45,10 +65,13 @@ test('Creator AR has no dashboard grab or controller-ray controls', () => {
 test('Creator AR setup guide covers welcome, checkpoint and placement', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
     assert.match(dashboardSource, /Welcome marker/);
-    assert.match(dashboardSource, /Area checkpoint/);
+    assert.match(dashboardSource, /Area Marker/);
     assert.match(dashboardSource, /Plants, markers and notes/);
     assert.match(dashboardSource, /Set Welcome Marker/);
     assert.match(dashboardSource, /Open Test AR/);
+    assert.match(dashboardSource, /label: 'Area Marker'/);
+    assert.match(dashboardSource, /openCreatorArCheckpointSetup/);
+    assert.match(dashboardSource, /Area Marker label/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
@@ -89,7 +112,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /creator-ar-session-active/);
     assert.match(source, /data-ar-web-mode/);
     assert.match(source, /Test session/);
-    assert.match(source, /Add Area checkpoint/);
+    assert.match(source, /Add Area Marker/);
     assert.match(source, /checkpointSessionOrigin = Float32Array\.from\(latestViewerMatrix\)/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
@@ -110,6 +133,28 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /saveAreaCheckpoint/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /optional for testing/);
-    assert.match(dashboardSource, /Edit Checkpoint/);
+    assert.match(dashboardSource, /Edit Area Marker/);
     assert.match(serverSource, /'area_checkpoint'/);
+});
+
+test('dashboard search indexes readable content and ranks name matches', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const entrySource = read('app/components/projectEntry.js');
+    assert.match(dashboardSource, /searchableText\('Area', area\.name, area\.type, area\.description\)/);
+    assert.match(dashboardSource, /primarySearchText: searchableText\(marker\.name/);
+    assert.doesNotMatch(dashboardSource, /searchableText\(markerTypeLabel\(marker\.type\), place, marker, plant, instance, legacyProfile\)/);
+    assert.match(dashboardSource, /const matchingItems = \[\]/);
+    assert.match(dashboardSource, /score\(right\) - score\(left\)/);
+    assert.match(entrySource, /data-search-primary/);
+    assert.match(entrySource, /'&': '&amp;'/);
+});
+
+test('web quick entry can save an untitled draft for later editing', () => {
+    const source = read('app/screens/fieldMarker.js');
+    assert.match(source, /Optional - an untitled draft will be created/);
+    assert.match(source, /Save draft/);
+    assert.match(source, /Untitled plant/);
+    assert.match(source, /Untitled note/);
+    assert.match(source, /Untitled marker/);
+    assert.doesNotMatch(source, /id="fieldName" required/);
 });
