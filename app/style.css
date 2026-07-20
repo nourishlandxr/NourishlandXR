@@ -2945,7 +2945,7 @@ button.site-map-area:hover, button.site-map-area:focus-visible { z-index: 4; bor
 .site-map-area strong { color: inherit; font-size: .76rem; line-height: 1.15; }
 .site-map-area span { color: rgba(255,255,255,.84); font-size: .61rem; line-height: 1.2; }
 .site-map-pin { position: absolute; left: var(--map-x); top: var(--map-y); z-index: 3; display: grid; place-items: center; width: 18px; height: 18px; padding: 0; transform: translate(-50%, -50%); border: 0; border-radius: 50%; background: transparent; box-shadow: none; }
-.site-map-pin::after { content: ''; width: 7px; height: 7px; border: 1px solid rgba(255,255,255,.95); border-radius: 50%; background: #d2942a; box-shadow: 0 1px 4px rgba(0,0,0,.42); }
+.site-map-pin::after { content: ''; width: 5px; height: 5px; border: 0; border-radius: 50%; background: #348a28; box-shadow: none; }
 .site-map-pin-plant::after { background: #5c963e; }
 .site-map-pin-note::after { background: #d2942a; }
 .site-map-pin-intro_checkpoint::after, .site-map-pin-sub_checkpoint::after, .site-map-pin-area_checkpoint::after { background: #3b8fc6; }
