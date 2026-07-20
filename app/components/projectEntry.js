@@ -72,7 +72,7 @@ export function renderProjectEntry(config) {
             </button>
             <button class="content-mode-card" type="button" onclick="${config.mapAction}">
                 <span class="content-mode-icon" aria-hidden="true">⌕</span>
-                <div><strong>Map</strong><span>Review Areas and spatial organisation without the camera.</span></div>
+                <div><strong>Site Map</strong><span>See Areas, paths and placed content across the property.</span></div>
             </button>
             <button class="content-mode-card" type="button" onclick="${config.storiesAction}">
                 <span class="content-mode-icon" aria-hidden="true">⚑</span>

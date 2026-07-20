@@ -4,7 +4,6 @@ export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
             <div class="page-header intro-heading">
-                <img class="launch-brand-art" src="./assets/herov2.png" alt="" aria-hidden="true" />
                 <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p></div>
             </div>
 
@@ -49,4 +48,3 @@ export function renderLaunchScreen(app) {
             <p class="collaboration-credit"><strong>Nourishland</strong> is committed to providing educational tools and hands-on solutions that help green our planet, growing more sustainable and engaging food systems for the world around us. Through food forests, plant literacy, and immersive learning experiences, we bring people closer to how food is grown, cared for, and shared — making sustainability something practical, adaptable, and genuinely enjoyable to be part of.</p>
         </div>`;
 }
-

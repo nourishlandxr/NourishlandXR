@@ -130,6 +130,59 @@ function hasGpsCoordinates(anchor) {
         && Number.isFinite(Number(anchor.longitude));
 }
 
+const clampMapCoordinate = value => Math.max(7, Math.min(93, value));
+const mapEntryKey = entry => `${entry.place.id}:${entry.marker.id}`;
+
+function buildSiteMapLayout(areas, entries) {
+    const gpsPoints = [
+        ...areas.map(area => area.anchor),
+        ...entries.map(entry => entry.anchor)
+    ].filter(hasGpsCoordinates);
+    const latitudes = gpsPoints.map(point => Number(point.latitude));
+    const longitudes = gpsPoints.map(point => Number(point.longitude));
+    const hasMapBounds = latitudes.length > 1 && longitudes.length > 1;
+    const maximumLatitude = latitudes.length ? Math.max(...latitudes) : 0;
+    const minimumLatitude = latitudes.length ? Math.min(...latitudes) : 0;
+    const maximumLongitude = longitudes.length ? Math.max(...longitudes) : 0;
+    const minimumLongitude = longitudes.length ? Math.min(...longitudes) : 0;
+    const latitudeRange = maximumLatitude - minimumLatitude || 0.0001;
+    const longitudeRange = maximumLongitude - minimumLongitude || 0.0001;
+    const pointForAnchor = anchor => {
+        if (!hasMapBounds || !hasGpsCoordinates(anchor)) return null;
+        return {
+            x: clampMapCoordinate(8 + ((Number(anchor.longitude) - minimumLongitude) / longitudeRange) * 84),
+            y: clampMapCoordinate(92 - ((Number(anchor.latitude) - minimumLatitude) / latitudeRange) * 84),
+            positioned: true
+        };
+    };
+    const columns = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(Math.max(areas.length, 1)))));
+    const rows = Math.max(1, Math.ceil(Math.max(areas.length, 1) / columns));
+    const areaPoints = new Map(areas.map((area, index) => {
+        const fallback = {
+            x: ((index % columns) + 0.5) * (100 / columns),
+            y: (Math.floor(index / columns) + 0.5) * (100 / rows),
+            positioned: false
+        };
+        return [area.id, pointForAnchor(area.anchor) || fallback];
+    }));
+    const entriesByArea = new Map(areas.map(area => [area.id, entries.filter(entry => entry.place.id === area.id)]));
+    const markerPoints = new Map();
+    entriesByArea.forEach((areaEntries, areaId) => {
+        const areaPoint = areaPoints.get(areaId) || { x: 50, y: 50, positioned: false };
+        areaEntries.forEach((entry, index) => {
+            const gpsPoint = pointForAnchor(entry.anchor);
+            const angle = (index * 137.5) * Math.PI / 180;
+            const ring = 4 + Math.floor(index / 6) * 2.5;
+            markerPoints.set(mapEntryKey(entry), gpsPoint || {
+                x: clampMapCoordinate(areaPoint.x + Math.cos(angle) * ring),
+                y: clampMapCoordinate(areaPoint.y + Math.sin(angle) * ring),
+                positioned: false
+            });
+        });
+    });
+    return { areaPoints, markerPoints, hasMapBounds };
+}
+
 async function projectAreaContext(projectId, areaId) {
     const context = await projectContent(projectId);
     const area = context.places.find(place => place.id === areaId && place.name !== 'Unassigned');
@@ -1320,21 +1373,33 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project, site, places, entries } = await projectContent(projectId);
-        const visibleEntries = creator ? entries : entries.filter(entry => entry.marker.visibility === 'public');
+        const placedEntries = await entriesWithPlacement(project, site, entries);
+        const visibleEntries = creator ? placedEntries : placedEntries.filter(entry => entry.marker.visibility === 'public');
         const areas = places.filter(place => place.name !== 'Unassigned');
         const visiblePlaces = creator ? areas : areas.filter(place => visibleEntries.some(entry => entry.place.id === place.id));
-        const placeRows = visiblePlaces.map(place => {
+        const mapEntries = visibleEntries.filter(entry => visiblePlaces.some(place => place.id === entry.place.id));
+        const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries);
+        const areaOverlays = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
-            const locationLabel = hasGpsCoordinates(place.anchor) ? 'GPS assigned' : 'Position not set';
-            const content = `<div><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.type || 'Area')} · ${count} entr${count === 1 ? 'y' : 'ies'}</span></div><span>${locationLabel}</span>`;
+            const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
+            const content = `<strong>${escapeHtml(place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.positioned ? 'GPS mapped' : 'map layout'}</span>`;
             return creator
-                ? `<button class="location-map-row" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')">${content}</button>`
-                : `<div class="location-map-row">${content}</div>`;
+                ? `<button class="site-map-area" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')" aria-label="Open ${escapeHtml(place.name)}">${content}</button>`
+                : `<div class="site-map-area" style="--map-x:${point.x}%;--map-y:${point.y}%">${content}</div>`;
+        }).join('');
+        const markerPins = mapEntries.map(entry => {
+            const point = mapLayout.markerPoints.get(mapEntryKey(entry));
+            if (!point) return '';
+            const label = `${entry.marker.name} · ${markerTypeLabel(entry.marker.type)}`;
+            const pin = `<span class="site-map-pin-icon" aria-hidden="true">${markerIcon(entry.marker.type)}</span><span class="sr-only">${escapeHtml(label)}</span>`;
+            return creator
+                ? `<button class="site-map-pin" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.openProjectEntry('${encoded(project.id)}', '${encoded(entry.marker.id)}')" aria-label="Open ${escapeHtml(label)}">${pin}</button>`
+                : `<span class="site-map-pin" style="--map-x:${point.x}%;--map-y:${point.y}%">${pin}</span>`;
         }).join('');
         const backAction = creator && returnContext === 'content-mode'
             ? `window.openCreatorContentMode('${encoded(project.id)}')`
             : `window.renderBrowseContent('${encoded(project.id)}', ${creator})`;
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><div class="panel"><h2>Spatial overview</h2><p>Browse every Area and its entries without opening the camera.</p></div><div class="location-map-list">${placeRows || '<div class="panel"><p>No visitor-visible Areas have been added yet.</p></div>'}</div></div>`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas" aria-label="${escapeHtml(project.name)} site map"><img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" /><div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }

@@ -19,7 +19,7 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.match(app.innerHTML, /Experience a quick demonstration of information appearing within a real place/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
-    assert.match(app.innerHTML, /assets\/herov2\.png/);
+    assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
 });
 
 test('About This Experience explains the concept without tutorial instructions', () => {
