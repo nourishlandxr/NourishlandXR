@@ -129,16 +129,17 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
     assert.match(dashboardSource, /AR setup unavailable/);
 });
 
-test('welcome Try It Now AR keeps its guidance visible and places an upright dashboard', () => {
+test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
     const styles = read('app/style.css');
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
-    assert.match(source, /domOverlay: \{ root: demoApp \}/);
-    assert.match(source, /makeUprightPanelMatrix\(pos, latestViewerMatrix\)/);
+    assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
-    assert.match(source, /Move your phone slowly to find a flat surface/);
-    assert.match(styles, /\.temporary-ar-demo\.is-immersive \.temporary-demo-stage,[\s\S]*pointer-events: none;/);
-    assert.match(styles, /\.temporary-demo-exit[\s\S]*pointer-events: auto;/);
+    assert.match(source, /Aim at a place, then tap the breathing circle/);
+    assert.match(source, /What is this marker\?/);
+    assert.doesNotMatch(source, /Dashboard|draggable-window/);
+    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
+    assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
 });
 
 test('Creator project AR is a no-code placement session without a dashboard overlay', () => {

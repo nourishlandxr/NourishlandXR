@@ -167,23 +167,22 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo is in-memory and supports placement, profile and exit', () => {
+test('temporary AR demo places before asking for marker type and name', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     assert.match(source, /Tap to place marker/);
     assert.match(source, /What is this marker\?/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /Name this marker/);
-    assert.match(source, /demoPlacementReady/);
-    assert.match(source, /updateDemoMarkerTexture/);
-    assert.doesNotMatch(source, /Loading Dashboard/);
-    assert.match(source, /AUGMENTED REALITY/);
-    assert.match(source, /temporary-demo-launcher/);
+    assert.match(source, /function placeMarker/);
+    assert.match(source, /function updateMarkerTexture/);
+    assert.match(source, /if \(marker\) return/);
+    assert.doesNotMatch(source, /Loading Dashboard|Place Your Dashboard|draggable-window/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);
     assert.match(source, /makeXRCompatible/);
     assert.match(source, /new XRWebGLLayer/);
     assert.match(source, /requestAnimationFrame\(draw\)/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
-    assert.match(source, /placedMarker = \{ x: latestHitMatrix/);
+    assert.match(source, /hitMatrix\[12\]/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });

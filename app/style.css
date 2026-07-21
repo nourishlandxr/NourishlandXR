@@ -545,6 +545,27 @@ h1 {
     background: linear-gradient(135deg, rgba(224, 245, 217, .96), rgba(244, 237, 187, .9));
 }
 
+/* Try It Now: one live placement control, then type and name the marker. */
+.tryit-demo { position: fixed; inset: 0; z-index: 12000; overflow: hidden; background: #183426; }
+.tryit-demo.is-immersive, .tryit-demo.is-immersive .tryit-stage, body:has(.tryit-demo.is-immersive), body:has(.tryit-demo.is-immersive) #app { background: transparent !important; }
+.tryit-stage { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, rgba(150,202,130,.48), transparent 34%), linear-gradient(#8db59a, #55745e 50%, #334d38 51%, #1d3324); }
+.tryit-demo.is-immersive .tryit-stage { pointer-events: none; }
+.tryit-xr-canvas { position: fixed; inset: 0; z-index: 11999; width: 100%; height: 100%; pointer-events: none; }
+.tryit-place { position: fixed; left: 50%; top: 50%; z-index: 12002; display: grid; justify-items: center; gap: 10px; min-width: 180px; padding: 0; transform: translate(-50%, -50%); border: 0; background: transparent; color: #fff; font-size: .78rem; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.72); pointer-events: auto; }
+.tryit-place[hidden] { display: none; }
+.tryit-place span { width: 76px; height: 76px; border: 3px solid rgba(220,239,149,.94); border-radius: 50%; background: rgba(220,239,149,.13); box-shadow: 0 0 0 9px rgba(220,239,149,.12), 0 0 28px rgba(220,239,149,.45); animation: tryit-breathe 1.7s ease-in-out infinite; }
+.tryit-place:active span { transform: scale(.9); }
+@keyframes tryit-breathe { 0%,100% { transform: scale(.88); opacity: .7; } 50% { transform: scale(1.1); opacity: 1; } }
+.tryit-guide { position: fixed; left: 50%; top: calc(50% + 58px); z-index: 12002; margin: 0; transform: translateX(-50%); color: #fff; font-size: .88rem; font-weight: 700; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: none; white-space: nowrap; }
+.tryit-exit { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 12003; pointer-events: auto; border-color: rgba(255,255,255,.55); background: rgba(12,27,18,.72); color: #fff; backdrop-filter: blur(8px); }
+.tryit-panel { position: fixed; left: 50%; bottom: max(72px, env(safe-area-inset-bottom)); z-index: 12004; display: grid; gap: 10px; width: min(90vw, 360px); padding: 16px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(12,27,18,.93); color: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.4); backdrop-filter: blur(14px); pointer-events: auto; }
+.tryit-panel h2, .tryit-panel p { margin: 0; }
+.tryit-type-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tryit-type-grid button { min-height: 44px; padding: 6px; border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.12); color: #fff; font-size: .7rem; }
+.tryit-name-field { display: grid; gap: 5px; font-size: .75rem; font-weight: 700; }
+.tryit-name-field input { min-height: 38px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.3); border-radius: 9px; background: rgba(255,255,255,.1); color: #fff; font: inherit; }
+.tryit-sim-marker { position: fixed; left: 50%; top: 40%; z-index: 12001; padding: 7px 12px; transform: translate(-50%, -50%); border: 1px solid rgba(220,239,149,.88); border-radius: 999px; background: rgba(17,58,32,.9); color: #fff; font-size: .78rem; font-weight: 800; }
+
 .temporary-ar-demo { position: fixed; inset: 0; z-index: 12000; overflow: hidden; background: #183426; }
 .temporary-demo-xr-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 11999; }
 .temporary-demo-stage { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, rgba(150, 202, 130, .48), transparent 34%), linear-gradient(#8db59a, #55745e 50%, #334d38 51%, #1d3324); }
