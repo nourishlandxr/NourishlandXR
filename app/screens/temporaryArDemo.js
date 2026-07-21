@@ -448,10 +448,13 @@ async function tryImmersiveDemo() {
             }
         });
 
-        // Handle tapping the breathing circle
-        document.addEventListener('click', function tryitTapHandler(e) {
-            const target = e.target.closest('.tryit-breathing-circle, #tryitTapTarget');
-            if (!target) return;
+        // Handle tap via XR select event (required — DOM click events don't fire during immersive AR)
+        let ignoreNextSelect = false;
+        demoSession.addEventListener('select', event => {
+            if (ignoreNextSelect) { ignoreNextSelect = false; return; }
+            // Ignore if a card is showing (user is typing/selecting options)
+            if (document.getElementById('tryitCard')) return;
+            
             if (!latestHitMatrix) {
                 showGuideText('Keep moving to find a surface');
                 return;
@@ -461,7 +464,7 @@ async function tryImmersiveDemo() {
             const index = placedMarkers.length;
             placedMarkers.push({ index, worldPos: pos, name: 'New Marker', type: 'poi' });
 
-            // Create initial marker texture
+            // Create initial marker texture inline
             const canvas = document.createElement('canvas');
             canvas.width = 300; canvas.height = 120;
             const ctx = canvas.getContext('2d');
