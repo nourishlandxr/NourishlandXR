@@ -169,16 +169,13 @@ test('quick access creation is minimal and separates Area assignment from placem
 
 test('temporary AR demo is in-memory and supports placement, profile and exit', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
-    assert.match(source, /Open My Location Dashboard/);
-    assert.match(source, /My Location/);
-    assert.match(source, /Tag a Nearby Plant/);
-    assert.match(source, /Plant List/);
-    assert.match(source, /Banana Cavendish/);
-    assert.match(source, /Lemon Drop Garcinia/);
-    assert.match(source, /Myoga Ginger/);
-    assert.match(source, /Jackfruit/);
-    assert.match(source, /This is the end of the demo/);
-    assert.match(source, /Finish Demo/);
+    assert.match(source, /Tap to place marker/);
+    assert.match(source, /What is this marker\?/);
+    assert.match(source, /Point of Interest/);
+    assert.match(source, /Name this marker/);
+    assert.match(source, /demoPlacementReady/);
+    assert.match(source, /updateDemoMarkerTexture/);
+    assert.doesNotMatch(source, /Loading Dashboard/);
     assert.match(source, /AUGMENTED REALITY/);
     assert.match(source, /temporary-demo-launcher/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);

@@ -25,6 +25,10 @@ let spatialDashboardMatrix = null;
 let dashboardPanelBuffer = null;
 let currentPanelCallback = null;
 let tagInputBuffer = null;
+let latestViewerMatrix = null;
+let demoPlacementReady = false;
+let demoPlacementInFlight = false;
+let demoMarkerType = 'marker';
 
 const DASHBOARD_W = 0.72;
 const DASHBOARD_H = 0.52;
@@ -288,7 +292,10 @@ function removeDemoCanvas() {
     demoHitSource = null;
     demoRefSpace = null;
     latestHitMatrix = null;
+    latestViewerMatrix = null;
     placedMarker = null;
+    demoPlacementReady = false;
+    demoPlacementInFlight = false;
     spatialDashboardMatrix = null;
     demoProgram = null;
     demoBuffer = null;
@@ -337,38 +344,68 @@ function selectPlantProfile(index) {
 function renderDemo(simulated) {
     profileLinked = false;
     markerName = 'My Plant';
-    const reticle = demoSession ? '<div class="temporary-demo-reticle" aria-hidden="true"></div><div class="temporary-demo-guide fade-in" role="status">Move your phone to find a flat surface</div><button class="temporary-demo-exit" type="button">Exit AR</button>' : '';
-    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage"><div class="breathing-overlay"><div class="breathing-circle"></div><p class="breathing-label">Loading Dashboard</p></div>${reticle}</div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
+    demoPlacementReady = true;
+    demoPlacementInFlight = false;
+    demoMarkerType = 'marker';
+    const reticle = demoSession ? '<div class="temporary-demo-reticle" aria-hidden="true"></div>' : '';
+    demoApp.innerHTML = `<div class="temporary-ar-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div id="temporaryDemoStage" class="temporary-demo-stage">${reticle}<button class="temporary-demo-place-control" type="button" data-demo-place><span class="breathing-circle" aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="temporary-demo-guide" role="status">Aim at a place, then tap the breathing circle.</p><button class="temporary-demo-exit" type="button">Exit AR</button></div><section id="temporaryDemoCard" class="temporary-demo-card"></section></div>`;
     document.querySelector('.temporary-demo-exit')?.addEventListener('click', finishDemo);
-    setTimeout(showPlacementPrompt, 2000);
+    document.querySelector('[data-demo-place]')?.addEventListener('click', placeDemoMarker);
 }
 
-function showPlacementPrompt() {
-    const overlay = document.querySelector('.breathing-overlay');
-    if (overlay) overlay.remove();
-    const container = document.getElementById('temporaryDemoCard');
-    if (!container) return;
-    if (demoSession) {
-        const guide = document.querySelector('.temporary-demo-guide');
-        if (guide) guide.textContent = latestHitMatrix
-            ? 'Tap the circle to place your dashboard'
-            : 'Move your phone slowly to find a flat surface';
+function setDemoGuide(message) {
+    const guide = document.querySelector('.temporary-demo-guide');
+    if (guide) guide.textContent = message;
+}
+
+function markerPosition() {
+    if (latestHitMatrix) return { x: latestHitMatrix[12], y: latestHitMatrix[13] + .16, z: latestHitMatrix[14] };
+    if (!latestViewerMatrix) return demoSession ? null : { x: 0, y: 0, z: -1.2 };
+    return {
+        x: latestViewerMatrix[12] - latestViewerMatrix[8] * 1.2,
+        y: latestViewerMatrix[13] - latestViewerMatrix[9] * 1.2,
+        z: latestViewerMatrix[14] - latestViewerMatrix[10] * 1.2
+    };
+}
+
+function placeDemoMarker() {
+    if (!demoPlacementReady || demoPlacementInFlight || placedMarker) return;
+    const position = markerPosition();
+    if (!position) {
+        setDemoGuide('Move your phone briefly, then tap the breathing circle again.');
         return;
     }
-    container.innerHTML = '';
-    const win = document.createElement('div');
-    win.className = 'ar-window draggable-window placement-prompt-window';
-    win.style.left = 'calc(50% - 220px)';
-    win.style.top = 'calc(50% + 10vh)';
-    win.style.zIndex = ++windowZIndex;
-    win.innerHTML = `<div class="window-header"><span class="window-dots"><i></i><i></i><i></i></span><strong>Place Your Dashboard</strong></div><div class="window-body"><p class="welcome-label">STEP 1</p><h2>Choose a location</h2><p>Tap below, then tap a surface in the scene to place your dashboard.</p><div class="button-row"><button class="primary" type="button" id="demoPlaceDashboard">Place Dashboard</button></div></div>`;
-    container.appendChild(win);
-    makeDraggable(win, win.querySelector('.window-header'));
-    if (!demoSession) {
-        document.getElementById('demoPlaceDashboard').addEventListener('click', () => { win.remove(); showSimulatedDashboard(); });
-    } else {
-        document.getElementById('demoPlaceDashboard').addEventListener('click', () => { win.remove(); setupImmersiveDashboard(); });
-    }
+    demoPlacementInFlight = true;
+    placedMarker = position;
+    demoPlacementReady = false;
+    document.querySelector('[data-demo-place]')?.setAttribute('hidden', '');
+    setDemoGuide('Marker placed in space.');
+    showMarkerTypePicker();
+    demoPlacementInFlight = false;
+}
+
+function showMarkerTypePicker() {
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    container.innerHTML = `<section class="temporary-demo-choice" aria-live="polite"><p class="welcome-label">MARKER PLACED</p><h2>What is this marker?</h2><div class="temporary-demo-choice-grid"><button type="button" data-demo-marker-type="plant">Plant</button><button type="button" data-demo-marker-type="note">Note</button><button type="button" data-demo-marker-type="poi">Point of Interest</button></div></section>`;
+    container.querySelectorAll('[data-demo-marker-type]').forEach(button => button.addEventListener('click', () => showMarkerNameEntry(button.dataset.demoMarkerType)));
+}
+
+function showMarkerNameEntry(type) {
+    demoMarkerType = type;
+    const labels = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' };
+    const container = document.getElementById('temporaryDemoCard');
+    if (!container) return;
+    container.innerHTML = `<section class="temporary-demo-choice"><p class="welcome-label">${labels[type]}</p><h2>Name this marker</h2><label><span>Name</span><input data-demo-marker-name value="${escapeHtml(type === 'plant' ? 'New plant' : type === 'note' ? 'New note' : 'Point of interest')}" maxlength="60" /></label><button class="primary" type="button" data-demo-save-marker>Save marker</button></section>`;
+    const input = container.querySelector('[data-demo-marker-name]');
+    container.querySelector('[data-demo-save-marker]').addEventListener('click', () => {
+        markerName = input.value.trim() || labels[type];
+        profileLinked = type === 'plant';
+        updateDemoMarkerTexture();
+        container.innerHTML = '';
+        setDemoGuide(`${markerName} saved in space. Select it later to edit.`);
+    });
+    input.focus();
 }
 
 function setupImmersiveDashboard() {
@@ -473,6 +510,27 @@ function drawSpatialMarker(view) {
     demoGl.drawArrays(demoGl.TRIANGLES, 0, 6);
 }
 
+function updateDemoMarkerTexture() {
+    if (!demoGl) return;
+    const markerCanvas = document.createElement('canvas');
+    markerCanvas.width = 300;
+    markerCanvas.height = 120;
+    const ctx = markerCanvas.getContext('2d');
+    const typeLabel = { plant: 'Plant', note: 'Note', poi: 'Point of interest', marker: 'Marker' }[demoMarkerType] || 'Marker';
+    ctx.fillStyle = 'rgba(20,55,34,.88)'; ctx.beginPath(); ctx.roundRect(0, 0, 300, 120, 16); ctx.fill();
+    ctx.fillStyle = '#dcef95'; ctx.beginPath(); ctx.arc(40, 60, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#173522'; ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('•', 40, 66);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff'; ctx.font = '700 18px sans-serif'; ctx.fillText(markerName, 70, 52);
+    ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = '14px sans-serif'; ctx.fillText(typeLabel, 70, 78);
+    if (!demoTextures.marker) demoTextures.marker = demoGl.createTexture();
+    demoGl.bindTexture(demoGl.TEXTURE_2D, demoTextures.marker);
+    demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
+    demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, markerCanvas);
+    demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
+    demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
+}
+
 function selectedSpatialMarker(rayMatrix) {
     if (!placedMarker || !rayMatrix) return false;
     const dx = placedMarker.x - rayMatrix[12], dy = placedMarker.y - rayMatrix[13], dz = placedMarker.z - rayMatrix[14];
@@ -511,23 +569,7 @@ async function tryImmersiveDemo() {
         setupMarkerRenderer();
         finishingDemo = false;
 
-        // Build initial marker texture for placed plants
-        const markerCanvas = document.createElement('canvas');
-        markerCanvas.width = 300; markerCanvas.height = 120;
-        const mCtx = markerCanvas.getContext('2d');
-        mCtx.fillStyle = 'rgba(20,55,34,.88)'; mCtx.beginPath(); mCtx.roundRect(0, 0, 300, 120, 16); mCtx.fill();
-        mCtx.fillStyle = '#dcef95'; mCtx.beginPath(); mCtx.arc(40, 60, 20, 0, Math.PI * 2); mCtx.fill();
-        mCtx.fillStyle = '#173522'; mCtx.font = '700 16px sans-serif'; mCtx.textAlign = 'center'; mCtx.fillText('✿', 40, 66);
-        mCtx.textAlign = 'left';
-        mCtx.fillStyle = '#fff'; mCtx.font = '700 18px sans-serif'; mCtx.fillText(profileLinked ? SAMPLE.commonName : markerName, 70, 52);
-        mCtx.fillStyle = 'rgba(255,255,255,.78)'; mCtx.font = 'italic 14px sans-serif';
-        mCtx.fillText(profileLinked ? SAMPLE.scientificName : 'Plant marker', 70, 78);
-        demoTextures['marker'] = demoGl.createTexture();
-        demoGl.bindTexture(demoGl.TEXTURE_2D, demoTextures['marker']);
-        demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
-        demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, markerCanvas);
-        demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
-        demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
+        updateDemoMarkerTexture();
 
         demoBuffer = demoGl.createBuffer();
         demoGl.bindBuffer(demoGl.ARRAY_BUFFER, demoBuffer);
@@ -540,7 +582,6 @@ async function tryImmersiveDemo() {
             -.18, .08, 0, 0, 0
         ]), demoGl.STATIC_DRAW);
 
-        let latestViewerMatrix = null;
         const draw = (_time, frame) => {
             if (frame.session !== demoSession || !demoGl) return;
             frame.session.requestAnimationFrame(draw);
@@ -575,42 +616,10 @@ async function tryImmersiveDemo() {
 
         session.requestAnimationFrame(draw);
 
-        session.addEventListener('select', event => {
-            // Handle dashboard placement on first tap
-            if (!spatialDashboardMatrix) {
-                if (latestViewerMatrix) {
-                    let pos;
-                    if (latestHitMatrix) {
-                        // Use detected surface position
-                        pos = [
-                            latestHitMatrix[12], latestHitMatrix[13] + 0.15, latestHitMatrix[14]
-                        ];
-                    } else {
-                        // Place 1.2m in front of the viewer as fallback
-                        const m = latestViewerMatrix;
-                        pos = [
-                            m[12] - m[8] * 1.2,
-                            m[13] - m[9] * 1.2 + 0.1,
-                            m[14] - m[10] * 1.2
-                        ];
-                    }
-                    spatialDashboardMatrix = makeUprightPanelMatrix(pos, latestViewerMatrix);
-                    buildSpatialPanel('dashboard');
-                    const guide = document.querySelector('.temporary-demo-guide');
-                    if (guide) { guide.textContent = 'Dashboard placed!'; setTimeout(() => { if(guide) guide.textContent = ''; }, 2500); }
-                }
-                return;
-            }
-
-            // Handle marker selection
-            if (placedMarker && demoRefSpace) {
-                const rayPose = event.frame.getPose(event.inputSource.targetRaySpace, demoRefSpace);
-                if (selectedSpatialMarker(rayPose?.transform.matrix)) {
-                    profileLinked ? buildSpatialPanel('plantProfile') : buildSpatialPanel('tag');
-                    const guide = document.querySelector('.temporary-demo-guide');
-                    if (guide) { guide.textContent = profileLinked ? 'Plant profile loaded.' : 'Tag prompt loaded.'; setTimeout(() => { if(guide) guide.textContent = ''; }, 2000); }
-                }
-            }
+        session.addEventListener('select', () => {
+            // Fallback for controller input when the DOM-overlay button does
+            // not receive the select event.
+            if (demoPlacementReady) placeDemoMarker();
         });
 
         session.addEventListener('end', () => {
