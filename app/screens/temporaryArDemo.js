@@ -1,22 +1,26 @@
+/**
+ * TRY IT NOW — V1 Final Flow
+ * Simple AR placement demo. No WebGL menu panels. No plant library.
+ * Tap → place marker → name it → done.
+ */
+
 const PLANTS = [
-    { commonName: 'Banana Cavendish', scientificName: 'Musa acuminata', summary: 'A productive tropical banana grown for its familiar sweet fruit and broad sheltering leaves.', family: 'Musaceae', origin: 'Southeast Asia', uses: ['Food', 'Cooking', 'Dessert'], image: '' },
-    { commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', summary: 'A compact tropical fruit tree with bright yellow fruit and a pleasantly sharp, citrus-like flavour.', family: 'Clusiaceae', origin: 'Central America', uses: ['Food', 'Flavour'], image: '' },
-    { commonName: 'Myoga Ginger', scientificName: 'Zingiber mioga', summary: 'A shade-loving perennial ginger valued for its aromatic flower buds and young shoots.', family: 'Zingiberaceae', origin: 'East Asia', uses: ['Culinary', 'Medicinal'], image: '' },
-    { commonName: 'Jackfruit', scientificName: 'Artocarpus heterophyllus', summary: 'A vigorous tropical tree producing exceptionally large fruit with sweet edible bulbs.', family: 'Moraceae', origin: 'South and Southeast Asia', uses: ['Food', 'Cooking'], image: '' }
+    { commonName: 'Banana Cavendish', scientificName: 'Musa acuminata', summary: 'A productive tropical banana grown for its familiar sweet fruit and broad sheltering leaves.', family: 'Musaceae', origin: 'Southeast Asia', uses: ['Food', 'Cooking', 'Dessert'] },
+    { commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', summary: 'A compact tropical fruit tree with bright yellow fruit and a pleasantly sharp, citrus-like flavour.', family: 'Clusiaceae', origin: 'Central America', uses: ['Food', 'Flavour'] },
+    { commonName: 'Myoga Ginger', scientificName: 'Zingiber mioga', summary: 'A shade-loving perennial ginger valued for its aromatic flower buds and young shoots.', family: 'Zingiberaceae', origin: 'East Asia', uses: ['Culinary', 'Medicinal'] },
+    { commonName: 'Jackfruit', scientificName: 'Artocarpus heterophyllus', summary: 'A vigorous tropical tree producing exceptionally large fruit with sweet edible bulbs.', family: 'Moraceae', origin: 'South and Southeast Asia', uses: ['Food', 'Cooking'] }
 ];
 let SAMPLE = PLANTS[1];
-let markerName = 'My Plant';
-let windowZIndex = 100;
 
 let demoSession = null;
 let demoApp = null;
 let demoCanvas = null;
 let demoGl = null;
-let finishingDemo = false;
 let demoRefSpace = null;
 let demoHitSource = null;
 let latestHitMatrix = null;
 let placedMarker = null;
+let placedMarkers = [];
 let demoProgram = null;
 let demoBuffer = null;
 let demoTextures = {};
@@ -29,247 +33,304 @@ let latestViewerMatrix = null;
 let demoPlacementReady = false;
 let demoPlacementInFlight = false;
 let demoMarkerType = 'marker';
+let finishingDemo = false;
+let lastViewerPoseForSelect = null;
 
-const DASHBOARD_W = 0.72;
-const DASHBOARD_H = 0.52;
-const TAG_W = 0.64;
-const TAG_H = 0.36;
-const PROFILE_W = 0.78;
-const PROFILE_H = 0.66;
-const LIST_W = 0.64;
-const LIST_H = 0.48;
+// Shared GL
+let quadProgram = null;
+let quadBuffer = null;
+let quadTextures = {};
 
-function createPanelTexture(width, height, drawFn) {
+// Breathing circle
+let breathingEl = null;
+
+const MARKER_SIZE = 0.18;
+
+// ─── Helper: inject keyframes once ───
+if (!document.getElementById('tryItNowStyle')) {
+    const s = document.createElement('style');
+    s.id = 'tryItNowStyle';
+    s.textContent = `
+        @keyframes tryit-breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}
+        @keyframes tryit-fade-in{from{opacity:0}to{opacity:1}}
+        @keyframes tryit-slide-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .tryit-breathing-circle{width:80px;height:80px;border:3px solid rgba(220,239,149,.9);border-radius:50%;box-shadow:0 0 40px rgba(220,239,149,.3);animation:tryit-breathe 2s ease-in-out infinite;cursor:pointer;transition:transform .15s}
+        .tryit-breathing-circle:active{transform:scale(.9)}
+        .tryit-overlay{position:fixed;z-index:2147483646;display:grid;place-items:center;pointer-events:none;animation:tryit-fade-in .3s ease-out}
+        .tryit-overlay>*{pointer-events:auto}
+        .tryit-card{position:fixed;z-index:2147483647;width:90vw;max-width:380px;background:rgba(248,250,244,.97);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;animation:tryit-slide-up .25s ease-out}
+        .tryit-card-header{background:rgba(20,55,34,.9);color:#fff;padding:12px 16px;font-weight:600;font-size:.85rem}
+        .tryit-card-body{padding:18px 20px;display:grid;gap:12px}
+        .tryit-card-body h2{margin:0;font-size:1.1rem}
+        .tryit-card-body p{margin:0;color:#4a5550;font-size:.88rem;line-height:1.5}
+        .tryit-choice{display:grid;gap:6px}
+        .tryit-choice button{width:100%;min-height:48px;text-align:left;padding:10px 14px;border:1px solid #d4d8d4;border-radius:10px;background:#f6f7f4;cursor:pointer;font-size:.9rem}
+        .tryit-choice button:hover{border-color:#2f6d42;background:#edf4e9}
+        .tryit-card-body .field{display:grid;gap:4px}
+        .tryit-card-body .field input{padding:10px 12px;border:1px solid #cdd2cd;border-radius:8px;font-size:.9rem}
+        .tryit-card-body .button-row{display:flex;gap:8px;margin-top:4px}
+        .tryit-card-body .button-row button{min-height:38px;padding:6px 12px;border-radius:8px;border:1px solid #cdd2cd;background:transparent;cursor:pointer;font-size:.82rem}
+        .tryit-card-body .button-row button.primary{border-color:#2f6d42;background:#2f6d42;color:#fff}
+        .tryit-exit{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:2147483646;padding:6px 12px;border:1px solid rgba(255,255,255,.6);border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font-size:.78rem;cursor:pointer;pointer-events:auto}
+        .tryit-guide{position:fixed;left:50%;top:calc(50% + 52px);transform:translateX(-50%);z-index:2147483646;color:rgba(255,255,255,.92);font-size:.9rem;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.5);text-align:center;pointer-events:none}
+    `;
+    document.documentElement.append(s);
+}
+
+function showBreathingCircle() {
+    hideBreathingCircle();
+    breathingEl = document.createElement('div');
+    breathingEl.className = 'tryit-overlay';
+    breathingEl.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%);width:80px;height:80px;';
+    breathingEl.innerHTML = '<div class="tryit-breathing-circle" id="tryitTapTarget"></div>';
+    document.documentElement.append(breathingEl);
+}
+
+function hideBreathingCircle() {
+    if (breathingEl) { breathingEl.remove(); breathingEl = null; }
+}
+
+function showGuideText(text) {
+    let el = document.getElementById('tryitGuide');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'tryitGuide';
+        el.className = 'tryit-guide';
+        document.documentElement.append(el);
+    }
+    el.textContent = text;
+}
+
+function hideGuideText() {
+    document.getElementById('tryitGuide')?.remove();
+}
+
+function showExitButton() {
+    let el = document.getElementById('tryitExit');
+    if (!el) {
+        el = document.createElement('button');
+        el.id = 'tryitExit';
+        el.className = 'tryit-exit';
+        el.textContent = 'Exit AR';
+        el.addEventListener('click', finishDemo);
+        document.documentElement.append(el);
+    }
+}
+
+function showCard(html) {
+    const existing = document.getElementById('tryitCard');
+    if (existing) existing.remove();
+    const card = document.createElement('div');
+    card.id = 'tryitCard';
+    card.className = 'tryit-card';
+    card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%);';
+    card.innerHTML = html;
+    document.documentElement.append(card);
+    return card;
+}
+
+function hideCard() {
+    document.getElementById('tryitCard')?.remove();
+}
+
+// ─── Show type selection after placement ───
+function showTypeSelector(markerIndex) {
+    showCard(`
+        <div class="tryit-card-header">Marker placed</div>
+        <div class="tryit-card-body">
+            <h2>What is this marker?</h2>
+            <div class="tryit-choice">
+                <button data-type="plant">🌱 Plant</button>
+                <button data-type="note">✎ Note</button>
+                <button data-type="poi">◆ Point of Interest</button>
+            </div>
+        </div>
+    `);
+    document.querySelectorAll('.tryit-choice button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const type = btn.dataset.type;
+            hideCard();
+            showNameInput(markerIndex, type);
+        });
+    });
+}
+
+// ─── Show name input after type selection ───
+function showNameInput(markerIndex, type) {
+    const typeLabels = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' };
+    const defaultNames = { plant: 'New Plant', note: 'New Note', poi: 'New Point' };
+    const label = typeLabels[type] || 'Marker';
+    const defName = defaultNames[type] || 'New Marker';
+    showCard(`
+        <div class="tryit-card-header">Name this ${label}</div>
+        <div class="tryit-card-body">
+            <div class="field">
+                <label style="font-size:.8rem;font-weight:600;color:#394039">Marker name</label>
+                <input id="tryitNameInput" value="${defName}" autocomplete="off" />
+            </div>
+            <p id="tryitNameError" style="color:#c43;font-size:.78rem;min-height:1em"></p>
+            <div class="button-row">
+                <button id="tryitNameCancel">Cancel</button>
+                <button class="primary" id="tryitNameSave">Save</button>
+            </div>
+        </div>
+    `);
+    document.getElementById('tryitNameInput')?.focus();
+    document.getElementById('tryitNameInput')?.select();
+    document.getElementById('tryitNameSave').addEventListener('click', () => saveName(markerIndex, type));
+    document.getElementById('tryitNameCancel').addEventListener('click', () => {
+        hideCard();
+        showBreathingCircle();
+        showGuideText('Tap to place a marker');
+    });
+}
+
+function saveName(markerIndex, type) {
+    const input = document.getElementById('tryitNameInput');
+    const error = document.getElementById('tryitNameError');
+    let name = (input?.value || '').trim();
+    if (!name) { if (error) error.textContent = 'Name is required.'; return; }
+
+    // Auto-suffix if name already used
+    const usedNames = placedMarkers.map(m => m.name);
+    if (usedNames.includes(name)) {
+        let suffix = 1;
+        while (usedNames.includes(`${name} (${suffix})`)) suffix++;
+        name = `${name} (${suffix})`;
+    }
+
+    placedMarkers[markerIndex].name = name;
+    placedMarkers[markerIndex].type = type;
+
+    hideCard();
+    // Redraw marker with new name
+    rebuildMarkerTexture(markerIndex);
+
+    if (placedMarkers.length === 1) {
+        // V1 completion message after first marker
+        setTimeout(() => showCompletionMessage(), 400);
+    } else {
+        showBreathingCircle();
+        showGuideText('Tap to place another marker');
+    }
+}
+
+function rebuildMarkerTexture(index) {
+    const marker = placedMarkers[index];
+    if (!marker) return;
     const canvas = document.createElement('canvas');
-    canvas.width = width || 600;
-    canvas.height = height || 400;
+    canvas.width = 300; canvas.height = 120;
     const ctx = canvas.getContext('2d');
-    drawFn(ctx, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(20,55,34,.88)';
+    ctx.beginPath(); ctx.roundRect(0, 0, 300, 120, 16); ctx.fill();
+    ctx.fillStyle = '#dcef95';
+    ctx.beginPath(); ctx.arc(40, 60, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#173522';
+    ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(marker.type === 'plant' ? '🌱' : marker.type === 'note' ? '✎' : '◆', 40, 66);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText(marker.name, 70, 52);
+    ctx.fillStyle = 'rgba(255,255,255,.78)';
+    ctx.font = 'italic 14px sans-serif';
+    ctx.fillText({ plant: 'Plant Marker', note: 'Note', poi: 'Point of Interest' }[marker.type] || 'Marker', 70, 78);
+
+    if (demoGl && quadTextures['marker_' + index]) {
+        demoGl.deleteTexture(quadTextures['marker_' + index]);
+    }
     const tex = demoGl.createTexture();
     demoGl.bindTexture(demoGl.TEXTURE_2D, tex);
-    // The quad uses V=0 at its top edge. Canvas pixels are already uploaded
-    // top-first, so flipping here turns every dashboard upside down.
     demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
     demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, canvas);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_WRAP_S, demoGl.CLAMP_TO_EDGE);
     demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_WRAP_T, demoGl.CLAMP_TO_EDGE);
-    return tex;
+    quadTextures['marker_' + index] = tex;
 }
 
-function renderDashboardPanel(ctx, w, h) {
-    ctx.fillStyle = 'rgba(20,55,34,.92)'; ctx.beginPath(); ctx.roundRect(8, 8, w - 16, h - 16, 24); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✿ My Project', w / 2, 48);
-    ctx.fillStyle = 'rgba(220,239,149,.9)'; ctx.font = '14px sans-serif'; ctx.fillText('DASHBOARD', w / 2, 72);
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = '18px sans-serif'; ctx.fillText('Is there a plant near you? Tap below to place a marker.', w / 2, 112);
-    ctx.fillStyle = '#dcef95'; ctx.beginPath(); ctx.roundRect(40, 140, w - 80, 52, 12); ctx.fill();
-    ctx.fillStyle = '#173522'; ctx.font = '700 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Tag a Plant', w / 2, 170);
-    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '12px sans-serif'; ctx.fillText('Place a marker at a real-world position', w / 2, 195);
-    ctx.fillStyle = '#28c840'; ctx.beginPath(); ctx.roundRect(40, 210, w - 80, 52, 12); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 20px sans-serif'; ctx.fillText('Create Plant Marker', w / 2, 240);
+// ─── V1 completion message ───
+function showCompletionMessage() {
+    showCard(`
+        <div class="tryit-card-header" style="background:#1a5c2e">Try It Now — Complete</div>
+        <div class="tryit-card-body" style="text-align:center">
+            <p style="font-size:1rem;line-height:1.6;color:#2a4a34">This is a placement app based on location, space and GPS information. It helps you rediscover this marker when needed.</p>
+            <p style="font-size:.9rem;color:#5a6f62;margin-top:6px"><strong>Version 1.0</strong> — thank you for trying.</p>
+            <div class="button-row" style="justify-content:center;margin-top:8px">
+                <button class="primary" id="tryitReturnToWelcome" style="padding:10px 24px;font-size:.95rem">Return to Welcome</button>
+            </div>
+        </div>
+    `);
+    document.getElementById('tryitReturnToWelcome').addEventListener('click', finishDemo);
 }
 
-function renderTagPanel(ctx, w, h) {
-    ctx.fillStyle = 'rgba(20,55,34,.92)'; ctx.beginPath(); ctx.roundRect(8, 8, w - 16, h - 16, 24); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Tag a Plant', w / 2, 48);
-    ctx.fillStyle = 'rgba(220,239,149,.9)'; ctx.font = '14px sans-serif'; ctx.fillText('STEP 1', w / 2, 72);
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = '16px sans-serif'; ctx.fillText('Point at the ground beside a real plant.', w / 2, 105);
-    ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.fillText(`Marker: ${markerName}`, w / 2, 140);
-    ctx.fillStyle = '#dcef95'; ctx.beginPath(); ctx.roundRect(40, h - 62, w - 80, 44, 12); ctx.fill();
-    ctx.fillStyle = '#173522'; ctx.font = '700 18px sans-serif'; ctx.fillText('Tag This Plant', w / 2, h - 38);
+// ─── WebGL program + buffer setup ───
+function setupQuadRenderer(gl) {
+    const vs = 'attribute vec3 p;attribute vec2 t;uniform mat4 mvp;varying vec2 uv;void main(){gl_Position=mvp*vec4(p,1.0);uv=t;}';
+    const fs = 'precision mediump float;varying vec2 uv;uniform sampler2D tex;void main(){gl_FragColor=texture2D(tex,uv);}';
+    const mk = (type, src) => { const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); return sh; };
+    const p = gl.createProgram();
+    gl.attachShader(p, mk(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1, -1, 0, 0, 1,   1, -1, 0, 1, 1,   1,  1, 0, 1, 0,
+        -1, -1, 0, 0, 1,   1,  1, 0, 1, 0,  -1,  1, 0, 0, 0
+    ]), gl.STATIC_DRAW);
+    return { program: p, buffer: buf };
 }
 
-function renderPlantListPanel(ctx, w, h) {
-    ctx.fillStyle = 'rgba(20,55,34,.92)'; ctx.beginPath(); ctx.roundRect(8, 8, w - 16, h - 16, 24); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Choose Plant Profile', w / 2, 48);
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = '16px sans-serif'; ctx.fillText('Select a matching plant profile:', w / 2, 80);
-    const items = ['Banana Cavendish - Musa acuminata', 'Lemon Drop Garcinia - Garcinia intermedia', 'Myoga Ginger - Zingiber mioga', 'Jackfruit - Artocarpus heterophyllus'];
-    items.forEach((name, i) => {
-        const y = 100 + i * 55;
-        ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.roundRect(30, y, w - 60, 44, 10); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(name, 48, y + 28);
-    });
+// ─── Compute upright billboard matrix that faces camera ───
+function billboardMatrix(pos, camPos) {
+    const cx = pos[0], cy = pos[1], cz = pos[2];
+    let fx = camPos[0] - cx, fy = camPos[1] - cy, fz = camPos[2] - cz;
+    const fl = Math.hypot(fx, fy, fz) || 1;
+    fx /= fl; fy /= fl; fz /= fl;
+    const upY = 1;
+    let rx = fy * upY, ry = -fx * upY, rz = 0;
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    rx /= rl; ry /= rl;
+    let ux = ry * fz, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
+    return new Float32Array([rx, ux, fx, 0, ry, uy, fy, 0, rz, uz, fz, 0, cx, cy, cz, 1]);
 }
 
-function renderPlantProfilePanel(ctx, w, h) {
-    ctx.fillStyle = 'rgba(20,55,34,.92)'; ctx.beginPath(); ctx.roundRect(8, 8, w - 16, h - 16, 24); ctx.fill();
-    ctx.fillStyle = '#dcef95'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('PLANT PROFILE', w / 2, 38);
-    ctx.fillStyle = '#fff'; ctx.font = '700 30px sans-serif'; ctx.fillText(SAMPLE.commonName, w / 2, 72);
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = 'italic 18px sans-serif'; ctx.fillText(SAMPLE.scientificName, w / 2, 98);
-    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '14px sans-serif'; ctx.fillText(SAMPLE.summary.substring(0, 90) + '...', w / 2, 132);
-    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(`Family: ${SAMPLE.family}`, 40, 170);
-    ctx.fillText(`Origin: ${SAMPLE.origin}`, 40, 194);
-    ctx.fillText(`Uses: ${(SAMPLE.uses || []).join(', ')}`, 40, 218);
-    ctx.fillStyle = '#28c840'; ctx.beginPath(); ctx.roundRect(w / 2 - 80, h - 54, 160, 36, 10); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✓ Linked to marker', w / 2, h - 32);
+// ─── Draw one marker quad for a given view ───
+function drawMarkerQuad(gl, view, projMatrix, worldPos, tex, size) {
+    const model = billboardMatrix(worldPos, [view.transform.position.x, view.transform.position.y, view.transform.position.z]);
+    const vm = view.transform.inverse.matrix;
+    const sm = new Float32Array([size, 0, 0, 0, 0, size * 0.4, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    const scaled = new Float32Array(16);
+    for (let c = 0; c < 4; c++)
+        for (let r = 0; r < 4; r++)
+            scaled[c * 4 + r] = sm[r] * model[c * 4] + sm[4 + r] * model[c * 4 + 1] + sm[8 + r] * model[c * 4 + 2] + sm[12 + r] * model[c * 4 + 3];
+    const mv = new Float32Array(16);
+    for (let c = 0; c < 4; c++)
+        for (let r = 0; r < 4; r++)
+            mv[c * 4 + r] = vm[r] * scaled[c * 4] + vm[4 + r] * scaled[c * 4 + 1] + vm[8 + r] * scaled[c * 4 + 2] + vm[12 + r] * scaled[c * 4 + 3];
+    const mvp = new Float32Array(16);
+    for (let c = 0; c < 4; c++)
+        for (let r = 0; r < 4; r++)
+            mvp[c * 4 + r] = projMatrix[r] * mv[c * 4] + projMatrix[4 + r] * mv[c * 4 + 1] + projMatrix[8 + r] * mv[c * 4 + 2] + projMatrix[12 + r] * mv[c * 4 + 3];
+
+    gl.useProgram(quadProgram.program);
+    gl.uniformMatrix4fv(gl.getUniformLocation(quadProgram.program, 'mvp'), false, mvp);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    gl.enableVertexAttribArray(gl.getAttribLocation(quadProgram.program, 'p'));
+    gl.vertexAttribPointer(gl.getAttribLocation(quadProgram.program, 'p'), 3, gl.FLOAT, false, 20, 0);
+    gl.enableVertexAttribArray(gl.getAttribLocation(quadProgram.program, 't'));
+    gl.vertexAttribPointer(gl.getAttribLocation(quadProgram.program, 't'), 2, gl.FLOAT, false, 20, 12);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(gl.getUniformLocation(quadProgram.program, 'tex'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
-function renderPlacementPrompt(ctx, w, h) {
-    ctx.fillStyle = 'rgba(20,55,34,.92)'; ctx.beginPath(); ctx.roundRect(8, 8, w - 16, h - 16, 24); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Place Your Dashboard', w / 2, 50);
-    ctx.fillStyle = 'rgba(220,239,149,.9)'; ctx.font = '14px sans-serif'; ctx.fillText('STEP 1', w / 2, 76);
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = '18px sans-serif'; ctx.fillText('Point at a flat surface and tap', w / 2, 115);
-    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '14px sans-serif'; ctx.fillText('Aim at a table, counter or the ground', w / 2, 145);
-    ctx.fillStyle = '#dcef95'; ctx.beginPath(); ctx.roundRect(w / 2 - 80, h - 56, 160, 38, 10); ctx.fill();
-    ctx.fillStyle = '#173522'; ctx.font = '700 16px sans-serif'; ctx.fillText('Place Dashboard', w / 2, h - 32);
-}
-
-function makeQuadBuffer(width, height) {
-    const buf = demoGl.createBuffer();
-    demoGl.bindBuffer(demoGl.ARRAY_BUFFER, buf);
-    demoGl.bufferData(demoGl.ARRAY_BUFFER, new Float32Array([
-        -width / 2, -height / 2, 0, 0, 1,
-        width / 2, -height / 2, 0, 1, 1,
-        width / 2, height / 2, 0, 1, 0,
-        -width / 2, -height / 2, 0, 0, 1,
-        width / 2, height / 2, 0, 1, 0,
-        -width / 2, height / 2, 0, 0, 0
-    ]), demoGl.STATIC_DRAW);
-    return buf;
-}
-
-function setupMarkerRenderer() {
-    const vShader = demoGl.createShader(demoGl.VERTEX_SHADER);
-    demoGl.shaderSource(vShader, 'attribute vec3 p;attribute vec2 t;uniform mat4 mvp;varying vec2 uv;void main(){gl_Position=mvp*vec4(p,1.0);uv=t;}');
-    demoGl.compileShader(vShader);
-    const fShader = demoGl.createShader(demoGl.FRAGMENT_SHADER);
-    demoGl.shaderSource(fShader, 'precision mediump float;varying vec2 uv;uniform sampler2D tex;void main(){gl_FragColor=texture2D(tex,uv);}');
-    demoGl.compileShader(fShader);
-    demoProgram = demoGl.createProgram();
-    demoGl.attachShader(demoProgram, vShader);
-    demoGl.attachShader(demoProgram, fShader);
-    demoGl.linkProgram(demoProgram);
-    demoGl.useProgram(demoProgram);
-    dashboardPanelBuffer = makeQuadBuffer(DASHBOARD_W, DASHBOARD_H);
-    tagInputBuffer = makeQuadBuffer(TAG_W, TAG_H);
-    const listBuf = makeQuadBuffer(LIST_W, LIST_H);
-    const profileBuf = makeQuadBuffer(PROFILE_W, PROFILE_H);
-    const placeBuf = makeQuadBuffer(DASHBOARD_W, DASHBOARD_H);
-}
-
-function buildSpatialPanel(panelName) {
-    if (!demoGl) return null;
-    if (panelName === 'dashboard') {
-        demoTextures['dashboard'] = createPanelTexture(600, 400, renderDashboardPanel);
-        return { tex: demoTextures['dashboard'], buf: dashboardPanelBuffer, w: DASHBOARD_W, h: DASHBOARD_H };
-    }
-    if (panelName === 'tag') {
-        demoTextures['tag'] = createPanelTexture(520, 280, renderTagPanel);
-        return { tex: demoTextures['tag'], buf: tagInputBuffer, w: TAG_W, h: TAG_H };
-    }
-    if (panelName === 'plantList') {
-        demoTextures['plantList'] = createPanelTexture(520, 360, renderPlantListPanel);
-        const buf = makeQuadBuffer(LIST_W, LIST_H);
-        return { tex: demoTextures['plantList'], buf, w: LIST_W, h: LIST_H };
-    }
-    if (panelName === 'plantProfile') {
-        demoTextures['plantProfile'] = createPanelTexture(640, 460, renderPlantProfilePanel);
-        const buf = makeQuadBuffer(PROFILE_W, PROFILE_H);
-        return { tex: demoTextures['plantProfile'], buf, w: PROFILE_W, h: PROFILE_H };
-    }
-    if (panelName === 'placement') {
-        demoTextures['placement'] = createPanelTexture(480, 280, renderPlacementPrompt);
-        return { tex: demoTextures['placement'], buf: dashboardPanelBuffer, w: DASHBOARD_W, h: DASHBOARD_H };
-    }
-    return null;
-}
-
-function drawSpatialPanel(view, panel, matrix, buf, width, height) {
-    if (!panel || !matrix) return;
-    const mvp = multiplyMat4(view.projectionMatrix, multiplyMat4(view.transform.inverse.matrix, matrix));
-    demoGl.useProgram(demoProgram);
-    demoGl.bindBuffer(demoGl.ARRAY_BUFFER, buf);
-    const pLoc = demoGl.getAttribLocation(demoProgram, 'p');
-    const tLoc = demoGl.getAttribLocation(demoProgram, 't');
-    demoGl.enableVertexAttribArray(pLoc);
-    demoGl.vertexAttribPointer(pLoc, 3, demoGl.FLOAT, false, 20, 0);
-    demoGl.enableVertexAttribArray(tLoc);
-    demoGl.vertexAttribPointer(tLoc, 2, demoGl.FLOAT, false, 20, 12);
-    demoGl.uniformMatrix4fv(demoGl.getUniformLocation(demoProgram, 'mvp'), false, mvp);
-    demoGl.activeTexture(demoGl.TEXTURE0);
-    demoGl.bindTexture(demoGl.TEXTURE_2D, panel);
-    demoGl.uniform1i(demoGl.getUniformLocation(demoProgram, 'tex'), 0);
-    demoGl.enable(demoGl.BLEND);
-    demoGl.blendFunc(demoGl.SRC_ALPHA, demoGl.ONE_MINUS_SRC_ALPHA);
-    demoGl.drawArrays(demoGl.TRIANGLES, 0, 6);
-}
-
-function multiplyMat4(a, b) {
-    const out = new Float32Array(16);
-    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
-        out[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
-    }
-    return out;
-}
-
-function makeUprightPanelMatrix(position, viewerMatrix) {
-    const camera = [viewerMatrix[12], viewerMatrix[13], viewerMatrix[14]];
-    let forwardX = camera[0] - position[0];
-    let forwardZ = camera[2] - position[2];
-    const forwardLength = Math.hypot(forwardX, forwardZ);
-    if (forwardLength < 0.001) {
-        forwardX = viewerMatrix[8];
-        forwardZ = viewerMatrix[10];
-    } else {
-        forwardX /= forwardLength;
-        forwardZ /= forwardLength;
-    }
-
-    // Keep the panel level with the real world instead of copying the phone's
-    // portrait/landscape roll. Local +Z faces the viewer and local +Y stays up.
-    return new Float32Array([
-        forwardZ, 0, -forwardX, 0,
-        0, 1, 0, 0,
-        forwardX, 0, forwardZ, 0,
-        position[0], position[1], position[2], 1
-    ]);
-}
-
-function makeDraggable(element, handle) {
-    let isDragging = false;
-    let startX, startY, origX, origY;
-    const header = handle || element;
-
-    function onStart(e) {
-        const ev = e.touches ? e.touches[0] : e;
-        isDragging = true;
-        startX = ev.clientX;
-        startY = ev.clientY;
-        origX = element.offsetLeft || 0;
-        origY = element.offsetTop || 0;
-        element.style.zIndex = ++windowZIndex;
-        element.classList.add('is-dragging');
-        if (e.touches) document.addEventListener('touchmove', onMove, { passive: true });
-        else document.addEventListener('mousemove', onMove);
-        document.addEventListener('touchend', onEnd, { passive: true });
-        document.addEventListener('mouseup', onEnd);
-        e.preventDefault();
-    }
-
-    function onMove(e) {
-        if (!isDragging) return;
-        const ev = e.touches ? e.touches[0] : e;
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        element.style.left = (origX + dx) + 'px';
-        element.style.top = (origY + dy) + 'px';
-    }
-
-    function onEnd() {
-        isDragging = false;
-        element.classList.remove('is-dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('mouseup', onEnd);
-        document.removeEventListener('touchend', onEnd);
-    }
-
-    header.addEventListener('mousedown', onStart);
-    header.addEventListener('touchstart', onStart, { passive: true });
-}
-
+// ─── Open launcher dialog ───
 export function openTemporaryArDemoWindow(app) {
     document.getElementById('temporaryDemoLauncher')?.remove();
     const launcher = document.createElement('div');
@@ -281,6 +342,31 @@ export function openTemporaryArDemoWindow(app) {
     document.getElementById('temporaryLauncherClose').addEventListener('click', close);
     document.getElementById('temporaryLauncherCancel').addEventListener('click', close);
     document.getElementById('temporaryLauncherStart').addEventListener('click', () => { close(); startTemporaryArDemo(app); });
+}
+
+export async function startTemporaryArDemo(app) {
+    demoApp = app;
+    const immersive = await tryImmersiveDemo();
+    if (!immersive) {
+        // Fallback to simulated on-screen demo
+        renderSimulated();
+    }
+}
+
+function renderSimulated() {
+    // Simple non-AR card-based demo
+    hideBreathingCircle();
+    hideGuideText();
+    showCard(`
+        <div class="tryit-card-header">Try It Now</div>
+        <div class="tryit-card-body">
+            <p>AR is not available on this device. In AR mode, you would see a breathing circle — tapping it places a marker in real space.</p>
+            <p style="color:#5a6f62;font-size:.82rem">The full experience requires a device with WebXR immersive-ar support over HTTPS.</p>
+            <div class="button-row" style="justify-content:center">
+                <button class="primary" onclick="window.renderLaunchScreen()">Return to Welcome</button>
+            </div>
+        </div>
+    `);
 }
 
 function removeDemoCanvas() {
@@ -393,7 +479,7 @@ function showMarkerTypePicker() {
 
 function showMarkerNameEntry(type) {
     demoMarkerType = type;
-    const labels = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' };
+    const labels = { plant: 'Plant', note: 'Note', poi: 'Point of interest', marker: 'Marker' };
     const container = document.getElementById('temporaryDemoCard');
     if (!container) return;
     container.innerHTML = `<section class="temporary-demo-choice"><p class="welcome-label">${labels[type]}</p><h2>Name this marker</h2><label><span>Name</span><input data-demo-marker-name value="${escapeHtml(type === 'plant' ? 'New plant' : type === 'note' ? 'New note' : 'Point of interest')}" maxlength="60" /></label><button class="primary" type="button" data-demo-save-marker>Save marker</button></section>`;
@@ -540,106 +626,216 @@ function selectedSpatialMarker(rayMatrix) {
     return along > 0 && miss < Math.max(.35, along * .04);
 }
 
+// ─── Try immersive AR ───
 async function tryImmersiveDemo() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
         if (!await navigator.xr.isSessionSupported('immersive-ar')) return false;
-        const session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['dom-overlay', 'hit-test'],
-            optionalFeatures: ['local-floor'],
-            domOverlay: { root: demoApp }
+
+        demoSession = await navigator.xr.requestSession('immersive-ar', {
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['dom-overlay', 'local-floor'],
+            domOverlay: { root: document.body }
         });
-        demoSession = session;
+
         demoCanvas = document.createElement('canvas');
         demoCanvas.className = 'temporary-demo-xr-canvas';
         document.body.append(demoCanvas);
+
         const gl = demoCanvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
-        session.updateRenderState({
-            baseLayer: new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true }),
-            depthNear: 0.01,
-            depthFar: 50
-        });
-        try { demoRefSpace = await session.requestReferenceSpace('local-floor'); }
-        catch { demoRefSpace = await session.requestReferenceSpace('local'); }
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        demoHitSource = await session.requestHitTestSource({ space: viewerSpace });
         demoGl = gl;
-        setupMarkerRenderer();
+
+        demoSession.updateRenderState({
+            baseLayer: new XRWebGLLayer(demoSession, gl, { alpha: true, antialias: true, depth: true }),
+            depthNear: 0.01, depthFar: 50
+        });
+
+        try { demoRefSpace = await demoSession.requestReferenceSpace('local-floor'); }
+        catch { demoRefSpace = await demoSession.requestReferenceSpace('local'); }
+
+        const viewerSpace = await demoSession.requestReferenceSpace('viewer');
+        demoHitSource = await demoSession.requestHitTestSource({ space: viewerSpace });
+
+        quadProgram = setupQuadRenderer(gl);
+        quadBuffer = quadProgram.buffer;
+
         finishingDemo = false;
 
-        updateDemoMarkerTexture();
+showBreathingCircle();
+showGuideText('Tap the circle to place a marker');
+showExitButton();
 
-        demoBuffer = demoGl.createBuffer();
-        demoGl.bindBuffer(demoGl.ARRAY_BUFFER, demoBuffer);
-        demoGl.bufferData(demoGl.ARRAY_BUFFER, new Float32Array([
-            -.18, -.08, 0, 0, 1,
-            .18, -.08, 0, 1, 1,
-            .18, .08, 0, 1, 0,
-            -.18, -.08, 0, 0, 1,
-            .18, .08, 0, 1, 0,
-            -.18, .08, 0, 0, 0
-        ]), demoGl.STATIC_DRAW);
+updateDemoMarkerTexture();
 
-        const draw = (_time, frame) => {
+demoBuffer = demoGl.createBuffer();
+demoGl.bindBuffer(demoGl.ARRAY_BUFFER, demoBuffer);
+demoGl.bufferData(demoGl.ARRAY_BUFFER, new Float32Array([
+    -.18, -.08, 0, 0, 1,
+    .18, -.08, 0, 1, 1,
+    .18, .08, 0, 1, 0,
+    -.18, -.08, 0, 0, 1,
+    .18, .08, 0, 1, 0,
+    -.18, .08, 0, 0, 0
+]), demoGl.STATIC_DRAW);
+
+const draw = (_time, frame) => {
             if (frame.session !== demoSession || !demoGl) return;
-            frame.session.requestAnimationFrame(draw);
-            const layer = frame.session.renderState.baseLayer;
+            demoSession.requestAnimationFrame(draw);
+
+            // Get viewer pose for select event cache
             const pose = frame.getViewerPose(demoRefSpace);
-            latestViewerMatrix = pose ? new Float32Array(pose.transform.matrix) : null;
+            if (pose) lastViewerPoseForSelect = pose;
+
+            // Get hit test results
             const hit = demoHitSource ? frame.getHitTestResults(demoHitSource)[0] : null;
             const hitPose = hit?.getPose(demoRefSpace);
             latestHitMatrix = hitPose ? new Float32Array(hitPose.transform.matrix) : null;
-            document.querySelector('.temporary-demo-reticle')?.classList.toggle('has-surface', Boolean(latestHitMatrix));
 
-            demoGl.bindFramebuffer(demoGl.FRAMEBUFFER, layer.framebuffer);
-            demoGl.clearColor(0, 0, 0, 0);
-            demoGl.clearDepth(1);
-            demoGl.clear(demoGl.COLOR_BUFFER_BIT | demoGl.DEPTH_BUFFER_BIT);
-
-            if (pose) {
-                for (const view of pose.views) {
-                    const viewport = layer.getViewport(view);
-                    demoGl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
-                    // Draw spatial marker if placed
-                    drawSpatialMarker(view);
-
-                    // Draw dashboard panel if placed
-                    if (spatialDashboardMatrix && demoTextures['dashboard']) {
-                        drawSpatialPanel(view, demoTextures['dashboard'], spatialDashboardMatrix, dashboardPanelBuffer, DASHBOARD_W, DASHBOARD_H);
+            // Update breathing circle appearance based on surface availability
+            if (breathingEl) {
+                const target = breathingEl.querySelector('.tryit-breathing-circle');
+                if (target) {
+                    if (latestHitMatrix) {
+                        target.style.borderColor = '#8befa2';
+                        target.style.boxShadow = '0 0 40px rgba(220,239,149,.3), 0 0 60px rgba(139,239,162,.2)';
+                    } else {
+                        target.style.borderColor = 'rgba(220,239,149,.9)';
+                        target.style.boxShadow = '0 0 40px rgba(220,239,149,.3)';
                     }
                 }
             }
-        };
 
-        session.requestAnimationFrame(draw);
+            // Render
+            const layer = demoSession.renderState.baseLayer;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clearDepth(1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        session.addEventListener('select', () => {
+            if (pose) {
+                for (const view of pose.views) {
+                    const vp = layer.getViewport(view);
+                    gl.viewport(vp.x, vp.y, vp.width, vp.height);
+                    // Draw all placed markers
+                    for (const marker of placedMarkers) {
+                        const tex = quadTextures['marker_' + marker.index];
+                        if (tex) drawMarkerQuad(gl, view, view.projectionMatrix, marker.worldPos, tex, MARKER_SIZE);
+                    }
+                }
+            }
+};
+
+session.requestAnimationFrame(draw);
+
+session.addEventListener('select', () => {
             // Fallback for controller input when the DOM-overlay button does
             // not receive the select event.
             if (demoPlacementReady) placeDemoMarker();
         });
 
-        session.addEventListener('end', () => {
-            demoSession = null;
-            removeDemoCanvas();
+        // Handle tap via XR select event (required — DOM click events don't fire during immersive AR)
+        let ignoreNextSelect = false;
+        demoSession.addEventListener('select', event => {
+            if (ignoreNextSelect) { ignoreNextSelect = false; return; }
+            // Ignore if a card is showing (user is typing/selecting options)
+            if (document.getElementById('tryitCard')) return;
+            
+            if (!latestHitMatrix) {
+                showGuideText('Keep moving to find a surface');
+                return;
+            }
+            // Place marker at hit position
+            const pos = [latestHitMatrix[12], latestHitMatrix[13], latestHitMatrix[14]];
+            const index = placedMarkers.length;
+            placedMarkers.push({ index, worldPos: pos, name: 'New Marker', type: 'poi' });
+
+            // Create initial marker texture inline
+            const canvas = document.createElement('canvas');
+            canvas.width = 300; canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(20,55,34,.88)';
+            ctx.beginPath(); ctx.roundRect(0, 0, 300, 120, 16); ctx.fill();
+            ctx.fillStyle = '#dcef95';
+            ctx.beginPath(); ctx.arc(40, 60, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#173522';
+            ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('◆', 40, 66);
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#fff';
+            ctx.font = '700 18px sans-serif';
+            ctx.fillText('New Marker', 70, 52);
+            ctx.fillStyle = 'rgba(255,255,255,.78)';
+            ctx.font = 'italic 14px sans-serif';
+            ctx.fillText('Placed', 70, 78);
+
+            const tex = demoGl.createTexture();
+            demoGl.bindTexture(demoGl.TEXTURE_2D, tex);
+            demoGl.pixelStorei(demoGl.UNPACK_FLIP_Y_WEBGL, false);
+            demoGl.texImage2D(demoGl.TEXTURE_2D, 0, demoGl.RGBA, demoGl.RGBA, demoGl.UNSIGNED_BYTE, canvas);
+            demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MIN_FILTER, demoGl.LINEAR);
+            demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_MAG_FILTER, demoGl.LINEAR);
+            demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_WRAP_S, demoGl.CLAMP_TO_EDGE);
+            demoGl.texParameteri(demoGl.TEXTURE_2D, demoGl.TEXTURE_WRAP_T, demoGl.CLAMP_TO_EDGE);
+            quadTextures['marker_' + index] = tex;
+
+            // Hide breathing circle, show type selector
+            hideBreathingCircle();
+            hideGuideText();
+            showTypeSelector(index);
+        });
+
+        demoSession.addEventListener('end', () => {
+            cleanupDemo();
             if (!finishingDemo) window.renderLaunchScreen();
             finishingDemo = false;
         });
+
         return true;
-    } catch {
-        const session = demoSession;
-        demoSession = null;
-        removeDemoCanvas();
-        if (session) session.end().catch(() => {});
+    } catch (e) {
+        console.error('[TryItNow]', e);
+        cleanupDemo();
         return false;
     }
 }
 
-export async function startTemporaryArDemo(app) {
-    demoApp = app;
-    const immersive = await tryImmersiveDemo();
-    renderDemo(!immersive);
+function cleanupDemo() {
+    hideBreathingCircle();
+    hideGuideText();
+    hideCard();
+    document.getElementById('tryitExit')?.remove();
+    document.getElementById('tryitCard')?.remove();
+    // Delete all textures
+    if (demoGl) {
+        for (const key in quadTextures) {
+            if (quadTextures[key]) demoGl.deleteTexture(quadTextures[key]);
+        }
+    }
+    quadTextures = {};
+    placedMarkers = [];
+    demoHitSource?.cancel?.();
+    demoHitSource = null;
+    demoRefSpace = null;
+    latestHitMatrix = null;
+    demoCanvas?.remove();
+    demoCanvas = null;
+    demoGl = null;
+    lastViewerPoseForSelect = null;
 }
+
+function finishDemo() {
+    finishingDemo = true;
+    const session = demoSession;
+    demoSession = null;
+    cleanupDemo();
+    if (session) session.end().catch(() => {});
+    document.getElementById('tryitCard')?.remove();
+    window.renderLaunchScreen();
+}
+
+// ─── Legacy exports required by main.js ───
+// (renderLaunchScreen accessed via window.renderLaunchScreen)
