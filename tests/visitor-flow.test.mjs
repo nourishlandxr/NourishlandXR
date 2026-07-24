@@ -167,12 +167,16 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo places before asking for marker type and name', () => {
+test('temporary AR demo chooses a marker type without a camera-blocking panel', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Tap to place marker/);
     assert.match(source, /What is this marker\?/);
     assert.match(source, /Point of Interest/);
-    assert.match(source, /Name this marker/);
+    assert.match(source, /data-tryit-name-controls/);
+    assert.match(source, /if \(simulatedMode\).*data-tryit-sim-marker/);
+    assert.doesNotMatch(source, /tryit-panel/);
+    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
     assert.match(source, /function updateMarkerTexture/);
     assert.match(source, /if \(marker\) return/);

@@ -14,6 +14,7 @@ let hitMatrix = null;
 let marker = null;
 let markerType = 'marker';
 let markerName = 'Marker';
+let simulatedMode = false;
 let program = null;
 let buffer = null;
 let texture = null;
@@ -54,32 +55,36 @@ function setGuide(message) {
 }
 
 function clearPanel() {
-    appRoot?.querySelector('[data-tryit-panel]')?.replaceChildren();
+    appRoot?.querySelector('[data-tryit-name-controls]')?.setAttribute('hidden', '');
 }
 
-function showTypePanel() {
-    const panel = appRoot?.querySelector('[data-tryit-panel]');
-    if (!panel) return;
-    panel.innerHTML = `<section class="tryit-panel" aria-live="polite"><p class="welcome-label">MARKER PLACED</p><h2>What is this marker?</h2><div class="tryit-type-grid"><button type="button" data-tryit-type="plant">Plant</button><button type="button" data-tryit-type="note">Note</button><button type="button" data-tryit-type="poi">Point of Interest</button></div></section>`;
-    panel.querySelectorAll('[data-tryit-type]').forEach(button => button.addEventListener('click', () => showNamePanel(button.dataset.tryitType)));
-}
-
-function showNamePanel(type) {
+function selectMarkerType(type) {
     markerType = type;
     const typeName = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' }[type];
-    const defaultName = type === 'plant' ? 'New plant' : type === 'note' ? 'New note' : 'Point of interest';
-    const panel = appRoot?.querySelector('[data-tryit-panel]');
-    if (!panel) return;
-    panel.innerHTML = `<section class="tryit-panel"><p class="welcome-label">${typeName}</p><h2>Name this marker</h2><label class="tryit-name-field"><span>Name</span><input data-tryit-name value="${escapeHtml(defaultName)}" maxlength="60" /></label><button class="primary" type="button" data-tryit-save>Save marker</button></section>`;
-    const input = panel.querySelector('[data-tryit-name]');
-    panel.querySelector('[data-tryit-save]').addEventListener('click', () => {
+    markerName = type === 'plant' ? 'New plant' : type === 'note' ? 'New note' : 'Point of interest';
+    appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => {
+        const selected = button.dataset.tryitType === type;
+        button.classList.toggle('is-selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+    });
+    const input = appRoot?.querySelector('[data-tryit-name]');
+    if (input) input.value = markerName;
+    updateMarkerTexture();
+    if (simulatedMode) appRoot?.querySelector('[data-tryit-sim-marker]')?.replaceChildren(document.createTextNode(markerName));
+    setGuide(marker ? `${typeName} marker placed. Name it below.` : `${typeName} selected. Aim, then tap the breathing circle.`);
+}
+
+function bindMarkerControls() {
+    appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => button.addEventListener('click', () => selectMarkerType(button.dataset.tryitType)));
+    const input = appRoot?.querySelector('[data-tryit-name]');
+    appRoot?.querySelector('[data-tryit-save]')?.addEventListener('click', () => {
+        const typeName = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' }[markerType];
         markerName = input.value.trim() || typeName;
         updateMarkerTexture();
-        appRoot.querySelector('[data-tryit-sim-marker]')?.replaceChildren(document.createTextNode(markerName));
+        if (simulatedMode) appRoot.querySelector('[data-tryit-sim-marker]')?.replaceChildren(document.createTextNode(markerName));
         clearPanel();
         setGuide(`${markerName} saved in space.`);
     });
-    input.focus();
 }
 
 function placementPosition() {
@@ -97,15 +102,19 @@ function placeMarker() {
     }
     marker = position;
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
-    appRoot?.querySelector('[data-tryit-sim-marker]')?.removeAttribute('hidden');
-    setGuide('Marker placed in space.');
-    showTypePanel();
+    if (simulatedMode) appRoot?.querySelector('[data-tryit-sim-marker]')?.removeAttribute('hidden');
+    appRoot?.querySelector('[data-tryit-name-controls]')?.removeAttribute('hidden');
+    setGuide(`${markerName} placed in space.`);
+    appRoot?.querySelector('[data-tryit-name]')?.focus();
 }
 
 function renderInterface(simulated) {
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div class="tryit-sim-marker" data-tryit-sim-marker hidden>Marker</div></div><div data-tryit-panel></div></div>`;
+    simulatedMode = simulated;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><div class="tryit-marker-controls" aria-label="What is this marker?"><span>Marker type</span><div class="tryit-type-grid"><button type="button" data-tryit-type="plant" aria-pressed="false">&#x1F331; Plant</button><button type="button" data-tryit-type="note" aria-pressed="false">&#x270E; Note</button><button type="button" data-tryit-type="poi" aria-pressed="false">&#x25C6; Place</button></div><div class="tryit-name-controls" data-tryit-name-controls hidden><input data-tryit-name value="${escapeHtml(markerName)}" maxlength="60" aria-label="Marker name" /><button type="button" data-tryit-save>Save</button></div></div><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div class="tryit-sim-marker" data-tryit-sim-marker hidden>Marker</div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
+    bindMarkerControls();
+    selectMarkerType('plant');
 }
 
 function multiply(a, b) {
