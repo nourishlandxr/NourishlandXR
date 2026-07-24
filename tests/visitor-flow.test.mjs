@@ -19,6 +19,8 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     const header = app.innerHTML.slice(app.innerHTML.indexOf('intro-heading'), app.innerHTML.indexOf('</div>', app.innerHTML.indexOf('intro-heading')) + 6);
     assert.match(header, /Plant literacy/);
     assert.match(header, /welcome-version-badge/);
+    assert.match(header, /· DEMO/);
+    assert.doesNotMatch(app.innerHTML, /welcome-label">DEMO/);
     assert.match(app.innerHTML, /Place a living story in your space/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));

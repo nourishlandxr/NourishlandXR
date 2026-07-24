@@ -41,6 +41,9 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.equal((taskbar.match(/<button/g) || []).length, 4);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
+    assert.match(arSource, /creator-ar-hand-pointer/);
+    assert.match(arSource, /is-hand-mode/);
+    assert.match(styles, /\.creator-ar-overlay\.is-hand-mode \.creator-ar-hand-pointer/);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);

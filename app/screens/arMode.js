@@ -119,6 +119,7 @@ function updateInteractionControls() {
     markerLayer?.classList.toggle('is-interactive', Boolean(interactionMode));
     markerLayer?.classList.toggle('is-grab-mode', interactionMode === 'grab');
     markerLayer?.classList.toggle('is-select-mode', interactionMode === 'select');
+    overlayRoot?.classList.toggle('is-hand-mode', interactionMode === 'grab');
 }
 
 function setInteractionMode(mode) {
@@ -572,6 +573,7 @@ function createOverlay() {
             <span class="creator-ar-placement-pointer"></span>
             <span class="creator-ar-placement-guide-label" data-ar-placement-guide-label>Place marker</span>
         </div>
+        <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at an orb</small></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>

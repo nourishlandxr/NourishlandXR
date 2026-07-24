@@ -4,11 +4,10 @@ export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
             <div class="page-header intro-heading">
-                <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p><span class="version-badge welcome-version-badge" aria-label="Version">V${BUILD_INFO.version}</span></div>
+                <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p><span class="version-badge welcome-version-badge" aria-label="Version and release channel">V${BUILD_INFO.version} · DEMO</span></div>
             </div>
 
             <section class="intro-copy" aria-labelledby="demoWelcomeTitle">
-                <div class="welcome-label">DEMO</div>
                 <h2 id="demoWelcomeTitle">MAP. GROW. LEARN IN PLACE.</h2>
                 <p><strong>Nourishland XR</strong> turns real gardens and landscapes into interactive learning experiences, helping people discover the plants, stories and natural relationships found around them.</p>
                 <p>Using a suitable device—such as your phone—you can map and explore plant-rich places, including home gardens, food forests, community gardens, farms and native forests. Add plants, mark important locations, create relationships, record observations and create information that others can discover while visiting the landscape.</p>
