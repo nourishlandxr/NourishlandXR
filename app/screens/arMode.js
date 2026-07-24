@@ -494,7 +494,7 @@ function createOverlay() {
     overlayRoot.innerHTML = `
         <p class="sr-only" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
-        <button class="creator-ar-ready-placement" type="button" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></button>
+        <span class="creator-ar-ready-placement" role="button" tabindex="0" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></span>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
@@ -515,8 +515,15 @@ function createOverlay() {
         void armPlacement('sub_checkpoint');
     });
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
-    overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
+    const readyPlacementControl = overlayRoot.querySelector('[data-ar-ready-place]');
+    readyPlacementControl.addEventListener('click', () => {
         if (readyPlacementType) void quickPlace(readyPlacementType);
+    });
+    readyPlacementControl.addEventListener('keydown', event => {
+        if ((event.key === 'Enter' || event.key === ' ') && readyPlacementType) {
+            event.preventDefault();
+            void quickPlace(readyPlacementType);
+        }
     });
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     updateReadyPlacementControl();

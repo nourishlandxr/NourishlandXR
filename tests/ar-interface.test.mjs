@@ -39,6 +39,9 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.equal((taskbar.match(/<button/g) || []).length, 3);
     assert.match(arSource, /data-ar-ready-place/);
     assert.match(arSource, /creator-ar-ready-ring/);
+    assert.match(arSource, /<span class="creator-ar-ready-placement" role="button"/);
+    assert.doesNotMatch(arSource, /<button class="creator-ar-ready-placement"/);
+    assert.match(arSource, /readyPlacementControl\.addEventListener\('keydown'/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
