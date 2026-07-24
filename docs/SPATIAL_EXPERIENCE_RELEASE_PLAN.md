@@ -47,6 +47,38 @@ V1 succeeds when a creator can walk a real test route, revisit it, load the same
 - Use hysteresis or a short dwell threshold to prevent rapid boundary switching.
 - Keep the Starting Point as the central first Area/journey stage.
 
+### Area system model: checkpoint as the local sun
+
+An Area is a self-contained spatial system. A useful mental model is a small galaxy:
+
+- The **Area checkpoint is the sun**: it identifies the Area, establishes its local coordinate origin and begins the Area experience.
+- Plants, notes, Focus Points and other markers are the **planets**: they belong to that Area and store their positions relative to its checkpoint where possible.
+- The **Area information board** is the entry guide: it introduces the place, its purpose, conditions, stories, safety or access information, and the layers available there.
+
+Checking in at an Area checkpoint activates that Area. The application must not load every marker from the whole project into one AR scene. Instead it loads the active Area package, reconstructs only its eligible markers, and applies the visitor's layer filters before rendering.
+
+The intended lifecycle is:
+
+1. Detect or scan the Area checkpoint.
+2. Resolve the checkpoint to one project, site and Area.
+3. Establish or restore the checkpoint-local coordinate frame.
+4. Load the Area information board first.
+5. Fetch the Area marker manifest and apply visibility, permission and seven-layer filters.
+6. Restore the remaining eligible markers around the checkpoint.
+7. When another Area is activated, cancel stale loading, unload the previous Area package and repeat.
+
+An Area package should eventually contain:
+
+- Area identity and checkpoint reference;
+- checkpoint-local origin and anchor metadata;
+- information-board content and presentation rules;
+- boundary or proximity metadata when available;
+- a lightweight marker manifest;
+- layer and permission metadata;
+- optional media dependencies and offline-cache information.
+
+This model is both experiential and technical. It gives visitors a clear moment of arrival while limiting memory, network, anchor reconstruction and visual clutter. Nearby Area manifests may be prefetched, but their full markers must remain inactive until the Area is checked in or confidently activated. If checkpoint recognition is unavailable, creator-authorized GPS/proximity or manual selection may activate an Area as a degraded fallback without changing the checkpoint's role as its canonical local origin.
+
 ### Marker loading pipeline
 
 `project -> active site -> active Area -> saved markers -> visibility/filter rules -> anchor reconstruction -> AR render`
@@ -140,6 +172,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-24 | The centred DOM placement control was removed; placement is armed from the taskbar and completed by tapping the WebGL surface target. | V1 foundation |
 | 2026-07-24 | Android Back is scoped to closing dashboard AR first rather than returning directly to the welcome screen. | V1 foundation |
 | 2026-07-24 | Added a temporary spatial-anchor compatibility envelope for deployed APIs that still validate only GPS/QR. | V1 deployment bridge |
+| 2026-07-24 | Areas are independently loaded spatial systems: the checkpoint is their canonical local origin, the Area board guides entry, and only the active Area's filtered markers render. | V1 architecture/V2 journey |
 
 ## Traceability rule
 
