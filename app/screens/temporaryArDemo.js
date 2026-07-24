@@ -13,14 +13,11 @@ let viewerMatrix = null;
 let hitMatrix = null;
 let marker = null;
 let markerType = 'marker';
-let markerName = 'Marker';
+let markers = [];
 let simulatedMode = false;
 let program = null;
 let buffer = null;
-let texture = null;
 let ending = false;
-
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function clearSessionState() {
     hitTestSource?.cancel?.();
@@ -30,11 +27,10 @@ function clearSessionState() {
     hitMatrix = null;
     marker = null;
     markerType = 'marker';
-    markerName = 'Marker';
+    markers.forEach(record => record.texture && gl?.deleteTexture(record.texture));
+    markers = [];
     program = null;
     buffer = null;
-    texture && gl?.deleteTexture(texture);
-    texture = null;
     canvas?.remove();
     canvas = null;
     gl = null;
@@ -55,36 +51,46 @@ function setGuide(message) {
 }
 
 function clearPanel() {
-    appRoot?.querySelector('[data-tryit-name-controls]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('[data-tryit-marker-controls]')?.setAttribute('hidden', '');
 }
 
 function selectMarkerType(type) {
     markerType = type;
-    const typeName = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' }[type];
-    markerName = type === 'plant' ? 'New plant' : type === 'note' ? 'New note' : 'Point of interest';
     appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => {
         const selected = button.dataset.tryitType === type;
         button.classList.toggle('is-selected', selected);
         button.setAttribute('aria-pressed', String(selected));
     });
-    const input = appRoot?.querySelector('[data-tryit-name]');
-    if (input) input.value = markerName;
-    updateMarkerTexture();
-    if (simulatedMode) appRoot?.querySelector('[data-tryit-sim-marker]')?.replaceChildren(document.createTextNode(markerName));
-    setGuide(marker ? `${typeName} marker placed. Name it below.` : `${typeName} selected. Aim, then tap the breathing circle.`);
+    appRoot?.querySelector('[data-tryit-apply]')?.removeAttribute('disabled');
 }
 
 function bindMarkerControls() {
     appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => button.addEventListener('click', () => selectMarkerType(button.dataset.tryitType)));
-    const input = appRoot?.querySelector('[data-tryit-name]');
-    appRoot?.querySelector('[data-tryit-save]')?.addEventListener('click', () => {
-        const typeName = { plant: 'Plant', note: 'Note', poi: 'Point of Interest' }[markerType];
-        markerName = input.value.trim() || typeName;
-        updateMarkerTexture();
-        if (simulatedMode) appRoot.querySelector('[data-tryit-sim-marker]')?.replaceChildren(document.createTextNode(markerName));
+    appRoot?.querySelector('[data-tryit-apply]')?.addEventListener('click', () => {
+        if (!marker || markerType === 'marker') return;
+        if (marker.texture) gl?.deleteTexture(marker.texture);
+        marker.type = markerType;
+        marker.texture = createMarkerTexture(marker);
+        updateSimulatedMarkers();
         clearPanel();
-        setGuide(`${markerName} saved in space.`);
+        const placedCount = markers.length;
+        marker = null;
+        markerType = 'marker';
+        if (placedCount < 3) {
+            appRoot?.querySelector('[data-tryit-place]')?.removeAttribute('hidden');
+            const placementLabel = appRoot?.querySelector('[data-tryit-place] strong');
+            if (placementLabel) placementLabel.textContent = `Place marker ${placedCount + 1} of 3`;
+            setGuide(`Marker ${placedCount} applied. Place marker ${placedCount + 1} of 3.`);
+        } else {
+            setGuide('Three markers placed. Move around to view their different shapes.');
+        }
     });
+}
+
+function updateSimulatedMarkers() {
+    const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
+    if (!layer || !simulatedMode) return;
+    layer.innerHTML = markers.map((record, index) => `<span class="tryit-sim-marker tryit-sim-marker-${record.type}" style="--marker-index:${index}">${record.type === 'plant' ? '&#x1F331;' : record.type === 'note' ? '&#x270E; Note' : record.type === 'area' ? '&#x25C6; Area' : 'Marker'}</span>`).join('');
 }
 
 function placementPosition() {
@@ -94,26 +100,32 @@ function placementPosition() {
 }
 
 function placeMarker() {
-    if (marker) return;
+    if (marker || markers.length >= 3) return;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
         return;
     }
-    marker = position;
+    marker = { position, type: 'marker', texture: null };
+    marker.texture = createMarkerTexture(marker);
+    markers.push(marker);
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
-    if (simulatedMode) appRoot?.querySelector('[data-tryit-sim-marker]')?.removeAttribute('hidden');
-    appRoot?.querySelector('[data-tryit-name-controls]')?.removeAttribute('hidden');
-    setGuide(`${markerName} placed in space.`);
+    appRoot?.querySelector('[data-tryit-marker-controls]')?.removeAttribute('hidden');
+    appRoot?.querySelector('[data-tryit-apply]')?.setAttribute('disabled', '');
+    appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => {
+        button.classList.remove('is-selected');
+        button.setAttribute('aria-pressed', 'false');
+    });
+    updateSimulatedMarkers();
+    setGuide('Your marker has been placed. What type of marker is this?');
 }
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><div class="tryit-marker-controls" aria-label="What is this marker?"><span>Marker type</span><div class="tryit-type-grid"><button type="button" data-tryit-type="plant" aria-pressed="false">&#x1F331; Plant</button><button type="button" data-tryit-type="note" aria-pressed="false">&#x270E; Note</button><button type="button" data-tryit-type="poi" aria-pressed="false">&#x25C6; Place</button></div><div class="tryit-name-controls" data-tryit-name-controls hidden><input type="text" name="nourishland-marker-label" data-tryit-name value="${escapeHtml(markerName)}" maxlength="60" aria-label="Marker name" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore /><button type="button" data-tryit-save>Save</button></div></div><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div class="tryit-sim-marker" data-tryit-sim-marker hidden>Marker</div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><div class="tryit-marker-controls" data-tryit-marker-controls aria-label="What is this marker?" hidden><span>Your marker has been placed. What type of marker is this?</span><div class="tryit-type-grid"><button type="button" data-tryit-type="plant" aria-pressed="false">&#x1F331; Plant</button><button type="button" data-tryit-type="note" aria-pressed="false">&#x270E; Note</button><button type="button" data-tryit-type="area" aria-pressed="false">&#x25C6; Area</button></div><button class="tryit-apply" type="button" data-tryit-apply disabled>Apply</button></div><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Place marker 1 of 3</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     bindMarkerControls();
-    selectMarkerType('plant');
 }
 
 function multiply(a, b) {
@@ -124,13 +136,13 @@ function multiply(a, b) {
     return out;
 }
 
-function billboardMatrix(position) {
+function billboardMatrix(position, scaleX = 1, scaleY = 1) {
     const camera = viewerMatrix || new Float32Array(16);
     let x = camera[12] - position.x;
     let z = camera[14] - position.z;
     const length = Math.hypot(x, z) || 1;
     x /= length; z /= length;
-    return new Float32Array([z, 0, -x, 0, 0, 1, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
+    return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
 function setupRenderer() {
@@ -145,10 +157,9 @@ function setupRenderer() {
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
-    updateMarkerTexture();
 }
 
-function updateMarkerTexture() {
+function unusedLegacyMarkerTexture() {
     if (!gl) return;
     const label = document.createElement('canvas');
     label.width = 360; label.height = 112;
@@ -169,20 +180,69 @@ function updateMarkerTexture() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
+function createMarkerTexture(record) {
+    if (!gl) return null;
+    const label = document.createElement('canvas');
+    label.width = 512;
+    label.height = 128;
+    const ctx = label.getContext('2d');
+    if (record.type === 'plant') {
+        ctx.fillStyle = '#4f8d3f';
+        ctx.beginPath();
+        ctx.arc(256, 64, 58, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '54px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🌱', 256, 84);
+    } else if (record.type === 'marker') {
+        ctx.fillStyle = '#365342';
+        ctx.beginPath();
+        ctx.arc(256, 64, 48, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 42px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('◆', 256, 80);
+    } else {
+        ctx.fillStyle = record.type === 'note' ? '#d6a928' : '#357fc4';
+        ctx.beginPath();
+        ctx.roundRect(8, 10, 496, 108, 28);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 35px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(record.type === 'note' ? '✎  Note' : '◆  Area', 256, 77);
+    }
+    const markerTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, markerTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return markerTexture;
+}
+
 function drawMarker(view) {
-    if (!marker || !texture) return;
-    const model = billboardMatrix(marker);
-    const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     const p = gl.getAttribLocation(program, 'p'); const uv = gl.getAttribLocation(program, 'uv');
     gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p, 3, gl.FLOAT, false, 20, 0);
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    markers.forEach(record => {
+        if (!record.texture) return;
+        const compact = ['plant', 'marker'].includes(record.type);
+        const model = billboardMatrix(record.position, compact ? .38 : 1, compact ? .95 : 1);
+        const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, record.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
 }
 
 async function startImmersive() {

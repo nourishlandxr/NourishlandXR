@@ -547,15 +547,22 @@ h1 {
 .tryit-guide { position: fixed; left: 50%; top: calc(50% + 58px); z-index: 12002; margin: 0; transform: translateX(-50%); color: #fff; font-size: .88rem; font-weight: 700; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: none; white-space: nowrap; }
 .tryit-exit { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 12003; pointer-events: auto; border-color: rgba(255,255,255,.55); background: rgba(12,27,18,.72); color: #fff; backdrop-filter: blur(8px); }
 .tryit-marker-controls { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 12004; display: grid; gap: 6px; width: min(92vw, 390px); padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.34); border-radius: 15px; background: rgba(18,52,31,.38); color: #fff; box-shadow: 0 5px 18px rgba(0,0,0,.16); backdrop-filter: blur(7px); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-stretch: normal; pointer-events: auto; }
+.tryit-marker-controls[hidden] { display: none; }
 .tryit-marker-controls > span { padding-left: 3px; font-size: .68rem; font-weight: 800; text-shadow: 0 1px 5px rgba(0,0,0,.8); }
 .tryit-type-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tryit-type-grid button { min-height: 38px; padding: 5px; border-color: rgba(255,255,255,.36); background: rgba(255,255,255,.1); color: #fff; font-family: inherit; font-size: .72rem; font-stretch: normal; }
 .tryit-type-grid button.is-selected { border-color: #dcef95; background: rgba(220,239,149,.3); box-shadow: inset 0 0 0 1px rgba(220,239,149,.28); }
+.tryit-apply { min-height: 38px; border-color: #dcef95; background: rgba(220,239,149,.28); color: #fff; font: inherit; }
+.tryit-apply:disabled { opacity: .45; }
 .tryit-name-controls { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 .tryit-name-controls[hidden] { display: none; }
 .tryit-name-controls input { min-width: 0; min-height: 38px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.38); border-radius: 9px; background: rgba(255,255,255,.14); color: #fff; font: inherit; }
 .tryit-name-controls button { min-height: 38px; border-color: #dcef95; background: rgba(220,239,149,.28); color: #fff; }
 .tryit-sim-marker { position: fixed; left: 50%; top: 40%; z-index: 12001; padding: 7px 12px; transform: translate(-50%, -50%); border: 1px solid rgba(220,239,149,.88); border-radius: 999px; background: rgba(17,58,32,.9); color: #fff; font-size: .78rem; font-weight: 800; }
+.tryit-sim-marker { left: calc(34% + var(--marker-index) * 16%); top: calc(36% + var(--marker-index) * 8%); }
+.tryit-sim-marker-plant { width: 42px; height: 42px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #4f8d3f; }
+.tryit-sim-marker-note { min-width: 110px; background: #d6a928; }
+.tryit-sim-marker-area { min-width: 110px; background: #357fc4; }
 .tryit-demo.is-immersive .tryit-sim-marker { display: none !important; }
 
 .temporary-ar-demo { position: fixed; inset: 0; z-index: 12000; overflow: hidden; background: #183426; }

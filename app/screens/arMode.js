@@ -29,9 +29,9 @@ let dragState = null;
 let readyPlacementType = '';
 let pendingPlacedRecord = null;
 
-const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point', area_checkpoint: 'area marker' })[type] || 'item';
-const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x25CE;' })[type] || '&#x25C6;';
-const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point', area_checkpoint: 'Area Marker' })[type] || 'Draft';
+const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
+const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
+const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function setPlacementStatus(message) {
@@ -139,7 +139,7 @@ function showPlacedMarkerActions(record) {
     if (!picker) return;
     pendingPlacedRecord = record;
     picker.hidden = false;
-    const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
+    const fixedType = record.marker.type === 'intro_checkpoint';
     picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What type of marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
@@ -346,7 +346,7 @@ async function armPlacement(type) {
 
 async function setPlacedMarkerType(record, type) {
     if (!record || pendingPlacedRecord !== record) return;
-    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New area' };
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point' };
     try {
         const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
             ...record.marker,
@@ -525,7 +525,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeProjectId = projectId;
     activeAreaId = areaId;
     activeCheckpointId = checkpointId;
-    readyPlacementType = ['plant', 'sub_checkpoint', 'note', 'intro_checkpoint', 'area_checkpoint'].includes(initialPlacementType) ? initialPlacementType : '';
+    readyPlacementType = ['plant', 'sub_checkpoint', 'note', 'intro_checkpoint'].includes(initialPlacementType) ? initialPlacementType : '';
     createOverlay();
 
     try {

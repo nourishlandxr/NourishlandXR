@@ -692,7 +692,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             quickActions: [
                 { icon: '📍', label: 'Add Marker', action: `window.startArMode('${encoded(project.id)}', '', '', 'sub_checkpoint')` },
                 { icon: '✎', label: 'Add Note', action: `window.startArMode('${encoded(project.id)}', '', '', 'note')` },
-                { icon: '⌖', label: 'Add Area Marker', action: `window.startArMode('${encoded(project.id)}', '', '', 'area_checkpoint')` },
+                { icon: '⌖', label: 'Starting Point', action: startingPoint ? `window.editProjectStartingPoint('${encoded(project.id)}')` : `window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')` },
                 { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
             ],
             guidance,
@@ -854,7 +854,7 @@ export async function renderNewLocationSetup(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project } = await projectContent(projectId);
-        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">New project</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">Start placing now. Organisation and details can be added later.</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')"><strong>Place Starting Point in AR</strong><span>1. Open AR · 2. Aim at an object · 3. Tap to place.</span></button><button class="content-type-row" type="button" onclick="window.startArMode('${encoded(project.id)}', '', '', 'area_checkpoint')"><strong>Place Area Marker in AR</strong><span>Place a simple marker now. Name and organise it later.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>Open Dashboard</strong><span>Skip setup and begin anywhere.</span></button></div></div>`;
+        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">New project</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">Start placing now. Organisation and details can be added later.</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')"><strong>Place Starting Point in AR</strong><span>1. Open AR · 2. Aim at an object · 3. Tap to place.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>Open Dashboard</strong><span>Skip setup and begin anywhere. Area information can be added later.</span></button></div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }

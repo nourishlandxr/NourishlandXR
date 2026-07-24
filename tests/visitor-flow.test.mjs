@@ -136,7 +136,7 @@ test('fresh projects can start freely and place Starting Point or Area markers i
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
     assert.match(dashboardSource, /Place Starting Point in AR/);
-    assert.match(dashboardSource, /Place Area Marker in AR/);
+    assert.doesNotMatch(dashboardSource.slice(dashboardSource.indexOf('export async function renderNewLocationSetup'), dashboardSource.indexOf('export async function renderAddToLocation')), /Place Area Marker in AR/);
     assert.match(dashboardSource, /1\. Open AR/);
     assert.match(dashboardSource, /2\. Aim at an object/);
     assert.match(dashboardSource, /3\. Tap to place/);
@@ -171,19 +171,22 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo chooses a marker type without a camera-blocking panel', () => {
+test('temporary AR demo applies types to three neutral markers without opening a keyboard', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(source, /Tap to place marker/);
+    assert.match(source, /Place marker 1 of 3/);
     assert.match(source, /What is this marker\?/);
-    assert.match(source, /Point of Interest/);
-    assert.match(source, /data-tryit-name-controls/);
-    assert.match(source, /if \(simulatedMode\).*data-tryit-sim-marker/);
+    assert.match(source, /Your marker has been placed/);
+    assert.match(source, /data-tryit-type="plant"/);
+    assert.match(source, /data-tryit-type="note"/);
+    assert.match(source, /data-tryit-type="area"/);
+    assert.match(source, /data-tryit-apply/);
+    assert.match(source, /markers\.length >= 3/);
+    assert.doesNotMatch(source, /<input|autocomplete="off"/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
-    assert.match(source, /function updateMarkerTexture/);
-    assert.match(source, /if \(marker\) return/);
+    assert.match(source, /function createMarkerTexture/);
     assert.doesNotMatch(source, /Loading Dashboard|Place Your Dashboard|draggable-window/);
     assert.match(source, /isSessionSupported\('immersive-ar'\)/);
     assert.match(source, /makeXRCompatible/);
@@ -193,8 +196,9 @@ test('temporary AR demo chooses a marker type without a camera-blocking panel', 
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
-    assert.match(source, /autocomplete="off"/);
-    assert.doesNotMatch(source, /querySelector\('\[data-tryit-name\]'\)\?\.focus\(\)/);
+    assert.match(source, /'#4f8d3f'/);
+    assert.match(source, /'#d6a928'/);
+    assert.match(source, /'#357fc4'/);
     assert.match(source, /hitMatrix\[12\]/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
