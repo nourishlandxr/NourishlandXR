@@ -618,11 +618,6 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-after-place-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .creator-ar-marker-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive { pointer-events: auto; }
-.creator-ar-ready-placement { position: fixed; left: 50%; top: 50%; z-index: 2; display: grid; justify-items: center; gap: 8px; width: max-content; min-width: 0; min-height: 0; padding: 0; transform: translate(-50%, -50%); border: 0; border-radius: 0; background: transparent !important; box-shadow: none !important; color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .02em; text-shadow: 0 2px 8px rgba(0,0,0,.7); pointer-events: auto; cursor: pointer; }
-.creator-ar-ready-placement[hidden] { display: none; }
-.creator-ar-ready-ring { width: 46px; height: 46px; border: 2px solid rgba(220,239,149,.98); border-radius: 50%; background: rgba(220,239,149,.16); box-shadow: 0 0 0 8px rgba(220,239,149,.14), 0 0 24px rgba(220,239,149,.5); animation: creator-ar-ready-pulse 1.55s ease-in-out infinite; }
-.creator-ar-ready-placement:active .creator-ar-ready-ring { transform: scale(.9); }
-@keyframes creator-ar-ready-pulse { 0%, 100% { transform: scale(.9); opacity: .72; } 50% { transform: scale(1.12); opacity: 1; } }
 .creator-ar-marker { position: fixed; display: block; box-sizing: border-box; width: 13px; height: 13px; min-width: 0; min-height: 0; padding: 0; border: 1px solid rgba(238,248,235,.68); border-radius: 50%; background: radial-gradient(circle at 38% 32%, rgba(238,248,235,.72) 0 14%, rgba(126,190,104,.48) 28% 62%, rgba(75,133,63,.2) 100%) !important; box-shadow: 0 0 0 4px rgba(230,246,223,.055), 0 0 15px rgba(164,221,139,.24); overflow: hidden; backdrop-filter: blur(3px); pointer-events: none; transition: transform .12s ease-out, box-shadow .2s ease-out; }
 .creator-ar-marker-note { background: radial-gradient(circle at 38% 32%, rgba(255,248,218,.78) 0 14%, rgba(214,169,40,.5) 28% 62%, rgba(145,105,18,.2) 100%) !important; }
 .creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: radial-gradient(circle at 38% 32%, rgba(236,247,255,.78) 0 14%, rgba(82,157,211,.5) 28% 62%, rgba(29,91,139,.2) 100%) !important; }

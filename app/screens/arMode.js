@@ -35,6 +35,7 @@ let hitTestSource = null;
 let latestHitMatrix = null;
 let markerProgram = null;
 let markerBuffer = null;
+let placementArmedAt = 0;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -47,15 +48,7 @@ function setPlacementStatus(message) {
 }
 
 function updateReadyPlacementControl() {
-    const control = overlayRoot?.querySelector('[data-ar-ready-place]');
-    if (!control) return;
-    const ready = Boolean(readyPlacementType);
-    control.hidden = !ready;
-    if (!ready) return;
-    const label = readyPlacementLabel(readyPlacementType);
-    control.setAttribute('aria-label', `Place ${label}`);
-    const text = control.querySelector('[data-ar-ready-place-label]');
-    if (text) text.textContent = `Place ${label}`;
+    overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
 }
 
 function placementPoint() {
@@ -203,7 +196,7 @@ function setupSpatialMarkerRenderer() {
 }
 
 function drawSpatialMarkers(view) {
-    if (!markerProgram || !markerBuffer || !sessionMarkers.length) return;
+    if (!markerProgram || !markerBuffer) return;
     gl.useProgram(markerProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
     const positionLocation = gl.getAttribLocation(markerProgram, 'p');
@@ -219,6 +212,14 @@ function drawSpatialMarkers(view) {
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), colors[record.marker.type] || colors.sub_checkpoint);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
+    if (readyPlacementType && latestHitMatrix) {
+        const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .035, z: latestHitMatrix[14] };
+        const model = markerBillboardMatrix(target, .07);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.72, .9, .58]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
 }
 
 function positionSessionMarkers(view = latestView) {
@@ -408,6 +409,7 @@ async function armPlacement(type) {
     closeInlineEditor();
     closePlacePicker();
     readyPlacementType = type;
+    placementArmedAt = performance.now();
     updateReadyPlacementControl();
     if (await ensurePlacementArea()) {
         setPlacementStatus(`${readyPlacementLabel(type)} ready. Tap the centre circle to place it.`);
@@ -494,7 +496,6 @@ function createOverlay() {
     overlayRoot.innerHTML = `
         <p class="sr-only" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
-        <span class="creator-ar-ready-placement" role="button" tabindex="0" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></span>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
@@ -515,16 +516,6 @@ function createOverlay() {
         void armPlacement('sub_checkpoint');
     });
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
-    const readyPlacementControl = overlayRoot.querySelector('[data-ar-ready-place]');
-    readyPlacementControl.addEventListener('click', () => {
-        if (readyPlacementType) void quickPlace(readyPlacementType);
-    });
-    readyPlacementControl.addEventListener('keydown', event => {
-        if ((event.key === 'Enter' || event.key === ' ') && readyPlacementType) {
-            event.preventDefault();
-            void quickPlace(readyPlacementType);
-        }
-    });
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     updateReadyPlacementControl();
     document.body.append(overlayRoot);
@@ -555,6 +546,7 @@ function cleanup() {
     pendingPlacedRecord = null;
     markerProgram = null;
     markerBuffer = null;
+    placementArmedAt = 0;
     gl = null;
 }
 
@@ -641,6 +633,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         session.addEventListener('end', () => {
             session = null;
             cleanup();
+        });
+        session.addEventListener('select', () => {
+            if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);
         });
         session.requestAnimationFrame(draw);
         return true;

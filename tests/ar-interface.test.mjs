@@ -37,11 +37,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
     assert.equal((taskbar.match(/<button/g) || []).length, 3);
-    assert.match(arSource, /data-ar-ready-place/);
-    assert.match(arSource, /creator-ar-ready-ring/);
-    assert.match(arSource, /<span class="creator-ar-ready-placement" role="button"/);
-    assert.doesNotMatch(arSource, /<button class="creator-ar-ready-placement"/);
-    assert.match(arSource, /readyPlacementControl\.addEventListener\('keydown'/);
+    assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
+    assert.match(arSource, /session\.addEventListener\('select'/);
+    assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
+    assert.match(arSource, /readyPlacementType && latestHitMatrix/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
@@ -217,8 +216,7 @@ test('dashboard quick marker and note actions open AR with a ready centre placem
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
     assert.match(arSource, /readyPlacementType = '';\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = ''\)/);
-    assert.match(styles, /\.creator-ar-ready-placement/);
-    assert.match(styles, /creator-ar-ready-pulse/);
+    assert.doesNotMatch(styles, /\.creator-ar-ready-placement|creator-ar-ready-pulse/);
 });
 
 test('dashboard search indexes readable content and ranks name matches', () => {
