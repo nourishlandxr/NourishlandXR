@@ -4,7 +4,7 @@ export function renderLaunchScreen(app) {
     app.innerHTML = `
         <div class="screen launch-screen intro-launch">
             <div class="page-header intro-heading">
-                <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p></div>
+                <div><h1>NOURISH LAND<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p><span class="version-badge welcome-version-badge" aria-label="Version">V${BUILD_INFO.version}</span></div>
             </div>
 
             <section class="intro-copy" aria-labelledby="demoWelcomeTitle">
@@ -41,7 +41,6 @@ export function renderLaunchScreen(app) {
         <nav class="platform-landing-nav" aria-label="Platform navigation">
             <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
             <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
-            <span class="version-badge" aria-label="Version">V${BUILD_INFO.version}</span>
         </nav>
 
             <p class="collaboration-credit"><strong>NourishlandXR</strong> is a collaboration between <strong>Nourishland</strong> and <strong>CyberLotus</strong>, combining regenerative education with immersive technology to transform real landscapes into interactive learning experiences through spatial computing and augmented reality.</p>

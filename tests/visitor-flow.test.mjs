@@ -13,10 +13,13 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.match(app.innerHTML, /Build and manage locations, content and visitor experiences/);
     assert.match(app.innerHTML, /Explore a Place/);
     assert.match(app.innerHTML, /welcome-complementary-grid/);
-    assert.match(app.innerHTML, /About This Experience/);
+    assert.match(app.innerHTML, /About This Tool/);
     assert.match(app.innerHTML, /Understand what NourishlandXR is and what it can help you build/);
-    assert.match(app.innerHTML, /Try It Now/);
-    assert.match(app.innerHTML, /Experience a quick demonstration of information appearing within a real place/);
+    assert.match(app.innerHTML, /TRY IT NOW/);
+    const header = app.innerHTML.slice(app.innerHTML.indexOf('intro-heading'), app.innerHTML.indexOf('</div>', app.innerHTML.indexOf('intro-heading')) + 6);
+    assert.match(header, /Plant literacy/);
+    assert.match(header, /welcome-version-badge/);
+    assert.match(app.innerHTML, /Place a living story in your space/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
     assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);

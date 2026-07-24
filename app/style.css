@@ -2375,6 +2375,7 @@ body.ar-session-active::after {
     color: var(--leaf-deep);
     user-select: none;
 }
+.welcome-version-badge { display: inline-flex; margin-top: 7px; font-size: .68rem; letter-spacing: .045em; opacity: .78; }
 
 .platform-utility-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
