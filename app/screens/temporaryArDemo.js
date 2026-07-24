@@ -245,42 +245,67 @@ function unusedLegacyMarkerTexture() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
+function drawWrappedTextureText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+    const words = String(text || '').split(/\s+/);
+    const lines = [];
+    let line = '';
+    words.forEach(word => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = candidate;
+        }
+    });
+    if (line) lines.push(line);
+    lines.slice(0, maxLines).forEach((value, index) => {
+        const lastVisibleLine = index === maxLines - 1 && lines.length > maxLines;
+        let visible = value;
+        if (lastVisibleLine) {
+            while (visible && ctx.measureText(`${visible}…`).width > maxWidth) visible = visible.slice(0, -1);
+            visible += '…';
+        }
+        ctx.fillText(visible, x, y + index * lineHeight);
+    });
+}
+
 function createSpatialKnowledgeTexture(record) {
     const content = DEMO_CONTENT[record.demoType || record.type];
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
-    label.width = 960;
-    label.height = 560;
+    label.width = 1120;
+    label.height = 720;
     const ctx = label.getContext('2d');
-    ctx.scale(1.25, 1.25);
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
     gradient.addColorStop(0, 'rgba(10,32,21,.72)');
     gradient.addColorStop(1, 'rgba(16,42,30,.40)');
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(18, 18, 732, 412, 44);
+    ctx.roundRect(18, 18, 1084, 684, 52);
     ctx.fill();
     ctx.strokeStyle = `${content.accent}b8`;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.stroke();
     ctx.fillStyle = content.accent;
     ctx.beginPath();
-    ctx.arc(72, 78, 18, 0, Math.PI * 2);
+    ctx.arc(82, 88, 22, 0, Math.PI * 2);
     ctx.fill();
     ctx.textAlign = 'left';
     if (record.revealTitle !== false) {
         ctx.fillStyle = '#fff';
-        ctx.font = '600 32px system-ui, sans-serif';
-        ctx.fillText(content.title, 112, 89);
+        ctx.font = '650 43px system-ui, sans-serif';
+        drawWrappedTextureText(ctx, content.title, 130, 102, 900, 50, 2);
     }
     content.lines.slice(0, record.revealLines ?? content.lines.length).forEach((line, index) => {
         const split = line.indexOf('  ');
+        const rowY = 232 + index * 150;
         ctx.fillStyle = content.accent;
-        ctx.font = '700 20px system-ui, sans-serif';
-        ctx.fillText(line.slice(0, split), 58, 174 + index * 78);
+        ctx.font = '750 27px system-ui, sans-serif';
+        ctx.fillText(line.slice(0, split), 62, rowY);
         ctx.fillStyle = 'rgba(255,255,255,.88)';
-        ctx.font = '25px system-ui, sans-serif';
-        ctx.fillText(line.slice(split + 2), 208, 174 + index * 78);
+        ctx.font = '31px system-ui, sans-serif';
+        drawWrappedTextureText(ctx, line.slice(split + 2), 62, rowY + 42, 990, 38, 2);
     });
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -371,7 +396,7 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (!record.texture) return;
         const compact = !record.demoExpanded;
-        const model = billboardMatrix(record.position, compact ? .38 : 1.9, compact ? .38 : 1.5);
+        const model = billboardMatrix(record.position, compact ? .38 : 2.75, compact ? .38 : 4.25);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
