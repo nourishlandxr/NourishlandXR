@@ -26,7 +26,7 @@ let startPromise = null;
 let latestViewerMatrix = null;
 let latestView = null;
 let checkpointSessionOrigin = null;
-let interactionMode = '';
+let interactionMode = 'view';
 let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
@@ -117,28 +117,33 @@ function cleanupDrag() {
 }
 
 function updateInteractionControls() {
+    const eye = overlayRoot?.querySelector('[data-ar-view-mode]');
     const hand = overlayRoot?.querySelector('[data-ar-grab-mode]');
     const pointer = overlayRoot?.querySelector('[data-ar-select-mode]');
+    eye?.classList.toggle('is-active', interactionMode === 'view');
     hand?.classList.toggle('is-active', interactionMode === 'grab');
     pointer?.classList.toggle('is-active', interactionMode === 'select');
+    eye?.setAttribute('aria-pressed', String(interactionMode === 'view'));
     hand?.setAttribute('aria-pressed', String(interactionMode === 'grab'));
     pointer?.setAttribute('aria-pressed', String(interactionMode === 'select'));
     const markerLayer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     markerLayer?.classList.toggle('is-interactive', Boolean(interactionMode));
+    markerLayer?.classList.toggle('is-view-mode', interactionMode === 'view');
     markerLayer?.classList.toggle('is-grab-mode', interactionMode === 'grab');
     markerLayer?.classList.toggle('is-select-mode', interactionMode === 'select');
     overlayRoot?.classList.toggle('is-hand-mode', interactionMode === 'grab');
 }
 
 function setInteractionMode(mode) {
-    interactionMode = interactionMode === mode ? '' : mode;
+    interactionMode = mode;
     cleanupDrag();
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
-    if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Hold an orb, then drag or move your phone to carry it through the space.');
+    if (interactionMode === 'view') setPlacementStatus('Eye mode is on. Hover over an orb to reveal its name.');
+    else if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Hold an orb, then drag or move your phone to carry it through the space.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
 }
@@ -229,7 +234,7 @@ function showPlacedMarkerActions(record) {
 
 function resetArControls() {
     cleanupDrag();
-    interactionMode = '';
+    interactionMode = 'view';
     closeInlineEditor();
     closeAreaChooser();
     closePlacePicker();
@@ -238,7 +243,7 @@ function resetArControls() {
     pendingBagRecord = null;
     updateReadyPlacementControl();
     updateInteractionControls();
-    setPlacementStatus('AR controls reset. Press plus when you are ready to place a marker.');
+    setPlacementStatus('AR controls reset. Eye mode is on; press plus when you are ready to place a marker.');
 }
 
 function multiplyMatrixVector(matrix, vector) {
@@ -434,6 +439,7 @@ function openInlineEditor(record, force = false) {
 
 function beginMarkerInteraction(record, event) {
     if (!interactionMode) return;
+    if (interactionMode === 'view') return;
     event.preventDefault();
     event.stopPropagation();
     if (interactionMode === 'select') {
@@ -482,11 +488,11 @@ async function finishMarkerDrag(event) {
     cleanupDrag();
     try {
         await saveMarkerAnchor(activeProjectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position));
-        interactionMode = '';
+        interactionMode = 'view';
         updateInteractionControls();
-        setPlacementStatus(`${state.record.marker.name} moved. Hand mode is now off.`);
+        setPlacementStatus(`${state.record.marker.name} moved. Eye mode is now on.`);
     } catch (error) {
-        interactionMode = '';
+        interactionMode = 'view';
         updateInteractionControls();
         setPlacementStatus(`Could not save the move: ${error.message}`);
     }
@@ -497,10 +503,10 @@ function cancelMarkerDrag(event) {
     if (!state || event?.pointerId !== state.pointerId) return;
     state.record.position = state.position;
     cleanupDrag();
-    interactionMode = '';
+    interactionMode = 'view';
     updateInteractionControls();
     positionSessionMarkers();
-    setPlacementStatus('Move cancelled. Hand mode is now off.');
+    setPlacementStatus('Move cancelled. Eye mode is now on.');
 }
 
 async function loadPlacementAreas() {
@@ -783,6 +789,7 @@ function createOverlay() {
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-orb" type="button" data-ar-window="tools" aria-label="Add neutral orb"><strong>ADD NEUTRAL ORB</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
+            <button class="creator-ar-mode-control is-active" type="button" data-ar-view-mode aria-label="Eye mode: view marker names" aria-pressed="true"><b class="creator-ar-eye-icon" aria-hidden="true"></b><span class="sr-only">Eye mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
@@ -800,6 +807,7 @@ function createOverlay() {
         void armPlacement('sub_checkpoint');
     });
     overlayRoot.querySelector('[data-ar-open-bag]').addEventListener('click', () => void openUnplacedBag());
+    overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
@@ -831,7 +839,7 @@ function cleanup() {
     hitTestSource = null;
     latestHitMatrix = null;
     checkpointSessionOrigin = null;
-    interactionMode = '';
+    interactionMode = 'view';
     sessionMarkers = [];
     readyPlacementType = '';
     pendingPlacedRecord = null;

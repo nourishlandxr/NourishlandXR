@@ -640,6 +640,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-add-orb strong { font-size: .68rem; letter-spacing: .055em; }
 .creator-ar-mode-control, .creator-ar-icon-control { min-width: 34px; justify-content: center; padding-inline: 6px !important; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
+.creator-ar-eye-icon { position: relative; display: inline-block; width: 17px; height: 10px; border: 1px solid rgba(255,255,255,.76); border-radius: 70% 12% 70% 12%; transform: rotate(-45deg); background: rgba(255,255,255,.06); }
+.creator-ar-eye-icon::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(220,239,149,.82); box-shadow: 0 0 6px rgba(220,239,149,.48); }
 .creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; width: min(88vw, 340px); gap: 7px; padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; background: rgba(12,34,22,.58) !important; box-shadow: 0 6px 20px rgba(0,0,0,.15); backdrop-filter: blur(12px); color: #fff; pointer-events: auto; }
 .creator-ar-place-picker[hidden] { display: none; }
 .creator-ar-place-picker p { margin: 0; font-size: .72rem; font-weight: 800; text-shadow: 0 1px 5px rgba(0,0,0,.65); }
@@ -663,7 +665,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; }
 .creator-ar-spatial-name { position: absolute; left: 50%; bottom: calc(100% + 4px); max-width: min(42vw, 180px); padding: 4px 8px; transform: translate(-50%, 3px); overflow: hidden; border: 1px solid rgba(238,248,235,.28); border-radius: 999px; background: rgba(13,34,21,.5); color: rgba(255,255,255,.94); box-shadow: 0 4px 14px rgba(0,0,0,.16); opacity: 0; visibility: hidden; backdrop-filter: blur(8px); font-size: .68rem; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.5); white-space: nowrap; transition: opacity .16s ease, transform .16s ease, visibility .16s; }
 .creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
-.creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name,
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .creator-ar-area-board-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(137,200,239,.35); border-radius: 12px; }
 .creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(255,224,137,.34); background: rgba(65,49,13,.5); }

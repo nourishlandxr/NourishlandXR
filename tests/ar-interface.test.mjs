@@ -38,11 +38,13 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /data-ar-placed-type="area_checkpoint"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
+    assert.match(arSource, /data-ar-view-mode/);
     assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
+    assert.match(styles, /\.creator-ar-eye-icon/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(taskbar, /data-ar-open-bag/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 5);
+    assert.equal((taskbar.match(/<button/g) || []).length, 6);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.match(arSource, /creator-ar-hand-pointer/);
@@ -66,6 +68,7 @@ test('Creator AR exposes the compact placement toolbar', () => {
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
     const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
     const configSource = read('app/services/arExperienceConfig.js');
     const serverSource = read('tools/persistence-server.mjs');
     const persistenceSource = read('app/services/persistence.js');
@@ -75,12 +78,14 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /draftName = `\$\{baseName\} \(\$\{suffix\+\+\}\)`/);
     assert.match(arSource, /saveMarkerAnchor/);
     assert.match(arSource, /type: 'spatial'/);
-    assert.match(arSource, /interactionMode = interactionMode === mode \? '' : mode/);
+    assert.match(arSource, /let interactionMode = 'view'/);
+    assert.match(arSource, /interactionMode = mode/);
+    assert.match(arSource, /Eye mode is on\. Hover over an orb to reveal its name/);
     assert.match(arSource, /Hand mode is on/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
     assert.match(arSource, /Pointer mode is on/);
-    assert.match(arSource, /Interaction is off/);
+    assert.match(arSource, /interactionMode === 'view'\) return/);
     assert.match(arSource, /openInlineEditor/);
     assert.match(arSource, /openInlineEditor\(record, true\)/);
     assert.match(arSource, /deletePlaceMarker/);
@@ -96,12 +101,13 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
-    assert.match(arSource, /Hand mode is now off/);
-    assert.match(arSource, /Move cancelled\. Hand mode is now off/);
+    assert.match(arSource, /moved\. Eye mode is now on/);
+    assert.match(arSource, /Move cancelled\. Eye mode is now on/);
+    assert.match(styles, /\.creator-ar-marker-layer\.is-view-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
     assert.match(arSource, /function resetArControls\(\)/);
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
-    assert.match(arSource, /AR controls reset\. Press plus when you are ready to place a marker/);
+    assert.match(arSource, /AR controls reset\. Eye mode is on; press plus when you are ready to place a marker/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(arSource, /createSitePlace/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
