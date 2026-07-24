@@ -177,7 +177,30 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         'Checking the compost…',
         'Inviting the pollinators…',
         'Untangling the garden hose…',
-        'Labeling the seedlings…'
+        'Labeling the seedlings…',
+        'Waking up the worms…',
+        'Sharpening the secateurs…',
+        'Mulching the pathways…',
+        'Turning the compost pile…',
+        'Checking for rain…',
+        'Making tea for the gardener…',
+        'Counting ladybirds…',
+        'Training the climbing beans…',
+        'Moving the wheelbarrow…',
+        'Finding the missing trowel…',
+        'Watering the young trees…',
+        'Listening for frogs…',
+        'Opening the seed library…',
+        'Sketching the garden beds…',
+        'Pruning the fruit trees…',
+        'Checking the beehive…',
+        'Planting a few surprises…',
+        'Sweeping the potting bench…',
+        'Mapping the mycelium…',
+        'Gathering fallen leaves…',
+        'Welcoming the beneficial insects…',
+        'Following the garden path…',
+        'Giving the soil a moment…'
     ];
     if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
         history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName }, '', window.location.href);
@@ -195,7 +218,7 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         if (!comment) return;
         loadingCommentIndex = (loadingCommentIndex + 1) % gardenLoadingComments.length;
         comment.textContent = gardenLoadingComments[loadingCommentIndex];
-    }, 850);
+    }, 2200);
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try {
         return await renderProjectDashboard(app, projectId);

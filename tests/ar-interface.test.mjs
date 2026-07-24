@@ -174,7 +174,9 @@ test('opening a project paints a dashboard loading state before data work begins
     assert.match(mainSource, /Adding the trellis/);
     assert.match(mainSource, /Soaking the seeds/);
     assert.match(mainSource, /Digging a few holes/);
-    assert.match(mainSource, /setInterval/);
+    assert.match(mainSource, /Waking up the worms/);
+    assert.match(mainSource, /Mapping the mycelium/);
+    assert.match(mainSource, /\}, 2200\)/);
     assert.match(mainSource, /clearInterval\(loadingCommentTimer\)/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
     assert.match(mainSource, /window\.addEventListener\('popstate'/);
@@ -310,8 +312,8 @@ test('dashboard focuses on Open AR and the Unplaced Bag', () => {
     assert.match(arSource, /if \(!\/unsupported\/i\.test/);
     assert.match(arSource, /areas\.find\(item => item\.id === record\.areaId\)/);
     assert.match(arSource, /Area welcome board/);
-    assert.match(arSource, /creator-ar-spatial-area-board/);
-    assert.match(styles, /\.creator-ar-spatial-area-board/);
+    assert.doesNotMatch(arSource, /const boardHtml/);
+    assert.match(styles, /\.creator-ar-marker-layer\.is-select-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
     assert.match(arSource, /readyPlacementType = AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
     assert.match(configSource, /placementDistanceMetres: 1\.2/);
     assert.match(configSource, /name: 'Unassigned'/);
