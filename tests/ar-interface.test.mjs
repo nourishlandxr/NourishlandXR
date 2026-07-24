@@ -24,6 +24,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
     assert.match(arSource, /data-ar-window="tools"/);
+    assert.match(arSource, /ADD NEUTRAL ORB/);
+    assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-orb/);
     assert.match(arSource, /data-ar-place-picker/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /function armPlacement\(type\)/);
@@ -158,6 +160,16 @@ test('project settings can rename a project and Areas toggle from the dashboard'
     assert.match(entrySource, /onclick="window\.toggleAreas\(this\)"/);
     assert.match(entrySource, /aria-expanded="false"/);
     assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
+});
+
+test('opening a project paints a dashboard loading state before data work begins', () => {
+    const mainSource = read('app/main.js');
+    const styles = read('app/style.css');
+    assert.match(mainSource, /class="project-loading-screen"/);
+    assert.match(mainSource, /Opening your project/);
+    assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
+    assert.match(styles, /\.project-loading-track span/);
+    assert.match(styles, /@keyframes project-loading-progress/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {

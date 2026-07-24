@@ -162,7 +162,17 @@ window.renderDemoProjects = async () => {
         window.alert(error.message);
     }
 };
-window.renderProjectDashboard = projectId => renderProjectDashboard(app, projectId);
+window.renderProjectDashboard = async projectId => {
+    app.innerHTML = `<div class="project-loading-screen" role="status" aria-live="polite">
+        <div class="project-loading-mark" aria-hidden="true">◉</div>
+        <p class="welcome-label">Nourishland XR</p>
+        <h1>Opening your project</h1>
+        <p>Loading dashboard, markers and Areas…</p>
+        <div class="project-loading-track" aria-hidden="true"><span></span></div>
+    </div>`;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return renderProjectDashboard(app, projectId);
+};
 window.toggleAreas = toggleAreas;
 window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);

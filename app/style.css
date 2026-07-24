@@ -633,6 +633,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-taskbar button, body[data-project-theme] .creator-ar-taskbar button { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 6px 7px; border: 1px solid transparent; border-radius: 11px; background: transparent !important; color: rgba(255,255,255,.78); font-size: .66rem; white-space: nowrap; }
 .creator-ar-taskbar button b { font-size: .95rem; line-height: 1; }
 .creator-ar-taskbar button.is-active { border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.16); color: #fff; }
+.creator-ar-taskbar .creator-ar-add-orb, body[data-project-theme] .creator-ar-taskbar .creator-ar-add-orb { min-height: 38px; padding: 7px 13px; border-color: rgba(220,239,149,.68); background: linear-gradient(135deg, rgba(91,143,74,.96), rgba(52,102,61,.96)) !important; color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.08); }
+.creator-ar-add-orb strong { font-size: .68rem; letter-spacing: .055em; }
 .creator-ar-mode-control, .creator-ar-icon-control { min-width: 34px; justify-content: center; padding-inline: 6px !important; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
 .creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; width: min(88vw, 340px); gap: 7px; padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; background: rgba(12,34,22,.58) !important; box-shadow: 0 6px 20px rgba(0,0,0,.15); backdrop-filter: blur(12px); color: #fff; pointer-events: auto; }
@@ -3071,6 +3073,15 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .dashboard-open-ar > span { grid-row: 1 / 3; font-size: 2rem; }
 .dashboard-open-ar strong { font-size: clamp(1.45rem, 4vw, 2rem); letter-spacing: .04em; }
 .dashboard-open-ar small { color: rgba(255,255,255,.8); font-size: .78rem; line-height: 1.4; }
+.project-loading-screen { position: fixed; inset: 0; z-index: 15000; display: grid; align-content: center; justify-items: center; gap: 10px; box-sizing: border-box; padding: 28px; background: radial-gradient(circle at 50% 40%, rgba(130,181,113,.2), transparent 34%), #f2f6ef; color: #203b29; text-align: center; }
+.project-loading-screen h1, .project-loading-screen p { margin: 0; }
+.project-loading-screen h1 { font-size: clamp(1.55rem, 6vw, 2.35rem); }
+.project-loading-screen > p:not(.welcome-label) { color: #66746b; font-size: .86rem; }
+.project-loading-mark { display: grid; place-items: center; width: 62px; height: 62px; border: 1px solid rgba(67,119,74,.3); border-radius: 50%; background: rgba(255,255,255,.72); color: #4d8653; box-shadow: 0 12px 30px rgba(40,83,49,.12); font-size: 1.8rem; animation: project-loading-breathe 1.6s ease-in-out infinite; }
+.project-loading-track { width: min(78vw, 360px); height: 7px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: rgba(54,94,62,.12); }
+.project-loading-track span { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #78ad6c, #dcef95); animation: project-loading-progress 1.15s ease-in-out infinite; }
+@keyframes project-loading-breathe { 0%, 100% { transform: scale(.92); opacity: .72; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes project-loading-progress { from { transform: translateX(-110%); } to { transform: translateX(340%); } }
 .dashboard-unplaced-bag { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .dashboard-unplaced-bag button { min-height: 52px; border-color: rgba(48,91,57,.25); background: rgba(239,244,235,.78); color: #243d2b; text-align: left; }
 .dashboard-unplaced-bag button:first-child { display: grid; gap: 2px; }

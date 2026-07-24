@@ -711,7 +711,7 @@ function createOverlay() {
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place marker"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place marker</span></button>
+            <button class="creator-ar-add-orb" type="button" data-ar-window="tools" aria-label="Add neutral orb"><strong>ADD NEUTRAL ORB</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
