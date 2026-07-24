@@ -102,7 +102,7 @@ test('project settings can rename a project and Areas toggle from the dashboard'
     const dashboardSource = read('app/screens/projectDashboard.js');
     const entrySource = read('app/components/projectEntry.js');
     const mainSource = read('app/main.js');
-    assert.match(dashboardSource, /Project Name/);
+    assert.match(dashboardSource, /Project Details/);
     assert.match(dashboardSource, /projectSettingsName/);
     assert.match(dashboardSource, /saveProjectName/);
     assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name \}\)/);

@@ -26,6 +26,7 @@ import { applyPlatformSettings, captureStartingPointLocation, dismissProjectGuid
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent } from './services/tutorialProgress.js';
+import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
 const siteManager = new SiteManager();
@@ -444,8 +445,8 @@ window.createProjectFromForm = async () => {
         const template = projectTemplate.value;
 
         if (name) {
-            const suggestions = (document.getElementById('projectSuggestions')?.value || '').split('\n').map(value => value.trim()).filter(Boolean);
-            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: document.getElementById('projectCoverImage')?.value.trim() || '', visibility: 'draft', siteSuggestions: suggestions });
+            const suggestions = projectTemplates[template]?.sites || [];
+            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', siteSuggestions: suggestions });
             await siteManager.loadSitesFromDisk();
             window.renderNewLocationSetup(encodeURIComponent(created.id));
         }
@@ -464,7 +465,7 @@ window.renameProjectFromForm = async (project) => {
                 name,
                 template: projectTemplate.value,
                 description: document.getElementById('projectDescription')?.value.trim() || '',
-                coverImage: document.getElementById('projectCoverImage')?.value.trim() || ''
+                coverImage: project.coverImage || ''
             });
             await siteManager.loadSitesFromDisk();
             window.renderProjects();

@@ -2,7 +2,7 @@
 import { renderSiteForm } from '../components/siteForm.js';
 import { renderSiteDashboard } from './siteDashboard.js';
 
-let selectedTemplate = 'blank';
+let selectedTemplate = 'food_forest';
 
 export function renderSitesScreen(app, siteManager = new SiteManager()) {
     const sites = siteManager.getAllSites().filter(site => site.id !== 'Banyula');
@@ -79,4 +79,3 @@ export function renderSiteFormScreen(app, siteManager) {
 export function renderSites(app, siteManager) {
     return renderSitesScreen(app, siteManager);
 }
-

@@ -1171,10 +1171,12 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
         </div>
         <section class="panel project-name-setting" aria-labelledby="projectNameTitle">
-            <div class="section-heading-row"><div><h2 id="projectNameTitle">Project Name</h2><p>Rename this project without changing its saved ID, Areas or content.</p></div></div>
+            <div class="section-heading-row"><div><h2 id="projectNameTitle">Project Details</h2><p>Update the project name, description and cover image without changing its saved ID, Areas or content.</p></div></div>
             <form onsubmit="window.saveProjectName(event, '${encoded(project.id)}')">
                 <div class="field"><label for="projectSettingsName">Project name</label><input id="projectSettingsName" value="${escapeHtml(project.name)}" required /></div>
-                <div class="button-row"><button class="primary" type="submit">Save Project Name</button></div>
+                <div class="field"><label for="projectSettingsDescription">Description (optional)</label><textarea id="projectSettingsDescription" rows="4" placeholder="Describe this garden, landscape or learning location.">${escapeHtml(project.description || '')}</textarea></div>
+                <div class="field"><label for="projectSettingsCoverImage">Cover image (optional)</label><input id="projectSettingsCoverImage" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div>
+                <div class="button-row"><button class="primary" type="submit">Save Project Details</button></div>
                 <p id="projectNameStatus" class="meta"></p>
             </form>
         </section>
@@ -1286,19 +1288,21 @@ export async function saveProjectName(app, event, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const status = document.getElementById('projectNameStatus');
     const name = document.getElementById('projectSettingsName')?.value.trim() || '';
+    const description = document.getElementById('projectSettingsDescription')?.value.trim() || '';
+    const coverImage = document.getElementById('projectSettingsCoverImage')?.value.trim() || '';
     if (!name) {
         if (status) status.textContent = 'Project name is required.';
         return;
     }
     try {
-        if (status) status.textContent = 'Saving project name...';
+        if (status) status.textContent = 'Saving project details...';
         const project = await projectById(projectId);
-        const savedProject = await renameProjectOnDisk(projectId, { ...project, preserveId: true, name });
+        const savedProject = await renameProjectOnDisk(projectId, { ...project, preserveId: true, name, description, coverImage });
         const subtitle = document.querySelector('.project-settings-screen .page-header .subtitle');
         if (subtitle) subtitle.textContent = `${savedProject.name} · Project-wide configuration`;
-        if (status) status.textContent = `Project name saved as ${savedProject.name}.`;
+        if (status) status.textContent = 'Project details saved.';
     } catch (error) {
-        if (status) status.textContent = `Project name could not be saved: ${error.message}`;
+        if (status) status.textContent = `Project details could not be saved: ${error.message}`;
     }
 }
 

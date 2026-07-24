@@ -190,3 +190,18 @@ test('temporary AR demo chooses a marker type without a camera-blocking panel', 
     assert.match(source, /hitMatrix\[12\]/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
+
+test('new location asks only for core details and supported templates', () => {
+    const form = fs.readFileSync(path.join(root, 'app/components/siteForm.js'), 'utf8');
+    const templates = fs.readFileSync(path.join(root, 'app/templates/projectTemplates.js'), 'utf8');
+    const dashboard = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    assert.match(form, /Location name/);
+    assert.match(form, /Description \(optional\)/);
+    assert.match(form, /projectTemplate/);
+    assert.doesNotMatch(form, /projectCoverImage|Suggested Locations/);
+    for (const label of ['Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
+        assert.match(templates, new RegExp(label));
+    }
+    assert.match(dashboard, /projectSettingsCoverImage/);
+    assert.match(dashboard, /Cover image \(optional\)/);
+});

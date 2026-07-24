@@ -1,8 +1,9 @@
 export const projectTemplates = {
-    blank: { label: 'Blank Location', sites: [] },
     food_forest: { label: 'Food Forest', sites: ['Main Food Forest', 'Nursery', 'Water Systems'] },
-    nursery: { label: 'Nursery', sites: ['Retail Area', 'Propagation Area', 'Stock Area', 'Dispatch Area'] },
+    native_forest: { label: 'Native Forest', sites: ['Forest', 'Tracks', 'Restoration Areas'] },
     orchard: { label: 'Orchard', sites: ['Orchard Blocks', 'Nursery', 'Packing Area'] },
-    botanical_garden: { label: 'Botanical Garden', sites: ['Collections', 'Trails', 'Visitor Areas'] },
-    national_park: { label: 'National Park', sites: ['Trails', 'Habitats', 'Visitor Areas'] }
+    home_garden: { label: 'Home Garden', sites: ['Front Garden', 'Back Garden', 'Growing Areas'] },
+    kitchen_garden: { label: 'Kitchen Garden', sites: ['Vegetable Beds', 'Herbs', 'Compost Area'] },
+    plant_nursery: { label: 'Plant Nursery', sites: ['Retail Area', 'Propagation Area', 'Stock Area', 'Dispatch Area'] },
+    stock_inventory: { label: 'Stock Inventory', sites: ['Stock Area', 'Storage', 'Dispatch Area'] }
 };
