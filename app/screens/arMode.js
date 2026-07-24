@@ -104,6 +104,7 @@ function cleanupDrag() {
     window.removeEventListener('pointermove', moveMarkerDrag);
     window.removeEventListener('pointerup', finishMarkerDrag);
     window.removeEventListener('pointercancel', cancelMarkerDrag);
+    dragState?.element?.classList.remove('is-adjusting');
     dragState = null;
 }
 
@@ -114,7 +115,10 @@ function updateInteractionControls() {
     pointer?.classList.toggle('is-active', interactionMode === 'select');
     hand?.setAttribute('aria-pressed', String(interactionMode === 'grab'));
     pointer?.setAttribute('aria-pressed', String(interactionMode === 'select'));
-    overlayRoot?.querySelector('[data-ar-marker-layer]')?.classList.toggle('is-interactive', Boolean(interactionMode));
+    const markerLayer = overlayRoot?.querySelector('[data-ar-marker-layer]');
+    markerLayer?.classList.toggle('is-interactive', Boolean(interactionMode));
+    markerLayer?.classList.toggle('is-grab-mode', interactionMode === 'grab');
+    markerLayer?.classList.toggle('is-select-mode', interactionMode === 'select');
 }
 
 function setInteractionMode(mode) {
@@ -366,11 +370,13 @@ function beginMarkerInteraction(record, event) {
     }
     dragState = {
         record,
+        element: event.currentTarget,
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         position: { ...record.position }
     };
+    event.currentTarget.classList.add('is-adjusting');
     event.currentTarget.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointerup', finishMarkerDrag);
@@ -571,6 +577,7 @@ function createOverlay() {
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place marker"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place marker</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
@@ -586,6 +593,7 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement('sub_checkpoint');
     });
+    overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();

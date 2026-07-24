@@ -35,9 +35,12 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /data-ar-placed-type="note"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
+    assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
-    assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 3);
+    assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
+    assert.equal((taskbar.match(/<button/g) || []).length, 4);
+    assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
+    assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
@@ -118,7 +121,8 @@ test('Creator AR has no dashboard grab or controller-ray controls', () => {
     );
     assert.doesNotMatch(arSource, /targetRaySpace|selectstart|selectend|squeezestart|squeezeend/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
-    assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
+    assert.match(taskbar, /data-ar-grab-mode/);
+    assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /checkpointSessionOrigin/);
 });
 

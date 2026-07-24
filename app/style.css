@@ -633,7 +633,13 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: radial-gradient(circle at 38% 32%, rgba(236,247,255,.78) 0 14%, rgba(82,157,211,.5) 28% 62%, rgba(29,91,139,.2) 100%) !important; }
 .creator-ar-marker-hit-target { position: fixed; display: block; width: 44px; height: 44px; margin: -15px 0 0 -15px; border-radius: 50%; background: transparent !important; pointer-events: none; }
 .creator-ar-marker-hit-target::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 7px; transform: translateX(-50%); background: linear-gradient(rgba(238,248,235,.7), transparent); }
+.creator-ar-marker-hit-target::after { content: ""; position: absolute; inset: 8px; border: 2px solid transparent; border-radius: 50%; transform: scale(.72); opacity: 0; box-shadow: 0 0 0 0 transparent; transition: transform .16s ease, opacity .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target { pointer-events: auto; }
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target { cursor: grab; touch-action: none; }
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target:hover::after,
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target:focus-visible::after,
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; }
 .creator-ar-spatial-name { position: absolute; left: 50%; bottom: calc(100% + 4px); max-width: min(42vw, 180px); padding: 4px 8px; transform: translateX(-50%); overflow: hidden; border: 1px solid rgba(238,248,235,.28); border-radius: 999px; background: rgba(13,34,21,.5); color: rgba(255,255,255,.94); box-shadow: 0 4px 14px rgba(0,0,0,.16); backdrop-filter: blur(8px); font-size: .68rem; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.5); white-space: nowrap; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(255,224,137,.34); background: rgba(65,49,13,.5); }
 .creator-ar-marker-hit-target-plant .creator-ar-spatial-name { border-color: color-mix(in srgb, var(--marker-accent) 58%, transparent); }
