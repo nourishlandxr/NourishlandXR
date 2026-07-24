@@ -43,6 +43,10 @@ test('visitor project selection opens the welcome page without a repeated card a
     assert.match(source, /renderVisitorLocationIntro/);
     assert.match(source, /Explore in AR/);
     assert.match(source, /Browse Content/);
+    assert.match(source, /const projects = \(await loadProjects\(\)\)/);
+    assert.match(source, /V2 preview · project view under development/);
+    assert.match(source, /privatePreview = creatorPreview \|\| explorePreview/);
+    assert.match(source, /Draft content is not published to visitors/);
 });
 
 test('AR entry is gated by preparation and only Start AR Mode launches AR', () => {
@@ -176,6 +180,13 @@ test('temporary AR demo applies types to three neutral markers without opening a
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Place marker 1 of 3/);
     assert.match(source, /What is this marker\?/);
+    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'area'\]/);
+    assert.match(source, /Plant · Lemon Myrtle/);
+    assert.match(source, /CLIMATE  Warm temperate · sheltered/);
+    assert.match(source, /MEDIA  Sound · animation · images/);
+    assert.match(source, /SYSTEM  One section · one microclimate/);
+    assert.match(source, /function createSpatialKnowledgeTexture/);
+    assert.match(source, /record\.demoExpanded/);
     assert.match(source, /Your marker has been placed/);
     assert.match(source, /data-tryit-type="plant"/);
     assert.match(source, /data-tryit-type="note"/);

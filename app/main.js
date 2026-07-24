@@ -314,7 +314,7 @@ window.beginAreaNavigationAr = (projectId, siteId, placeId) => startAreaNavigati
 window.toggleGlobalAr = () => toggleGlobalAr();
 window.renderExplorerProjects = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.renderVisitorLocationExperience = projectId => { setExperienceRole('visitor'); return renderVisitorLocationExperience(app, projectId); };
-window.renderVisitorLocationIntro = (projectId, creatorPreview = false) => { setExperienceRole(creatorPreview ? 'creator' : 'visitor'); return renderVisitorLocationIntro(app, projectId, creatorPreview); };
+window.renderVisitorLocationIntro = (projectId, creatorPreview = false, explorePreview = false) => { setExperienceRole(creatorPreview ? 'creator' : 'visitor'); return renderVisitorLocationIntro(app, projectId, creatorPreview, explorePreview); };
 window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
 window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
 window.renderFieldGuide = (projectId, creator = false) => { setExperienceRole(creator ? 'creator' : 'visitor'); return renderFieldGuide(app, projectId, creator); };

@@ -18,6 +18,12 @@ let simulatedMode = false;
 let program = null;
 let buffer = null;
 let ending = false;
+const DEMO_SEQUENCE = ['plant', 'note', 'area'];
+const DEMO_CONTENT = Object.freeze({
+    plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
+    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
+    area: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['SYSTEM  One section · one microclimate', 'PURPOSE  Guild · crop · learning zone', 'FLOW  Loads its markers and stories'] }
+});
 
 function clearSessionState() {
     hitTestSource?.cancel?.();
@@ -70,6 +76,8 @@ function bindMarkerControls() {
         if (!marker || markerType === 'marker') return;
         if (marker.texture) gl?.deleteTexture(marker.texture);
         marker.type = markerType;
+        const appliedType = markerType;
+        marker.demoExpanded = true;
         marker.texture = createMarkerTexture(marker);
         updateSimulatedMarkers();
         clearPanel();
@@ -80,9 +88,9 @@ function bindMarkerControls() {
             appRoot?.querySelector('[data-tryit-place]')?.removeAttribute('hidden');
             const placementLabel = appRoot?.querySelector('[data-tryit-place] strong');
             if (placementLabel) placementLabel.textContent = `Place marker ${placedCount + 1} of 3`;
-            setGuide(`Marker ${placedCount} applied. Place marker ${placedCount + 1} of 3.`);
+            setGuide(`${DEMO_CONTENT[appliedType]?.title || 'Marker'} added. Next: ${DEMO_SEQUENCE[placedCount] === 'note' ? 'Note / Focus Point' : 'Area'}.`);
         } else {
-            setGuide('Three markers placed. Move around to view their different shapes.');
+            setGuide('Plant knowledge, a Focus Point and an Area now form one spatial learning experience.');
         }
     });
 }
@@ -90,7 +98,10 @@ function bindMarkerControls() {
 function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
-    layer.innerHTML = markers.map((record, index) => `<span class="tryit-sim-marker tryit-sim-marker-${record.type}" style="--marker-index:${index}">${record.type === 'plant' ? '&#x1F331;' : record.type === 'note' ? '&#x270E; Note' : record.type === 'area' ? '&#x25C6; Area' : 'Marker'}</span>`).join('');
+    layer.innerHTML = markers.map((record, index) => {
+        const content = DEMO_CONTENT[record.type];
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${content && record.demoExpanded ? `<strong>${content.title}</strong>${content.lines.map(line => `<small>${line}</small>`).join('')}` : '·'}</span>`;
+    }).join('');
 }
 
 function placementPosition() {
@@ -113,11 +124,14 @@ function placeMarker() {
     appRoot?.querySelector('[data-tryit-marker-controls]')?.removeAttribute('hidden');
     appRoot?.querySelector('[data-tryit-apply]')?.setAttribute('disabled', '');
     appRoot?.querySelectorAll('[data-tryit-type]').forEach(button => {
+        const expected = DEMO_SEQUENCE[markers.length - 1];
+        button.disabled = button.dataset.tryitType !== expected;
         button.classList.remove('is-selected');
         button.setAttribute('aria-pressed', 'false');
     });
     updateSimulatedMarkers();
-    setGuide('Your marker has been placed. What type of marker is this?');
+    const expected = DEMO_SEQUENCE[markers.length - 1];
+    setGuide(`Your marker has been placed. Apply ${expected === 'note' ? 'Note / Focus Point' : expected[0].toUpperCase() + expected.slice(1)}.`);
 }
 
 function renderInterface(simulated) {
@@ -180,8 +194,54 @@ function unusedLegacyMarkerTexture() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
+function createSpatialKnowledgeTexture(record) {
+    const content = DEMO_CONTENT[record.type];
+    if (!gl || !content) return null;
+    const label = document.createElement('canvas');
+    label.width = 768;
+    label.height = 448;
+    const ctx = label.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
+    gradient.addColorStop(0, 'rgba(10,32,21,.72)');
+    gradient.addColorStop(1, 'rgba(16,42,30,.40)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(18, 18, 732, 412, 44);
+    ctx.fill();
+    ctx.strokeStyle = `${content.accent}b8`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = content.accent;
+    ctx.beginPath();
+    ctx.arc(72, 78, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff';
+    ctx.font = '600 32px system-ui, sans-serif';
+    ctx.fillText(content.title, 112, 89);
+    content.lines.forEach((line, index) => {
+        const split = line.indexOf('  ');
+        ctx.fillStyle = content.accent;
+        ctx.font = '700 20px system-ui, sans-serif';
+        ctx.fillText(line.slice(0, split), 58, 174 + index * 78);
+        ctx.fillStyle = 'rgba(255,255,255,.88)';
+        ctx.font = '25px system-ui, sans-serif';
+        ctx.fillText(line.slice(split + 2), 208, 174 + index * 78);
+    });
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return texture;
+}
+
 function createMarkerTexture(record) {
     if (!gl) return null;
+    if (record.demoExpanded) return createSpatialKnowledgeTexture(record);
     const label = document.createElement('canvas');
     label.width = 512;
     label.height = 128;
@@ -234,8 +294,8 @@ function drawMarker(view) {
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     markers.forEach(record => {
         if (!record.texture) return;
-        const compact = ['plant', 'marker'].includes(record.type);
-        const model = billboardMatrix(record.position, compact ? .38 : 1, compact ? .95 : 1);
+        const compact = !record.demoExpanded;
+        const model = billboardMatrix(record.position, compact ? .38 : 1.45, compact ? .38 : 1.18);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);

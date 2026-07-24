@@ -36,12 +36,14 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
+    assert.equal((taskbar.match(/<button/g) || []).length, 3);
     assert.match(arSource, /data-ar-ready-place/);
     assert.match(arSource, /creator-ar-ready-ring/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
     const arSource = read('app/screens/arMode.js');
+    const configSource = read('app/services/arExperienceConfig.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /createPlaceMarker/);
     assert.match(arSource, /createProjectSite/);
@@ -65,7 +67,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. Press plus when you are ready to place a marker/);
-    assert.match(arSource, /name: 'Unassigned'/);
+    assert.match(configSource, /name: 'Unassigned'/);
     assert.match(arSource, /createSitePlace/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
@@ -161,7 +163,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
-    assert.match(styles, /\.creator-ar-marker \{[\s\S]*width: 10px;[\s\S]*height: 10px;/);
+    assert.match(styles, /\.creator-ar-marker \{[\s\S]*width: 9px;[\s\S]*height: 9px;/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
     assert.doesNotMatch(styles, /\.creator-ar-placement-status/);
     assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(3/);
@@ -187,12 +189,15 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
 
 test('dashboard quick marker and note actions open AR with a ready centre placement control', () => {
     const arSource = read('app/screens/arMode.js');
+    const configSource = read('app/services/arExperienceConfig.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
     assert.match(dashboardSource, /label: 'Add Marker', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'sub_checkpoint'\)`/);
     assert.match(dashboardSource, /label: 'Add Note', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'note'\)`/);
-    assert.match(arSource, /readyPlacementType = \['plant', 'sub_checkpoint', 'note', 'intro_checkpoint'\]\.includes\(initialPlacementType\)/);
+    assert.match(arSource, /readyPlacementType = AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
+    assert.match(configSource, /placementDistanceMetres: 1\.2/);
+    assert.match(configSource, /name: 'Unassigned'/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
     assert.match(arSource, /if \(readyPlacementType === type\)/);

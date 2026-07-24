@@ -35,8 +35,12 @@ export async function renderExplorerProjects(app) {
     stopGps();
     disableTargetReticle();
     try {
-        const projects = (await loadProjects(true)).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Select the place you are visiting.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
+        const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
+        const cards = projects.map(project => {
+            const preview = project.visibility !== 'public';
+            return `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}', false, ${preview})"><strong>${escapeHtml(project.name)}</strong><span>${preview ? 'V2 preview · project view under development' : 'Explore this published location'}</span></button>`;
+        }).join('');
+        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Published locations open normally. New projects appear in a private V2 preview mode.</p></div><div class="menu-stack">${cards || '<div class="panel"><p>No locations are available.</p></div>'}</div></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${escapeHtml(error.message)}`); }
 }
 
@@ -51,24 +55,28 @@ export async function renderVisitorLocationExperience(app, encodedProjectId) {
     } catch (error) { app.innerHTML = errorScreen(`Location could not be opened: ${escapeHtml(error.message)}`); }
 }
 
-export async function renderVisitorLocationIntro(app, encodedProjectId, creatorPreview = false) {
+export async function renderVisitorLocationIntro(app, encodedProjectId, creatorPreview = false, explorePreview = false) {
     stopGps();
     disableTargetReticle();
     const projectId = decodeURIComponent(encodedProjectId);
     try {
-        const project = (await loadProjects(!creatorPreview)).find(item => item.id === projectId);
+        const privatePreview = creatorPreview || explorePreview;
+        const project = (await loadProjects(!privatePreview)).find(item => item.id === projectId);
         if (!project) throw new Error('This location is not available to visitors.');
-        const sites = await loadProjectSites(project.id, !creatorPreview);
+        const sites = await loadProjectSites(project.id, !privatePreview);
         const groups = await Promise.all(sites.map(async site => {
-            const places = await loadSitePlaces(project.id, site.id, !creatorPreview);
-            return Promise.all(places.map(async place => ({ site, place, markers: await loadPlaceMarkers(project.id, site.id, place.id, !creatorPreview) })));
+            const places = await loadSitePlaces(project.id, site.id, !privatePreview);
+            return Promise.all(places.map(async place => ({ site, place, markers: await loadPlaceMarkers(project.id, site.id, place.id, !privatePreview) })));
         }));
         const entries = groups.flat().flatMap(group => group.markers.map(marker => ({ ...group, marker })));
         const starting = entries.find(entry => entry.marker.type === 'intro_checkpoint');
         const welcome = starting?.marker.description || project.description || `Welcome to ${project.name}.`;
         const directions = starting?.marker.directions || '';
-        const cover = project.coverImage ? `<img class="visitor-welcome-cover" src="${escapeHtml(project.coverImage)}" alt="${escapeHtml(project.name)}" />` : '';
+        let cover = project.coverImage ? `<img class="visitor-welcome-cover" src="${escapeHtml(project.coverImage)}" alt="${escapeHtml(project.name)}" />` : '';
         const backAction = creatorPreview ? `window.renderProjectDashboard('${encoded(project.id)}')` : 'window.renderV1Explorer()';
+        const previewNotice = explorePreview ? '<aside class="setup-notice compact-setup-notice"><span>This private project view is reserved for the developing V2 Explorer. Draft content is not published to visitors.</span></aside>' : '';
+        if (explorePreview) cover = previewNotice + cover;
+        creatorPreview = creatorPreview || explorePreview;
         app.innerHTML = `<div class="screen visitor-welcome location-selected" data-location-id="${escapeHtml(project.id)}"><div class="page-header"><button class="ghost" onclick="${backAction}">${creatorPreview ? '← Back to dashboard' : '← Choose another location'}</button><p class="welcome-label">${creatorPreview ? 'Visitor welcome preview' : 'Visitor welcome'}</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">${escapeHtml(starting?.marker.name || 'Explore this location')}</p></div>${cover}<section class="panel visitor-welcome-copy"><p>${escapeHtml(welcome)}</p>${directions ? `<h2>When you arrive</h2><p>${escapeHtml(directions)}</p>` : ''}</section><section class="role-grid visitor-mode-grid" aria-label="Choose how to explore"><button class="menu-card role-card" onclick="window.renderArPreparation('${encoded(project.id)}', '${creatorPreview ? 'creator-preview' : 'visitor'}')"><strong>Explore in AR</strong><span>Discover information in the landscape using augmented reality.</span></button><button class="menu-card role-card" onclick="window.renderBrowseContent('${encoded(project.id)}', ${creatorPreview})"><strong>Browse Content</strong><span>Open the Field Guide, map and published visitor content without using the camera.</span></button></section></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Visitor welcome could not be loaded: ${escapeHtml(error.message)}`); }
 }

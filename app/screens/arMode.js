@@ -8,6 +8,7 @@
  */
 
 import { createPlaceMarker, createProjectSite, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 
 let session = null;
 let gl = null;
@@ -53,7 +54,7 @@ function updateReadyPlacementControl() {
 
 function placementPoint() {
     if (!latestViewerMatrix) return null;
-    const distance = 1.2;
+    const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
     return {
         x: latestViewerMatrix[12] - latestViewerMatrix[8] * distance,
         y: latestViewerMatrix[13] - latestViewerMatrix[9] * distance,
@@ -305,22 +306,15 @@ function cancelMarkerDrag(event) {
 
 async function loadPlacementAreas() {
     const sites = await loadProjectSites(activeProjectId);
-    const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0] || await createProjectSite(activeProjectId, {
-        name: 'Main Location',
-        description: 'Primary Location for this project.',
-        visibility: 'draft'
-    });
+    const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0]
+        || await createProjectSite(activeProjectId, { ...AR_EXPERIENCE_CONFIG.defaultSite });
     activeSiteId = site.id;
     const areas = await loadSitePlaces(activeProjectId, site.id);
     const selected = areas.find(area => area.id === activeAreaId);
     if (selected) activeAreaName = selected.name;
     else {
-        const automaticArea = areas.find(area => area.name === 'Unassigned') || areas[0] || await createSitePlace(activeProjectId, site.id, {
-            name: 'Unassigned',
-            type: 'Unassigned',
-            description: 'Content captured quickly in AR and ready to organise later.',
-            visibility: 'draft'
-        });
+        const automaticArea = areas.find(area => area.name === AR_EXPERIENCE_CONFIG.fallbackArea.name) || areas[0]
+            || await createSitePlace(activeProjectId, site.id, { ...AR_EXPERIENCE_CONFIG.fallbackArea });
         activeAreaId = automaticArea.id;
         activeAreaName = automaticArea.name;
     }
@@ -513,7 +507,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeProjectId = projectId;
     activeAreaId = areaId;
     activeCheckpointId = checkpointId;
-    readyPlacementType = ['plant', 'sub_checkpoint', 'note', 'intro_checkpoint'].includes(initialPlacementType) ? initialPlacementType : '';
+    readyPlacementType = AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';
     createOverlay();
 
     try {
