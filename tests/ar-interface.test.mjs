@@ -53,6 +53,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     const arSource = read('app/screens/arMode.js');
     const configSource = read('app/services/arExperienceConfig.js');
     const serverSource = read('tools/persistence-server.mjs');
+    const persistenceSource = read('app/services/persistence.js');
     assert.match(arSource, /createPlaceMarker/);
     assert.match(arSource, /createProjectSite/);
     assert.match(arSource, /loadPlaceMarkers/);
@@ -80,6 +81,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
     assert.match(serverSource, /markerName = `\$\{requestedName\} \(\$\{suffix\}\)`/);
+    assert.match(persistenceSource, /legacySpatialRejection/);
+    assert.match(persistenceSource, /nxr-spatial:/);
+    assert.match(persistenceSource, /compatibility_format: 'nxr-spatial-v1'/);
+    assert.match(persistenceSource, /spatial_position/);
 });
 
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {
