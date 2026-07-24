@@ -132,6 +132,17 @@ function hasGpsCoordinates(anchor) {
 
 const clampMapCoordinate = value => Math.max(7, Math.min(93, value));
 const mapEntryKey = entry => `${entry.place.id}:${entry.marker.id}`;
+const TERRACE_PLAN_POINTS = Object.freeze({
+    '1R1': { x: 12, y: 89 }, '1R2': { x: 36, y: 92 }, '1R3': { x: 61, y: 92 }, '1R4': { x: 86, y: 89 },
+    '1L1': { x: 14, y: 78 }, '1L2': { x: 36, y: 81 }, '1L3': { x: 61, y: 81 }, '1L4': { x: 86, y: 78 },
+    '2R1': { x: 16, y: 60 }, '2R2': { x: 38, y: 63 }, '2R3': { x: 63, y: 63 }, '2R4': { x: 84, y: 60 },
+    '2L1': { x: 17, y: 42 }, '2L2': { x: 40, y: 46 }, '2L3': { x: 63, y: 46 }, '2L4': { x: 83, y: 42 }
+});
+const terracePlanPoint = area => {
+    const key = String(area?.name || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const point = TERRACE_PLAN_POINTS[key];
+    return point ? { ...point, positioned: true, planLinked: true } : null;
+};
 
 function buildSiteMapLayout(areas, entries) {
     const gpsPoints = [
@@ -163,7 +174,7 @@ function buildSiteMapLayout(areas, entries) {
             y: (Math.floor(index / columns) + 0.5) * (100 / rows),
             positioned: false
         };
-        return [area.id, pointForAnchor(area.anchor) || fallback];
+        return [area.id, terracePlanPoint(area) || pointForAnchor(area.anchor) || fallback];
     }));
     const entriesByArea = new Map(areas.map(area => [area.id, entries.filter(entry => entry.place.id === area.id)]));
     const markerPoints = new Map();
@@ -689,12 +700,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 notice: startingConfigured ? '' : 'A Starting Point is required before publishing.',
                 setupAction: `window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')`
             },
-            quickActions: [
-                { icon: '📍', label: 'Add Marker', action: `window.startArMode('${encoded(project.id)}', '', '', 'sub_checkpoint')` },
-                { icon: '✎', label: 'Add Note', action: `window.startArMode('${encoded(project.id)}', '', '', 'note')` },
-                { icon: '⌖', label: 'Starting Point', action: startingPoint ? `window.editProjectStartingPoint('${encoded(project.id)}')` : `window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')` },
-                { icon: '◈', label: 'AR Mode', action: `window.openCreatorArMode('${encoded(project.id)}')` }
-            ],
+            openArAction: `window.startArMode('${encoded(project.id)}')`,
+            addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
             guidance,
             fieldGuideAction: `window.renderFieldGuide('${encoded(project.id)}', true)`,
             mapAction: `window.renderLocationMap('${encoded(project.id)}', true)`,
@@ -865,7 +872,7 @@ export async function renderAddToLocation(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const project = await projectById(projectId);
     const action = (label, description, onclick) => `<button class="content-type-row" type="button" onclick="${onclick}"><strong>${label}</strong><span>${description}</span></button>`;
-    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Quick Access</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>Choose what you want to do next. Create an Area first when this is a new project, then add Plants and Notes inside it.</p></div><div class="content-type-list">${action('Plant', 'Add a plant to an Area.', `window.renderPlacementChoice('${encoded(project.id)}', 'plant')`)}${action('Area', 'Create a mapped subdivision of this Location.', `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`)}${action('Note', 'Record a short note within an Area.', `window.renderPlacementChoice('${encoded(project.id)}', 'note')`)}</div></div>`;
+    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add to Unplaced Bag</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>Save an idea wherever you are. When you reach the physical location, open the Bag in AR and place it into the landscape.</p></div><div class="content-type-list">${action('Plant', 'Save a plant now and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`)}${action('Neutral marker', 'Save an unclassified marker for later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'sub_checkpoint', 'without-ar', true)`)}${action('Note', 'Record an observation and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)`)}</div></div>`;
 }
 
 export async function renderPlacementChoice(app, encodedProjectId, type) {
@@ -1139,7 +1146,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
         const placementEntries = await entriesWithPlacement(project, site, entries);
         const unplaced = placementEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type) && !entry.isPlaced);
         const rows = unplaced.map(({ marker, place }) => `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(marker.type)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(marker.type)} · Area: ${escapeHtml(place.name || 'Unassigned')}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`).join('');
-        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Unplaced Content</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting physical placement.</p></div><div class="panel"><p>These items already belong to an Area or the Unassigned list. Their content is saved normally and can be positioned later.</p></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Everything has been placed.</p>'}</div></div>`;
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Unplaced Bag</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting physical placement.</p></div><div class="panel"><p>Save Plants, Notes and neutral markers wherever you are. At the location, open AR, choose Bag, then place an item into the landscape.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Bag</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">The Bag is empty.</p>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1384,9 +1391,9 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
         const areaOverlays = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
             const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
-            const content = `<strong>${escapeHtml(place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.positioned ? 'GPS mapped' : 'map layout'}</span>`;
+            const content = `<strong>${escapeHtml(place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.planLinked ? 'plan linked' : point.positioned ? 'GPS mapped' : 'map layout'}</span>`;
             return creator
-                ? `<button class="site-map-area" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')" aria-label="Open ${escapeHtml(place.name)}">${content}</button>`
+                ? `<button class="site-map-area${point.planLinked ? ' is-plan-linked' : ''}" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')" aria-label="Open ${escapeHtml(place.name)}">${content}</button>`
                 : `<div class="site-map-area" style="--map-x:${point.x}%;--map-y:${point.y}%">${content}</div>`;
         }).join('');
         const markerPins = mapEntries.map(entry => {

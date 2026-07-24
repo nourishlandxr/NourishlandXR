@@ -15,5 +15,5 @@ export const AR_EXPERIENCE_CONFIG = Object.freeze({
         description: 'Content captured quickly in AR and ready to organise later.',
         visibility: 'draft'
     }),
-    markerTypes: Object.freeze(['plant', 'sub_checkpoint', 'note', 'intro_checkpoint'])
+    markerTypes: Object.freeze(['plant', 'sub_checkpoint', 'note', 'intro_checkpoint', 'area_checkpoint'])
 });

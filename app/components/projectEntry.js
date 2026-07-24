@@ -63,7 +63,7 @@ export function renderProjectEntry(config) {
             ? 'quickAccess'
             : '';
 
-    // Content mode sections displayed below Quick Access
+    // Quiet management tools displayed below the primary AR path.
     const contentSections = `
         <section class="content-mode-section">
             <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
@@ -78,10 +78,6 @@ export function renderProjectEntry(config) {
                 <span class="content-mode-icon" aria-hidden="true">⚑</span>
                 <div><strong>Stories & Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></div>
             </button>
-            <button class="content-mode-card" type="button" onclick="${config.unplacedAction}">
-                <span class="content-mode-icon" aria-hidden="true">📦</span>
-                <div><strong>Unplaced Content</strong><span>${config.status.unplaced} items can be positioned later.</span></div>
-            </button>
         </section>`;
 
     return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
@@ -92,10 +88,15 @@ export function renderProjectEntry(config) {
             <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
-        <section class="location-create-section location-create-section-prominent${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="quickAccessTitle">
-            <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
-            <div class="quick-access-grid">
-                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
+        <section class="dashboard-ar-path${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
+            <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
+                <span aria-hidden="true">◉</span>
+                <strong id="openArTitle">OPEN AR</strong>
+                <small>Place neutral orbs, select details, or fine-tune positions.</small>
+            </button>
+            <div class="dashboard-unplaced-bag">
+                <button type="button" onclick="${config.unplacedAction}"><strong>Unplaced Bag</strong><span>${config.status.unplaced} saved item${config.status.unplaced === '1' ? '' : 's'} waiting for placement</span></button>
+                <button type="button" onclick="${config.addUnplacedAction}">Add item</button>
             </div>
         </section>
 

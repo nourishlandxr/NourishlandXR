@@ -21,7 +21,7 @@ function draw() {
         <div class="screen">
             <div class="page-header">
                 <button class="ghost" type="button" onclick="window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')">Back</button>
-                <p class="welcome-label">Quick Access</p>
+                <p class="welcome-label">Unplaced Bag</p>
                 <h1>Add ${typeLabel}</h1>
                 <p class="subtitle">${placementMode === 'ar' ? 'Create a draft now, then continue to AR placement.' : 'Save a draft now and complete its details later.'}</p>
             </div>

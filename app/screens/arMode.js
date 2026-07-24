@@ -39,12 +39,13 @@ let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
 let placementInProgress = false;
+let pendingBagRecord = null;
 
-const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
-const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
-const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point' })[type] || 'Draft';
+const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point', area_checkpoint: 'area checkpoint' })[type] || 'item';
+const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
+const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point', area_checkpoint: 'Area Checkpoint' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#4f9ed1', intro_checkpoint: '#4f9ed1' })[type] || '#91a29a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#4f9ed1', area_checkpoint: '#4f9ed1' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 
@@ -127,6 +128,7 @@ function setInteractionMode(mode) {
     cleanupDrag();
     closeAreaChooser();
     closePlacePicker();
+    closeUnplacedBag();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
@@ -152,13 +154,61 @@ function closePlacePicker() {
     overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'false');
 }
 
+function closeUnplacedBag() {
+    const bag = overlayRoot?.querySelector('[data-ar-unplaced-bag]');
+    if (bag) {
+        bag.hidden = true;
+        bag.innerHTML = '';
+    }
+}
+
+async function openUnplacedBag() {
+    const bag = overlayRoot?.querySelector('[data-ar-unplaced-bag]');
+    if (!bag) return;
+    closeInlineEditor();
+    closePlacePicker();
+    readyPlacementType = '';
+    pendingBagRecord = null;
+    updateReadyPlacementControl();
+    bag.hidden = false;
+    bag.innerHTML = '<p>Loading your Unplaced Bag…</p>';
+    try {
+        await loadPlacementAreas();
+        const areas = await loadSitePlaces(activeProjectId, activeSiteId);
+        const groups = await Promise.all(areas.map(async area => {
+            const markers = await loadPlaceMarkers(activeProjectId, activeSiteId, area.id).catch(() => []);
+            const entries = await Promise.all(markers.filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type)).map(async marker => {
+                const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, area.id, marker.id).catch(() => null);
+                return anchor?.type === 'spatial' ? null : { marker, areaId: area.id, areaName: area.name };
+            }));
+            return entries.filter(Boolean);
+        }));
+        const items = groups.flat();
+        bag.innerHTML = `<div><strong>Unplaced Bag</strong><button type="button" data-ar-close-bag aria-label="Close Bag">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>Your Bag is empty. Add items from the dashboard when an idea comes to you.</p>'}`;
+        bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
+        bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
+            const item = items[Number(button.dataset.arBagItem)];
+            if (!item) return;
+            pendingBagRecord = { ...item, siteId: activeSiteId };
+            readyPlacementType = item.marker.type;
+            placementArmedAt = performance.now();
+            closeUnplacedBag();
+            updateReadyPlacementControl();
+            setPlacementStatus(`${item.marker.name} selected from your Bag. Aim the breathing circle, then tap to place it.`);
+        }));
+    } catch (error) {
+        bag.innerHTML = `<div><strong>Unplaced Bag</strong><button type="button" data-ar-close-bag aria-label="Close Bag">&times;</button></div><p>Could not load the Bag: ${escapeHtml(error.message)}</p>`;
+        bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
+    }
+}
+
 function showPlacedMarkerActions(record) {
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
     if (!picker) return;
     pendingPlacedRecord = record;
     picker.hidden = false;
     const fixedType = record.marker.type === 'intro_checkpoint';
-    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What type of marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
+    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What should this orb become?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Checkpoint</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
     }));
@@ -176,7 +226,9 @@ function resetArControls() {
     closeInlineEditor();
     closeAreaChooser();
     closePlacePicker();
+    closeUnplacedBag();
     readyPlacementType = '';
+    pendingBagRecord = null;
     updateReadyPlacementControl();
     updateInteractionControls();
     setPlacementStatus('AR controls reset. Press plus when you are ready to place a marker.');
@@ -228,7 +280,7 @@ function drawSpatialMarkers(view) {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.31, .62, .82], intro_checkpoint: [.31, .62, .82] };
+    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.31, .62, .82], area_checkpoint: [.31, .62, .82] };
     sessionMarkers.forEach(record => {
         const model = markerBillboardMatrix(record.position, record.marker.type === 'intro_checkpoint' ? .06 : markerScale(record.marker));
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
@@ -295,7 +347,7 @@ function openInlineEditor(record, force = false) {
     const fixedType = record.marker.type === 'intro_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
-    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option></select></label>`;
+    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option><option value="area_checkpoint" ${record.marker.type === 'area_checkpoint' ? 'selected' : ''}>Area Checkpoint</option></select></label>`;
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
@@ -335,7 +387,7 @@ function openInlineEditor(record, force = false) {
         }
         try {
             status.textContent = 'Saving...';
-            const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
+            const update = {
                 ...record.marker,
                 type,
                 name,
@@ -350,7 +402,10 @@ function openInlineEditor(record, force = false) {
                     common_name: name
                 } : record.marker.plant_profile,
                 notes: type === 'note' ? description : record.marker.notes || ''
-            });
+            };
+            const updated = type === 'area_checkpoint' && record.marker.type !== 'area_checkpoint'
+                ? await convertRecordToAreaCheckpoint(record, update)
+                : await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, update);
             record.marker = updated;
             renderSessionMarkers();
             closeInlineEditor();
@@ -472,6 +527,7 @@ async function ensurePlacementArea() {
 async function armPlacement(type) {
     closeInlineEditor();
     closePlacePicker();
+    closeUnplacedBag();
     readyPlacementType = type;
     placementArmedAt = performance.now();
     updateReadyPlacementControl();
@@ -480,16 +536,64 @@ async function armPlacement(type) {
     }
 }
 
+async function convertRecordToAreaCheckpoint(record, overrides = {}) {
+    const areas = await loadSitePlaces(activeProjectId, record.siteId);
+    const names = new Set(areas.map(area => String(area.name || '').toLocaleLowerCase()));
+    const requestedName = String(overrides.name || record.marker.name || '').trim();
+    const baseAreaName = requestedName && !/^new marker$/i.test(requestedName) ? requestedName : 'New Area';
+    let areaName = baseAreaName;
+    let suffix = 2;
+    while (names.has(areaName.toLocaleLowerCase())) areaName = `${baseAreaName} (${suffix++})`;
+    const area = await createSitePlace(activeProjectId, record.siteId, {
+        name: areaName,
+        type: 'Area',
+        description: '',
+        visibility: 'draft'
+    });
+    const response = await createPlaceMarker(activeProjectId, record.siteId, area.id, {
+        ...record.marker,
+        ...overrides,
+        id: undefined,
+        type: 'area_checkpoint',
+        name: `${areaName} checkpoint`,
+        description: overrides.description || `Entry checkpoint for ${areaName}.`,
+        area_information_board: {
+            title: areaName,
+            introduction: `Welcome to ${areaName}. Add guidance, purpose and Area information later.`
+        }
+    });
+    const marker = response.marker || response;
+    const anchor = {
+        ...spatialAnchor(record.position),
+        coordinate_space: 'session-local',
+        checkpoint_id: ''
+    };
+    await saveMarkerAnchor(activeProjectId, record.siteId, area.id, marker.id, anchor);
+    await deletePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id);
+    record.marker = marker;
+    record.areaId = area.id;
+    record.areaName = area.name;
+    return marker;
+}
+
 async function setPlacedMarkerType(record, type) {
     if (!record || pendingPlacedRecord !== record) return;
-    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point' };
+    if (record.marker.type === type) {
+        pickerSelectedType(type);
+        setPlacementStatus(`${readyPlacementLabel(type)} selected. Edit details now or finish.`);
+        return;
+    }
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New Area checkpoint' };
     try {
-        const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
+        const update = {
             ...record.marker,
             type,
             name: record.marker.name === 'New marker' ? defaults[type] : record.marker.name,
             plant_profile: type === 'plant' ? { common_name: defaults[type] } : undefined
-        });
+        };
+        const updated = type === 'area_checkpoint'
+            ? await convertRecordToAreaCheckpoint(record, update)
+            : await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, update);
         record.marker = updated;
         renderSessionMarkers();
         showPlacedMarkerActions(record);
@@ -520,6 +624,34 @@ async function quickPlace(type) {
     if (!position) {
         setPlacementStatus('Move your phone briefly, then use Place again.');
         placementInProgress = false;
+        return;
+    }
+    if (pendingBagRecord) {
+        const bagRecord = pendingBagRecord;
+        readyPlacementType = '';
+        pendingBagRecord = null;
+        updateReadyPlacementControl();
+        setPlacementStatus(`Placing ${bagRecord.marker.name} from your Bag...`);
+        try {
+            const bagAnchor = spatialAnchor(position);
+            if (bagRecord.areaId !== activeAreaId) {
+                bagAnchor.coordinate_space = 'session-local';
+                bagAnchor.checkpoint_id = '';
+            }
+            await saveMarkerAnchor(activeProjectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, bagAnchor);
+            const record = { ...bagRecord, position };
+            sessionMarkers.push(record);
+            renderSessionMarkers();
+            setPlacementStatus(`${record.marker.name} placed from your Bag.`);
+            showPlacedMarkerActions(record);
+        } catch (error) {
+            pendingBagRecord = bagRecord;
+            readyPlacementType = bagRecord.marker.type;
+            updateReadyPlacementControl();
+            setPlacementStatus(`Could not place ${bagRecord.marker.name}: ${error.message}`);
+        } finally {
+            placementInProgress = false;
+        }
         return;
     }
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
@@ -577,8 +709,10 @@ function createOverlay() {
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
+        <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place marker"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place marker</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
@@ -595,6 +729,7 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement('sub_checkpoint');
     });
+    overlayRoot.querySelector('[data-ar-open-bag]').addEventListener('click', () => void openUnplacedBag());
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
@@ -634,6 +769,7 @@ function cleanup() {
     markerBuffer = null;
     placementArmedAt = 0;
     placementInProgress = false;
+    pendingBagRecord = null;
     gl = null;
 }
 

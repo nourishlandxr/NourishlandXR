@@ -255,7 +255,7 @@ window.renderLocationFieldMarker = async (projectId, type, placementMode = 'with
         sites = [site];
     }
     const decodedAreaId = preferredAreaId ? decodeURIComponent(preferredAreaId) : '';
-    const selectedArea = areas.some(area => area.id === decodedAreaId) ? decodedAreaId : '';
+    const selectedArea = areas.some(area => area.id === decodedAreaId) ? decodedAreaId : allowUnassigned ? '__unassigned__' : '';
     await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: selectedArea, type, placementMode, dashboardProjectId: decodedProjectId });
 };
 window.renderPlaceForLocation = async (projectId) => {

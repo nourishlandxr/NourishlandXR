@@ -19,6 +19,9 @@ test('dashboard Site Map renders a visual plan with areas and placed content', (
     assert.match(dashboard, /onclick="window\.renderProjectAreaDashboard/);
     assert.match(dashboard, /window\.renderProjectDashboard/);
     assert.match(dashboard, /site-map-pin/);
+    assert.match(dashboard, /TERRACE_PLAN_POINTS/);
+    assert.match(dashboard, /'1R1': \{ x: 12, y: 89 \}/);
+    assert.match(dashboard, /is-plan-linked/);
     assert.match(dashboard, /site-map-pin-\$\{escapeHtml\(entry\.marker\.type\)\}/);
     assert.match(dashboard, /GPS positions are shown relative to one another/);
     assert.match(styles, /\.site-map-canvas/);

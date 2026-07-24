@@ -29,16 +29,18 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /What type of marker is this\?/);
+    assert.match(arSource, /What should this orb become\?/);
     assert.match(arSource, /data-ar-placed-type="plant"/);
     assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
     assert.match(arSource, /data-ar-placed-type="note"/);
+    assert.match(arSource, /data-ar-placed-type="area_checkpoint"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 4);
+    assert.match(taskbar, /data-ar-open-bag/);
+    assert.equal((taskbar.match(/<button/g) || []).length, 5);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.match(arSource, /creator-ar-hand-pointer/);
@@ -206,7 +208,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
     assert.match(source, /Test session/);
-    assert.match(source, /What type of marker is this\?/);
+    assert.match(source, /What should this orb become\?/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
@@ -216,13 +218,14 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /function setupSpatialMarkerRenderer/);
     assert.match(source, /function drawSpatialMarkers/);
     assert.match(source, /drawSpatialMarkers\(view\)/);
-    assert.match(styles, /\.creator-ar-marker-hit-target \{[\s\S]*opacity: 0;/);
+    assert.match(styles, /\.creator-ar-marker-hit-target \{/);
+    assert.match(styles, /\.creator-ar-spatial-name \{/);
     assert.match(source, /async function restoreRecordedMarkers/);
     assert.match(source, /loadMarkerAnchor/);
     assert.match(source, /loadPlacementAreas\(\)\.then\(restoreRecordedMarkers\)/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
     assert.doesNotMatch(styles, /\.creator-ar-placement-status/);
-    assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(3/);
+    assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(2/);
 });
 
 test('Creator AR supports temporary checkpoints and direct test sessions', () => {
@@ -243,14 +246,19 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(serverSource, /'area_checkpoint'/);
 });
 
-test('dashboard quick marker and note actions open AR with a ready centre placement control', () => {
+test('dashboard focuses on Open AR and the Unplaced Bag', () => {
     const arSource = read('app/screens/arMode.js');
     const configSource = read('app/services/arExperienceConfig.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
-    assert.match(dashboardSource, /label: 'Add Marker', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'sub_checkpoint'\)`/);
-    assert.match(dashboardSource, /label: 'Add Note', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'note'\)`/);
+    assert.match(dashboardSource, /openArAction: `window\.startArMode\('\$\{encoded\(project\.id\)\}'\)`/);
+    assert.match(dashboardSource, /addUnplacedAction: `window\.renderAddToLocation/);
+    assert.doesNotMatch(dashboardSource, /quickActions:/);
+    assert.match(arSource, /openUnplacedBag/);
+    assert.match(arSource, /pendingBagRecord/);
+    assert.match(arSource, /selected from your Bag/);
+    assert.match(arSource, /convertRecordToAreaCheckpoint/);
     assert.match(arSource, /readyPlacementType = AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
     assert.match(configSource, /placementDistanceMetres: 1\.2/);
     assert.match(configSource, /name: 'Unassigned'/);

@@ -27,18 +27,17 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
 });
 
-test('About This Experience explains the concept without tutorial instructions', () => {
+test('About This Tool explains the concept without tutorial instructions', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
-    const aboutStart = source.indexOf("if (feature === 'About This Experience')");
+    const aboutStart = source.indexOf("if (feature === 'About This Tool')");
     const aboutEnd = source.indexOf("app.innerHTML = `<div class=\"screen\">", aboutStart);
     const aboutSource = source.slice(aboutStart, aboutEnd);
     assert.match(aboutSource, /What is NourishlandXR\?/);
-    assert.match(aboutSource, /dynamic, place-based database that connects information to real environments/);
-    assert.match(aboutSource, /More than a map/);
-    assert.match(aboutSource, /Build from anywhere/);
-    assert.match(aboutSource, /A living record/);
-    assert.match(aboutSource, /helps turn knowledge about a place into something organized, visible and connected to the landscape itself/);
-    assert.doesNotMatch(aboutSource, /How it works|Choose your path|Select a location|Explore with AR|Demo note/);
+    assert.match(aboutSource, /place-based tool that connects information directly to real environments/);
+    assert.match(aboutSource, /How it works/);
+    assert.match(aboutSource, /Built for food literacy/);
+    assert.match(aboutSource, /turns knowledge about a place into something you can see, edit and share/);
+    assert.doesNotMatch(aboutSource, /Choose your path|Select a location|Explore with AR|Demo note/);
     assert.doesNotMatch(aboutSource, /<ol>|<li>/);
 });
 
@@ -62,19 +61,19 @@ test('AR entry is gated by preparation and only Start AR Mode launches AR', () =
     assert.match(source, />Go Back</);
 });
 
-test('creator dashboard exposes equal AR and Content work modes, quick add, search and project settings', () => {
+test('creator dashboard prioritizes Open AR while retaining quiet management and project settings', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
-    assert.match(entrySource, />Work Mode</);
-    assert.match(source, /label: 'AR Mode'/);
-    assert.match(source, /Position and work with content in the landscape/);
-    assert.match(source, /label: 'Content Mode'/);
-    assert.match(source, /Add and organize content without the camera/);
-    assert.doesNotMatch(source, /label: 'Dive straight into AR'/);
+    assert.match(entrySource, />OPEN AR</);
+    assert.match(entrySource, /Unplaced Bag/);
+    assert.doesNotMatch(entrySource, />Work Mode</);
+    assert.doesNotMatch(entrySource, />Quick Access</);
+    assert.match(source, /openArAction/);
+    assert.match(source, /addUnplacedAction/);
     assert.match(source, /renderContentMode/);
     assert.match(source, /Field Guide/);
     assert.match(source, /Stories &amp; Checkpoints/);
-    assert.match(source, /Unplaced Content/);
+    assert.match(source, /Unplaced Bag/);
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
@@ -103,9 +102,10 @@ test('creator dashboard exposes equal AR and Content work modes, quick add, sear
     assert.match(source, /Reset Learning Tips/);
     assert.match(source, /Tutorial Mode/);
     assert.match(source, /recordTutorialEvent/);
-    assert.match(entrySource, /Quick Access/);
-    assert.match(entrySource, /quick-access-icon/);
-    assert.match(entrySource, /<strong>\$\{item\.label\}<\/strong>/);
+    assert.match(entrySource, /dashboard-open-ar/);
+    assert.match(entrySource, />OPEN AR</);
+    assert.match(entrySource, /Unplaced Bag/);
+    assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
     assert.match(entrySource, /project-areas-section/);
