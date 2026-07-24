@@ -48,6 +48,13 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#4f9ed1', area_checkpoint: '#4f9ed1' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
+const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
+    ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
+    : marker;
+const areaBoard = marker => ({
+    title: marker?.area_information_board?.title || String(marker?.name || 'Area').replace(/\s+checkpoint$/i, ''),
+    introduction: marker?.area_information_board?.introduction || marker?.description || 'Welcome to this Area.'
+});
 
 function markerRgb(marker, fallback) {
     if (!/^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '')) return fallback;
@@ -323,7 +330,11 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span></span>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => {
+        const board = record.marker.type === 'area_checkpoint' ? areaBoard(record.marker) : null;
+        const boardHtml = board ? `<span class="creator-ar-spatial-area-board creator-ar-spatial-area-board-${markerAppearanceSize(record.marker)}"><strong>${escapeHtml(board.title)}</strong><small>${escapeHtml(board.introduction)}</small></span>` : '';
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span>${boardHtml}</span>`;
+    }).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -345,11 +356,14 @@ function openInlineEditor(record, force = false) {
     if (!editor) return;
     const plant = record.marker.type === 'plant';
     const fixedType = record.marker.type === 'intro_checkpoint';
+    const areaCheckpoint = record.marker.type === 'area_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
     const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option><option value="area_checkpoint" ${record.marker.type === 'area_checkpoint' ? 'selected' : ''}>Area Checkpoint</option></select></label>`;
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const board = areaBoard(record.marker);
+    const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board appears at the Area checkpoint and can be refined later in Web Mode.</p></fieldset>` : '';
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${areaBoardControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
@@ -403,9 +417,15 @@ function openInlineEditor(record, force = false) {
                 } : record.marker.plant_profile,
                 notes: type === 'note' ? description : record.marker.notes || ''
             };
+            if (type === 'area_checkpoint') {
+                update.area_information_board = {
+                    title: form.elements.areaBoardTitle?.value.trim() || name.replace(/\s+checkpoint$/i, ''),
+                    introduction: form.elements.areaBoardIntroduction?.value.trim() || description || `Welcome to ${name}.`
+                };
+            }
             const updated = type === 'area_checkpoint' && record.marker.type !== 'area_checkpoint'
                 ? await convertRecordToAreaCheckpoint(record, update)
-                : await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, update);
+                : await updateAreaCompatibleMarker(record, update);
             record.marker = updated;
             renderSessionMarkers();
             closeInlineEditor();
@@ -507,7 +527,8 @@ async function loadPlacementAreas() {
 async function restoreRecordedMarkers() {
     if (!activeProjectId || !activeSiteId || !activeAreaId) return;
     const savedMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, activeAreaId).catch(() => []);
-    const restored = await Promise.all(savedMarkers.map(async marker => {
+    const restored = await Promise.all(savedMarkers.map(async savedMarker => {
+        const marker = normalizeAreaCheckpointMarker(savedMarker);
         const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id).catch(() => null);
         const position = anchor?.position;
         if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
@@ -557,11 +578,11 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     while (names.has(areaName.toLocaleLowerCase())) areaName = `${baseAreaName} (${suffix++})`;
     const area = await createSitePlace(activeProjectId, record.siteId, {
         name: areaName,
-        type: 'Area',
+        type: 'Outdoor Area',
         description: '',
         visibility: 'draft'
     });
-    const response = await createPlaceMarker(activeProjectId, record.siteId, area.id, {
+    const areaMarker = {
         ...record.marker,
         ...overrides,
         id: undefined,
@@ -572,8 +593,23 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
             title: areaName,
             introduction: `Welcome to ${areaName}. Add guidance, purpose and Area information later.`
         }
-    });
-    const marker = response.marker || response;
+    };
+    let response;
+    let compatibilityMode = false;
+    try {
+        response = await createPlaceMarker(activeProjectId, record.siteId, area.id, areaMarker);
+    } catch (error) {
+        if (!/unsupported marker type/i.test(String(error?.message || ''))) throw error;
+        compatibilityMode = true;
+        response = await createPlaceMarker(activeProjectId, record.siteId, area.id, {
+            ...areaMarker,
+            type: 'sub_checkpoint',
+            semantic_type: 'area_checkpoint',
+            storage_type: 'sub_checkpoint'
+        });
+    }
+    const storedMarker = response.marker || response;
+    const marker = normalizeAreaCheckpointMarker(compatibilityMode ? { ...storedMarker, semantic_type: 'area_checkpoint', storage_type: 'sub_checkpoint' } : storedMarker);
     const anchor = {
         ...spatialAnchor(record.position),
         coordinate_space: 'session-local',
@@ -585,6 +621,25 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     record.areaId = area.id;
     record.areaName = area.name;
     return marker;
+}
+
+async function updateAreaCompatibleMarker(record, update) {
+    const payload = record.marker.storage_type === 'sub_checkpoint' && update.type === 'area_checkpoint'
+        ? { ...update, type: 'sub_checkpoint', semantic_type: 'area_checkpoint', storage_type: 'sub_checkpoint' }
+        : update;
+    try {
+        const saved = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, payload);
+        return normalizeAreaCheckpointMarker(saved);
+    } catch (error) {
+        if (update.type !== 'area_checkpoint' || !/unsupported marker type/i.test(String(error?.message || ''))) throw error;
+        const saved = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
+            ...update,
+            type: 'sub_checkpoint',
+            semantic_type: 'area_checkpoint',
+            storage_type: 'sub_checkpoint'
+        });
+        return normalizeAreaCheckpointMarker(saved);
+    }
 }
 
 async function setPlacedMarkerType(record, type) {

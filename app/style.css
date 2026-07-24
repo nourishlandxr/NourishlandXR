@@ -662,6 +662,13 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; }
 .creator-ar-spatial-name { position: absolute; left: 50%; bottom: calc(100% + 4px); max-width: min(42vw, 180px); padding: 4px 8px; transform: translateX(-50%); overflow: hidden; border: 1px solid rgba(238,248,235,.28); border-radius: 999px; background: rgba(13,34,21,.5); color: rgba(255,255,255,.94); box-shadow: 0 4px 14px rgba(0,0,0,.16); backdrop-filter: blur(8px); font-size: .68rem; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.5); white-space: nowrap; }
+.creator-ar-spatial-area-board { position: absolute; left: 50%; bottom: calc(100% + 30px); display: grid; gap: 5px; box-sizing: border-box; width: min(58vw, 250px); padding: 12px 14px; transform: translateX(-50%); border: 1px solid color-mix(in srgb, var(--marker-accent) 68%, white); border-radius: 16px; background: linear-gradient(135deg, rgba(10,32,21,.76), rgba(16,42,30,.48)); color: #fff; box-shadow: 0 10px 28px rgba(0,0,0,.2); text-align: left; backdrop-filter: blur(10px); pointer-events: none; }
+.creator-ar-spatial-area-board strong { overflow-wrap: anywhere; font-size: .88rem; line-height: 1.2; }
+.creator-ar-spatial-area-board small { display: block; overflow-wrap: anywhere; color: rgba(255,255,255,.84); font-size: .68rem; line-height: 1.35; white-space: normal; }
+.creator-ar-spatial-area-board-small { width: min(48vw, 205px); padding: 9px 11px; }
+.creator-ar-spatial-area-board-large { width: min(70vw, 310px); padding: 15px 17px; }
+.creator-ar-area-board-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(137,200,239,.35); border-radius: 12px; }
+.creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(255,224,137,.34); background: rgba(65,49,13,.5); }
 .creator-ar-marker-hit-target-plant .creator-ar-spatial-name { border-color: color-mix(in srgb, var(--marker-accent) 58%, transparent); }
 .creator-ar-marker-hit-target-intro_checkpoint .creator-ar-spatial-name,

@@ -288,6 +288,12 @@ test('dashboard focuses on Open AR and the Unplaced Bag', () => {
     assert.match(arSource, /pendingBagRecord/);
     assert.match(arSource, /selected from your Bag/);
     assert.match(arSource, /convertRecordToAreaCheckpoint/);
+    assert.match(arSource, /type: 'Outdoor Area'/);
+    assert.match(arSource, /semantic_type: 'area_checkpoint'/);
+    assert.match(arSource, /Unsupported marker type/i);
+    assert.match(arSource, /Area welcome board/);
+    assert.match(arSource, /creator-ar-spatial-area-board/);
+    assert.match(styles, /\.creator-ar-spatial-area-board/);
     assert.match(arSource, /readyPlacementType = AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
     assert.match(configSource, /placementDistanceMetres: 1\.2/);
     assert.match(configSource, /name: 'Unassigned'/);
