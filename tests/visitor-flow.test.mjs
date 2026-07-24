@@ -170,7 +170,7 @@ test('fresh projects can start freely and place Starting Point or Area markers i
 test('quick access creation is minimal and separates Area assignment from placement', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
     assert.match(source, /<label for="fieldArea">Area<\/label>/);
-    assert.match(source, /Reuse Plant Profile/);
+    assert.match(source, /Find a plant/);
     assert.match(source, /Unassigned — decide later/);
     assert.match(source, /Create a new Area/);
     assert.match(source, /Placement status:<\/strong> Not yet placed/);
@@ -180,10 +180,10 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo guides three spatial orb conversions without saving', () => {
+test('temporary AR demo guides three Marker purposes without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(source, /Place a neutral orb/);
+    assert.match(source, /Place a Marker/);
     assert.match(source, /This short spatial journey works like a game/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);

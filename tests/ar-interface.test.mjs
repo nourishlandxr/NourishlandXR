@@ -24,14 +24,14 @@ test('Creator AR exposes the compact placement toolbar', () => {
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
     assert.match(arSource, /data-ar-window="tools"/);
-    assert.match(arSource, /ADD NEUTRAL ORB/);
-    assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-orb/);
+    assert.match(arSource, /ADD MARKER/);
+    assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-marker/);
     assert.match(arSource, /data-ar-place-picker/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /What should this orb become\?/);
+    assert.match(arSource, /What kind of Marker is this\?/);
     assert.match(arSource, /data-ar-placed-type="plant"/);
     assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
     assert.match(arSource, /data-ar-placed-type="note"/);
@@ -80,7 +80,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /let interactionMode = 'view'/);
     assert.match(arSource, /interactionMode = mode/);
-    assert.match(arSource, /Eye mode is on\. Hover over an orb to reveal its name/);
+    assert.match(arSource, /Eye mode is on\. Hover over a Marker to reveal its name/);
     assert.match(arSource, /Hand mode is on/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
@@ -260,7 +260,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
     assert.match(source, /Test session/);
-    assert.match(source, /What should this orb become\?/);
+    assert.match(source, /What kind of Marker is this\?/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
@@ -340,6 +340,20 @@ test('dashboard search indexes readable content and ranks name matches', () => {
     assert.match(dashboardSource, /score\(right\) - score\(left\)/);
     assert.match(entrySource, /data-search-primary/);
     assert.match(entrySource, /'&': '&amp;'/);
+});
+
+test('plant creation separates Local records from read-only Global discovery', () => {
+    const fieldMarker = read('app/screens/fieldMarker.js');
+    const plantService = read('app/services/plantDataService.js');
+    const server = read('tools/persistence-server.mjs');
+    assert.match(fieldMarker, />Local<\/button>/);
+    assert.match(fieldMarker, />Global<\/button>/);
+    assert.match(fieldMarker, /Read-only results from GBIF/);
+    assert.match(fieldMarker, /searchGlobalPlants\(query\)/);
+    assert.match(fieldMarker, /sourceId: selectedGlobalPlant\?\.sourceId/);
+    assert.match(plantService, /plant-search\/global/);
+    assert.match(server, /api\.gbif\.org\/v1\/species\/suggest/);
+    assert.match(server, /source: 'GBIF'/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

@@ -27,9 +27,9 @@ V1 succeeds when a creator can walk a real test route, revisit it, load the same
 
 - The dashboard has one dominant **Open AR** path; creation controls are not duplicated in a Quick Access grid.
 - One shared taskbar and marker picker for every project.
-- Neutral marker first; type is chosen after placement.
-- A neutral orb can become a Plant, Note, general Marker or Area Checkpoint.
-- Converting an orb to an Area Checkpoint creates the minimal Area package and makes the checkpoint its local origin.
+- Marker first; its purpose is chosen after placement.
+- A new Marker can become a Plant, Note, general Marker or Area Checkpoint.
+- Turning a Marker into an Area Checkpoint creates the minimal Area package and makes the checkpoint its local origin.
 - Content remembered away from the physical site is saved into the **Unplaced Bag** and can later be selected and spatially placed from the AR taskbar.
 - Automatic `Main Location` and `Unassigned` fallback storage.
 - Plant, note, marker and Starting Point share one persistence path.
@@ -178,7 +178,8 @@ V2 develops this into the complete visitor journey:
 | 2026-07-24 | Added a temporary spatial-anchor compatibility envelope for deployed APIs that still validate only GPS/QR. | V1 deployment bridge |
 | 2026-07-24 | Areas are independently loaded spatial systems: the checkpoint is their canonical local origin, the Area board guides entry, and only the active Area's filtered markers render. | V1 architecture/V2 journey |
 | 2026-07-25 | Dashboard creation is reduced to Open AR; off-site ideas enter an Unplaced Bag and are placed later from the AR taskbar. | V1 workflow |
-| 2026-07-25 | A neutral orb may convert directly into an Area Checkpoint, creating a minimal Area and information-board record. | V1 Area foundation |
+| 2026-07-25 | A new Marker may become an Area Checkpoint directly, creating a minimal Area and information-board record. | V1 Area foundation |
+| 2026-07-25 | “Marker” is the single user-facing spatial term. “Orb” is retired from interface language; visual appearance is not a separate concept users must learn. | V1 language |
 | 2026-07-25 | Named terrace Areas such as 1R1 link to their printed site-plan positions; their marker dots arrange locally around the Area link. | V1 map |
 
 ## Traceability rule

@@ -1,5 +1,5 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
-import { loadPlantLibrary } from '../services/plantDataService.js';
+import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 
 let app;
@@ -10,6 +10,10 @@ let markerType = 'plant';
 let dashboardProjectId = '';
 let plantProfiles = [];
 let placementMode = 'without-ar';
+let plantSearchScope = 'local';
+let globalPlantResults = [];
+let selectedGlobalPlant = null;
+let globalSearchTimer = null;
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -39,7 +43,7 @@ function draw() {
                     <label for="fieldName">${plant ? 'Common name' : markerType === 'note' ? 'Name or short title' : 'Name'}</label>
                     <input id="fieldName" placeholder="Optional - an untitled draft will be created" />
                 </div>
-                ${plant ? `<div class="field"><label for="fieldPlantProfile">Reuse Plant Profile</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create a new profile to complete later</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}${profile.scientificName ? ` · ${escapeHtml(profile.scientificName)}` : ''}</option>`).join('')}</select></div>` : ''}
+                ${plant ? `<div class="field plant-source-picker"><label>Find a plant</label><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Local</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div><p class="meta">${plantSearchScope === 'local' ? 'Plants already saved in Nourishland.' : 'Read-only results from GBIF. Choose one to add an editable copy to this project.'}</p>${plantSearchScope === 'local' ? `<select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create a new profile to complete later</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}${profile.scientificName ? ` · ${escapeHtml(profile.scientificName)}` : ''}</option>`).join('')}</select>` : `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected from GBIF: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em>${result.family ? ` · ${escapeHtml(result.family)}` : ''}</span><small>Global · GBIF</small></button>`).join('')}</div>`}</div>` : ''}
                 <p class="placement-status is-unplaced"><strong>Placement status:</strong> Not yet placed</p>
                 <p class="meta">Area assignment records where this item belongs. You can leave the name blank, save a draft, and add details or an AR position later.</p>
                 <div class="button-row">
@@ -56,6 +60,9 @@ export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
     plantProfiles = (await loadPlantLibrary(true)).plants || [];
+    plantSearchScope = 'local';
+    globalPlantResults = [];
+    selectedGlobalPlant = null;
     if (defaults) {
         dashboardProjectId = defaults.dashboardProjectId || '';
         selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
@@ -97,6 +104,42 @@ export function selectFieldPlantProfile(id) {
     document.getElementById('fieldName').value = profile.commonName || '';
 }
 
+export function setPlantSearchScope(scope) {
+    plantSearchScope = scope === 'global' ? 'global' : 'local';
+    globalPlantResults = [];
+    selectedGlobalPlant = null;
+    draw();
+}
+
+export function searchGlobalPlantOptions(value) {
+    clearTimeout(globalSearchTimer);
+    const query = String(value || '').trim();
+    const status = document.getElementById('globalPlantSearchStatus');
+    if (query.length < 2) {
+        globalPlantResults = [];
+        if (status) status.textContent = 'Type at least 2 letters.';
+        return;
+    }
+    if (status) status.textContent = 'Searching the global plant list…';
+    globalSearchTimer = setTimeout(async () => {
+        globalPlantResults = await searchGlobalPlants(query);
+        selectedGlobalPlant = null;
+        draw();
+        const input = document.getElementById('globalPlantSearch');
+        if (input) { input.value = query; input.focus(); }
+        const nextStatus = document.getElementById('globalPlantSearchStatus');
+        if (nextStatus) nextStatus.textContent = globalPlantResults.length ? `${globalPlantResults.length} global result${globalPlantResults.length === 1 ? '' : 's'}.` : 'No global plants found.';
+    }, 350);
+}
+
+export function selectGlobalPlant(index) {
+    selectedGlobalPlant = globalPlantResults[Number(index)] || null;
+    if (!selectedGlobalPlant) return;
+    document.getElementById('fieldName').value = selectedGlobalPlant.commonName || selectedGlobalPlant.canonicalName || selectedGlobalPlant.scientificName || '';
+    const status = document.getElementById('globalPlantSearchStatus');
+    if (status) status.textContent = `Selected from GBIF: ${selectedGlobalPlant.scientificName}`;
+}
+
 export async function createFieldArea() {
     const name = window.prompt('Name this Area');
     if (!name?.trim()) return;
@@ -116,7 +159,7 @@ export async function saveFieldMarker(event) {
     const type = markerType;
     const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: 'Untitled marker' };
     const name = document.getElementById('fieldName').value.trim() || defaults[type];
-    const plantId = document.getElementById('fieldPlantProfile')?.value || '';
+    const plantId = plantSearchScope === 'local' ? (document.getElementById('fieldPlantProfile')?.value || '') : '';
 
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
     if (!selected.place) { error.textContent = 'Select an Area or choose Unassigned.'; return; }
@@ -130,7 +173,16 @@ export async function saveFieldMarker(event) {
         const profile = plantProfiles.find(item => item.id === plantId);
         const visibility = 'draft';
         const marker = type === 'plant'
-            ? (await createSpatialPlant(selected.project, selected.site, place.id, { plantId, commonName: name, scientificName: profile?.scientificName || '', visibility })).marker
+            ? (await createSpatialPlant(selected.project, selected.site, place.id, {
+                plantId,
+                commonName: name,
+                scientificName: profile?.scientificName || selectedGlobalPlant?.scientificName || '',
+                family: selectedGlobalPlant?.family || '',
+                source: selectedGlobalPlant?.source || '',
+                sourceId: selectedGlobalPlant?.sourceId || '',
+                sourceUrl: selectedGlobalPlant?.sourceUrl || '',
+                visibility
+            })).marker
             : await createPlaceMarker(selected.project, selected.site, place.id, { name, type, description: '', visibility });
         recordTutorialEvent(selected.project, 'first_item_created');
         if (placementMode === 'without-ar') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');

@@ -1,4 +1,5 @@
 import http from 'http';
+import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -53,6 +54,27 @@ function sendJson(res, statusCode, payload) {
     return true;
 }
 
+function fetchJson(url, timeoutMs = 7000) {
+    return new Promise((resolve, reject) => {
+        const request = https.get(url, {
+            headers: { Accept: 'application/json', 'User-Agent': 'NourishlandXR/1.0 plant-search' }
+        }, response => {
+            let body = '';
+            response.on('data', chunk => {
+                body += chunk;
+                if (Buffer.byteLength(body) > 1024 * 1024) request.destroy(new Error('Plant search response is too large'));
+            });
+            response.on('end', () => {
+                if (response.statusCode < 200 || response.statusCode >= 300) return reject(new Error(`Plant source returned ${response.statusCode}`));
+                try { resolve(JSON.parse(body)); }
+                catch { reject(new Error('Plant source returned invalid data')); }
+            });
+        });
+        request.setTimeout(timeoutMs, () => request.destroy(new Error('Plant search timed out')));
+        request.on('error', reject);
+    });
+}
+
 function readJson(filePath, fallback = null) {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
@@ -86,7 +108,7 @@ function writeJson(filePath, data) {
     fs.renameSync(tempPath, filePath);
 }
 
-const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library']);
+const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library', 'plant-search']);
 
 function normalizeApiPath(pathname) {
     if (pathname === '/xr-api') return '/api';
@@ -558,7 +580,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     let instanceId = instanceBaseId, instanceSuffix = 2;
     while (instanceData.instances.some(instance => instance.id === instanceId)) instanceId = `${instanceBaseId}-${instanceSuffix++}`;
     const now = new Date().toISOString();
-    const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', visibility, created: now, modified: now };
+    const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', source: String(data.source || ''), sourceId: String(data.sourceId || ''), sourceUrl: String(data.sourceUrl || ''), visibility, created: now, modified: now };
     const instance = { id: instanceId, plantId, placeId, zoneId: '', markerId, cultivarOverride: '', status: data.status || '', plantingDate: '', localNotes: '', map: { latitude, longitude, x: null, y: null }, visibility, created: now, modified: now };
     const marker = { id: markerId, type: 'plant', name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
     const anchor = hasAnyPosition ? { type: 'gps', latitude, longitude, altitude: data.altitude ?? '', accuracy, captured_at: data.captured_at || now, qr_code: '', description: '', created: now, modified: now } : null;
@@ -656,6 +678,29 @@ function handleApi(req, res) {
         const plants = visitor ? result.data.plants.filter(isPublic) : result.data.plants;
         return sendJson(res, 200, { ...result.data, plants, warnings: result.warnings });
     }
+    if (pathname === '/api/plant-search/global' && req.method === 'GET') {
+        const query = String(url.searchParams.get('q') || '').trim().slice(0, 120);
+        if (query.length < 2) return sendJson(res, 200, { source: 'GBIF', readonly: true, results: [] });
+        const endpoint = `https://api.gbif.org/v1/species/suggest?q=${encodeURIComponent(query)}&rank=SPECIES&limit=12`;
+        fetchJson(endpoint).then(items => {
+            const results = (Array.isArray(items) ? items : [])
+                .filter(item => String(item.kingdom || '').toLowerCase() === 'plantae')
+                .map(item => ({
+                    source: 'GBIF',
+                    sourceId: String(item.key || item.usageKey || ''),
+                    commonName: String(item.vernacularName || ''),
+                    scientificName: String(item.scientificName || item.canonicalName || ''),
+                    canonicalName: String(item.canonicalName || ''),
+                    genus: String(item.genus || ''),
+                    family: String(item.family || ''),
+                    rank: String(item.rank || ''),
+                    status: String(item.status || ''),
+                    sourceUrl: item.key ? `https://www.gbif.org/species/${item.key}` : ''
+                }));
+            sendJson(res, 200, { source: 'GBIF', readonly: true, results });
+        }).catch(error => sendJson(res, 502, { error: `Global plant search is temporarily unavailable: ${error.message}` }));
+        return true;
+    }
     if (pathname === '/api/plant-library' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
@@ -668,7 +713,7 @@ function handleApi(req, res) {
                 let id = baseId, suffix = 2;
                 while (library.plants.some(plant => plant.id === id)) id = `${baseId}-${suffix++}`;
                 const now = new Date().toISOString();
-                const plant = { id, commonName: String(data.commonName || '').trim(), scientificName: String(data.scientificName || '').trim(), cultivar: data.cultivar || '', family: data.family || '', origin: data.origin || '', plantType: data.plantType || '', layer: data.layer || '', uses: Array.isArray(data.uses) ? data.uses : [], propagation: Array.isArray(data.propagation) ? data.propagation : [], summary: data.summary || '', image: data.image || '', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const plant = { id, commonName: String(data.commonName || '').trim(), scientificName: String(data.scientificName || '').trim(), cultivar: data.cultivar || '', family: data.family || '', origin: data.origin || '', plantType: data.plantType || '', layer: data.layer || '', uses: Array.isArray(data.uses) ? data.uses : [], propagation: Array.isArray(data.propagation) ? data.propagation : [], summary: data.summary || '', image: data.image || '', source: data.source || '', sourceId: data.sourceId || '', sourceUrl: data.sourceUrl || '', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 library.plants.push(plant);
                 writeJson(path.join(workspaceDir, 'plant-library', 'plants.json'), library);
                 sendJson(res, 201, plant);

@@ -72,7 +72,7 @@ function setGuide(message) {
 
 function showDemoAction(label, nextStage) {
     const messages = {
-        note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second neutral orb somewhere nearby.'],
+        note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second Marker somewhere nearby.'],
         zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
@@ -137,8 +137,8 @@ function showGuidedChoice(html, onClick) {
 }
 
 function guidePlantConversion(record) {
-    setGuide('Neutral orb placed. Now give it a purpose.');
-    showGuidedChoice('<h2>Neutral orb placed</h2><p>Convert this orb into a Plant marker.</p><button type="button" data-demo-choice="plant">Convert to Plant</button>', choice => {
+    setGuide('Marker placed. Now give it a purpose.');
+    showGuidedChoice('<h2>Marker placed</h2><p>Make this a Plant Marker.</p><button type="button" data-demo-choice="plant">Make it a Plant</button>', choice => {
         if (choice !== 'plant') return;
         record.type = 'plant';
         record.demoType = 'plant';
@@ -152,14 +152,14 @@ function guidePlantConversion(record) {
             refreshDemoRecord(record);
             hideGuidedChoice();
             setGuide('Lemon Myrtle profile loaded. Its climate, uses and relationships now live in this place.');
-            showDemoAction('Place another orb →', 'note');
+            showDemoAction('Place another Marker →', 'note');
         });
     });
 }
 
 function guideNoteConversion(record) {
-    setGuide('A second neutral orb is ready. Turn it into a Focus Point.');
-    showGuidedChoice('<h2>What should this orb become?</h2><p>Convert it into a Note, then choose a useful starting template.</p><button type="button" data-demo-choice="note">Convert to Note</button>', choice => {
+    setGuide('A second Marker is ready. Turn it into a Focus Point.');
+    showGuidedChoice('<h2>What kind of Marker is this?</h2><p>Make it a Note, then choose a useful starting template.</p><button type="button" data-demo-choice="note">Make it a Note</button>', choice => {
         if (choice !== 'note') return;
         record.type = 'note';
         record.demoType = 'note';
@@ -180,7 +180,7 @@ function guideNoteConversion(record) {
 }
 
 function guideAreaConversion(record) {
-    setGuide('The final orb can become the checkpoint for one defined Area.');
+    setGuide('The final Marker can become the checkpoint for one defined Area.');
     showGuidedChoice('<h2>Why create an Area?</h2><p>An Area groups nearby plants and Focus Points. Entering its checkpoint can load only the knowledge belonging to that place.</p><button type="button" data-demo-choice="area">Convert to Area Checkpoint</button>', choice => {
         if (choice !== 'area') return;
         record.type = 'sub_checkpoint';
@@ -192,7 +192,7 @@ function guideAreaConversion(record) {
         record.revealLines = 3;
         refreshDemoRecord(record);
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed and transformed three neutral orbs: a Plant profile, a Focus Point, and an Area checkpoint that can load the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed three Markers: a Plant profile, a Focus Point, and an Area checkpoint that can load the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
             if (action === 'finish') returnToWelcome();
             if (action === 'reset') {
                 markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
@@ -211,14 +211,14 @@ function armDemoPlacement(type) {
     const place = appRoot?.querySelector('[data-tryit-place]');
     place?.removeAttribute('hidden');
     const label = place?.querySelector('strong');
-    if (label) label.textContent = 'Place a neutral orb';
+    if (label) label.textContent = 'Place a Marker';
     const instructions = {
-        plant: 'Choose a new spot and place a neutral orb.',
-        note: 'Choose another spot in your physical space for a neutral orb.',
+        plant: 'Choose a new spot and place a Marker.',
+        note: 'Choose another spot in your physical space for a Marker.',
         zone: 'Choose the central checkpoint for this Area.'
     };
     setGuide(instructions[type]);
-    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first orb' : type === 'note' ? 'Place a second orb' : 'Place the Area checkpoint'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
+    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area checkpoint'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
 }
 
 function advanceDemo() {
@@ -285,13 +285,13 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a neutral orb" hidden><span aria-hidden="true"></span><strong>Place a neutral orb</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a Marker" hidden><span aria-hidden="true"></span><strong>Place a Marker</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>This short spatial journey works like a game. You will place three neutral orbs, then discover how each one can become a Plant, a Focus Point, or the checkpoint for an Area.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
+    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>This short spatial journey works like a game. You will place three Markers: a Plant, a Focus Point, and the checkpoint for an Area.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
         if (choice === 'continue') armDemoPlacement('plant');
     });
 }

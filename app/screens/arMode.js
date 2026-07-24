@@ -142,8 +142,8 @@ function setInteractionMode(mode) {
     closeUnplacedBag();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
-    if (interactionMode === 'view') setPlacementStatus('Eye mode is on. Hover over an orb to reveal its name.');
-    else if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Hold an orb, then drag or move your phone to carry it through the space.');
+    if (interactionMode === 'view') setPlacementStatus('Eye mode is on. Hover over a Marker to reveal its name.');
+    else if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Hold a Marker, then drag or move your phone to carry it through the space.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
 }
@@ -220,7 +220,7 @@ function showPlacedMarkerActions(record) {
     pendingPlacedRecord = record;
     picker.hidden = false;
     const fixedType = record.marker.type === 'intro_checkpoint';
-    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What should this orb become?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Checkpoint</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
+    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What kind of Marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} General Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Checkpoint</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
     }));
@@ -781,13 +781,13 @@ function createOverlay() {
             <span class="creator-ar-placement-pointer"></span>
             <span class="creator-ar-placement-guide-label" data-ar-placement-guide-label>Place marker</span>
         </div>
-        <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at an orb</small></div>
+        <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at a Marker</small></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button class="creator-ar-add-orb" type="button" data-ar-window="tools" aria-label="Add neutral orb"><strong>ADD NEUTRAL ORB</strong></button>
+            <button class="creator-ar-add-marker" type="button" data-ar-window="tools" aria-label="Add Marker"><strong>ADD MARKER</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
             <button class="creator-ar-mode-control is-active" type="button" data-ar-view-mode aria-label="Eye mode: view marker names" aria-pressed="true"><b class="creator-ar-eye-icon" aria-hidden="true"></b><span class="sr-only">Eye mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>

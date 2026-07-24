@@ -73,6 +73,13 @@ export async function createPlantRecord(data) {
     return plant;
 }
 
+export async function searchGlobalPlants(query) {
+    const value = String(query || '').trim();
+    if (value.length < 2) return [];
+    const payload = await requestJson(`${API_BASE}/plant-search/global?q=${encodeURIComponent(value)}`, { results: [] });
+    return Array.isArray(payload?.results) ? payload.results : [];
+}
+
 export async function updatePlantRecord(plantId, data) {
     const plant = await requestJson(`${API_BASE}/plant-library/${encodeURIComponent(plantId)}`, null, { method: 'PUT', body: JSON.stringify(data) });
     libraryCache.clear();

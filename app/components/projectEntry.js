@@ -92,7 +92,7 @@ export function renderProjectEntry(config) {
             <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
                 <strong id="openArTitle">OPEN AR</strong>
-                <small>Place neutral orbs, select details, or fine-tune positions.</small>
+                <small>Place Markers, choose their purpose, or fine-tune positions.</small>
             </button>
             <div class="dashboard-unplaced-bag">
                 <button type="button" onclick="${config.unplacedAction}"><strong>Unplaced Bag</strong><span>${config.status.unplaced} saved item${config.status.unplaced === '1' ? '' : 's'} waiting for placement</span></button>

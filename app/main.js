@@ -12,7 +12,7 @@ import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors
 import { exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, startArWithSkipCheck, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
 import { startArMode, exitArMode, isArModeActive } from './screens/arMode.js';
-import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, setFieldMarkerType } from './screens/fieldMarker.js';
+import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, searchGlobalPlantOptions, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, selectGlobalPlant, setFieldMarkerType, setPlantSearchScope } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
 import { deleteHillyardsMarker, openHillyardsEntry, openHillyardsMarkerActions, openHillyardsPlantProfileEditor, openMarkerPlantProfile, renderCheckpointForm, renderComingSoon, renderDemoProjects, renderFirstSteps, renderGlobalPlantList, renderHillyardsGuidelines, renderHillyardsProject, saveCheckpoint, editDraftMarker, saveDraftMarker, editDraftPlantProfile, saveDraftPlantProfile, deleteDraftMarker } from './screens/v1Navigation.js';
@@ -350,6 +350,9 @@ window.selectFieldProject = (id) => selectFieldProject(id);
 window.selectFieldSite = (id) => selectFieldSite(id);
 window.selectFieldPlace = (id) => selectFieldPlace(id);
 window.selectFieldPlantProfile = (id) => selectFieldPlantProfile(id);
+window.setPlantSearchScope = setPlantSearchScope;
+window.searchGlobalPlantOptions = searchGlobalPlantOptions;
+window.selectGlobalPlant = selectGlobalPlant;
 window.createFieldArea = () => createFieldArea().catch(error => window.alert(`Area could not be created: ${error.message}`));
 window.refreshFieldLocation = () => refreshFieldLocation();
 window.saveFieldMarker = event => saveFieldMarker(event);
