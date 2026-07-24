@@ -18,12 +18,15 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
 
 test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
+    const taskbar = arSource.slice(
+        arSource.indexOf('<nav class="creator-ar-taskbar"'),
+        arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
+    );
     assert.match(arSource, /data-ar-window="tools"/);
     assert.match(arSource, /data-ar-place-picker/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
-    assert.match(arSource, /Recenter checkpoint/);
     assert.match(arSource, /EXIT AR/);
     assert.match(arSource, /What type of marker is this\?/);
     assert.match(arSource, /data-ar-placed-type="plant"/);
@@ -31,10 +34,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /data-ar-placed-type="note"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
-    assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
-    assert.match(arSource, /data-ar-reset/);
-    assert.match(arSource, /Reset AR controls/);
+    assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /data-ar-ready-place/);
     assert.match(arSource, /creator-ar-ready-ring/);
 });
@@ -43,6 +44,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     const arSource = read('app/screens/arMode.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /createPlaceMarker/);
+    assert.match(arSource, /createProjectSite/);
     assert.match(arSource, /loadPlaceMarkers/);
     assert.match(arSource, /draftName = `\$\{baseName\} \(\$\{suffix\+\+\}\)`/);
     assert.match(arSource, /saveMarkerAnchor/);
@@ -78,8 +80,13 @@ test('Creator dashboard stays in web mode instead of being duplicated in AR', ()
 
 test('Creator AR has no dashboard grab or controller-ray controls', () => {
     const arSource = read('app/screens/arMode.js');
+    const taskbar = arSource.slice(
+        arSource.indexOf('<nav class="creator-ar-taskbar"'),
+        arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
+    );
     assert.doesNotMatch(arSource, /targetRaySpace|selectstart|selectend|squeezestart|squeezeend/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
+    assert.doesNotMatch(taskbar, /data-ar-grab-mode|data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /checkpointSessionOrigin/);
 });
 
@@ -152,9 +159,9 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /Test session/);
     assert.match(source, /What type of marker is this\?/);
     assert.doesNotMatch(source, /Choose an Area/);
-    assert.match(source, /checkpointSessionOrigin = Float32Array\.from\(latestViewerMatrix\)/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
+    assert.match(styles, /\.creator-ar-marker \{[\s\S]*width: 10px;[\s\S]*height: 10px;/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
     assert.doesNotMatch(styles, /\.creator-ar-placement-status/);
     assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(3/);

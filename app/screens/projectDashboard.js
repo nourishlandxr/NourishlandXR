@@ -701,6 +701,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
+                { label: 'Starting Point', description: 'Place, review and deeply edit the central beginning of the visitor experience.', action: `window.renderStartingPoints('${encoded(project.id)}')` },
                 { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` },
                 { label: 'NourishlandXR Settings', description: 'Platform settings, text size, hints, diagnostics and build information from the welcome page.', action: `window.renderPlatformComingSoon('Settings', 'creator')` }
             ],

@@ -25,5 +25,7 @@ test('dashboard Site Map renders a visual plan with areas and placed content', (
     assert.match(styles, /\.site-map-area/);
     assert.match(styles, /\.site-map-pin/);
     assert.match(styles, /\.site-map-pin::after/);
+    assert.match(styles, /\.site-map-pin \{[\s\S]*width: 3px; height: 3px/);
+    assert.match(styles, /\.site-map-area \{[\s\S]*background: rgba\(11,45,25,.26\)/);
     assert.equal(fs.existsSync(path.join(root, 'app/assets/terrace-marking.png')), true);
 });

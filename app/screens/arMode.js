@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 
 let session = null;
 let gl = null;
@@ -192,7 +192,7 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<button class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" type="button" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}">${markerIcon(record.marker.type)}<span>${escapeHtml(record.marker.name)}</span></button>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => `<button class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" type="button" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></button>`).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -305,8 +305,11 @@ function cancelMarkerDrag(event) {
 
 async function loadPlacementAreas() {
     const sites = await loadProjectSites(activeProjectId);
-    const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0];
-    if (!site) return [];
+    const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0] || await createProjectSite(activeProjectId, {
+        name: 'Main Location',
+        description: 'Primary Location for this project.',
+        visibility: 'draft'
+    });
     activeSiteId = site.id;
     const areas = await loadSitePlaces(activeProjectId, site.id);
     const selected = areas.find(area => area.id === activeAreaId);
@@ -436,10 +439,7 @@ function createOverlay() {
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place marker"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place marker</span></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: move markers" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button class="creator-ar-icon-control" type="button" data-ar-reset aria-label="Reset AR controls"><b aria-hidden="true">&#x21BA;</b><span class="sr-only">Reset AR controls</span></button>
-            <button class="creator-ar-icon-control" type="button" data-ar-recenter aria-label="Recenter checkpoint"><b aria-hidden="true">&#x25CE;</b><span class="sr-only">Recenter checkpoint</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
 
@@ -454,19 +454,7 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement('sub_checkpoint');
     });
-    overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
-    overlayRoot.querySelector('[data-ar-reset]').addEventListener('click', resetArControls);
-    overlayRoot.querySelector('[data-ar-recenter]').addEventListener('click', () => {
-        if (!latestViewerMatrix) {
-            setPlacementStatus('Move your phone briefly, then recenter the checkpoint.');
-            return;
-        }
-        checkpointSessionOrigin = Float32Array.from(latestViewerMatrix);
-        setPlacementStatus(activeCheckpointId
-            ? 'Checkpoint origin set for this placement session.'
-            : 'Temporary test origin set for this session. Add an Area Marker when you install one.');
-    });
     overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
         if (readyPlacementType) void quickPlace(readyPlacementType);
     });
