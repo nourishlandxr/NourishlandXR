@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 
 let session = null;
 let gl = null;
@@ -27,32 +27,16 @@ let interactionMode = '';
 let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
+let pendingPlacedRecord = null;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
-function returnToWeb() {
-    const projectId = activeProjectId;
-    exitArMode();
-    window.setTimeout(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)), 0);
-}
-
-function openCheckpointSetup() {
-    const projectId = activeProjectId;
-    exitArMode();
-    window.setTimeout(() => window.openCreatorArCheckpointSetup?.(encodeURIComponent(projectId)), 0);
-}
-
 function setPlacementStatus(message) {
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
     if (status) status.textContent = message;
-}
-
-function setAreaButtonLabel() {
-    const button = overlayRoot?.querySelector('[data-ar-select-area]');
-    if (button) button.textContent = activeAreaName ? `Area: ${activeAreaName}` : 'Choose Area';
 }
 
 function updateReadyPlacementControl() {
@@ -142,13 +126,28 @@ function closeAreaChooser() {
 
 function closePlacePicker() {
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
-    if (picker) picker.hidden = true;
+    if (picker) {
+        picker.hidden = true;
+        picker.innerHTML = '';
+    }
+    pendingPlacedRecord = null;
     overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'false');
 }
 
-function openPlacePicker() {
+function showPlacedMarkerActions(record) {
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
-    if (picker) picker.hidden = false;
+    if (!picker) return;
+    pendingPlacedRecord = record;
+    picker.hidden = false;
+    picker.innerHTML = `<p>What type of marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button></div><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
+    picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
+        void setPlacedMarkerType(record, button.dataset.arPlacedType);
+    }));
+    picker.querySelector('[data-ar-edit-placed]').addEventListener('click', () => {
+        closePlacePicker();
+        openInlineEditor(record, true);
+    });
+    picker.querySelector('[data-ar-finish-placed]').addEventListener('click', closePlacePicker);
     overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'true');
 }
 
@@ -161,7 +160,7 @@ function resetArControls() {
     readyPlacementType = '';
     updateReadyPlacementControl();
     updateInteractionControls();
-    setPlacementStatus('AR controls reset. Choose an Area or Place when you are ready.');
+    setPlacementStatus('AR controls reset. Press plus when you are ready to place a marker.');
 }
 
 function multiplyMatrixVector(matrix, vector) {
@@ -308,77 +307,30 @@ async function loadPlacementAreas() {
     const site = sites.find(item => item.id === activeSiteId) || sites.find(item => item.id === 'main_food_forest') || sites[0];
     if (!site) return [];
     activeSiteId = site.id;
-    const areas = (await loadSitePlaces(activeProjectId, site.id)).filter(area => area.name !== 'Unassigned');
+    const areas = await loadSitePlaces(activeProjectId, site.id);
     const selected = areas.find(area => area.id === activeAreaId);
     if (selected) activeAreaName = selected.name;
-    else if (areas.length === 1) {
-        activeAreaId = areas[0].id;
-        activeAreaName = areas[0].name;
+    else {
+        const automaticArea = areas.find(area => area.name === 'Unassigned') || areas[0] || await createSitePlace(activeProjectId, site.id, {
+            name: 'Unassigned',
+            type: 'Unassigned',
+            description: 'Content captured quickly in AR and ready to organise later.',
+            visibility: 'draft'
+        });
+        activeAreaId = automaticArea.id;
+        activeAreaName = automaticArea.name;
     }
-    setAreaButtonLabel();
     return areas;
-}
-
-function showAreaChooser(areas) {
-    const chooser = overlayRoot?.querySelector('[data-ar-area-chooser]');
-    if (!chooser) return;
-    chooser.hidden = false;
-    chooser.innerHTML = `<div><strong>Choose an Area</strong><button type="button" aria-label="Close Area chooser" data-ar-close-area>&times;</button></div><p>New drafts will be saved to this Area.</p><div class="creator-ar-area-options">${areas.map(area => `<button type="button" data-ar-area-id="${escapeHtml(area.id)}">${escapeHtml(area.name)}</button>`).join('')}</div>`;
-    chooser.querySelector('[data-ar-close-area]').addEventListener('click', closeAreaChooser);
-    chooser.querySelectorAll('[data-ar-area-id]').forEach((button, index) => button.addEventListener('click', () => {
-        const area = areas[index];
-        if (!area) return;
-        const changedArea = Boolean(activeAreaId && activeAreaId !== area.id);
-        activeAreaId = area.id;
-        activeAreaName = area.name;
-        if (changedArea) {
-            activeCheckpointId = '';
-            checkpointSessionOrigin = null;
-        }
-        closeAreaChooser();
-        setAreaButtonLabel();
-        if (readyPlacementType) {
-            updateReadyPlacementControl();
-            setPlacementStatus(`${readyPlacementLabel(readyPlacementType)} ready in ${area.name}. Tap the centre circle to place it.`);
-        } else {
-            openPlacePicker();
-            setPlacementStatus(`${area.name} selected.${changedArea ? ' Checkpoint origin reset for this Area.' : ''} Choose what to place.`);
-        }
-    }));
 }
 
 async function ensurePlacementArea() {
     try {
         const areas = await loadPlacementAreas();
         if (areas.some(area => area.id === activeAreaId)) return true;
-        if (!areas.length) {
-            setPlacementStatus('Create an Area in Web Mode before placing content.');
-            return false;
-        }
-        showAreaChooser(areas);
-        setPlacementStatus('Choose an Area, then place the draft.');
     } catch (error) {
-        setPlacementStatus(`Area selection is unavailable: ${error.message}`);
+        setPlacementStatus(`Marker storage is unavailable: ${error.message}`);
     }
     return false;
-}
-
-async function choosePlacementArea() {
-    try {
-        cleanupDrag();
-        interactionMode = '';
-        closeInlineEditor();
-        updateInteractionControls();
-        const areas = await loadPlacementAreas();
-        if (!areas.length) {
-            setPlacementStatus('Create an Area in Web Mode before placing content.');
-            return;
-        }
-        showAreaChooser(areas);
-        setPlacementStatus('Choose an Area. Reset closes this panel if you need to start again.');
-    } catch (error) {
-        setPlacementStatus(`Area selection is unavailable: ${error.message}`);
-    }
 }
 
 async function armPlacement(type) {
@@ -389,6 +341,34 @@ async function armPlacement(type) {
     if (await ensurePlacementArea()) {
         setPlacementStatus(`${readyPlacementLabel(type)} ready. Tap the centre circle to place it.`);
     }
+}
+
+async function setPlacedMarkerType(record, type) {
+    if (!record || pendingPlacedRecord !== record) return;
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
+    try {
+        const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
+            ...record.marker,
+            type,
+            name: record.marker.name === 'New marker' ? defaults[type] : record.marker.name,
+            plant_profile: type === 'plant' ? { common_name: defaults[type] } : undefined
+        });
+        record.marker = updated;
+        renderSessionMarkers();
+        showPlacedMarkerActions(record);
+        pickerSelectedType(type);
+        setPlacementStatus(`${readyPlacementLabel(type)} selected. Edit details now or finish.`);
+    } catch (error) {
+        setPlacementStatus(`Could not change marker type: ${error.message}`);
+    }
+}
+
+function pickerSelectedType(type) {
+    overlayRoot?.querySelectorAll('[data-ar-placed-type]').forEach(button => {
+        const selected = button.dataset.arPlacedType === type;
+        button.classList.toggle('is-selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+    });
 }
 
 async function quickPlace(type) {
@@ -430,12 +410,8 @@ async function quickPlace(type) {
             readyPlacementType = '';
             updateReadyPlacementControl();
         }
-        if (type === 'note') {
-            setPlacementStatus(`${marker.name} placed. Add your note now, or save it as a draft for later.`);
-            openInlineEditor(record, true);
-        } else {
-            setPlacementStatus(`${marker.name} placed as a draft. Enable Pointer to edit or Hand to move it.`);
-        }
+        setPlacementStatus(`${marker.name} placed. Choose its type, then edit only if you want to.`);
+        showPlacedMarkerActions(record);
     } catch (error) {
         setPlacementStatus(`Could not place ${label}: ${error.message}`);
     }
@@ -456,17 +432,9 @@ function createOverlay() {
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <button class="creator-ar-ready-placement" type="button" data-ar-ready-place hidden><span class="creator-ar-ready-ring" aria-hidden="true"></span><span data-ar-ready-place-label></span></button>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
-        <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
-        <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Place content" hidden>
-            <button type="button" data-ar-select-area>Choose Area</button>
-            <button type="button" data-ar-add-checkpoint>Add Area Marker</button>
-            <button type="button" data-ar-place-tree>Place tree</button>
-            <button type="button" data-ar-place-marker>Place marker</button>
-            <button type="button" data-ar-place-note>Place note</button>
-        </section>
+        <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
         <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button type="button" data-ar-web-mode><b aria-hidden="true">&#x21B7;</b><span>WEB</span></button>
-            <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place content" aria-expanded="false"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place content</span></button>
+            <button class="creator-ar-icon-control" type="button" data-ar-window="tools" aria-label="Place marker"><b aria-hidden="true">&#xFF0B;</b><span class="sr-only">Place marker</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: move markers" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button class="creator-ar-icon-control" type="button" data-ar-reset aria-label="Reset AR controls"><b aria-hidden="true">&#x21BA;</b><span class="sr-only">Reset AR controls</span></button>
@@ -474,11 +442,16 @@ function createOverlay() {
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
         </nav>`;
 
-    overlayRoot.querySelector('[data-ar-web-mode]').addEventListener('click', returnToWeb);
-    overlayRoot.querySelector('[data-ar-window="tools"]').addEventListener('click', event => {
-        const picker = overlayRoot.querySelector('[data-ar-place-picker]');
-        if (picker.hidden) openPlacePicker();
-        else closePlacePicker();
+    overlayRoot.querySelector('[data-ar-window="tools"]').addEventListener('click', () => {
+        if (readyPlacementType) {
+            readyPlacementType = '';
+            updateReadyPlacementControl();
+            setPlacementStatus('Placement cancelled.');
+            return;
+        }
+        closeInlineEditor();
+        closePlacePicker();
+        void armPlacement('sub_checkpoint');
     });
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
@@ -493,11 +466,6 @@ function createOverlay() {
             ? 'Checkpoint origin set for this placement session.'
             : 'Temporary test origin set for this session. Add an Area Marker when you install one.');
     });
-    overlayRoot.querySelector('[data-ar-select-area]').addEventListener('click', () => { closePlacePicker(); void choosePlacementArea(); });
-    overlayRoot.querySelector('[data-ar-add-checkpoint]').addEventListener('click', () => { closePlacePicker(); openCheckpointSetup(); });
-    overlayRoot.querySelector('[data-ar-place-tree]').addEventListener('click', () => { void armPlacement('plant'); });
-    overlayRoot.querySelector('[data-ar-place-marker]').addEventListener('click', () => { void armPlacement('sub_checkpoint'); });
-    overlayRoot.querySelector('[data-ar-place-note]').addEventListener('click', () => { void armPlacement('note'); });
     overlayRoot.querySelector('[data-ar-ready-place]').addEventListener('click', () => {
         if (readyPlacementType) void quickPlace(readyPlacementType);
     });
@@ -525,6 +493,7 @@ function cleanup() {
     interactionMode = '';
     sessionMarkers = [];
     readyPlacementType = '';
+    pendingPlacedRecord = null;
     gl = null;
 }
 

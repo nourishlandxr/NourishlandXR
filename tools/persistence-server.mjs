@@ -1249,6 +1249,9 @@ function handleApi(req, res) {
                 if (nextId !== markerId) fs.renameSync(currentDir, nextDir);
                 const marker = { ...existing, ...data, visibility: normalizeVisibility(data.visibility, existing.visibility || 'draft'), id: nextId, type, name: nextName, modified: new Date().toISOString() };
                 writeJson(path.join(nextDir, 'marker.json'), marker);
+                if (type === 'plant' && !fs.existsSync(path.join(nextDir, 'plant_profile.json'))) {
+                    writeJson(path.join(nextDir, 'plant_profile.json'), { common_name: nextName, scientific_name: '', overview: '', identification: '', edible_uses: '', propagation: '', growing_conditions: '', notes: '', references: '', ...(data.plant_profile || {}) });
+                }
                 sendJson(res, 200, marker);
             } catch (error) { sendJson(res, 400, { error: error.message }); }
         });

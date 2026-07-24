@@ -18,7 +18,6 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
 
 test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
-    assert.match(arSource, /WEB/);
     assert.match(arSource, /data-ar-window="tools"/);
     assert.match(arSource, /data-ar-place-picker/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
@@ -26,17 +25,18 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /Recenter checkpoint/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /Add Area Marker/);
-    assert.match(arSource, /Place tree/);
-    assert.match(arSource, /Place marker/);
-    assert.match(arSource, /Place note/);
+    assert.match(arSource, /What type of marker is this\?/);
+    assert.match(arSource, /data-ar-placed-type="plant"/);
+    assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
+    assert.match(arSource, /data-ar-placed-type="note"/);
+    assert.doesNotMatch(arSource, /data-ar-web-mode/);
+    assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-grab-mode/);
     assert.match(arSource, /data-ar-select-mode/);
     assert.match(arSource, /data-ar-reset/);
     assert.match(arSource, /Reset AR controls/);
     assert.match(arSource, /data-ar-ready-place/);
     assert.match(arSource, /creator-ar-ready-ring/);
-    assert.match(arSource, /Add Area Marker/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
@@ -61,10 +61,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Move cancelled\. Hand mode is now off/);
     assert.match(arSource, /function resetArControls\(\)/);
     assert.match(arSource, /readyPlacementType = '';/);
-    assert.match(arSource, /openPlacePicker\(\);/);
-    assert.match(arSource, /AR controls reset\. Choose an Area or Place when you are ready/);
-    assert.match(arSource, /chooser\.querySelectorAll\('\[data-ar-area-id\]'\)/);
-    assert.match(arSource, /activeCheckpointId = ''/);
+    assert.match(arSource, /showPlacedMarkerActions\(record\)/);
+    assert.match(arSource, /AR controls reset\. Press plus when you are ready to place a marker/);
+    assert.match(arSource, /name: 'Unassigned'/);
+    assert.match(arSource, /createSitePlace/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
     assert.match(serverSource, /markerName = `\$\{requestedName\} \(\$\{suffix\}\)`/);
@@ -73,8 +73,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {
     const arSource = read('app/screens/arMode.js');
     assert.doesNotMatch(arSource, /drawDashboard|captureDashboardSnapshot|Grab dashboard|summonArDashboard/);
-    assert.match(arSource, /returnToWeb/);
-    assert.match(arSource, /window\.renderProjectDashboard/);
+    assert.doesNotMatch(arSource, /returnToWeb|data-ar-web-mode/);
 });
 
 test('Creator AR has no dashboard grab or controller-ray controls', () => {
@@ -150,15 +149,15 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
-    assert.match(source, /data-ar-web-mode/);
     assert.match(source, /Test session/);
-    assert.match(source, /Add Area Marker/);
+    assert.match(source, /What type of marker is this\?/);
+    assert.doesNotMatch(source, /Choose an Area/);
     assert.match(source, /checkpointSessionOrigin = Float32Array\.from\(latestViewerMatrix\)/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
     assert.doesNotMatch(styles, /\.creator-ar-placement-status/);
-    assert.match(styles, /\.creator-ar-area-options \{ display: grid; grid-template-columns: repeat\(2/);
+    assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(3/);
 });
 
 test('Creator AR supports temporary checkpoints and direct test sessions', () => {
