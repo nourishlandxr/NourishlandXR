@@ -143,8 +143,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
-    assert.match(source, /Aim at a place, then tap the breathing circle/);
-    assert.match(source, /What is this marker\?/);
+    assert.match(source, /Look around and find a clear surface/);
+    assert.match(source, /Choose a place for your story/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
@@ -156,6 +156,9 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
+    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(source, /requestHitTestSource/);
+    assert.match(source, /spatialPosition\(latestHitMatrix, latestViewerMatrix/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
     assert.match(source, /Test session/);
@@ -200,7 +203,7 @@ test('dashboard quick marker and note actions open AR with a ready centre placem
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
-    assert.match(arSource, /if \(readyPlacementType === type\)/);
+    assert.match(arSource, /readyPlacementType = '';\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = ''\)/);
     assert.match(styles, /\.creator-ar-ready-placement/);
     assert.match(styles, /creator-ar-ready-pulse/);

@@ -9,6 +9,8 @@
 
 import { createPlaceMarker, createProjectSite, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
+import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
+import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
 
 let session = null;
 let gl = null;
@@ -29,6 +31,8 @@ let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
 let pendingPlacedRecord = null;
+let hitTestSource = null;
+let latestHitMatrix = null;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -53,13 +57,7 @@ function updateReadyPlacementControl() {
 }
 
 function placementPoint() {
-    if (!latestViewerMatrix) return null;
-    const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
-    return {
-        x: latestViewerMatrix[12] - latestViewerMatrix[8] * distance,
-        y: latestViewerMatrix[13] - latestViewerMatrix[9] * distance,
-        z: latestViewerMatrix[14] - latestViewerMatrix[10] * distance
-    };
+    return spatialPosition(latestHitMatrix, latestViewerMatrix, 0.06);
 }
 
 function roundCoordinate(value) {
@@ -379,6 +377,8 @@ async function quickPlace(type) {
     }
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
     const label = markerLabel(type);
+    readyPlacementType = '';
+    updateReadyPlacementControl();
     setPlacementStatus(`Placing ${label}...`);
     try {
         const existingMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, activeAreaId).catch(() => []);
@@ -391,26 +391,17 @@ async function quickPlace(type) {
         }
         // AR drafts intentionally use the stable marker route. Plant markers
         // include a profile file and can be completed later from Pointer/Web.
-        const response = await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, {
-            name: draftName,
-            type,
-            description: '',
-            plant_profile: type === 'plant' ? { common_name: draftName } : undefined,
-            visibility: 'draft',
-            status: 'draft'
-        });
+        const response = await createPlaceMarker(activeProjectId, activeSiteId, activeAreaId, createMinimalMarkerDraft(type, { name: draftName }));
         const marker = response.marker || response;
         await saveMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id, spatialAnchor(position));
         const record = { marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName };
         sessionMarkers.push(record);
         renderSessionMarkers();
-        if (readyPlacementType === type) {
-            readyPlacementType = '';
-            updateReadyPlacementControl();
-        }
         setPlacementStatus(`${marker.name} placed. Choose its type, then edit only if you want to.`);
         showPlacedMarkerActions(record);
     } catch (error) {
+        readyPlacementType = type;
+        updateReadyPlacementControl();
         setPlacementStatus(`Could not place ${label}: ${error.message}`);
     }
 }
@@ -472,6 +463,9 @@ function cleanup() {
     activeCheckpointId = '';
     latestViewerMatrix = null;
     latestView = null;
+    hitTestSource?.cancel?.();
+    hitTestSource = null;
+    latestHitMatrix = null;
     checkpointSessionOrigin = null;
     interactionMode = '';
     sessionMarkers = [];
@@ -512,7 +506,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
 
     try {
         session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['dom-overlay'],
+            requiredFeatures: ['dom-overlay', 'hit-test'],
             optionalFeatures: ['local-floor'],
             domOverlay: { root: overlayRoot }
         });
@@ -533,6 +527,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         } catch {
             refSpace = await session.requestReferenceSpace('local');
         }
+        const viewerSpace = await session.requestReferenceSpace('viewer');
+        hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
         const draw = (_time, frame) => {
             if (frame.session !== session || !gl) return;
@@ -541,6 +537,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
             latestView = pose.views[0] || null;
+            const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
+            latestHitMatrix = matrixFromPose(hit?.getPose(refSpace));
             positionSessionMarkers(latestView);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);

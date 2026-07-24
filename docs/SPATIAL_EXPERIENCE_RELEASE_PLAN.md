@@ -66,13 +66,13 @@ Loading must be cancellable. A late response from a previous Area must never ove
 
 ### Try It Now master flow
 
-The three-marker demonstration teaches the underlying platform model:
+The welcome demonstration begins with a persistent transparent Story Board, then teaches the underlying platform model with exactly three placed elements:
 
 1. **Plant:** place a plant, then reveal its spatial knowledge frame with climate, uses and relationships.
 2. **Note / Focus Point:** place an observation, then demonstrate the roadmap for sound, animation, images and evolving stories.
-3. **Area:** create an Area checkpoint that groups its markers into one section, guild, microclimate, crop or educational experience.
+3. **Checkpoint:** create a discovery point that welcomes visitors, begins a journey and connects the plant and note into an experience.
 
-The sequence is a compact explanation of how simple spatial markers become stories, databases and place-based education.
+The sequence is temporary and saves nothing. It is a compact explanation of how simple spatial markers become stories, databases and place-based education. Dashboard AR and Try It Now share the same surface-hit placement primitive in `app/services/spatialPlacement.js`; their persistence differs intentionally.
 
 ### Seven-layer filtering model (provisional)
 

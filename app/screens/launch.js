@@ -31,9 +31,9 @@ export function renderLaunchScreen(app) {
                         <strong>About This Tool</strong>
                         <span>Understand what NourishlandXR is and what it can help you build.</span>
                     </button>
-                    <button class="menu-card role-card welcome-complementary-card" onclick="window.openTemporaryArDemoWindow()">
-                        <strong>Try It Now</strong>
-                        <span>Experience a quick demonstration of information appearing within a real place.</span>
+                    <button class="menu-card role-card welcome-complementary-card try-it-now-entry" onclick="window.openTemporaryArDemoWindow()">
+                        <strong>TRY IT NOW</strong>
+                        <span>Place a living story in your space.</span>
                     </button>
                 </div>
             </section>

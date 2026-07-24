@@ -175,24 +175,20 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo applies types to three neutral markers without opening a keyboard', () => {
+test('temporary AR demo places a story board and three guided spatial elements without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(source, /Place marker 1 of 3/);
-    assert.match(source, /What is this marker\?/);
-    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'area'\]/);
-    assert.match(source, /Plant · Lemon Myrtle/);
-    assert.match(source, /CLIMATE  Warm temperate · sheltered/);
-    assert.match(source, /MEDIA  Sound · animation · images/);
-    assert.match(source, /SYSTEM  One section · one microclimate/);
+    assert.match(source, /Tap to place the story/);
+    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'checkpoint'\]/);
+    assert.match(source, /Every place holds more than we first see/);
+    assert.match(source, /Discovery point/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /Your marker has been placed/);
-    assert.match(source, /data-tryit-type="plant"/);
-    assert.match(source, /data-tryit-type="note"/);
-    assert.match(source, /data-tryit-type="area"/);
-    assert.match(source, /data-tryit-apply/);
-    assert.match(source, /markers\.length >= 3/);
+    assert.match(source, /Begin building/);
+    assert.match(source, /Create a checkpoint/);
+    assert.match(source, /markers\.length >= 4/);
+    assert.match(source, /createMinimalMarkerDraft/);
+    assert.match(source, /relateMinimalMarkers/);
     assert.doesNotMatch(source, /<input|autocomplete="off"/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker \{ display: none !important;/);
@@ -207,10 +203,8 @@ test('temporary AR demo applies types to three neutral markers without opening a
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
-    assert.match(source, /'#4f8d3f'/);
-    assert.match(source, /'#d6a928'/);
-    assert.match(source, /'#357fc4'/);
-    assert.match(source, /hitMatrix\[12\]/);
+    assert.match(source, /Finish demo/);
+    assert.match(source, /spatialPosition\(hitMatrix, viewerMatrix/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
 
