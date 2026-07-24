@@ -36,6 +36,9 @@ let latestHitMatrix = null;
 let markerProgram = null;
 let markerBuffer = null;
 let placementArmedAt = 0;
+let arHistoryArmed = false;
+let handlingArHistory = false;
+let placementInProgress = false;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -445,11 +448,17 @@ function pickerSelectedType(type) {
 }
 
 async function quickPlace(type) {
+    if (placementInProgress) return;
+    placementInProgress = true;
     closeInlineEditor();
-    if (!await ensurePlacementArea()) return;
+    if (!await ensurePlacementArea()) {
+        placementInProgress = false;
+        return;
+    }
     const position = placementPoint();
     if (!position) {
         setPlacementStatus('Move your phone briefly, then use Place again.');
+        placementInProgress = false;
         return;
     }
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
@@ -480,6 +489,8 @@ async function quickPlace(type) {
         readyPlacementType = type;
         updateReadyPlacementControl();
         setPlacementStatus(`Could not place ${label}: ${error.message}`);
+    } finally {
+        placementInProgress = false;
     }
 }
 
@@ -494,7 +505,8 @@ function createOverlay() {
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
-        <p class="sr-only" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
+        <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
+        <span class="creator-ar-placement-capture" data-ar-placement-capture aria-hidden="true"></span>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
@@ -516,6 +528,11 @@ function createOverlay() {
         void armPlacement('sub_checkpoint');
     });
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
+    overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (readyPlacementType && performance.now() - placementArmedAt > 180) void quickPlace(readyPlacementType);
+    });
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     updateReadyPlacementControl();
     document.body.append(overlayRoot);
@@ -547,14 +564,43 @@ function cleanup() {
     markerProgram = null;
     markerBuffer = null;
     placementArmedAt = 0;
+    placementInProgress = false;
     gl = null;
 }
 
-export function exitArMode() {
+function finishArExitToDashboard() {
+    const projectId = activeProjectId;
     const activeSession = session;
     session = null;
     cleanup();
     activeSession?.end().catch(() => {});
+    if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)));
+}
+
+function handleArHistoryBack() {
+    if (!arHistoryArmed || handlingArHistory) return;
+    handlingArHistory = true;
+    arHistoryArmed = false;
+    window.removeEventListener('popstate', handleArHistoryBack);
+    finishArExitToDashboard();
+    handlingArHistory = false;
+}
+
+function armArHistory() {
+    if (arHistoryArmed) return;
+    history.pushState({ ...(history.state || {}), nourishlandCreatorAr: true }, '', window.location.href);
+    arHistoryArmed = true;
+    window.addEventListener('popstate', handleArHistoryBack);
+}
+
+export function exitArMode() {
+    if (arHistoryArmed && history.state?.nourishlandCreatorAr) {
+        history.back();
+        return;
+    }
+    arHistoryArmed = false;
+    window.removeEventListener('popstate', handleArHistoryBack);
+    finishArExitToDashboard();
 }
 
 export function isArModeActive() {
@@ -631,12 +677,15 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         };
 
         session.addEventListener('end', () => {
+            const projectId = activeProjectId;
             session = null;
             cleanup();
+            if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)));
         });
         session.addEventListener('select', () => {
             if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);
         });
+        armArHistory();
         session.requestAnimationFrame(draw);
         return true;
     } catch (error) {

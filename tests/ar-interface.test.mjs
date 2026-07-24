@@ -18,6 +18,7 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
 
 test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
     const taskbar = arSource.slice(
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
@@ -39,6 +40,11 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.equal((taskbar.match(/<button/g) || []).length, 3);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
+    assert.match(arSource, /data-ar-placement-capture/);
+    assert.match(arSource, /addEventListener\('pointerup'/);
+    assert.match(arSource, /performance\.now\(\) - placementArmedAt > 180/);
+    assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-capture \{ pointer-events: auto; \}/);
+    assert.match(styles, /\.creator-ar-status/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
     assert.match(arSource, /readyPlacementType && latestHitMatrix/);
 });
@@ -130,6 +136,9 @@ test('Creator AR opens a transparent WebXR session and cleans up on exit', () =>
     assert.match(arSource, /session\.addEventListener\('end'/);
     assert.match(arSource, /creator-ar-session-active/);
     assert.match(arSource, /activeSession\?\.end/);
+    assert.match(arSource, /history\.pushState\(\{ \.\.\.\(history\.state \|\| \{\}\), nourishlandCreatorAr: true \}/);
+    assert.match(arSource, /window\.addEventListener\('popstate', handleArHistoryBack\)/);
+    assert.match(arSource, /window\.renderProjectDashboard\?\.\(encodeURIComponent\(projectId\)\)/);
 });
 
 test('Creator AR falls back to setup when WebXR cannot start', () => {
