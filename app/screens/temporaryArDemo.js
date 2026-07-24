@@ -29,6 +29,10 @@ const DEMO_CONTENT = Object.freeze({
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['BOUNDARY  One defined place', 'USE  Guild · microclimate · crop', 'FLOW  Loads this Area’s markers and stories'] }
 });
+const NOTE_TEMPLATES = Object.freeze({
+    poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
+    warning: { title: 'Warning Note · DON’T GO HERE', accent: '#ef9b78', lines: ['WARNING  Do not enter this place', 'GUIDANCE  Explain the risk or boundary', 'FUTURE  Sound · alerts · animation'] }
+});
 
 function clearSessionState() {
     hitTestSource?.cancel?.();
@@ -75,17 +79,104 @@ function showDemoAction(label, nextStage) {
     action.dataset.nextStage = nextStage;
 }
 
+function demoContentFor(record) {
+    return record.demoContent || DEMO_CONTENT[record.demoType || record.type];
+}
+
+function hideGuidedChoice() {
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    if (panel) {
+        panel.hidden = true;
+        panel.innerHTML = '';
+    }
+}
+
+function showGuidedChoice(html, onClick) {
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    if (!panel) return;
+    panel.innerHTML = html;
+    panel.hidden = false;
+    panel.onclick = event => {
+        const choice = event.target.closest('[data-demo-choice]')?.dataset.demoChoice;
+        if (choice) onClick(choice);
+    };
+}
+
+function guidePlantConversion(record) {
+    setGuide('Neutral orb placed. Now give it a purpose.');
+    showGuidedChoice('<h2>Neutral orb placed</h2><p>Convert this orb into a Plant marker.</p><button type="button" data-demo-choice="plant">Convert to Plant</button>', choice => {
+        if (choice !== 'plant') return;
+        record.type = 'plant';
+        record.demoType = 'plant';
+        refreshDemoRecord(record);
+        showGuidedChoice('<h2>Choose a plant preset</h2><p>The plant database can recommend matching profiles. For this guided example, use Lemon Myrtle.</p><label>Search plant presets<input value="Lemon Myrtle" readonly></label><button type="button" data-demo-choice="lemon-myrtle">Use Lemon Myrtle preset</button>', preset => {
+            if (preset !== 'lemon-myrtle') return;
+            record.name = 'Lemon Myrtle';
+            record.demoExpanded = true;
+            record.revealTitle = true;
+            record.revealLines = 3;
+            refreshDemoRecord(record);
+            hideGuidedChoice();
+            setGuide('Lemon Myrtle profile loaded. Its climate, uses and relationships now live in this place.');
+            showDemoAction('Place another orb →', 'note');
+        });
+    });
+}
+
+function guideNoteConversion(record) {
+    setGuide('A second neutral orb is ready. Turn it into a Focus Point.');
+    showGuidedChoice('<h2>What should this orb become?</h2><p>Convert it into a Note, then choose a useful starting template.</p><button type="button" data-demo-choice="note">Convert to Note</button>', choice => {
+        if (choice !== 'note') return;
+        record.type = 'note';
+        record.demoType = 'note';
+        refreshDemoRecord(record);
+        showGuidedChoice('<h2>Choose a Note template</h2><p>Notes can become stories, warnings, media and interactive Focus Points.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="poi">Point of Interest</button><button type="button" data-demo-choice="warning">Warning note<br><small>DON’T GO HERE</small></button></div>', template => {
+            if (!NOTE_TEMPLATES[template]) return;
+            record.demoContent = NOTE_TEMPLATES[template];
+            record.name = template === 'warning' ? 'DON’T GO HERE' : 'Point of Interest';
+            record.demoExpanded = true;
+            record.revealTitle = true;
+            record.revealLines = 3;
+            refreshDemoRecord(record);
+            hideGuidedChoice();
+            setGuide('This Focus Point can later include sound, animation, images, alerts and changing observations.');
+            showDemoAction('See how Areas work →', 'zone');
+        });
+    });
+}
+
+function guideAreaConversion(record) {
+    setGuide('The final orb can become the checkpoint for one defined Area.');
+    showGuidedChoice('<h2>Why create an Area?</h2><p>An Area groups nearby plants and Focus Points. Entering its checkpoint can load only the knowledge belonging to that place.</p><button type="button" data-demo-choice="area">Convert to Area Checkpoint</button>', choice => {
+        if (choice !== 'area') return;
+        record.type = 'sub_checkpoint';
+        record.demoType = 'zone';
+        record.name = 'Citrus Guild';
+        record.demoExpanded = true;
+        record.isBoundary = true;
+        record.revealTitle = true;
+        record.revealLines = 3;
+        refreshDemoRecord(record);
+        hideGuidedChoice();
+        setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
+        const actions = appRoot?.querySelector('[data-tryit-final-actions]');
+        if (actions) actions.hidden = false;
+    });
+}
+
 function armDemoPlacement(type) {
+    if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
+    hideGuidedChoice();
     const place = appRoot?.querySelector('[data-tryit-place]');
     place?.removeAttribute('hidden');
     const label = place?.querySelector('strong');
-    if (label) label.textContent = type === 'story' ? 'Tap to place the story' : `Place ${type === 'checkpoint' ? 'a checkpoint' : `a ${type}`}`;
+    if (label) label.textContent = type === 'story' ? 'Tap to place the story' : 'Place a neutral orb';
     const instructions = {
         story: 'Choose a place for your story.',
-        plant: 'Aim at a surface and tap to place your plant.',
-        note: 'Choose a nearby place and tap to leave a thought.',
-        zone: 'Trace a place on the ground where this Area belongs.'
+        plant: 'Choose a new spot and place a neutral orb.',
+        note: 'Choose another spot in your physical space for a neutral orb.',
+        zone: 'Choose the central checkpoint for this Area.'
     };
     setGuide(instructions[type]);
 }
@@ -111,7 +202,7 @@ function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     layer.innerHTML = markers.map((record, index) => {
-        const content = DEMO_CONTENT[record.demoType || record.type];
+        const content = demoContentFor(record);
         const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
         return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : '·'}</span>`;
     }).join('');
@@ -136,19 +227,19 @@ function placementPosition() {
 }
 
 function placeMarker() {
-    if (marker || markers.length >= 4) return;
+    if (marker || markers.length >= 4 || markers.some(record => record.tutorialStage === demoStage)) return;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
         return;
     }
     const type = demoStage;
-    const draftType = type === 'zone' ? 'sub_checkpoint' : type;
+    const draftType = type === 'story' ? 'marker' : 'sub_checkpoint';
     const sample = createMinimalMarkerDraft(draftType, {
         name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : type === 'zone' ? 'New Area' : DEMO_CONTENT.story.title,
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    marker = { ...sample, position, type: draftType, demoType: type, demoExpanded: type === 'story', revealTitle: type !== 'story', revealLines: type === 'story' ? 0 : 3, texture: null };
+    marker = { ...sample, position, type: 'marker', demoType: type === 'story' ? 'story' : 'marker', tutorialStage: type, demoExpanded: type === 'story', revealTitle: type !== 'story', revealLines: type === 'story' ? 0 : 3, texture: null };
     if (markers.length > 1) marker = relateMinimalMarkers(marker, markers[1]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
@@ -161,27 +252,14 @@ function placeMarker() {
         scheduleRecordUpdate(placedRecord, 350, record => { record.revealTitle = true; });
         [1, 2, 3].forEach((count, index) => scheduleRecordUpdate(placedRecord, 850 + index * 650, record => { record.revealLines = count; }));
         demoTimers.push(setTimeout(() => showDemoAction('Begin building →', 'plant'), 2850));
-    } else if (type === 'plant') {
-        setGuide('Marker placed. Let’s name it Lemon Myrtle.');
-        scheduleRecordUpdate(placedRecord, 700, record => { record.name = 'Lemon Myrtle'; record.demoExpanded = true; });
-        demoTimers.push(setTimeout(() => { setGuide('Plant profile loaded. Climate, uses and relationships now live with the plant.'); showDemoAction('Add a note →', 'note'); }, 950));
-    } else if (type === 'note') {
-        setGuide('Note marker placed. Possible outcomes are loading.');
-        scheduleRecordUpdate(placedRecord, 650, record => { record.demoExpanded = true; });
-        demoTimers.push(setTimeout(() => { setGuide('Notes can become observations, media and Focus Points.'); showDemoAction('Define an Area →', 'zone'); }, 900));
-    } else {
-        placedRecord.demoExpanded = true;
-        placedRecord.isBoundary = true;
-        refreshDemoRecord(placedRecord);
-        setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        const actions = appRoot?.querySelector('[data-tryit-final-actions]');
-        if (actions) actions.hidden = false;
-    }
+    } else if (type === 'plant') guidePlantConversion(placedRecord);
+    else if (type === 'note') guideNoteConversion(placedRecord);
+    else guideAreaConversion(placedRecord);
 }
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place spatial element"><span aria-hidden="true"></span><strong>Tap to place the story</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide>Look around and find a clear surface. When you are ready, tap to begin.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place spatial element"><span aria-hidden="true"></span><strong>Tap to place the story</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice" data-tryit-guided-choice hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide>Look around and find a clear surface. When you are ready, tap to begin.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
@@ -271,7 +349,7 @@ function drawWrappedTextureText(ctx, text, x, y, maxWidth, lineHeight, maxLines 
 }
 
 function createSpatialKnowledgeTexture(record) {
-    const content = DEMO_CONTENT[record.demoType || record.type];
+    const content = demoContentFor(record);
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
     label.width = 1120;
@@ -356,7 +434,7 @@ function createMarkerTexture(record) {
         ctx.font = '54px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('🌱', 256, 84);
-    } else if (record.type === 'marker') {
+    } else if (record.type === 'marker' || record.type === 'sub_checkpoint') {
         ctx.fillStyle = '#365342';
         ctx.beginPath();
         ctx.arc(256, 64, 48, 0, Math.PI * 2);

@@ -190,15 +190,15 @@ test('temporary AR demo places a story board and three guided spatial elements w
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
     assert.match(source, /Begin building/);
-    assert.match(source, /Define an Area/);
+    assert.match(source, /See how Areas work/);
     assert.match(source, /markers\.length >= 4/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
-    assert.match(source, /Let’s name it Lemon Myrtle/);
+    assert.match(source, /Use Lemon Myrtle preset/);
     assert.match(source, /scheduleRecordUpdate/);
     assert.match(source, /createBoundaryTexture/);
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
-    assert.doesNotMatch(source, /<input|autocomplete="off"/);
+    assert.match(source, /Search plant presets<input value="Lemon Myrtle" readonly>/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker \{ display: none !important;/);
     assert.match(source, /function placeMarker/);

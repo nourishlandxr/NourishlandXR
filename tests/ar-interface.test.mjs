@@ -194,6 +194,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(94vw, 620px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
+    assert.match(source, /record\.tutorialStage === demoStage/);
+    assert.match(source, /data-tryit-guided-choice/);
+    assert.match(source, /Use Lemon Myrtle preset/);
+    assert.match(source, /Point of Interest/);
+    assert.match(source, /DON’T GO HERE/);
+    assert.match(source, /Convert to Area Checkpoint/);
+    assert.match(styles, /\.tryit-guided-choice/);
 });
 
 test('Creator project AR is a no-code placement session without a dashboard overlay', () => {
