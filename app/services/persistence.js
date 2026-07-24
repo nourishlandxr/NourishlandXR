@@ -131,7 +131,15 @@ export async function deletePlaceMarker(projectId, siteId, placeId, markerId) { 
 export async function loadPlantProfile(projectId, siteId, placeId, markerId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/plant-profile${visitorQuery(visitor)}`); }
 export async function savePlantProfile(projectId, siteId, placeId, markerId, profile) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/plant-profile`, { method: 'PUT', body: JSON.stringify(profile) }); }
 export async function loadMarkerAnchor(projectId, siteId, placeId, markerId, visitor = false) {
-    const anchor = await requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/anchor${visitorQuery(visitor)}`);
+    let anchor;
+    try {
+        anchor = await requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/anchor${visitorQuery(visitor)}`);
+    } catch (error) {
+        const markers = await loadPlaceMarkers(projectId, siteId, placeId, visitor);
+        const marker = markers.find(item => item.id === markerId);
+        if (!marker?.spatial_anchor) throw error;
+        return marker.spatial_anchor;
+    }
     if (anchor?.type === 'qr' && String(anchor.qr_code || '').startsWith('nxr-spatial:') && anchor.spatial_position) {
         return {
             ...anchor,
@@ -159,8 +167,17 @@ export async function saveMarkerAnchor(projectId, siteId, placeId, markerId, anc
             captured_at: anchor.captured_at,
             compatibility_format: 'nxr-spatial-v1'
         };
-        const saved = await requestJson(url, { method: 'PUT', body: JSON.stringify(compatibleAnchor) });
-        return { ...saved, ...anchor, compatibility_format: 'nxr-spatial-v1' };
+        try {
+            const saved = await requestJson(url, { method: 'PUT', body: JSON.stringify(compatibleAnchor) });
+            return { ...saved, ...anchor, compatibility_format: 'nxr-spatial-v1' };
+        } catch {
+            const markerRecordUrl = `${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}`;
+            const savedMarker = await requestJson(markerRecordUrl, {
+                method: 'PUT',
+                body: JSON.stringify({ spatial_anchor: { ...anchor, compatibility_format: 'nxr-marker-spatial-v1' } })
+            });
+            return { ...anchor, marker_id: savedMarker.id || markerId, compatibility_format: 'nxr-marker-spatial-v1' };
+        }
     }
 }
 

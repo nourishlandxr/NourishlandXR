@@ -85,6 +85,9 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(persistenceSource, /nxr-spatial:/);
     assert.match(persistenceSource, /compatibility_format: 'nxr-spatial-v1'/);
     assert.match(persistenceSource, /spatial_position/);
+    assert.match(persistenceSource, /marker\?\.spatial_anchor/);
+    assert.match(persistenceSource, /nxr-marker-spatial-v1/);
+    assert.match(persistenceSource, /body: JSON\.stringify\(\{ spatial_anchor:/);
 });
 
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {

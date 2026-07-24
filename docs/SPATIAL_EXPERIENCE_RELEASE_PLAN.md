@@ -67,7 +67,7 @@ Loading must be cancellable. A late response from a previous Area must never ove
 - Dashboard marker pixels are rendered directly in WebXR/WebGL. The projected DOM element is invisible and exists only as a generous Pointer-mode hit target.
 - Dashboard placement targets are also WebGL-only and follow the detected physical surface; no DOM control exists at screen centre.
 - Dashboard AR owns one temporary browser-history entry. Android Back and Exit AR close the session and restore the active project dashboard before normal navigation resumes.
-- Spatial anchors use the native `spatial` API type. During deployment transition, GPS/QR-only legacy endpoints receive a reserved `nxr-spatial-v1` compatibility envelope that is normalized back to spatial data on read.
+- Spatial anchors use the native `spatial` API type. During deployment transition, GPS/QR-only legacy endpoints first receive a reserved `nxr-spatial-v1` compatibility envelope. If their anchor route is unusable, the same data is embedded on the marker as `nxr-marker-spatial-v1`; both formats normalize back to spatial data on read.
 - A placed master marker is recorded immediately in fallback storage when no Area has been assigned.
 - Opening dashboard AR restores recorded spatial entries from the active storage Area; later Area assignment moves the same stable entry rather than recreating it.
 
