@@ -576,12 +576,20 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     let areaName = baseAreaName;
     let suffix = 2;
     while (names.has(areaName.toLocaleLowerCase())) areaName = `${baseAreaName} (${suffix++})`;
-    const area = await createSitePlace(activeProjectId, record.siteId, {
-        name: areaName,
-        type: 'Outdoor Area',
-        description: '',
-        visibility: 'draft'
-    });
+    let area;
+    try {
+        area = await createSitePlace(activeProjectId, record.siteId, {
+            name: areaName,
+            type: 'Outdoor Area',
+            description: '',
+            visibility: 'draft'
+        });
+    } catch (error) {
+        if (!/unsupported/i.test(String(error?.message || ''))) throw error;
+        area = areas.find(item => item.id === record.areaId);
+        if (!area) throw error;
+        areaName = area.name || areaName;
+    }
     const areaMarker = {
         ...record.marker,
         ...overrides,
@@ -599,7 +607,7 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     try {
         response = await createPlaceMarker(activeProjectId, record.siteId, area.id, areaMarker);
     } catch (error) {
-        if (!/unsupported marker type/i.test(String(error?.message || ''))) throw error;
+        if (!/unsupported/i.test(String(error?.message || ''))) throw error;
         compatibilityMode = true;
         response = await createPlaceMarker(activeProjectId, record.siteId, area.id, {
             ...areaMarker,
@@ -631,7 +639,7 @@ async function updateAreaCompatibleMarker(record, update) {
         const saved = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, payload);
         return normalizeAreaCheckpointMarker(saved);
     } catch (error) {
-        if (update.type !== 'area_checkpoint' || !/unsupported marker type/i.test(String(error?.message || ''))) throw error;
+        if (update.type !== 'area_checkpoint' || !/unsupported/i.test(String(error?.message || ''))) throw error;
         const saved = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
             ...update,
             type: 'sub_checkpoint',

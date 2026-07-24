@@ -156,7 +156,7 @@ export async function saveMarkerAnchor(projectId, siteId, placeId, markerId, anc
     try {
         return await requestJson(url, { method: 'PUT', body: JSON.stringify(anchor) });
     } catch (error) {
-        const legacySpatialRejection = anchor?.type === 'spatial' && /anchor type|gps|qr/i.test(String(error?.message || ''));
+        const legacySpatialRejection = anchor?.type === 'spatial' && /unsupported|placement|spatial|anchor type|gps|qr/i.test(String(error?.message || ''));
         if (!legacySpatialRejection) throw error;
         const compatibleAnchor = {
             type: 'qr',

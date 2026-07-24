@@ -171,6 +171,11 @@ test('opening a project paints a dashboard loading state before data work begins
     assert.match(mainSource, /resolvedName/);
     assert.match(mainSource, /Returning to dashboard/);
     assert.match(mainSource, /loadingContext === 'returning'/);
+    assert.match(mainSource, /Adding the trellis/);
+    assert.match(mainSource, /Soaking the seeds/);
+    assert.match(mainSource, /Digging a few holes/);
+    assert.match(mainSource, /setInterval/);
+    assert.match(mainSource, /clearInterval\(loadingCommentTimer\)/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
     assert.match(mainSource, /window\.addEventListener\('popstate'/);
     assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
@@ -259,6 +264,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
 
 test('Creator AR supports temporary checkpoints and direct test sessions', () => {
     const arSource = read('app/screens/arMode.js');
+    const persistenceSource = read('app/services/persistence.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /let startPromise = null/);
@@ -273,6 +279,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /optional for testing/);
     assert.match(dashboardSource, /Edit Area Marker/);
     assert.match(serverSource, /'area_checkpoint'/);
+    assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
 });
 
 test('dashboard focuses on Open AR and the Unplaced Bag', () => {
@@ -290,7 +297,8 @@ test('dashboard focuses on Open AR and the Unplaced Bag', () => {
     assert.match(arSource, /convertRecordToAreaCheckpoint/);
     assert.match(arSource, /type: 'Outdoor Area'/);
     assert.match(arSource, /semantic_type: 'area_checkpoint'/);
-    assert.match(arSource, /Unsupported marker type/i);
+    assert.match(arSource, /if \(!\/unsupported\/i\.test/);
+    assert.match(arSource, /areas\.find\(item => item\.id === record\.areaId\)/);
     assert.match(arSource, /Area welcome board/);
     assert.match(arSource, /creator-ar-spatial-area-board/);
     assert.match(styles, /\.creator-ar-spatial-area-board/);

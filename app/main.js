@@ -170,6 +170,15 @@ window.renderDemoProjects = async () => {
 };
 window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
     const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
+    const gardenLoadingComments = [
+        'Adding the trellis…',
+        'Soaking the seeds…',
+        'Digging a few holes…',
+        'Checking the compost…',
+        'Inviting the pollinators…',
+        'Untangling the garden hose…',
+        'Labeling the seedlings…'
+    ];
     if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
         history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName }, '', window.location.href);
     }
@@ -177,11 +186,22 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         <div class="project-loading-mark" aria-hidden="true">◉</div>
         <p class="welcome-label">${loadingContext === 'returning' ? 'Returning to dashboard' : 'Nourishland XR'}</p>
         <h1>${escapeMainHtml(resolvedName)}</h1>
-        <p>${loadingContext === 'returning' ? 'Restoring your project workspace…' : 'Loading dashboard, markers and Areas…'}</p>
+        <p data-project-loading-comment>${loadingContext === 'returning' ? 'Walking back from the garden…' : gardenLoadingComments[0]}</p>
         <div class="project-loading-track" aria-hidden="true"><span></span></div>
     </div>`;
+    let loadingCommentIndex = 0;
+    const loadingCommentTimer = setInterval(() => {
+        const comment = app.querySelector('[data-project-loading-comment]');
+        if (!comment) return;
+        loadingCommentIndex = (loadingCommentIndex + 1) % gardenLoadingComments.length;
+        comment.textContent = gardenLoadingComments[loadingCommentIndex];
+    }, 850);
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    return renderProjectDashboard(app, projectId);
+    try {
+        return await renderProjectDashboard(app, projectId);
+    } finally {
+        clearInterval(loadingCommentTimer);
+    }
 };
 window.addEventListener('popstate', event => {
     if (isArModeActive()) return;
