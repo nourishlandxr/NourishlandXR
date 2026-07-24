@@ -565,9 +565,12 @@ h1 {
 .tryit-name-controls button { min-height: 38px; border-color: #dcef95; background: rgba(220,239,149,.28); color: #fff; }
 .tryit-sim-marker { position: fixed; left: 50%; top: 40%; z-index: 12001; width: 13px; height: 13px; padding: 0; transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,.68); border-radius: 50%; background: rgba(183,232,149,.46); color: #fff; box-shadow: 0 0 12px rgba(183,232,149,.28); backdrop-filter: blur(5px); }
 .tryit-sim-marker { left: calc(34% + var(--marker-index) * 16%); top: calc(36% + var(--marker-index) * 8%); }
-.tryit-sim-marker.is-expanded { display: grid; gap: 7px; width: min(72vw, 330px); height: auto; padding: 14px 16px; border-radius: 20px; background: linear-gradient(135deg, rgba(10,32,21,.68), rgba(16,42,30,.38)); box-shadow: 0 12px 34px rgba(0,0,0,.18), inset 0 0 20px rgba(255,255,255,.035); color: rgba(255,255,255,.9); text-align: left; backdrop-filter: blur(11px); }
-.tryit-sim-marker.is-expanded strong { color: #fff; font-size: .8rem; }
-.tryit-sim-marker.is-expanded small { display: block; font-size: .58rem; line-height: 1.35; letter-spacing: .015em; }
+.tryit-sim-marker.is-expanded { display: grid; gap: 10px; width: min(84vw, 430px); height: auto; padding: 20px 22px; border-radius: 24px; background: linear-gradient(135deg, rgba(10,32,21,.68), rgba(16,42,30,.38)); box-shadow: 0 12px 34px rgba(0,0,0,.18), inset 0 0 20px rgba(255,255,255,.035); color: rgba(255,255,255,.9); text-align: left; backdrop-filter: blur(11px); animation: tryit-frame-arrive .36s ease-out both; }
+.tryit-sim-marker.is-expanded strong { min-height: 1.2em; color: #fff; font-size: 1.05rem; }
+.tryit-sim-marker.is-expanded small { display: block; font-size: .76rem; line-height: 1.45; letter-spacing: .015em; animation: tryit-subtitle-in .32s ease-out both; }
+.tryit-sim-marker-zone.is-expanded::before { content: ""; position: absolute; left: 50%; top: 100%; width: min(86vw, 520px); height: 110px; transform: translate(-50%, 14px); border: 3px dashed rgba(137,200,239,.72); border-radius: 50%; box-shadow: 0 0 22px rgba(137,200,239,.2); }
+@keyframes tryit-frame-arrive { from { opacity: 0; transform: translate(-50%, -45%) scale(.88); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes tryit-subtitle-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .tryit-sim-marker-plant.is-expanded { border-color: rgba(183,232,149,.72); }
 .tryit-sim-marker-note.is-expanded { border-color: rgba(240,207,112,.72); }
 .tryit-sim-marker-area.is-expanded { border-color: rgba(137,200,239,.72); }
@@ -606,10 +609,10 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-taskbar button.is-active { border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.16); color: #fff; }
 .creator-ar-mode-control, .creator-ar-icon-control { min-width: 34px; justify-content: center; padding-inline: 6px !important; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
-.creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; width: min(88vw, 340px); gap: 7px; padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.4); border-radius: 14px; background: rgba(18,52,31,.42); box-shadow: 0 6px 20px rgba(0,0,0,.18); backdrop-filter: blur(8px); color: #fff; pointer-events: auto; }
+.creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; width: min(88vw, 340px); gap: 7px; padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; background: rgba(12,34,22,.58) !important; box-shadow: 0 6px 20px rgba(0,0,0,.15); backdrop-filter: blur(12px); color: #fff; pointer-events: auto; }
 .creator-ar-place-picker[hidden] { display: none; }
 .creator-ar-place-picker p { margin: 0; font-size: .72rem; font-weight: 800; text-shadow: 0 1px 5px rgba(0,0,0,.65); }
-.creator-ar-place-picker button { min-height: 36px; padding: 6px 8px; border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.1); color: #fff; font-size: .7rem; white-space: nowrap; }
+.creator-ar-place-picker button, body[data-project-theme] .creator-ar-place-picker button { min-height: 36px; padding: 6px 8px; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.08) !important; color: #fff; font-size: .7rem; white-space: nowrap; }
 .creator-ar-type-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .creator-ar-type-options button.is-selected { border-color: #dcef95; background: rgba(220,239,149,.28); }
 .creator-ar-after-place-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -620,9 +623,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-ready-ring { width: 46px; height: 46px; border: 2px solid rgba(220,239,149,.98); border-radius: 50%; background: rgba(220,239,149,.16); box-shadow: 0 0 0 8px rgba(220,239,149,.14), 0 0 24px rgba(220,239,149,.5); animation: creator-ar-ready-pulse 1.55s ease-in-out infinite; }
 .creator-ar-ready-placement:active .creator-ar-ready-ring { transform: scale(.9); }
 @keyframes creator-ar-ready-pulse { 0%, 100% { transform: scale(.9); opacity: .72; } 50% { transform: scale(1.12); opacity: 1; } }
-.creator-ar-marker { position: fixed; width: 9px; height: 9px; min-width: 0; min-height: 0; padding: 0; border: 1px solid rgba(255,255,255,.62); border-radius: 50%; background: rgba(126,190,104,.48); box-shadow: 0 0 0 3px rgba(255,255,255,.07), 0 0 12px rgba(164,221,139,.2); overflow: hidden; backdrop-filter: blur(3px); pointer-events: none; }
-.creator-ar-marker-note { background: rgba(214,169,40,.64); }
-.creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: rgba(53,127,196,.64); }
+.creator-ar-marker { position: fixed; display: block; box-sizing: border-box; width: 13px; height: 13px; min-width: 0; min-height: 0; padding: 0; border: 1px solid rgba(238,248,235,.68); border-radius: 50%; background: radial-gradient(circle at 38% 32%, rgba(238,248,235,.72) 0 14%, rgba(126,190,104,.48) 28% 62%, rgba(75,133,63,.2) 100%) !important; box-shadow: 0 0 0 4px rgba(230,246,223,.055), 0 0 15px rgba(164,221,139,.24); overflow: hidden; backdrop-filter: blur(3px); pointer-events: none; transition: transform .12s ease-out, box-shadow .2s ease-out; }
+.creator-ar-marker-note { background: radial-gradient(circle at 38% 32%, rgba(255,248,218,.78) 0 14%, rgba(214,169,40,.5) 28% 62%, rgba(145,105,18,.2) 100%) !important; }
+.creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: radial-gradient(circle at 38% 32%, rgba(236,247,255,.78) 0 14%, rgba(82,157,211,.5) 28% 62%, rgba(29,91,139,.2) 100%) !important; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker { pointer-events: auto; }
 .creator-ar-marker span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .creator-ar-inline-editor, .creator-ar-area-chooser { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 62px); z-index: 3; width: min(92vw, 390px); max-height: min(54vh, 430px); overflow: auto; padding: 14px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(12,27,18,.94); color: #fff; box-shadow: 0 10px 32px rgba(0,0,0,.35); backdrop-filter: blur(14px); pointer-events: auto; }

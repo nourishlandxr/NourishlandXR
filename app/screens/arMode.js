@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createProjectSite, createSitePlace, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, loadMarkerAnchor, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
@@ -191,7 +191,7 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<button class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" type="button" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></button>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></span>`).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -317,6 +317,27 @@ async function loadPlacementAreas() {
         activeAreaName = automaticArea.name;
     }
     return areas;
+}
+
+async function restoreRecordedMarkers() {
+    if (!activeProjectId || !activeSiteId || !activeAreaId) return;
+    const savedMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, activeAreaId).catch(() => []);
+    const restored = await Promise.all(savedMarkers.map(async marker => {
+        const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id).catch(() => null);
+        const position = anchor?.position;
+        if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
+        return {
+            marker,
+            position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
+            siteId: activeSiteId,
+            areaId: activeAreaId,
+            areaName: activeAreaName,
+            coordinateSpace: anchor.coordinate_space || 'session-local'
+        };
+    }));
+    const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
+    sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
+    renderSessionMarkers();
 }
 
 async function ensurePlacementArea() {
@@ -511,7 +532,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             domOverlay: { root: overlayRoot }
         });
         document.body.classList.add('creator-ar-session-active');
-        void loadPlacementAreas().catch(() => {});
+        void loadPlacementAreas().then(restoreRecordedMarkers).catch(() => {});
 
         canvas = document.createElement('canvas');
         canvas.className = 'creator-ar-canvas';

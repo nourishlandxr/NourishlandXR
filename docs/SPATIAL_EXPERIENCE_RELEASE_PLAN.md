@@ -63,6 +63,9 @@ Loading must be cancellable. A late response from a previous Area must never ove
 - Notes evolve into Focus Points capable of stories, sound, animation, imagery and observations.
 - Area checkpoints define a coherent system such as a section, guild, microclimate, crop or learning zone.
 - Marker clarity must be evaluated outdoors, indoors, in bright light and against visually busy backgrounds.
+- Spatial markers must not be HTML buttons and must remain isolated from project-theme button/card styling.
+- A placed master marker is recorded immediately in fallback storage when no Area has been assigned.
+- Opening dashboard AR restores recorded spatial entries from the active storage Area; later Area assignment moves the same stable entry rather than recreating it.
 
 ### Try It Now master flow
 
@@ -70,7 +73,9 @@ The welcome demonstration begins with a persistent transparent Story Board, then
 
 1. **Plant:** place a plant, then reveal its spatial knowledge frame with climate, uses and relationships.
 2. **Note / Focus Point:** place an observation, then demonstrate the roadmap for sound, animation, images and evolving stories.
-3. **Checkpoint:** create a discovery point that welcomes visitors, begins a journey and connects the plant and note into an experience.
+3. **Area / Zone:** trace a visible boundary on the ground, then reveal how one defined place can represent a section, guild, microclimate, crop or learning zone and load its connected markers.
+
+The Story Board begins visually empty and reveals its narrative progressively like subtitles. Plant and Note begin as simple breathing-circle placements: the marker appears first, receives its example identity, and only then opens its static spatial information frame.
 
 The sequence is temporary and saves nothing. It is a compact explanation of how simple spatial markers become stories, databases and place-based education. Dashboard AR and Try It Now share the same surface-hit placement primitive in `app/services/spatialPlacement.js`; their persistence differs intentionally.
 
@@ -124,6 +129,9 @@ V2 develops this into the complete visitor journey:
 | 2026-07-24 | Seven composable layers are reserved; final taxonomy remains provisional. | V1 design/V2 UX |
 | 2026-07-24 | Spatial information uses soft anchored frames; opaque office-style labels are rejected. | V1 onward |
 | 2026-07-24 | Try It Now teaches Plant, Focus Point and Area as one master experience flow. | V1 demo |
+| 2026-07-24 | Demo frames and text are deliberately larger; the Story Board reveals text progressively. | V1 demo |
+| 2026-07-24 | The third demo placement defines an Area boundary on the ground before loading Area-use information. | V1 demo |
+| 2026-07-24 | Dashboard spatial markers are isolated from global button/theme CSS and recorded markers restore from storage. | V1 foundation |
 
 ## Traceability rule
 

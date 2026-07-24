@@ -21,12 +21,13 @@ let program = null;
 let buffer = null;
 let ending = false;
 let demoStage = 'story';
-const DEMO_SEQUENCE = ['plant', 'note', 'checkpoint'];
+let demoTimers = [];
+const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     story: { title: 'Every place holds more than we first see.', accent: '#eef6ed', lines: ['NourishlandXR turns landscapes into living, shared experiences.', 'Plants, stories, knowledge and care stay where they belong.', 'A plant, a note and a discovery point form a language of place.'] },
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
-    checkpoint: { title: 'Discovery point', accent: '#ef8d83', lines: ['WELCOME  Begin a visitor journey', 'GUIDE  Reveal a story · invite attention', 'EXPLORE  Connect plants, notes and place'] }
+    zone: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['BOUNDARY  One defined place', 'USE  Guild · microclimate · crop', 'FLOW  Loads this Area’s markers and stories'] }
 });
 
 function clearSessionState() {
@@ -38,7 +39,12 @@ function clearSessionState() {
     marker = null;
     markerType = 'marker';
     demoStage = 'story';
-    markers.forEach(record => record.texture && gl?.deleteTexture(record.texture));
+    demoTimers.forEach(clearTimeout);
+    demoTimers = [];
+    markers.forEach(record => {
+        if (record.texture) gl?.deleteTexture(record.texture);
+        if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
+    });
     markers = [];
     program = null;
     buffer = null;
@@ -79,7 +85,7 @@ function armDemoPlacement(type) {
         story: 'Choose a place for your story.',
         plant: 'Aim at a surface and tap to place your plant.',
         note: 'Choose a nearby place and tap to leave a thought.',
-        checkpoint: 'Place it where you would like someone’s journey to begin.'
+        zone: 'Trace a place on the ground where this Area belongs.'
     };
     setGuide(instructions[type]);
 }
@@ -106,8 +112,23 @@ function updateSimulatedMarkers() {
     if (!layer || !simulatedMode) return;
     layer.innerHTML = markers.map((record, index) => {
         const content = DEMO_CONTENT[record.demoType || record.type];
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${content && record.demoExpanded ? `<strong>${content.title}</strong>${content.lines.map(line => `<small>${line}</small>`).join('')}` : '·'}</span>`;
+        const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : '·'}</span>`;
     }).join('');
+}
+
+function refreshDemoRecord(record) {
+    if (record.texture) gl?.deleteTexture(record.texture);
+    record.texture = createMarkerTexture(record);
+    updateSimulatedMarkers();
+}
+
+function scheduleRecordUpdate(record, delay, update) {
+    demoTimers.push(setTimeout(() => {
+        if (!markers.includes(record)) return;
+        update(record);
+        refreshDemoRecord(record);
+    }, delay));
 }
 
 function placementPosition() {
@@ -122,29 +143,37 @@ function placeMarker() {
         return;
     }
     const type = demoStage;
-    const draftType = type === 'checkpoint' ? 'sub_checkpoint' : type;
+    const draftType = type === 'zone' ? 'sub_checkpoint' : type;
     const sample = createMinimalMarkerDraft(draftType, {
-        name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : type === 'checkpoint' ? 'Discovery point' : DEMO_CONTENT.story.title,
+        name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : type === 'zone' ? 'New Area' : DEMO_CONTENT.story.title,
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    marker = { ...sample, position, type: draftType, demoType: type, demoExpanded: true, texture: null };
+    marker = { ...sample, position, type: draftType, demoType: type, demoExpanded: type === 'story', revealTitle: type !== 'story', revealLines: type === 'story' ? 0 : 3, texture: null };
     if (markers.length > 1) marker = relateMinimalMarkers(marker, markers[1]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
+    const placedRecord = marker;
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
     updateSimulatedMarkers();
     marker = null;
     if (type === 'story') {
-        setGuide('Your story is now quietly present in this place.');
-        showDemoAction('Begin building →', 'plant');
+        setGuide('Your story is arriving in this place.');
+        scheduleRecordUpdate(placedRecord, 350, record => { record.revealTitle = true; });
+        [1, 2, 3].forEach((count, index) => scheduleRecordUpdate(placedRecord, 850 + index * 650, record => { record.revealLines = count; }));
+        demoTimers.push(setTimeout(() => showDemoAction('Begin building →', 'plant'), 2850));
     } else if (type === 'plant') {
-        setGuide('Plant placed. This can become a profile, field guide entry or planting story.');
-        showDemoAction('Add a note →', 'note');
+        setGuide('Marker placed. Let’s name it Lemon Myrtle.');
+        scheduleRecordUpdate(placedRecord, 700, record => { record.name = 'Lemon Myrtle'; record.demoExpanded = true; });
+        demoTimers.push(setTimeout(() => { setGuide('Plant profile loaded. Climate, uses and relationships now live with the plant.'); showDemoAction('Add a note →', 'note'); }, 950));
     } else if (type === 'note') {
-        setGuide('Note placed. Your environment can hold knowledge exactly where it matters.');
-        showDemoAction('Create a checkpoint →', 'checkpoint');
+        setGuide('Note marker placed. Possible outcomes are loading.');
+        scheduleRecordUpdate(placedRecord, 650, record => { record.demoExpanded = true; });
+        demoTimers.push(setTimeout(() => { setGuide('Notes can become observations, media and Focus Points.'); showDemoAction('Define an Area →', 'zone'); }, 900));
     } else {
-        setGuide('You have started an experience. This is how a place begins to speak.');
+        placedRecord.demoExpanded = true;
+        placedRecord.isBoundary = true;
+        refreshDemoRecord(placedRecord);
+        setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
         const actions = appRoot?.querySelector('[data-tryit-final-actions]');
         if (actions) actions.hidden = false;
     }
@@ -175,6 +204,10 @@ function billboardMatrix(position, scaleX = 1, scaleY = 1) {
     const length = Math.hypot(x, z) || 1;
     x /= length; z /= length;
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
+}
+
+function groundMatrix(position, scale = 1) {
+    return new Float32Array([scale, 0, 0, 0, 0, 0, -scale, 0, 0, scale, 0, 0, position.x, position.y - .12, position.z, 1]);
 }
 
 function setupRenderer() {
@@ -216,9 +249,10 @@ function createSpatialKnowledgeTexture(record) {
     const content = DEMO_CONTENT[record.demoType || record.type];
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
-    label.width = 768;
-    label.height = 448;
+    label.width = 960;
+    label.height = 560;
     const ctx = label.getContext('2d');
+    ctx.scale(1.25, 1.25);
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
     gradient.addColorStop(0, 'rgba(10,32,21,.72)');
     gradient.addColorStop(1, 'rgba(16,42,30,.40)');
@@ -234,10 +268,12 @@ function createSpatialKnowledgeTexture(record) {
     ctx.arc(72, 78, 18, 0, Math.PI * 2);
     ctx.fill();
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#fff';
-    ctx.font = '600 32px system-ui, sans-serif';
-    ctx.fillText(content.title, 112, 89);
-    content.lines.forEach((line, index) => {
+    if (record.revealTitle !== false) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 32px system-ui, sans-serif';
+        ctx.fillText(content.title, 112, 89);
+    }
+    content.lines.slice(0, record.revealLines ?? content.lines.length).forEach((line, index) => {
         const split = line.indexOf('  ');
         ctx.fillStyle = content.accent;
         ctx.font = '700 20px system-ui, sans-serif';
@@ -246,6 +282,28 @@ function createSpatialKnowledgeTexture(record) {
         ctx.font = '25px system-ui, sans-serif';
         ctx.fillText(line.slice(split + 2), 208, 174 + index * 78);
     });
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return texture;
+}
+
+function createBoundaryTexture() {
+    if (!gl) return null;
+    const label = document.createElement('canvas');
+    label.width = 512; label.height = 512;
+    const ctx = label.getContext('2d');
+    ctx.strokeStyle = 'rgba(137,200,239,.78)';
+    ctx.lineWidth = 9;
+    ctx.setLineDash([22, 14]);
+    ctx.beginPath();
+    ctx.ellipse(256, 256, 218, 142, 0, 0, Math.PI * 2);
+    ctx.stroke();
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -313,13 +371,20 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (!record.texture) return;
         const compact = !record.demoExpanded;
-        const model = billboardMatrix(record.position, compact ? .38 : 1.45, compact ? .38 : 1.18);
+        const model = billboardMatrix(record.position, compact ? .38 : 1.9, compact ? .38 : 1.5);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+        if (record.isBoundary) {
+            record.boundaryTexture ||= createBoundaryTexture();
+            const boundaryMvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, groundMatrix(record.position, 4.6)));
+            gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, boundaryMvp);
+            gl.bindTexture(gl.TEXTURE_2D, record.boundaryTexture);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
     });
 }
 
