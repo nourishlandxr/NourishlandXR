@@ -203,8 +203,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
-    assert.match(source, /Look around and find a clear surface/);
-    assert.match(source, /Place the first neutral orb when you are ready/);
+    assert.match(source, /Keep this board open as your guide/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
@@ -212,7 +211,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(94vw, 620px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
-    assert.match(styles, /\.tryit-guide \{[\s\S]*width: min\(88vw, 480px\)[\s\S]*white-space: normal/);
+    assert.match(source, /Welcome to TRY IT NOW/);
+    assert.match(source, /Press to continue/);
+    assert.match(source, /typeNextCharacter/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 22\)/);
+    assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
     assert.match(source, /Use Lemon Myrtle preset/);

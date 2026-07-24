@@ -21,6 +21,7 @@ let program = null;
 let buffer = null;
 let ending = false;
 let demoStage = 'plant';
+let boardTypingTimer = null;
 const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
@@ -41,6 +42,8 @@ function clearSessionState() {
     marker = null;
     markerType = 'marker';
     demoStage = 'plant';
+    clearTimeout(boardTypingTimer);
+    boardTypingTimer = null;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -68,11 +71,14 @@ function setGuide(message) {
 }
 
 function showDemoAction(label, nextStage) {
-    const action = appRoot?.querySelector('[data-tryit-action]');
-    if (!action) return;
-    action.textContent = label;
-    action.hidden = false;
-    action.dataset.nextStage = nextStage;
+    const messages = {
+        note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second neutral orb somewhere nearby.'],
+        zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
+    };
+    const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
+    showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">${label}</button>`, choice => {
+        if (choice === 'continue') armDemoPlacement(nextStage);
+    });
 }
 
 function demoContentFor(record) {
@@ -92,7 +98,39 @@ function showGuidedChoice(html, onClick) {
     if (!panel) return;
     panel.innerHTML = html;
     panel.hidden = false;
+    clearTimeout(boardTypingTimer);
+    const paragraph = panel.querySelector('p');
+    const fullText = paragraph?.textContent || '';
+    const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
+    revealTargets.forEach(target => target.classList.add('is-awaiting-text'));
+    let typedLength = 0;
+    let typing = Boolean(paragraph && fullText);
+    const finishTyping = () => {
+        clearTimeout(boardTypingTimer);
+        if (paragraph) paragraph.textContent = fullText;
+        typing = false;
+        revealTargets.forEach(target => target.classList.remove('is-awaiting-text'));
+        panel.classList.remove('is-typing');
+    };
+    const typeNextCharacter = () => {
+        if (!typing || !paragraph) return;
+        typedLength += 1;
+        paragraph.textContent = fullText.slice(0, typedLength);
+        if (typedLength >= fullText.length) return finishTyping();
+        boardTypingTimer = setTimeout(typeNextCharacter, 22);
+    };
+    if (typing) {
+        paragraph.textContent = '';
+        panel.classList.add('is-typing');
+        typeNextCharacter();
+    } else {
+        finishTyping();
+    }
     panel.onclick = event => {
+        if (typing) {
+            finishTyping();
+            return;
+        }
         const choice = event.target.closest('[data-demo-choice]')?.dataset.demoChoice;
         if (choice) onClick(choice);
     };
@@ -153,17 +191,23 @@ function guideAreaConversion(record) {
         record.revealTitle = true;
         record.revealLines = 3;
         refreshDemoRecord(record);
-        hideGuidedChoice();
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        const actions = appRoot?.querySelector('[data-tryit-final-actions]');
-        if (actions) actions.hidden = false;
+        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed and transformed three neutral orbs: a Plant profile, a Focus Point, and an Area checkpoint that can load the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+            if (action === 'finish') returnToWelcome();
+            if (action === 'reset') {
+                markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
+                markers = [];
+                marker = null;
+                demoStage = 'plant';
+                renderInterface(simulatedMode);
+            }
+        });
     });
 }
 
 function armDemoPlacement(type) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
-    hideGuidedChoice();
     const place = appRoot?.querySelector('[data-tryit-place]');
     place?.removeAttribute('hidden');
     const label = place?.querySelector('strong');
@@ -174,6 +218,7 @@ function armDemoPlacement(type) {
         zone: 'Choose the central checkpoint for this Area.'
     };
     setGuide(instructions[type]);
+    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first orb' : type === 'note' ? 'Place a second orb' : 'Place the Area checkpoint'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
 }
 
 function advanceDemo() {
@@ -240,12 +285,15 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a neutral orb"><span aria-hidden="true"></span><strong>Place a neutral orb</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice" data-tryit-guided-choice hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide>Look around and find a clear surface. Place the first neutral orb when you are ready.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a neutral orb" hidden><span aria-hidden="true"></span><strong>Place a neutral orb</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
+    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>This short spatial journey works like a game. You will place three neutral orbs, then discover how each one can become a Plant, a Focus Point, or the checkpoint for an Area.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
+        if (choice === 'continue') armDemoPlacement('plant');
+    });
 }
 
 function multiply(a, b) {

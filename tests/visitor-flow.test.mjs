@@ -184,6 +184,7 @@ test('temporary AR demo guides three spatial orb conversions without saving', ()
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Place a neutral orb/);
+    assert.match(source, /This short spatial journey works like a game/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
