@@ -583,7 +583,10 @@ export function openCreatorVisitorPreview(encodedProjectId) {
 export async function renderPlatformHome(app) {
     applyProjectTheme('forest-light');
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-    const cards = projects.map(project => `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>${escapeHtml(PROJECT_NAMES[project.id] || project.name)}</strong></button>`).join('');
+    const cards = projects.map(project => {
+        const name = PROJECT_NAMES[project.id] || project.name;
+        return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><strong>${escapeHtml(name)}</strong></button>`;
+    }).join('');
     app.innerHTML = `<div class="screen platform-home creator-project-menu">
         <div class="page-header">
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>

@@ -131,7 +131,7 @@ function setInteractionMode(mode) {
     closeUnplacedBag();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
-    if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Drag a placed marker to move it.');
+    if (interactionMode === 'grab') setPlacementStatus('Hand mode is on. Hold an orb, then drag or move your phone to carry it through the space.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
 }
@@ -430,23 +430,34 @@ function beginMarkerInteraction(record, event) {
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
-        position: { ...record.position }
+        position: { ...record.position },
+        cameraPosition: latestViewerMatrix ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } : null,
+        pointerOffset: { x: 0, y: 0 }
     };
     event.currentTarget.classList.add('is-adjusting');
     event.currentTarget.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointerup', finishMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
-    setPlacementStatus(`Moving ${record.marker.name}. Release to save its new position.`);
+    setPlacementStatus(`Holding ${record.marker.name}. Drag or move your phone; release to save its new position.`);
 }
 
 function moveMarkerDrag(event) {
     if (!dragState) return;
     if (event.pointerId !== dragState.pointerId) return;
     const scale = 2.2 / Math.max(window.innerWidth, 320);
-    dragState.record.position.x = dragState.position.x + (event.clientX - dragState.startX) * scale;
-    dragState.record.position.y = dragState.position.y - (event.clientY - dragState.startY) * scale;
+    dragState.pointerOffset.x = (event.clientX - dragState.startX) * scale;
+    dragState.pointerOffset.y = -(event.clientY - dragState.startY) * scale;
+    updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
+}
+
+function updateGrabbedMarkerFromCamera() {
+    if (!dragState || !latestViewerMatrix) return;
+    const origin = dragState.cameraPosition || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
+    dragState.record.position.x = dragState.position.x + (latestViewerMatrix[12] - origin.x) + dragState.pointerOffset.x;
+    dragState.record.position.y = dragState.position.y + (latestViewerMatrix[13] - origin.y) + dragState.pointerOffset.y;
+    dragState.record.position.z = dragState.position.z + (latestViewerMatrix[14] - origin.z);
 }
 
 async function finishMarkerDrag(event) {
@@ -865,6 +876,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
             latestView = pose.views[0] || null;
+            updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             latestHitMatrix = matrixFromPose(hit?.getPose(refSpace));
             positionSessionMarkers(latestView);

@@ -30,6 +30,11 @@ import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
 const siteManager = new SiteManager();
+const escapeMainHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const decodeMainValue = value => {
+    try { return decodeURIComponent(String(value ?? '')); }
+    catch { return String(value ?? ''); }
+};
 applyPlatformSettings();
 const setExperienceRole = role => {
     document.body.dataset.experienceRole = role;
@@ -157,22 +162,41 @@ window.renderDemoProjects = async () => {
     try {
         if (!await ensureCreatorAuthentication()) return;
         setExperienceRole('creator');
+        history.replaceState({ nourishlandView: 'projects' }, '', window.location.href);
         await renderDemoProjects(app);
     } catch (error) {
         window.alert(error.message);
     }
 };
-window.renderProjectDashboard = async projectId => {
+window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false) => {
+    const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
+    if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
+        history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName }, '', window.location.href);
+    }
     app.innerHTML = `<div class="project-loading-screen" role="status" aria-live="polite">
         <div class="project-loading-mark" aria-hidden="true">◉</div>
         <p class="welcome-label">Nourishland XR</p>
-        <h1>Opening your project</h1>
+        <h1>${escapeMainHtml(resolvedName)}</h1>
         <p>Loading dashboard, markers and Areas…</p>
         <div class="project-loading-track" aria-hidden="true"><span></span></div>
     </div>`;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     return renderProjectDashboard(app, projectId);
 };
+window.addEventListener('popstate', event => {
+    if (isArModeActive()) return;
+    if (event.state?.nourishlandView === 'dashboard' && event.state.projectId) {
+        void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
+        return;
+    }
+    if (event.state?.nourishlandView === 'projects') {
+        setExperienceRole('creator');
+        void renderDemoProjects(app);
+        return;
+    }
+    setExperienceRole('launch');
+    renderLaunchScreen(app);
+});
 window.toggleAreas = toggleAreas;
 window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);

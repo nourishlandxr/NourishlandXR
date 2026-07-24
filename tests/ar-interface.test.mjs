@@ -77,6 +77,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /interactionMode = interactionMode === mode \? '' : mode/);
     assert.match(arSource, /Hand mode is on/);
+    assert.match(arSource, /updateGrabbedMarkerFromCamera/);
+    assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /Interaction is off/);
     assert.match(arSource, /openInlineEditor/);
@@ -166,7 +168,9 @@ test('opening a project paints a dashboard loading state before data work begins
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
     assert.match(mainSource, /class="project-loading-screen"/);
-    assert.match(mainSource, /Opening your project/);
+    assert.match(mainSource, /resolvedName/);
+    assert.match(mainSource, /nourishlandView: 'dashboard'/);
+    assert.match(mainSource, /window\.addEventListener\('popstate'/);
     assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
     assert.match(styles, /\.project-loading-track span/);
     assert.match(styles, /@keyframes project-loading-progress/);
