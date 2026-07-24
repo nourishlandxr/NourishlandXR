@@ -3057,6 +3057,13 @@ body.ar-session-active::after {
 .site-map-canvas { position: relative; isolation: isolate; overflow: hidden; width: 100%; aspect-ratio: 1.094 / 1; border: 1px solid rgba(35, 80, 44, .42); border-radius: 22px; background: #284a20; box-shadow: 0 12px 32px rgba(23, 51, 29, .14); }
 .site-map-canvas > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
 .site-map-generic-surface { position: absolute; inset: 0; z-index: -2; background-color: #31583a; background-image: linear-gradient(rgba(221,239,211,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(221,239,211,.08) 1px, transparent 1px), radial-gradient(circle at 24% 22%, rgba(151,198,127,.22), transparent 32%), radial-gradient(circle at 76% 72%, rgba(105,157,91,.26), transparent 38%); background-size: 32px 32px, 32px 32px, auto, auto; }
+.site-map-editor { display: grid; gap: 10px; }
+.site-map-editor h2, .site-map-editor p { margin: 0; }
+.site-map-upload { display: grid; gap: 5px; font-size: .76rem; font-weight: 750; }
+.site-map-upload input { padding: 8px; border: 1px dashed rgba(45,91,55,.32); border-radius: 10px; background: rgba(239,246,235,.72); }
+.site-map-link-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.site-map-link-tools button { min-height: 36px; padding: 6px 10px; }
+.site-map-canvas.is-linking-area { cursor: crosshair; outline: 3px solid #dcef95; outline-offset: 3px; }
 .site-map-image-wash { position: absolute; inset: 0; z-index: -1; background: linear-gradient(135deg, rgba(7, 34, 14, .04), transparent 46%, rgba(11, 38, 17, .16)); pointer-events: none; }
 .site-map-area { position: absolute; left: var(--map-x); top: var(--map-y); z-index: 1; display: grid; width: auto; min-width: 22px; min-height: 18px; padding: 1px 3px; transform: translate(-50%, -50%); border: 0; border-radius: 4px; background: rgba(11,45,25,.26); color: rgba(255,255,255,.9); text-align: center; box-shadow: none; backdrop-filter: none; }
 button.site-map-area { cursor: pointer; }

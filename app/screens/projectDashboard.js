@@ -144,7 +144,7 @@ const terracePlanPoint = area => {
     return point ? { ...point, positioned: true, planLinked: true } : null;
 };
 
-function buildSiteMapLayout(areas, entries, useTerracePlan = false) {
+function buildSiteMapLayout(areas, entries, useTerracePlan = false, savedAreaPoints = {}) {
     const gpsPoints = [
         ...areas.map(area => area.anchor),
         ...entries.map(entry => entry.anchor)
@@ -174,7 +174,11 @@ function buildSiteMapLayout(areas, entries, useTerracePlan = false) {
             y: (Math.floor(index / columns) + 0.5) * (100 / rows),
             positioned: false
         };
-        return [area.id, (useTerracePlan ? terracePlanPoint(area) : null) || pointForAnchor(area.anchor) || fallback];
+        const saved = savedAreaPoints[area.id];
+        const savedPoint = Number.isFinite(Number(saved?.x)) && Number.isFinite(Number(saved?.y))
+            ? { x: clampMapCoordinate(Number(saved.x)), y: clampMapCoordinate(Number(saved.y)), positioned: true, planLinked: true }
+            : null;
+        return [area.id, savedPoint || (useTerracePlan ? terracePlanPoint(area) : null) || pointForAnchor(area.anchor) || fallback];
     }));
     const entriesByArea = new Map(areas.map(area => [area.id, entries.filter(entry => entry.place.id === area.id)]));
     const markerPoints = new Map();
@@ -1392,10 +1396,14 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
         const mapEntries = visibleEntries.filter(entry => visiblePlaces.some(place => place.id === entry.place.id));
         const projectIdentity = `${project.id} ${project.name}`.trim();
         const usesHillyardsPlan = project.id === 'Hillyards' || /test loaded data/i.test(projectIdentity);
-        const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries, usesHillyardsPlan);
-        const mapBackground = usesHillyardsPlan
+        const siteMap = project.siteMap || {};
+        const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries, usesHillyardsPlan, siteMap.areaPoints || {});
+        const mapBackground = siteMap.image
+            ? `<img src="${escapeHtml(siteMap.image)}" alt="${escapeHtml(project.name)} uploaded site plan" />`
+            : usesHillyardsPlan
             ? '<img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" />'
             : '<div class="site-map-generic-surface" aria-hidden="true"></div>';
+        const mapEditor = creator ? `<section class="panel site-map-editor"><div><h2>Map photo and Area links</h2><p>Upload a plan or aerial photo, then choose an Area and tap its position on the image.</p></div><label class="site-map-upload">Upload map photo<input type="file" accept="image/*" onchange="window.uploadSiteMapPhoto(event, '${encoded(project.id)}')" /></label>${siteMap.image ? `<button type="button" onclick="window.removeSiteMapPhoto('${encoded(project.id)}')">Remove uploaded photo</button>` : ''}<div class="site-map-link-tools">${visiblePlaces.map(place => `<button type="button" onclick="window.beginSiteMapAreaLink('${encoded(project.id)}', '${encoded(place.id)}', '${encoded(place.name)}')">Link ${escapeHtml(place.name)}</button>`).join('') || '<span>Create an Area before linking the map.</span>'}</div><p class="meta" data-site-map-editor-status>Select an Area, then tap the matching point on the map.</p></section>` : '';
         const areaOverlays = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
             const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
@@ -1419,10 +1427,87 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
             : creator
                 ? `window.renderProjectDashboard('${encoded(project.id)}')`
                 : `window.renderBrowseContent('${encoded(project.id)}', false)`;
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div>${mapEditor}<section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas onclick="window.placeLinkedAreaOnSiteMap(event)" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
+}
+
+let pendingSiteMapAreaLink = null;
+
+export function beginSiteMapAreaLink(encodedProjectId, encodedAreaId, encodedAreaName) {
+    pendingSiteMapAreaLink = {
+        projectId: decodeURIComponent(encodedProjectId),
+        areaId: decodeURIComponent(encodedAreaId),
+        areaName: decodeURIComponent(encodedAreaName)
+    };
+    document.querySelector('[data-site-map-canvas]')?.classList.add('is-linking-area');
+    const status = document.querySelector('[data-site-map-editor-status]');
+    if (status) status.textContent = `Tap the map where ${pendingSiteMapAreaLink.areaName} belongs.`;
+}
+
+export async function placeLinkedAreaOnSiteMap(event) {
+    if (!pendingSiteMapAreaLink || event.target.closest('.site-map-area, .site-map-pin')) return;
+    const canvas = event.currentTarget;
+    const bounds = canvas.getBoundingClientRect();
+    const point = {
+        x: Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100)),
+        y: Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100))
+    };
+    const link = pendingSiteMapAreaLink;
+    pendingSiteMapAreaLink = null;
+    canvas.classList.remove('is-linking-area');
+    const project = await projectById(link.projectId);
+    await renameProjectOnDisk(project.id, {
+        ...project,
+        preserveId: true,
+        siteMap: {
+            ...(project.siteMap || {}),
+            areaPoints: { ...(project.siteMap?.areaPoints || {}), [link.areaId]: point }
+        }
+    });
+    await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+}
+
+function compressedMapImage(file) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('The selected image could not be opened.'));
+        image.onload = () => {
+            const maximum = 1600;
+            const scale = Math.min(1, maximum / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(image.src);
+            resolve(canvas.toDataURL('image/jpeg', .82));
+        };
+        image.src = URL.createObjectURL(file);
+    });
+}
+
+export async function uploadSiteMapPhoto(event, encodedProjectId) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const status = document.querySelector('[data-site-map-editor-status]');
+    if (status) status.textContent = 'Preparing the map photo…';
+    try {
+        const projectId = decodeURIComponent(encodedProjectId);
+        const project = await projectById(projectId);
+        const image = await compressedMapImage(file);
+        await renameProjectOnDisk(project.id, { ...project, preserveId: true, siteMap: { ...(project.siteMap || {}), image } });
+        await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+    } catch (error) {
+        if (status) status.textContent = `Map photo could not be saved: ${error.message}`;
+    }
+}
+
+export async function removeSiteMapPhoto(encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const project = await projectById(projectId);
+    await renameProjectOnDisk(project.id, { ...project, preserveId: true, siteMap: { ...(project.siteMap || {}), image: '' } });
+    await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
 }
 
 export async function renderStartingPoints(app, encodedProjectId) {

@@ -1,9 +1,42 @@
-import { loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor } from '../services/persistence.js';
+import { loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor } from '../services/persistence.js';
 import { loadResolvedPlantsForPlace } from '../services/plantDataService.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
 let currentGuide = null;
+
+async function loadAreaPlants(projectId, siteId, placeId, visitor) {
+    const [resolved, markers] = await Promise.all([
+        loadResolvedPlantsForPlace(projectId, siteId, placeId, visitor),
+        loadPlaceMarkers(projectId, siteId, placeId, visitor).catch(() => [])
+    ]);
+    const representedMarkers = new Set(resolved.map(plant => plant.markerId).filter(Boolean));
+    const markerPlants = await Promise.all(markers.filter(marker => marker.type === 'plant' && !representedMarkers.has(marker.id)).map(async marker => {
+        let profile = marker.plant_profile || {};
+        if (marker.plant_profile_path) {
+            profile = await loadPlantProfile(projectId, siteId, placeId, marker.id, visitor).catch(() => profile);
+        }
+        return {
+            ...profile,
+            instanceId: marker.plantInstanceId || `marker-${marker.id}`,
+            markerId: marker.id,
+            plantId: marker.plantId || '',
+            placeId,
+            commonName: profile.common_name || marker.name || 'Unnamed plant',
+            scientificName: profile.scientific_name || '',
+            family: profile.family || '',
+            origin: profile.origin || '',
+            plantType: profile.plant_type || '',
+            layer: profile.layer || '',
+            uses: profile.uses || '',
+            propagation: profile.propagation || '',
+            status: marker.status || '',
+            localNotes: marker.notes || marker.description || profile.overview || '',
+            summary: profile.overview || marker.description || ''
+        };
+    }));
+    return [...resolved, ...markerPlants];
+}
 
 async function loadGuide(projectId) {
     const project = (await loadProjects(true)).find(item => item.id === projectId);
@@ -11,7 +44,7 @@ async function loadGuide(projectId) {
     const sites = await loadProjectSites(project.id, true);
     const siteGroups = await Promise.all(sites.map(async site => {
         const places = await loadSitePlaces(project.id, site.id, true);
-        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadResolvedPlantsForPlace(project.id, site.id, place.id, true) })));
+        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadAreaPlants(project.id, site.id, place.id, true) })));
         return { site, placeGroups };
     }));
     const plants = siteGroups.flatMap(group => group.placeGroups.flatMap(placeGroup => placeGroup.plants.map(plant => ({ ...plant, siteId: group.site.id, siteName: group.site.name, placeName: placeGroup.place.name }))));
@@ -47,7 +80,7 @@ async function loadCreatorGuide(projectId) {
     const sites = await loadProjectSites(project.id);
     const siteGroups = await Promise.all(sites.map(async site => {
         const places = await loadSitePlaces(project.id, site.id);
-        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadResolvedPlantsForPlace(project.id, site.id, place.id, false) })));
+        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadAreaPlants(project.id, site.id, place.id, false) })));
         return { site, placeGroups };
     }));
     const plants = siteGroups.flatMap(group => group.placeGroups.flatMap(placeGroup => placeGroup.plants.map(plant => ({ ...plant, siteId: group.site.id, siteName: group.site.name, placeName: placeGroup.place.name }))));

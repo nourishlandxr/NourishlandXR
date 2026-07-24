@@ -17,8 +17,13 @@ test('dashboard Site Map renders a visual plan with areas and placed content', (
     assert.match(dashboard, /terrace-marking\.png/);
     assert.match(dashboard, /project\.id === 'Hillyards'/);
     assert.match(dashboard, /test loaded data/i);
-    assert.match(dashboard, /buildSiteMapLayout\(visiblePlaces, mapEntries, usesHillyardsPlan\)/);
+    assert.match(dashboard, /buildSiteMapLayout\(visiblePlaces, mapEntries, usesHillyardsPlan, siteMap\.areaPoints \|\| \{\}\)/);
     assert.match(dashboard, /site-map-generic-surface/);
+    assert.match(dashboard, /Upload map photo/);
+    assert.match(dashboard, /beginSiteMapAreaLink/);
+    assert.match(dashboard, /placeLinkedAreaOnSiteMap/);
+    assert.match(dashboard, /compressedMapImage/);
+    assert.match(dashboard, /siteMap: \{/);
     assert.match(dashboard, /site-map-area/);
     assert.match(dashboard, /onclick="window\.renderProjectAreaDashboard/);
     assert.match(dashboard, /window\.renderProjectDashboard/);
@@ -30,6 +35,7 @@ test('dashboard Site Map renders a visual plan with areas and placed content', (
     assert.match(dashboard, /GPS positions are shown relative to one another/);
     assert.match(styles, /\.site-map-canvas/);
     assert.match(styles, /\.site-map-generic-surface/);
+    assert.match(styles, /\.site-map-canvas\.is-linking-area/);
     assert.match(styles, /\.site-map-area/);
     assert.match(styles, /\.site-map-pin/);
     assert.match(styles, /\.site-map-pin::after/);

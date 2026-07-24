@@ -183,6 +183,16 @@ test('opening a project paints a dashboard loading state before data work begins
     assert.match(styles, /@keyframes project-loading-progress/);
 });
 
+test('Field Guide correlates Area membership for both plant instances and AR plant markers', () => {
+    const source = read('app/screens/fieldGuide.js');
+    assert.match(source, /async function loadAreaPlants/);
+    assert.match(source, /loadResolvedPlantsForPlace/);
+    assert.match(source, /loadPlaceMarkers/);
+    assert.match(source, /marker\.type === 'plant'/);
+    assert.match(source, /placeId,/);
+    assert.match(source, /return \[\.\.\.resolved, \.\.\.markerPlants\]/);
+});
+
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /navigator\.xr\.requestSession\('immersive-ar'/);
