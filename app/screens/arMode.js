@@ -44,10 +44,12 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : '#6fb85a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#4f9ed1', intro_checkpoint: '#4f9ed1' })[type] || '#91a29a';
+const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 
 function markerRgb(marker, fallback) {
+    if (!/^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '')) return fallback;
     const color = markerAppearanceColor(marker);
     const value = Number.parseInt(color.slice(1), 16);
     return Number.isFinite(value) ? [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255] : fallback;
@@ -227,7 +229,7 @@ function drawSpatialMarkers(view) {
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
-        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), record.marker.type === 'plant' ? markerRgb(record.marker, baseColor) : baseColor);
+        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
     if (readyPlacementType && latestHitMatrix) {
@@ -285,10 +287,12 @@ function openInlineEditor(record, force = false) {
     const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
     if (!editor) return;
     const plant = record.marker.type === 'plant';
+    const fixedType = record.marker.type === 'intro_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
-    const plantControls = plant ? `<fieldset class="creator-ar-appearance"><legend>Spatial marker</legend><label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>` : '';
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">${plant ? 'Plant profile' : 'Marker details'}</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>${plant ? 'Quick description' : 'Note'}<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${plantControls}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option></select></label>`;
+    const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
@@ -319,6 +323,7 @@ function openInlineEditor(record, force = false) {
         const status = form.querySelector('[data-ar-editor-status]');
         const name = form.elements.name.value.trim();
         const description = form.elements.description.value.trim();
+        const type = form.elements.markerType?.value || record.marker.type;
         if (!name) {
             status.textContent = 'A name is required.';
             return;
@@ -327,14 +332,19 @@ function openInlineEditor(record, force = false) {
             status.textContent = 'Saving...';
             const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, {
                 ...record.marker,
+                type,
                 name,
                 description,
-                appearance: plant ? {
+                appearance: {
                     ...appearance,
                     color: form.elements.markerColor.value,
                     size: form.elements.markerSize.value
-                } : record.marker.appearance,
-                notes: record.marker.type === 'note' ? description : record.marker.notes || ''
+                },
+                plant_profile: type === 'plant' ? {
+                    ...(record.marker.plant_profile || {}),
+                    common_name: name
+                } : record.marker.plant_profile,
+                notes: type === 'note' ? description : record.marker.notes || ''
             });
             record.marker = updated;
             renderSessionMarkers();

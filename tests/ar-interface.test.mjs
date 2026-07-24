@@ -74,8 +74,11 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /deletePlaceMarker/);
     assert.match(arSource, /name="markerColor" type="color"/);
     assert.match(arSource, /name="markerSize"/);
+    assert.match(arSource, /name="markerType"/);
+    assert.match(arSource, /<p class="welcome-label">Marker details<\/p>/);
+    assert.match(arSource, /plant_profile: type === 'plant'/);
     assert.match(arSource, /Confirm delete/);
-    assert.match(arSource, /appearance: plant/);
+    assert.match(arSource, /appearance: \{/);
     assert.match(arSource, /markerRgb\(record\.marker/);
     assert.match(arSource, /requestAnimationFrame\(\(\) => editor\.querySelector\('textarea'\)\?\.focus\(\)\)/);
     assert.match(arSource, /finishMarkerDrag/);
