@@ -52,6 +52,8 @@ function setPlacementStatus(message) {
 
 function updateReadyPlacementControl() {
     overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
+    const guideLabel = overlayRoot?.querySelector('[data-ar-placement-guide-label]');
+    if (guideLabel && readyPlacementType) guideLabel.textContent = `Place ${readyPlacementLabel(readyPlacementType)}`;
 }
 
 function placementPoint() {
@@ -249,7 +251,7 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></span>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span></span>`).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -507,6 +509,11 @@ function createOverlay() {
     overlayRoot.innerHTML = `
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <span class="creator-ar-placement-capture" data-ar-placement-capture aria-hidden="true"></span>
+        <div class="creator-ar-placement-guide" aria-hidden="true">
+            <span class="creator-ar-breathing-target"></span>
+            <span class="creator-ar-placement-pointer"></span>
+            <span class="creator-ar-placement-guide-label" data-ar-placement-guide-label>Place marker</span>
+        </div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
         <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>

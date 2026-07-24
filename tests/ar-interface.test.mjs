@@ -41,6 +41,11 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
+    assert.match(arSource, /creator-ar-breathing-target/);
+    assert.match(arSource, /data-ar-placement-guide-label/);
+    assert.match(arSource, /creator-ar-spatial-name/);
+    assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-guide/);
+    assert.match(styles, /@keyframes creator-ar-breathe/);
     assert.match(arSource, /addEventListener\('pointerup'/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 180/);
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-capture \{ pointer-events: auto; \}/);
