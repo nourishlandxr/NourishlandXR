@@ -71,6 +71,12 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Interaction is off/);
     assert.match(arSource, /openInlineEditor/);
     assert.match(arSource, /openInlineEditor\(record, true\)/);
+    assert.match(arSource, /deletePlaceMarker/);
+    assert.match(arSource, /name="markerColor" type="color"/);
+    assert.match(arSource, /name="markerSize"/);
+    assert.match(arSource, /Confirm delete/);
+    assert.match(arSource, /appearance: plant/);
+    assert.match(arSource, /markerRgb\(record\.marker/);
     assert.match(arSource, /requestAnimationFrame\(\(\) => editor\.querySelector\('textarea'\)\?\.focus\(\)\)/);
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);

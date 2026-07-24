@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createProjectSite, createSitePlace, loadMarkerAnchor, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
@@ -44,6 +44,18 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Tree', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : '#6fb85a';
+const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
+
+function markerRgb(marker, fallback) {
+    const color = markerAppearanceColor(marker);
+    const value = Number.parseInt(color.slice(1), 16);
+    return Number.isFinite(value) ? [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255] : fallback;
+}
+
+function markerScale(marker) {
+    return ({ small: .034, medium: .045, large: .06 })[markerAppearanceSize(marker)] || .045;
+}
 
 function setPlacementStatus(message) {
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
@@ -211,10 +223,11 @@ function drawSpatialMarkers(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.31, .62, .82], intro_checkpoint: [.31, .62, .82] };
     sessionMarkers.forEach(record => {
-        const model = markerBillboardMatrix(record.position, record.marker.type === 'intro_checkpoint' ? .06 : .045);
+        const model = markerBillboardMatrix(record.position, record.marker.type === 'intro_checkpoint' ? .06 : markerScale(record.marker));
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
-        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), colors[record.marker.type] || colors.sub_checkpoint);
+        const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
+        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), record.marker.type === 'plant' ? markerRgb(record.marker, baseColor) : baseColor);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
     if (readyPlacementType && latestHitMatrix) {
@@ -251,7 +264,7 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span></span>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span></span>`).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -273,9 +286,33 @@ function openInlineEditor(record, force = false) {
     if (!editor) return;
     const plant = record.marker.type === 'plant';
     editor.hidden = false;
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">${plant ? 'Plant profile' : 'Marker details'}</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>${plant ? 'Quick description' : 'Note'}<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label><div class="button-row"><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const appearance = record.marker.appearance || {};
+    const plantControls = plant ? `<fieldset class="creator-ar-appearance"><legend>Spatial marker</legend><label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>` : '';
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">${plant ? 'Plant profile' : 'Marker details'}</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>${plant ? 'Quick description' : 'Note'}<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${plantControls}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
+    editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const status = editor.querySelector('[data-ar-editor-status]');
+        if (button.dataset.confirmDelete !== 'true') {
+            button.dataset.confirmDelete = 'true';
+            button.textContent = 'Confirm delete';
+            status.textContent = `Tap Confirm delete to permanently remove ${record.marker.name}.`;
+            return;
+        }
+        button.disabled = true;
+        status.textContent = 'Deleting...';
+        try {
+            await deletePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id);
+            sessionMarkers = sessionMarkers.filter(item => item !== record);
+            renderSessionMarkers();
+            closeInlineEditor();
+            setPlacementStatus(`${record.marker.name} deleted.`);
+        } catch (error) {
+            button.disabled = false;
+            status.textContent = `Could not delete: ${error.message}`;
+        }
+    });
     editor.querySelector('[data-ar-editor-form]').addEventListener('submit', async event => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -292,6 +329,11 @@ function openInlineEditor(record, force = false) {
                 ...record.marker,
                 name,
                 description,
+                appearance: plant ? {
+                    ...appearance,
+                    color: form.elements.markerColor.value,
+                    size: form.elements.markerSize.value
+                } : record.marker.appearance,
                 notes: record.marker.type === 'note' ? description : record.marker.notes || ''
             });
             record.marker = updated;
