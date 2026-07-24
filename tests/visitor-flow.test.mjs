@@ -180,22 +180,20 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo places a story board and three guided spatial elements without saving', () => {
+test('temporary AR demo guides three spatial orb conversions without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(source, /Tap to place the story/);
+    assert.match(source, /Place a neutral orb/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
-    assert.match(source, /Every place holds more than we first see/);
+    assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /Begin building/);
     assert.match(source, /See how Areas work/);
-    assert.match(source, /markers\.length >= 4/);
+    assert.match(source, /markers\.length >= 3/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
     assert.match(source, /Use Lemon Myrtle preset/);
-    assert.match(source, /scheduleRecordUpdate/);
     assert.match(source, /createBoundaryTexture/);
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
     assert.match(source, /Search plant presets<input value="Lemon Myrtle" readonly>/);

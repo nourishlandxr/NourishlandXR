@@ -20,11 +20,9 @@ let simulatedMode = false;
 let program = null;
 let buffer = null;
 let ending = false;
-let demoStage = 'story';
-let demoTimers = [];
+let demoStage = 'plant';
 const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
-    story: { title: 'Every place holds more than we first see.', accent: '#eef6ed', lines: ['NourishlandXR turns landscapes into living, shared experiences.', 'Plants, stories, knowledge and care stay where they belong.', 'A plant, a note and a discovery point form a language of place.'] },
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['BOUNDARY  One defined place', 'USE  Guild · microclimate · crop', 'FLOW  Loads this Area’s markers and stories'] }
@@ -42,9 +40,7 @@ function clearSessionState() {
     hitMatrix = null;
     marker = null;
     markerType = 'marker';
-    demoStage = 'story';
-    demoTimers.forEach(clearTimeout);
-    demoTimers = [];
+    demoStage = 'plant';
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -171,9 +167,8 @@ function armDemoPlacement(type) {
     const place = appRoot?.querySelector('[data-tryit-place]');
     place?.removeAttribute('hidden');
     const label = place?.querySelector('strong');
-    if (label) label.textContent = type === 'story' ? 'Tap to place the story' : 'Place a neutral orb';
+    if (label) label.textContent = 'Place a neutral orb';
     const instructions = {
-        story: 'Choose a place for your story.',
         plant: 'Choose a new spot and place a neutral orb.',
         note: 'Choose another spot in your physical space for a neutral orb.',
         zone: 'Choose the central checkpoint for this Area.'
@@ -190,12 +185,12 @@ function advanceDemo() {
         markers = [];
         marker = null;
         markerType = 'marker';
-        demoStage = 'story';
+        demoStage = 'plant';
         renderInterface(simulatedMode);
         if (simulatedMode) viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
         return;
     }
-    armDemoPlacement(nextStage || 'story');
+    armDemoPlacement(nextStage || 'plant');
 }
 
 function updateSimulatedMarkers() {
@@ -214,52 +209,38 @@ function refreshDemoRecord(record) {
     updateSimulatedMarkers();
 }
 
-function scheduleRecordUpdate(record, delay, update) {
-    demoTimers.push(setTimeout(() => {
-        if (!markers.includes(record)) return;
-        update(record);
-        refreshDemoRecord(record);
-    }, delay));
-}
-
 function placementPosition() {
     return spatialPosition(hitMatrix, viewerMatrix, .14);
 }
 
 function placeMarker() {
-    if (marker || markers.length >= 4 || markers.some(record => record.tutorialStage === demoStage)) return;
+    if (marker || markers.length >= 3 || markers.some(record => record.tutorialStage === demoStage)) return;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
         return;
     }
     const type = demoStage;
-    const draftType = type === 'story' ? 'marker' : 'sub_checkpoint';
-    const sample = createMinimalMarkerDraft(draftType, {
-        name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : type === 'zone' ? 'New Area' : DEMO_CONTENT.story.title,
+    const sample = createMinimalMarkerDraft('sub_checkpoint', {
+        name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    marker = { ...sample, position, type: 'marker', demoType: type === 'story' ? 'story' : 'marker', tutorialStage: type, demoExpanded: type === 'story', revealTitle: type !== 'story', revealLines: type === 'story' ? 0 : 3, texture: null };
-    if (markers.length > 1) marker = relateMinimalMarkers(marker, markers[1]?.id || 'demo-plant', 'part-of-story');
+    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, revealTitle: true, revealLines: 3, texture: null };
+    if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
     const placedRecord = marker;
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
     updateSimulatedMarkers();
     marker = null;
-    if (type === 'story') {
-        setGuide('Your story is arriving in this place.');
-        scheduleRecordUpdate(placedRecord, 350, record => { record.revealTitle = true; });
-        [1, 2, 3].forEach((count, index) => scheduleRecordUpdate(placedRecord, 850 + index * 650, record => { record.revealLines = count; }));
-        demoTimers.push(setTimeout(() => showDemoAction('Begin building →', 'plant'), 2850));
-    } else if (type === 'plant') guidePlantConversion(placedRecord);
+    if (type === 'plant') guidePlantConversion(placedRecord);
     else if (type === 'note') guideNoteConversion(placedRecord);
     else guideAreaConversion(placedRecord);
 }
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place spatial element"><span aria-hidden="true"></span><strong>Tap to place the story</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice" data-tryit-guided-choice hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide>Look around and find a clear surface. When you are ready, tap to begin.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a neutral orb"><span aria-hidden="true"></span><strong>Place a neutral orb</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice" data-tryit-guided-choice hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide>Look around and find a clear surface. Place the first neutral orb when you are ready.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
