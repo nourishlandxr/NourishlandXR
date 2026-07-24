@@ -105,7 +105,7 @@ test('project settings can rename a project and Areas toggle from the dashboard'
     assert.match(dashboardSource, /Project Details/);
     assert.match(dashboardSource, /projectSettingsName/);
     assert.match(dashboardSource, /saveProjectName/);
-    assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name \}\)/);
+    assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name, description, coverImage \}\)/);
     assert.match(dashboardSource, /const button = trigger\?\.currentTarget \|\| trigger/);
     assert.match(entrySource, /onclick="window\.toggleAreas\(this\)"/);
     assert.match(entrySource, /aria-expanded="false"/);

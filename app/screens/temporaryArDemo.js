@@ -105,12 +105,11 @@ function placeMarker() {
     if (simulatedMode) appRoot?.querySelector('[data-tryit-sim-marker]')?.removeAttribute('hidden');
     appRoot?.querySelector('[data-tryit-name-controls]')?.removeAttribute('hidden');
     setGuide(`${markerName} placed in space.`);
-    appRoot?.querySelector('[data-tryit-name]')?.focus();
 }
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><div class="tryit-marker-controls" aria-label="What is this marker?"><span>Marker type</span><div class="tryit-type-grid"><button type="button" data-tryit-type="plant" aria-pressed="false">&#x1F331; Plant</button><button type="button" data-tryit-type="note" aria-pressed="false">&#x270E; Note</button><button type="button" data-tryit-type="poi" aria-pressed="false">&#x25C6; Place</button></div><div class="tryit-name-controls" data-tryit-name-controls hidden><input data-tryit-name value="${escapeHtml(markerName)}" maxlength="60" aria-label="Marker name" /><button type="button" data-tryit-save>Save</button></div></div><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div class="tryit-sim-marker" data-tryit-sim-marker hidden>Marker</div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Exit AR</button><div class="tryit-marker-controls" aria-label="What is this marker?"><span>Marker type</span><div class="tryit-type-grid"><button type="button" data-tryit-type="plant" aria-pressed="false">&#x1F331; Plant</button><button type="button" data-tryit-type="note" aria-pressed="false">&#x270E; Note</button><button type="button" data-tryit-type="poi" aria-pressed="false">&#x25C6; Place</button></div><div class="tryit-name-controls" data-tryit-name-controls hidden><input type="text" name="nourishland-marker-label" data-tryit-name value="${escapeHtml(markerName)}" maxlength="60" aria-label="Marker name" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore /><button type="button" data-tryit-save>Save</button></div></div><button class="tryit-place" type="button" data-tryit-place aria-label="Place marker"><span aria-hidden="true"></span><strong>Tap to place marker</strong></button><p class="tryit-guide" data-tryit-guide>Aim at a place, then tap the breathing circle.</p><div class="tryit-sim-marker" data-tryit-sim-marker hidden>Marker</div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     bindMarkerControls();
@@ -166,6 +165,8 @@ function updateMarkerTexture() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
 function drawMarker(view) {

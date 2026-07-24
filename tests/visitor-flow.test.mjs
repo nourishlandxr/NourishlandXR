@@ -187,6 +187,10 @@ test('temporary AR demo chooses a marker type without a camera-blocking panel', 
     assert.match(source, /requestAnimationFrame\(draw\)/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
+    assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
+    assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
+    assert.match(source, /autocomplete="off"/);
+    assert.doesNotMatch(source, /querySelector\('\[data-tryit-name\]'\)\?\.focus\(\)/);
     assert.match(source, /hitMatrix\[12\]/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
