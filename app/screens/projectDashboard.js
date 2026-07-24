@@ -144,7 +144,7 @@ const terracePlanPoint = area => {
     return point ? { ...point, positioned: true, planLinked: true } : null;
 };
 
-function buildSiteMapLayout(areas, entries) {
+function buildSiteMapLayout(areas, entries, useTerracePlan = false) {
     const gpsPoints = [
         ...areas.map(area => area.anchor),
         ...entries.map(entry => entry.anchor)
@@ -174,7 +174,7 @@ function buildSiteMapLayout(areas, entries) {
             y: (Math.floor(index / columns) + 0.5) * (100 / rows),
             positioned: false
         };
-        return [area.id, terracePlanPoint(area) || pointForAnchor(area.anchor) || fallback];
+        return [area.id, (useTerracePlan ? terracePlanPoint(area) : null) || pointForAnchor(area.anchor) || fallback];
     }));
     const entriesByArea = new Map(areas.map(area => [area.id, entries.filter(entry => entry.place.id === area.id)]));
     const markerPoints = new Map();
@@ -1390,7 +1390,12 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
         const areas = places.filter(place => place.name !== 'Unassigned');
         const visiblePlaces = creator ? areas : areas.filter(place => visibleEntries.some(entry => entry.place.id === place.id));
         const mapEntries = visibleEntries.filter(entry => visiblePlaces.some(place => place.id === entry.place.id));
-        const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries);
+        const projectIdentity = `${project.id} ${project.name}`.trim();
+        const usesHillyardsPlan = project.id === 'Hillyards' || /test loaded data/i.test(projectIdentity);
+        const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries, usesHillyardsPlan);
+        const mapBackground = usesHillyardsPlan
+            ? '<img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" />'
+            : '<div class="site-map-generic-surface" aria-hidden="true"></div>';
         const areaOverlays = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
             const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
@@ -1414,7 +1419,7 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
             : creator
                 ? `window.renderProjectDashboard('${encoded(project.id)}')`
                 : `window.renderBrowseContent('${encoded(project.id)}', false)`;
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas" aria-label="${escapeHtml(project.name)} site map"><img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" /><div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div><section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }

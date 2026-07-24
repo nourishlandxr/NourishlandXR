@@ -790,7 +790,7 @@ function finishArExitToDashboard() {
     session = null;
     cleanup();
     activeSession?.end().catch(() => {});
-    if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)));
+    if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId), '', false, 'returning'));
 }
 
 function handleArHistoryBack() {
@@ -897,7 +897,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             const projectId = activeProjectId;
             session = null;
             cleanup();
-            if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId)));
+            if (projectId) queueMicrotask(() => window.renderProjectDashboard?.(encodeURIComponent(projectId), '', false, 'returning'));
         });
         session.addEventListener('select', () => {
             if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);

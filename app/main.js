@@ -168,16 +168,16 @@ window.renderDemoProjects = async () => {
         window.alert(error.message);
     }
 };
-window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false) => {
+window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
     const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
     if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
         history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName }, '', window.location.href);
     }
     app.innerHTML = `<div class="project-loading-screen" role="status" aria-live="polite">
         <div class="project-loading-mark" aria-hidden="true">◉</div>
-        <p class="welcome-label">Nourishland XR</p>
+        <p class="welcome-label">${loadingContext === 'returning' ? 'Returning to dashboard' : 'Nourishland XR'}</p>
         <h1>${escapeMainHtml(resolvedName)}</h1>
-        <p>Loading dashboard, markers and Areas…</p>
+        <p>${loadingContext === 'returning' ? 'Restoring your project workspace…' : 'Loading dashboard, markers and Areas…'}</p>
         <div class="project-loading-track" aria-hidden="true"><span></span></div>
     </div>`;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

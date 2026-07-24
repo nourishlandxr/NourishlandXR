@@ -169,6 +169,8 @@ test('opening a project paints a dashboard loading state before data work begins
     const styles = read('app/style.css');
     assert.match(mainSource, /class="project-loading-screen"/);
     assert.match(mainSource, /resolvedName/);
+    assert.match(mainSource, /Returning to dashboard/);
+    assert.match(mainSource, /loadingContext === 'returning'/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
     assert.match(mainSource, /window\.addEventListener\('popstate'/);
     assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
@@ -185,7 +187,7 @@ test('Creator AR opens a transparent WebXR session and cleans up on exit', () =>
     assert.match(arSource, /activeSession\?\.end/);
     assert.match(arSource, /history\.pushState\(\{ \.\.\.\(history\.state \|\| \{\}\), nourishlandCreatorAr: true \}/);
     assert.match(arSource, /window\.addEventListener\('popstate', handleArHistoryBack\)/);
-    assert.match(arSource, /window\.renderProjectDashboard\?\.\(encodeURIComponent\(projectId\)\)/);
+    assert.match(arSource, /window\.renderProjectDashboard\?\.\(encodeURIComponent\(projectId\), '', false, 'returning'\)/);
 });
 
 test('Creator AR falls back to setup when WebXR cannot start', () => {
