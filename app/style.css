@@ -2162,10 +2162,11 @@ body.ar-session-active::after {
 
 /* Bold Nourishland-inspired welcome experiment. Scoped to the launch screen. */
 .intro-launch { max-width: 1080px; gap: 24px; }
-.intro-launch .intro-heading { display: flex; align-items: center; gap: 18px; padding: 18px 4px 4px; border: 0; }
+.intro-launch .intro-heading { display: flex; align-items: center; justify-content: center; padding: 18px 4px 4px; border: 0; text-align: center; }
+.intro-launch .intro-heading > div { display: flex; width: 100%; flex-direction: column; align-items: center; }
 .intro-launch .intro-heading h1 { margin: 0; color: #0d1710; font-size: clamp(1.75rem, 5vw, 3.35rem); font-weight: 900; letter-spacing: .035em; line-height: .92; }
 .intro-launch .intro-heading h1 span { margin-left: .18em; color: #477243; font-size: .58em; vertical-align: top; }
-.intro-launch .intro-heading .subtitle { margin: 7px 0 0; color: #27382b; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; }
+.intro-launch .intro-heading .subtitle { margin: 9px 0 0; color: #27382b; font-size: .78rem; letter-spacing: .12em; line-height: 1.35; text-align: center; text-transform: uppercase; }
 .intro-launch .intro-copy { min-height: 0; padding: clamp(18px, 4vw, 38px) 4px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .intro-launch .intro-copy h2 { position: relative; z-index: 1; max-width: 720px; margin-bottom: 20px; color: #101811; font-size: clamp(2.55rem, 7vw, 5.7rem); font-weight: 900; letter-spacing: -.055em; line-height: .88; }
 .intro-launch .intro-copy p { position: relative; z-index: 1; max-width: 610px; color: #354238; font-size: 1rem; }
@@ -2209,7 +2210,7 @@ body.ar-session-active::after {
 @keyframes tutorial-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 600px) {
-    .intro-launch .intro-heading { gap: 12px; }
+    .intro-launch .intro-heading { padding-top: 14px; }
     .intro-launch .intro-copy { min-height: 0; padding: 18px 4px; }
     .intro-launch .role-grid { grid-template-columns: 1fr; }
     .welcome-complementary-grid { grid-template-columns: 1fr; }
@@ -2375,7 +2376,7 @@ body.ar-session-active::after {
     color: var(--leaf-deep);
     user-select: none;
 }
-.welcome-version-badge { display: inline-flex; margin-top: 7px; font-size: .68rem; letter-spacing: .045em; opacity: .78; }
+.welcome-version-badge { display: inline-flex; justify-content: center; margin-top: 8px; font-size: .68rem; letter-spacing: .045em; opacity: .78; }
 
 .platform-utility-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
