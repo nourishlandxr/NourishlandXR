@@ -131,11 +131,16 @@ test('creator dashboard exposes equal AR and Content work modes, quick add, sear
     assert.doesNotMatch(changesRowSource, /\$\{item\.area\}|entry-status-/);
 });
 
-test('fresh projects receive high guidance and Area-required states are actionable', () => {
+test('fresh projects can start freely and place Starting Point or Area markers in AR', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
-    const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
-    assert.match(dashboardSource, /area:\s*\{/);
-    assert.match(dashboardSource, /Create your first Area/);
+    const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
+    assert.match(dashboardSource, /Place Starting Point in AR/);
+    assert.match(dashboardSource, /Place Area Marker in AR/);
+    assert.match(dashboardSource, /1\. Open AR/);
+    assert.match(dashboardSource, /2\. Aim at an object/);
+    assert.match(dashboardSource, /3\. Tap to place/);
+    assert.match(dashboardSource, /No code is required/);
     assert.match(dashboardSource, /Outdoor Area — garden, park, nursery, farm section/);
     assert.match(dashboardSource, /Indoor Area — greenhouse, building, covered growing area/);
     assert.match(dashboardSource, /Bed or Plot — garden bed, terrace, production row/);
@@ -148,7 +153,6 @@ test('fresh projects receive high guidance and Area-required states are actionab
     assert.match(dashboardSource, /Main Location/);
     assert.match(dashboardSource, />Create Area</);
     assert.match(dashboardSource, /Is this where your Starting Point will be/);
-    assert.match(dashboardSource, /Project → Location → Area → Plant or Note/);
     assert.match(dashboardSource, /area_explained/);
     assert.match(dashboardSource, /first_area_created_or_selected/);
     assert.match(dashboardSource, /meaningful section inside a Location/);

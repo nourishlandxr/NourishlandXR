@@ -90,7 +90,7 @@ test('Creator AR setup guide covers welcome, checkpoint and placement', () => {
     assert.match(dashboardSource, /Plants, markers and notes/);
     assert.match(dashboardSource, /Set Welcome Marker/);
     assert.match(dashboardSource, /Open Test AR/);
-    assert.match(dashboardSource, /label: 'Add Checkpoint'/);
+    assert.match(dashboardSource, /label: 'Add Area Marker'/);
     assert.match(dashboardSource, /openCheckpointQuickSetup/);
     assert.match(dashboardSource, /Create New Area/);
     assert.match(dashboardSource, /Add in AR now/);
@@ -185,7 +185,9 @@ test('dashboard quick marker and note actions open AR with a ready centre placem
     const styles = read('app/style.css');
     assert.match(dashboardSource, /label: 'Add Marker', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'sub_checkpoint'\)`/);
     assert.match(dashboardSource, /label: 'Add Note', action: `window\.startArMode\('\$\{encoded\(project\.id\)\}', '', '', 'note'\)`/);
-    assert.match(arSource, /readyPlacementType = \['plant', 'sub_checkpoint', 'note'\]\.includes\(initialPlacementType\)/);
+    assert.match(arSource, /readyPlacementType = \['plant', 'sub_checkpoint', 'note', 'intro_checkpoint', 'area_checkpoint'\]\.includes\(initialPlacementType\)/);
+    assert.match(dashboardSource, /'intro_checkpoint'/);
+    assert.match(dashboardSource, /'area_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
     assert.match(arSource, /if \(readyPlacementType === type\)/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = ''\)/);

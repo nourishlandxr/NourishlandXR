@@ -448,7 +448,7 @@ window.createProjectFromForm = async () => {
             const suggestions = projectTemplates[template]?.sites || [];
             const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', siteSuggestions: suggestions });
             await siteManager.loadSitesFromDisk();
-            window.renderNewLocationSetup(encodeURIComponent(created.id));
+            window.renderProjectDashboard(encodeURIComponent(created.id));
         }
     }
 };
