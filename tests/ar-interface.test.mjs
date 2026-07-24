@@ -167,8 +167,12 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
     assert.match(styles, /\.creator-ar-marker \{[\s\S]*width: 13px;[\s\S]*height: 13px;/);
-    assert.match(source, /<span class="creator-ar-marker/);
+    assert.match(source, /<span class="creator-ar-marker-hit-target/);
     assert.doesNotMatch(source, /<button class="creator-ar-marker/);
+    assert.match(source, /function setupSpatialMarkerRenderer/);
+    assert.match(source, /function drawSpatialMarkers/);
+    assert.match(source, /drawSpatialMarkers\(view\)/);
+    assert.match(styles, /\.creator-ar-marker-hit-target \{[\s\S]*opacity: 0;/);
     assert.match(source, /async function restoreRecordedMarkers/);
     assert.match(source, /loadMarkerAnchor/);
     assert.match(source, /loadPlacementAreas\(\)\.then\(restoreRecordedMarkers\)/);

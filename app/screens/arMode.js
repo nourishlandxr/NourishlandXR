@@ -33,6 +33,8 @@ let readyPlacementType = '';
 let pendingPlacedRecord = null;
 let hitTestSource = null;
 let latestHitMatrix = null;
+let markerProgram = null;
+let markerBuffer = null;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -167,6 +169,58 @@ function multiplyMatrixVector(matrix, vector) {
     return [0, 1, 2, 3].map(row => matrix[row] * vector[0] + matrix[row + 4] * vector[1] + matrix[row + 8] * vector[2] + matrix[row + 12] * vector[3]);
 }
 
+function multiplyMatrices(a, b) {
+    const out = new Float32Array(16);
+    for (let column = 0; column < 4; column++) for (let row = 0; row < 4; row++) {
+        out[column * 4 + row] = a[row] * b[column * 4] + a[4 + row] * b[column * 4 + 1] + a[8 + row] * b[column * 4 + 2] + a[12 + row] * b[column * 4 + 3];
+    }
+    return out;
+}
+
+function markerBillboardMatrix(position, scale = .045) {
+    const camera = latestViewerMatrix || new Float32Array(16);
+    let x = camera[12] - position.x;
+    let z = camera[14] - position.z;
+    const length = Math.hypot(x, z) || 1;
+    x /= length; z /= length;
+    return new Float32Array([z * scale, 0, -x * scale, 0, 0, scale, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
+}
+
+function setupSpatialMarkerRenderer() {
+    const vertex = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
+    gl.compileShader(vertex);
+    const fragment = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;void main(){float d=distance(uv,vec2(.5));float body=1.-smoothstep(.30,.49,d);float glow=(1.-smoothstep(.18,.5,d))*.28;float highlight=1.-smoothstep(0.,.16,distance(uv,vec2(.39,.36)));vec3 c=mix(color,vec3(1.),highlight*.58);gl_FragColor=vec4(c,body*.58+glow);}');
+    gl.compileShader(fragment);
+    markerProgram = gl.createProgram();
+    gl.attachShader(markerProgram, vertex);
+    gl.attachShader(markerProgram, fragment);
+    gl.linkProgram(markerProgram);
+    markerBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+}
+
+function drawSpatialMarkers(view) {
+    if (!markerProgram || !markerBuffer || !sessionMarkers.length) return;
+    gl.useProgram(markerProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
+    const positionLocation = gl.getAttribLocation(markerProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.31, .62, .82], intro_checkpoint: [.31, .62, .82] };
+    sessionMarkers.forEach(record => {
+        const model = markerBillboardMatrix(record.position, record.marker.type === 'intro_checkpoint' ? .06 : .045);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), colors[record.marker.type] || colors.sub_checkpoint);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
+}
+
 function positionSessionMarkers(view = latestView) {
     if (!view || !overlayRoot) return;
     const inverse = view.transform?.inverse?.matrix;
@@ -191,7 +245,7 @@ function positionSessionMarkers(view = latestView) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker creator-ar-marker-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></span>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}"><span>${escapeHtml(record.marker.name)}</span></span>`).join('');
     sessionMarkers.forEach(record => {
         layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
     });
@@ -492,6 +546,8 @@ function cleanup() {
     sessionMarkers = [];
     readyPlacementType = '';
     pendingPlacedRecord = null;
+    markerProgram = null;
+    markerBuffer = null;
     gl = null;
 }
 
@@ -540,6 +596,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         gl = canvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
         if (!gl) throw new Error('WebGL unavailable.');
         await gl.makeXRCompatible();
+        setupSpatialMarkerRenderer();
 
         const layer = new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true });
         session.updateRenderState({ baseLayer: layer, depthNear: 0.01, depthFar: 50 });
@@ -570,6 +627,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 if (!viewport) continue;
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                drawSpatialMarkers(view);
             }
         };
 

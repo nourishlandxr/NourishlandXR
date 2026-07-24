@@ -64,6 +64,7 @@ Loading must be cancellable. A late response from a previous Area must never ove
 - Area checkpoints define a coherent system such as a section, guild, microclimate, crop or learning zone.
 - Marker clarity must be evaluated outdoors, indoors, in bright light and against visually busy backgrounds.
 - Spatial markers must not be HTML buttons and must remain isolated from project-theme button/card styling.
+- Dashboard marker pixels are rendered directly in WebXR/WebGL. The projected DOM element is invisible and exists only as a generous Pointer-mode hit target.
 - A placed master marker is recorded immediately in fallback storage when no Area has been assigned.
 - Opening dashboard AR restores recorded spatial entries from the active storage Area; later Area assignment moves the same stable entry rather than recreating it.
 
@@ -132,6 +133,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-24 | Demo frames and text are deliberately larger; the Story Board reveals text progressively. | V1 demo |
 | 2026-07-24 | The third demo placement defines an Area boundary on the ground before loading Area-use information. | V1 demo |
 | 2026-07-24 | Dashboard spatial markers are isolated from global button/theme CSS and recorded markers restore from storage. | V1 foundation |
+| 2026-07-24 | Dashboard master-marker visuals moved from DOM/CSS into WebGL to eliminate device and theme white-board rendering. | V1 foundation |
 
 ## Traceability rule
 
