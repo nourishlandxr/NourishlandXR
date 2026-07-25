@@ -41,11 +41,11 @@ let handlingArHistory = false;
 let placementInProgress = false;
 let pendingBagRecord = null;
 
-const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point', area_checkpoint: 'area checkpoint' })[type] || 'item';
+const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point gateway', area_checkpoint: 'area totem' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
-const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point', area_checkpoint: 'Area Checkpoint' })[type] || 'Draft';
+const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#4f9ed1', area_checkpoint: '#4f9ed1' })[type] || '#91a29a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#e9c46a', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
@@ -220,7 +220,7 @@ function showPlacedMarkerActions(record) {
     pendingPlacedRecord = record;
     picker.hidden = false;
     const fixedType = record.marker.type === 'intro_checkpoint';
-    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What kind of Marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} General Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Checkpoint</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
+    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What kind of Marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} General Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Totem</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
     }));
@@ -272,7 +272,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;void main(){float d=distance(uv,vec2(.5));float body=1.-smoothstep(.30,.49,d);float glow=(1.-smoothstep(.18,.5,d))*.28;float highlight=1.-smoothstep(0.,.16,distance(uv,vec2(.39,.36)));vec3 c=mix(color,vec3(1.),highlight*.58);gl_FragColor=vec4(c,body*.58+glow);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;void main(){vec2 q=uv-vec2(.5);float d=length(q);float circle=1.-smoothstep(.30,.49,d);float totemX=1.-smoothstep(.16,.23,abs(q.x));float totemY=1.-smoothstep(.38,.49,abs(q.y));float cap=1.-smoothstep(.12,.22,length(vec2(q.x,q.y-.31)));float totem=max(totemX*totemY,cap);float diamond=abs(q.x)+abs(q.y);float gateway=(1.-smoothstep(.34,.45,diamond))*smoothstep(.18,.27,diamond);float body=shape<.5?circle:(shape<1.5?totem:gateway);float glow=(1.-smoothstep(.18,.52,d))*.22;vec3 c=mix(color,vec3(1.),shape>1.5?.34:.2);float alpha=shape<.5?body*.58+glow:body*.5+glow*.65;gl_FragColor=vec4(c,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -292,11 +292,14 @@ function drawSpatialMarkers(view) {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.31, .62, .82], area_checkpoint: [.31, .62, .82] };
+    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.92, .72, .28], area_checkpoint: [.34, .78, .7] };
     sessionMarkers.forEach(record => {
-        const model = markerBillboardMatrix(record.position, record.marker.type === 'intro_checkpoint' ? .06 : markerScale(record.marker));
+        const shape = record.marker.type === 'area_checkpoint' ? 1 : record.marker.type === 'intro_checkpoint' ? 2 : 0;
+        const scale = shape === 1 ? .13 : shape === 2 ? .11 : markerScale(record.marker);
+        const model = markerBillboardMatrix(record.position, scale);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), shape);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -306,6 +309,7 @@ function drawSpatialMarkers(view) {
         const model = markerBillboardMatrix(target, .07);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 0);
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.72, .9, .58]);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -360,10 +364,10 @@ function openInlineEditor(record, force = false) {
     const areaCheckpoint = record.marker.type === 'area_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
-    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option><option value="area_checkpoint" ${record.marker.type === 'area_checkpoint' ? 'selected' : ''}>Area Checkpoint</option></select></label>`;
+    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option><option value="area_checkpoint" ${record.marker.type === 'area_checkpoint' ? 'selected' : ''}>Area Totem</option></select></label>`;
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
     const board = areaBoard(record.marker);
-    const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board appears at the Area checkpoint and can be refined later in Web Mode.</p></fieldset>` : '';
+    const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${areaBoardControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
@@ -659,7 +663,7 @@ async function setPlacedMarkerType(record, type) {
         setPlacementStatus(`${readyPlacementLabel(type)} selected. Edit details now or finish.`);
         return;
     }
-    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New Area checkpoint' };
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New Area Totem' };
     try {
         const update = {
             ...record.marker,

@@ -18,6 +18,26 @@ The experience should inspire curiosity. It is not intended to become a dense pr
 
 “Orb” is not a product concept. A Marker may be drawn as a quiet glowing circle, but its appearance does not require another name.
 
+Three roles have distinct visual identities:
+
+- Ordinary content appears as a quiet Marker.
+- An **Area Totem** is a taller translucent form that holds an Area together. Information panels can arrange themselves around it.
+- The **Starting Point** is a warm gateway shape, visibly different from both Markers and Area Totems.
+
+## Friendly Mode and Expert Mode
+
+Status: V1 foundation
+
+New projects begin in the friendly experience. It asks only for information required to create a meaningful place.
+
+Expert Mode is an explicit project checkbox. It reveals advanced configuration, coordinates, diagnostics, themes and future V2 controls without forcing those concepts on every creator.
+
+The first-use tutorial should teach a welcoming journey, not the software architecture:
+
+1. Create a welcoming Starting Point.
+2. Understand an Area through its translucent Totem.
+3. Place one Marker and give it a purpose.
+
 ## Active ideas
 
 ### Living plant discovery
@@ -77,4 +97,3 @@ Before promoting an idea into the release plan, ask:
 3. Does it reduce effort or create a meaningful moment?
 4. Can it work reliably in a garden?
 5. Is it V1-essential, a later enhancement, or simply an inspiring possibility?
-

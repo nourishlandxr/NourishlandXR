@@ -2,7 +2,7 @@ const DEFAULT_NAMES = Object.freeze({
     plant: 'A living plant',
     note: 'A small observation',
     sub_checkpoint: 'Discovery point',
-    area_checkpoint: 'New Area checkpoint',
+    area_checkpoint: 'New Area Totem',
     intro_checkpoint: 'Starting Point'
 });
 

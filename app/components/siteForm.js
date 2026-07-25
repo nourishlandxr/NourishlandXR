@@ -23,6 +23,11 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
             </select>
         </div>
 
+        <label class="tutorial-mode-toggle project-expert-toggle">
+            <span><strong>Expert Mode</strong><small>Show advanced setup and technical controls. Leave this off for the friendly guided experience.</small></span>
+            <input id="projectExpertMode" type="checkbox" ${project?.expertMode ? 'checked' : ''} />
+        </label>
+
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>
             <button class="primary" onclick="${onSubmit}">${project ? 'Save Location' : 'Create Location'}</button>

@@ -17,14 +17,14 @@ function contextualGuidance(guidance, target) {
 }
 
 function tutorialSpotlight(guidance) {
-    if (!guidance || !['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
+    if (!guidance || !['dashboardWelcome', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
     return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
         <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
-            <span class="guidance-stage">Tutorial Mode</span>
+            <span class="guidance-stage">First steps</span>
             <strong>${guidance.title}</strong>
             <p>${guidance.body}</p>
             <div class="tutorial-spotlight-actions">
-                <button type="button" onclick="${guidance.dismissAction}">Skip Tutorial</button>
+                <button type="button" onclick="${guidance.dismissAction}">Skip this step</button>
                 <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
             </div>
         </aside>`;
@@ -59,7 +59,7 @@ export function renderProjectEntry(config) {
     </button>`).join('');
     const spotlightTarget = config.guidance?.feature === 'dashboardWelcome'
         ? 'header'
-        : config.guidance?.feature === 'quickAccess'
+        : ['startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
             ? 'quickAccess'
             : '';
 

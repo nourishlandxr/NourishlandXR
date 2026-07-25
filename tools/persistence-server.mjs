@@ -354,6 +354,7 @@ function createProject(projectData) {
         coverImage: projectData.coverImage || '',
         template: projectData.template || '',
         theme: PROJECT_THEMES.has(projectData.theme) ? projectData.theme : 'forest-light',
+        expertMode: projectData.expertMode === true,
         visibility: normalizeVisibility(projectData.visibility)
     };
     writeJson(path.join(projectDir, 'project.json'), project);

@@ -244,7 +244,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Use Lemon Myrtle preset/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /DON’T GO HERE/);
-    assert.match(source, /Convert to Area Checkpoint/);
+    assert.match(source, /Create Area Totem/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
 
@@ -354,6 +354,15 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(plantService, /plant-search\/global/);
     assert.match(server, /api\.gbif\.org\/v1\/species\/suggest/);
     assert.match(server, /source: 'GBIF'/);
+});
+
+test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
+    const arSource = read('app/screens/arMode.js');
+    assert.match(arSource, /area_checkpoint' \? 1/);
+    assert.match(arSource, /intro_checkpoint' \? 2/);
+    assert.match(arSource, /shape<\.5\?circle:\(shape<1\.5\?totem:gateway\)/);
+    assert.match(arSource, /Area Totem/);
+    assert.match(arSource, /starting point gateway/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

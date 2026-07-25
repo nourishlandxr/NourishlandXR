@@ -127,7 +127,7 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(entrySource, /tutorial-spotlight-shield/);
     assert.match(entrySource, /contextual-guidance/);
     assert.match(entrySource, /First-use guidance/);
-    assert.match(entrySource, /Skip Tutorial/);
+    assert.match(entrySource, /Skip this step/);
     assert.match(entrySource, />See all</);
     assert.match(entrySource, /No entries have been added yet/);
     assert.match(entrySource, />Date</);
@@ -184,7 +184,8 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Place a Marker/);
-    assert.match(source, /This short spatial journey works like a game/);
+    assert.doesNotMatch(source, /works like a game/);
+    assert.match(source, /Place three simple Markers/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
@@ -229,4 +230,17 @@ test('new location asks only for core details and supported templates', () => {
     }
     assert.match(dashboard, /projectSettingsCoverImage/);
     assert.match(dashboard, /Cover image \(optional\)/);
+});
+
+test('new projects offer friendly mode by default and an explicit Expert Mode', () => {
+    const formSource = fs.readFileSync(path.join(root, 'app/components/siteForm.js'), 'utf8');
+    const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    assert.match(formSource, /<strong>Expert Mode<\/strong>/);
+    assert.match(mainSource, /projectExpertMode'\)\?\.checked === true/);
+    assert.match(dashboardSource, /const expertMode = project\.expertMode === true/);
+    assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
+    assert.match(dashboardSource, /What should visitors call this place\?/);
+    assert.match(dashboardSource, /What should they know or feel when they arrive\?/);
+    assert.match(dashboardSource, /Advanced Starting Point options/);
 });

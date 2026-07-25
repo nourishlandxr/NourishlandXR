@@ -21,7 +21,7 @@ const checkpointSetupFlows = new Map();
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
-const markerTypeLabel = type => ({ plant: 'Plant', note: 'Note', intro_checkpoint: 'Starting Point', sub_checkpoint: 'Checkpoint', area_checkpoint: 'Area Checkpoint' })[type] || 'Content';
+const markerTypeLabel = type => ({ plant: 'Plant', note: 'Note', intro_checkpoint: 'Starting Point', sub_checkpoint: 'Checkpoint', area_checkpoint: 'Area Totem' })[type] || 'Content';
 const markerIcon = type => ({ plant: '🌱', note: '✎', intro_checkpoint: '⚑', sub_checkpoint: '⚑', area_checkpoint: '⌖' })[type] || '◆';
 const entryStatus = marker => marker.visibility === 'public'
     ? { label: 'Published', tone: 'published' }
@@ -363,10 +363,9 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
     if (!isProjectTutorialEnabled(projectId)) return null;
     const candidates = [
         freshProject ? ['dashboardWelcome', 'header'] : null,
-        ['quickAccess', 'quickAccess'],
-        ['arMode', 'workMode'],
-        ['contentMode', 'workMode'],
-        !startingConfigured ? ['startingPoint', 'status'] : null
+        !startingConfigured ? ['startingPoint', 'quickAccess'] : null,
+        !hasArea ? ['area', 'quickAccess'] : null,
+        ['quickAccess', 'quickAccess']
     ].filter(Boolean);
     const forcedFeature = forcedGuidanceFeatures.get(projectId);
     const selected = forcedFeature
@@ -378,23 +377,23 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
     const stage = getTutorialStage(projectId, feature);
     const content = {
         dashboardWelcome: {
-            title: 'Welcome to your Dashboard',
-            full: 'This is where your project is organized, edited and brought to life. You can build content on screen or work directly in the landscape using AR.',
-            short: 'This Dashboard is your workspace for organizing content and working in AR.',
+            title: 'Welcome to your living place',
+            full: 'You do not need to learn a technical system. Nourishland begins with a real place, a few simple shapes and the stories you want people to discover there.',
+            short: 'Begin with a real place and one meaningful discovery.',
             actionLabel: '',
             action: ''
         },
         area: {
-            title: 'Areas organise your Location',
-            full: 'An Area is a meaningful section inside a Location, such as an orchard row, garden bed, fountain, restaurant, propagation area or walking path. Create one now; you can rename or update it later.',
-            short: 'Create or select an Area before adding content. You can change it later.',
+            title: 'An Area Totem holds a place together',
+            full: 'A translucent Totem marks one garden bed, grove or learning zone. The information and Markers belonging to that Area can gather naturally around it.',
+            short: 'Use an Area Totem to give one part of the landscape its own identity.',
             actionLabel: hasArea ? 'View Areas' : 'Create Area',
             action: hasArea ? `window.openCreatorContentMode('${encoded(projectId)}')` : `window.renderProjectAreaForm('${encoded(projectId)}', 'dashboard')`
         },
         quickAccess: {
-            title: 'Quick Access',
-            full: 'Add a Plant, Checkpoint or Note. You can prepare information now and position it later using a map or AR Mode.',
-            short: 'Add a Plant, Checkpoint or Note now and position it later.',
+            title: 'Place your first Marker',
+            full: 'Open AR and tap a surface to place one Marker. Then choose whether it represents a Plant, a Note or another point of interest. You can add details later.',
+            short: 'Place one Marker first. Give it a purpose when you are ready.',
             actionLabel: '',
             action: ''
         },
@@ -413,9 +412,9 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: `window.openCreatorContentMode('${encoded(projectId)}')`
         },
         startingPoint: {
-            title: 'Starting Point still needed',
-            full: 'Place one simple Starting Point in AR. Aim at any object and tap; details, directions and physical codes can be added later.',
-            short: 'Place the Starting Point in AR now and enhance it later.',
+            title: 'First, show visitors where the journey begins',
+            full: 'The Starting Point is a welcoming gateway, visually different from every Marker and Area Totem. Place it in AR now; a name and short welcome are enough.',
+            short: 'The Starting Point is the welcoming gateway into this place.',
             actionLabel: 'Place Starting Point',
             action: `window.startArMode('${encoded(projectId)}', '', '', 'intro_checkpoint')`
         }
@@ -1167,6 +1166,7 @@ export async function renderStoriesAndFocus(app, encodedProjectId) {
 export async function renderProjectSettings(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
     const theme = PROJECT_THEMES.has(project.theme) ? project.theme : 'forest-light';
+    const expertMode = project.expertMode === true;
     const tutorialEnabled = isProjectTutorialEnabled(project.id);
     const arTutorial = getArTutorialProgress();
     const settings = readPlatformSettings();
@@ -1192,7 +1192,11 @@ export async function renderProjectSettings(app, encodedProjectId) {
                 <p id="projectNameStatus" class="meta"></p>
             </form>
         </section>
-        <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle">
+        <section class="panel expert-mode-setting" aria-labelledby="expertModeTitle">
+            <div class="section-heading-row"><div><h2 id="expertModeTitle">Experience level</h2><p>Keep the everyday experience calm, or reveal advanced controls when you need them.</p></div><span class="tutorial-status">${expertMode ? 'Expert' : 'Friendly'}</span></div>
+            <label class="tutorial-mode-toggle"><span><strong>Expert Mode</strong><small>Show themes, technical guidance, diagnostics and other advanced project controls.</small></span><input type="checkbox" ${expertMode ? 'checked' : ''} onchange="window.updateProjectExpertMode('${encoded(project.id)}', this.checked)" /></label>
+        </section>
+        <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div></div>
             <div class="field">
                 <label for="projectTheme">Project theme</label>
@@ -1210,7 +1214,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
         <div class="content-type-list">
             <button class="content-type-row" type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Manage entrances and experience starting points</strong><span>Manage Master Markers and choose where visitors begin the experience.</span></button>
         </div>
-        <section class="panel tutorial-settings" aria-labelledby="tutorialSettingsTitle">
+        <section class="panel tutorial-settings" aria-labelledby="tutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="tutorialSettingsTitle">Tutorial &amp; Guidance</h2><p>First-use explanations become shorter after successful actions.</p></div><span class="tutorial-status">${tutorialEnabled ? 'On' : 'Off'}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>Tutorial Mode</strong><small>Show contextual guidance beside the feature being learned.</small></span><input type="checkbox" ${tutorialEnabled ? 'checked' : ''} onchange="window.setProjectTutorialMode('${encoded(project.id)}', this.checked)" /></label>
             <div class="tutorial-settings-actions">
@@ -1219,7 +1223,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
             </div>
             <p class="meta">These actions reset guidance only. Plants, Areas, Notes, checkpoints and AR positions are never changed.</p>
         </section>
-        <section class="panel tutorial-settings" aria-labelledby="arTutorialSettingsTitle">
+        <section class="panel tutorial-settings" aria-labelledby="arTutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="arTutorialSettingsTitle">AR Tutorial &amp; Hints</h2><p>Control the compact guidance shown inside Creator AR Mode.</p></div><span class="tutorial-status">${arTutorialLabel}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>Show AR Hints</strong><small>Show short surface-detection and placement reminders when they are useful.</small></span><input type="checkbox" ${arTutorial.showHints === false ? '' : 'checked'} onchange="window.setArHints('${encoded(project.id)}', this.checked)" /></label>
             <div class="tutorial-settings-actions">
@@ -1228,13 +1232,13 @@ export async function renderProjectSettings(app, encodedProjectId) {
             </div>
             <p class="meta">The tutorial appears once for an experienced creator, can be skipped, and can always be replayed here. Resetting it never changes project content or AR positions.</p>
         </section>
-        <section class="panel tutorial-settings" aria-labelledby="developerDiagnosticsTitle">
+        <section class="panel tutorial-settings" aria-labelledby="developerDiagnosticsTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="developerDiagnosticsTitle">Developer Diagnostics</h2><p>Keep technical AR launch details hidden during normal use.</p></div><span class="tutorial-status">${settings.developerDiagnostics ? 'Debug on' : 'Debug off'}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
             <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
             <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
         </section>
-        <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle">
+        <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><h2 id="backupProjectTitle">Backup Project to File</h2><span class="coming-soon-badge">Coming Soon</span></div>
             <p>Exports a configuration file containing all project data, Areas, content and settings.</p>
             <button type="button" disabled aria-disabled="true">Backup Project</button>
@@ -1316,6 +1320,13 @@ export async function saveProjectName(app, event, encodedProjectId) {
     } catch (error) {
         if (status) status.textContent = `Project details could not be saved: ${error.message}`;
     }
+}
+
+export async function updateProjectExpertMode(app, encodedProjectId, enabled) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const project = await projectById(projectId);
+    await renameProjectOnDisk(projectId, { ...project, preserveId: true, name: project.name, expertMode: Boolean(enabled) });
+    await renderProjectSettings(app, encoded(projectId));
 }
 
 export async function setProjectTutorialModeFromSettings(app, encodedProjectId, enabled) {
@@ -1549,14 +1560,19 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
         }
         const startingStage = getTutorialStage(project.id, 'startingPoint');
         const startingGuidance = startingStage === 'new'
-            ? '<div class="panel starting-point-explanation"><h2>What is a Starting Point?</h2><p>A Starting Point defines where visitors begin and helps connect the digital experience to the physical Location. Choose its Area and arrival information now; physical positioning can be completed or changed later.</p><p><strong>Next:</strong> Save the welcome details, then preview the visitor experience from the Dashboard.</p></div>'
+            ? '<div class="panel starting-point-explanation"><h2>A warm first moment</h2><p>The Starting Point is the welcoming gateway into this place. Give it a name and a short welcome. Everything else can wait.</p></div>'
             : startingStage === 'learning'
-                ? '<div class="panel contextual-reminder"><p><strong>Reminder:</strong> Choose where visitors begin. Its directions and physical position can be updated later.</p></div>'
+                ? '<div class="panel contextual-reminder"><p><strong>Keep it simple:</strong> a name and a short welcome are enough.</p></div>'
                 : '';
         const returnAction = flow === 'checkpoint-quick'
             ? `window.openCheckpointQuickSetup('${encoded(project.id)}')`
             : `window.renderProjectDashboard('${encoded(project.id)}')`;
-        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><h1>${startingPoint ? 'Manage' : 'Set'} Starting Point</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${startingGuidance}<form class="panel" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow)}')"><div class="field"><label for="projectStartingArea">Area</label>${startingPoint ? `<p id="projectStartingArea" class="field-readonly-value">${escapeHtml(startingPoint.place.name)}</p>` : `<select id="projectStartingArea" required><option value="">Select an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select>`}</div><div class="field"><label for="projectStartingName">Starting-point name</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Starting Point')}" required /></div><div class="field"><label for="projectStartingDescription">Welcome text</label><textarea id="projectStartingDescription" rows="4">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Set it while standing there</strong><span>Use this phone’s current position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Choose it on the map</strong><span>Enter coordinates from a computer.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Location accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Direction visitors should face</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" placeholder="For example: north toward the orchard" /></div></div><div class="field"><label for="projectStartingPhoto">Optional reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" placeholder="https://…" /></div><div class="field"><label for="projectStartingQr">Optional QR or physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft - Creator only</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? `Position configured${anchor.accuracy ? ` · accuracy ${escapeHtml(anchor.accuracy)} m` : ''}.` : 'Position not configured. You can save and finish it later.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Starting Point</button></form></div>`;
+        const expertMode = project.expertMode === true;
+        const areaField = startingPoint
+            ? `<input id="projectStartingArea" type="hidden" value="${escapeHtml(startingPoint.place.id)}" /><p class="starting-point-home">Belongs to ${escapeHtml(startingPoint.place.name)}</p>`
+            : `<div class="field"><label for="projectStartingArea">Garden Area</label><select id="projectStartingArea" required><option value="">Choose an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select></div>`;
+        const advancedFields = expertMode ? `<details class="starting-point-advanced"><summary>Advanced Starting Point options</summary><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Use current GPS</strong><span>Capture this phone’s position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Enter coordinates</strong><span>Use a mapped position.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Visitor facing direction</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" /></div></div><div class="field"><label for="projectStartingPhoto">Reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" /></div><div class="field"><label for="projectStartingQr">Physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div></details>` : '';
+        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">Visitor gateway</p><h1>Your Starting Point</h1><p class="subtitle">A simple welcome into ${escapeHtml(project.name)}.</p></div>${startingGuidance}<form class="panel simple-starting-point" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow)}')">${areaField}<div class="field"><label for="projectStartingName">What should visitors call this place?</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Welcome')}" required /></div><div class="field"><label for="projectStartingDescription">What should they know or feel when they arrive?</label><textarea id="projectStartingDescription" rows="4" placeholder="A short, warm welcome is enough.">${escapeHtml(marker.description || '')}</textarea></div>${advancedFields}<p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? 'Its position is saved.' : 'Its AR placement is already connected to this gateway.'}</p><p id="projectStartingError" class="meta"></p><button class="primary" type="submit">Save Welcome</button></form></div>`;
         if (!startingPoint && preferredAreaId && areas.some(area => area.id === preferredAreaId)) {
             document.getElementById('projectStartingArea').value = preferredAreaId;
         }
@@ -1591,16 +1607,17 @@ export async function saveProjectStartingPoint(event, encodedProjectId, flow = '
     const error = document.getElementById('projectStartingError');
     try {
         const context = await startingContext(projectId);
-        const visibility = document.getElementById('projectStartingVisibility').value;
+        const existingMarker = context.startingPoint?.marker || {};
+        const visibility = document.getElementById('projectStartingVisibility')?.value || existingMarker.visibility || 'draft';
         const selectedAreaId = document.getElementById('projectStartingArea')?.value || '';
         const place = context.startingPoint?.place || context.places.find(area => area.id === selectedAreaId) || null;
         if (!place) throw new Error('Select an Area for the Starting Point.');
-        const latitude = document.getElementById('projectStartingLatitude').value.trim();
-        const longitude = document.getElementById('projectStartingLongitude').value.trim();
-        const accuracy = document.getElementById('projectStartingAccuracy').value.trim();
-        const qrReference = document.getElementById('projectStartingQr').value.trim();
+        const latitude = document.getElementById('projectStartingLatitude')?.value.trim() || '';
+        const longitude = document.getElementById('projectStartingLongitude')?.value.trim() || '';
+        const accuracy = document.getElementById('projectStartingAccuracy')?.value.trim() || '';
+        const qrReference = document.getElementById('projectStartingQr')?.value.trim() || existingMarker.qr_reference || '';
         const hasCoordinates = latitude !== '' && longitude !== '' && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
-        const data = { type: 'intro_checkpoint', name: document.getElementById('projectStartingName').value.trim(), description: document.getElementById('projectStartingDescription').value.trim(), directions: document.getElementById('projectStartingDirections').value.trim(), reference_photo: document.getElementById('projectStartingPhoto').value.trim(), facing_direction: document.getElementById('projectStartingFacing').value.trim(), qr_reference: qrReference, visibility };
+        const data = { type: 'intro_checkpoint', name: document.getElementById('projectStartingName').value.trim(), description: document.getElementById('projectStartingDescription').value.trim(), directions: document.getElementById('projectStartingDirections')?.value.trim() || existingMarker.directions || '', reference_photo: document.getElementById('projectStartingPhoto')?.value.trim() || existingMarker.reference_photo || '', facing_direction: document.getElementById('projectStartingFacing')?.value.trim() || existingMarker.facing_direction || '', qr_reference: qrReference, visibility };
         let savedMarker;
         if (context.startingPoint) savedMarker = await updatePlaceMarker(projectId, context.site.id, place.id, context.startingPoint.marker.id, data);
         else savedMarker = await createPlaceMarker(projectId, context.site.id, place.id, data);

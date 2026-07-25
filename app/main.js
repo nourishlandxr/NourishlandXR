@@ -22,7 +22,7 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectName, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, uploadSiteMapPhoto } from './screens/projectDashboard.js';
+import { applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectName, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent } from './services/tutorialProgress.js';
@@ -264,6 +264,7 @@ window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId
 window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
 window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, theme);
 window.saveProjectName = (event, projectId) => saveProjectName(app, event, projectId);
+window.updateProjectExpertMode = (projectId, enabled) => updateProjectExpertMode(app, projectId, enabled);
 window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
 window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
 window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
@@ -530,7 +531,7 @@ window.createProjectFromForm = async () => {
 
         if (name) {
             const suggestions = projectTemplates[template]?.sites || [];
-            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', siteSuggestions: suggestions });
+            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', expertMode: document.getElementById('projectExpertMode')?.checked === true, siteSuggestions: suggestions });
             await siteManager.loadSitesFromDisk();
             window.renderProjectDashboard(encodeURIComponent(created.id));
         }
@@ -549,7 +550,8 @@ window.renameProjectFromForm = async (project) => {
                 name,
                 template: projectTemplate.value,
                 description: document.getElementById('projectDescription')?.value.trim() || '',
-                coverImage: project.coverImage || ''
+                coverImage: project.coverImage || '',
+                expertMode: document.getElementById('projectExpertMode')?.checked === true
             });
             await siteManager.loadSitesFromDisk();
             window.renderProjects();

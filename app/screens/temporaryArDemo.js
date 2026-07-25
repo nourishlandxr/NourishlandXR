@@ -181,7 +181,7 @@ function guideNoteConversion(record) {
 
 function guideAreaConversion(record) {
     setGuide('The final Marker can become the checkpoint for one defined Area.');
-    showGuidedChoice('<h2>Why create an Area?</h2><p>An Area groups nearby plants and Focus Points. Entering its checkpoint can load only the knowledge belonging to that place.</p><button type="button" data-demo-choice="area">Convert to Area Checkpoint</button>', choice => {
+    showGuidedChoice('<h2>Why create an Area?</h2><p>An Area groups nearby Plants and Focus Points around a translucent Totem. Arriving there can reveal only the knowledge belonging to that place.</p><button type="button" data-demo-choice="area">Create Area Totem</button>', choice => {
         if (choice !== 'area') return;
         record.type = 'sub_checkpoint';
         record.demoType = 'zone';
@@ -192,7 +192,7 @@ function guideAreaConversion(record) {
         record.revealLines = 3;
         refreshDemoRecord(record);
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed three Markers: a Plant profile, a Focus Point, and an Area checkpoint that can load the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed a Plant, a Focus Point and a translucent Area Totem that gathers the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
             if (action === 'finish') returnToWelcome();
             if (action === 'reset') {
                 markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
@@ -218,7 +218,7 @@ function armDemoPlacement(type) {
         zone: 'Choose the central checkpoint for this Area.'
     };
     setGuide(instructions[type]);
-    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area checkpoint'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
+    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
 }
 
 function advanceDemo() {
@@ -291,7 +291,7 @@ function renderInterface(simulated) {
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>This short spatial journey works like a game. You will place three Markers: a Plant, a Focus Point, and the checkpoint for an Area.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
+    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>Place three simple Markers and discover how a Plant, a Focus Point and an Area can bring knowledge into a real place.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
         if (choice === 'continue') armDemoPlacement('plant');
     });
 }

@@ -92,6 +92,8 @@ Loading must be cancellable. A late response from a previous Area must never ove
 ### Spatial visual language
 
 - Markers are quiet environmental cues, not opaque office-style labels or floating web cards.
+- Area checkpoints appear as taller translucent **Area Totems**, never ordinary circular Markers. Area information panels may arrange themselves around the Totem.
+- The Starting Point appears as a warm gateway form distinct from both ordinary Markers and Area Totems.
 - Default cues should be small, translucent, softly illuminated and readable against changing environments.
 - Extended information is spatial content anchored with the marker, not a footer panel fixed to the camera.
 - Information frames use restrained transparency, depth, hierarchy and progressive disclosure.
@@ -180,6 +182,9 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | Dashboard creation is reduced to Open AR; off-site ideas enter an Unplaced Bag and are placed later from the AR taskbar. | V1 workflow |
 | 2026-07-25 | A new Marker may become an Area Checkpoint directly, creating a minimal Area and information-board record. | V1 Area foundation |
 | 2026-07-25 | “Marker” is the single user-facing spatial term. “Orb” is retired from interface language; visual appearance is not a separate concept users must learn. | V1 language |
+| 2026-07-25 | New projects default to a friendly guided experience; Expert Mode explicitly reveals advanced and future V2 controls. | V1 accessibility |
+| 2026-07-25 | Area checkpoints use a translucent Totem visual and Starting Points use a separate gateway visual. | V1 spatial language |
+| 2026-07-25 | The first-use tutorial teaches Starting Point, Area Totem and first Marker rather than the old dashboard tool flow. | V1 onboarding |
 | 2026-07-25 | Named terrace Areas such as 1R1 link to their printed site-plan positions; their marker dots arrange locally around the Area link. | V1 map |
 
 ## Traceability rule
