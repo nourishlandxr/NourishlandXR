@@ -1,4 +1,5 @@
 export const projectTemplates = {
+    empty: { label: 'Empty Project', sites: [] },
     food_forest: { label: 'Food Forest', sites: ['Main Food Forest', 'Nursery', 'Water Systems'] },
     native_forest: { label: 'Native Forest', sites: ['Forest', 'Tracks', 'Restoration Areas'] },
     orchard: { label: 'Orchard', sites: ['Orchard Blocks', 'Nursery', 'Packing Area'] },

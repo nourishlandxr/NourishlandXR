@@ -235,9 +235,11 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(form, /Description \(optional\)/);
     assert.match(form, /projectTemplate/);
     assert.doesNotMatch(form, /projectCoverImage|Suggested Locations/);
-    for (const label of ['Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
+    for (const label of ['Empty Project', 'Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
         assert.match(templates, new RegExp(label));
     }
+    assert.match(form, /templateKey = 'empty'/);
+    assert.ok(templates.indexOf('empty:') < templates.indexOf('food_forest:'));
     assert.match(dashboard, /projectSettingsCoverImage/);
     assert.match(dashboard, /Cover image \(optional\)/);
 });

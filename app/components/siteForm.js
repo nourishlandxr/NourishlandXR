@@ -1,6 +1,6 @@
 import { projectTemplates } from '../templates/projectTemplates.js';
 
-export function renderSiteForm(onCancel, onSubmit, project = null, templateKey = 'food_forest') {
+export function renderSiteForm(onCancel, onSubmit, project = null, templateKey = 'empty') {
     const selectedTemplate = project?.template || templateKey;
     const options = Object.entries(projectTemplates).map(([key, template]) => `<option value="${key}" ${selectedTemplate === key ? 'selected' : ''}>${template.label}</option>`).join('');
 
@@ -17,7 +17,7 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
         </div>
 
         <div class="field">
-            <label for="projectTemplate">Template</label>
+            <label for="projectTemplate">Starting template</label>
             <select id="projectTemplate">
                 ${options}
             </select>

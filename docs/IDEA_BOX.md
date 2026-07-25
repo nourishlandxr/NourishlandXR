@@ -59,6 +59,11 @@ Status: V1 foundation
 - **Ready** identifies a visitor-ready live project.
 - Project Settings owns the status and real-world address. A future **Notify me when ready** action is shown but remains inactive until notifications are implemented.
 
+## Project templates
+
+- New projects default to **Empty Project** so NourishlandXR remains useful for any garden, landscape, collection or learning place.
+- Food Forest and the other domain-specific templates remain optional starting shortcuts.
+
 New projects begin in the friendly experience. It asks only for information required to create a meaningful place.
 
 Expert Mode is an explicit project checkbox. It reveals advanced configuration, coordinates, diagnostics, themes and future V2 controls without forcing those concepts on every creator.
