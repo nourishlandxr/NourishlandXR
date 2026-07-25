@@ -719,7 +719,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             searchItems,
             locationName: escapeHtml(project.name),
             siteName: escapeHtml(site?.name || 'No site configured'),
-            backAction: 'window.renderDemoProjects()',
+            backAction: 'window.renderLaunchScreen()',
             status: {
                 entries: String(projectEntries.length),
                 unplaced: String(unplacedEntries.length),

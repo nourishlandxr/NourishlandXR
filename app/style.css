@@ -649,6 +649,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-mode-pointer span::before { width: 9px; height: 2px; }
 .creator-ar-mode-pointer span::after { width: 2px; height: 9px; }
 .creator-ar-mode-pointer small { min-width: max-content; padding: 3px 7px; border-radius: 999px; background: rgba(7,22,14,.58); color: #fff; font-size: .64rem; font-weight: 750; letter-spacing: .025em; }
+.creator-ar-overlay.is-placement-armed .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
 .creator-ar-overlay.is-view-mode .creator-ar-mode-pointer span { border-radius: 70% 12% 70% 12%; transform: rotate(-45deg); border-color: #dcef95; }
 .creator-ar-overlay.is-hand-mode .creator-ar-mode-pointer span { border-radius: 8px; border-color: #ffe3a0; transform: scale(1.08); }
 .creator-ar-overlay.is-select-mode .creator-ar-mode-pointer span { border-radius: 50%; border-style: dashed; border-color: #9bddff; animation: creator-ar-pointer-turn 2.4s linear infinite; }
@@ -683,6 +684,10 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-special-totem > b { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(255,255,255,.34); border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; font-size: 1rem; }
 .creator-ar-special-totem span { display: grid; gap: 2px; color: #fff; white-space: normal; }
 .creator-ar-special-totem small { color: rgba(255,255,255,.72); font-size: .64rem; line-height: 1.25; white-space: normal; }
+.creator-ar-place-picker .creator-ar-special-totem strong,
+.creator-ar-place-picker .creator-ar-special-totem span,
+.creator-ar-place-picker .creator-ar-special-totem small { color: #fff !important; text-shadow: 0 1px 3px rgba(0,0,0,.68); }
+.creator-ar-place-picker .creator-ar-special-totem small { color: rgba(255,255,255,.84) !important; }
 .creator-ar-after-place-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .creator-ar-marker-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive { pointer-events: auto; }
@@ -690,6 +695,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-note { background: radial-gradient(circle at 38% 32%, rgba(255,248,218,.78) 0 14%, rgba(214,169,40,.5) 28% 62%, rgba(145,105,18,.2) 100%) !important; }
 .creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: radial-gradient(circle at 38% 32%, rgba(236,247,255,.78) 0 14%, rgba(82,157,211,.5) 28% 62%, rgba(29,91,139,.2) 100%) !important; }
 .creator-ar-marker-hit-target { position: fixed; display: block; width: 44px; height: 44px; margin: -15px 0 0 -15px; border-radius: 50%; background: transparent !important; pointer-events: none; }
+.creator-ar-marker-hit-target-intro_checkpoint { width: 72px; height: 88px; margin: -37px 0 0 -36px; border-radius: 44% 44% 38% 38%; }
 .creator-ar-marker-hit-target::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 7px; transform: translateX(-50%); background: linear-gradient(rgba(238,248,235,.7), transparent); }
 .creator-ar-marker-hit-target::after { content: ""; position: absolute; inset: 8px; border: 2px solid transparent; border-radius: 50%; transform: scale(.72); opacity: 0; box-shadow: 0 0 0 0 transparent; transition: transform .16s ease, opacity .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target { pointer-events: auto; }

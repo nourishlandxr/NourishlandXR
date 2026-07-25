@@ -418,7 +418,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
     assert.match(arSource, /area_checkpoint: \[\.25 \* factor, 1\.05 \* factor\]/);
-    assert.match(arSource, /intro_checkpoint: \[\.6 \* factor, 1\.15 \* factor\]/);
+    assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /shape<1\.5\?\.50:\.24/);
     assert.match(arSource, /float rect/);

@@ -85,7 +85,7 @@ function markerDimensions(marker) {
         // WebXR model scales are half-extents: these render at 0.5m x 2.1m
         // and 1.2m x 2.3m respectively at the default size.
         area_checkpoint: [.25 * factor, 1.05 * factor],
-        intro_checkpoint: [.6 * factor, 1.15 * factor],
+        intro_checkpoint: [.42 * factor, .805 * factor],
         note: [.11 * factor, .07 * factor],
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]

@@ -140,7 +140,7 @@ export function renderProjectEntry(config) {
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
         <footer class="dashboard-location-footer">
-            <button class="change-location-control" type="button" onclick="${config.backAction}">← Change Location</button>
+            <button class="change-location-control exit-project-creator" type="button" onclick="${config.backAction}">← Exit Project Creator</button>
         </footer>
         ${tutorialSpotlight(config.guidance)}
     </div>`;
