@@ -238,7 +238,7 @@ function showPlacedMarkerActions(record) {
     if (!picker) return;
     pendingPlacedRecord = record;
     picker.hidden = false;
-    const fixedType = record.marker.type === 'intro_checkpoint';
+    const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${fixedType ? `${readyPlacementLabel(record.marker.type)} placed` : 'Choose its purpose'}</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div>${fixedType ? `<p class="creator-ar-picker-status">Its details and size can be changed later in Pointer mode.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>` : `<div class="creator-ar-type-options creator-ar-common-types"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button></div><p class="creator-ar-picker-status" data-ar-picker-status>One tap completes this Marker.</p>`}`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
@@ -397,12 +397,12 @@ function openInlineEditor(record, force = false) {
     const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
     if (!editor) return;
     const plant = record.marker.type === 'plant';
-    const fixedType = record.marker.type === 'intro_checkpoint';
+    const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
     const startingPoint = record.marker.type === 'intro_checkpoint';
     const areaCheckpoint = record.marker.type === 'area_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
-    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · Starting Point</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option><option value="area_checkpoint" ${record.marker.type === 'area_checkpoint' ? 'selected' : ''}>Area Totem</option></select></label>`;
+    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · ${record.marker.type === 'area_checkpoint' ? 'Area Totem' : 'Starting Point'}</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option></select></label>`;
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
     const board = areaBoard(record.marker);
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';

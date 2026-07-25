@@ -3111,8 +3111,28 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 @keyframes project-loading-breathe { 0%, 100% { transform: scale(.92); opacity: .72; } 50% { transform: scale(1.06); opacity: 1; } }
 @keyframes project-loading-progress { from { transform: translateX(-110%); } to { transform: translateX(340%); } }
 .dashboard-vital-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.dashboard-vital-actions button { display: grid; align-content: center; gap: 2px; min-height: 72px; padding: 10px; border-color: rgba(48,91,57,.25); background: rgba(239,244,235,.78); color: #243d2b; text-align: left; }
-.dashboard-vital-actions button span { color: #627067; font-size: .7rem; font-weight: 500; line-height: 1.3; }
+.dashboard-vital-actions button { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px; min-height: 58px; padding: 10px 12px; border: 1px solid rgba(48,91,57,.32); border-radius: 13px; background: #f7faf5; color: #243d2b; text-align: left; box-shadow: 0 3px 10px rgba(35,67,42,.07); }
+.dashboard-vital-actions button:hover, .dashboard-vital-actions button:focus-visible { border-color: rgba(48,91,57,.62); background: #fff; }
+.dashboard-vital-actions button b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(61,111,70,.11); color: #35663f; font-size: .9rem; }
+.dashboard-vital-actions button strong { font-size: .76rem; line-height: 1.15; }
+.dashboard-vital-actions button small { position: absolute; top: 5px; right: 7px; min-width: 17px; padding: 1px 4px; border-radius: 999px; background: #345f3c; color: #fff; font-size: .58rem; text-align: center; }
+.ar-portal,
+button[onclick*="renderArPreparation"],
+button[onclick*="openCreatorArMode"],
+button[onclick*="startArMode"],
+button[onclick*="navigateToProjectArea"] { border-color: rgba(44,132,151,.62) !important; background: linear-gradient(135deg, #14596b, #277b86) !important; color: #fff !important; box-shadow: 0 7px 20px rgba(20,89,107,.18); }
+.ar-portal span,
+button[onclick*="renderArPreparation"] span,
+button[onclick*="openCreatorArMode"] span,
+button[onclick*="startArMode"] span,
+button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !important; }
+.explorer-project-card.is-under-construction { display: flex; align-items: center; justify-content: space-between; gap: 12px; opacity: .82; }
+.explorer-project-card.is-under-construction > div { display: grid; gap: 3px; }
+.explorer-project-card.is-under-construction button { flex: 0 0 auto; min-height: 36px; padding: 7px 11px; }
+.project-public-facts { display: grid; gap: 9px; margin: 16px 0; }
+.project-public-facts div { display: grid; grid-template-columns: minmax(90px,.45fr) 1fr; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(48,91,57,.14); }
+.project-public-facts dt { color: #647067; font-size: .72rem; }
+.project-public-facts dd { margin: 0; font-weight: 700; }
 .dashboard-vital-notice { order: -1; }
 .dashboard-location-footer { display: flex; justify-content: flex-start; padding-top: 8px; border-top: 1px solid rgba(48,91,57,.16); }
 

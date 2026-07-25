@@ -48,6 +48,16 @@ Normal and structural creation are separate:
 
 Status: V1 foundation
 
+## Explorer project status
+
+Status: V1 foundation
+
+- Every new project begins as **Under construction**.
+- Under Construction projects appear in Explorer but cannot be entered. **More info** reveals the welcome board, date started, creator username and shared world location.
+- **Demo** identifies a working example visitors can enter.
+- **Ready** identifies a visitor-ready live project.
+- Project Settings owns the status and real-world address. A future **Notify me when ready** action is shown but remains inactive until notifications are implemented.
+
 New projects begin in the friendly experience. It asks only for information required to create a meaningful place.
 
 Expert Mode is an explicit project checkbox. It reveals advanced configuration, coordinates, diagnostics, themes and future V2 controls without forcing those concepts on every creator.

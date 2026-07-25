@@ -48,9 +48,11 @@ test('visitor project selection opens the welcome page without a repeated card a
     assert.match(source, /Explore in AR/);
     assert.match(source, /Browse Content/);
     assert.match(source, /const projects = \(await loadProjects\(\)\)/);
-    assert.match(source, /V2 preview · project view under development/);
+    assert.match(source, /Under construction/);
+    assert.match(source, /More info/);
+    assert.match(source, /Notify me when ready · Coming soon/);
     assert.match(source, /privatePreview = creatorPreview \|\| explorePreview/);
-    assert.match(source, /Draft content is not published to visitors/);
+    assert.match(source, /This experience is not open yet/);
 });
 
 test('AR entry is gated by preparation and only Start AR Mode launches AR', () => {
@@ -68,7 +70,8 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(entrySource, />OPEN AR</);
     assert.match(entrySource, /Unplaced Bag/);
     assert.match(entrySource, /Create Plant/);
-    assert.match(entrySource, /Choose what to add and where it belongs/);
+    assert.match(entrySource, /<strong>Add Item<\/strong>/);
+    assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
     assert.ok(entrySource.indexOf('dashboard-vital-notice') < entrySource.indexOf('dashboard-ar-path'));
     assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
     assert.match(styles, /\.dashboard-ar-path \{ display: grid; grid-template-columns:/);

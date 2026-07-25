@@ -96,9 +96,9 @@ export function renderProjectEntry(config) {
                 <small>Place or update Markers on site.</small>
             </button>
             <div class="dashboard-vital-actions">
-                <button type="button" onclick="${config.unplacedAction}"><strong>Unplaced Bag</strong><span>${config.status.unplaced} saved item${config.status.unplaced === '1' ? '' : 's'} waiting for placement</span></button>
-                <button type="button" onclick="${config.createQuickPlantAction}"><strong>Create Plant</strong><span>Save one quickly for future placement.</span></button>
-                <button type="button" onclick="${config.addUnplacedAction}"><strong>Add Item</strong><span>Choose what to add and where it belongs.</span></button>
+                <button type="button" onclick="${config.unplacedAction}"><b aria-hidden="true">▣</b><strong>Unplaced Bag</strong><small>${config.status.unplaced}</small></button>
+                <button type="button" onclick="${config.createQuickPlantAction}"><b aria-hidden="true">＋</b><strong>Create Plant</strong></button>
+                <button type="button" onclick="${config.addUnplacedAction}"><b aria-hidden="true">＋</b><strong>Add Item</strong></button>
             </div>
         </section>
 

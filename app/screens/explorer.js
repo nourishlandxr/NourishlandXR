@@ -12,6 +12,14 @@ let gpsApp = null;
 let gpsMarkers = [];
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
+const projectStatus = project => ['under_construction', 'demo', 'ready'].includes(project?.projectStatus)
+    ? project.projectStatus
+    : project?.visibility === 'public' ? 'ready' : 'under_construction';
+const projectStatusLabel = status => ({ under_construction: 'Under construction', demo: 'Demo', ready: 'Ready' })[status] || 'Under construction';
+const startedLabel = value => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+};
 
 function stopGps() { if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
 function haversine(lat1, lon1, lat2, lon2) { const r = 6371000, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2; return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
@@ -37,10 +45,13 @@ export async function renderExplorerProjects(app) {
     try {
         const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
         const cards = projects.map(project => {
-            const preview = project.visibility !== 'public';
-            return `<button class="menu-card" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}', false, ${preview})"><strong>${escapeHtml(project.name)}</strong><span>${preview ? 'V2 preview · project view under development' : 'Explore this published location'}</span></button>`;
+            const status = projectStatus(project);
+            if (status === 'under_construction') {
+                return `<article class="menu-card explorer-project-card is-under-construction"><div><strong>${escapeHtml(project.name)}</strong><span>Under construction</span></div><button type="button" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}', false, true)">More info</button></article>`;
+            }
+            return `<button class="menu-card explorer-project-card is-${status}" onclick="window.renderVisitorLocationIntro('${encoded(project.id)}')"><strong>${escapeHtml(project.name)}</strong><span>${projectStatusLabel(status)} · Explore this location</span></button>`;
         }).join('');
-        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Published locations open normally. New projects appear in a private V2 preview mode.</p></div><div class="menu-stack">${cards || '<div class="panel"><p>No locations are available.</p></div>'}</div></div>`;
+        app.innerHTML = `<div class="screen explorer-entry visitor-location-picker"><div class="page-header"><button class="ghost" onclick="window.renderLaunchScreen()">Back</button><p class="welcome-label">Visitor</p><h1>Choose a location</h1><p class="subtitle">Discover projects that are ready, explore a demo, or follow work as it grows.</p></div><div class="menu-stack">${cards || '<div class="panel"><p>No locations are available.</p></div>'}</div></div>`;
     } catch (error) { app.innerHTML = errorScreen(`Location data could not be loaded: ${escapeHtml(error.message)}`); }
 }
 
@@ -63,6 +74,11 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
         const privatePreview = creatorPreview || explorePreview;
         const project = (await loadProjects(!privatePreview)).find(item => item.id === projectId);
         if (!project) throw new Error('This location is not available to visitors.');
+        if (explorePreview && projectStatus(project) === 'under_construction') {
+            const welcome = project.description || `A new living project is taking shape at ${project.name}.`;
+            app.innerHTML = `<div class="screen visitor-welcome project-coming-soon"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">← Choose another location</button><p class="welcome-label">Under construction</p><h1>${escapeHtml(project.name)}</h1><p class="subtitle">This experience is not open yet.</p></div>${project.coverImage ? `<img class="visitor-welcome-cover" src="${escapeHtml(project.coverImage)}" alt="${escapeHtml(project.name)}" />` : ''}<section class="panel visitor-welcome-copy"><h2>Project welcome board</h2><p>${escapeHtml(welcome)}</p><dl class="project-public-facts"><div><dt>Date started</dt><dd>${escapeHtml(startedLabel(project.dateStarted))}</dd></div><div><dt>Creator</dt><dd>${escapeHtml(project.creatorUsername || 'Nourishland creator')}</dd></div><div><dt>World location</dt><dd>${escapeHtml(project.address || 'Location not shared yet')}</dd></div></dl><button type="button" disabled>Notify me when ready · Coming soon</button></section></div>`;
+            return;
+        }
         const sites = await loadProjectSites(project.id, !privatePreview);
         const groups = await Promise.all(sites.map(async site => {
             const places = await loadSitePlaces(project.id, site.id, !privatePreview);
