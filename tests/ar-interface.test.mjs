@@ -130,6 +130,9 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
     assert.match(arSource, /data-ar-locate-totem/);
+    assert.match(arSource, /data-ar-toggle-structural/);
+    assert.match(arSource, /Hide.*Totem/);
+    assert.match(arSource, /Hide.*Starting Point/);
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const restoredGroups = await Promise\.all\(areas\.map/);
@@ -405,8 +408,10 @@ test('plant creation separates Local records from read-only Global discovery', (
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.075 \* factor, \.22 \* factor\]/);
-    assert.match(arSource, /float starRadius/);
+    assert.match(arSource, /area_checkpoint: \[\.25 \* factor, 1\.05 \* factor\]/);
+    assert.match(arSource, /intro_checkpoint: \[\.6 \* factor, 1\.15 \* factor\]/);
+    assert.match(arSource, /float jade/);
+    assert.match(arSource, /shape<1\.5\?\.50:\.24/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);

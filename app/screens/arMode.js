@@ -42,12 +42,13 @@ let handlingArHistory = false;
 let placementInProgress = false;
 let pendingBagRecord = null;
 let locatedTotemRecord = null;
+const hiddenStructuralMarkerIds = new Set();
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point gateway', area_checkpoint: 'area totem' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Starting Point', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#e9c46a', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
@@ -80,8 +81,10 @@ function markerShape(type) {
 function markerDimensions(marker) {
     const factor = markerSizeFactor(marker);
     return ({
-        area_checkpoint: [.075 * factor, .22 * factor],
-        intro_checkpoint: [.105 * factor, .105 * factor],
+        // WebXR model scales are half-extents: these render at 0.5m x 2.1m
+        // and 1.2m x 2.3m respectively at the default size.
+        area_checkpoint: [.25 * factor, 1.05 * factor],
+        intro_checkpoint: [.6 * factor, 1.15 * factor],
         note: [.11 * factor, .07 * factor],
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
@@ -95,6 +98,10 @@ function setPlacementStatus(message) {
 
 function updateReadyPlacementControl() {
     overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
+    if (!readyPlacementType && !interactionMode) {
+        interactionMode = 'view';
+        updateInteractionControls();
+    }
     const guideLabel = overlayRoot?.querySelector('[data-ar-placement-guide-label]');
     if (guideLabel && readyPlacementType) guideLabel.textContent = `Place ${readyPlacementLabel(readyPlacementType)}`;
 }
@@ -267,8 +274,13 @@ async function openSpecialMarkerPicker() {
     updateReadyPlacementControl();
     await restoreRecordedMarkers().catch(() => {});
     const existingTotem = sessionMarkers.find(record => record.marker.type === 'area_checkpoint');
+    const existingStartingPoint = sessionMarkers.find(record => record.marker.type === 'intro_checkpoint' && (!activeAreaId || record.areaId === activeAreaId));
+    const visibilityControls = [
+        existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong><small>Change visibility for this AR session.</small></span></button>` : '',
+        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingStartingPoint.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? 'Show' : 'Hide'} Starting Point</strong><small>Change visibility for this AR session.</small></span></button>` : ''
+    ].join('');
     picker.hidden = false;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || 'Area Totem')}</small></span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Area Totem</strong><small>Create a new Area from ground level.</small></span></button>`}`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || 'Area Totem')}</small></span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Area Totem</strong><small>Create a new Area from ground level.</small></span></button>`}${visibilityControls}`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-special-type]')?.addEventListener('click', event => {
         const type = event.currentTarget.dataset.arSpecialType;
@@ -280,6 +292,17 @@ async function openSpecialMarkerPicker() {
         closePlacePicker();
         setPlacementStatus(`Ground guide active. Follow it to ${existingTotem.areaName || 'the Area Totem'}.`);
     });
+    picker.querySelectorAll('[data-ar-toggle-structural]').forEach(button => button.addEventListener('click', () => {
+        const markerId = button.dataset.arToggleStructural;
+        const record = sessionMarkers.find(item => item.marker.id === markerId);
+        if (!record) return;
+        if (hiddenStructuralMarkerIds.has(markerId)) hiddenStructuralMarkerIds.delete(markerId);
+        else hiddenStructuralMarkerIds.add(markerId);
+        if (locatedTotemRecord?.marker.id === markerId && hiddenStructuralMarkerIds.has(markerId)) locatedTotemRecord = null;
+        renderSessionMarkers();
+        setPlacementStatus(`${readyPlacementLabel(record.marker.type)} ${hiddenStructuralMarkerIds.has(markerId) ? 'hidden' : 'visible'} for this AR session.`);
+        void openSpecialMarkerPicker();
+    }));
 }
 
 function resetArControls() {
@@ -340,7 +363,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float a=atan(q.y,q.x);float starRadius=.22+.16*cos(5.*a);float star=1.-smoothstep(starRadius,starRadius+.025,d);vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backStar=1.-smoothstep(starRadius,starRadius+.035,length(backQ));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?star:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backStar:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float alpha=body*(shape<.5?.58:(shape>4.5?.42:.82))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.50:.24;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -360,11 +383,12 @@ function drawSpatialMarkers(view) {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.92, .72, .28], area_checkpoint: [.34, .78, .7] };
+    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
     sessionMarkers.forEach(record => {
+        if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
         const [scaleX, scaleY] = markerDimensions(record.marker);
-        const groundedPosition = shape === 1 ? { ...record.position, y: record.position.y + scaleY } : record.position;
+        const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
@@ -401,6 +425,10 @@ function positionSessionMarkers(view = latestView) {
     sessionMarkers.forEach(record => {
         const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         if (!element) return;
+        if (hiddenStructuralMarkerIds.has(record.marker.id)) {
+            element.hidden = true;
+            return;
+        }
         const eye = multiplyMatrixVector(inverse, [record.position.x, record.position.y, record.position.z, 1]);
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
         if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
@@ -660,8 +688,10 @@ async function armPlacement(type) {
     closePlacePicker();
     closeUnplacedBag();
     readyPlacementType = type;
+    interactionMode = '';
     placementArmedAt = performance.now();
     updateReadyPlacementControl();
+    updateInteractionControls();
     if (await ensurePlacementArea()) {
         setPlacementStatus(`${readyPlacementLabel(type)} ready. Tap the centre circle to place it.`);
     }
@@ -955,6 +985,7 @@ function cleanup() {
     placementInProgress = false;
     pendingBagRecord = null;
     locatedTotemRecord = null;
+    hiddenStructuralMarkerIds.clear();
     gl = null;
 }
 

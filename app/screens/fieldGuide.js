@@ -38,13 +38,26 @@ async function loadAreaPlants(projectId, siteId, placeId, visitor) {
     return [...resolved, ...markerPlants];
 }
 
+async function loadAreaGuideGroup(projectId, siteId, place, visitor) {
+    const [plants, markers] = await Promise.all([
+        loadAreaPlants(projectId, siteId, place.id, visitor),
+        loadPlaceMarkers(projectId, siteId, place.id, visitor).catch(() => [])
+    ]);
+    return {
+        place,
+        plants,
+        hasTotem: markers.some(marker => marker.type === 'area_checkpoint' || marker.semantic_type === 'area_checkpoint'),
+        hasStartingPoint: markers.some(marker => marker.type === 'intro_checkpoint')
+    };
+}
+
 async function loadGuide(projectId) {
     const project = (await loadProjects(true)).find(item => item.id === projectId);
     if (!project) throw new Error('This location is not public.');
     const sites = await loadProjectSites(project.id, true);
     const siteGroups = await Promise.all(sites.map(async site => {
         const places = await loadSitePlaces(project.id, site.id, true);
-        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadAreaPlants(project.id, site.id, place.id, true) })));
+        const placeGroups = await Promise.all(places.map(place => loadAreaGuideGroup(project.id, site.id, place, true)));
         return { site, placeGroups };
     }));
     const plants = siteGroups.flatMap(group => group.placeGroups.flatMap(placeGroup => placeGroup.plants.map(plant => ({ ...plant, siteId: group.site.id, siteName: group.site.name, placeName: placeGroup.place.name }))));
@@ -62,8 +75,12 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
     try {
         const guide = creator ? await loadCreatorGuide(projectId) : await loadGuide(projectId);
         const backAction = creator ? `window.renderProjectDashboard('${encoded(projectId)}')` : `window.renderVisitorLocationIntro('${encoded(projectId)}')`;
-        const places = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, count: placeGroup.plants.length })));
-        app.innerHTML = `<div class="screen field-guide analog-print-page"><div class="page-header"><button class="ghost analog-navigation" onclick="${backAction}">Back</button><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Field Guide</h1><p class="subtitle">A living field notebook generated from project data.</p></div><section class="panel"><h2>Project overview</h2><p>${escapeHtml(guide.project.description || 'Explore the public Areas and plant knowledge connected to this project.')}</p></section><section class="analog-filter-panel analog-navigation"><div class="field"><label for="fieldGuideSearch">Search the guide</label><input id="fieldGuideSearch" type="search" placeholder="Plant, scientific name, Area..." oninput="window.applyFieldGuideFilter()" /></div></section><section><h2 class="project-section-title">Areas</h2><div class="field-guide-place-cloud">${places.map(place => `<button onclick="window.filterFieldGuidePlace('${escapeHtml(place.id)}')"><strong>${escapeHtml(place.name)}</strong><span>${place.count} plant${place.count === 1 ? '' : 's'}</span></button>`).join('') || '<p class="meta">No public Areas are available yet.</p>'}</div></section><section><h2 class="project-section-title">Plants</h2><p id="fieldGuideCount" class="meta">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list">${guide.plants.map(plant => `<button class="analog-plant-row" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.placeId, plant.placeName].join(' ').toLowerCase())}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em> · ${escapeHtml(plant.placeName || plant.placeId)}</small></span></button>`).join('') || '<div class="panel"><p>No plants have been published for this project.</p></div>'}</div></section><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button></div></div>`;
+        const places = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, count: placeGroup.plants.length, hasTotem: placeGroup.hasTotem, hasStartingPoint: placeGroup.hasStartingPoint })));
+        const areaCards = places.map(place => {
+            const symbols = `${place.hasStartingPoint ? '<i class="field-guide-starting-symbol" aria-label="Starting Point"></i>' : ''}${place.hasTotem ? '<i class="field-guide-totem-symbol" aria-label="Area Totem"></i>' : ''}`;
+            return `<button class="field-guide-area-card" onclick="window.filterFieldGuidePlace('${escapeHtml(place.id)}')"><span class="field-guide-area-symbols" aria-hidden="false">${symbols || '<i class="field-guide-area-symbol" aria-label="Area"></i>'}</span><span><strong>${escapeHtml(place.name)}</strong><small>${place.count} plant${place.count === 1 ? '' : 's'}${place.hasTotem ? ' · Totem' : ''}${place.hasStartingPoint ? ' · Starting Point' : ''}</small></span></button>`;
+        }).join('');
+        app.innerHTML = `<div class="screen field-guide analog-print-page"><div class="page-header"><button class="ghost analog-navigation" onclick="${backAction}">Back</button><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Field Guide</h1><p class="subtitle">A living field notebook generated from project data.</p></div><section class="panel"><h2>Project overview</h2><p>${escapeHtml(guide.project.description || 'Explore the public Areas and plant knowledge connected to this project.')}</p></section><section class="analog-filter-panel analog-navigation"><div class="field"><label for="fieldGuideSearch">Search the guide</label><input id="fieldGuideSearch" type="search" placeholder="Plant, scientific name, Area..." oninput="window.applyFieldGuideFilter()" /></div></section><section><h2 class="project-section-title">Areas</h2><div class="field-guide-place-cloud">${areaCards || '<p class="meta">No public Areas are available yet.</p>'}</div></section><section><h2 class="project-section-title">Plants</h2><p id="fieldGuideCount" class="meta">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list">${guide.plants.map(plant => `<button class="analog-plant-row" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.placeId, plant.placeName].join(' ').toLowerCase())}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em> · ${escapeHtml(plant.placeName || plant.placeId)}</small></span></button>`).join('') || '<div class="panel"><p>No plants have been published for this project.</p></div>'}</div></section><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button></div></div>`;
         app.innerHTML = app.innerHTML
             .replace('generated from project data', 'generated from location data')
             .replace('Project overview', 'Location overview')
@@ -80,7 +97,7 @@ async function loadCreatorGuide(projectId) {
     const sites = await loadProjectSites(project.id);
     const siteGroups = await Promise.all(sites.map(async site => {
         const places = await loadSitePlaces(project.id, site.id);
-        const placeGroups = await Promise.all(places.map(async place => ({ place, plants: await loadAreaPlants(project.id, site.id, place.id, false) })));
+        const placeGroups = await Promise.all(places.map(place => loadAreaGuideGroup(project.id, site.id, place, false)));
         return { site, placeGroups };
     }));
     const plants = siteGroups.flatMap(group => group.placeGroups.flatMap(placeGroup => placeGroup.plants.map(plant => ({ ...plant, siteId: group.site.id, siteName: group.site.name, placeName: placeGroup.place.name }))));

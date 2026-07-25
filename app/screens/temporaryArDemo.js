@@ -284,8 +284,62 @@ function updateSimulatedMarkers() {
         const content = demoContentFor(record);
         const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
         const honeycomb = record.demoExpanded && record.demoType === 'plant' ? plantKnowledgeMarkup() : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : '·')}</span>`;
+        const offset = record.demoPanelOffset || { x: 0, y: 0 };
+        const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
+        const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '·';
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
     }).join('');
+    bindSimulatedInformationPanels(layer);
+}
+
+function bindSimulatedInformationPanels(layer) {
+    layer.querySelectorAll('.tryit-sim-marker:not(.is-expanded)').forEach(compactMarker => {
+        const record = markers[Number(compactMarker.dataset.demoMarkerIndex)];
+        if (!record || !['plant', 'note'].includes(record.demoType)) return;
+        compactMarker.setAttribute('role', 'button');
+        compactMarker.setAttribute('tabindex', '0');
+        compactMarker.addEventListener('click', () => {
+            record.demoExpanded = true;
+            refreshDemoRecord(record);
+        });
+    });
+    layer.querySelectorAll('.tryit-sim-marker.is-expanded').forEach(panel => {
+        const record = markers[Number(panel.dataset.demoMarkerIndex)];
+        if (!record) return;
+        let start = null;
+        let moved = false;
+        panel.addEventListener('pointerdown', event => {
+            start = { x: event.clientX, y: event.clientY, offset: record.demoPanelOffset || { x: 0, y: 0 } };
+            moved = false;
+            panel.setPointerCapture?.(event.pointerId);
+            panel.classList.add('is-dragging');
+        });
+        panel.addEventListener('pointermove', event => {
+            if (!start) return;
+            const dx = event.clientX - start.x;
+            const dy = event.clientY - start.y;
+            moved ||= Math.hypot(dx, dy) > 5;
+            record.demoPanelOffset = { x: start.offset.x + dx, y: start.offset.y + dy };
+            panel.style.setProperty('--panel-x', `${record.demoPanelOffset.x}px`);
+            panel.style.setProperty('--panel-y', `${record.demoPanelOffset.y}px`);
+        });
+        const finish = () => { start = null; panel.classList.remove('is-dragging'); };
+        panel.addEventListener('pointerup', () => {
+            finish();
+            if (!moved) {
+                record.demoExpanded = false;
+                refreshDemoRecord(record);
+            }
+        });
+        panel.addEventListener('pointercancel', finish);
+        panel.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                record.demoExpanded = false;
+                refreshDemoRecord(record);
+            }
+        });
+    });
 }
 
 function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE) {
@@ -315,7 +369,7 @@ function placeMarker() {
         name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, revealTitle: true, revealLines: 3, texture: null };
+    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: { x: 0, y: 0 }, revealTitle: true, revealLines: 3, texture: null };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
@@ -501,19 +555,19 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge) {
     ctx.clearRect(0, 0, label.width, label.height);
     const center = { x: label.width / 2, y: label.height / 2 };
     const cells = [
-        ...knowledge.left.map((item, index) => ({ item, x: 210 + index * 82, y: 165 + index * 190 })),
-        ...knowledge.right.map((item, index) => ({ item, x: 910 - index * 82, y: 165 + index * 190 }))
+        ...knowledge.left.map((item, index) => ({ item, x: 260 + index * 58, y: 190 + index * 150, side: -1 })),
+        ...knowledge.right.map((item, index) => ({ item, x: 860 - index * 58, y: 190 + index * 150, side: 1 }))
     ];
-    ctx.strokeStyle = 'rgba(205,238,177,.68)';
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(205,238,177,.20)';
+    ctx.lineWidth = 2;
     cells.forEach(cell => {
         ctx.beginPath();
         ctx.moveTo(center.x, center.y);
-        ctx.lineTo(cell.x, cell.y);
+        ctx.bezierCurveTo(center.x + cell.side * 70, center.y, cell.x - cell.side * 54, cell.y, cell.x, cell.y);
         ctx.stroke();
     });
     cells.forEach(cell => {
-        drawHexagon(ctx, cell.x, cell.y, 112, 'rgba(9,36,23,.86)', 'rgba(183,232,149,.88)');
+        drawHexagon(ctx, cell.x, cell.y, 94, 'rgba(22,53,36,.78)', 'rgba(183,232,149,.52)');
         ctx.textAlign = 'center';
         ctx.fillStyle = '#dcef95';
         ctx.font = '750 24px system-ui, sans-serif';
@@ -624,7 +678,8 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (!record.texture) return;
         const compact = !record.demoExpanded;
-        const model = billboardMatrix(record.position, compact ? .38 : 2.75, compact ? .38 : 4.25);
+        const displayPosition = compact ? record.position : { ...record.position, y: Math.max(record.position.y + 1.35, 1.35) };
+        const model = billboardMatrix(displayPosition, compact ? .38 : 2.35, compact ? .38 : 3.45);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
