@@ -25,7 +25,7 @@ import { startAreaNavigationAr } from './screens/explorer.js';
 import { applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, saveAreaCheckpoint, savePlatformSetting, saveProjectArea, saveProjectName, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
-import { recordTutorialEvent } from './services/tutorialProgress.js';
+import { recordTutorialEvent, restartProjectTutorial } from './services/tutorialProgress.js';
 import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
@@ -532,6 +532,7 @@ window.createProjectFromForm = async () => {
         if (name) {
             const suggestions = projectTemplates[template]?.sites || [];
             const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', expertMode: document.getElementById('projectExpertMode')?.checked === true, siteSuggestions: suggestions });
+            restartProjectTutorial(created.id);
             await siteManager.loadSitesFromDisk();
             window.renderProjectDashboard(encodeURIComponent(created.id));
         }

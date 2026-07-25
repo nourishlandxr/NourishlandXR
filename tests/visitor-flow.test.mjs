@@ -238,6 +238,7 @@ test('new projects offer friendly mode by default and an explicit Expert Mode', 
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     assert.match(formSource, /<strong>Expert Mode<\/strong>/);
     assert.match(mainSource, /projectExpertMode'\)\?\.checked === true/);
+    assert.match(mainSource, /restartProjectTutorial\(created\.id\)/);
     assert.match(dashboardSource, /const expertMode = project\.expertMode === true/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
     assert.match(dashboardSource, /What should visitors call this place\?/);
