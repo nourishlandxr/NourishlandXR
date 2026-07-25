@@ -195,6 +195,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | A new soft form converts into purpose-specific 3D language: rectangular Note, notice-bearing Starting Point star, grounded Area Totem, living-core Plant sphere or quiet general Marker. | V1 spatial language |
 | 2026-07-25 | Everyday `+ Marker` placement offers only Plant, Note and Marker; structural Area Totems move to a deliberate `+ Special` flow, and resizing stays in Edit details. | V1 AR workflow |
 | 2026-07-25 | Explorer projects use Under Construction, Demo or Ready status. New projects default to Under Construction with a public information-only page until opened by the creator. | V1 publishing |
+| 2026-07-25 | Hidden from Explorer is a fourth publishing state for projects that must remain entirely private. | V1 publishing |
 
 ## Traceability rule
 

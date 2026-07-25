@@ -1197,13 +1197,14 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <div class="section-heading-row"><div><h2 id="projectPublishingTitle">Explorer status</h2><p>Choose how this project appears to visitors in Explorer.</p></div></div>
             <form onsubmit="window.saveProjectPublishing(event, '${encoded(project.id)}')">
                 <div class="field"><label for="projectSettingsStatus">Status</label><select id="projectSettingsStatus">
+                    <option value="hidden" ${project.projectStatus === 'hidden' ? 'selected' : ''}>Hidden from Explorer</option>
                     <option value="under_construction" ${(project.projectStatus || 'under_construction') === 'under_construction' ? 'selected' : ''}>Under construction</option>
                     <option value="demo" ${project.projectStatus === 'demo' ? 'selected' : ''}>Demo</option>
                     <option value="ready" ${project.projectStatus === 'ready' ? 'selected' : ''}>Ready</option>
                 </select></div>
                 <div class="field"><label for="projectSettingsAddress">Real location (address)</label><input id="projectSettingsAddress" value="${escapeHtml(project.address || '')}" placeholder="Town, region or full visitor address" /></div>
                 <div class="field"><label for="projectSettingsCreator">Creator username</label><input id="projectSettingsCreator" value="${escapeHtml(project.creatorUsername || 'Nourishland creator')}" /></div>
-                <p class="meta">Under Construction projects show their welcome information in Explorer, but cannot be entered. Demo and Ready projects can be explored.</p>
+                <p class="meta">Hidden projects stay private. Under Construction projects show welcome information but cannot be entered. Demo and Ready projects can be explored.</p>
                 <div class="button-row"><button class="primary" type="submit">Save Explorer Status</button></div>
                 <p id="projectPublishingStatus" class="meta"></p>
             </form>
@@ -1363,7 +1364,7 @@ export async function saveProjectPublishing(app, event, encodedProjectId) {
             address,
             creatorUsername,
             dateStarted: project.dateStarted || new Date().toISOString(),
-            visibility: projectStatus === 'under_construction' ? 'draft' : 'public'
+            visibility: ['hidden', 'under_construction'].includes(projectStatus) ? 'draft' : 'public'
         });
         if (status) status.textContent = 'Explorer status saved.';
     } catch (error) {

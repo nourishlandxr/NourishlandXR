@@ -53,6 +53,7 @@ Status: V1 foundation
 Status: V1 foundation
 
 - Every new project begins as **Under construction**.
+- **Hidden from Explorer** keeps a project entirely private while it is being prepared.
 - Under Construction projects appear in Explorer but cannot be entered. **More info** reveals the welcome board, date started, creator username and shared world location.
 - **Demo** identifies a working example visitors can enter.
 - **Ready** identifies a visitor-ready live project.

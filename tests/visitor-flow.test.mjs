@@ -49,6 +49,7 @@ test('visitor project selection opens the welcome page without a repeated card a
     assert.match(source, /Browse Content/);
     assert.match(source, /const projects = \(await loadProjects\(\)\)/);
     assert.match(source, /Under construction/);
+    assert.match(source, /projectStatus\(project\) !== 'hidden'/);
     assert.match(source, /More info/);
     assert.match(source, /Notify me when ready · Coming soon/);
     assert.match(source, /privatePreview = creatorPreview \|\| explorePreview/);
@@ -253,4 +254,12 @@ test('new projects offer friendly mode by default and an explicit Expert Mode', 
     assert.match(dashboardSource, /What should visitors call this place\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);
     assert.match(dashboardSource, /Advanced Starting Point options/);
+});
+
+test('project publishing can hide a project from Explorer', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const serverSource = fs.readFileSync(path.join(root, 'tools/persistence-server.mjs'), 'utf8');
+    assert.match(dashboardSource, /value="hidden".*Hidden from Explorer/);
+    assert.match(dashboardSource, /\['hidden', 'under_construction'\]\.includes\(projectStatus\)/);
+    assert.match(serverSource, /\['hidden', 'under_construction', 'demo', 'ready'\]/);
 });

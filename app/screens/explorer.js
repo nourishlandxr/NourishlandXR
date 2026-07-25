@@ -12,7 +12,7 @@ let gpsApp = null;
 let gpsMarkers = [];
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
-const projectStatus = project => ['under_construction', 'demo', 'ready'].includes(project?.projectStatus)
+const projectStatus = project => ['hidden', 'under_construction', 'demo', 'ready'].includes(project?.projectStatus)
     ? project.projectStatus
     : project?.visibility === 'public' ? 'ready' : 'under_construction';
 const projectStatusLabel = status => ({ under_construction: 'Under construction', demo: 'Demo', ready: 'Ready' })[status] || 'Under construction';
@@ -43,7 +43,7 @@ export async function renderExplorerProjects(app) {
     stopGps();
     disableTargetReticle();
     try {
-        const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
+        const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id) && projectStatus(project) !== 'hidden');
         const cards = projects.map(project => {
             const status = projectStatus(project);
             if (status === 'under_construction') {

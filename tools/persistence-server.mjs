@@ -355,7 +355,7 @@ function createProject(projectData) {
         template: projectData.template || '',
         theme: PROJECT_THEMES.has(projectData.theme) ? projectData.theme : 'forest-light',
         expertMode: projectData.expertMode === true,
-        projectStatus: ['under_construction', 'demo', 'ready'].includes(projectData.projectStatus) ? projectData.projectStatus : 'under_construction',
+        projectStatus: ['hidden', 'under_construction', 'demo', 'ready'].includes(projectData.projectStatus) ? projectData.projectStatus : 'under_construction',
         address: projectData.address || '',
         creatorUsername: projectData.creatorUsername || 'Nourishland creator',
         dateStarted: projectData.dateStarted || new Date().toISOString(),
