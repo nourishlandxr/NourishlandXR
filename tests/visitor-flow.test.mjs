@@ -69,7 +69,7 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(entrySource, />OPEN AR</);
-    assert.match(entrySource, /Journey Bag/);
+    assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.match(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
     assert.doesNotMatch(entrySource, /dashboard-vital-notice/);
@@ -82,7 +82,7 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(source, /renderContentMode/);
     assert.match(source, /Field Guide/);
     assert.match(source, /Stories &amp; Checkpoints/);
-    assert.match(source, /Unplaced Bag/);
+    assert.match(source, /Organizer Folder/);
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
@@ -113,7 +113,7 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(source, /recordTutorialEvent/);
     assert.match(entrySource, /dashboard-open-ar/);
     assert.match(entrySource, />OPEN AR</);
-    assert.match(entrySource, /Journey Bag/);
+    assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);

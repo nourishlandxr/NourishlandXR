@@ -43,7 +43,6 @@ let placementInProgress = false;
 let pendingBagRecord = null;
 let locatedTotemRecord = null;
 const hiddenStructuralMarkerIds = new Set();
-let journeyBagHidden = false;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point gateway', area_checkpoint: 'area totem' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -84,7 +83,7 @@ function markerDimensions(marker) {
     return ({
         // WebXR model scales are half-extents: these render at 0.5m x 2.1m
         // and 1.2m x 2.3m respectively at the default size.
-        area_checkpoint: [.25 * factor, 1.05 * factor],
+        area_checkpoint: [.225 * factor, 1 * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         note: [.11 * factor, .07 * factor],
         plant: [.062 * factor, .062 * factor],
@@ -215,7 +214,7 @@ async function openUnplacedBag() {
     pendingBagRecord = null;
     updateReadyPlacementControl();
     bag.hidden = false;
-    bag.innerHTML = '<p>Loading your Unplaced Bag…</p>';
+    bag.innerHTML = '<p>Loading your Organizer Folder…</p>';
     try {
         await loadPlacementAreas();
         const areas = await loadSitePlaces(activeProjectId, activeSiteId);
@@ -228,7 +227,7 @@ async function openUnplacedBag() {
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Unplaced Bag</strong><button type="button" data-ar-close-bag aria-label="Close Bag">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>Your Bag is empty. Add items from the dashboard when an idea comes to you.</p>'}`;
+        bag.innerHTML = `<div><strong>Organizer Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>This folder is empty. Save information here only when you want to organise or place it later.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];
@@ -241,7 +240,7 @@ async function openUnplacedBag() {
             setPlacementStatus(`${item.marker.name} selected from your Bag. Aim the breathing circle, then tap to place it.`);
         }));
     } catch (error) {
-        bag.innerHTML = `<div><strong>Unplaced Bag</strong><button type="button" data-ar-close-bag aria-label="Close Bag">&times;</button></div><p>Could not load the Bag: ${escapeHtml(error.message)}</p>`;
+        bag.innerHTML = `<div><strong>Organizer Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div><p>Could not load the folder: ${escapeHtml(error.message)}</p>`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
     }
 }
@@ -278,8 +277,7 @@ async function openSpecialMarkerPicker() {
     const existingStartingPoint = sessionMarkers.find(record => record.marker.type === 'intro_checkpoint' && (!activeAreaId || record.areaId === activeAreaId));
     const visibilityControls = [
         existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong><small>Change visibility for this AR session.</small></span></button>` : '',
-        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingStartingPoint.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? 'Show' : 'Hide'} Starting Point</strong><small>Change visibility for this AR session.</small></span></button>` : '',
-        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-journey-bag><b aria-hidden="true">&#x25A3;</b><span><strong>${journeyBagHidden ? 'Show' : 'Hide'} Journey Bag</strong><small>Keep the Starting Point workspace calm.</small></span></button>` : ''
+        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingStartingPoint.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? 'Show' : 'Hide'} Starting Point</strong><small>Change visibility for this AR session.</small></span></button>` : ''
     ].join('');
     picker.hidden = false;
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || 'Area Totem')}</small></span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Area Totem</strong><small>Create a new Area from ground level.</small></span></button>`}${visibilityControls}`;
@@ -305,13 +303,6 @@ async function openSpecialMarkerPicker() {
         setPlacementStatus(`${readyPlacementLabel(record.marker.type)} ${hiddenStructuralMarkerIds.has(markerId) ? 'hidden' : 'visible'} for this AR session.`);
         void openSpecialMarkerPicker();
     }));
-    picker.querySelector('[data-ar-toggle-journey-bag]')?.addEventListener('click', () => {
-        journeyBagHidden = !journeyBagHidden;
-        overlayRoot?.querySelector('[data-ar-open-bag]')?.toggleAttribute('hidden', journeyBagHidden);
-        closeUnplacedBag();
-        setPlacementStatus(`Journey Bag ${journeyBagHidden ? 'hidden' : 'visible'} for this AR session.`);
-        void openSpecialMarkerPicker();
-    });
 }
 
 function resetArControls() {
@@ -372,7 +363,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.50:.24;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.82:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -927,11 +918,11 @@ function createOverlay() {
           <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
           <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
-          <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
+          <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Organizer Folder" hidden></section>
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-marker" type="button" data-ar-add-marker aria-label="Add Marker"><strong>+ MARKER</strong></button>
             <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Organizer Folder"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Organizer Folder</span></button>
             <button class="creator-ar-mode-control is-active" type="button" data-ar-view-mode aria-label="Eye mode: view marker names" aria-pressed="true"><b class="creator-ar-eye-icon" aria-hidden="true"></b><span class="sr-only">Eye mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
@@ -995,7 +986,6 @@ function cleanup() {
     pendingBagRecord = null;
     locatedTotemRecord = null;
     hiddenStructuralMarkerIds.clear();
-    journeyBagHidden = false;
     gl = null;
 }
 

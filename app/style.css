@@ -3201,7 +3201,7 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .project-loading-track span { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #78ad6c, #dcef95); animation: project-loading-progress 1.15s ease-in-out infinite; }
 @keyframes project-loading-breathe { 0%, 100% { transform: scale(.92); opacity: .72; } 50% { transform: scale(1.06); opacity: 1; } }
 @keyframes project-loading-progress { from { transform: translateX(-110%); } to { transform: translateX(340%); } }
-.dashboard-vital-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dashboard-vital-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .dashboard-vital-actions button { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px; min-height: 58px; padding: 10px 12px; border: 1px solid rgba(48,91,57,.32); border-radius: 13px; background: #f7faf5; color: #243d2b; text-align: left; box-shadow: 0 3px 10px rgba(35,67,42,.07); }
 .dashboard-vital-actions button:hover, .dashboard-vital-actions button:focus-visible { border-color: rgba(48,91,57,.62); background: #fff; }
 .dashboard-vital-actions button b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(61,111,70,.11); color: #35663f; font-size: .9rem; }

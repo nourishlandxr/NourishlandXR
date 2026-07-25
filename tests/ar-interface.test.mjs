@@ -283,7 +283,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Start the demo/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 22\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 38\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
@@ -358,7 +358,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
 });
 
-test('dashboard focuses on Open AR and the Unplaced Bag', () => {
+test('dashboard focuses on Open AR while the Organizer Folder stays secondary', () => {
     const arSource = read('app/screens/arMode.js');
     const configSource = read('app/services/arExperienceConfig.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
@@ -417,10 +417,10 @@ test('plant creation separates Local records from read-only Global discovery', (
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.25 \* factor, 1\.05 \* factor\]/);
+    assert.match(arSource, /area_checkpoint: \[\.225 \* factor, 1 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
-    assert.match(arSource, /shape<1\.5\?\.50:\.24/);
+    assert.match(arSource, /shape<1\.5\?\.82:\.50/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);

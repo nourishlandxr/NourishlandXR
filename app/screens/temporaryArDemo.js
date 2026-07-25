@@ -139,7 +139,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         typedLength += 1;
         paragraph.textContent = fullText.slice(0, typedLength);
         if (typedLength >= fullText.length) return finishTyping();
-        boardTypingTimer = setTimeout(typeNextCharacter, 22);
+        boardTypingTimer = setTimeout(typeNextCharacter, 38);
     };
     if (typing) {
         paragraph.textContent = '';
@@ -208,8 +208,8 @@ function guideAreaConversion(record) {
         record.type = 'sub_checkpoint';
         record.demoType = 'zone';
         record.name = 'Citrus Guild';
-        record.demoExpanded = true;
-        record.isBoundary = true;
+        record.demoExpanded = false;
+        record.isBoundary = false;
         record.revealTitle = true;
         record.revealLines = 3;
         refreshDemoRecord(record);
@@ -284,7 +284,8 @@ function updateSimulatedMarkers() {
         const content = demoContentFor(record);
         const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
         const honeycomb = record.demoExpanded && record.demoType === 'plant' ? plantKnowledgeMarkup() : '';
-        const offset = record.demoPanelOffset || { x: 0, y: 0 };
+        const defaultOffsets = { plant: { x: -70, y: -45 }, note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
+        const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '·';
         return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
@@ -369,7 +370,8 @@ function placeMarker() {
         name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: { x: 0, y: 0 }, revealTitle: true, revealLines: 3, texture: null };
+    const panelOffsets = { plant: { x: -70, y: -45 }, note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
+    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: panelOffsets[type], revealTitle: true, revealLines: 3, texture: null };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
@@ -632,6 +634,18 @@ function createMarkerTexture(record) {
         ctx.font = '76px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('🌱', 128, 153);
+    } else if (record.demoType === 'zone') {
+        const post = ctx.createLinearGradient(76, 0, 180, 0);
+        post.addColorStop(0, 'rgba(31,96,89,.96)');
+        post.addColorStop(.48, 'rgba(103,211,194,.98)');
+        post.addColorStop(1, 'rgba(24,78,73,.96)');
+        ctx.fillStyle = post;
+        ctx.beginPath();
+        ctx.roundRect(76, 8, 104, 240, 12);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(215,255,247,.72)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
     } else if (record.type === 'marker' || record.type === 'sub_checkpoint') {
         const glow = ctx.createRadialGradient(128, 128, 18, 128, 128, 118);
         glow.addColorStop(0, 'rgba(226,244,181,.7)');
@@ -690,8 +704,11 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (!record.texture) return;
         const compact = !record.demoExpanded;
-        const displayPosition = compact ? record.position : { ...record.position, y: Math.max(record.position.y + 1.35, 1.35) };
-        const model = billboardMatrix(displayPosition, compact ? .38 : 2.35, compact ? .38 : 3.45);
+        const totem = record.demoType === 'zone';
+        const displayPosition = totem
+            ? { ...record.position, y: record.position.y + 1 }
+            : compact ? record.position : { ...record.position, y: Math.max(record.position.y + 1.35, 1.35) };
+        const model = billboardMatrix(displayPosition, totem ? 1.125 : compact ? .38 : 2.35, totem ? 12.5 : compact ? .38 : 3.45);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);

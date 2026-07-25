@@ -93,7 +93,6 @@ export function renderProjectEntry(config) {
             </button>
             <div class="dashboard-vital-actions">
                 <button class="dashboard-spatial-home" type="button" onclick="${config.startingAction}"><b aria-hidden="true">◊</b><strong>${config.startingConfigured ? 'Starting Point' : 'Add Starting Point'}</strong></button>
-                <button class="dashboard-spatial-bag" type="button" onclick="${config.unplacedAction}"><b aria-hidden="true">▣</b><strong>Journey Bag</strong><small>${config.status.unplaced}</small></button>
             </div>
         </section>
 
