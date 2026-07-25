@@ -250,7 +250,9 @@ test('new projects offer friendly mode by default and an explicit Expert Mode', 
     assert.match(formSource, /<strong>Expert Mode<\/strong>/);
     assert.match(mainSource, /projectExpertMode'\)\?\.checked === true/);
     assert.match(mainSource, /restartProjectTutorial\(created\.id\)/);
+    assert.match(mainSource, /if \(expertMode\) setProjectTutorialMode\(created\.id, false\)/);
     assert.match(dashboardSource, /const expertMode = project\.expertMode === true/);
+    assert.match(dashboardSource, /setProjectTutorialMode\(projectId, !enabled\)/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
     assert.match(dashboardSource, /What should visitors call this place\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);

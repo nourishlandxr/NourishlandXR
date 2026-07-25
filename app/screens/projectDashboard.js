@@ -1371,6 +1371,7 @@ export async function updateProjectExpertMode(app, encodedProjectId, enabled) {
     const projectId = decodeURIComponent(encodedProjectId);
     const project = await projectById(projectId);
     await renameProjectOnDisk(projectId, { ...project, preserveId: true, name: project.name, expertMode: Boolean(enabled) });
+    setProjectTutorialMode(projectId, !enabled);
     await renderProjectSettings(app, encoded(projectId));
 }
 
