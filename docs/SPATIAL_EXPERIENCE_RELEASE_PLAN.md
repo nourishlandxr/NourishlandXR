@@ -192,6 +192,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | A fresh project may stage its Starting Point in the Unassigned workflow container, persisted with the supported neutral Place type `Other`. | V1 field-test compatibility |
 | 2026-07-25 | The next field milestone is ten placed Markers: one Starting Point, two Area Totems and their initial Plants. | 0.890 milestone |
 | 2026-07-25 | The dashboard top is a compact vital-actions board: temporary Starting Point reminder, smaller Open AR, Bag, Create Plant and Add Item; Change Location belongs at the bottom. | V1 dashboard |
+| 2026-07-25 | A new soft form converts into purpose-specific 3D language: rectangular Note, notice-bearing Starting Point star, grounded Area Totem, living-core Plant sphere or quiet general Marker. | V1 spatial language |
 
 ## Traceability rule
 

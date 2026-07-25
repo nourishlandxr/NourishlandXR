@@ -32,7 +32,7 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /What kind of Marker is this\?/);
+    assert.match(arSource, /Give this new Marker a purpose/);
     assert.match(arSource, /data-ar-placed-type="plant"/);
     assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
     assert.match(arSource, /data-ar-placed-type="note"/);
@@ -112,6 +112,14 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. Eye mode is on; press plus when you are ready to place a marker/);
+    assert.match(arSource, /Give this new Marker a purpose/);
+    assert.match(arSource, /data-ar-close-placed/);
+    assert.match(arSource, /resizePlacedMarker/);
+    assert.match(arSource, /markerDimensions/);
+    assert.match(arSource, /note: 3, plant: 4/);
+    assert.match(arSource, /notice_board/);
+    assert.match(arSource, /Creating the Area and raising its Totem/);
+    assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);
     assert.match(arSource, /intro_checkpoint: 'Starting Point'/);
@@ -275,7 +283,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /creator-ar-session-active/);
     assert.doesNotMatch(source, /Test session - no physical code/);
     assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
-    assert.match(source, /What kind of Marker is this\?/);
+    assert.match(source, /Give this new Marker a purpose/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
@@ -373,9 +381,11 @@ test('plant creation separates Local records from read-only Global discovery', (
 
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
-    assert.match(arSource, /area_checkpoint' \? 1/);
-    assert.match(arSource, /intro_checkpoint' \? 2/);
-    assert.match(arSource, /shape<\.5\?circle:\(shape<1\.5\?totem:gateway\)/);
+    assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
+    assert.match(arSource, /area_checkpoint: \[\.075 \* factor, \.22 \* factor\]/);
+    assert.match(arSource, /float starRadius/);
+    assert.match(arSource, /float rect/);
+    assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);
     assert.match(arSource, /starting point gateway/);
 });

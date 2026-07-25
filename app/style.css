@@ -647,8 +647,13 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-place-picker[hidden] { display: none; }
 .creator-ar-place-picker p { margin: 0; font-size: .72rem; font-weight: 800; text-shadow: 0 1px 5px rgba(0,0,0,.65); }
 .creator-ar-place-picker button, body[data-project-theme] .creator-ar-place-picker button { min-height: 36px; padding: 6px 8px; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.08) !important; color: #fff; font-size: .7rem; white-space: nowrap; }
+.creator-ar-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.creator-ar-picker-heading > button { width: 32px; min-width: 32px; padding: 0; font-size: 1rem; }
+.creator-ar-picker-status { color: rgba(255,255,255,.72); font-weight: 550 !important; line-height: 1.35; }
 .creator-ar-type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
 .creator-ar-type-options button.is-selected { border-color: #dcef95; background: rgba(220,239,149,.28); }
+.creator-ar-quick-size { display: grid; grid-template-columns: 38px 1fr 38px; gap: 5px; align-items: center; }
+.creator-ar-quick-size span { color: rgba(255,255,255,.86); font-size: .7rem; font-weight: 750; text-align: center; text-transform: capitalize; }
 .creator-ar-after-place-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .creator-ar-marker-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .creator-ar-marker-layer.is-interactive { pointer-events: auto; }

@@ -68,6 +68,25 @@ function markerScale(marker) {
     return ({ small: .034, medium: .045, large: .06 })[markerAppearanceSize(marker)] || .045;
 }
 
+function markerSizeFactor(marker) {
+    return ({ small: .76, medium: 1, large: 1.34 })[markerAppearanceSize(marker)] || 1;
+}
+
+function markerShape(type) {
+    return ({ sub_checkpoint: 0, area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4 })[type] ?? 0;
+}
+
+function markerDimensions(marker) {
+    const factor = markerSizeFactor(marker);
+    return ({
+        area_checkpoint: [.075 * factor, .22 * factor],
+        intro_checkpoint: [.105 * factor, .105 * factor],
+        note: [.11 * factor, .07 * factor],
+        plant: [.062 * factor, .062 * factor],
+        sub_checkpoint: [markerScale(marker), markerScale(marker)]
+    })[marker.type] || [markerScale(marker), markerScale(marker)];
+}
+
 function setPlacementStatus(message) {
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
     if (status) status.textContent = message;
@@ -221,7 +240,7 @@ function showPlacedMarkerActions(record) {
     pendingPlacedRecord = record;
     picker.hidden = false;
     const fixedType = record.marker.type === 'intro_checkpoint';
-    picker.innerHTML = `${fixedType ? `<p>${readyPlacementLabel(record.marker.type)} placed</p>` : `<p>What kind of Marker is this?</p><div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} General Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Totem</button></div>`}<div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${fixedType ? `${readyPlacementLabel(record.marker.type)} placed` : 'Give this new Marker a purpose'}</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div>${fixedType ? '' : `<div class="creator-ar-type-options"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} General Marker</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="area_checkpoint">${markerIcon('area_checkpoint')} Area Totem</button></div>`}<p class="creator-ar-picker-status" data-ar-picker-status>${fixedType ? 'Add a notice board or adjust its size in Edit details.' : 'Choose one purpose. This panel will close when it is ready.'}</p><div class="creator-ar-quick-size" aria-label="Marker size"><button type="button" data-ar-size-step="-1" aria-label="Make smaller">&minus;</button><span>${markerAppearanceSize(record.marker)} size</span><button type="button" data-ar-size-step="1" aria-label="Make larger">+</button></div><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
         void setPlacedMarkerType(record, button.dataset.arPlacedType);
     }));
@@ -230,6 +249,10 @@ function showPlacedMarkerActions(record) {
         openInlineEditor(record, true);
     });
     picker.querySelector('[data-ar-finish-placed]').addEventListener('click', closePlacePicker);
+    picker.querySelector('[data-ar-close-placed]').addEventListener('click', closePlacePicker);
+    picker.querySelectorAll('[data-ar-size-step]').forEach(button => button.addEventListener('click', () => {
+        void resizePlacedMarker(record, Number(button.dataset.arSizeStep));
+    }));
     overlayRoot?.querySelector('[data-ar-window="tools"]')?.setAttribute('aria-expanded', 'true');
 }
 
@@ -259,13 +282,13 @@ function multiplyMatrices(a, b) {
     return out;
 }
 
-function markerBillboardMatrix(position, scale = .045) {
+function markerBillboardMatrix(position, scaleX = .045, scaleY = scaleX) {
     const camera = latestViewerMatrix || new Float32Array(16);
     let x = camera[12] - position.x;
     let z = camera[14] - position.z;
     const length = Math.hypot(x, z) || 1;
     x /= length; z /= length;
-    return new Float32Array([z * scale, 0, -x * scale, 0, 0, scale, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
+    return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
 function setupSpatialMarkerRenderer() {
@@ -273,7 +296,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;void main(){vec2 q=uv-vec2(.5);float d=length(q);float circle=1.-smoothstep(.30,.49,d);float totemX=1.-smoothstep(.16,.23,abs(q.x));float totemY=1.-smoothstep(.38,.49,abs(q.y));float cap=1.-smoothstep(.12,.22,length(vec2(q.x,q.y-.31)));float totem=max(totemX*totemY,cap);float diamond=abs(q.x)+abs(q.y);float gateway=(1.-smoothstep(.34,.45,diamond))*smoothstep(.18,.27,diamond);float body=shape<.5?circle:(shape<1.5?totem:gateway);float glow=(1.-smoothstep(.18,.52,d))*.22;vec3 c=mix(color,vec3(1.),shape>1.5?.34:.2);float alpha=shape<.5?body*.58+glow:body*.5+glow*.65;gl_FragColor=vec4(c,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float depth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=1.-smoothstep(.0,.035,max(abs(q.x)-.43,abs(q.y)-.31));float bevel=1.-smoothstep(.27,.42,d);float totemBody=1.-smoothstep(.0,.035,max(abs(q.x)-(.12+.08*(q.y+.5)),abs(q.y)-.45));float totemCap=1.-smoothstep(.12,.22,length(vec2(q.x,q.y-.34)));float totem=max(totemBody,totemCap);float a=atan(q.y,q.x);float starRadius=.22+.16*cos(5.*a);float star=1.-smoothstep(starRadius,starRadius+.035,d);float body=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?star:(shape<3.5?rect:sphere)));float light=clamp(.38+.62*depth+.22*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.48,mix(color,vec3(1.),.34),light);if(shape>2.5&&shape<3.5)shaded=mix(color*.62,mix(color,vec3(1.),.22),.45+.4*bevel);if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);float glow=(1.-smoothstep(.26,.54,d))*(shape<.5||shape>3.5?.2:.1);float alpha=body*(shape<.5?.48:.72)+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -295,9 +318,10 @@ function drawSpatialMarkers(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.92, .72, .28], area_checkpoint: [.34, .78, .7] };
     sessionMarkers.forEach(record => {
-        const shape = record.marker.type === 'area_checkpoint' ? 1 : record.marker.type === 'intro_checkpoint' ? 2 : 0;
-        const scale = shape === 1 ? .13 : shape === 2 ? .11 : markerScale(record.marker);
-        const model = markerBillboardMatrix(record.position, scale);
+        const shape = markerShape(record.marker.type);
+        const [scaleX, scaleY] = markerDimensions(record.marker);
+        const groundedPosition = shape === 1 ? { ...record.position, y: record.position.y + scaleY } : record.position;
+        const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
         gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), shape);
@@ -362,6 +386,7 @@ function openInlineEditor(record, force = false) {
     if (!editor) return;
     const plant = record.marker.type === 'plant';
     const fixedType = record.marker.type === 'intro_checkpoint';
+    const startingPoint = record.marker.type === 'intro_checkpoint';
     const areaCheckpoint = record.marker.type === 'area_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
@@ -369,7 +394,9 @@ function openInlineEditor(record, force = false) {
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
     const board = areaBoard(record.marker);
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${areaBoardControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const noticeBoard = record.marker.notice_board || {};
+    const startingBoardControls = startingPoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Starting Point notice board</legend><label>Board title<input name="noticeBoardTitle" value="${escapeHtml(noticeBoard.title || record.marker.name)}" /></label><label>Welcome notice<textarea name="noticeBoardMessage" rows="3" placeholder="Add a welcome, orientation or important notice.">${escapeHtml(noticeBoard.message || '')}</textarea></label><p>Leave the notice blank when the Starting Point only needs its star.</p></fieldset>` : '';
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${areaBoardControls}${startingBoardControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
@@ -428,6 +455,13 @@ function openInlineEditor(record, force = false) {
                     title: form.elements.areaBoardTitle?.value.trim() || name.replace(/\s+checkpoint$/i, ''),
                     introduction: form.elements.areaBoardIntroduction?.value.trim() || description || `Welcome to ${name}.`
                 };
+            }
+            if (type === 'intro_checkpoint') {
+                const message = form.elements.noticeBoardMessage?.value.trim() || '';
+                update.notice_board = message ? {
+                    title: form.elements.noticeBoardTitle?.value.trim() || name,
+                    message
+                } : undefined;
             }
             const updated = type === 'area_checkpoint' && record.marker.type !== 'area_checkpoint'
                 ? await convertRecordToAreaCheckpoint(record, update)
@@ -660,12 +694,16 @@ async function updateAreaCompatibleMarker(record, update) {
 async function setPlacedMarkerType(record, type) {
     if (!record || pendingPlacedRecord !== record) return;
     if (record.marker.type === type) {
-        pickerSelectedType(type);
-        setPlacementStatus(`${readyPlacementLabel(type)} selected. Edit details now or finish.`);
+        setPlacementStatus(`${readyPlacementLabel(type)} ready.`);
+        closePlacePicker();
         return;
     }
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New Area Totem' };
     try {
+        const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
+        const pickerStatus = picker?.querySelector('[data-ar-picker-status]');
+        picker?.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        if (pickerStatus) pickerStatus.textContent = type === 'area_checkpoint' ? 'Creating the Area and raising its Totem…' : `Creating ${readyPlacementLabel(type)}…`;
         const update = {
             ...record.marker,
             type,
@@ -677,11 +715,32 @@ async function setPlacedMarkerType(record, type) {
             : await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, update);
         record.marker = updated;
         renderSessionMarkers();
-        showPlacedMarkerActions(record);
-        pickerSelectedType(type);
-        setPlacementStatus(`${readyPlacementLabel(type)} selected. Edit details now or finish.`);
+        setPlacementStatus(`${readyPlacementLabel(type)} created. Tap it in Pointer mode whenever you want to edit or resize it.`);
+        closePlacePicker();
     } catch (error) {
+        const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
+        picker?.querySelectorAll('button').forEach(button => { button.disabled = false; });
+        const pickerStatus = picker?.querySelector('[data-ar-picker-status]');
+        if (pickerStatus) pickerStatus.textContent = `Could not create it: ${error.message}`;
         setPlacementStatus(`Could not change marker type: ${error.message}`);
+    }
+}
+
+async function resizePlacedMarker(record, direction) {
+    const sizes = ['small', 'medium', 'large'];
+    const current = sizes.indexOf(markerAppearanceSize(record.marker));
+    const next = sizes[Math.max(0, Math.min(sizes.length - 1, current + direction))];
+    if (next === sizes[current]) return;
+    const status = overlayRoot?.querySelector('[data-ar-picker-status]');
+    if (status) status.textContent = `Changing to ${next}…`;
+    try {
+        const update = { ...record.marker, appearance: { ...(record.marker.appearance || {}), size: next } };
+        record.marker = await updateAreaCompatibleMarker(record, update);
+        showPlacedMarkerActions(record);
+        const nextStatus = overlayRoot?.querySelector('[data-ar-picker-status]');
+        if (nextStatus) nextStatus.textContent = `${readyPlacementLabel(record.marker.type)} is now ${next}.`;
+    } catch (error) {
+        if (status) status.textContent = `Could not resize: ${error.message}`;
     }
 }
 

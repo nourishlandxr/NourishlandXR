@@ -24,6 +24,20 @@ Three roles have distinct visual identities:
 - An **Area Totem** is a taller translucent form that holds an Area together. Information panels can arrange themselves around it.
 - The **Starting Point** is a warm gateway shape, visibly different from both Markers and Area Totems.
 
+### Spatial form language
+
+Status: V1 implementation
+
+The soft glowing circle is the temporary, uncommitted form of a newly placed entry. People do not need to learn another name for it. Once given a purpose, its 3D form communicates what it has become:
+
+- **Note / Focus Point** — a soft rectangular information form.
+- **Starting Point** — a warm star that can carry an editable notice board.
+- **Area Totem** — a translucent vertical form rising from ground level.
+- **Plant** — a living sphere with a denser luminous core.
+- **General Marker** — retains the quiet soft circular form.
+
+Softness, translucency and the existing symbol character must be preserved. All forms share the same Small / Medium / Large sizing system.
+
 ## Friendly Mode and Expert Mode
 
 Status: V1 foundation
