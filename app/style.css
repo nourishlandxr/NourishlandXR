@@ -615,7 +615,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .temporary-demo-choice-grid button { min-height: 44px; padding: 6px; border-color: rgba(220,239,149,.45); background: rgba(220,239,149,.12); color: #fff; font-size: .7rem; }
 .creator-ar-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 11999; }
 .creator-ar-overlay { position: fixed; inset: 0; z-index: 12001; pointer-events: none; }
-.creator-ar-taskbar { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); z-index: 6; display: flex; gap: 3px; max-width: calc(100vw - 20px); padding: 5px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(12,27,18,.72); box-shadow: 0 7px 24px rgba(0,0,0,.2); backdrop-filter: blur(12px); overflow-x: auto; pointer-events: auto; }
+.creator-ar-control-dock { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); z-index: 6; display: grid; width: min(calc(100vw - 20px), 430px); transform: translateX(-50%); pointer-events: none; }
+.creator-ar-taskbar { position: relative; z-index: 2; display: flex; justify-content: center; gap: 3px; width: 100%; box-sizing: border-box; padding: 5px; border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(12,27,18,.82); box-shadow: 0 7px 24px rgba(0,0,0,.2); backdrop-filter: blur(12px); overflow-x: auto; pointer-events: auto; }
+.creator-ar-control-dock:has(> section:not([hidden])) .creator-ar-taskbar { border-radius: 0 0 16px 16px; }
 .creator-ar-placement-capture { position: fixed; inset: 0; z-index: 2; display: block; background: transparent !important; pointer-events: none; touch-action: manipulation; }
 .creator-ar-overlay.is-placement-armed .creator-ar-placement-capture { pointer-events: auto; }
 .creator-ar-placement-guide { position: fixed; left: 50%; top: 50%; z-index: 3; width: 116px; height: 116px; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
@@ -645,7 +647,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
 .creator-ar-eye-icon { position: relative; display: inline-block; width: 17px; height: 10px; border: 1px solid rgba(255,255,255,.76); border-radius: 70% 12% 70% 12%; transform: rotate(-45deg); background: rgba(255,255,255,.06); }
 .creator-ar-eye-icon::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(220,239,149,.82); box-shadow: 0 0 6px rgba(220,239,149,.48); }
-.creator-ar-place-picker { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 56px); display: grid; width: min(88vw, 340px); gap: 7px; padding: 8px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; background: rgba(12,34,22,.58) !important; box-shadow: 0 6px 20px rgba(0,0,0,.15); backdrop-filter: blur(12px); color: #fff; pointer-events: auto; }
+.creator-ar-place-picker { position: relative; z-index: 1; display: grid; width: 100%; box-sizing: border-box; gap: 7px; padding: 9px; border: 1px solid rgba(255,255,255,.3); border-bottom: 0; border-radius: 16px 16px 0 0; background: rgba(12,34,22,.88) !important; box-shadow: 0 -6px 20px rgba(0,0,0,.15); backdrop-filter: blur(12px); color: #fff; pointer-events: auto; }
 .creator-ar-place-picker[hidden] { display: none; }
 .creator-ar-place-picker p { margin: 0; font-size: .72rem; font-weight: 800; text-shadow: 0 1px 5px rgba(0,0,0,.65); }
 .creator-ar-place-picker button, body[data-project-theme] .creator-ar-place-picker button { min-height: 36px; padding: 6px 8px; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.08) !important; color: #fff; font-size: .7rem; white-space: nowrap; }
@@ -684,8 +686,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-hit-target-intro_checkpoint .creator-ar-spatial-name,
 .creator-ar-marker-hit-target-sub_checkpoint .creator-ar-spatial-name,
 .creator-ar-marker-hit-target-area_checkpoint .creator-ar-spatial-name { border-color: rgba(174,220,251,.34); background: rgba(15,47,72,.5); }
-.creator-ar-inline-editor, .creator-ar-area-chooser, .creator-ar-unplaced-bag { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 62px); z-index: 3; width: min(92vw, 390px); max-height: min(54vh, 430px); overflow: auto; padding: 14px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(12,27,18,.94); color: #fff; box-shadow: 0 10px 32px rgba(0,0,0,.35); backdrop-filter: blur(14px); pointer-events: auto; }
-.creator-ar-unplaced-bag[hidden] { display: none; }
+.creator-ar-inline-editor, .creator-ar-area-chooser, .creator-ar-unplaced-bag { position: relative; z-index: 1; width: 100%; max-height: min(54vh, 430px); box-sizing: border-box; overflow: auto; padding: 14px; border: 1px solid rgba(255,255,255,.28); border-bottom: 0; border-radius: 16px 16px 0 0; background: rgba(12,27,18,.94); color: #fff; box-shadow: 0 -10px 32px rgba(0,0,0,.24); backdrop-filter: blur(14px); pointer-events: auto; }
+.creator-ar-inline-editor[hidden], .creator-ar-area-chooser[hidden], .creator-ar-unplaced-bag[hidden] { display: none; }
 .creator-ar-unplaced-bag > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .creator-ar-unplaced-bag > div:first-child button { width: 30px; min-width: 30px; min-height: 30px; padding: 0; border-color: rgba(255,255,255,.24); background: transparent; color: #fff; }
 .creator-ar-unplaced-bag p { margin: 8px 0 0; color: rgba(255,255,255,.78); font-size: .74rem; }

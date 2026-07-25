@@ -123,7 +123,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /notice_board/);
     assert.match(arSource, /Creating the Area and raising its Totem/);
     assert.match(arSource, /Structural Markers are created deliberately/);
-    assert.match(arSource, /if \(type === 'area_checkpoint'\) await convertRecordToAreaCheckpoint/);
+    assert.match(arSource, /record\.marker = await convertRecordToAreaCheckpoint/);
+    assert.match(arSource, /const type = button\.dataset\.arPlacedType;[\s\S]*closePlacePicker\(\);[\s\S]*setPlacedMarkerType\(record, type\)/);
+    assert.doesNotMatch(arSource, /One tap completes this Marker/);
+    assert.match(arSource, /creator-ar-control-dock/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);

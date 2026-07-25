@@ -239,9 +239,11 @@ function showPlacedMarkerActions(record) {
     pendingPlacedRecord = record;
     picker.hidden = false;
     const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${fixedType ? `${readyPlacementLabel(record.marker.type)} placed` : 'Choose its purpose'}</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div>${fixedType ? `<p class="creator-ar-picker-status">Its details and size can be changed later in Pointer mode.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>` : `<div class="creator-ar-type-options creator-ar-common-types"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button></div><p class="creator-ar-picker-status" data-ar-picker-status>One tap completes this Marker.</p>`}`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${fixedType ? `${readyPlacementLabel(record.marker.type)} placed` : 'Choose its purpose'}</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div>${fixedType ? `<p class="creator-ar-picker-status">Its details and size can be changed later in Pointer mode.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>` : `<div class="creator-ar-type-options creator-ar-common-types"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button></div>`}`;
     picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
-        void setPlacedMarkerType(record, button.dataset.arPlacedType);
+        const type = button.dataset.arPlacedType;
+        closePlacePicker();
+        void setPlacedMarkerType(record, type);
     }));
     picker.querySelector('[data-ar-edit-placed]')?.addEventListener('click', () => {
         closePlacePicker();
@@ -704,7 +706,7 @@ async function updateAreaCompatibleMarker(record, update) {
 }
 
 async function setPlacedMarkerType(record, type) {
-    if (!record || pendingPlacedRecord !== record) return;
+    if (!record) return;
     if (record.marker.type === type) {
         setPlacementStatus(`${readyPlacementLabel(type)} ready.`);
         closePlacePicker();
@@ -712,10 +714,7 @@ async function setPlacedMarkerType(record, type) {
     }
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Starting Point', area_checkpoint: 'New Area Totem' };
     try {
-        const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
-        const pickerStatus = picker?.querySelector('[data-ar-picker-status]');
-        picker?.querySelectorAll('button').forEach(button => { button.disabled = true; });
-        if (pickerStatus) pickerStatus.textContent = type === 'area_checkpoint' ? 'Creating the Area and raising its Totem…' : `Creating ${readyPlacementLabel(type)}…`;
+        setPlacementStatus(`Creating ${readyPlacementLabel(type)}…`);
         const update = {
             ...record.marker,
             type,
@@ -728,12 +727,7 @@ async function setPlacedMarkerType(record, type) {
         record.marker = updated;
         renderSessionMarkers();
         setPlacementStatus(`${readyPlacementLabel(type)} created. Tap it in Pointer mode whenever you want to edit or resize it.`);
-        closePlacePicker();
     } catch (error) {
-        const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
-        picker?.querySelectorAll('button').forEach(button => { button.disabled = false; });
-        const pickerStatus = picker?.querySelector('[data-ar-picker-status]');
-        if (pickerStatus) pickerStatus.textContent = `Could not create it: ${error.message}`;
         setPlacementStatus(`Could not change marker type: ${error.message}`);
     }
 }
@@ -807,7 +801,10 @@ async function quickPlace(type) {
         const marker = response.marker || response;
         await saveMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id, spatialAnchor(position));
         const record = { marker, position, siteId: activeSiteId, areaId: activeAreaId, areaName: activeAreaName };
-        if (type === 'area_checkpoint') await convertRecordToAreaCheckpoint(record, { name: 'New Area' });
+        if (type === 'area_checkpoint') {
+            setPlacementStatus('Creating the Area and raising its Totem…');
+            record.marker = await convertRecordToAreaCheckpoint(record, { name: 'New Area' });
+        }
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {
@@ -843,10 +840,12 @@ function createOverlay() {
         </div>
         <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at a Marker</small></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
-        <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
-        <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
-        <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
-        <nav class="creator-ar-taskbar" aria-label="AR placement controls">
+        <div class="creator-ar-control-dock">
+          <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
+          <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
+          <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
+          <section class="creator-ar-unplaced-bag" data-ar-unplaced-bag aria-label="Unplaced Bag" hidden></section>
+          <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-marker" type="button" data-ar-add-marker aria-label="Add Marker"><strong>+ MARKER</strong></button>
             <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-open-bag aria-label="Open Unplaced Bag"><b aria-hidden="true">&#x25A3;</b><span class="sr-only">Unplaced Bag</span></button>
@@ -854,7 +853,8 @@ function createOverlay() {
             <button class="creator-ar-mode-control" type="button" data-ar-grab-mode aria-label="Hand mode: fine-tune marker location" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hand mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
-        </nav>`;
+          </nav>
+        </div>`;
 
     overlayRoot.querySelector('[data-ar-add-marker]').addEventListener('click', () => {
         if (readyPlacementType) {
