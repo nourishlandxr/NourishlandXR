@@ -11,6 +11,7 @@ import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarke
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
+import { placementPointerMarkup } from '../services/placementPointer.js';
 
 let session = null;
 let gl = null;
@@ -773,7 +774,7 @@ function createOverlay() {
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
         : hasCheckpoint
         ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
-        : 'Test session - no physical code is needed. Place drafts now, then edit them in AR or Web Mode.';
+        : '';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
@@ -781,9 +782,7 @@ function createOverlay() {
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <span class="creator-ar-placement-capture" data-ar-placement-capture aria-hidden="true"></span>
         <div class="creator-ar-placement-guide" aria-hidden="true">
-            <span class="creator-ar-breathing-target"></span>
-            <span class="creator-ar-placement-pointer"></span>
-            <span class="creator-ar-placement-guide-label" data-ar-placement-guide-label>Place marker</span>
+            ${placementPointerMarkup('Place Marker', true)}
         </div>
         <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at a Marker</small></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>

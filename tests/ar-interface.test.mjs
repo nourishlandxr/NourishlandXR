@@ -19,6 +19,7 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
 test('Creator AR exposes the compact placement toolbar', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
+    const pointerSource = read('app/services/placementPointer.js');
     const taskbar = arSource.slice(
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
@@ -53,7 +54,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
-    assert.match(arSource, /creator-ar-breathing-target/);
+    assert.match(arSource, /placementPointerMarkup/);
+    assert.match(pointerSource, /creator-ar-breathing-target/);
+    assert.match(pointerSource, /creator-ar-placement-pointer/);
+    assert.match(pointerSource, /creator-ar-placement-guide-label/);
     assert.match(arSource, /data-ar-placement-guide-label/);
     assert.match(arSource, /creator-ar-spatial-name/);
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-guide/);
@@ -228,8 +232,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /onTextComplete/);
     assert.match(source, /aimRevealTimer = setTimeout/);
-    assert.match(source, /creator-ar-breathing-target/);
-    assert.match(source, /creator-ar-placement-pointer/);
+    assert.match(source, /placementPointerMarkup/);
     assert.match(source, /When the aiming circle rests on the right place/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
     assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
@@ -265,7 +268,8 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /spatialPosition\(latestHitMatrix, latestViewerMatrix/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
-    assert.match(source, /Test session/);
+    assert.doesNotMatch(source, /Test session - no physical code/);
+    assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
     assert.match(source, /What kind of Marker is this\?/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
