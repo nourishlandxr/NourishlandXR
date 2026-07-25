@@ -127,6 +127,13 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /const type = button\.dataset\.arPlacedType;[\s\S]*closePlacePicker\(\);[\s\S]*setPlacedMarkerType\(record, type\)/);
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
+    assert.match(arSource, /data-ar-locate-totem/);
+    assert.match(arSource, /groundGuideMatrix/);
+    assert.match(arSource, /locatedTotemRecord/);
+    assert.match(arSource, /const restoredGroups = await Promise\.all\(areas\.map/);
+    assert.match(arSource, /float backTotem/);
+    assert.match(arSource, /float side=max\(0\.,back-front\)/);
+    assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);

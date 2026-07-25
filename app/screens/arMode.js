@@ -41,6 +41,7 @@ let arHistoryArmed = false;
 let handlingArHistory = false;
 let placementInProgress = false;
 let pendingBagRecord = null;
+let locatedTotemRecord = null;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point gateway', area_checkpoint: 'area totem' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -253,20 +254,27 @@ function showPlacedMarkerActions(record) {
     picker.querySelector('[data-ar-close-placed]').addEventListener('click', closePlacePicker);
 }
 
-function openSpecialMarkerPicker() {
+async function openSpecialMarkerPicker() {
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
     if (!picker) return;
     closeInlineEditor();
     closeUnplacedBag();
     readyPlacementType = '';
     updateReadyPlacementControl();
+    await restoreRecordedMarkers().catch(() => {});
+    const existingTotem = sessionMarkers.find(record => record.marker.type === 'area_checkpoint');
     picker.hidden = false;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><strong>${markerIcon('area_checkpoint')} Area Totem</strong><span>Create a new Area and raise its Totem from ground level.</span></button>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-locate-totem><strong>${markerIcon('area_checkpoint')} Locate Totem</strong><span>Show a ground guide to ${escapeHtml(existingTotem.areaName || 'the Area Totem')}.</span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><strong>${markerIcon('area_checkpoint')} Add Area Totem</strong><span>Create a new Area and raise its Totem from ground level.</span></button>`}`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-special-type]').addEventListener('click', event => {
+    picker.querySelector('[data-ar-special-type]')?.addEventListener('click', event => {
         const type = event.currentTarget.dataset.arSpecialType;
         closePlacePicker();
         void armPlacement(type);
+    });
+    picker.querySelector('[data-ar-locate-totem]')?.addEventListener('click', () => {
+        locatedTotemRecord = existingTotem;
+        closePlacePicker();
+        setPlacementStatus(`Ground guide active. Follow it to ${existingTotem.areaName || 'the Area Totem'}.`);
     });
 }
 
@@ -305,12 +313,30 @@ function markerBillboardMatrix(position, scaleX = .045, scaleY = scaleX) {
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
+function groundGuideMatrix(target) {
+    if (!latestViewerMatrix || !target) return null;
+    const start = { x: latestViewerMatrix[12], y: target.y + .006, z: latestViewerMatrix[14] };
+    const dx = target.x - start.x;
+    const dz = target.z - start.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance < .08) return null;
+    const ux = dx / distance;
+    const uz = dz / distance;
+    const width = .018;
+    return new Float32Array([
+        uz * width, 0, -ux * width, 0,
+        ux * distance * .5, 0, uz * distance * .5, 0,
+        0, 1, 0, 0,
+        (start.x + target.x) * .5, start.y, (start.z + target.z) * .5, 1
+    ]);
+}
+
 function setupSpatialMarkerRenderer() {
     const vertex = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float depth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=1.-smoothstep(.0,.035,max(abs(q.x)-.43,abs(q.y)-.31));float bevel=1.-smoothstep(.27,.42,d);float totemBody=1.-smoothstep(.0,.035,max(abs(q.x)-(.12+.08*(q.y+.5)),abs(q.y)-.45));float totemCap=1.-smoothstep(.12,.22,length(vec2(q.x,q.y-.34)));float totem=max(totemBody,totemCap);float a=atan(q.y,q.x);float starRadius=.22+.16*cos(5.*a);float star=1.-smoothstep(starRadius,starRadius+.035,d);float body=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?star:(shape<3.5?rect:sphere)));float light=clamp(.38+.62*depth+.22*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.48,mix(color,vec3(1.),.34),light);if(shape>2.5&&shape<3.5)shaded=mix(color*.62,mix(color,vec3(1.),.22),.45+.4*bevel);if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);float glow=(1.-smoothstep(.26,.54,d))*(shape<.5||shape>3.5?.2:.1);float alpha=body*(shape<.5?.48:.72)+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float a=atan(q.y,q.x);float starRadius=.22+.16*cos(5.*a);float star=1.-smoothstep(starRadius,starRadius+.025,d);vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backStar=1.-smoothstep(starRadius,starRadius+.035,length(backQ));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?star:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backStar:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float alpha=body*(shape<.5?.58:(shape>4.5?.42:.82))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -343,6 +369,16 @@ function drawSpatialMarkers(view) {
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
+    if (locatedTotemRecord) {
+        const guideModel = groundGuideMatrix(locatedTotemRecord.position);
+        if (guideModel) {
+            const guideMvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, guideModel));
+            gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, guideMvp);
+            gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 5);
+            gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.55, .92, .78]);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+    }
     if (readyPlacementType && latestHitMatrix) {
         const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .035, z: latestHitMatrix[14] };
         const model = markerBillboardMatrix(target, .07);
@@ -581,21 +617,25 @@ async function loadPlacementAreas() {
 
 async function restoreRecordedMarkers() {
     if (!activeProjectId || !activeSiteId || !activeAreaId) return;
-    const savedMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, activeAreaId).catch(() => []);
-    const restored = await Promise.all(savedMarkers.map(async savedMarker => {
-        const marker = normalizeAreaCheckpointMarker(savedMarker);
-        const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, activeAreaId, marker.id).catch(() => null);
-        const position = anchor?.position;
-        if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
-        return {
-            marker,
-            position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
-            siteId: activeSiteId,
-            areaId: activeAreaId,
-            areaName: activeAreaName,
-            coordinateSpace: anchor.coordinate_space || 'session-local'
-        };
+    const areas = await loadSitePlaces(activeProjectId, activeSiteId).catch(() => []);
+    const restoredGroups = await Promise.all(areas.map(async area => {
+        const savedMarkers = await loadPlaceMarkers(activeProjectId, activeSiteId, area.id).catch(() => []);
+        return Promise.all(savedMarkers.map(async savedMarker => {
+            const marker = normalizeAreaCheckpointMarker(savedMarker);
+            const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, area.id, marker.id).catch(() => null);
+            const position = anchor?.position;
+            if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
+            return {
+                marker,
+                position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
+                siteId: activeSiteId,
+                areaId: area.id,
+                areaName: area.name,
+                coordinateSpace: anchor.coordinate_space || 'session-local'
+            };
+        }));
     }));
+    const restored = restoredGroups.flat();
     const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();
@@ -867,7 +907,7 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement('sub_checkpoint');
     });
-    overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', openSpecialMarkerPicker);
+    overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', () => void openSpecialMarkerPicker());
     overlayRoot.querySelector('[data-ar-open-bag]').addEventListener('click', () => void openUnplacedBag());
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-grab-mode]').addEventListener('click', () => setInteractionMode('grab'));
@@ -910,6 +950,7 @@ function cleanup() {
     placementArmedAt = 0;
     placementInProgress = false;
     pendingBagRecord = null;
+    locatedTotemRecord = null;
     gl = null;
 }
 

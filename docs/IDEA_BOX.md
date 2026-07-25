@@ -38,11 +38,14 @@ The soft glowing circle is the temporary, uncommitted form of a newly placed ent
 
 Softness, translucency and the existing symbol character must be preserved. All forms share the same Small / Medium / Large sizing system.
 
+All spatial symbols are volumetric: untouched entries and Plants are full spheres, Notes and Totems have visible depth, and symbolic gateways are extruded forms. Text and welcome boards remain flat for comfortable reading.
+
 Normal and structural creation are separate:
 
 - **+ Marker** is the fast everyday action. After placement, choose Plant, Note or general Marker in one tap.
 - **+ Special** contains rare structural forms such as Area Totem. These use a deliberate guided process rather than appearing in every ordinary Marker conversion.
 - Resizing belongs in **Edit details**, not in the immediate post-placement choice.
+- Once an Area Totem exists, **+ Special** offers **Locate Totem** instead of creating a duplicate. Locate Totem draws a ground guide toward its saved position.
 
 ## Friendly Mode and Expert Mode
 
