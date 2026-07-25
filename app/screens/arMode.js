@@ -152,7 +152,11 @@ function updateInteractionControls() {
     markerLayer?.classList.toggle('is-view-mode', interactionMode === 'view');
     markerLayer?.classList.toggle('is-grab-mode', interactionMode === 'grab');
     markerLayer?.classList.toggle('is-select-mode', interactionMode === 'select');
+    overlayRoot?.classList.toggle('is-view-mode', interactionMode === 'view');
     overlayRoot?.classList.toggle('is-hand-mode', interactionMode === 'grab');
+    overlayRoot?.classList.toggle('is-select-mode', interactionMode === 'select');
+    const modePointerLabel = overlayRoot?.querySelector('[data-ar-mode-pointer-label]');
+    if (modePointerLabel) modePointerLabel.textContent = interactionMode === 'grab' ? 'Hold to move' : interactionMode === 'select' ? 'Tap to open' : 'Look to reveal';
 }
 
 function setInteractionMode(mode) {
@@ -264,7 +268,7 @@ async function openSpecialMarkerPicker() {
     await restoreRecordedMarkers().catch(() => {});
     const existingTotem = sessionMarkers.find(record => record.marker.type === 'area_checkpoint');
     picker.hidden = false;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-locate-totem><strong>${markerIcon('area_checkpoint')} Locate Totem</strong><span>Show a ground guide to ${escapeHtml(existingTotem.areaName || 'the Area Totem')}.</span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><strong>${markerIcon('area_checkpoint')} Add Area Totem</strong><span>Create a new Area and raise its Totem from ground level.</span></button>`}`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || 'Area Totem')}</small></span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Area Totem</strong><small>Create a new Area from ground level.</small></span></button>`}`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-special-type]')?.addEventListener('click', event => {
         const type = event.currentTarget.dataset.arSpecialType;
@@ -878,7 +882,7 @@ function createOverlay() {
         <div class="creator-ar-placement-guide" aria-hidden="true">
             ${placementPointerMarkup('Place Marker', true)}
         </div>
-        <div class="creator-ar-hand-pointer" aria-hidden="true"><span></span><small>Aim at a Marker</small></div>
+        <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span><small data-ar-mode-pointer-label>Look to reveal</small></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <div class="creator-ar-control-dock">
           <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>

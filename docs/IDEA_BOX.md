@@ -67,6 +67,18 @@ Status: V1 foundation
 - New projects default to **Empty Project** so NourishlandXR remains useful for any garden, landscape, collection or learning place.
 - Food Forest and the other domain-specific templates remain optional starting shortcuts.
 
+## Plant knowledge constellation
+
+Status: interaction preset
+
+- A **Marker** remains the spatial anchor people place and locate. **Elements** are the individual information cells that unfold from it.
+- Opening a Plant keeps its living orb visible at the centre.
+- Information unfolds as a connected honeycomb or molecular constellation rather than replacing the orb with a conventional panel.
+- The left branch synthesises practical and ecological knowledge: uses, relationships and forest layer.
+- The right branch synthesises scientific and cultural context: taxonomy, biology and history.
+- The Try It Now Lemon Myrtle profile is the reference preset for future Plant Profile interactions.
+- Flat panels remain available for long text and welcome boards; the spatial knowledge overview uses connected cells.
+
 New projects begin in the friendly experience. It asks only for information required to create a meaningful place.
 
 Expert Mode is an explicit project checkbox. It reveals advanced configuration, coordinates, diagnostics, themes and future V2 controls without forcing those concepts on every creator.

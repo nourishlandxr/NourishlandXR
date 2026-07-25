@@ -30,6 +30,19 @@ const DEMO_CONTENT = Object.freeze({
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['BOUNDARY  One defined place', 'USE  Guild · microclimate · crop', 'FLOW  Loads this Area’s markers and stories'] }
 });
+const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
+    title: 'Lemon Myrtle',
+    left: [
+        ['USES', 'Tea · spice · aromatic oils'],
+        ['RELATIONSHIPS', 'Pollinators · people · habitat'],
+        ['FOREST LAYER', 'Understory tree · sheltered edge']
+    ],
+    right: [
+        ['SCIENTIFIC', 'Backhousia citriodora · Myrtaceae'],
+        ['BIOLOGY', 'Citral-rich leaves · evergreen flowering tree'],
+        ['HISTORY', 'Long-held First Nations knowledge · later botanical records']
+    ]
+});
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     warning: { title: 'Warning Note · DON’T GO HERE', accent: '#ef9b78', lines: ['WARNING  Do not enter this place', 'GUIDANCE  Explain the risk or boundary', 'FUTURE  Sound · alerts · animation'] }
@@ -270,8 +283,14 @@ function updateSimulatedMarkers() {
     layer.innerHTML = markers.map((record, index) => {
         const content = demoContentFor(record);
         const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : '·'}</span>`;
+        const honeycomb = record.demoExpanded && record.demoType === 'plant' ? plantKnowledgeMarkup() : '';
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" style="--marker-index:${index}">${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : '·')}</span>`;
     }).join('');
+}
+
+function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE) {
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<span class="plant-knowledge-cell" style="--cell:${index}"><b>${label}</b><small>${value}</small></span>`).join('')}</span>`;
+    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core"><i aria-hidden="true">🌿</i><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -413,6 +432,10 @@ function createSpatialKnowledgeTexture(record) {
     label.width = 1120;
     label.height = 720;
     const ctx = label.getContext('2d');
+    if (record.demoType === 'plant') {
+        drawPlantKnowledgeTexture(ctx, label, LEMON_MYRTLE_KNOWLEDGE);
+        return canvasTexture(label);
+    }
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
     gradient.addColorStop(0, 'rgba(10,32,21,.72)');
     gradient.addColorStop(1, 'rgba(16,42,30,.40)');
@@ -443,6 +466,10 @@ function createSpatialKnowledgeTexture(record) {
         ctx.font = '31px system-ui, sans-serif';
         drawWrappedTextureText(ctx, line.slice(split + 2), 62, rowY + 42, 990, 38, 2);
     });
+    return canvasTexture(label);
+}
+
+function canvasTexture(label) {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -452,6 +479,65 @@ function createSpatialKnowledgeTexture(record) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return texture;
+}
+
+function drawHexagon(ctx, x, y, radius, fill, stroke) {
+    ctx.beginPath();
+    for (let point = 0; point < 6; point++) {
+        const angle = Math.PI / 3 * point;
+        const px = x + Math.cos(angle) * radius;
+        const py = y + Math.sin(angle) * radius;
+        if (!point) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+}
+
+function drawPlantKnowledgeTexture(ctx, label, knowledge) {
+    ctx.clearRect(0, 0, label.width, label.height);
+    const center = { x: label.width / 2, y: label.height / 2 };
+    const cells = [
+        ...knowledge.left.map((item, index) => ({ item, x: 210 + index * 82, y: 165 + index * 190 })),
+        ...knowledge.right.map((item, index) => ({ item, x: 910 - index * 82, y: 165 + index * 190 }))
+    ];
+    ctx.strokeStyle = 'rgba(205,238,177,.68)';
+    ctx.lineWidth = 5;
+    cells.forEach(cell => {
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(cell.x, cell.y);
+        ctx.stroke();
+    });
+    cells.forEach(cell => {
+        drawHexagon(ctx, cell.x, cell.y, 112, 'rgba(9,36,23,.86)', 'rgba(183,232,149,.88)');
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#dcef95';
+        ctx.font = '750 24px system-ui, sans-serif';
+        ctx.fillText(cell.item[0], cell.x, cell.y - 15);
+        ctx.fillStyle = '#fff';
+        ctx.font = '22px system-ui, sans-serif';
+        drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 20, 170, 27, 3);
+    });
+    const orb = ctx.createRadialGradient(center.x - 28, center.y - 34, 8, center.x, center.y, 110);
+    orb.addColorStop(0, '#f5ffe8');
+    orb.addColorStop(.24, '#a8df7d');
+    orb.addColorStop(.68, '#4d933f');
+    orb.addColorStop(1, 'rgba(31,92,44,.35)');
+    ctx.fillStyle = orb;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, 105, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(235,255,217,.9)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = '750 31px system-ui, sans-serif';
+    ctx.fillText(knowledge.title, center.x, center.y + 8);
 }
 
 function createBoundaryTexture() {

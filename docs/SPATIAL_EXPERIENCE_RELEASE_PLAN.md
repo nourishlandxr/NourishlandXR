@@ -197,6 +197,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | Explorer projects use Under Construction, Demo or Ready status. New projects default to Under Construction with a public information-only page until opened by the creator. | V1 publishing |
 | 2026-07-25 | Hidden from Explorer is a fourth publishing state for projects that must remain entirely private. | V1 publishing |
 | 2026-07-25 | AR popup controls form an aligned extension above the taskbar. Purpose selection closes immediately, then converts the soft draft into its Plant, Note or Marker form; Area creation remains inside + Special. | V1 AR workflow |
+| 2026-07-25 | Plant interaction keeps the living orb central and unfolds profile Elements as a molecular honeycomb: practical/ecological knowledge left, scientific/historical knowledge right. Lemon Myrtle in Try It Now is the reusable reference preset. | V1 plant interaction |
 
 ## Traceability rule
 
