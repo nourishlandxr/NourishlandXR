@@ -243,8 +243,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(94vw, 620px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
-    assert.match(source, /Welcome to TRY IT NOW/);
-    assert.match(source, /Press to continue/);
+    assert.match(source, /Welcome to our quick demo/);
+    assert.match(source, /Imagine your space coming alive with rich information/);
+    assert.match(source, /Let’s test some NourishlandXR features/);
+    assert.match(source, /Start the demo/);
+    assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 22\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);

@@ -32,7 +32,7 @@ export function renderLaunchScreen(app) {
                     </button>
                     <button class="menu-card role-card welcome-complementary-card try-it-now-entry" onclick="window.openTemporaryArDemoWindow()">
                         <strong>TRY IT NOW</strong>
-                        <span>Place a living story in your space.</span>
+                        <span>A quick introduction to spatial stories, Markers and Areas.</span>
                     </button>
                 </div>
             </section>

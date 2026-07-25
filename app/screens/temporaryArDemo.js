@@ -311,14 +311,17 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    showGuidedChoice('<h2>Welcome to TRY IT NOW</h2><p>Place three simple Markers and discover how a Plant, a Focus Point and an Area can bring knowledge into a real place.</p><button type="button" data-demo-choice="continue">Press to continue</button>', choice => {
-        if (choice === 'continue') armDemoPlacement('plant');
+    showGuidedChoice('<h2>Welcome to our quick demo</h2><p>Hey there, welcome to NourishlandXR. Imagine your space coming alive with rich information—plants sharing their stories, useful knowledge appearing where it matters, and each place becoming easier to understand.</p><button type="button" data-demo-choice="discover">Let’s explore</button>', choice => {
+        if (choice !== 'discover') return;
+        showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place three simple Markers together. One will become a Plant, one a Focus Point, and one an Area Totem. Nothing from this quick demo is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {
+            if (nextChoice === 'continue') armDemoPlacement('plant');
+        });
     });
 }
 

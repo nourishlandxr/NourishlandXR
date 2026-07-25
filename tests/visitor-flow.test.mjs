@@ -21,7 +21,7 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.match(header, /welcome-version-badge/);
     assert.match(header, /· DEMO/);
     assert.doesNotMatch(app.innerHTML, /welcome-label">DEMO/);
-    assert.match(app.innerHTML, /Place a living story in your space/);
+    assert.match(app.innerHTML, /A quick introduction to spatial stories, Markers and Areas/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
     assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
@@ -185,7 +185,7 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Place a Marker/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /Place three simple Markers/);
+    assert.match(source, /place three simple Markers/i);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
