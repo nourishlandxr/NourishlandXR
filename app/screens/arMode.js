@@ -735,7 +735,13 @@ async function quickPlace(type) {
         }
         return;
     }
-    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note' };
+    const defaults = {
+        plant: 'New plant',
+        sub_checkpoint: 'New marker',
+        note: 'New note',
+        intro_checkpoint: 'Starting Point',
+        area_checkpoint: 'New Area Totem'
+    };
     const label = markerLabel(type);
     readyPlacementType = '';
     updateReadyPlacementControl();

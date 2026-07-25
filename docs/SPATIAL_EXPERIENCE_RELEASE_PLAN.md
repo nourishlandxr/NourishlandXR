@@ -189,6 +189,8 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | Try It Now completes its orientation message before slowly revealing the shared aiming target and only then asks for placement. | V1 demo |
 | 2026-07-25 | Every placement method renders one shared aiming-pointer component; pointer design changes must propagate globally. | V1 architecture |
 | 2026-07-25 | The quick demo welcomes people personally and explains the experience before introducing its three-Marker process. | V1 demo |
+| 2026-07-25 | A fresh project may stage its Starting Point in the Unassigned workflow container, persisted with the supported neutral Place type `Other`. | V1 field-test compatibility |
+| 2026-07-25 | The next field milestone is ten placed Markers: one Starting Point, two Area Totems and their initial Plants. | 0.890 milestone |
 
 ## Traceability rule
 

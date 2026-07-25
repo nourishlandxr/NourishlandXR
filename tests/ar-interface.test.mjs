@@ -113,6 +113,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. Eye mode is on; press plus when you are ready to place a marker/);
     assert.match(configSource, /name: 'Unassigned'/);
+    assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);
+    assert.match(arSource, /intro_checkpoint: 'Starting Point'/);
     assert.match(arSource, /createSitePlace/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
