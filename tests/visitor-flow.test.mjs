@@ -30,7 +30,7 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
 test('About This Tool explains the concept without tutorial instructions', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const aboutStart = source.indexOf("if (feature === 'About This Tool')");
-    const aboutEnd = source.indexOf("app.innerHTML = `<div class=\"screen\">", aboutStart);
+    const aboutEnd = source.indexOf("if (feature === 'Help Guide')", aboutStart);
     const aboutSource = source.slice(aboutStart, aboutEnd);
     assert.match(aboutSource, /What is NourishlandXR\?/);
     assert.match(aboutSource, /place-based tool that connects information directly to real environments/);
@@ -69,11 +69,10 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(entrySource, />OPEN AR</);
-    assert.match(entrySource, /Unplaced Bag/);
-    assert.match(entrySource, /Create Plant/);
-    assert.match(entrySource, /<strong>Add Item<\/strong>/);
+    assert.match(entrySource, /Journey Bag/);
+    assert.match(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
-    assert.ok(entrySource.indexOf('dashboard-vital-notice') < entrySource.indexOf('dashboard-ar-path'));
+    assert.doesNotMatch(entrySource, /dashboard-vital-notice/);
     assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
     assert.match(styles, /\.dashboard-ar-path \{ display: grid; grid-template-columns:/);
     assert.doesNotMatch(entrySource, />Work Mode</);
@@ -114,7 +113,7 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(source, /recordTutorialEvent/);
     assert.match(entrySource, /dashboard-open-ar/);
     assert.match(entrySource, />OPEN AR</);
-    assert.match(entrySource, /Unplaced Bag/);
+    assert.match(entrySource, /Journey Bag/);
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
@@ -235,7 +234,7 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(form, /Description \(optional\)/);
     assert.match(form, /projectTemplate/);
     assert.doesNotMatch(form, /projectCoverImage|Suggested Locations/);
-    for (const label of ['Empty Project', 'Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
+    for (const label of ['Blank', 'Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
         assert.match(templates, new RegExp(label));
     }
     assert.match(form, /templateKey = 'empty'/);

@@ -377,9 +377,9 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
     const stage = getTutorialStage(projectId, feature);
     const content = {
         dashboardWelcome: {
-            title: 'Welcome to your living place',
-            full: 'You do not need to learn a technical system. Nourishland begins with a real place, a few simple shapes and the stories you want people to discover there.',
-            short: 'Begin with a real place and one meaningful discovery.',
+            title: 'WELCOME TO YOUR LIVING SPACE',
+            full: 'This is your Dashboard: the calm home for creating a path of information through a real place. In Web Mode it acts as your database, notebook and organiser—collect Plants, Notes, Areas and stories here, then position them when you are ready.',
+            short: 'Your Dashboard is the Web Mode home for organising knowledge about this living place.',
             actionLabel: '',
             action: ''
         },
@@ -398,10 +398,10 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: ''
         },
         arMode: {
-            title: 'About AR Mode',
-            full: 'AR Mode opens a camera-based test session straight away. You can add Trees, Markers and Notes without a physical code. When you are ready to repeat placement at the same real-world point, add an Area Marker for that Area and later attach its installed physical marker code.',
-            short: 'AR opens without a physical code. Add an Area Marker later for repeatable real-world placement.',
-            actionLabel: 'Open AR Mode',
+            title: 'Now meet AR Mode',
+            full: 'AR Mode lets you experiment with the same information in spatial form. Place a simple Marker first, then decide whether it becomes a Plant, Note or another element. Find the guide below whenever you need help—and enjoy exploring your living space.',
+            short: 'Use AR Mode to place and explore the same knowledge in spatial form.',
+            actionLabel: 'Create your first Marker',
             action: `window.openCreatorArMode('${encoded(projectId)}')`
         },
         contentMode: {
@@ -428,7 +428,7 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
         actionLabel: content.actionLabel,
         action: content.action,
         dismissAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
-        nextAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
+        nextAction: feature === 'dashboardWelcome' ? `window.showWorkModeGuidance('${encoded(projectId)}')` : `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
         introducedEvent: GUIDANCE_EVENTS[feature]
     };
 }
@@ -441,6 +441,7 @@ export async function dismissProjectGuidance(app, encodedProjectId, feature) {
 
 export async function showWorkModeGuidance(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
+    dismissTutorialFeature(projectId, 'dashboardWelcome');
     recallTutorialFeatures(projectId, ['arMode', 'contentMode']);
     forcedGuidanceFeatures.set(projectId, 'arMode');
     await renderProjectDashboard(app, encoded(projectId));
@@ -646,6 +647,27 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
         </div>`;
         return;
     }
+    if (feature === 'Help Guide') {
+        app.innerHTML = `<div class="screen help-guide-screen">
+            <div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><p class="welcome-label">NourishlandXR</p><h1>Help Guide</h1><p class="subtitle">Fast answers while you create.</p></div>
+            <section class="panel help-guide-quick"><h2>Quick how-to</h2><ol>
+                <li><strong>Create in Web Mode:</strong> save Plants, Notes and ideas into the Journey Bag.</li>
+                <li><strong>Organise:</strong> create Areas for meaningful parts of the landscape.</li>
+                <li><strong>Place in AR:</strong> open the Bag, aim at the real location and place an element.</li>
+                <li><strong>Begin a journey:</strong> add a Starting Point as the spatial home for the project.</li>
+                <li><strong>Explore:</strong> use the Field Guide for Plants, Areas and their information.</li>
+            </ol></section>
+            <section class="help-faq" aria-labelledby="helpFaqTitle"><h2 id="helpFaqTitle">Frequently asked questions</h2>
+                <details open><summary>Do I need AR to begin?</summary><p>No. Web Mode is your database and notebook. Build information first and place it later.</p></details>
+                <details><summary>What is a Marker?</summary><p>A Marker is a spatial anchor. It can become a Plant, Note or another useful element.</p></details>
+                <details><summary>What is an Area Totem?</summary><p>A Totem represents one Area and gathers the information belonging to that part of the landscape.</p></details>
+                <details><summary>What is the Starting Point?</summary><p>It is the welcoming gateway and spatial home where journeys, orientation and the Journey Bag can begin.</p></details>
+                <details><summary>What happens when I am offline?</summary><p>Prepared project content remains available locally. New field observations can be synchronised when connectivity returns.</p></details>
+                <details><summary>Can I make a mistake?</summary><p>Yes—and fix it. Creator tools let you edit, move or remove your own content without changing the underlying real place.</p></details>
+            </section>
+        </div>`;
+        return;
+    }
     app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>${escapeHtml(feature)}</h1><p class="subtitle">Coming Soon</p></div><div class="panel"><h2>Platform function</h2><p>${escapeHtml(feature)} will remain available from the welcome page.</p></div></div>`;
 }
 
@@ -665,7 +687,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const hasGps = Number.isFinite(Number(startingAnchor?.latitude)) && Number.isFinite(Number(startingAnchor?.longitude));
         const startingConfigured = Boolean(startingPoint && (startingAnchor?.type || hasGps || startingAnchor?.qr_code));
         const projectEntries = entries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(entry.marker.type));
-        const guidance = dashboardGuidance(project.id, { hasArea, startingConfigured, freshProject: !hasArea && projectEntries.length === 0 });
+        const guidance = project.expertMode === true ? null : dashboardGuidance(project.id, { hasArea, startingConfigured, freshProject: !hasArea && projectEntries.length === 0 });
         const latestDate = [
             ...projectEntries.map(entry => entry.marker.modified || entry.marker.created),
             ...areas.map(area => area.modified || area.created)
@@ -703,10 +725,14 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 unplaced: String(unplacedEntries.length),
                 areas: String(areas.length),
                 lastUpdated: latestDate ? editedLabel(latestDate).replace(/^Edited /, '') : 'No edits yet',
-                notice: startingConfigured ? '' : 'A Starting Point is required before publishing.',
+                notice: '',
                 setupAction: `window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')`
             },
             openArAction: `window.startArMode('${encoded(project.id)}')`,
+            startingConfigured,
+            startingAction: startingPoint
+                ? `window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(startingPoint.place.id)}')`
+                : `window.startArMode('${encoded(project.id)}', '', '', 'intro_checkpoint')`,
             addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
             createQuickPlantAction: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`,
             guidance,
@@ -718,6 +744,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 { label: 'Starting Point', description: 'Place, review and deeply edit the central beginning of the visitor experience.', action: `window.renderStartingPoints('${encoded(project.id)}')` },
                 { label: 'Project Settings', description: 'Manage entrances, experience starting points and project-wide configuration.', action: `window.renderProjectSettings('${encoded(project.id)}')` },
                 { label: 'NourishlandXR Settings', description: 'Platform settings, text size, hints, diagnostics and build information from the welcome page.', action: `window.renderPlatformComingSoon('Settings', 'creator')` }
+                ,{ label: 'Help Guide', description: 'Quick how-to instructions and answers to the most important questions.', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` }
             ],
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`

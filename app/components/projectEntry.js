@@ -17,7 +17,7 @@ function contextualGuidance(guidance, target) {
 }
 
 function tutorialSpotlight(guidance) {
-    if (!guidance || !['dashboardWelcome', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
+    if (!guidance || !['dashboardWelcome', 'arMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
     return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
         <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
             <span class="guidance-stage">First steps</span>
@@ -57,9 +57,7 @@ export function renderProjectEntry(config) {
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
-    const spotlightTarget = config.guidance?.feature === 'dashboardWelcome'
-        ? 'header'
-        : ['startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
+    const spotlightTarget = ['arMode', 'startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
             ? 'quickAccess'
             : '';
 
@@ -87,8 +85,6 @@ export function renderProjectEntry(config) {
             <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
-        ${config.status.notice ? `<aside class="setup-notice compact-setup-notice dashboard-vital-notice"><span>${config.status.notice}</span><button type="button" onclick="${config.status.setupAction}">Set Starting Point</button></aside>` : ''}
-
         <section class="dashboard-ar-path${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
             <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
@@ -96,9 +92,8 @@ export function renderProjectEntry(config) {
                 <small>Place or update Markers on site.</small>
             </button>
             <div class="dashboard-vital-actions">
-                <button type="button" onclick="${config.unplacedAction}"><b aria-hidden="true">▣</b><strong>Unplaced Bag</strong><small>${config.status.unplaced}</small></button>
-                <button type="button" onclick="${config.createQuickPlantAction}"><b aria-hidden="true">＋</b><strong>Create Plant</strong></button>
-                <button type="button" onclick="${config.addUnplacedAction}"><b aria-hidden="true">＋</b><strong>Add Item</strong></button>
+                <button class="dashboard-spatial-home" type="button" onclick="${config.startingAction}"><b aria-hidden="true">◊</b><strong>${config.startingConfigured ? 'Starting Point' : 'Add Starting Point'}</strong></button>
+                <button class="dashboard-spatial-bag" type="button" onclick="${config.unplacedAction}"><b aria-hidden="true">▣</b><strong>Journey Bag</strong><small>${config.status.unplaced}</small></button>
             </div>
         </section>
 

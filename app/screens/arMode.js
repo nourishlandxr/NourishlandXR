@@ -43,6 +43,7 @@ let placementInProgress = false;
 let pendingBagRecord = null;
 let locatedTotemRecord = null;
 const hiddenStructuralMarkerIds = new Set();
+let journeyBagHidden = false;
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'starting point gateway', area_checkpoint: 'area totem' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -277,7 +278,8 @@ async function openSpecialMarkerPicker() {
     const existingStartingPoint = sessionMarkers.find(record => record.marker.type === 'intro_checkpoint' && (!activeAreaId || record.areaId === activeAreaId));
     const visibilityControls = [
         existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong><small>Change visibility for this AR session.</small></span></button>` : '',
-        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingStartingPoint.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? 'Show' : 'Hide'} Starting Point</strong><small>Change visibility for this AR session.</small></span></button>` : ''
+        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingStartingPoint.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingStartingPoint.marker.id) ? 'Show' : 'Hide'} Starting Point</strong><small>Change visibility for this AR session.</small></span></button>` : '',
+        existingStartingPoint ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-journey-bag><b aria-hidden="true">&#x25A3;</b><span><strong>${journeyBagHidden ? 'Show' : 'Hide'} Journey Bag</strong><small>Keep the Starting Point workspace calm.</small></span></button>` : ''
     ].join('');
     picker.hidden = false;
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${existingTotem ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || 'Area Totem')}</small></span></button>` : `<p class="creator-ar-picker-status">Structural Markers are created deliberately and usually only once per place.</p><button class="creator-ar-special-totem" type="button" data-ar-special-type="area_checkpoint"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Area Totem</strong><small>Create a new Area from ground level.</small></span></button>`}${visibilityControls}`;
@@ -303,6 +305,13 @@ async function openSpecialMarkerPicker() {
         setPlacementStatus(`${readyPlacementLabel(record.marker.type)} ${hiddenStructuralMarkerIds.has(markerId) ? 'hidden' : 'visible'} for this AR session.`);
         void openSpecialMarkerPicker();
     }));
+    picker.querySelector('[data-ar-toggle-journey-bag]')?.addEventListener('click', () => {
+        journeyBagHidden = !journeyBagHidden;
+        overlayRoot?.querySelector('[data-ar-open-bag]')?.toggleAttribute('hidden', journeyBagHidden);
+        closeUnplacedBag();
+        setPlacementStatus(`Journey Bag ${journeyBagHidden ? 'hidden' : 'visible'} for this AR session.`);
+        void openSpecialMarkerPicker();
+    });
 }
 
 function resetArControls() {
@@ -986,6 +995,7 @@ function cleanup() {
     pendingBagRecord = null;
     locatedTotemRecord = null;
     hiddenStructuralMarkerIds.clear();
+    journeyBagHidden = false;
     gl = null;
 }
 
