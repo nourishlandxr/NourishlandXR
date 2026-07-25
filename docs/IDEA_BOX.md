@@ -38,6 +38,12 @@ The soft glowing circle is the temporary, uncommitted form of a newly placed ent
 
 Softness, translucency and the existing symbol character must be preserved. All forms share the same Small / Medium / Large sizing system.
 
+Normal and structural creation are separate:
+
+- **+ Marker** is the fast everyday action. After placement, choose Plant, Note or general Marker in one tap.
+- **+ Special** contains rare structural forms such as Area Totem. These use a deliberate guided process rather than appearing in every ordinary Marker conversion.
+- Resizing belongs in **Edit details**, not in the immediate post-placement choice.
+
 ## Friendly Mode and Expert Mode
 
 Status: V1 foundation

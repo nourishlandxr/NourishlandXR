@@ -24,19 +24,22 @@ test('Creator AR exposes the compact placement toolbar', () => {
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
-    assert.match(arSource, /data-ar-window="tools"/);
-    assert.match(arSource, /ADD MARKER/);
+    assert.match(arSource, /data-ar-add-marker/);
+    assert.match(arSource, /\+ MARKER/);
+    assert.match(arSource, /data-ar-add-special/);
+    assert.match(arSource, /\+ SPECIAL/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-marker/);
     assert.match(arSource, /data-ar-place-picker/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /Give this new Marker a purpose/);
+    assert.match(arSource, /Choose its purpose/);
     assert.match(arSource, /data-ar-placed-type="plant"/);
     assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
     assert.match(arSource, /data-ar-placed-type="note"/);
-    assert.match(arSource, /data-ar-placed-type="area_checkpoint"/);
+    assert.doesNotMatch(arSource.slice(arSource.indexOf('function showPlacedMarkerActions'), arSource.indexOf('function openSpecialMarkerPicker')), /data-ar-placed-type="area_checkpoint"/);
+    assert.match(arSource, /data-ar-special-type="area_checkpoint"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-view-mode/);
@@ -45,7 +48,7 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(styles, /\.creator-ar-eye-icon/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(taskbar, /data-ar-open-bag/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 6);
+    assert.equal((taskbar.match(/<button/g) || []).length, 7);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.match(arSource, /creator-ar-hand-pointer/);
@@ -112,13 +115,15 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. Eye mode is on; press plus when you are ready to place a marker/);
-    assert.match(arSource, /Give this new Marker a purpose/);
+    assert.match(arSource, /Choose its purpose/);
     assert.match(arSource, /data-ar-close-placed/);
-    assert.match(arSource, /resizePlacedMarker/);
+    assert.doesNotMatch(arSource, /data-ar-size-step|resizePlacedMarker/);
     assert.match(arSource, /markerDimensions/);
     assert.match(arSource, /note: 3, plant: 4/);
     assert.match(arSource, /notice_board/);
     assert.match(arSource, /Creating the Area and raising its Totem/);
+    assert.match(arSource, /Structural Markers are created deliberately/);
+    assert.match(arSource, /if \(type === 'area_checkpoint'\) await convertRecordToAreaCheckpoint/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);
@@ -283,7 +288,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /creator-ar-session-active/);
     assert.doesNotMatch(source, /Test session - no physical code/);
     assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
-    assert.match(source, /Give this new Marker a purpose/);
+    assert.match(source, /Choose its purpose/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
