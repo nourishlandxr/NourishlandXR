@@ -64,8 +64,14 @@ test('AR entry is gated by preparation and only Start AR Mode launches AR', () =
 test('creator dashboard prioritizes Open AR while retaining quiet management and project settings', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(entrySource, />OPEN AR</);
     assert.match(entrySource, /Unplaced Bag/);
+    assert.match(entrySource, /Create Plant/);
+    assert.match(entrySource, /Choose what to add and where it belongs/);
+    assert.ok(entrySource.indexOf('dashboard-vital-notice') < entrySource.indexOf('dashboard-ar-path'));
+    assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
+    assert.match(styles, /\.dashboard-ar-path \{ display: grid; grid-template-columns:/);
     assert.doesNotMatch(entrySource, />Work Mode</);
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.match(source, /openArAction/);

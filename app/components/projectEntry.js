@@ -82,21 +82,23 @@ export function renderProjectEntry(config) {
 
     return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
-            <button class="change-location-control" type="button" onclick="${config.backAction}">← Change location</button>
             <h1>${config.locationName}</h1>
             <span class="dashboard-identity">Dashboard</span>
             <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
+        ${config.status.notice ? `<aside class="setup-notice compact-setup-notice dashboard-vital-notice"><span>${config.status.notice}</span><button type="button" onclick="${config.status.setupAction}">Set Starting Point</button></aside>` : ''}
+
         <section class="dashboard-ar-path${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
             <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
                 <strong id="openArTitle">OPEN AR</strong>
-                <small>Place Markers, choose their purpose, or fine-tune positions.</small>
+                <small>Place or update Markers on site.</small>
             </button>
-            <div class="dashboard-unplaced-bag">
+            <div class="dashboard-vital-actions">
                 <button type="button" onclick="${config.unplacedAction}"><strong>Unplaced Bag</strong><span>${config.status.unplaced} saved item${config.status.unplaced === '1' ? '' : 's'} waiting for placement</span></button>
-                <button type="button" onclick="${config.addUnplacedAction}">Add item</button>
+                <button type="button" onclick="${config.createQuickPlantAction}"><strong>Create Plant</strong><span>Save one quickly for future placement.</span></button>
+                <button type="button" onclick="${config.addUnplacedAction}"><strong>Add Item</strong><span>Choose what to add and where it belongs.</span></button>
             </div>
         </section>
 
@@ -134,8 +136,6 @@ export function renderProjectEntry(config) {
             </div>
         </section>
 
-        ${config.status.notice ? `<aside class="setup-notice compact-setup-notice"><span>${config.status.notice}</span><button type="button" onclick="${config.status.setupAction}">Set Starting Point</button></aside>` : ''}
-
         <nav class="location-tool-grid" aria-label="Location tools">
             ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
         </nav>
@@ -144,6 +144,9 @@ export function renderProjectEntry(config) {
             <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
+        <footer class="dashboard-location-footer">
+            <button class="change-location-control" type="button" onclick="${config.backAction}">← Change Location</button>
+        </footer>
         ${tutorialSpotlight(config.guidance)}
     </div>`;
 }

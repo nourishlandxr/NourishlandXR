@@ -44,6 +44,7 @@ The first-use tutorial should teach a welcoming journey, not the software archit
 
 Status: V1 foundation in progress
 
+- **Available now:** Create Plant → Global searches GBIF read-only by common name, scientific name, genus or species. Selecting a result creates a sourced, editable Local copy.
 - Keep **Local** plants clearly separate from **Global** plant discovery.
 - Local means a plant profile already saved in Nourishland.
 - Global means a read-only result from an external botanical source.
@@ -52,6 +53,16 @@ Status: V1 foundation in progress
 - Begin with GBIF as the global taxonomy source.
 - Consider Atlas of Living Australia enrichment for Australian projects.
 - Useful/edible knowledge must be cited and curated locally; never present an unverified safety claim as fact.
+
+Source pathway:
+
+1. **GBIF now** — broad global name discovery and taxonomic identifiers.
+2. **Atlas of Living Australia next** — Australian names, occurrences and regional context.
+3. **iNaturalist enrichment later** — observation-led discovery and images, using its supported API and rate limits.
+4. **Kew POWO/WCVP reference layer** — accepted names, distributions and plant uses where licensing and data access permit.
+5. **Nourishland useful-plant layer** — curated edible, medicinal, fibre, habitat and food-forest knowledge with visible sources and safety review.
+
+Global sources remain read-only. NourishlandXR stores the source name, source ID, source URL and retrieval date when a person chooses a result. Global results must never silently overwrite Local knowledge.
 
 ### Gentle advanced search
 
@@ -77,6 +88,35 @@ Status: product direction
 - Movement, observation and return visits should reveal knowledge gradually.
 - Gardens can hold stories, seasonal change, plant relationships and community memory.
 - Reward curiosity and care rather than collection for its own sake.
+
+### Collect, organise, then place
+
+Status: V1 dashboard direction; staged implementation
+
+The dashboard is the creator's active field board. Its top section should contain only what matters now:
+
+- A temporary Starting Point reminder for a new project. It disappears when completed.
+- A compact but highlighted **Open AR** action.
+- **Unplaced Bag** for collected ideas awaiting a home or precise position.
+- **Create Plant** for quickly recording a plant to place later.
+- **Add Item** for choosing a Plant and Area, then either placing it in AR or leaving it gathered around the Area Totem.
+
+The spatial model is:
+
+1. **Collect** — find or create a Plant and keep it in the Bag.
+2. **Organise** — assign it to an Area. It leaves the truly unassigned Bag and loads around that Area's Totem.
+3. **Place** — while on site, move it from the Totem cluster to a permanent spatial position.
+4. **Discover** — visitors find the placed Markers; creators can keep collecting and refining the garden.
+
+An Area assignment and a permanent physical position are different states. Content assigned to an Area but not precisely positioned should remain visible around its Totem, not appear lost or incomplete.
+
+Implementation pathway:
+
+- V1A: reorganise the dashboard vital section and clarify Bag/Create/Add language.
+- V1B: store Area assignment independently from the spatial anchor.
+- V1C: render Area-assigned, unpositioned content in a stable Totem cluster.
+- V1D: let AR placement move an item out of the Totem cluster without changing its Area.
+- V1E: add friendly collection progress and discovery feedback without introducing gaming terminology.
 
 ## Real-garden test ideas
 

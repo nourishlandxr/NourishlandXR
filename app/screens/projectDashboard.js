@@ -708,6 +708,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             },
             openArAction: `window.startArMode('${encoded(project.id)}')`,
             addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
+            createQuickPlantAction: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`,
             guidance,
             fieldGuideAction: `window.renderFieldGuide('${encoded(project.id)}', true)`,
             mapAction: `window.renderLocationMap('${encoded(project.id)}', true)`,
