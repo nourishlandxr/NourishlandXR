@@ -2437,6 +2437,59 @@ body.ar-session-active::after {
     text-align: left;
 }
 
+.field-guide-place-cloud .field-guide-area-card {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    min-width: min(100%, 210px);
+}
+
+.field-guide-area-card > span:last-child {
+    display: grid;
+    gap: 2px;
+}
+
+.field-guide-area-card small {
+    color: #647067;
+    font-size: .68rem;
+}
+
+.field-guide-area-symbols {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 30px;
+}
+
+.field-guide-totem-symbol {
+    display: block;
+    width: 8px;
+    height: 31px;
+    border: 1px solid rgba(32,119,109,.6);
+    border-radius: 3px 3px 1px 1px;
+    background: linear-gradient(90deg, rgba(75,197,178,.3), rgba(75,197,178,.72), rgba(31,111,100,.38));
+    box-shadow: 3px 2px 0 rgba(31,111,100,.18);
+}
+
+.field-guide-starting-symbol {
+    display: block;
+    width: 20px;
+    height: 32px;
+    border: 1px solid rgba(31,154,133,.52);
+    border-radius: 46% 46% 38% 38%;
+    background: linear-gradient(145deg, rgba(98,232,204,.28), rgba(24,151,129,.62));
+    clip-path: polygon(50% 0, 88% 18%, 100% 72%, 70% 100%, 30% 100%, 0 72%, 12% 18%);
+    box-shadow: inset 0 0 8px rgba(226,255,247,.52), 0 2px 7px rgba(22,106,91,.18);
+}
+
+.field-guide-area-symbol {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--earth-line);
+    border-radius: 50%;
+    background: var(--paper-wash);
+}
+
 .field-guide-place-cloud span {
     color: #647067;
     font-size: .72rem;

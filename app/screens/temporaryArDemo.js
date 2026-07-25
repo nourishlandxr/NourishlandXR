@@ -647,15 +647,27 @@ function createMarkerTexture(record) {
         ctx.beginPath();
         ctx.arc(128, 128, 78, 0, Math.PI * 2);
         ctx.stroke();
+    } else if (record.type === 'note') {
+        ctx.fillStyle = 'rgba(31,35,26,.82)';
+        ctx.beginPath();
+        ctx.roundRect(8, 64, 240, 128, 18);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(240,207,112,.72)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        drawWrappedTextureText(ctx, record.name || 'Note', 128, 126, 205, 27, 2);
     } else {
-        ctx.fillStyle = record.type === 'note' ? '#d6a928' : '#357fc4';
+        ctx.fillStyle = '#357fc4';
         ctx.beginPath();
         ctx.roundRect(8, 42, 240, 172, 28);
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 30px system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(record.type === 'note' ? '✎  Note' : '◆  Area', 128, 139);
+        ctx.fillText('◆  Area', 128, 139);
     }
     const markerTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, markerTexture);

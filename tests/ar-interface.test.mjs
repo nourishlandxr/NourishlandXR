@@ -233,6 +233,10 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /marker\.type === 'plant'/);
     assert.match(source, /placeId,/);
     assert.match(source, /return \[\.\.\.resolved, \.\.\.markerPlants\]/);
+    assert.match(source, /hasTotem/);
+    assert.match(source, /hasStartingPoint/);
+    assert.match(source, /field-guide-totem-symbol/);
+    assert.match(source, /field-guide-starting-symbol/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
@@ -271,7 +275,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
     assert.match(source, /label\.width = 1120/);
     assert.match(source, /drawWrappedTextureText/);
-    assert.match(styles, /width: min\(94vw, 620px\)/);
+    assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
     assert.match(source, /Welcome to our quick demo/);
     assert.match(source, /Imagine your space coming alive with rich information/);
@@ -287,9 +291,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
+    assert.match(source, /bindSimulatedInformationPanels/);
+    assert.match(source, /demoPanelOffset/);
+    assert.match(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
+    assert.match(source, /record\.demoExpanded = false/);
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
+    assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /DON’T GO HERE/);
     assert.match(source, /Create Area Totem/);
