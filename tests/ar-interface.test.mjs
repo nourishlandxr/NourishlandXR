@@ -226,7 +226,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
-    assert.match(source, /Keep this board open as your guide/);
+    assert.match(source, /onTextComplete/);
+    assert.match(source, /aimRevealTimer = setTimeout/);
+    assert.match(source, /creator-ar-breathing-target/);
+    assert.match(source, /creator-ar-placement-pointer/);
+    assert.match(source, /When the aiming circle rests on the right place/);
+    assert.match(styles, /\.tryit-place\.is-revealing/);
+    assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);

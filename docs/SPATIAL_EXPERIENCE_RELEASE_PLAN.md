@@ -186,6 +186,7 @@ V2 develops this into the complete visitor journey:
 | 2026-07-25 | Area checkpoints use a translucent Totem visual and Starting Points use a separate gateway visual. | V1 spatial language |
 | 2026-07-25 | The first-use tutorial teaches Starting Point, Area Totem and first Marker rather than the old dashboard tool flow. | V1 onboarding |
 | 2026-07-25 | Named terrace Areas such as 1R1 link to their printed site-plan positions; their marker dots arrange locally around the Area link. | V1 map |
+| 2026-07-25 | Try It Now completes its orientation message before slowly revealing the shared aiming target and only then asks for placement. | V1 demo |
 
 ## Traceability rule
 

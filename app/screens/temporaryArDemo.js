@@ -22,6 +22,7 @@ let buffer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
+let aimRevealTimer = null;
 const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
@@ -43,7 +44,9 @@ function clearSessionState() {
     markerType = 'marker';
     demoStage = 'plant';
     clearTimeout(boardTypingTimer);
+    clearTimeout(aimRevealTimer);
     boardTypingTimer = null;
+    aimRevealTimer = null;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -93,7 +96,7 @@ function hideGuidedChoice() {
     }
 }
 
-function showGuidedChoice(html, onClick) {
+function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
     panel.innerHTML = html;
@@ -105,12 +108,17 @@ function showGuidedChoice(html, onClick) {
     revealTargets.forEach(target => target.classList.add('is-awaiting-text'));
     let typedLength = 0;
     let typing = Boolean(paragraph && fullText);
+    let completionNotified = false;
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
         if (paragraph) paragraph.textContent = fullText;
         typing = false;
         revealTargets.forEach(target => target.classList.remove('is-awaiting-text'));
         panel.classList.remove('is-typing');
+        if (!completionNotified) {
+            completionNotified = true;
+            options.onTextComplete?.();
+        }
     };
     const typeNextCharacter = () => {
         if (!typing || !paragraph) return;
@@ -209,7 +217,8 @@ function armDemoPlacement(type) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     const place = appRoot?.querySelector('[data-tryit-place]');
-    place?.removeAttribute('hidden');
+    place?.setAttribute('hidden', '');
+    place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
     if (label) label.textContent = 'Place a Marker';
     const instructions = {
@@ -218,7 +227,23 @@ function armDemoPlacement(type) {
         zone: 'Choose the central checkpoint for this Area.'
     };
     setGuide(instructions[type]);
-    showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>${instructions[type]} Keep this board open as your guide, then tap the breathing circle.</p>`, () => {});
+    const introductions = {
+        plant: ['Find your first place', 'Look around slowly and choose a calm, clear spot. In a moment, an aiming circle will appear in the centre to help you place with intention.'],
+        note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.'],
+        zone: ['Find the heart of the Area', 'Look toward the centre of the place you want this Area to gather. The aiming circle will appear when this introduction finishes.']
+    };
+    const [title, introduction] = introductions[type];
+    clearTimeout(aimRevealTimer);
+    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p>`, () => {}, {
+        onTextComplete: () => {
+            place?.removeAttribute('hidden');
+            requestAnimationFrame(() => place?.classList.add('is-revealing'));
+            aimRevealTimer = setTimeout(() => {
+                place?.classList.add('is-ready');
+                showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>${instructions[type]} When the aiming circle rests on the right place, tap it.</p>`);
+            }, 1100);
+        }
+    });
 }
 
 function advanceDemo() {
@@ -285,7 +310,7 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place" type="button" data-tryit-place aria-label="Place a Marker" hidden><span aria-hidden="true"></span><strong>Place a Marker</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden><span class="creator-ar-breathing-target" aria-hidden="true"></span><span class="creator-ar-placement-pointer" aria-hidden="true"></span><strong class="creator-ar-placement-guide-label">Place a Marker</strong></button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to TRY IT NOW.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
@@ -451,36 +476,42 @@ function createMarkerTexture(record) {
     if (!gl) return null;
     if (record.demoExpanded) return createSpatialKnowledgeTexture(record);
     const label = document.createElement('canvas');
-    label.width = 512;
-    label.height = 128;
+    label.width = 256;
+    label.height = 256;
     const ctx = label.getContext('2d');
     if (record.type === 'plant') {
         ctx.fillStyle = '#4f8d3f';
         ctx.beginPath();
-        ctx.arc(256, 64, 58, 0, Math.PI * 2);
+        ctx.arc(128, 128, 88, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = '54px sans-serif';
+        ctx.font = '76px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('🌱', 256, 84);
+        ctx.fillText('🌱', 128, 153);
     } else if (record.type === 'marker' || record.type === 'sub_checkpoint') {
-        ctx.fillStyle = '#365342';
+        const glow = ctx.createRadialGradient(128, 128, 18, 128, 128, 118);
+        glow.addColorStop(0, 'rgba(226,244,181,.7)');
+        glow.addColorStop(.58, 'rgba(146,201,122,.48)');
+        glow.addColorStop(.82, 'rgba(104,164,91,.18)');
+        glow.addColorStop(1, 'rgba(104,164,91,0)');
+        ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(256, 64, 48, 0, Math.PI * 2);
+        ctx.arc(128, 128, 118, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 42px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('◆', 256, 80);
+        ctx.strokeStyle = 'rgba(226,244,181,.92)';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.arc(128, 128, 78, 0, Math.PI * 2);
+        ctx.stroke();
     } else {
         ctx.fillStyle = record.type === 'note' ? '#d6a928' : '#357fc4';
         ctx.beginPath();
-        ctx.roundRect(8, 10, 496, 108, 28);
+        ctx.roundRect(8, 42, 240, 172, 28);
         ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 35px system-ui, sans-serif';
+        ctx.font = 'bold 30px system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(record.type === 'note' ? '✎  Note' : '◆  Area', 256, 77);
+        ctx.fillText(record.type === 'note' ? '✎  Note' : '◆  Area', 128, 139);
     }
     const markerTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, markerTexture);
