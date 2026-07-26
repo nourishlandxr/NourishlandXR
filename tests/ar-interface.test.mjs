@@ -39,28 +39,31 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
     assert.match(arSource, /data-ar-placed-type="note"/);
     assert.doesNotMatch(arSource.slice(arSource.indexOf('function showPlacedMarkerActions'), arSource.indexOf('function openSpecialMarkerPicker')), /data-ar-placed-type="area_checkpoint"/);
-    assert.match(arSource, /data-ar-special-type="area_checkpoint"/);
+    assert.match(arSource, /data-ar-create-area/);
+    assert.match(arSource, /data-ar-place-area-totem/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-view-mode/);
-    assert.match(arSource, /data-ar-grab-mode/);
+    assert.match(arSource, /data-ar-hold-mode/);
     assert.match(arSource, /data-ar-select-mode/);
-    assert.match(styles, /\.creator-ar-eye-icon/);
+    assert.match(styles, /\.creator-ar-view-icon/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
-    assert.match(taskbar, /data-ar-open-bag/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 7);
+    assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
+    assert.equal((taskbar.match(/<button/g) || []).length, 6);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.match(arSource, /creator-ar-mode-pointer/);
-    assert.match(arSource, /is-hand-mode/);
+    assert.match(arSource, /is-hold-mode/);
     assert.match(styles, /\.creator-ar-overlay\.is-view-mode \.creator-ar-mode-pointer/);
-    assert.match(styles, /\.creator-ar-overlay\.is-hand-mode \.creator-ar-mode-pointer/);
+    assert.match(styles, /\.creator-ar-overlay\.is-hold-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-overlay\.is-select-mode \.creator-ar-mode-pointer/);
-    assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*bottom:/);
+    assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*bottom: max\(calc\(82px \+ 3cm\), calc\(env\(safe-area-inset-bottom\) \+ 68px \+ 3cm\)\)/);
     assert.doesNotMatch(arSource, /data-ar-mode-pointer-label/);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
-    assert.match(arSource, /session\.addEventListener\('select'/);
+    assert.match(arSource, /launchedSession\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
+    assert.match(arSource, /querySelector\('\[data-ar-add-marker\]'\)\.addEventListener\('click'/);
+    assert.match(arSource, /querySelector\('\[data-ar-add-special\]'\)\.addEventListener\('click'/);
     assert.match(arSource, /placementPointerMarkup/);
     assert.match(pointerSource, /creator-ar-breathing-target/);
     assert.match(pointerSource, /creator-ar-placement-pointer/);
@@ -77,6 +80,21 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /readyPlacementType && latestHitMatrix/);
 });
 
+test('Special Marker tools open immediately while recorded Markers restore', () => {
+    const arSource = read('app/screens/arMode.js');
+    const start = arSource.indexOf('async function openSpecialMarkerPicker()');
+    const end = arSource.indexOf('function resetArControls()', start);
+    const specialPicker = arSource.slice(start, end);
+    assert.ok(start >= 0 && end > start);
+    assert.ok(specialPicker.indexOf('picker.hidden = false') < specialPicker.indexOf('await restoreRecordedMarkers(restoringOperation)'));
+    assert.ok(specialPicker.indexOf('await loadPlacementAreas(loadingOperation)') < specialPicker.indexOf('await restoreRecordedMarkers(restoringOperation)'));
+    assert.match(specialPicker, /Loading Area tools/);
+    assert.match(specialPicker, /picker\.dataset\.panel !== panelId/);
+    assert.match(specialPicker, /requestId !== specialPickerRequest/);
+    assert.match(arSource, /createAreaRecord\(projectId, siteId/);
+    assert.match(specialPicker, /renderSpecialMarkerChoices\(picker\)/);
+});
+
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
@@ -91,9 +109,12 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /let interactionMode = 'view'/);
     assert.match(arSource, /interactionMode = mode/);
-    assert.match(arSource, /Eye mode is on\. Hover over a Marker to reveal its name/);
-    assert.match(arSource, /Hand mode is on/);
+    assert.match(arSource, /View mode is on\. Hover over a Marker to reveal its name/);
+    assert.match(arSource, /Hold mode is on\. Touch one Marker to carry it to the pointer; release and View mode returns/);
     assert.match(arSource, /snapOffset/);
+    assert.match(arSource, /creator-ar-mode-pointer span'\)\?\.getBoundingClientRect\(\)/);
+    assert.match(arSource, /pointerTarget/);
+    assert.doesNotMatch(arSource, /window\.innerHeight - 104/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
     assert.match(arSource, /Pointer mode is on/);
@@ -113,29 +134,38 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
-    assert.match(arSource, /moved\. Eye mode is now on/);
-    assert.match(arSource, /Move cancelled\. Eye mode is now on/);
+    assert.match(arSource, /moved\. View mode is now on/);
+    assert.match(arSource, /Move cancelled\. View mode is now on/);
+    const finishHold = arSource.slice(arSource.indexOf('async function finishMarkerDrag'), arSource.indexOf('function cancelMarkerDrag'));
+    assert.ok(finishHold.indexOf("interactionMode = 'view'") < finishHold.indexOf('await saveMarkerAnchor'));
+    assert.match(finishHold, /state\.record\.position = state\.position/);
+    assert.match(arSource, /placementArmGeneration/);
+    assert.match(arSource, /async function prepareExistingMarkerPlacement/);
+    assert.match(arSource, /pendingExistingMarkerId/);
+    assert.match(arSource, /navigateAfterAr/);
+    assert.match(arSource, /window\.resumeAreaCreationFlow/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-view-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
     assert.match(arSource, /function resetArControls\(\)/);
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
-    assert.match(arSource, /AR controls reset\. Eye mode is on; press plus when you are ready to place a marker/);
+    assert.match(arSource, /AR controls reset\. View mode is on; press plus when you are ready to place a Marker/);
     assert.match(arSource, /Choose its purpose/);
     assert.match(arSource, /data-ar-close-placed/);
     assert.doesNotMatch(arSource, /data-ar-size-step|resizePlacedMarker/);
     assert.match(arSource, /markerDimensions/);
     assert.match(arSource, /note: 3, plant: 4/);
     assert.match(arSource, /notice_board/);
-    assert.match(arSource, /Creating the Area and raising its Totem/);
-    assert.match(arSource, /Structural Markers are created deliberately/);
-    assert.match(arSource, /record\.marker = await convertRecordToAreaCheckpoint/);
+    assert.match(arSource, /data-ar-create-area-form/);
+    assert.match(arSource, /Create &amp; Place Totem/);
+    assert.match(arSource, /async function createAreaCompatibleMarker/);
+    assert.match(arSource, /convertRecordToAreaCheckpoint/);
     assert.match(arSource, /const type = button\.dataset\.arPlacedType;[\s\S]*closePlacePicker\(\);[\s\S]*setPlacedMarkerType\(record, type\)/);
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
     assert.match(arSource, /data-ar-locate-totem/);
     assert.match(arSource, /data-ar-toggle-structural/);
     assert.match(arSource, /Hide.*Totem/);
-    assert.match(arSource, /Hide.*Starting Point/);
+    assert.match(arSource, /Hide.*Trail Entrance/);
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const restoredGroups = await Promise\.all\(areas\.map/);
@@ -145,7 +175,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(configSource, /name: 'Unassigned',[\s\S]*type: 'Other'/);
-    assert.match(arSource, /intro_checkpoint: 'Starting Point'/);
+    assert.match(arSource, /intro_checkpoint: 'Trail Entrance'/);
     assert.match(arSource, /createSitePlace/);
     assert.match(serverSource, /'gps', 'qr', 'spatial'/);
     assert.match(serverSource, /Spatial anchors require finite x, y and z coordinates/);
@@ -173,24 +203,25 @@ test('Creator AR has no dashboard grab or controller-ray controls', () => {
     );
     assert.doesNotMatch(arSource, /targetRaySpace|selectstart|selectend|squeezestart|squeezeend/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
-    assert.match(taskbar, /data-ar-grab-mode/);
+    assert.match(taskbar, /data-ar-hold-mode/);
+    assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /checkpointSessionOrigin/);
 });
 
-test('Creator AR setup guide covers welcome, checkpoint and placement', () => {
+test('Creator AR setup guide starts with Areas and keeps visitor entrances optional', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
-    assert.match(dashboardSource, /Welcome marker/);
-    assert.match(dashboardSource, /Area Marker/);
-    assert.match(dashboardSource, /Plants, markers and notes/);
-    assert.match(dashboardSource, /Set Welcome Marker/);
+    assert.match(dashboardSource, /Area Totem/);
+    assert.match(dashboardSource, /Plants, Markers and Notes/);
+    assert.match(dashboardSource, /Optional Trail Entrance/);
+    assert.match(dashboardSource, /Home &amp; Entrances/);
     assert.match(dashboardSource, /Open Test AR/);
-    assert.match(dashboardSource, /label: 'Starting Point'/);
+    assert.match(dashboardSource, /label: 'Home & Entrances'/);
     assert.match(dashboardSource, /openCheckpointQuickSetup/);
     assert.match(dashboardSource, /Create New Area/);
-    assert.match(dashboardSource, /Add in AR now/);
-    assert.match(dashboardSource, /Add location later/);
-    assert.match(dashboardSource, /Area Marker label/);
+    assert.match(dashboardSource, /Place its Totem in AR/);
+    assert.match(dashboardSource, /Create now, place later/);
+    assert.doesNotMatch(dashboardSource, /Set Welcome Marker/);
 });
 
 test('project settings can rename a project and Areas toggle from the dashboard', () => {
@@ -246,12 +277,41 @@ test('Creator AR opens a transparent WebXR session and cleans up on exit', () =>
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(arSource, /domOverlay: \{ root: overlayRoot \}/);
-    assert.match(arSource, /session\.addEventListener\('end'/);
+    assert.match(arSource, /launchedSession\.addEventListener\('end'/);
     assert.match(arSource, /creator-ar-session-active/);
     assert.match(arSource, /activeSession\?\.end/);
     assert.match(arSource, /history\.pushState\(\{ \.\.\.\(history\.state \|\| \{\}\), nourishlandCreatorAr: true \}/);
     assert.match(arSource, /window\.addEventListener\('popstate', handleArHistoryBack\)/);
     assert.match(arSource, /window\.renderProjectDashboard\?\.\(encodeURIComponent\(projectId\), '', false, 'returning'\)/);
+});
+
+test('Creator AR fences stale session, restore and placement work', () => {
+    const arSource = read('app/screens/arMode.js');
+    const quickPlace = arSource.slice(arSource.indexOf('async function quickPlace(type)'), arSource.indexOf('function createOverlay()', arSource.indexOf('async function quickPlace(type)')));
+    const restoration = arSource.slice(arSource.indexOf('async function loadPlacementAreas('), arSource.indexOf('async function ensurePlacementArea('));
+    const launch = arSource.slice(arSource.indexOf('async function launchArMode('));
+    assert.match(arSource, /function captureArOperationContext\(\)/);
+    assert.match(arSource, /session === context\.launchedSession/);
+    assert.match(arSource, /placementArmGeneration === context\.generation/);
+    assert.match(restoration, /loadProjectSites\(operation\.projectId\)/);
+    assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, operation\.siteId, area\.id\)/);
+    assert.match(restoration, /isArOperationCurrent\(operation, guardOptions\)/);
+    assert.match(quickPlace, /const loadingOperation = captureArOperationContext\(\)/);
+    assert.match(quickPlace, /const operation = captureArOperationContext\(\)/);
+    assert.match(quickPlace, /operationIsCurrent/);
+    assert.match(quickPlace, /createPlaceMarker\(operation\.projectId, operation\.siteId, operation\.areaId/);
+    assert.match(quickPlace, /saveMarkerAnchor\(operation\.projectId, operation\.siteId, operation\.areaId/);
+    assert.match(quickPlace, /if \(!operationIsCurrent\(\)\) return;[\s\S]*sessionMarkers\.push\(record\)/);
+    assert.match(launch, /const launchedSession = session/);
+    assert.match(launch, /if \(session !== launchedSession\) return/);
+    assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
+    assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
+    assert.match(arSource, /saveMarkerAnchor\(operation\.projectId, state\.record\.siteId, state\.record\.areaId/);
+    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. View mode is now on/);
+    assert.match(arSource, /function finishNaturalArExit/);
+    assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
+    assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, areaId, returnContext\), \{ once: true \}\)/);
+    assert.match(arSource, /history\.back\(\)/);
 });
 
 test('Creator AR falls back to setup when WebXR cannot start', () => {
@@ -335,7 +395,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(styles, /\.creator-ar-spatial-name \{/);
     assert.match(source, /async function restoreRecordedMarkers/);
     assert.match(source, /loadMarkerAnchor/);
-    assert.match(source, /loadPlacementAreas\(\)\.then\(restoreRecordedMarkers\)/);
+    assert.match(source, /loadPlacementAreas\(loadingOperation, restorationGuard\)[\s\S]*restoreRecordedMarkers\(restoringOperation, restorationGuard\)/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
     assert.doesNotMatch(styles, /\.creator-ar-placement-status/);
     assert.match(styles, /\.creator-ar-type-options \{ display: grid; grid-template-columns: repeat\(2/);
@@ -347,7 +407,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     const dashboardSource = read('app/screens/projectDashboard.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /let startPromise = null/);
-    assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType\)/);
+    assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(arSource, /session = await navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
@@ -381,13 +441,14 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(arSource, /Area welcome board/);
     assert.doesNotMatch(arSource, /const boardHtml/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-select-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
-    assert.match(arSource, /readyPlacementType = AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
+    assert.match(arSource, /readyPlacementType = pendingExistingMarkerId \? '' : AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
     assert.match(configSource, /placementDistanceMetres: 1\.2/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
     assert.match(arSource, /readyPlacementType = '';\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
-    assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = ''\)/);
+    assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = ''\)/);
+    assert.match(mainSource, /window\.startExistingMarkerPlacement/);
     assert.doesNotMatch(styles, /\.creator-ar-ready-placement|creator-ar-ready-pulse/);
 });
 
@@ -427,7 +488,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);
-    assert.match(arSource, /starting point gateway/);
+    assert.match(arSource, /trail entrance gateway/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

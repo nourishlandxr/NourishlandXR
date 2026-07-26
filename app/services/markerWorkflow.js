@@ -3,7 +3,7 @@ const DEFAULT_NAMES = Object.freeze({
     note: 'A small observation',
     sub_checkpoint: 'Discovery point',
     area_checkpoint: 'New Area Totem',
-    intro_checkpoint: 'Starting Point'
+    intro_checkpoint: 'Trail Entrance'
 });
 
 export function createMinimalMarkerDraft(type, overrides = {}) {

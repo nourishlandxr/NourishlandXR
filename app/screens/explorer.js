@@ -153,8 +153,8 @@ export function toggleArTechnicalDetails() {
 export function renderArFailure(app, encodedProjectId, returnContext, error) {
     const projectId = decodeURIComponent(encodedProjectId);
     const creator = returnContext === 'creator';
-    const userMessage = /Starting Point/i.test(error?.message || '')
-        ? 'Set a GPS Starting Point for this project, then try AR Mode again.'
+    const userMessage = /Starting Point|Trail Entrance/i.test(error?.message || '')
+        ? 'Add a GPS position to this project’s Trail Entrance, then try AR Mode again.'
         : `AR could not start: ${error?.message || 'Unknown error'}. Check that camera access is allowed and try again.`;
     const retryAction = creator
         ? `window.startCreatorLocationAr('${encoded(projectId)}')`

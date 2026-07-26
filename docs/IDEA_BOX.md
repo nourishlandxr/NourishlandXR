@@ -8,6 +8,68 @@ Nourishland XR uses the inviting discovery loop of location-based games to recon
 
 The experience should inspire curiosity. It is not intended to become a dense professional authoring tool. A visitor or garden creator should be able to begin without learning technical language.
 
+## V0.8500 — Areas-first living map strategy
+
+Date recorded: 26 July 2026
+
+Status: V1 foundation
+
+This section supersedes earlier Starting Point-first journey notes while preserving them as product history.
+
+### The essential structure
+
+Every project requires at least one **Area**. Areas are the fundamental regions used to organise Plants, Notes and Markers in a backyard, orchard, garden, forest or trail.
+
+```text
+Project
+└── Areas
+    ├── Area Totem
+    ├── Plants
+    ├── Notes
+    └── Markers
+
+Optional project features
+├── Home Base
+└── Trail Entrance
+```
+
+- **Home Base** is an optional organisational home linked to the main Area. It does not initially require GPS or a spatial object.
+- **Trail Entrance** is the optional physical gateway for a walkthrough, visitor route or guided story. It may later gain AR, GPS, QR or other precise anchoring.
+- A simple backyard or orchard map must work fully without either optional feature.
+
+### One shared Area and Totem flow
+
+The Dashboard always offers **+ Create Area** beside Areas. Creation asks for a name first, then offers:
+
+1. **Place its Totem in AR**
+2. **Create now, place later**
+
+Dashboard creation and **Special Markers → Create Area Totem** must call the same Area workflow and create one shared Area record. Placing a Totem for an existing Area must never create a duplicate Area. Once that Area has a Totem, the action becomes Locate, Hide or Show Totem.
+
+### Gentle growth journey
+
+Friendly Mode encourages progress without scores, coins or competitive badges:
+
+1. **Seed** — project created.
+2. **Roots** — first Area created.
+3. **Growing** — first three living elements added.
+4. **Connected** — another Area or meaningful relationship added.
+5. **Ready to Explore** — the map has been tested on site.
+6. **Ready to Share** — welcome and publishing information are complete.
+
+The journey uses a soft growing or branching visual, highlights one achievable next action and can collapse as confidence grows. Expert Mode removes it.
+
+### Progressive spatial anchoring
+
+Spatial precision develops only when it becomes useful:
+
+1. Choose a main Area or Home Base.
+2. Add an optional welcome.
+3. Place an optional spatial gateway or Trail Entrance.
+4. Add precise GPS, QR or future physical anchoring when preparing a repeatable public experience.
+
+The normal mapping journey must not ask for coordinates, accuracy or physical codes before they are needed.
+
 ## Language rule
 
 **Marker** is the single spatial term shown to users.

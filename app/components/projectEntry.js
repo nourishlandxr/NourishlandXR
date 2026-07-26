@@ -49,7 +49,7 @@ export function renderProjectEntry(config) {
         ? areas.map(area => `<button class="project-area-link" type="button" onclick="${area.action}">
             <span class="project-area-link-icon" aria-hidden="true">▧</span>
             <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.type} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
-            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Starting Point' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
+            <span class="project-area-link-meta">${area.hasHomeBase ? 'Home Base' : area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
@@ -57,6 +57,18 @@ export function renderProjectEntry(config) {
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
+    const growth = config.growthJourney;
+    const growthJourneyHtml = growth ? `<section class="living-map-progress" aria-labelledby="livingMapProgressTitle">
+        <div class="living-map-progress-heading">
+            <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">Your living map is ${escapeAttribute(growth.message)}</h2></div>
+            <strong>${growth.completed} of ${growth.steps.length}</strong>
+        </div>
+        <div class="living-growth-path" role="progressbar" aria-valuemin="0" aria-valuemax="${growth.steps.length}" aria-valuenow="${growth.completed}">
+            ${growth.steps.map((step, index) => `<span class="${step.complete ? 'is-complete' : index === growth.completed ? 'is-current' : ''}" title="${escapeAttribute(step.label)}"><i></i><small>${escapeAttribute(step.label)}</small></span>`).join('')}
+        </div>
+        <div class="living-map-next"><span>${escapeAttribute(growth.nextDescription)}</span><button class="primary" type="button" onclick="${growth.nextAction}">${escapeAttribute(growth.nextLabel)}</button></div>
+        ${growth.optionalFeature ? `<details class="living-map-optional"><summary>Optional: create a home or visitor entrance</summary><p>A Home Base helps organise an everyday map. A Trail Entrance begins a guided visitor journey. Neither is required for an orchard or backyard map.</p><div class="button-row">${growth.optionalFeature.showHome ? `<button type="button" onclick="${growth.optionalFeature.homeAction}">Add Home Base</button>` : ''}${growth.optionalFeature.showTrail ? `<button type="button" onclick="${growth.optionalFeature.trailAction}">Create Trail Entrance</button>` : ''}</div></details>` : ''}
+    </section>` : '';
     const spotlightTarget = ['arMode', 'startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
             ? 'quickAccess'
             : '';
@@ -85,6 +97,8 @@ export function renderProjectEntry(config) {
             <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
+        ${growthJourneyHtml}
+
         <section class="dashboard-ar-path${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
             <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
@@ -92,7 +106,7 @@ export function renderProjectEntry(config) {
                 <small>Place or update Markers on site.</small>
             </button>
             <div class="dashboard-vital-actions">
-                <button class="dashboard-spatial-home" type="button" onclick="${config.startingAction}"><b aria-hidden="true">◊</b><strong>${config.startingConfigured ? 'Starting Point' : 'Add Starting Point'}</strong></button>
+                ${config.homeConfigured ? `<button class="dashboard-spatial-home" type="button" onclick="${config.homeAction}"><b aria-hidden="true">◊</b><strong>${config.homeLabel}</strong></button>` : ''}
             </div>
         </section>
 
@@ -112,10 +126,13 @@ export function renderProjectEntry(config) {
         </section>
 
         <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
-            <button class="section-heading-row areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
-                <h2 id="projectAreasTitle">Areas</h2>
-                <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
-            </button>
+            <div class="section-heading-row areas-heading-row">
+                <button class="areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
+                    <h2 id="projectAreasTitle">Areas</h2>
+                    <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
+                </button>
+                <button class="project-create-area" type="button" onclick="${config.createAreaAction || ''}">+ CREATE AREA</button>
+            </div>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>

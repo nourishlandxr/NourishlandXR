@@ -463,7 +463,7 @@ function createDemoMarker(data) {
     while (fs.existsSync(path.join(demoMarkersDir, markerId))) markerId = `${baseId}_${suffix++}`;
     const markerDir = path.join(demoMarkersDir, markerId);
     const now = new Date().toISOString();
-    const marker = { id: markerId, name, type, status: 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+    const marker = { id: markerId, name, type, description: data.description || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, area_information_board: data.area_information_board || undefined, experience_role: data.experience_role || undefined, status: 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
     const anchor = { type: 'spatial', latitude: null, longitude: null, altitude: null, accuracy: null };
     fs.mkdirSync(markerDir, { recursive: true });
     writeJson(path.join(markerDir, 'marker.json'), marker);
@@ -1178,7 +1178,7 @@ function handleApi(req, res) {
                 const markerDir = path.join(markersDir, markerId);
                 fs.mkdirSync(markerDir, { recursive: true });
                 const now = new Date().toISOString();
-                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, semantic_type: data.semantic_type || undefined, storage_type: data.storage_type || undefined, area_information_board: data.area_information_board || undefined, notice_board: data.notice_board || undefined, experience_role: data.experience_role || undefined, status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
                 if (['gps', 'qr', 'spatial'].includes(String(data.anchor?.type || '').toLowerCase())) {
                     const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };

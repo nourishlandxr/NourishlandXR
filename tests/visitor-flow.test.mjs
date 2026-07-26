@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { renderProjectEntry } from '../app/components/projectEntry.js';
 import { renderLaunchScreen } from '../app/screens/launch.js';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -64,13 +65,21 @@ test('AR entry is gated by preparation and only Start AR Mode launches AR', () =
     assert.match(source, />Go Back</);
 });
 
-test('creator dashboard prioritizes Open AR while retaining quiet management and project settings', () => {
+test('creator dashboard prioritizes Areas and Open AR while optional features stay quiet', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(entrySource, />OPEN AR</);
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
-    assert.match(entrySource, /Add Starting Point/);
+    assert.doesNotMatch(entrySource, /Add Starting Point/);
+    assert.match(entrySource, />\+ CREATE AREA</);
+    assert.match(entrySource, /config\.createAreaAction \|\| ''/);
+    assert.match(entrySource, /Home Base/);
+    assert.match(entrySource, /Trail Entrance/);
+    assert.match(entrySource, /living-map-progress/);
+    assert.match(entrySource, /escapeAttribute\(growth\.nextDescription\)/);
+    assert.match(entrySource, /growth\.optionalFeature\.showHome/);
+    assert.match(entrySource, /growth\.optionalFeature\.showTrail/);
     assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
     assert.doesNotMatch(entrySource, /dashboard-vital-notice/);
     assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
@@ -86,7 +95,10 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories and Focus Elements/);
     assert.match(source, /Project Settings/);
-    assert.match(source, /Manage entrances and experience starting points/);
+    assert.match(source, /Home & Entrances/);
+    assert.match(source, /Optional Home Base and guided Trail Entrance features/);
+    assert.match(source, /createAreaAction: `window\.renderProjectAreaForm/);
+    assert.match(source, /growthJourney/);
     assert.match(source, /Change Theme/);
     assert.match(source, /LIGHT \(White\)/);
     assert.match(source, /DARK \(Black\)/);
@@ -147,33 +159,104 @@ test('creator dashboard prioritizes Open AR while retaining quiet management and
     assert.match(source, /entryCreatorLabel/);
     const changesRowSource = entrySource.slice(entrySource.indexOf('function latestEntryRow'), entrySource.indexOf('export function renderProjectEntry'));
     assert.doesNotMatch(changesRowSource, /\$\{item\.area\}|entry-status-/);
+
+    const dashboardHtml = renderProjectEntry({
+        locationId: 'garden',
+        locationName: 'Garden',
+        siteName: 'Backyard',
+        openArAction: 'window.openAr()',
+        createAreaAction: 'window.createArea()',
+        fieldGuideAction: 'window.fieldGuide()',
+        mapAction: 'window.siteMap()',
+        storiesAction: 'window.stories()',
+        unplacedAction: 'window.unplaced()',
+        backAction: 'window.exitProject()',
+        viewAllAction: 'window.viewAll()',
+        status: { entries: '0', unplaced: '0', areas: '0', lastUpdated: 'No edits yet' },
+        tools: [],
+        growthJourney: null
+    });
+    assert.match(dashboardHtml, /onclick="window\.createArea\(\)">\+ CREATE AREA/);
+    assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
 });
 
-test('fresh projects can start freely and place Starting Point or Area markers in AR', () => {
+test('fresh projects begin with a simple Area and can place its Totem now or later', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
-    assert.match(dashboardSource, /Place Starting Point in AR/);
-    assert.doesNotMatch(dashboardSource.slice(dashboardSource.indexOf('export async function renderNewLocationSetup'), dashboardSource.indexOf('export async function renderAddToLocation')), /Place Area Marker in AR/);
-    assert.match(dashboardSource, /1\. Open AR/);
-    assert.match(dashboardSource, /2\. Aim at an object/);
-    assert.match(dashboardSource, /3\. Tap to place/);
-    assert.match(dashboardSource, /No code is required/);
-    assert.match(dashboardSource, /Outdoor Area — garden, park, nursery, farm section/);
-    assert.match(dashboardSource, /Indoor Area — greenhouse, building, covered growing area/);
-    assert.match(dashboardSource, /Bed or Plot — garden bed, terrace, production row/);
-    assert.match(dashboardSource, /Room — classroom, propagation room, restaurant/);
-    assert.match(dashboardSource, /Enclosure — pen, protected garden, fenced compartment/);
-    assert.match(dashboardSource, /Path or Route — trail, tour route, nursery lane/);
-    assert.match(dashboardSource, /Other — anything that doesn’t fit/);
+    assert.match(dashboardSource, /Your space is ready to grow/);
+    assert.match(dashboardSource, /CREATE YOUR FIRST AREA/);
+    assert.match(dashboardSource, /Name your Area/);
+    assert.match(dashboardSource, /Area \$\{nextAreaNumber\}/);
+    assert.match(dashboardSource, /Examples: Orchard · Vegetable Garden · Creek Bank · Front Bed/);
+    assert.match(dashboardSource, /data-area-next="later"/);
+    assert.match(dashboardSource, /Create now, place later/);
+    assert.match(dashboardSource, /data-area-next="place"/);
+    assert.match(dashboardSource, /Place its Totem in AR/);
+    assert.match(dashboardSource, /event\.submitter\?\.dataset\.areaNext === 'place'/);
+    assert.match(dashboardSource, /await window\.startArMode\(projectId, area\.id, '', 'area_checkpoint', '', intent\)/);
+    assert.match(dashboardSource, /if \(started\) return/);
+    assert.match(dashboardSource, /resumeAreaCreationFlow/);
+    assert.match(dashboardSource, /renderLocationFieldMarker\(encoded\(projectId\), type, placementMode, false, encoded\(areaId\)\)/);
+    assert.match(dashboardSource, /createAreaRecord\(projectId, site\.id/);
+    const areaWorkflowSource = fs.readFileSync(path.join(root, 'app/services/areaWorkflow.js'), 'utf8');
+    assert.match(areaWorkflowSource, /export async function createAreaRecord/);
+    const setupSource = dashboardSource.slice(
+        dashboardSource.indexOf('export async function renderNewLocationSetup'),
+        dashboardSource.indexOf('export async function renderAddToLocation')
+    );
+    assert.doesNotMatch(setupSource, /Place Starting Point|Use current GPS|Enter coordinates/);
     assert.match(dashboardSource, /renderAreaRequired/);
     assert.match(dashboardSource, /ensureProjectLocation/);
     assert.match(dashboardSource, /Main Location/);
     assert.match(dashboardSource, />Create Area</);
-    assert.match(dashboardSource, /Is this where your Starting Point will be/);
+    assert.doesNotMatch(dashboardSource, /Is this where your Starting Point will be/);
+    assert.match(dashboardSource, /A Home Base is simply a reference to your main Area/);
+    assert.match(dashboardSource, /A Trail Entrance belongs to the Area where a guided journey begins/);
     assert.match(dashboardSource, /area_explained/);
     assert.match(dashboardSource, /first_area_created_or_selected/);
     assert.match(dashboardSource, /meaningful section inside a Location/);
+    assert.match(dashboardSource, /placedTotemAreaIds/);
+    assert.match(dashboardSource, /missingTotemArea/);
+    assert.match(dashboardSource, /allAreasHavePlacedTotems/);
+    assert.match(dashboardSource, /effectiveMarkerType/);
+    assert.match(dashboardSource, /const homeArea = areas\.find/);
+    assert.match(dashboardSource, /const startingPoints = entries\.filter\(entry => entry\.marker\.type === 'intro_checkpoint'\)/);
+    assert.match(dashboardSource, /window\.startExistingMarkerPlacement/);
+    assert.doesNotMatch(dashboardSource, /savedMarker = await updatePlaceMarker\(projectId, context\.site\.id, place\.id, savedMarker\.id, data\)/);
+});
+
+test('Area AR actions fall back to the Area dashboard when WebXR cannot start', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    const helperSource = dashboardSource.slice(
+        dashboardSource.indexOf('export async function openProjectAreaAr'),
+        dashboardSource.indexOf('export async function renderProjectAreaDashboard')
+    );
+    const areaDashboardSource = dashboardSource.slice(
+        dashboardSource.indexOf('export async function renderProjectAreaDashboard'),
+        dashboardSource.indexOf('export async function renderProjectAreaLocationForm')
+    );
+    assert.match(helperSource, /started = await window\.startArMode\?\.\(projectId, areaId, checkpointId, initialPlacementType, '', 'dashboard'\)/);
+    assert.match(helperSource, /if \(started\) return true;\s*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. Check camera permission and WebXR support[\s\S]*return false;/);
+    assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
+    assert.match(dashboardSource, /action: `window\.openProjectAreaAr\('\$\{encoded\(project\.id\)\}', '\$\{encoded\(missingTotemArea\.id\)\}', '', 'area_checkpoint'\)`/);
+    assert.match(dashboardSource, /action: `window\.openProjectAreaAr\('\$\{encoded\(project\.id\)\}', '\$\{encoded\(firstArea\.id\)\}'\)`/);
+    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '\$\{encoded\(checkpoint\.marker\.id\)\}'\)">Open this Area in AR/);
+    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place its Totem in AR/);
+    assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
+    assert.doesNotMatch(areaDashboardSource, /onclick="window\.startArMode\([^)]*\)">(?:Open this Area in AR|Place its Totem in AR)/);
+});
+
+test('Organizer Folder excludes compatibility Area Totems by semantic type', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const unplacedSource = dashboardSource.slice(
+        dashboardSource.indexOf('export async function renderUnplacedContent'),
+        dashboardSource.indexOf('export async function renderStoriesAndFocus')
+    );
+    assert.match(unplacedSource, /\['plant', 'note', 'sub_checkpoint'\]\.includes\(effectiveMarkerType\(entry\.marker\)\)/);
+    assert.match(unplacedSource, /const markerType = effectiveMarkerType\(marker\)/);
+    assert.doesNotMatch(unplacedSource, /\.includes\(entry\.marker\.type\)/);
 });
 
 test('quick access creation is minimal and separates Area assignment from placement', () => {
@@ -229,6 +312,7 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
 test('new location asks only for core details and supported templates', () => {
     const form = fs.readFileSync(path.join(root, 'app/components/siteForm.js'), 'utf8');
     const templates = fs.readFileSync(path.join(root, 'app/templates/projectTemplates.js'), 'utf8');
+    const sites = fs.readFileSync(path.join(root, 'app/screens/sites.js'), 'utf8');
     const dashboard = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     assert.match(form, /Location name/);
     assert.match(form, /Description \(optional\)/);
@@ -238,6 +322,7 @@ test('new location asks only for core details and supported templates', () => {
         assert.match(templates, new RegExp(label));
     }
     assert.match(form, /templateKey = 'empty'/);
+    assert.match(sites, /let selectedTemplate = 'empty'/);
     assert.ok(templates.indexOf('empty:') < templates.indexOf('food_forest:'));
     assert.match(dashboard, /projectSettingsCoverImage/);
     assert.match(dashboard, /Cover image \(optional\)/);
@@ -254,9 +339,12 @@ test('new projects offer friendly mode by default and an explicit Expert Mode', 
     assert.match(dashboardSource, /const expertMode = project\.expertMode === true/);
     assert.match(dashboardSource, /setProjectTutorialMode\(projectId, !enabled\)/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
-    assert.match(dashboardSource, /What should visitors call this place\?/);
+    assert.match(dashboardSource, /if \(project\.expertMode === true\) return renderProjectDashboard/);
+    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true \? null/);
+    assert.match(dashboardSource, /const guidance = project\.expertMode === true \? null/);
+    assert.match(dashboardSource, /What should visitors call this entrance\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);
-    assert.match(dashboardSource, /Advanced Starting Point options/);
+    assert.match(dashboardSource, /Advanced Trail Entrance options/);
 });
 
 test('project publishing can hide a project from Explorer', () => {
