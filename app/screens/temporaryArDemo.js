@@ -420,8 +420,11 @@ function bindSimulatedInformationPanels(layer) {
         const record = markers[index];
         if (!record) return;
         let holdTimer = null;
-        compactMarker.addEventListener('pointerdown', () => {
+        let holdGesture = null;
+        compactMarker.addEventListener('pointerdown', event => {
             if (demoHeldIndex === index) return;
+            holdGesture = { pointerId: event.pointerId, startY: event.clientY };
+            compactMarker.setPointerCapture?.(event.pointerId);
             holdTimer = setTimeout(() => {
                 demoHeldIndex = index;
                 suppressDemoMarkerClick = true;
@@ -436,8 +439,21 @@ function bindSimulatedInformationPanels(layer) {
                 const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
                 joystick.hidden = false;
                 joystick.querySelector('strong').textContent = record.name || 'Held element';
-                setGuide(`Holding ${record.name || 'this element'} at the aim. Use Pull or Push, then press it again to release.`);
+                joystick.querySelector('[data-demo-depth-readout]').textContent = `${(record.demoDistance || 1).toFixed(1)} m`;
+                joystick.style.setProperty('--depth-shift', '0px');
+                setGuide(`Holding ${record.name || 'this element'} at the aim. Keep this finger down: slide up to push away or down to pull closer.`);
             }, 420);
+        });
+        compactMarker.addEventListener('pointermove', event => {
+            if (demoHeldIndex !== index || event.pointerId !== holdGesture?.pointerId) return;
+            const verticalTravel = holdGesture.startY - event.clientY;
+            record.demoDistance = Math.max(.4, Math.min(4, 1 + verticalTravel / 120));
+            record.demoDepthScale = Math.max(.55, Math.min(1.8, 1 / record.demoDistance));
+            compactMarker.style.setProperty('--depth-scale', record.demoDepthScale);
+            const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
+            const visualMotion = Math.max(-1, Math.min(1, verticalTravel / 180));
+            joystick.style.setProperty('--depth-shift', `${(-visualMotion * 38).toFixed(1)}px`);
+            joystick.querySelector('[data-demo-depth-readout]').textContent = `${record.demoDistance.toFixed(1)} m`;
         });
         const cancelHoldTimer = () => { clearTimeout(holdTimer); holdTimer = null; };
         compactMarker.addEventListener('pointerup', cancelHoldTimer);
@@ -645,18 +661,12 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><aside class="tryit-depth-joystick" data-demo-depth-joystick hidden><strong>Held element</strong><span>Pull</span><input type="range" min="-100" max="100" value="0" step="5" aria-label="Pull closer or push farther" /><span>Push</span></aside><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><aside class="tryit-depth-joystick" data-demo-depth-joystick hidden aria-label="Slide up to push away or down to pull closer"><strong>Held element</strong><span class="tryit-depth-label">Push away</span><span class="tryit-depth-track" aria-hidden="true"><i></i></span><span class="tryit-depth-label">Pull closer</span><small data-demo-depth-readout>1.0 m</small></aside><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    appRoot.querySelector('[data-demo-depth-joystick] input').addEventListener('input', event => {
-        const record = markers[demoHeldIndex];
-        if (!record) return;
-        record.demoDepthScale = Math.max(.55, Math.min(1.8, 1 - Number(event.currentTarget.value) / 180));
-        appRoot.querySelector(`[data-demo-marker-index="${demoHeldIndex}"]`)?.style.setProperty('--depth-scale', record.demoDepthScale);
-    });
     showGuidedChoice('<h2>Welcome to our quick demo</h2><p>Hey there, welcome to NourishlandXR. Imagine your space coming alive with rich information—plants sharing their stories, useful knowledge appearing where it matters, and each place becoming easier to understand.</p><button type="button" data-demo-choice="discover">Let’s explore</button>', choice => {
         if (choice !== 'discover') return;
         showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place three simple Markers together. One will become a Plant, one a Focus Point, and one an Area Totem. Nothing from this quick demo is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {

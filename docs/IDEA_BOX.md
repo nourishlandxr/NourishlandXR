@@ -1,5 +1,12 @@
 # Nourishland XR Idea Box
 
+## V0.8512 — One-finger spatial depth
+
+- Hold an element and continue the same gesture vertically.
+- Slide up to push away; slide down to pull closer.
+- Show depth as a quiet rail growing naturally from the cursor, with live distance feedback.
+- Preserve the second-press confirmation so accidental finger release does not lose the refined position.
+
 ## V0.8511 — Living Plant Profile interaction
 
 - Keep ordinary Plants simple; let creators deliberately upgrade important Plants into knowledge-rich Profiles.

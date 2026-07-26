@@ -187,11 +187,15 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /View mode is on\. Hover over a Marker to reveal its name/);
     assert.match(arSource, /Hold mode is on\. Press an element to carry it at the aim; press it again to release/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
-    assert.match(arSource, /latestViewerMatrix\[12\] - latestViewerMatrix\[8\] \* distance/);
+    assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
+    assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
+    assert.match(arSource, /function heldPointerRay\(\)/);
+    assert.match(arSource, /latestViewerMatrix\[12\] \+ ray\.x \* distance/);
     assert.match(arSource, /data-ar-depth-joystick/);
     assert.doesNotMatch(arSource, /window\.innerHeight - 104/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
-    assert.match(arSource, /latestViewerMatrix\[14\] - latestViewerMatrix\[10\] \* distance/);
+    assert.match(arSource, /latestViewerMatrix\[14\] \+ ray\.z \* distance/);
+    assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.profileExpanded = !record\.profileExpanded/);
     assert.match(arSource, /openInlineEditor/);
@@ -449,6 +453,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function toggleDemoPlantProfile/);
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
     assert.match(source, /uniform float opacity/);
+    assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
+    assert.match(source, /Keep this finger down: slide up to push away or down to pull closer/);
+    assert.match(styles, /\.tryit-depth-track i/);
+    assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(styles, /\.plant-knowledge-core/);

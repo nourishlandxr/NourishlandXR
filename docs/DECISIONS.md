@@ -1,5 +1,15 @@
 # NourishlandXR product decisions
 
+## 2026-07-26 — Push/Pull is part of the Hold gesture
+
+Decision: depth adjustment is not a separate slider. While an element is held, the same finger slides upward to push it farther away or downward to pull it closer. The visual depth rail extends directly through the centre cursor.
+
+Consequences:
+
+- Placement does not require a second finger or a separate control.
+- The held element follows the thumb-reachable pointer ray, not an unrelated screen-centre ray.
+- Releasing the first gesture leaves the element held; pressing it again confirms and releases it.
+
 ## 2026-07-26 — Plant Profiles are an upgrade, not the default
 
 Decision: A plain Plant stays a lightweight living orb. Creating a Plant Profile unlocks advanced scientific, practical, relationship and propagation data. In AR, an upgraded Plant responds gently on hover and its Marker toggles the tethered information tree.

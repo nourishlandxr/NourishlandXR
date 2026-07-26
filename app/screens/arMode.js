@@ -218,8 +218,7 @@ function cleanupDrag() {
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = true;
-        const control = joystick.querySelector('input');
-        if (control) control.value = '0';
+        joystick.style.setProperty('--depth-shift', '0px');
     }
 }
 
@@ -819,6 +818,7 @@ function beginMarkerInteraction(record, event) {
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
+        gestureStartY: Number.isFinite(event.clientY) ? event.clientY : window.innerHeight / 2,
         position: { ...record.position },
         cameraPosition: camera,
         distance,
@@ -828,31 +828,60 @@ function beginMarkerInteraction(record, event) {
     event.currentTarget.classList.add('is-adjusting');
     overlayRoot?.classList.add('is-holding-item');
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = false;
         joystick.querySelector('[data-ar-depth-name]').textContent = record.marker.name;
+        joystick.querySelector('[data-ar-depth-readout]').textContent = `${distance.toFixed(1)} m`;
+        joystick.style.setProperty('--depth-shift', '0px');
     }
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
-    setPlacementStatus(`Holding ${record.marker.name}. Aim to move, use Push/Pull for depth, then press it again to release.`);
+    setPlacementStatus(`Holding ${record.marker.name}. Keep the same finger down: slide up to push away or down to pull closer. Press again to release.`);
 }
 
 function moveMarkerDrag(event) {
     if (!dragState) return;
     if (event.pointerId !== dragState.pointerId) return;
+    const verticalTravel = dragState.gestureStartY - event.clientY;
+    setHeldMarkerDepthOffset(verticalTravel / 120);
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
+}
+
+function heldPointerRay() {
+    if (!latestViewerMatrix || !latestView?.projectionMatrix) return null;
+    const pointer = overlayRoot?.querySelector('.creator-ar-mode-pointer');
+    const rect = pointer?.getBoundingClientRect();
+    const screenX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const screenY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const ndcX = screenX / window.innerWidth * 2 - 1;
+    const ndcY = 1 - screenY / window.innerHeight * 2;
+    const projection = latestView.projectionMatrix;
+    let x = (ndcX + projection[8]) / projection[0];
+    let y = (ndcY + projection[9]) / projection[5];
+    let z = -1;
+    const viewLength = Math.hypot(x, y, z) || 1;
+    x /= viewLength;
+    y /= viewLength;
+    z /= viewLength;
+    const worldX = latestViewerMatrix[0] * x + latestViewerMatrix[4] * y + latestViewerMatrix[8] * z;
+    const worldY = latestViewerMatrix[1] * x + latestViewerMatrix[5] * y + latestViewerMatrix[9] * z;
+    const worldZ = latestViewerMatrix[2] * x + latestViewerMatrix[6] * y + latestViewerMatrix[10] * z;
+    const worldLength = Math.hypot(worldX, worldY, worldZ) || 1;
+    return { x: worldX / worldLength, y: worldY / worldLength, z: worldZ / worldLength };
 }
 
 function updateGrabbedMarkerFromCamera() {
     if (!dragState) return;
     if (!latestViewerMatrix) return;
     const distance = Math.max(.3, Math.min(8, dragState.distance + dragState.depthOffset));
-    dragState.record.position.x = latestViewerMatrix[12] - latestViewerMatrix[8] * distance;
-    dragState.record.position.y = latestViewerMatrix[13] - latestViewerMatrix[9] * distance;
-    dragState.record.position.z = latestViewerMatrix[14] - latestViewerMatrix[10] * distance;
+    const ray = heldPointerRay() || { x: -latestViewerMatrix[8], y: -latestViewerMatrix[9], z: -latestViewerMatrix[10] };
+    dragState.record.position.x = latestViewerMatrix[12] + ray.x * distance;
+    dragState.record.position.y = latestViewerMatrix[13] + ray.y * distance;
+    dragState.record.position.z = latestViewerMatrix[14] + ray.z * distance;
 }
 
 async function finishMarkerDrag(event) {
@@ -875,12 +904,13 @@ async function finishMarkerDrag(event) {
     }
 }
 
-function adjustHeldMarkerDepth(value) {
+function setHeldMarkerDepthOffset(value) {
     if (!dragState) return;
-    dragState.depthOffset = Number(value) / 100;
-    updateGrabbedMarkerFromCamera();
-    positionSessionMarkers();
+    dragState.depthOffset = Math.max(-dragState.distance + .3, Math.min(8 - dragState.distance, Number(value)));
     const readout = overlayRoot?.querySelector('[data-ar-depth-readout]');
+    const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
+    const visualMotion = Math.max(-1, Math.min(1, dragState.depthOffset / 2));
+    joystick?.style.setProperty('--depth-shift', `${(-visualMotion * 38).toFixed(1)}px`);
     if (readout) {
         const distance = Math.max(.3, dragState.distance + dragState.depthOffset);
         readout.textContent = `${distance.toFixed(1)} m`;
@@ -1284,9 +1314,11 @@ function createOverlay() {
             ${placementPointerMarkup('Place Marker', true)}
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
-        <aside class="creator-ar-depth-joystick" data-ar-depth-joystick hidden aria-label="Push or pull held element">
+        <aside class="creator-ar-depth-joystick" data-ar-depth-joystick hidden aria-label="Slide up to push away or down to pull closer">
             <strong data-ar-depth-name>Held element</strong>
-            <div><span>Pull</span><input type="range" min="-200" max="200" value="0" step="5" aria-label="Pull closer or push farther" /><span>Push</span></div>
+            <span class="creator-ar-depth-label creator-ar-depth-push">Push away</span>
+            <span class="creator-ar-depth-track" aria-hidden="true"><i></i></span>
+            <span class="creator-ar-depth-label creator-ar-depth-pull">Pull closer</span>
             <small data-ar-depth-readout>1.2 m</small>
         </aside>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
@@ -1320,7 +1352,6 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
-    overlayRoot.querySelector('[data-ar-depth-joystick] input').addEventListener('input', event => adjustHeldMarkerDepth(event.currentTarget.value));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();
         event.stopPropagation();
