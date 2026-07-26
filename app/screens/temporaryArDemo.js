@@ -287,7 +287,7 @@ function updateSimulatedMarkers() {
         const defaultOffsets = { plant: { x: -70, y: -45 }, note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
-        const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '·';
+        const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
@@ -626,14 +626,23 @@ function createMarkerTexture(record) {
     label.height = 256;
     const ctx = label.getContext('2d');
     if (record.type === 'plant') {
-        ctx.fillStyle = '#4f8d3f';
+        const life = ctx.createRadialGradient(102, 94, 10, 128, 128, 94);
+        life.addColorStop(0, '#f5ffe8');
+        life.addColorStop(.2, '#b7e895');
+        life.addColorStop(.52, '#5fa34d');
+        life.addColorStop(.78, 'rgba(43,112,54,.88)');
+        life.addColorStop(1, 'rgba(25,75,39,.2)');
+        ctx.fillStyle = life;
         ctx.beginPath();
         ctx.arc(128, 128, 88, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = '76px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🌱', 128, 153);
+        ctx.strokeStyle = 'rgba(239,255,226,.88)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(241,255,225,.82)';
+        ctx.beginPath();
+        ctx.arc(108, 105, 18, 0, Math.PI * 2);
+        ctx.fill();
     } else if (record.demoType === 'zone') {
         const post = ctx.createLinearGradient(76, 0, 180, 0);
         post.addColorStop(0, 'rgba(31,96,89,.96)');

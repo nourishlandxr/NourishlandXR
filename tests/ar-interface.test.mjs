@@ -56,6 +56,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(styles, /\.creator-ar-overlay\.is-view-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-overlay\.is-hand-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-overlay\.is-select-mode \.creator-ar-mode-pointer/);
+    assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*bottom:/);
+    assert.doesNotMatch(arSource, /data-ar-mode-pointer-label/);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /session\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
@@ -91,6 +93,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /interactionMode = mode/);
     assert.match(arSource, /Eye mode is on\. Hover over a Marker to reveal its name/);
     assert.match(arSource, /Hand mode is on/);
+    assert.match(arSource, /snapOffset/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
     assert.match(arSource, /Pointer mode is on/);

@@ -162,8 +162,6 @@ function updateInteractionControls() {
     overlayRoot?.classList.toggle('is-view-mode', interactionMode === 'view');
     overlayRoot?.classList.toggle('is-hand-mode', interactionMode === 'grab');
     overlayRoot?.classList.toggle('is-select-mode', interactionMode === 'select');
-    const modePointerLabel = overlayRoot?.querySelector('[data-ar-mode-pointer-label]');
-    if (modePointerLabel) modePointerLabel.textContent = interactionMode === 'grab' ? 'Hold to move' : interactionMode === 'select' ? 'Tap to open' : 'Look to reveal';
 }
 
 function setInteractionMode(mode) {
@@ -567,6 +565,11 @@ function beginMarkerInteraction(record, event) {
         openInlineEditor(record);
         return;
     }
+    const grabScale = 2.2 / Math.max(window.innerWidth, 320);
+    const snapOffset = {
+        x: (window.innerWidth / 2 - event.clientX) * grabScale,
+        y: -(window.innerHeight - 104 - event.clientY) * grabScale
+    };
     dragState = {
         record,
         element: event.currentTarget,
@@ -575,13 +578,16 @@ function beginMarkerInteraction(record, event) {
         startY: event.clientY,
         position: { ...record.position },
         cameraPosition: latestViewerMatrix ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } : null,
-        pointerOffset: { x: 0, y: 0 }
+        snapOffset,
+        pointerOffset: { ...snapOffset }
     };
     event.currentTarget.classList.add('is-adjusting');
     event.currentTarget.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointerup', finishMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
+    updateGrabbedMarkerFromCamera();
+    positionSessionMarkers();
     setPlacementStatus(`Holding ${record.marker.name}. Drag or move your phone; release to save its new position.`);
 }
 
@@ -589,8 +595,8 @@ function moveMarkerDrag(event) {
     if (!dragState) return;
     if (event.pointerId !== dragState.pointerId) return;
     const scale = 2.2 / Math.max(window.innerWidth, 320);
-    dragState.pointerOffset.x = (event.clientX - dragState.startX) * scale;
-    dragState.pointerOffset.y = -(event.clientY - dragState.startY) * scale;
+    dragState.pointerOffset.x = dragState.snapOffset.x + (event.clientX - dragState.startX) * scale;
+    dragState.pointerOffset.y = dragState.snapOffset.y - (event.clientY - dragState.startY) * scale;
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
 }
@@ -912,7 +918,7 @@ function createOverlay() {
         <div class="creator-ar-placement-guide" aria-hidden="true">
             ${placementPointerMarkup('Place Marker', true)}
         </div>
-        <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span><small data-ar-mode-pointer-label>Look to reveal</small></div>
+        <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <div class="creator-ar-control-dock">
           <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
