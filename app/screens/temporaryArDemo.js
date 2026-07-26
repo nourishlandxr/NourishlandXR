@@ -28,6 +28,7 @@ let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
+let placementReady = false;
 const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
@@ -61,6 +62,7 @@ function clearSessionState() {
     marker = null;
     markerType = 'marker';
     demoStage = 'plant';
+    placementReady = false;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     boardTypingTimer = null;
@@ -147,7 +149,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         typedLength += 1;
         paragraph.textContent = fullText.slice(0, typedLength);
         if (typedLength >= fullText.length) return finishTyping();
-        boardTypingTimer = setTimeout(typeNextCharacter, 38);
+        boardTypingTimer = setTimeout(typeNextCharacter, 46);
     };
     if (typing) {
         paragraph.textContent = '';
@@ -167,31 +169,32 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function guidePlantConversion(record) {
-    setGuide('Marker placed. Now give it a purpose.');
-    showGuidedChoice('<h2>Marker placed</h2><p>Make this a Plant Marker.</p><button type="button" data-demo-choice="plant">Make it a Plant</button>', choice => {
+    setGuide('Your first Marker is placed.');
+    showGuidedChoice('<h2>Beautiful — your first Marker is placed</h2><p>A new Marker is an unassigned orb. It can become a Plant, a flat Note, or a Special Marker such as an Area Totem. Let’s use a Plant.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="plant">Plant</button><button type="button" disabled>Note</button><button type="button" disabled>Special Marker</button></div>', choice => {
         if (choice !== 'plant') return;
         record.type = 'plant';
         record.demoType = 'plant';
         refreshDemoRecord(record);
-        showGuidedChoice('<h2>Choose a plant preset</h2><p>The plant database can recommend matching profiles. For this guided example, use Lemon Myrtle.</p><label>Search plant presets<input value="Lemon Myrtle" readonly></label><button type="button" data-demo-choice="lemon-myrtle">Use Lemon Myrtle preset</button>', preset => {
+        setGuide('The Marker has become a living Plant orb.');
+        showGuidedChoice('<h2>Name your Plant</h2><p>You can search your own plants or the global catalogue. For this example, choose Lemon Myrtle.</p><label>Plant name<input value="Lemon Myrtle" readonly></label><button type="button" data-demo-choice="lemon-myrtle">Choose Lemon Myrtle</button>', preset => {
             if (preset !== 'lemon-myrtle') return;
             record.name = 'Lemon Myrtle';
             record.demoExpanded = true;
-            record.demoActiveBranch = 'left-0';
+            record.demoActiveBranch = '';
             record.informationPosition = plantInformationPosition(record);
             record.revealTitle = true;
             record.revealLines = 3;
             refreshDemoRecord(record);
             hideGuidedChoice();
-            setGuide('Lemon Myrtle profile loaded. Its climate, uses and relationships now live in this place.');
+            setGuide('Its soft information tree opens at reading height, always tethered to the original living orb.');
             showDemoAction('Place another Marker →', 'note');
         });
     });
 }
 
 function guideNoteConversion(record) {
-    setGuide('A second Marker is ready. Turn it into a Focus Point.');
-    showGuidedChoice('<h2>What kind of Marker is this?</h2><p>Make it a Note, then choose a useful starting template.</p><button type="button" data-demo-choice="note">Make it a Note</button>', choice => {
+    setGuide('A second Marker is ready.');
+    showGuidedChoice('<h2>Turn this Marker into a Note</h2><p>A Note is always a flat information bubble—not a 3D object. Its title remains easy to recognise from a distance.</p><button type="button" data-demo-choice="note">Make it a Note</button>', choice => {
         if (choice !== 'note') return;
         record.type = 'note';
         record.demoType = 'note';
@@ -205,7 +208,7 @@ function guideNoteConversion(record) {
             record.revealLines = 3;
             refreshDemoRecord(record);
             hideGuidedChoice();
-            setGuide('This Focus Point can later include sound, animation, images, alerts and changing observations.');
+            setGuide('Use Hold mode and the centre aim to fine-tune it: hold the Note, move your view, then release it where it belongs.');
             showDemoAction('See how Areas work →', 'zone');
         });
     });
@@ -213,7 +216,7 @@ function guideNoteConversion(record) {
 
 function guideAreaConversion(record) {
     setGuide('The final Marker can become the checkpoint for one defined Area.');
-    showGuidedChoice('<h2>Why create an Area?</h2><p>An Area groups nearby Plants and Focus Points around a translucent Totem. Arriving there can reveal only the knowledge belonging to that place.</p><button type="button" data-demo-choice="area">Create Area Totem</button>', choice => {
+    showGuidedChoice('<h2>Give the Area a Totem</h2><p>A Totem is the main information centre of an Area. Crucial guidance can gather here, and Plants without a permanent position can wait nearby until you place them.</p><button type="button" data-demo-choice="area">Raise the Area Totem</button>', choice => {
         if (choice !== 'area') return;
         record.type = 'sub_checkpoint';
         record.demoType = 'zone';
@@ -240,6 +243,7 @@ function guideAreaConversion(record) {
 function armDemoPlacement(type) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
+    placementReady = false;
     const place = appRoot?.querySelector('[data-tryit-place]');
     const simulatedAim = simulatedMode
         ? ({ plant: { x: 50, y: 50 }, note: { x: 68, y: 58 }, zone: { x: 80, y: 44 } })[type]
@@ -254,12 +258,11 @@ function armDemoPlacement(type) {
     place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
     if (label) label.textContent = 'Place a Marker';
-    const instructions = {
-        plant: 'Choose a new spot and place a Marker.',
-        note: 'Choose another spot in your physical space for a Marker.',
-        zone: 'Choose the central checkpoint for this Area.'
-    };
-    setGuide(instructions[type]);
+    setGuide(type === 'plant'
+        ? 'Look around slowly. The centre aim will appear when you are ready.'
+        : type === 'note'
+            ? 'Take in the space before choosing the next position.'
+            : 'Look for the natural centre of this Area.');
     const introductions = {
         plant: ['Find your first place', 'Look around slowly and choose a calm, clear spot. In a moment, an aiming circle will appear in the centre to help you place with intention.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.'],
@@ -267,15 +270,17 @@ function armDemoPlacement(type) {
     };
     const [title, introduction] = introductions[type];
     clearTimeout(aimRevealTimer);
-    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p>`, () => {}, {
-        onTextComplete: () => {
-            place?.removeAttribute('hidden');
-            requestAnimationFrame(() => place?.classList.add('is-revealing'));
-            aimRevealTimer = setTimeout(() => {
-                place?.classList.add('is-ready');
-                showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>${instructions[type]} When the aiming circle rests on the right place, tap it.</p>`);
-            }, 1100);
-        }
+    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="show-aim">Show the centre aim</button>`, choice => {
+        if (choice !== 'show-aim') return;
+        hideGuidedChoice();
+        setGuide('Take a moment to follow the centre aim as you look around.');
+        place?.removeAttribute('hidden');
+        requestAnimationFrame(() => place?.classList.add('is-revealing'));
+        aimRevealTimer = setTimeout(() => {
+            place?.classList.add('is-ready');
+            placementReady = true;
+            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>Let’s place it around you using our centre aim. Look slowly, settle the circle on the right place, then tap the circle.</p>`);
+        }, 1900);
     });
 }
 
@@ -556,7 +561,8 @@ function plantInformationPosition(record) {
 }
 
 function placeMarker() {
-    if (marker || markers.length >= 3 || markers.some(record => record.tutorialStage === demoStage)) return;
+    if (!placementReady || marker || markers.length >= 3 || markers.some(record => record.tutorialStage === demoStage)) return;
+    placementReady = false;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
@@ -981,7 +987,7 @@ async function startImmersive() {
         const viewerSpace = await session.requestReferenceSpace('viewer');
         hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         setupRenderer();
-        session.addEventListener('select', () => { if (!marker) placeMarker(); });
+        session.addEventListener('select', () => { if (placementReady && !marker) placeMarker(); });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;

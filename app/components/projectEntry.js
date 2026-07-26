@@ -60,14 +60,13 @@ export function renderProjectEntry(config) {
     const growth = config.growthJourney;
     const growthJourneyHtml = growth ? `<section class="living-map-progress" aria-labelledby="livingMapProgressTitle">
         <div class="living-map-progress-heading">
-            <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">Your living map is ${escapeAttribute(growth.message)}</h2></div>
+            <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">${escapeAttribute(growth.message)}</h2></div>
             <strong>${growth.completed} of ${growth.steps.length}</strong>
         </div>
-        <div class="living-growth-path" role="progressbar" aria-valuemin="0" aria-valuemax="${growth.steps.length}" aria-valuenow="${growth.completed}">
-            ${growth.steps.map((step, index) => `<span class="${step.complete ? 'is-complete' : index === growth.completed ? 'is-current' : ''}" title="${escapeAttribute(step.label)}"><i></i><small>${escapeAttribute(step.label)}</small></span>`).join('')}
+        <div class="tutorial-task-list" role="list" aria-label="Getting started tasks">
+            ${growth.steps.map(step => `<span class="${step.complete ? 'is-complete' : ''}" role="listitem"><i aria-hidden="true">${step.complete ? '✓' : '○'}</i><strong>${escapeAttribute(step.label)}</strong>${step.progress ? `<small>${escapeAttribute(step.progress)}</small>` : ''}</span>`).join('')}
         </div>
         <div class="living-map-next"><span>${escapeAttribute(growth.nextDescription)}</span><button class="primary" type="button" onclick="${growth.nextAction}">${escapeAttribute(growth.nextLabel)}</button></div>
-        ${growth.optionalFeature ? `<details class="living-map-optional"><summary>Optional: create a home or visitor entrance</summary><p>A Home Base helps organise an everyday map. A Trail Entrance begins a guided visitor journey. Neither is required for an orchard or backyard map.</p><div class="button-row">${growth.optionalFeature.showHome ? `<button type="button" onclick="${growth.optionalFeature.homeAction}">Add Home Base</button>` : ''}${growth.optionalFeature.showTrail ? `<button type="button" onclick="${growth.optionalFeature.trailAction}">Create Trail Entrance</button>` : ''}</div></details>` : ''}
     </section>` : '';
     const spotlightTarget = ['arMode', 'startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
             ? 'quickAccess'

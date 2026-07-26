@@ -674,15 +674,6 @@ function beginMarkerInteraction(record, event) {
         openInlineEditor(record);
         return;
     }
-    const grabScale = 2.2 / Math.max(window.innerWidth, 320);
-    const pointerBounds = overlayRoot?.querySelector('.creator-ar-mode-pointer span')?.getBoundingClientRect();
-    const pointerTarget = pointerBounds
-        ? { x: pointerBounds.left + pointerBounds.width / 2, y: pointerBounds.top + pointerBounds.height / 2 }
-        : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const snapOffset = {
-        x: (pointerTarget.x - event.clientX) * grabScale,
-        y: -(pointerTarget.y - event.clientY) * grabScale
-    };
     dragState = {
         record,
         element: event.currentTarget,
@@ -691,8 +682,7 @@ function beginMarkerInteraction(record, event) {
         startY: event.clientY,
         position: { ...record.position },
         cameraPosition: latestViewerMatrix ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } : null,
-        snapOffset,
-        pointerOffset: { ...snapOffset }
+        pointerOffset: { x: 0, y: 0 }
     };
     event.currentTarget.classList.add('is-adjusting');
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -701,21 +691,24 @@ function beginMarkerInteraction(record, event) {
     window.addEventListener('pointercancel', cancelMarkerDrag);
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
-    setPlacementStatus(`Holding ${record.marker.name}. Drag or move your phone; release to save its new position.`);
+    setPlacementStatus(`Holding ${record.marker.name} at the centre aim. Move your phone; release to place it.`);
 }
 
 function moveMarkerDrag(event) {
     if (!dragState) return;
     if (event.pointerId !== dragState.pointerId) return;
-    const scale = 2.2 / Math.max(window.innerWidth, 320);
-    dragState.pointerOffset.x = dragState.snapOffset.x + (event.clientX - dragState.startX) * scale;
-    dragState.pointerOffset.y = dragState.snapOffset.y - (event.clientY - dragState.startY) * scale;
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
 }
 
 function updateGrabbedMarkerFromCamera() {
-    if (!dragState || !latestViewerMatrix) return;
+    if (!dragState) return;
+    const aimedPosition = placementPoint();
+    if (aimedPosition) {
+        dragState.record.position = { ...aimedPosition };
+        return;
+    }
+    if (!latestViewerMatrix) return;
     const origin = dragState.cameraPosition || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
     dragState.record.position.x = dragState.position.x + (latestViewerMatrix[12] - origin.x) + dragState.pointerOffset.x;
     dragState.record.position.y = dragState.position.y + (latestViewerMatrix[13] - origin.y) + dragState.pointerOffset.y;

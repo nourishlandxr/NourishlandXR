@@ -254,3 +254,12 @@ Before promoting an idea into the release plan, ask:
 3. Does it reduce effort or create a meaningful moment?
 4. Can it work reliably in a garden?
 5. Is it V1-essential, a later enhancement, or simply an inspiring possibility?
+# V0.8503 — calm first-use mapping
+
+- Try It Now follows an intentional sequence: introduction, reveal the centre aim, place an unassigned Marker, convert it to a living Plant orb, reveal its tethered information tree, add a flat Note, then introduce the Area Totem.
+- Hold movement is centre-aim based: hold an element, move the view, and release it at the pointer.
+- The beginner project journey uses four literal tasks: add one Area, five Plants, a Home or Entrance, and one Note. It is hidden when advanced controls are enabled or the tutorial is switched off.
+- Project creation offers “Include guided tutorial” separately from “Show advanced controls.”
+- Plants may be saved as Not placed without an Area; Area creation has a compatibility fallback for older persistence services.
+- Organizer Folder and Home & Entrances live under Stories & Checkpoints rather than general dashboard settings.
+- Area Totems and Trail Entrances can store a physical QR or location code so future spatial anchors can lock to installed markers.

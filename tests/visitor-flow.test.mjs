@@ -78,8 +78,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /Trail Entrance/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /escapeAttribute\(growth\.nextDescription\)/);
-    assert.match(entrySource, /growth\.optionalFeature\.showHome/);
-    assert.match(entrySource, /growth\.optionalFeature\.showTrail/);
+    assert.match(entrySource, /tutorial-task-list/);
+    assert.match(entrySource, /step\.complete \? '✓' : '○'/);
     assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
     assert.doesNotMatch(entrySource, /dashboard-vital-notice/);
     assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
@@ -93,10 +93,10 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /Stories &amp; Checkpoints/);
     assert.match(source, /Organizer Folder/);
     assert.match(source, /Add without AR/);
-    assert.match(source, /Stories and Focus Elements/);
+    assert.match(source, /Stories &amp; Checkpoints/);
     assert.match(source, /Project Settings/);
-    assert.match(source, /Home & Entrances/);
-    assert.match(source, /Optional Home Base and guided Trail Entrance features/);
+    assert.match(source, /Home &amp; Entrances/);
+    assert.match(source, /Organizer Folder/);
     assert.match(source, /createAreaAction: `window\.renderProjectAreaForm/);
     assert.match(source, /growthJourney/);
     assert.match(source, /Change Theme/);
@@ -184,7 +184,7 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
-    assert.match(dashboardSource, /Your space is ready to grow/);
+    assert.match(dashboardSource, /Your space is ready/);
     assert.match(dashboardSource, /CREATE YOUR FIRST AREA/);
     assert.match(dashboardSource, /Name your Area/);
     assert.match(dashboardSource, /Area \$\{nextAreaNumber\}/);
@@ -240,8 +240,8 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(helperSource, /started = await window\.startArMode\?\.\(projectId, areaId, checkpointId, initialPlacementType, '', 'dashboard'\)/);
     assert.match(helperSource, /if \(started\) return true;\s*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. Check camera permission and WebXR support[\s\S]*return false;/);
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
-    assert.match(dashboardSource, /action: `window\.openProjectAreaAr\('\$\{encoded\(project\.id\)\}', '\$\{encoded\(missingTotemArea\.id\)\}', '', 'area_checkpoint'\)`/);
-    assert.match(dashboardSource, /action: `window\.openProjectAreaAr\('\$\{encoded\(project\.id\)\}', '\$\{encoded\(firstArea\.id\)\}'\)`/);
+    assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
+    assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
     assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '\$\{encoded\(checkpoint\.marker\.id\)\}'\)">Open this Area in AR/);
     assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place its Totem in AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
@@ -287,10 +287,10 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
     assert.match(source, /markers\.length >= 3/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
-    assert.match(source, /Use Lemon Myrtle preset/);
+    assert.match(source, /Choose Lemon Myrtle/);
     assert.match(source, /createBoundaryTexture/);
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
-    assert.match(source, /Search plant presets<input value="Lemon Myrtle" readonly>/);
+    assert.match(source, /Plant name<input value="Lemon Myrtle" readonly>/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
@@ -328,19 +328,20 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(dashboard, /Cover image \(optional\)/);
 });
 
-test('new projects offer friendly mode by default and an explicit Expert Mode', () => {
+test('new projects separate guided tutorial choice from advanced controls', () => {
     const formSource = fs.readFileSync(path.join(root, 'app/components/siteForm.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
-    assert.match(formSource, /<strong>Expert Mode<\/strong>/);
+    assert.match(formSource, /<strong>Include guided tutorial<\/strong>/);
+    assert.match(formSource, /<strong>Show advanced controls<\/strong>/);
     assert.match(mainSource, /projectExpertMode'\)\?\.checked === true/);
     assert.match(mainSource, /restartProjectTutorial\(created\.id\)/);
-    assert.match(mainSource, /if \(expertMode\) setProjectTutorialMode\(created\.id, false\)/);
+    assert.match(mainSource, /setProjectTutorialMode\(created\.id, tutorialEnabled && !expertMode\)/);
     assert.match(dashboardSource, /const expertMode = project\.expertMode === true/);
     assert.match(dashboardSource, /setProjectTutorialMode\(projectId, !enabled\)/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
     assert.match(dashboardSource, /if \(project\.expertMode === true\) return renderProjectDashboard/);
-    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true \? null/);
+    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true \|\| !isProjectTutorialEnabled\(project\.id\) \? null/);
     assert.match(dashboardSource, /const guidance = project\.expertMode === true \? null/);
     assert.match(dashboardSource, /What should visitors call this entrance\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);

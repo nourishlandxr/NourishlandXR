@@ -23,8 +23,13 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
             </select>
         </div>
 
+        ${project ? '' : `<label class="tutorial-mode-toggle project-tutorial-toggle">
+            <span><strong>Include guided tutorial</strong><small>Turn this off if you already know how you want to begin.</small></span>
+            <input id="projectTutorialEnabled" type="checkbox" checked />
+        </label>`}
+
         <label class="tutorial-mode-toggle project-expert-toggle">
-            <span><strong>Expert Mode</strong><small>Show advanced setup and technical controls. Leave this off for the friendly guided experience.</small></span>
+            <span><strong>Show advanced controls</strong><small>Reveal technical and precision tools when you need them.</small></span>
             <input id="projectExpertMode" type="checkbox" ${project?.expertMode ? 'checked' : ''} />
         </label>
 

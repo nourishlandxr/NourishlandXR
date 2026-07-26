@@ -519,9 +519,9 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             try { savedCode = (await loadMarkerAnchor(projectId, context.site.id, areaId, existing.marker.id)).qr_code || ''; }
             catch { savedCode = ''; }
         }
-        const title = existing ? `Edit ${context.area.name} Area Marker` : `Add ${context.area.name} Area Marker`;
-        const submitLabel = existing ? 'Save Area Marker Changes' : 'Save Temporary Area Marker';
-        app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Back to AR Areas</button><p class="welcome-label">Area checkpoint</p><h1>${escapeHtml(title)}</h1><p class="subtitle">This is a named marker associated with one Area. A physical code can be added later.</p></div><section class="panel guide"><p>For home testing, use a stable object and give this marker a clear label, such as Kitchen CP-01 or Living Room Table.</p><p>This Area Marker becomes the local origin for items placed in this Area. GPS can still help find the Area, but it does not determine individual plant positions.</p></section><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Area Marker label</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} checkpoint`)}" required /></div><div class="field"><label for="areaCheckpointCode">Physical marker code <span class="meta">(optional for testing)</span></label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="For example: HOME-KITCHEN-CP01" /></div><p class="meta">Leave the code blank to test now. Add the exact QR or physical marker code later when it is installed.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.openCreatorArMode('${encoded(context.project.id)}')">Cancel</button><button class="primary" type="submit">${submitLabel}</button></div></form></div>`;
+        const title = existing ? `Edit ${context.area.name} Totem` : `Add ${context.area.name} Totem`;
+        const submitLabel = existing ? 'Save Totem changes' : 'Save Totem';
+        app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button><p class="welcome-label">Area Totem</p><h1>${escapeHtml(title)}</h1><p class="subtitle">Connect this Area’s spatial centre to a real physical location.</p></div><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} Totem`)}" required /></div><div class="field"><label for="areaCheckpointCode">Physical QR or location code <span class="meta">(optional)</span></label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter the code installed beside this Totem" /></div><p class="meta">This code lets a future visit lock the Area and its nearby elements back onto the same real-world point.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Cancel</button><button class="primary" type="submit">${submitLabel}</button></div></form></div>`;
         if (flow === 'quick') {
             app.querySelector('.page-header .ghost').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
             app.querySelector('.button-row button[type="button"]').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
@@ -689,18 +689,13 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const missingTotemArea = areas.find(area => !placedTotemAreaIds.has(area.id)) || null;
         const allAreasHavePlacedTotems = areas.length > 0 && !missingTotemArea;
         const homeArea = areas.find(area => area.id === project.homeBaseAreaId) || null;
-        const hasRoots = hasArea;
-        const isGrowing = hasRoots && projectEntries.length >= 3;
-        const isConnected = isGrowing && areas.length >= 2;
-        const readyToExplore = isConnected && allAreasHavePlacedTotems && placedProjectEntries.length >= 3;
-        const readyToShare = readyToExplore && project.projectStatus === 'ready';
+        const plantCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant').length;
+        const noteCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'note').length;
         const growthSteps = [
-            { label: 'Seed', complete: true },
-            { label: 'Roots', complete: hasRoots },
-            { label: 'Growing', complete: isGrowing },
-            { label: 'Connected', complete: isConnected },
-            { label: 'Ready to Explore', complete: readyToExplore },
-            { label: 'Ready to Share', complete: readyToShare }
+            { label: 'Add 1 Area', complete: hasArea },
+            { label: 'Add 5 Plants', complete: plantCount >= 5, progress: `${Math.min(plantCount, 5)}/5` },
+            { label: 'Add a Home or Entrance', complete: Boolean(homeArea || startingPoint) },
+            { label: 'Add 1 Note', complete: noteCount >= 1 }
         ];
         const growthCompleted = growthSteps.filter(step => step.complete).length;
         const firstArea = areas[0];
@@ -710,49 +705,38 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 description: 'Begin with one meaningful section of the landscape.',
                 action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`
             }
-            : missingTotemArea
-                ? {
-                    label: 'Place its Totem',
-                    description: `${missingTotemArea.name} is ready. Raise its Totem when you are on site.`,
-                    action: `window.openProjectAreaAr('${encoded(project.id)}', '${encoded(missingTotemArea.id)}', '', 'area_checkpoint')`
-                }
-                : projectEntries.length < 3
+            : plantCount < 5
                     ? {
-                        label: 'Discover three elements',
-                        description: `Add ${3 - projectEntries.length} more Plant${3 - projectEntries.length === 1 ? '' : 's'}, Note${3 - projectEntries.length === 1 ? '' : 's'} or Marker${3 - projectEntries.length === 1 ? '' : 's'}.`,
-                        action: `window.openProjectAreaAr('${encoded(project.id)}', '${encoded(firstArea.id)}')`
+                        label: 'Add a Plant',
+                        description: `${5 - plantCount} Plant${5 - plantCount === 1 ? '' : 's'} remaining.`,
+                        action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`
                     }
-                    : areas.length < 2
+                    : !homeArea && !startingPoint
                         ? {
-                            label: 'Add another Area',
-                            description: 'Connect another garden bed, orchard section or landscape region.',
-                            action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`
+                            label: 'Add a Home or Entrance',
+                            description: 'Choose an optional return point or visitor beginning.',
+                            action: `window.renderStartingPoints('${encoded(project.id)}')`
                         }
-                        : !readyToExplore
+                        : noteCount < 1
                             ? {
-                                label: 'Test your map outside',
-                                description: 'Walk the Areas and make sure their Totems and elements are easy to find.',
-                                action: `window.openProjectAreaAr('${encoded(project.id)}', '${encoded(firstArea.id)}')`
+                                label: 'Add a Note',
+                                description: 'Record one useful observation.',
+                                action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)`
                             }
                             : {
-                                label: 'Prepare to share',
-                                description: 'When the project feels ready, review its Explorer status.',
-                                action: `window.renderProjectSettings('${encoded(project.id)}')`
+                                label: 'Tutorial complete',
+                                description: 'Your essential mapping tools are ready.',
+                                action: `window.startArMode('${encoded(project.id)}')`
                             };
-        const growthJourney = project.expertMode === true ? null : {
+        const growthJourney = project.expertMode === true || !isProjectTutorialEnabled(project.id) ? null : {
             steps: growthSteps,
             completed: growthCompleted,
-            stage: growthSteps.find(step => !step.complete)?.label || 'Flourishing',
-            message: readyToExplore ? 'ready to explore' : hasArea ? 'taking root' : 'ready to grow',
+            stage: 'Getting started',
+            message: 'Project tutorial',
             nextLabel: growthNext.label,
             nextDescription: growthNext.description,
             nextAction: growthNext.action,
-            optionalFeature: projectEntries.length >= 3 && (!startingPoint || !homeArea) ? {
-                showHome: !homeArea,
-                showTrail: !startingPoint,
-                homeAction: `window.renderHomeBaseForm('${encoded(project.id)}')`,
-                trailAction: `window.renderStartingPointForm('${encoded(project.id)}', '', 'trail-entrance')`
-            } : null
+            optionalFeature: null
         };
         const guidance = project.expertMode === true ? null : dashboardGuidance(project.id, { hasArea, startingConfigured: Boolean(startingPoint), freshProject: !hasArea && projectEntries.length === 0 });
         const latestDate = [
@@ -813,11 +797,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
-                { label: 'Home & Entrances', description: 'Optional Home Base and guided Trail Entrance features.', action: `window.renderStartingPoints('${encoded(project.id)}')` },
-                { label: 'Organizer Folder', description: `${unplacedEntries.length} saved item${unplacedEntries.length === 1 ? '' : 's'} awaiting organisation or placement.`, action: `window.renderUnplacedContent('${encoded(project.id)}')` },
-                { label: 'Project Settings', description: 'Manage project-wide configuration and Explorer visibility.', action: `window.renderProjectSettings('${encoded(project.id)}')` },
-                { label: 'NourishlandXR Settings', description: 'Platform settings, text size, hints, diagnostics and build information from the welcome page.', action: `window.renderPlatformComingSoon('Settings', 'creator')` }
-                ,{ label: 'Help Guide', description: 'Quick how-to instructions and answers to the most important questions.', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` }
+                { label: 'Project Settings', action: `window.renderProjectSettings('${encoded(project.id)}')` },
+                { label: 'NourishlandXR Settings', action: `window.renderPlatformComingSoon('Settings', 'creator')` },
+                { label: 'Help Guide', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` }
             ],
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`
@@ -968,7 +950,7 @@ export async function renderNewLocationSetup(app, encodedProjectId) {
     try {
         const { project } = await projectContent(projectId);
         if (project.expertMode === true) return renderProjectDashboard(app, encoded(project.id));
-        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">Seed</p><h1>Your space is ready to grow</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><section class="panel guide"><h2>Begin with one Area</h2><p>An Area is a garden bed, orchard section, forest zone or any meaningful part of the landscape you want to understand. Every project grows from its Areas; a Home Base or visitor entrance can be added later only if it is useful.</p></section><div class="content-type-list"><button class="content-type-row primary" type="button" onclick="window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')"><strong>CREATE YOUR FIRST AREA</strong><span>Name the region, then place its Totem now or later.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>Open Dashboard</strong><span>See the living-map journey and continue when you are ready.</span></button></div></div>`;
+        app.innerHTML = `<div class="screen setup-flow"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Save and exit</button><p class="welcome-label">Getting started</p><h1>Your space is ready</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><section class="panel guide"><h2>Begin with one Area</h2><p>An Area is a garden bed, orchard section, forest zone or any meaningful part of the landscape you want to understand. A Home Base or visitor entrance can be added later only if it is useful.</p></section><div class="content-type-list"><button class="content-type-row primary" type="button" onclick="window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')"><strong>CREATE YOUR FIRST AREA</strong><span>Name the region, then place its Totem now or later.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><strong>Open Dashboard</strong><span>Continue from the simple project checklist.</span></button></div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1017,7 +999,7 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
             : `window.renderProjectDashboard('${encoded(project.id)}')`;
         const nextAreaNumber = places.filter(place => place.name !== 'Unassigned').length + 1;
         const expertAreaFields = project.expertMode === true ? `<details class="area-advanced-fields"><summary>Optional Area details</summary><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area</option><option value="Indoor Area">Indoor Area</option><option value="Bed or Plot">Bed or Plot</option><option value="Room">Room</option><option value="Enclosure">Enclosure</option><option value="Path or Route">Path or Route</option><option value="Other">Other</option></select></div><div class="field"><label for="projectAreaDescription">Short description</label><textarea id="projectAreaDescription" rows="3" placeholder="What belongs in this Area?"></textarea></div></details>` : '';
-        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">${firstArea ? 'Roots' : 'Grow your map'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${guidance}<form class="panel simple-area-form" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Name your Area</label><input id="projectAreaName" value="Area ${nextAreaNumber}" placeholder="Area ${nextAreaNumber}" required /></div><p class="area-name-examples">Examples: Orchard · Vegetable Garden · Creek Bank · Front Bed</p>${expertAreaFields}<p id="projectAreaError" class="meta"></p><div class="area-create-actions"><button type="button" onclick="${returnAction}">Cancel</button><button type="submit" data-area-next="later"><strong>Create now, place later</strong><span>Save the Area without opening the camera.</span></button><button class="primary" type="submit" data-area-next="place"><strong>Place its Totem in AR</strong><span>Create the Area, then raise its Totem on site.</span></button></div></form></div>`;
+        app.innerHTML = `<div class="screen area-form-screen"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">${firstArea ? 'First Area' : 'Areas'}</p><h1>${firstArea ? 'Create your first Area' : 'Create an Area'}</h1><p class="subtitle">${escapeHtml(project.name)}</p></div>${guidance}<form class="panel simple-area-form" onsubmit="window.saveProjectArea(event, '${encoded(project.id)}', '${encoded(intent)}')"><div class="field"><label for="projectAreaName">Name your Area</label><input id="projectAreaName" value="Area ${nextAreaNumber}" placeholder="Area ${nextAreaNumber}" required /></div><p class="area-name-examples">Examples: Orchard · Vegetable Garden · Creek Bank · Front Bed</p>${expertAreaFields}<p id="projectAreaError" class="meta"></p><div class="area-create-actions"><button type="button" onclick="${returnAction}">Cancel</button><button type="submit" data-area-next="later"><strong>Create now, place later</strong><span>Save the Area without opening the camera.</span></button><button class="primary" type="submit" data-area-next="place"><strong>Place its Totem in AR</strong><span>Create the Area, then raise its Totem on site.</span></button></div></form></div>`;
         if (areaStage === 'new') recordTutorialEvent(project.id, 'area_explained');
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Area setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
@@ -1297,7 +1279,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
 
 export async function renderStoriesAndFocus(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Planned for V2</p><h1>Stories and Focus Elements</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel guide"><p>Create special checkpoints for stories, guided moments and focused experiences connected to an Area.</p><h2>What is planned</h2><ul><li>A story attached to a particular Area</li><li>A guided narrative or learning sequence</li><li>A special checkpoint</li><li>Visual effects showing movement, relationships or living processes</li><li>A focused moment that reveals something normally unseen</li></ul><p class="meta">These V2 tools are not active yet. Existing checkpoints continue to work as before.</p></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Stories &amp; Checkpoints</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><nav class="content-mode-tool-grid" aria-label="Stories and checkpoints tools"><button type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Home &amp; Entrances</strong><span>Manage the project Home Base and visitor Trail Entrance.</span></button><button type="button" onclick="window.renderUnplacedContent('${encoded(project.id)}')"><strong>Organizer Folder</strong><span>Review Plants, Notes and Markers waiting for an Area or physical position.</span></button></nav><div class="panel guide"><h2>Story tools are growing</h2><p>Guided narratives, focused moments and richer Area stories are planned for V2. Existing checkpoints remain available now.</p></div></div>`;
 }
 
 export async function renderProjectSettings(app, encodedProjectId) {
@@ -1347,7 +1329,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
         </section>
         <section class="panel expert-mode-setting" aria-labelledby="expertModeTitle">
             <div class="section-heading-row"><div><h2 id="expertModeTitle">Experience level</h2><p>Keep the everyday experience calm, or reveal advanced controls when you need them.</p></div><span class="tutorial-status">${expertMode ? 'Expert' : 'Friendly'}</span></div>
-            <label class="tutorial-mode-toggle"><span><strong>Expert Mode</strong><small>Show themes, technical guidance, diagnostics and other advanced project controls.</small></span><input type="checkbox" ${expertMode ? 'checked' : ''} onchange="window.updateProjectExpertMode('${encoded(project.id)}', this.checked)" /></label>
+            <label class="tutorial-mode-toggle"><span><strong>Show advanced controls</strong><small>Show themes, technical guidance, diagnostics and other precision tools.</small></span><input type="checkbox" ${expertMode ? 'checked' : ''} onchange="window.updateProjectExpertMode('${encoded(project.id)}', this.checked)" /></label>
         </section>
         <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div></div>
@@ -1790,9 +1772,9 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
         const areaField = startingPoint
             ? `<input id="projectStartingArea" type="hidden" value="${escapeHtml(startingPoint.place.id)}" /><p class="starting-point-home">Trail begins in ${escapeHtml(startingPoint.place.name)}</p>`
             : `<div class="field"><label for="projectStartingArea">Entrance Area</label><select id="projectStartingArea" required><option value="">Choose an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select></div>`;
-        const advancedFields = expertMode ? `<details class="starting-point-advanced"><summary>Advanced Trail Entrance options</summary><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Use current GPS</strong><span>Capture this phone’s position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Enter coordinates</strong><span>Use a mapped position.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Visitor facing direction</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" /></div></div><div class="field"><label for="projectStartingPhoto">Reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" /></div><div class="field"><label for="projectStartingQr">Physical marker reference</label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div></details>` : '';
+        const advancedFields = expertMode ? `<details class="starting-point-advanced"><summary>Advanced Trail Entrance options</summary><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Use current GPS</strong><span>Capture this phone’s position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Enter coordinates</strong><span>Use a mapped position.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Visitor facing direction</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" /></div></div><div class="field"><label for="projectStartingPhoto">Reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div></details>` : '';
         const spatialAction = startingPoint ? `<button type="button" onclick="window.startExistingMarkerPlacement('${encoded(project.id)}', '${encoded(site.id)}', '${encoded(startingPoint.place.id)}', '${encoded(marker.id)}', 'intro_checkpoint')">Place gateway in AR</button>` : '';
-        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">Optional · Guided journey</p><h1>Your Trail Entrance</h1><p class="subtitle">A clear beginning for visitors to ${escapeHtml(project.name)}.</p></div>${startingGuidance}<form class="panel simple-starting-point" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow || 'trail-entrance')}')">${areaField}<div class="field"><label for="projectStartingName">What should visitors call this entrance?</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Trail Entrance')}" required /></div><div class="field"><label for="projectStartingDescription">What should they know or feel when they arrive?</label><textarea id="projectStartingDescription" rows="4" placeholder="A short, warm welcome is enough.">${escapeHtml(marker.description || '')}</textarea></div>${advancedFields}<p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? 'Its precise position is saved.' : 'Spatial placement is optional and can happen later.'}</p><p id="projectStartingError" class="meta"></p><div class="button-row">${spatialAction}<button class="primary" type="submit">Save Trail Entrance</button></div></form></div>`;
+        app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">Optional · Guided journey</p><h1>Your Trail Entrance</h1><p class="subtitle">A clear beginning for visitors to ${escapeHtml(project.name)}.</p></div>${startingGuidance}<form class="panel simple-starting-point" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow || 'trail-entrance')}')">${areaField}<div class="field"><label for="projectStartingName">What should visitors call this entrance?</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Trail Entrance')}" required /></div><div class="field"><label for="projectStartingDescription">What should they know or feel when they arrive?</label><textarea id="projectStartingDescription" rows="4" placeholder="A short, warm welcome is enough.">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingQr">Physical QR or location code <span class="meta">(optional)</span></label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" placeholder="Scan or enter the code installed at this entrance" /></div><p class="meta">A physical code lets a future visit lock this spatial entrance back onto the same real-world point.</p>${advancedFields}<p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? 'Its precise position is saved.' : 'Spatial placement is optional and can happen later.'}</p><p id="projectStartingError" class="meta"></p><div class="button-row">${spatialAction}<button class="primary" type="submit">Save Trail Entrance</button></div></form></div>`;
         if (!startingPoint && preferredAreaId && areas.some(area => area.id === preferredAreaId)) {
             document.getElementById('projectStartingArea').value = preferredAreaId;
         }

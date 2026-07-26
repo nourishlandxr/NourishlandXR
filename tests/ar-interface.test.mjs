@@ -185,9 +185,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /interactionMode = mode/);
     assert.match(arSource, /View mode is on\. Hover over a Marker to reveal its name/);
     assert.match(arSource, /Hold mode is on\. Touch one Marker to carry it to the pointer; release and View mode returns/);
-    assert.match(arSource, /snapOffset/);
-    assert.match(arSource, /creator-ar-mode-pointer span'\)\?\.getBoundingClientRect\(\)/);
-    assert.match(arSource, /pointerTarget/);
+    assert.match(arSource, /const aimedPosition = placementPoint\(\)/);
+    assert.match(arSource, /dragState\.record\.position = \{ \.\.\.aimedPosition \}/);
     assert.doesNotMatch(arSource, /window\.innerHeight - 104/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - origin\.z/);
@@ -290,7 +289,8 @@ test('Creator AR setup guide starts with Areas and keeps visitor entrances optio
     assert.match(dashboardSource, /Optional Trail Entrance/);
     assert.match(dashboardSource, /Home &amp; Entrances/);
     assert.match(dashboardSource, /Open Test AR/);
-    assert.match(dashboardSource, /label: 'Home & Entrances'/);
+    assert.match(dashboardSource, /Stories &amp; Checkpoints/);
+    assert.match(dashboardSource, /window\.renderStartingPoints/);
     assert.match(dashboardSource, /openCheckpointQuickSetup/);
     assert.match(dashboardSource, /Create New Area/);
     assert.match(dashboardSource, /Place its Totem in AR/);
@@ -401,10 +401,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
-    assert.match(source, /onTextComplete/);
+    assert.match(source, /placementReady/);
     assert.match(source, /aimRevealTimer = setTimeout/);
     assert.match(source, /placementPointerMarkup/);
-    assert.match(source, /When the aiming circle rests on the right place/);
+    assert.match(source, /Let’s place it around you using our centre aim/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
     assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
@@ -420,11 +420,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Start the demo/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 38\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 46\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
-    assert.match(source, /Use Lemon Myrtle preset/);
+    assert.match(source, /Choose Lemon Myrtle/);
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
@@ -451,7 +451,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /DON’T GO HERE/);
-    assert.match(source, /Create Area Totem/);
+    assert.match(source, /Raise the Area Totem/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
 
@@ -502,8 +502,8 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /renderAreaCheckpointForm/);
     assert.match(dashboardSource, /saveAreaCheckpoint/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
-    assert.match(dashboardSource, /optional for testing/);
-    assert.match(dashboardSource, /Edit Area Marker/);
+    assert.match(dashboardSource, /Physical QR or location code/);
+    assert.match(dashboardSource, /Edit Totem information/);
     assert.match(serverSource, /'area_checkpoint'/);
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
 });

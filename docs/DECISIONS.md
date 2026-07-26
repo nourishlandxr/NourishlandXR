@@ -11,3 +11,11 @@ Consequences:
 - Plant information uses progressive disclosure and translucent low-contrast cells.
 - Dragging the information cluster changes only its presentation position; the spatial Marker remains immutable.
 - Lemon Myrtle in Try It Now is the reference implementation for future spatial Plant Profiles.
+# V0.8503 — interaction and onboarding rules
+
+- “Advanced controls” is a display choice; it is not the definition of whether someone wants a tutorial.
+- First-use progress uses plain tasks, not metaphorical growth stages.
+- Notes are flat information bubbles. Plants are living spherical orbs. Totems are structural Area centres.
+- Hold means magnetise the chosen element to the centre aim until release.
+- An Area remains the normal container for spatial placement, while information created before Area assignment is explicitly “Not placed.”
+- Physical QR/code anchoring belongs directly in Totem and Trail Entrance panels.

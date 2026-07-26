@@ -555,9 +555,10 @@ window.createProjectFromForm = async () => {
         if (name) {
             const suggestions = projectTemplates[template]?.sites || [];
             const expertMode = document.getElementById('projectExpertMode')?.checked === true;
+            const tutorialEnabled = document.getElementById('projectTutorialEnabled')?.checked !== false;
             const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', projectStatus: 'under_construction', expertMode, siteSuggestions: suggestions });
             restartProjectTutorial(created.id);
-            if (expertMode) setProjectTutorialMode(created.id, false);
+            setProjectTutorialMode(created.id, tutorialEnabled && !expertMode);
             await siteManager.loadSitesFromDisk();
             window.renderProjectDashboard(encodeURIComponent(created.id));
         }
