@@ -29,7 +29,8 @@ let startPromise = null;
 let latestViewerMatrix = null;
 let latestView = null;
 let checkpointSessionOrigin = null;
-let interactionMode = 'view';
+let interactionMode = 'neutral';
+let suspendedInteractionMode = '';
 let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
@@ -148,7 +149,8 @@ function setPlacementStatus(message) {
 function updateReadyPlacementControl() {
     overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
     if (!readyPlacementType && !interactionMode) {
-        interactionMode = 'view';
+        interactionMode = suspendedInteractionMode || 'neutral';
+        suspendedInteractionMode = '';
         updateInteractionControls();
     }
     const guideLabel = overlayRoot?.querySelector('[data-ar-placement-guide-label]');
@@ -235,25 +237,32 @@ function updateInteractionControls() {
     const markerLayer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     markerLayer?.classList.toggle('is-interactive', Boolean(interactionMode));
     markerLayer?.classList.toggle('is-view-mode', interactionMode === 'view');
+    markerLayer?.classList.toggle('is-neutral-mode', interactionMode === 'neutral');
     markerLayer?.classList.toggle('is-grab-mode', interactionMode === 'grab');
     markerLayer?.classList.toggle('is-select-mode', interactionMode === 'select');
     overlayRoot?.classList.toggle('is-view-mode', interactionMode === 'view');
+    overlayRoot?.classList.toggle('is-neutral-mode', interactionMode === 'neutral');
     overlayRoot?.classList.toggle('is-hold-mode', interactionMode === 'grab');
     overlayRoot?.classList.toggle('is-select-mode', interactionMode === 'select');
 }
 
 function setInteractionMode(mode) {
-    interactionMode = mode;
-    cleanupDrag();
+    if (dragState) {
+        dragState.record.position = dragState.position;
+        cleanupDrag();
+        positionSessionMarkers();
+    }
+    interactionMode = interactionMode === mode && ['grab', 'select'].includes(mode) ? 'neutral' : mode;
+    sessionMarkers.forEach(record => { record.profileHovered = false; });
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
-    if (interactionMode === 'view') setPlacementStatus('View mode is on. Hover over a Marker to reveal its name.');
+    if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
     else if (interactionMode === 'grab') setPlacementStatus('Hold mode is on. Press an element to carry it at the aim; press it again to release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
-    else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
+    else setPlacementStatus('Aim dot ready. Hover over Markers to reveal their names.');
 }
 
 function closeAreaChooser() {
@@ -439,7 +448,8 @@ async function openSpecialMarkerPicker() {
 function resetArControls() {
     placementArmGeneration += 1;
     cleanupDrag();
-    interactionMode = 'view';
+    interactionMode = 'neutral';
+    suspendedInteractionMode = '';
     closeInlineEditor();
     closeAreaChooser();
     closePlacePicker();
@@ -448,7 +458,7 @@ function resetArControls() {
     pendingBagRecord = null;
     updateReadyPlacementControl();
     updateInteractionControls();
-    setPlacementStatus('AR controls reset. View mode is on; press plus when you are ready to place a Marker.');
+    setPlacementStatus('AR controls reset. The aim dot is ready; press plus when you want to place a Marker.');
 }
 
 function multiplyMatrixVector(matrix, vector) {
@@ -630,10 +640,14 @@ function renderSessionMarkers() {
     layer.innerHTML = sessionMarkers.map(record => {
         const profileAvailable = hasPlantProfile(record);
         const profileLabel = profileAvailable ? (record.profileExpanded ? ' Hide Plant Profile' : ' Open Plant Profile') : '';
+        const informationSummary = record.marker.description
+            || record.marker.notes
+            || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
+            || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : ''}</span></span>${profileLayer}`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>${profileLayer}`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -644,7 +658,7 @@ function renderSessionMarkers() {
             beginMarkerInteraction(record, event);
         });
         if (hasPlantProfile(record)) {
-            const setHovered = value => { record.profileHovered = value; };
+            const setHovered = value => { record.profileHovered = value && ['neutral', 'view'].includes(interactionMode); };
             element?.addEventListener('mouseenter', () => setHovered(true));
             element?.addEventListener('mouseleave', () => setHovered(false));
             element?.addEventListener('focus', () => setHovered(true));
@@ -785,17 +799,23 @@ function openInlineEditor(record, force = false) {
 function beginMarkerInteraction(record, event) {
     if (!interactionMode) return;
     if (interactionMode === 'view') {
-        if (!hasPlantProfile(record)) return;
         event.preventDefault();
         event.stopPropagation();
-        record.profileExpanded = !record.profileExpanded;
+        if (hasPlantProfile(record)) {
+            record.profileExpanded = !record.profileExpanded;
+            record.infoVisible = record.profileExpanded;
+        } else {
+            record.infoVisible = !record.infoVisible;
+        }
         record.profileHovered = false;
         renderSessionMarkers();
-        setPlacementStatus(record.profileExpanded
-            ? `${record.marker.name} Plant Profile opened. Press the Plant Marker again to hide it.`
-            : `${record.marker.name} Plant Profile hidden.`);
+        const visible = hasPlantProfile(record) ? record.profileExpanded : record.infoVisible;
+        setPlacementStatus(visible
+            ? `${record.marker.name} information opened. Tap the Marker again to hide it.`
+            : `${record.marker.name} information hidden.`);
         return;
     }
+    if (interactionMode === 'neutral') return;
     event.preventDefault();
     event.stopPropagation();
     if (interactionMode === 'select') {
@@ -889,13 +909,12 @@ async function finishMarkerDrag(event) {
     if (!state || (event?.pointerId != null && event.pointerId !== state.pointerId)) return;
     const operation = captureArOperationContext();
     cleanupDrag();
-    interactionMode = 'view';
     updateInteractionControls();
-    setPlacementStatus(`Saving ${state.record.marker.name}… View mode is now on.`);
+    setPlacementStatus(`Saving ${state.record.marker.name}… Hold mode remains on.`);
     try {
         await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation));
         if (!isArOperationCurrent(operation)) return;
-        setPlacementStatus(`${state.record.marker.name} moved. View mode is now on.`);
+        setPlacementStatus(`${state.record.marker.name} moved. Hold another element, unpress Hold, or choose View.`);
     } catch (error) {
         if (!isArOperationCurrent(operation)) return;
         state.record.position = state.position;
@@ -922,10 +941,9 @@ function cancelMarkerDrag(event) {
     if (!state || event?.pointerId !== state.pointerId) return;
     state.record.position = state.position;
     cleanupDrag();
-    interactionMode = 'view';
     updateInteractionControls();
     positionSessionMarkers();
-    setPlacementStatus('Move cancelled. View mode is now on.');
+    setPlacementStatus('Move cancelled. Hold mode remains on.');
 }
 
 async function loadPlacementAreas(operation = captureArOperationContext(), guardOptions = {}) {
@@ -1006,6 +1024,7 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         areaName: operation.areaName
     };
     readyPlacementType = marker.type;
+    suspendedInteractionMode = interactionMode || suspendedInteractionMode || 'neutral';
     interactionMode = '';
     placementArmedAt = performance.now();
     updateReadyPlacementControl();
@@ -1034,6 +1053,7 @@ async function armPlacement(type) {
     closePlacePicker();
     closeUnplacedBag();
     readyPlacementType = type;
+    suspendedInteractionMode = interactionMode || suspendedInteractionMode || 'neutral';
     interactionMode = '';
     placementArmedAt = performance.now();
     updateReadyPlacementControl();
@@ -1045,7 +1065,6 @@ async function armPlacement(type) {
         return;
     }
     readyPlacementType = '';
-    interactionMode = 'view';
     updateReadyPlacementControl();
     updateInteractionControls();
     if (!activeAreaId) void openSpecialMarkerPicker();
@@ -1222,7 +1241,7 @@ async function quickPlace(type) {
                 const record = { ...bagRecord, position };
                 sessionMarkers.push(record);
                 renderSessionMarkers();
-                setPlacementStatus(`${record.marker.name} placed. View mode is on.`);
+                setPlacementStatus(`${record.marker.name} placed. Your previous interaction mode is still active.`);
                 showPlacedMarkerActions(record);
             } catch (error) {
                 if (!operationIsCurrent()) return;
@@ -1282,7 +1301,7 @@ async function quickPlace(type) {
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {
-            setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. View mode is on.`);
+            setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. Your previous interaction mode is still active.`);
         } else {
             setPlacementStatus(`${marker.name} placed. Choose its purpose.`);
             showPlacedMarkerActions(record);
@@ -1303,7 +1322,7 @@ function createOverlay() {
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
         : hasCheckpoint
         ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
-        : '';
+        : 'Aim dot ready. Hover over Markers to reveal their names.';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
@@ -1329,7 +1348,7 @@ function createOverlay() {
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-marker" type="button" data-ar-add-marker aria-label="Add Marker"><strong>+ MARKER</strong></button>
             <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
-            <button class="creator-ar-mode-control is-active" type="button" data-ar-view-mode aria-label="View mode: reveal Marker names" aria-pressed="true"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Hold mode: move one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hold mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
@@ -1360,6 +1379,7 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     overlayRoot.querySelector('.creator-ar-control-dock').addEventListener('beforexrselect', event => event.preventDefault());
     updateReadyPlacementControl();
+    updateInteractionControls();
     document.body.append(overlayRoot);
 }
 
@@ -1382,7 +1402,8 @@ function cleanup() {
     hitTestSource = null;
     latestHitMatrix = null;
     checkpointSessionOrigin = null;
-    interactionMode = 'view';
+    interactionMode = 'neutral';
+    suspendedInteractionMode = '';
     sessionMarkers = [];
     readyPlacementType = '';
     pendingPlacedRecord = null;

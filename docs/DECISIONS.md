@@ -1,5 +1,17 @@
 # NourishlandXR product decisions
 
+## 2026-07-26 — AR modes remain selected
+
+Decision: Pointer and Hold are persistent tools, not one-action commands. Pressing the active tool again returns to the neutral aim dot; choosing View enters a pointer-free inspection mode.
+
+Consequences:
+
+- Neutral starts with a small dot and reveals Marker names on hover.
+- View hides the pointer and uses Marker taps to reveal or hide information.
+- Pointer stays available for repeated editing.
+- Hold stays available after moving or cancelling an element.
+- Placement temporarily suspends and then restores the creator’s previous mode.
+
 ## 2026-07-26 — Push/Pull is part of the Hold gesture
 
 Decision: depth adjustment is not a separate slider. While an element is held, the same finger slides upward to push it farther away or downward to pull it closer. The visual depth rail extends directly through the centre cursor.

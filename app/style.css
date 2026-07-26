@@ -685,13 +685,18 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-placement-pointer::after { content: ""; position: absolute; left: 50%; top: 10px; width: 1px; height: 18px; transform: translateX(-50%); background: linear-gradient(rgba(255,255,255,.9), transparent); }
 .creator-ar-placement-guide-label { position: absolute; left: 50%; top: calc(100% + 4px); min-width: max-content; transform: translateX(-50%); color: rgba(255,255,255,.94); font-size: .72rem; font-weight: 750; letter-spacing: .025em; text-shadow: 0 2px 8px rgba(0,0,0,.75); }
 .creator-ar-mode-pointer { position: fixed; left: 50%; bottom: max(calc(82px + 3cm), calc(env(safe-area-inset-bottom) + 68px + 3cm)); z-index: 3; display: grid; justify-items: center; transform: translateX(-50%); opacity: 1; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.75); pointer-events: none; transition: opacity .18s ease; }
-.creator-ar-mode-pointer span { position: relative; width: 28px; height: 28px; border: 2px solid rgba(255,255,255,.92); border-radius: 50%; box-shadow: 0 0 0 6px rgba(255,255,255,.08), 0 0 18px rgba(192,230,151,.28); transition: border-radius .18s, transform .18s, border-color .18s; }
-.creator-ar-mode-pointer span::before, .creator-ar-mode-pointer span::after { content: ""; position: absolute; left: 50%; top: 50%; background: #fff; transform: translate(-50%, -50%); }
+.creator-ar-mode-pointer span { position: relative; width: 9px; height: 9px; border: 1px solid rgba(255,255,255,.94); border-radius: 50%; background: rgba(255,255,255,.82); box-shadow: 0 0 0 5px rgba(255,255,255,.08), 0 0 15px rgba(192,230,151,.3); transition: width .18s, height .18s, border-radius .18s, transform .18s, border-color .18s, background .18s; }
+.creator-ar-mode-pointer span::before, .creator-ar-mode-pointer span::after { content: ""; position: absolute; left: 50%; top: 50%; background: #fff; opacity: 0; transform: translate(-50%, -50%); transition: opacity .14s; }
 .creator-ar-mode-pointer span::before { width: 9px; height: 2px; }
 .creator-ar-mode-pointer span::after { width: 2px; height: 9px; }
 .creator-ar-overlay.is-placement-armed .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
-.creator-ar-overlay.is-view-mode .creator-ar-mode-pointer span { border-radius: 70% 12% 70% 12%; transform: rotate(-45deg); border-color: #dcef95; }
-.creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span { border-radius: 8px; border-color: #ffe3a0; transform: scale(1.08); }
+.creator-ar-overlay.is-neutral-mode .creator-ar-mode-pointer { opacity: 1; visibility: visible; }
+.creator-ar-overlay.is-view-mode .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
+.creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span { width: 28px; height: 28px; border-radius: 8px; border-color: #ffe3a0; background: rgba(255,227,160,.08); transform: scale(1.08); }
+.creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::before,
+.creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::after,
+.creator-ar-overlay.is-select-mode .creator-ar-mode-pointer span::before,
+.creator-ar-overlay.is-select-mode .creator-ar-mode-pointer span::after { opacity: 1; }
 .creator-ar-overlay.is-holding-item .creator-ar-mode-pointer span { border-color: #dcef95; background: rgba(220,239,149,.24); box-shadow: 0 0 0 9px rgba(220,239,149,.12), 0 0 25px rgba(220,239,149,.52); }
 .creator-ar-depth-joystick { position: fixed; left: 50%; bottom: max(calc(82px + 3cm), calc(env(safe-area-inset-bottom) + 68px + 3cm)); z-index: 2; display: block; width: 84px; height: 220px; transform: translate(-50%, 50%); border: 1px solid rgba(255,255,255,.34); border-radius: 38px; background: linear-gradient(rgba(51,73,48,.68), rgba(8,21,13,.78) 48%, rgba(51,73,48,.68)); color: #fff; box-shadow: 0 9px 24px rgba(0,0,0,.2); backdrop-filter: blur(8px); pointer-events: none; }
 .creator-ar-depth-joystick[hidden] { display: none; }
@@ -702,7 +707,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-depth-track { position: absolute; left: 50%; top: 50%; width: 7px; height: 104px; transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,.38); border-radius: 999px; background: rgba(5,12,8,.48); box-shadow: inset 0 0 5px rgba(0,0,0,.35); }
 .creator-ar-depth-track i { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; transform: translate(-50%, calc(-50% + var(--depth-shift, 0px))); border: 3px solid #dcef95; border-radius: 13px; background: rgba(15,31,20,.82); box-shadow: 0 0 0 9px rgba(220,239,149,.1), 0 0 18px rgba(220,239,149,.35); transition: transform .05s linear; }
 .creator-ar-depth-joystick > small { position: absolute; left: 4px; right: 4px; bottom: 8px; color: #fff; font-size: .62rem; font-weight: 800; text-align: center; }
-.creator-ar-overlay.is-select-mode .creator-ar-mode-pointer span { border-radius: 50%; border-style: dashed; border-color: #9bddff; animation: creator-ar-pointer-turn 2.4s linear infinite; }
+.creator-ar-overlay.is-select-mode .creator-ar-mode-pointer span { width: 28px; height: 28px; border-radius: 50%; border-style: dashed; border-color: #9bddff; background: rgba(155,221,255,.06); animation: creator-ar-pointer-turn 2.4s linear infinite; }
 @keyframes creator-ar-pointer-turn { to { transform: rotate(360deg); } }
 @keyframes creator-ar-breathe { 0%, 100% { transform: scale(.86); opacity: .62; } 50% { transform: scale(1.08); opacity: 1; } }
 .creator-ar-status { position: fixed; left: 50%; top: max(16px, env(safe-area-inset-top)); z-index: 5; max-width: min(82vw, 420px); margin: 0; padding: 7px 11px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: rgba(7,22,14,.7); color: #fff !important; box-shadow: 0 5px 18px rgba(0,0,0,.2); backdrop-filter: blur(9px); font-size: .68rem; font-weight: 700; line-height: 1.3; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,.75); pointer-events: none; }
@@ -768,14 +773,21 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-spatial-name { position: absolute; left: 50%; bottom: calc(100% + 4px); max-width: min(42vw, 180px); padding: 4px 8px; transform: translate(-50%, 3px); overflow: hidden; border: 1px solid rgba(238,248,235,.34); border-radius: 999px; background: rgba(8,24,14,.72); color: #fff !important; box-shadow: 0 4px 14px rgba(0,0,0,.2); opacity: 0; visibility: hidden; backdrop-filter: blur(8px); font-size: .68rem; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.75); white-space: nowrap; transition: opacity .16s ease, transform .16s ease, visibility .16s; }
 .creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
 .creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name,
+.creator-ar-marker-layer.is-neutral-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
+.creator-ar-marker-layer.is-neutral-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name,
 .creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
-.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:focus-visible .creator-ar-spatial-name,
+.creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .creator-ar-area-board-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(137,200,239,.35); border-radius: 12px; }
 .creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(255,224,137,.34); background: rgba(65,49,13,.5); }
 .creator-ar-marker-hit-target-plant .creator-ar-spatial-name { border-color: color-mix(in srgb, var(--marker-accent) 58%, transparent); }
+.creator-ar-spatial-name > small { display: none; }
 .creator-ar-marker-hit-target.has-plant-profile .creator-ar-spatial-name small { display: block; margin-top: 2px; color: rgba(220,239,149,.76); font-size: .52rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
-.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after { animation: creator-ar-profile-ready .38s ease-in-out infinite alternate; border-color: rgba(220,239,149,.88); opacity: 1; }
+.creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name { width: min(72vw, 300px); max-width: min(72vw, 300px); padding: 9px 11px; border-radius: 14px; text-align: left; text-overflow: clip; white-space: normal; }
+.creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name > small { display: block; margin-top: 4px; color: rgba(255,255,255,.78); font-size: .62rem; font-weight: 550; line-height: 1.35; letter-spacing: normal; text-transform: none; white-space: normal; }
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after,
+.creator-ar-marker-layer.is-neutral-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after { animation: creator-ar-profile-ready .38s ease-in-out infinite alternate; border-color: rgba(220,239,149,.88); opacity: 1; }
 @keyframes creator-ar-profile-ready { from { transform: translateX(-1px) scale(.96); } to { transform: translateX(1px) translateY(-1px) scale(1.03); } }
 .creator-ar-plant-tether { position: fixed; z-index: 1; display: block; height: 1px; transform-origin: left center; background: linear-gradient(90deg, rgba(222,239,207,.52), rgba(222,239,207,.14)); filter: drop-shadow(0 0 3px rgba(183,232,149,.18)); opacity: 0; pointer-events: none; animation: creator-ar-profile-fade .9s .18s ease forwards; }
 .creator-ar-plant-profile { position: fixed; z-index: 2; width: min(90vw, 520px); height: clamp(240px, 50vw, 310px); transform: translate(-50%, -50%) scale(.965); border: 0; background: transparent; color: rgba(255,255,255,.88); filter: drop-shadow(0 8px 18px rgba(0,0,0,.1)); opacity: 0; pointer-events: none; animation: creator-ar-profile-arrive 1.05s cubic-bezier(.18,.78,.28,1) forwards; }

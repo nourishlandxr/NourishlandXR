@@ -1,5 +1,13 @@
 # Nourishland XR Idea Box
 
+## V0.8513 — Persistent spatial tools
+
+- Neutral: small aim dot and quiet hover information.
+- View: pointer-free exploration; tap Markers for information.
+- Pointer: persistent selection and editing until unpressed.
+- Hold: persistent placement and movement until unpressed.
+- New placement restores whichever interaction tool the creator was already using.
+
 ## V0.8512 — One-finger spatial depth
 
 - Hold an element and continue the same gesture vertically.

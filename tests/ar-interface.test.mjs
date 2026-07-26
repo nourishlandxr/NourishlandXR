@@ -130,6 +130,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /creator-ar-mode-pointer/);
     assert.match(arSource, /is-hold-mode/);
     assert.match(styles, /\.creator-ar-overlay\.is-view-mode \.creator-ar-mode-pointer/);
+    assert.match(styles, /\.creator-ar-overlay\.is-view-mode \.creator-ar-mode-pointer \{ opacity: 0; visibility: hidden; \}/);
+    assert.match(styles, /\.creator-ar-overlay\.is-neutral-mode/);
     assert.match(styles, /\.creator-ar-overlay\.is-hold-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-overlay\.is-select-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*bottom: max\(calc\(82px \+ 3cm\), calc\(env\(safe-area-inset-bottom\) \+ 68px \+ 3cm\)\)/);
@@ -182,9 +184,9 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /draftName = `\$\{baseName\} \(\$\{suffix\+\+\}\)`/);
     assert.match(arSource, /saveMarkerAnchor/);
     assert.match(arSource, /type: 'spatial'/);
-    assert.match(arSource, /let interactionMode = 'view'/);
-    assert.match(arSource, /interactionMode = mode/);
-    assert.match(arSource, /View mode is on\. Hover over a Marker to reveal its name/);
+    assert.match(arSource, /let interactionMode = 'neutral'/);
+    assert.match(arSource, /interactionMode = interactionMode === mode && \['grab', 'select'\]\.includes\(mode\) \? 'neutral' : mode/);
+    assert.match(arSource, /View only mode\. The pointer is hidden; tap a Marker to reveal or hide its information/);
     assert.match(arSource, /Hold mode is on\. Press an element to carry it at the aim; press it again to release/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
@@ -197,7 +199,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /latestViewerMatrix\[14\] \+ ray\.z \* distance/);
     assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
     assert.match(arSource, /Pointer mode is on/);
-    assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.profileExpanded = !record\.profileExpanded/);
+    assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
+    assert.match(arSource, /if \(interactionMode === 'neutral'\) return/);
     assert.match(arSource, /openInlineEditor/);
     assert.match(arSource, /openInlineEditor\(record, true\)/);
     assert.match(arSource, /deletePlaceMarker/);
@@ -213,10 +216,10 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
-    assert.match(arSource, /moved\. View mode is now on/);
-    assert.match(arSource, /Move cancelled\. View mode is now on/);
+    assert.match(arSource, /moved\. Hold another element, unpress Hold, or choose View/);
+    assert.match(arSource, /Move cancelled\. Hold mode remains on/);
     const finishHold = arSource.slice(arSource.indexOf('async function finishMarkerDrag'), arSource.indexOf('function cancelMarkerDrag'));
-    assert.ok(finishHold.indexOf("interactionMode = 'view'") < finishHold.indexOf('await saveMarkerAnchor'));
+    assert.doesNotMatch(finishHold, /interactionMode\s*=/);
     assert.match(finishHold, /state\.record\.position = state\.position/);
     assert.match(arSource, /placementArmGeneration/);
     assert.match(arSource, /async function prepareExistingMarkerPlacement/);
@@ -224,10 +227,12 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /navigateAfterAr/);
     assert.match(arSource, /window\.resumeAreaCreationFlow/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-view-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
+    assert.match(styles, /\.creator-ar-marker-layer\.is-neutral-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
+    assert.match(styles, /\.creator-ar-marker-hit-target\.is-info-open \.creator-ar-spatial-name/);
     assert.match(arSource, /function resetArControls\(\)/);
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
-    assert.match(arSource, /AR controls reset\. View mode is on; press plus when you are ready to place a Marker/);
+    assert.match(arSource, /AR controls reset\. The aim dot is ready; press plus when you want to place a Marker/);
     assert.match(arSource, /Choose its purpose/);
     assert.match(arSource, /data-ar-close-placed/);
     assert.doesNotMatch(arSource, /data-ar-size-step|resizePlacedMarker/);
@@ -388,7 +393,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
     assert.match(arSource, /saveMarkerAnchor\(operation\.projectId, state\.record\.siteId, state\.record\.areaId/);
-    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. View mode is now on/);
+    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Hold another element/);
     assert.match(arSource, /function finishNaturalArExit/);
     assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
     assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, areaId, returnContext\), \{ once: true \}\)/);
@@ -600,7 +605,7 @@ test('Creator Plants deliberately upgrade into collapsible AR Plant Profiles', (
     const styles = read('app/style.css');
     assert.match(arSource, /function hasPlantProfile\(record\)/);
     assert.match(arSource, /record\.profileExpanded = !record\.profileExpanded/);
-    assert.match(arSource, /Plant Profile opened\. Press the Plant Marker again to hide it/);
+    assert.match(arSource, /information opened\. Tap the Marker again to hide it/);
     assert.match(arSource, /creator-ar-plant-profile/);
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
