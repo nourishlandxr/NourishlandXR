@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
+import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -44,6 +45,28 @@ test('shared spatial orbs use indexed three-dimensional sphere geometry', () => 
     const model = sphereModelMatrix({ x: 1, y: 2, z: -3 }, 0.25);
     assert.deepEqual([model[0], model[5], model[10]], [0.25, 0.25, 0.25]);
     assert.deepEqual([model[12], model[13], model[14]], [1, 2, -3]);
+});
+
+test('Plant profile tethers use a curved camera-facing triangle ribbon', () => {
+    const vertices = createTetherRibbonGeometry(
+        { x: 0, y: 0.1, z: -1.2 },
+        { x: 0.14, y: 0.9, z: -1.05 },
+        { x: 0, y: 1.55, z: 0 },
+        { segments: 10, width: 0.0045 }
+    );
+    assert.equal(vertices.length, 10 * 6 * 3);
+    assert.ok(vertices.every(Number.isFinite));
+    const xValues = [];
+    const yValues = [];
+    const zValues = [];
+    for (let index = 0; index < vertices.length; index += 3) {
+        xValues.push(vertices[index]);
+        yValues.push(vertices[index + 1]);
+        zValues.push(vertices[index + 2]);
+    }
+    assert.ok(Math.max(...yValues) - Math.min(...yValues) > 0.7);
+    assert.ok(Math.max(...xValues) - Math.min(...xValues) > 0.1);
+    assert.ok(Math.max(...zValues) - Math.min(...zValues) > 0.1);
 });
 
 test('Marker and Plant spheres are shared across Creator, demo and Explorer AR', () => {
@@ -405,13 +428,26 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
+    assert.match(source, /const open = cell\.key === activeBranch/);
     assert.match(source, /bindSimulatedInformationPanels/);
     assert.match(source, /demoPanelOffset/);
-    assert.match(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
+    assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
+    assert.match(source, /viewerMatrix\?\.\[13\]/);
+    assert.match(source, /drawSpatialTether/);
+    assert.match(source, /simulatedAnchor/);
+    assert.doesNotMatch(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
+    assert.doesNotMatch(styles, /--marker-index/);
+    assert.doesNotMatch(styles, /\+ 230px/);
+    assert.match(styles, /\.tryit-sim-plant-tether/);
+    assert.match(styles, /\.tryit-sim-plant-tether path \{ fill: none;/);
+    assert.match(styles, /\.tryit-sim-plant-profile/);
+    assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: none;/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
+    assert.match(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
+    assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /DON’T GO HERE/);

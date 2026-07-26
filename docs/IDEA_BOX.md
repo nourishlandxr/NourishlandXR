@@ -131,13 +131,17 @@ Status: V1 foundation
 
 ## Plant knowledge constellation
 
-Status: interaction preset
+Status: implemented reference preset in V0.8502
 
 - A **Marker** remains the spatial anchor people place and locate. **Elements** are the individual information cells that unfold from it.
-- Opening a Plant keeps its living orb visible at the centre.
+- Opening a Plant keeps its living orb fixed at the exact place where it was created.
+- The information cluster is an independent layer at a comfortable reading height. A thin, gently curved tether keeps its relationship to the living orb unmistakable.
 - Information unfolds as a connected honeycomb or molecular constellation rather than replacing the orb with a conventional panel.
 - The left branch synthesises practical and ecological knowledge: uses, relationships and forest layer.
 - The right branch synthesises scientific and cultural context: taxonomy, biology and history.
+- Category cells remain quiet until hovered, focused or tapped; only one concise detail opens at a time.
+- Cells use translucent glass, muted sage labels and soft off-white text. The information cluster never imitates or competes with the live Plant orb.
+- Moving the information cluster updates its tether without moving the Marker.
 - The Try It Now Lemon Myrtle profile is the reference preset for future Plant Profile interactions.
 - Flat panels remain available for long text and welcome boards; the spatial knowledge overview uses connected cells.
 

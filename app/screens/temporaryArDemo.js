@@ -6,6 +6,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 
 let appRoot = null;
 let session = null;
@@ -22,6 +23,7 @@ let simulatedMode = false;
 let program = null;
 let buffer = null;
 let sphereRenderer = null;
+let tetherRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -37,12 +39,12 @@ const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
     left: [
         ['USES', 'Tea · spice · aromatic oils'],
         ['RELATIONSHIPS', 'Pollinators · people · habitat'],
-        ['FOREST LAYER', 'Understory tree · sheltered edge']
+        ['FOREST LAYER', 'Understory · sheltered edge']
     ],
     right: [
-        ['SCIENTIFIC', 'Backhousia citriodora · Myrtaceae'],
-        ['BIOLOGY', 'Citral-rich leaves · evergreen flowering tree'],
-        ['HISTORY', 'Long-held First Nations knowledge · later botanical records']
+        ['SCIENTIFIC', 'Backhousia citriodora'],
+        ['BIOLOGY', 'Myrtaceae · citral-rich leaves'],
+        ['HISTORY', 'First Nations knowledge']
     ]
 });
 const NOTE_TEMPLATES = Object.freeze({
@@ -68,7 +70,9 @@ function clearSessionState() {
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    destroySpatialTetherRenderer(gl, tetherRenderer);
     sphereRenderer = null;
+    tetherRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -173,6 +177,8 @@ function guidePlantConversion(record) {
             if (preset !== 'lemon-myrtle') return;
             record.name = 'Lemon Myrtle';
             record.demoExpanded = true;
+            record.demoActiveBranch = 'left-0';
+            record.informationPosition = plantInformationPosition(record);
             record.revealTitle = true;
             record.revealLines = 3;
             refreshDemoRecord(record);
@@ -235,6 +241,15 @@ function armDemoPlacement(type) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     const place = appRoot?.querySelector('[data-tryit-place]');
+    const simulatedAim = simulatedMode
+        ? ({ plant: { x: 50, y: 50 }, note: { x: 68, y: 58 }, zone: { x: 80, y: 44 } })[type]
+        : { x: 50, y: 50 };
+    if (place && simulatedAim) {
+        place.dataset.aimX = String(simulatedAim.x);
+        place.dataset.aimY = String(simulatedAim.y);
+        place.style.setProperty('--aim-x', `${simulatedAim.x}%`);
+        place.style.setProperty('--aim-y', `${simulatedAim.y}%`);
+    }
     place?.setAttribute('hidden', '');
     place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
@@ -281,27 +296,120 @@ function advanceDemo() {
     armDemoPlacement(nextStage || 'plant');
 }
 
+function simulatedAnchorStyle(anchor) {
+    return `--marker-x:${Number(anchor.x).toFixed(2)}%;--marker-y:${Number(anchor.y).toFixed(2)}%`;
+}
+
+function tetherMetrics(offset) {
+    return {
+        length: Math.max(8, Math.hypot(offset.x, offset.y)),
+        angle: Math.atan2(offset.y, offset.x) * 180 / Math.PI
+    };
+}
+
+function clampPlantPanelOffset(anchor, offset) {
+    const viewportWidth = Math.max(320, window.innerWidth || 320);
+    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    const profileWidth = Math.min(viewportWidth * 0.9, 520);
+    const profileHeight = Math.min(310, Math.max(240, viewportWidth * 0.5));
+    const anchorX = viewportWidth * anchor.x / 100;
+    const anchorY = viewportHeight * anchor.y / 100;
+    const minimumX = 16 + profileWidth / 2 - anchorX;
+    const maximumX = viewportWidth - 16 - profileWidth / 2 - anchorX;
+    const minimumY = 16 + profileHeight / 2 - anchorY;
+    const maximumY = viewportHeight - 16 - profileHeight / 2 - anchorY;
+    return {
+        x: Math.min(maximumX, Math.max(minimumX, offset.x)),
+        y: Math.min(maximumY, Math.max(minimumY, offset.y))
+    };
+}
+
+function defaultPlantPanelOffset(anchor) {
+    const viewportWidth = Math.max(320, window.innerWidth || 320);
+    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    const profileHeight = Math.min(310, Math.max(240, viewportWidth * 0.5));
+    const anchorY = viewportHeight * anchor.y / 100;
+    const upwardRoom = anchorY - 72 - profileHeight / 2;
+    if (upwardRoom >= 48) return clampPlantPanelOffset(anchor, { x: 0, y: -Math.min(132, upwardRoom) });
+    const profileWidth = Math.min(viewportWidth * 0.9, 520);
+    const anchorX = viewportWidth * anchor.x / 100;
+    const rightRoom = viewportWidth - 16 - profileWidth / 2 - anchorX;
+    const leftRoom = 16 + profileWidth / 2 - anchorX;
+    return clampPlantPanelOffset(anchor, {
+        x: Math.abs(rightRoom) >= Math.abs(leftRoom)
+            ? Math.max(64, Math.min(150, rightRoom))
+            : Math.min(-64, Math.max(-150, leftRoom)),
+        y: 0
+    });
+}
+
+function capturedSimulatedAnchor() {
+    const place = appRoot?.querySelector('[data-tryit-place]');
+    const x = Number(place?.dataset.aimX);
+    const y = Number(place?.dataset.aimY);
+    return {
+        x: Number.isFinite(x) ? x : 50,
+        y: Number.isFinite(y) ? y : 50
+    };
+}
+
+function renderSimulatedPlant(record, index, anchor, offset) {
+    const anchorVariables = simulatedAnchorStyle(anchor);
+    const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant${record.demoExpanded ? ' has-information' : ''}" data-demo-marker-index="${index}" style="${anchorVariables}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    if (!record.demoExpanded) return anchoredOrb;
+    const tether = tetherMetrics(offset);
+    const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
+    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(LEMON_MYRTLE_KNOWLEDGE, record.demoActiveBranch)}</span>`;
+}
+
 function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     layer.innerHTML = markers.map((record, index) => {
         const content = demoContentFor(record);
         const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
-        const honeycomb = record.demoExpanded && record.demoType === 'plant' ? plantKnowledgeMarkup() : '';
-        const defaultOffsets = { plant: { x: -70, y: -45 }, note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
+        const anchor = record.simulatedAnchor || { x: 50, y: 50 };
+        if (record.demoType === 'plant') {
+            const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
+            return renderSimulatedPlant(record, index, anchor, offset);
+        }
+        const defaultOffsets = { note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
-        const orbProjection = ['marker', 'plant'].includes(record.demoType) ? `<span class="tryit-sim-orb${record.demoType === 'plant' ? ' is-plant' : ''}" aria-hidden="true"></span>` : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${orbProjection}${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
+        const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
 
+function applyPlantPanelOffset(profile, tether, offset) {
+    const metrics = tetherMetrics(offset);
+    profile.style.setProperty('--panel-x', `${offset.x}px`);
+    profile.style.setProperty('--panel-y', `${offset.y}px`);
+    tether?.style.setProperty('--tether-length', `${metrics.length}px`);
+    tether?.style.setProperty('--tether-angle', `${metrics.angle}deg`);
+}
+
 function bindSimulatedInformationPanels(layer) {
-    layer.querySelectorAll('.tryit-sim-marker:not(.is-expanded)').forEach(compactMarker => {
+    layer.querySelectorAll('.tryit-sim-marker').forEach(compactMarker => {
         const record = markers[Number(compactMarker.dataset.demoMarkerIndex)];
-        if (!record || !['plant', 'note'].includes(record.demoType)) return;
+        if (!record) return;
+        if (record.demoType === 'plant') {
+            compactMarker.addEventListener('click', () => {
+                record.demoExpanded = !record.demoExpanded;
+                if (record.demoExpanded && !record.demoActiveBranch) record.demoActiveBranch = 'left-0';
+                refreshDemoRecord(record);
+            });
+            compactMarker.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                compactMarker.click();
+            });
+            return;
+        }
+        if (record.demoExpanded || record.demoType !== 'note') return;
         compactMarker.setAttribute('role', 'button');
         compactMarker.setAttribute('tabindex', '0');
         compactMarker.addEventListener('click', () => {
@@ -346,11 +454,77 @@ function bindSimulatedInformationPanels(layer) {
             }
         });
     });
+    layer.querySelectorAll('[data-demo-plant-profile]').forEach(profile => {
+        const index = Number(profile.dataset.demoPlantProfile);
+        const record = markers[index];
+        const tether = layer.querySelector(`[data-demo-plant-tether="${index}"]`);
+        const handle = profile.querySelector('[data-plant-profile-handle]');
+        if (!record || !handle) return;
+        const cells = [...profile.querySelectorAll('[data-plant-branch]')];
+        const activateBranch = branchKey => {
+            record.demoActiveBranch = branchKey;
+            cells.forEach(candidate => {
+                const open = candidate.dataset.plantBranch === branchKey;
+                candidate.classList.toggle('is-open', open);
+                candidate.setAttribute('aria-expanded', String(open));
+                candidate.querySelector('small')?.setAttribute('aria-hidden', String(!open));
+            });
+        };
+        cells.forEach(cell => {
+            cell.addEventListener('click', event => {
+                event.stopPropagation();
+                const branchKey = cell.dataset.plantBranch;
+                activateBranch(record.demoActiveBranch === branchKey ? '' : branchKey);
+            });
+            cell.addEventListener('mouseenter', () => activateBranch(cell.dataset.plantBranch));
+        });
+        let start = null;
+        handle.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            start = { x: event.clientX, y: event.clientY, offset: record.demoPanelOffset || { x: 0, y: 0 } };
+            handle.setPointerCapture?.(event.pointerId);
+            profile.classList.add('is-dragging');
+        });
+        handle.addEventListener('pointermove', event => {
+            if (!start) return;
+            record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
+                x: start.offset.x + event.clientX - start.x,
+                y: start.offset.y + event.clientY - start.y
+            });
+            applyPlantPanelOffset(profile, tether, record.demoPanelOffset);
+        });
+        const finish = () => {
+            start = null;
+            profile.classList.remove('is-dragging');
+        };
+        handle.addEventListener('pointerup', finish);
+        handle.addEventListener('pointercancel', finish);
+        handle.addEventListener('keydown', event => {
+            const movement = {
+                ArrowLeft: { x: -12, y: 0 },
+                ArrowRight: { x: 12, y: 0 },
+                ArrowUp: { x: 0, y: -12 },
+                ArrowDown: { x: 0, y: 12 }
+            }[event.key];
+            if (!movement) return;
+            event.preventDefault();
+            const offset = record.demoPanelOffset || { x: 0, y: 0 };
+            record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
+                x: offset.x + movement.x,
+                y: offset.y + movement.y
+            });
+            applyPlantPanelOffset(profile, tether, record.demoPanelOffset);
+        });
+    });
 }
 
-function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE) {
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<span class="plant-knowledge-cell" style="--cell:${index}"><b>${label}</b><small>${value}</small></span>`).join('')}</span>`;
-    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core"><i aria-hidden="true">🌿</i><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
+function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE, activeBranch = 'left-0') {
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => {
+        const key = `${side}-${index}`;
+        const open = activeBranch === key;
+        return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${label}</b><small aria-hidden="${!open}">${value}</small></button>`;
+    }).join('')}</span>`;
+    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${knowledge.title} information cluster"><small>PLANT PROFILE</small><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -361,6 +535,24 @@ function refreshDemoRecord(record) {
 
 function placementPosition() {
     return spatialPosition(hitMatrix, viewerMatrix, .14);
+}
+
+function plantInformationPosition(record) {
+    const position = record?.position || { x: 0, y: 0, z: -1.2 };
+    const viewerY = Number(viewerMatrix?.[13]);
+    const minimumY = position.y + 0.45;
+    const maximumY = position.y + 1.05;
+    const preferredY = Number.isFinite(viewerY) ? viewerY - 0.12 : position.y + 0.72;
+    const cameraX = Number(viewerMatrix?.[12]);
+    const cameraZ = Number(viewerMatrix?.[14]);
+    const towardViewerX = Number.isFinite(cameraX) ? cameraX - position.x : 0;
+    const towardViewerZ = Number.isFinite(cameraZ) ? cameraZ - position.z : 1;
+    const horizontalDistance = Math.hypot(towardViewerX, towardViewerZ) || 1;
+    return {
+        x: position.x + towardViewerX / horizontalDistance * 0.14,
+        y: Math.min(maximumY, Math.max(minimumY, preferredY)),
+        z: position.z + towardViewerZ / horizontalDistance * 0.14
+    };
 }
 
 function placeMarker() {
@@ -375,8 +567,13 @@ function placeMarker() {
         name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
-    const panelOffsets = { plant: { x: -70, y: -45 }, note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
-    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: panelOffsets[type], revealTitle: true, revealLines: 3, texture: null };
+    const simulatedAnchor = simulatedMode ? capturedSimulatedAnchor() : null;
+    const panelOffsets = {
+        plant: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
+        note: { x: 105, y: 75 },
+        zone: { x: 0, y: 0 }
+    };
+    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: panelOffsets[type], simulatedAnchor, informationPosition: null, revealTitle: true, revealLines: 3, texture: null };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
@@ -439,6 +636,7 @@ function setupRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
+    tetherRenderer = createSpatialTetherRenderer(gl);
 }
 
 function unusedLegacyMarkerTexture() {
@@ -495,7 +693,7 @@ function createSpatialKnowledgeTexture(record) {
     label.height = 720;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
-        drawPlantKnowledgeTexture(ctx, label, LEMON_MYRTLE_KNOWLEDGE);
+        drawPlantKnowledgeTexture(ctx, label, LEMON_MYRTLE_KNOWLEDGE, record.demoActiveBranch || 'left-0');
         return canvasTexture(label);
     }
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
@@ -543,7 +741,7 @@ function canvasTexture(label) {
     return texture;
 }
 
-function drawHexagon(ctx, x, y, radius, fill, stroke) {
+function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
     ctx.beginPath();
     for (let point = 0; point < 6; point++) {
         const angle = Math.PI / 3 * point;
@@ -555,51 +753,48 @@ function drawHexagon(ctx, x, y, radius, fill, stroke) {
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = lineWidth;
     ctx.stroke();
 }
 
-function drawPlantKnowledgeTexture(ctx, label, knowledge) {
+function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0') {
     ctx.clearRect(0, 0, label.width, label.height);
     const center = { x: label.width / 2, y: label.height / 2 };
     const cells = [
-        ...knowledge.left.map((item, index) => ({ item, x: 260 + index * 58, y: 190 + index * 150, side: -1 })),
-        ...knowledge.right.map((item, index) => ({ item, x: 860 - index * 58, y: 190 + index * 150, side: 1 }))
+        ...knowledge.left.map((item, index) => ({
+            item,
+            key: `left-${index}`,
+            x: [477, 394, 477][index],
+            y: [216, 360, 504][index]
+        })),
+        ...knowledge.right.map((item, index) => ({
+            item,
+            key: `right-${index}`,
+            x: [643, 726, 643][index],
+            y: [216, 360, 504][index]
+        }))
     ];
-    ctx.strokeStyle = 'rgba(205,238,177,.20)';
-    ctx.lineWidth = 2;
     cells.forEach(cell => {
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.bezierCurveTo(center.x + cell.side * 70, center.y, cell.x - cell.side * 54, cell.y, cell.x, cell.y);
-        ctx.stroke();
-    });
-    cells.forEach(cell => {
-        drawHexagon(ctx, cell.x, cell.y, 94, 'rgba(22,53,36,.78)', 'rgba(183,232,149,.52)');
+        const open = cell.key === activeBranch;
+        drawHexagon(ctx, cell.x, cell.y, 80, 'rgba(24,52,37,.24)', 'rgba(224,240,211,.30)', 2);
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#dcef95';
-        ctx.font = '750 24px system-ui, sans-serif';
-        ctx.fillText(cell.item[0], cell.x, cell.y - 15);
-        ctx.fillStyle = '#fff';
-        ctx.font = '22px system-ui, sans-serif';
-        drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 20, 170, 27, 3);
+        ctx.fillStyle = 'rgba(226,240,207,.84)';
+        ctx.font = '650 20px system-ui, sans-serif';
+        ctx.fillText(cell.item[0], cell.x, cell.y + (open ? -10 : 7));
+        if (open) {
+            ctx.fillStyle = 'rgba(255,255,255,.80)';
+            ctx.font = '18px system-ui, sans-serif';
+            drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 17, 126, 22, 2);
+        }
     });
-    const orb = ctx.createRadialGradient(center.x - 28, center.y - 34, 8, center.x, center.y, 110);
-    orb.addColorStop(0, '#f5ffe8');
-    orb.addColorStop(.24, '#a8df7d');
-    orb.addColorStop(.68, '#4d933f');
-    orb.addColorStop(1, 'rgba(31,92,44,.35)');
-    ctx.fillStyle = orb;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, 105, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(235,255,217,.9)';
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.fillStyle = '#fff';
+    drawHexagon(ctx, center.x, center.y, 88, 'rgba(34,68,49,.30)', 'rgba(232,245,221,.38)', 3);
     ctx.textAlign = 'center';
-    ctx.font = '750 31px system-ui, sans-serif';
-    ctx.fillText(knowledge.title, center.x, center.y + 8);
+    ctx.fillStyle = 'rgba(223,237,209,.70)';
+    ctx.font = '650 16px system-ui, sans-serif';
+    ctx.fillText('PLANT PROFILE', center.x, center.y - 15);
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = '650 28px system-ui, sans-serif';
+    ctx.fillText(knowledge.title, center.x, center.y + 20);
 }
 
 function createBoundaryTexture() {
@@ -710,7 +905,7 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
-    if (!program || !buffer || !sphereRenderer) return;
+    if (!program || !buffer || !sphereRenderer || !tetherRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -720,6 +915,19 @@ function drawMarker(view) {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
         if (!orbType) return;
         drawSpatialOrb(gl, sphereRenderer, view, record.position, orbType === 'plant' ? .062 : .045, { type: orbType });
+    });
+
+    markers.forEach(record => {
+        if (record.demoType !== 'plant' || !record.demoExpanded) return;
+        const informationPosition = record.informationPosition || (record.informationPosition = plantInformationPosition(record));
+        drawSpatialTether(
+            gl,
+            tetherRenderer,
+            view,
+            { ...record.position, y: record.position.y + 0.07 },
+            { ...informationPosition, y: informationPosition.y - 0.22 },
+            { width: 0.003, color: [0.84, 0.93, 0.76, 0.25], curve: 0.035, lift: 0.05 }
+        );
     });
 
     gl.useProgram(program);
@@ -733,10 +941,17 @@ function drawMarker(view) {
         if (orbOnly) return;
         const compact = !record.demoExpanded;
         const totem = record.demoType === 'zone';
-        const displayPosition = totem
+        const plantProfile = record.demoType === 'plant' && record.demoExpanded;
+        const displayPosition = plantProfile
+            ? record.informationPosition || (record.informationPosition = plantInformationPosition(record))
+            : totem
             ? { ...record.position, y: record.position.y + 1 }
-            : compact ? record.position : { ...record.position, y: Math.max(record.position.y + 1.35, 1.35) };
-        const model = billboardMatrix(displayPosition, totem ? 1.125 : compact ? .38 : 2.35, totem ? 12.5 : compact ? .38 : 3.45);
+            : compact ? record.position : { ...record.position, y: record.position.y + 0.72 };
+        const model = billboardMatrix(
+            displayPosition,
+            plantProfile ? 1.85 : totem ? 1.125 : compact ? .38 : 2.35,
+            plantProfile ? 2.55 : totem ? 12.5 : compact ? .38 : 3.45
+        );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);

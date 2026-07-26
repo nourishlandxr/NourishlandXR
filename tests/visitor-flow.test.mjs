@@ -292,7 +292,7 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
     assert.match(source, /Search plant presets<input value="Lemon Myrtle" readonly>/);
     assert.doesNotMatch(source, /tryit-panel/);
-    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker \{ display: none !important;/);
+    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
     assert.match(source, /function createMarkerTexture/);
     assert.doesNotMatch(source, /Loading Dashboard|Place Your Dashboard|draggable-window/);
