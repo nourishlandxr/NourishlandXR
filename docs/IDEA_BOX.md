@@ -1,5 +1,12 @@
 # Nourishland XR Idea Box
 
+## V0.8511 — Living Plant Profile interaction
+
+- Keep ordinary Plants simple; let creators deliberately upgrade important Plants into knowledge-rich Profiles.
+- Use the living orb as the permanent spatial anchor and the honeycomb tree as a collapsible reading layer.
+- A subtle hover vibration communicates that more knowledge is available without adding another instruction panel.
+- Future: let community-reviewed profile branches inherit trusted global taxonomy while preserving local observations.
+
 This is the living memory of Nourishland XR. Add promising ideas here when they appear in conversation or testing. Ideas do not become commitments automatically: each one should protect the product’s purpose and remain simple enough for a person standing in a real garden.
 
 ## Product compass

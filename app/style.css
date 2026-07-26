@@ -597,6 +597,8 @@ h1 {
 @keyframes tryit-live-orb-awaken { 0% { opacity: .55; transform: translate(-50%, -50%) scale(.72); filter: saturate(.35); } 55% { transform: translate(-50%, -50%) scale(1.14); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: saturate(1); } }
 .tryit-sim-orb.is-plant::after { content: ""; position: absolute; left: 50%; top: 52%; width: 38%; height: 38%; transform: translate(-50%, -50%); border: 1px solid rgba(232,255,201,.7); border-radius: 50%; background: radial-gradient(circle at 32% 26%, #f2ffd9 0 18%, #b9e66f 38%, #3f7f38 100%); box-shadow: 0 0 10px rgba(220,247,151,.52), inset -3px -4px 5px rgba(29,79,33,.34); }
 .tryit-sim-marker-plant.has-information .tryit-sim-orb { box-shadow: inset -9px -11px 16px rgba(12,55,25,.42), inset 5px 5px 9px rgba(255,255,255,.16), 0 0 27px rgba(183,232,149,.56); }
+.tryit-sim-marker-plant.has-plant-profile:is(:hover, :focus-visible) .tryit-sim-orb { animation: tryit-plant-profile-ready .38s ease-in-out infinite alternate; }
+@keyframes tryit-plant-profile-ready { from { transform: translate(-50%, -50%) translate(-1px, 0) scale(.99); } to { transform: translate(-50%, -50%) translate(1px, -1px) scale(1.015); } }
 .tryit-sim-plant-tether { position: fixed; left: var(--marker-x, 50%); top: calc(var(--marker-y, 50%) - 9px); z-index: 12000; width: var(--tether-length, 120px); height: 18px; transform: rotate(var(--tether-angle, -90deg)); transform-origin: 0 9px; overflow: visible; filter: drop-shadow(0 0 3px rgba(183,232,149,.20)); opacity: .9; pointer-events: none; }
 .tryit-sim-plant-tether path { fill: none; stroke: rgba(222,239,207,.36); stroke-width: 1; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .tryit-sim-plant-profile { position: fixed; left: var(--marker-x, 50%); top: var(--marker-y, 50%); z-index: 12001; width: min(90vw, 520px); height: clamp(240px, 50vw, 310px); transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); border: 0; background: transparent; color: rgba(255,255,255,.86); filter: drop-shadow(0 8px 18px rgba(0,0,0,.10)); pointer-events: none; animation: tryit-profile-arrive 1.15s cubic-bezier(.18,.78,.28,1) both; }
@@ -762,6 +764,14 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(255,224,137,.34); background: rgba(65,49,13,.5); }
 .creator-ar-marker-hit-target-plant .creator-ar-spatial-name { border-color: color-mix(in srgb, var(--marker-accent) 58%, transparent); }
+.creator-ar-marker-hit-target.has-plant-profile .creator-ar-spatial-name small { display: block; margin-top: 2px; color: rgba(220,239,149,.76); font-size: .52rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after { animation: creator-ar-profile-ready .38s ease-in-out infinite alternate; border-color: rgba(220,239,149,.88); opacity: 1; }
+@keyframes creator-ar-profile-ready { from { transform: translateX(-1px) scale(.96); } to { transform: translateX(1px) translateY(-1px) scale(1.03); } }
+.creator-ar-plant-tether { position: fixed; z-index: 1; display: block; height: 1px; transform-origin: left center; background: linear-gradient(90deg, rgba(222,239,207,.52), rgba(222,239,207,.14)); filter: drop-shadow(0 0 3px rgba(183,232,149,.18)); opacity: 0; pointer-events: none; animation: creator-ar-profile-fade .9s .18s ease forwards; }
+.creator-ar-plant-profile { position: fixed; z-index: 2; width: min(90vw, 520px); height: clamp(240px, 50vw, 310px); transform: translate(-50%, -50%) scale(.965); border: 0; background: transparent; color: rgba(255,255,255,.88); filter: drop-shadow(0 8px 18px rgba(0,0,0,.1)); opacity: 0; pointer-events: none; animation: creator-ar-profile-arrive 1.05s cubic-bezier(.18,.78,.28,1) forwards; }
+.creator-ar-plant-profile .plant-knowledge-core { cursor: default; }
+@keyframes creator-ar-profile-arrive { from { opacity: 0; transform: translate(-50%, -46%) scale(.93); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes creator-ar-profile-fade { to { opacity: .82; } }
 .creator-ar-marker-hit-target-intro_checkpoint .creator-ar-spatial-name,
 .creator-ar-marker-hit-target-sub_checkpoint .creator-ar-spatial-name,
 .creator-ar-marker-hit-target-area_checkpoint .creator-ar-spatial-name { border-color: rgba(174,220,251,.34); background: rgba(15,47,72,.5); }
@@ -4407,3 +4417,14 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .global-plant-results button small {
     opacity: 0.78;
 }
+
+.plant-profile-upgrade { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(76,126,66,.24); border-radius: 16px; background: rgba(231,240,225,.34); }
+.plant-profile-invitation { display: grid; gap: 8px; justify-items: start; }
+.plant-profile-invitation p, .plant-profile-state { margin: 0; }
+.plant-profile-invitation p { color: var(--muted, #536457); font-size: .84rem; line-height: 1.45; }
+.plant-profile-state { display: grid; gap: 3px; }
+.plant-profile-state span { color: var(--muted, #536457); font-size: .78rem; }
+.plant-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.plant-profile-fields[hidden] { display: none; }
+.plant-profile-fields .field:has(textarea), .plant-profile-fields .field:last-child { grid-column: 1 / -1; }
+@media (max-width: 620px) { .plant-profile-fields { grid-template-columns: 1fr; } .plant-profile-fields .field { grid-column: auto; } }

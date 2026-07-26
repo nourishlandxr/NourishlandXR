@@ -1,5 +1,14 @@
 # NourishlandXR product decisions
 
+## 2026-07-26 — Plant Profiles are an upgrade, not the default
+
+Decision: A plain Plant stays a lightweight living orb. Creating a Plant Profile unlocks advanced scientific, practical, relationship and propagation data. In AR, an upgraded Plant responds gently on hover and its Marker toggles the tethered information tree.
+
+Consequences:
+
+- Plant Profile panels fade in rather than appearing abruptly; the real-world Plant Marker remains anchored.
+- Creator Totems share the Demo Totem’s rounded, translucent post language.
+
 ## 2026-07-26 — Spatial Plant Profiles preserve the live Marker
 
 Decision: A Plant Profile never replaces or repositions its living orb. The orb remains at its recorded physical anchor while a separate, compact honeycomb appears nearby at a comfortable reading height. A subtle curved tether connects the two.

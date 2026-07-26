@@ -183,6 +183,7 @@ function guidePlantConversion(record) {
             if (preset !== 'lemon-myrtle') return;
             record.name = 'Lemon Myrtle';
             record.demoExpanded = true;
+            record.profileRevealStarted = performance.now();
             record.demoActiveBranch = '';
             record.informationPosition = plantInformationPosition(record);
             record.revealTitle = true;
@@ -364,11 +365,24 @@ function capturedSimulatedAnchor() {
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
     return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(LEMON_MYRTLE_KNOWLEDGE, record.demoActiveBranch)}</span>`;
+}
+
+function toggleDemoPlantProfile(record) {
+    if (!record || record.demoType !== 'plant') return;
+    record.demoExpanded = !record.demoExpanded;
+    if (record.demoExpanded) {
+        record.profileRevealStarted = performance.now();
+        if (!record.demoActiveBranch) record.demoActiveBranch = 'left-0';
+    }
+    refreshDemoRecord(record);
+    setGuide(record.demoExpanded
+        ? `${record.name || 'Plant'} profile opened gently. Press the living orb again to hide it.`
+        : `${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
 }
 
 function updateSimulatedMarkers() {
@@ -443,11 +457,7 @@ function bindSimulatedInformationPanels(layer) {
             }
         });
         if (record.demoType === 'plant') {
-            compactMarker.addEventListener('click', () => {
-                record.demoExpanded = !record.demoExpanded;
-                if (record.demoExpanded && !record.demoActiveBranch) record.demoActiveBranch = 'left-0';
-                refreshDemoRecord(record);
-            });
+            compactMarker.addEventListener('click', () => toggleDemoPlantProfile(record));
             compactMarker.addEventListener('keydown', event => {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
@@ -681,7 +691,7 @@ function setupRenderer() {
     gl.shaderSource(vertex, 'attribute vec3 p;attribute vec2 uv;uniform mat4 mvp;varying vec2 v;void main(){gl_Position=mvp*vec4(p,1.);v=uv;}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,v);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
     gl.compileShader(fragment);
     program = gl.createProgram();
     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
@@ -1011,6 +1021,8 @@ function drawMarker(view) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
+        const profileOpacity = plantProfile ? Math.min(1, Math.max(0, (performance.now() - (record.profileRevealStarted || 0)) / 1050)) : 1;
+        gl.uniform1f(gl.getUniformLocation(program, 'opacity'), profileOpacity);
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         if (plantProfile) gl.depthMask(true);
@@ -1037,7 +1049,14 @@ async function startImmersive() {
         const viewerSpace = await session.requestReferenceSpace('viewer');
         hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         setupRenderer();
-        session.addEventListener('select', () => { if (placementReady && !marker) placeMarker(); });
+        session.addEventListener('select', () => {
+            if (placementReady && !marker) {
+                placeMarker();
+                return;
+            }
+            const profiledPlant = markers.find(record => record.demoType === 'plant');
+            if (profiledPlant) toggleDemoPlantProfile(profiledPlant);
+        });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;

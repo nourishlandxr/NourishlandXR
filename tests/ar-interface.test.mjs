@@ -80,7 +80,8 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(sphereSource, /radius \* 0\.38/);
     assert.match(sphereSource, /gl\.enable\(gl\.DEPTH_TEST\)/);
     assert.match(creatorSource, /shape !== 0 && shape !== 4/);
-    assert.match(creatorSource, /drawSpatialOrb\(gl, sphereRenderer, view, record\.position/);
+    assert.match(creatorSource, /const hoverVibration = record\.profileHovered && hasPlantProfile\(record\)/);
+    assert.match(creatorSource, /drawSpatialOrb\(gl, sphereRenderer, view, \{/);
     assert.match(creatorSource, /readyPlacementType === 'plant' \? 'plant' : 'marker'/);
     assert.match(demoSource, /record\.demoType === 'plant' \? 'plant' : record\.demoType === 'marker' \? 'marker'/);
     assert.match(demoSource, /const orbOnly = \['marker', 'plant'\]\.includes\(record\.demoType\) && !record\.demoExpanded/);
@@ -192,7 +193,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /latestViewerMatrix\[14\] - latestViewerMatrix\[10\] \* distance/);
     assert.match(arSource, /Pointer mode is on/);
-    assert.match(arSource, /interactionMode === 'view'\) return/);
+    assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.profileExpanded = !record\.profileExpanded/);
     assert.match(arSource, /openInlineEditor/);
     assert.match(arSource, /openInlineEditor\(record, true\)/);
     assert.match(arSource, /deletePlaceMarker/);
@@ -445,6 +446,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-plant-profile/);
     assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: none;/);
     assert.match(source, /record\.demoExpanded = false/);
+    assert.match(source, /function toggleDemoPlantProfile/);
+    assert.match(source, /profileRevealStarted = performance\.now\(\)/);
+    assert.match(source, /uniform float opacity/);
+    assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
@@ -573,11 +578,29 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /area_checkpoint: \[\.225 \* factor, 1 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
-    assert.match(arSource, /shape<1\.5\?\.82:\.50/);
+    assert.match(arSource, /roundBox\(q,vec2\(\.43,.48\),\.075\)/);
+    assert.match(arSource, /shape<1\.5\?\.72:\.50/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);
     assert.match(arSource, /trail entrance gateway/);
+});
+
+test('Creator Plants deliberately upgrade into collapsible AR Plant Profiles', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /function hasPlantProfile\(record\)/);
+    assert.match(arSource, /record\.profileExpanded = !record\.profileExpanded/);
+    assert.match(arSource, /Plant Profile opened\. Press the Plant Marker again to hide it/);
+    assert.match(arSource, /creator-ar-plant-profile/);
+    assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
+    assert.match(styles, /@keyframes creator-ar-profile-arrive/);
+    assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
+    assert.match(dashboardSource, /Upgrade this Plant/);
+    assert.match(dashboardSource, /Create Plant Profile/);
+    assert.match(dashboardSource, /projectEntryRelationships/);
+    assert.match(dashboardSource, /if \(profileEnabled\)/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

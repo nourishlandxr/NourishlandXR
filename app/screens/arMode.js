@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
@@ -98,6 +98,46 @@ function markerDimensions(marker) {
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
     })[marker.type] || [markerScale(marker), markerScale(marker)];
+}
+
+function hasPlantProfile(record) {
+    const profile = record?.plantProfile || record?.marker?.plant_profile || {};
+    return record?.marker?.type === 'plant' && Boolean(
+        profile.profile_enabled === true
+        || profile.scientific_name
+        || profile.overview
+        || profile.family
+        || profile.origin
+        || profile.plant_type
+        || profile.layer
+        || profile.uses
+        || profile.propagation
+        || profile.relationships
+    );
+}
+
+function creatorPlantKnowledge(record) {
+    const profile = record.plantProfile || record.marker.plant_profile || {};
+    const summary = (...values) => values.find(value => String(value || '').trim()) || 'Add in Web Mode';
+    return {
+        title: profile.common_name || record.marker.name || 'Plant Profile',
+        left: [
+            ['USES', summary(profile.uses, profile.overview)],
+            ['RELATIONSHIPS', summary(profile.relationships, profile.companions)],
+            ['FOREST LAYER', summary(profile.layer, profile.plant_type)]
+        ],
+        right: [
+            ['SCIENTIFIC', summary(profile.scientific_name)],
+            ['BIOLOGY', summary(profile.family, profile.plant_type)],
+            ['ORIGIN', summary(profile.origin, profile.propagation)]
+        ]
+    };
+}
+
+function creatorPlantKnowledgeMarkup(record) {
+    const knowledge = creatorPlantKnowledge(record);
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-expanded="false"><b>${escapeHtml(label)}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
+    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function setPlacementStatus(message) {
@@ -456,7 +496,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=box(q,vec2(.20,.45));float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.065,-.055);float backRect=box(backQ,vec2(.40,.28));float backTotem=box(backQ,vec2(.20,.45));float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.82:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.025,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=roundBox(q,vec2(.43,.48),.075);float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.055,-.035);float backRect=box(backQ,vec2(.40,.28));float backTotem=roundBox(backQ,vec2(.43,.48),.075);float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.72:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -482,7 +522,17 @@ function drawSpatialMarkers(view) {
         if (shape !== 0 && shape !== 4) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
-        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY), {
+        const hoverVibration = record.profileHovered && hasPlantProfile(record)
+            ? {
+                x: Math.sin(performance.now() / 42) * .0035,
+                y: Math.sin(performance.now() / 58) * .0025
+            }
+            : { x: 0, y: 0 };
+        drawSpatialOrb(gl, sphereRenderer, view, {
+            ...record.position,
+            x: record.position.x + hoverVibration.x,
+            y: record.position.y + hoverVibration.y
+        }, Math.max(scaleX, scaleY), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor)
         });
@@ -548,16 +598,76 @@ function positionSessionMarkers(view = latestView) {
         const y = (-clip[1] / clip[3] * 0.5 + 0.5) * window.innerHeight;
         const visible = x > -40 && x < window.innerWidth + 40 && y > -40 && y < window.innerHeight + 40;
         element.hidden = !visible;
-        if (visible) element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
+        if (visible) {
+            element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
+            positionCreatorPlantProfile(record, x, y);
+        }
     });
+}
+
+function positionCreatorPlantProfile(record, markerX, markerY) {
+    if (!record.profileExpanded || !overlayRoot) return;
+    const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
+    const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
+    if (!profile || !tether) return;
+    const panelWidth = Math.min(window.innerWidth * .9, 520);
+    const panelHeight = Math.min(310, Math.max(240, window.innerWidth * .5));
+    const horizontalDirection = markerX < window.innerWidth / 2 ? 1 : -1;
+    const panelX = Math.max(panelWidth / 2 + 12, Math.min(window.innerWidth - panelWidth / 2 - 12, markerX + horizontalDirection * Math.min(210, window.innerWidth * .32)));
+    const panelY = Math.max(panelHeight / 2 + 12, Math.min(window.innerHeight - panelHeight / 2 - 84, markerY - Math.min(150, window.innerHeight * .2)));
+    profile.style.left = `${panelX}px`;
+    profile.style.top = `${panelY}px`;
+    const dx = panelX - markerX;
+    const dy = panelY - markerY;
+    tether.style.left = `${markerX}px`;
+    tether.style.top = `${markerY}px`;
+    tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
+    tether.style.transform = `translateY(-50%) rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
 
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}</span></span>`).join('');
+    layer.innerHTML = sessionMarkers.map(record => {
+        const profileAvailable = hasPlantProfile(record);
+        const profileLabel = profileAvailable ? (record.profileExpanded ? ' Hide Plant Profile' : ' Open Plant Profile') : '';
+        const profileLayer = profileAvailable && record.profileExpanded
+            ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            : '';
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : ''}</span></span>${profileLayer}`;
+    }).join('');
     sessionMarkers.forEach(record => {
-        layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`)?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
+        const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
+        element?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
+        element?.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            beginMarkerInteraction(record, event);
+        });
+        if (hasPlantProfile(record)) {
+            const setHovered = value => { record.profileHovered = value; };
+            element?.addEventListener('mouseenter', () => setHovered(true));
+            element?.addEventListener('mouseleave', () => setHovered(false));
+            element?.addEventListener('focus', () => setHovered(true));
+            element?.addEventListener('blur', () => setHovered(false));
+        }
+        layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(cell => {
+            const activate = () => {
+                const open = !cell.classList.contains('is-open');
+                layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(candidate => {
+                    candidate.classList.toggle('is-open', candidate === cell && open);
+                    candidate.setAttribute('aria-expanded', String(candidate === cell && open));
+                    candidate.querySelector('small')?.setAttribute('aria-hidden', String(!(candidate === cell && open)));
+                });
+            };
+            cell.addEventListener('click', event => {
+                event.stopPropagation();
+                activate();
+            });
+            cell.addEventListener('mouseenter', () => {
+                if (!cell.classList.contains('is-open')) activate();
+            });
+        });
     });
     updateInteractionControls();
     positionSessionMarkers();
@@ -587,7 +697,10 @@ function openInlineEditor(record, force = false) {
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
     const noticeBoard = record.marker.notice_board || {};
     const startingBoardControls = startingPoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Trail Entrance notice board</legend><label>Board title<input name="noticeBoardTitle" value="${escapeHtml(noticeBoard.title || record.marker.name)}" /></label><label>Welcome notice<textarea name="noticeBoardMessage" rows="3" placeholder="Add a welcome, orientation or important notice.">${escapeHtml(noticeBoard.message || '')}</textarea></label><p>Leave the notice blank when this entrance needs no spatial text.</p></fieldset>` : '';
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${plant ? '<p class="creator-ar-profile-note">Open Web Mode to build the full Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const profileNote = plant
+        ? `<p class="creator-ar-profile-note">${hasPlantProfile(record) ? 'Plant Profile enabled. Use View mode to reveal it, or Web Mode to extend its knowledge.' : 'Upgrade this Plant in Web Mode to unlock its interactive AR information tree.'}</p>`
+        : '';
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${profileNote}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-edit-in-web]').addEventListener('click', () => {
         arReturnContext = `web-marker:${record.marker.id}`;
@@ -672,7 +785,18 @@ function openInlineEditor(record, force = false) {
 
 function beginMarkerInteraction(record, event) {
     if (!interactionMode) return;
-    if (interactionMode === 'view') return;
+    if (interactionMode === 'view') {
+        if (!hasPlantProfile(record)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        record.profileExpanded = !record.profileExpanded;
+        record.profileHovered = false;
+        renderSessionMarkers();
+        setPlacementStatus(record.profileExpanded
+            ? `${record.marker.name} Plant Profile opened. Press the Plant Marker again to hide it.`
+            : `${record.marker.name} Plant Profile hidden.`);
+        return;
+    }
     event.preventDefault();
     event.stopPropagation();
     if (interactionMode === 'select') {
@@ -807,11 +931,18 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
         const savedMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, area.id).catch(() => []);
         return Promise.all(savedMarkers.map(async savedMarker => {
             const marker = normalizeAreaCheckpointMarker(savedMarker);
-            const anchor = await loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null);
+            const [anchor, plantProfile] = await Promise.all([
+                loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null),
+                marker.type === 'plant'
+                    ? loadPlantProfile(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null)
+                    : null
+            ]);
             const position = anchor?.position;
             if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
             return {
                 marker,
+                plantProfile,
+                profileExpanded: false,
                 position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
                 siteId: operation.siteId,
                 areaId: area.id,
