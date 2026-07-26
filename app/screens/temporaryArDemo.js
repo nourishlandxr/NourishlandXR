@@ -5,6 +5,7 @@
 import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
+import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 
 let appRoot = null;
 let session = null;
@@ -20,6 +21,7 @@ let markers = [];
 let simulatedMode = false;
 let program = null;
 let buffer = null;
+let sphereRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -65,6 +67,8 @@ function clearSessionState() {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
     });
+    destroySpatialSphereRenderer(gl, sphereRenderer);
+    sphereRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -288,7 +292,8 @@ function updateSimulatedMarkers() {
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
+        const orbProjection = ['marker', 'plant'].includes(record.demoType) ? `<span class="tryit-sim-orb${record.demoType === 'plant' ? ' is-plant' : ''}" aria-hidden="true"></span>` : '';
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="--marker-index:${index};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${orbProjection}${honeycomb || (content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent)}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -433,6 +438,7 @@ function setupRenderer() {
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
+    sphereRenderer = createSpatialSphereRenderer(gl);
 }
 
 function unusedLegacyMarkerTexture() {
@@ -704,14 +710,27 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
+    if (!program || !buffer || !sphereRenderer) return;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    markers.forEach(record => {
+        const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
+        if (!orbType) return;
+        drawSpatialOrb(gl, sphereRenderer, view, record.position, orbType === 'plant' ? .062 : .045, { type: orbType });
+    });
+
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     const p = gl.getAttribLocation(program, 'p'); const uv = gl.getAttribLocation(program, 'uv');
     gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p, 3, gl.FLOAT, false, 20, 0);
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     markers.forEach(record => {
         if (!record.texture) return;
+        const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
+        if (orbOnly) return;
         const compact = !record.demoExpanded;
         const totem = record.demoType === 'zone';
         const displayPosition = totem

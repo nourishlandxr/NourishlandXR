@@ -237,4 +237,12 @@ export function renderARPanel(gl, frame, refSpace, tex, opts = {}) {
         gl.uniformMatrix4fv(mvpLoc, false, mvp);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
+
+    if (typeof opts.drawSpatialContent === 'function') {
+        for (const view of viewerPose.views) {
+            const viewport = layer.getViewport(view);
+            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+            opts.drawSpatialContent(view);
+        }
+    }
 }

@@ -1,10 +1,14 @@
 ﻿import { initPanelRenderer, createPanelTexture, renderARPanel } from './arPanel.js';
 
+import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from './spatialSphereRenderer.js';
+
 let session;
 let gl;
 let refSpace;
 let renderer = null;
 let panelTex = null;
+let sphereRenderer = null;
+let activeMarker = null;
 
 // ─── Compatibility stubs ───
 const arDiagnosticLines = [];
@@ -51,7 +55,7 @@ function drawMenuPanel(ctx, w, h) {
     ctx.fillText('Exit', w / 2, h - 32);
 }
 
-export async function startArNote(_marker, profile) {
+export async function startArNote(marker, profile) {
     if (!window.isSecureContext) { alert('AR requires HTTPS.'); return; }
     if (!navigator.xr) { alert('WebXR unavailable.'); return; }
     try {
@@ -78,13 +82,16 @@ export async function startArNote(_marker, profile) {
         try { refSpace = await session.requestReferenceSpace('local-floor'); }
         catch { refSpace = await session.requestReferenceSpace('local'); }
 
-        // Initialize shared billboard renderer
+        // Initialize the shared panel and true-sphere renderers.
         renderer = initPanelRenderer(gl);
+        sphereRenderer = createSpatialSphereRenderer(gl);
+        activeMarker = marker || null;
         panelTex = createPanelTexture(gl, drawMenuPanel);
 
         session.addEventListener('end', () => {
             document.getElementById('arCanvas')?.remove();
-            session = null; gl = null; renderer = null; panelTex = null;
+            destroySpatialSphereRenderer(gl, sphereRenderer);
+            session = null; gl = null; renderer = null; panelTex = null; sphereRenderer = null; activeMarker = null;
         });
 
         // Draw loop with billboard panel
@@ -97,15 +104,31 @@ export async function startArNote(_marker, profile) {
                     buffer: renderer.buffer,
                     position: [0, 1.5, -2],
                     width: 0.92,
-                    height: 0.65
+                    height: 0.65,
+                    drawSpatialContent: activeMarker && ['plant', 'sub_checkpoint'].includes(activeMarker.type)
+                        ? view => drawSpatialOrb(
+                            gl,
+                            sphereRenderer,
+                            view,
+                            { x: 0, y: 1.06, z: -1.28 },
+                            activeMarker.type === 'plant' ? .062 : .045,
+                            { type: activeMarker.type === 'plant' ? 'plant' : 'marker' }
+                        )
+                        : null
                 });
             } catch(e) { console.error('[AR] render error:', e); }
         });
 
     } catch (error) {
         console.error('[AR] error:', error);
-        document.getElementById('arCanvas')?.remove();
+        const activeSession = session;
         session = null;
+        document.getElementById('arCanvas')?.remove();
+        destroySpatialSphereRenderer(gl, sphereRenderer);
+        sphereRenderer = null;
+        activeMarker = null;
+        gl = null;
+        activeSession?.end().catch(() => {});
         alert('AR error: ' + (error?.message || 'unknown'));
     }
 }

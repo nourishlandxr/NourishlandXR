@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -14,6 +15,56 @@ test('legacy AR diagnostics stay out of the camera interface', () => {
     assert.doesNotMatch(arSource, /overlayStatus\.textContent\s*=\s*error\s*\?/);
     assert.match(arSource, /getArDiagnostics/);
     assert.match(arSource, /copyArDiagnostics/);
+});
+
+test('shared spatial orbs use indexed three-dimensional sphere geometry', () => {
+    const geometry = createUvSphereGeometry(12, 16);
+    const vertexCount = geometry.vertices.length / geometry.stride;
+    assert.ok(vertexCount > 6);
+    assert.ok(geometry.indices.length > 6);
+    const bounds = {
+        x: [Infinity, -Infinity],
+        y: [Infinity, -Infinity],
+        z: [Infinity, -Infinity]
+    };
+    for (let offset = 0; offset < geometry.vertices.length; offset += geometry.stride) {
+        const position = geometry.vertices.slice(offset, offset + 3);
+        const normal = geometry.vertices.slice(offset + 3, offset + 6);
+        ['x', 'y', 'z'].forEach((axis, index) => {
+            bounds[axis][0] = Math.min(bounds[axis][0], position[index]);
+            bounds[axis][1] = Math.max(bounds[axis][1], position[index]);
+        });
+        assert.ok(Math.abs(Math.hypot(...normal) - 1) < 1e-5);
+    }
+    assert.ok(bounds.x[0] <= -0.99 && bounds.x[1] >= 0.99);
+    assert.ok(bounds.y[0] <= -0.99 && bounds.y[1] >= 0.99);
+    assert.ok(bounds.z[0] <= -0.99 && bounds.z[1] >= 0.99);
+    assert.ok(geometry.indices.every(index => index < vertexCount));
+
+    const model = sphereModelMatrix({ x: 1, y: 2, z: -3 }, 0.25);
+    assert.deepEqual([model[0], model[5], model[10]], [0.25, 0.25, 0.25]);
+    assert.deepEqual([model[12], model[13], model[14]], [1, 2, -3]);
+});
+
+test('Marker and Plant spheres are shared across Creator, demo and Explorer AR', () => {
+    const sphereSource = read('app/services/spatialSphereRenderer.js');
+    const creatorSource = read('app/screens/arMode.js');
+    const demoSource = read('app/screens/temporaryArDemo.js');
+    const explorerSource = read('app/services/arNote.js');
+    const panelSource = read('app/services/arPanel.js');
+    const styles = read('app/style.css');
+    assert.match(sphereSource, /gl\.drawElements\(gl\.TRIANGLES/);
+    assert.match(sphereSource, /radius \* 0\.38/);
+    assert.match(sphereSource, /gl\.enable\(gl\.DEPTH_TEST\)/);
+    assert.match(creatorSource, /shape !== 0 && shape !== 4/);
+    assert.match(creatorSource, /drawSpatialOrb\(gl, sphereRenderer, view, record\.position/);
+    assert.match(creatorSource, /readyPlacementType === 'plant' \? 'plant' : 'marker'/);
+    assert.match(demoSource, /record\.demoType === 'plant' \? 'plant' : record\.demoType === 'marker' \? 'marker'/);
+    assert.match(demoSource, /const orbOnly = \['marker', 'plant'\]\.includes\(record\.demoType\) && !record\.demoExpanded/);
+    assert.match(demoSource, /class="tryit-sim-orb/);
+    assert.match(styles, /\.tryit-sim-orb\.is-plant::after/);
+    assert.match(explorerSource, /drawSpatialContent:[\s\S]*drawSpatialOrb/);
+    assert.match(panelSource, /opts\.drawSpatialContent\(view\)/);
 });
 
 test('Creator AR exposes the compact placement toolbar', () => {

@@ -13,6 +13,7 @@ import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
+import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 
 let session = null;
 let gl = null;
@@ -37,6 +38,7 @@ let hitTestSource = null;
 let latestHitMatrix = null;
 let markerProgram = null;
 let markerBuffer = null;
+let sphereRenderer = null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
@@ -461,21 +463,46 @@ function setupSpatialMarkerRenderer() {
     markerBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+    sphereRenderer = createSpatialSphereRenderer(gl);
 }
 
 function drawSpatialMarkers(view) {
-    if (!markerProgram || !markerBuffer) return;
+    if (!markerProgram || !markerBuffer || !sphereRenderer) return;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
+
+    sessionMarkers.forEach(record => {
+        if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
+        const shape = markerShape(record.marker.type);
+        if (shape !== 0 && shape !== 4) return;
+        const [scaleX, scaleY] = markerDimensions(record.marker);
+        const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
+        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY), {
+            type: shape === 4 ? 'plant' : 'marker',
+            color: markerRgb(record.marker, baseColor)
+        });
+    });
+
+    if (readyPlacementType && latestHitMatrix) {
+        const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .07, z: latestHitMatrix[14] };
+        drawSpatialOrb(gl, sphereRenderer, view, target, .07, {
+            type: readyPlacementType === 'plant' ? 'plant' : 'marker',
+            color: readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]
+        });
+    }
+
     gl.useProgram(markerProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
     const positionLocation = gl.getAttribLocation(markerProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
     sessionMarkers.forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
+        if (shape === 0 || shape === 4) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
@@ -495,15 +522,6 @@ function drawSpatialMarkers(view) {
             gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.55, .92, .78]);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
-    }
-    if (readyPlacementType && latestHitMatrix) {
-        const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .035, z: latestHitMatrix[14] };
-        const model = markerBillboardMatrix(target, .07);
-        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
-        gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
-        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 0);
-        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.72, .9, .58]);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }
 
@@ -1179,6 +1197,8 @@ function cleanup() {
     sessionMarkers = [];
     readyPlacementType = '';
     pendingPlacedRecord = null;
+    destroySpatialSphereRenderer(gl, sphereRenderer);
+    sphereRenderer = null;
     markerProgram = null;
     markerBuffer = null;
     placementArmedAt = 0;
