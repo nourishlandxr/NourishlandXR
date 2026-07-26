@@ -4,6 +4,7 @@ import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
 import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { loadProject } from '../services/persistence.js';
+import { deletePlaceMarker, savePlantProfile } from '../services/persistence.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
@@ -1843,9 +1844,62 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
-    const { project, site, entries } = await projectContent(projectId);
+    const { project, site, places, entries } = await projectContent(projectId);
     const entry = entries.find(item => item.marker.id === markerId);
     if (!entry) throw new Error('Entry not found.');
     const [placement] = await entriesWithPlacement(project, site, [entry]);
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${markerTypeLabel(entry.marker.type)}</p></div><div class="panel"><p>${escapeHtml(entry.marker.description || entry.marker.notes || 'Detailed information can be added later.')}</p><p class="meta">Area: ${escapeHtml(entry.place.name)} · ${escapeHtml(entry.marker.visibility || 'draft')}</p><p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement status: ${placement.isPlaced ? 'Placed' : 'Not yet placed'}</p>${placement.isPlaced ? '' : `<button class="primary" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}</div></div>`;
+    const plant = entry.marker.type === 'plant';
+    const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
+    const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
+    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div><form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `<details class="plant-profile-editor" open><summary>${Object.keys(profile).length ? 'Edit Plant Profile' : 'Create Plant Profile'}</summary><div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" /></div><div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div><div class="field"><label for="projectEntryOverview">Profile overview</label><textarea id="projectEntryOverview" rows="5">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div></details>` : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form></div>`;
+}
+
+export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId) {
+    event.preventDefault();
+    const projectId = decodeURIComponent(encodedProjectId);
+    const markerId = decodeURIComponent(encodedMarkerId);
+    const status = document.getElementById('projectEntryEditStatus');
+    try {
+        status.textContent = 'Saving…';
+        const { project, site, entries } = await projectContent(projectId);
+        const entry = entries.find(item => item.marker.id === markerId);
+        if (!entry) throw new Error('Entry not found.');
+        const name = document.getElementById('projectEntryName').value.trim();
+        const description = document.getElementById('projectEntryDescription').value.trim();
+        const targetAreaId = document.getElementById('projectEntryArea').value;
+        let savedMarker = entry.marker;
+        if (targetAreaId !== entry.place.id) {
+            const { created, modified, plant_profile_path, spatial_anchor, ...portableMarker } = entry.marker;
+            const response = await createPlaceMarker(project.id, site.id, targetAreaId, {
+                ...portableMarker,
+                name,
+                description,
+                notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
+            });
+            savedMarker = response.marker || response;
+            if (entry.marker.type === 'plant') {
+                const existingProfile = await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {});
+                await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, existingProfile);
+            }
+            await deletePlaceMarker(project.id, site.id, entry.place.id, entry.marker.id);
+        } else {
+            savedMarker = await updatePlaceMarker(project.id, site.id, entry.place.id, entry.marker.id, {
+                ...entry.marker,
+                name,
+                description,
+                notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
+            });
+        }
+        if (entry.marker.type === 'plant') {
+            await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, {
+                ...(await loadPlantProfile(project.id, site.id, targetAreaId, savedMarker.id).catch(() => ({}))),
+                common_name: document.getElementById('projectEntryCommonName').value.trim() || name,
+                scientific_name: document.getElementById('projectEntryScientificName').value.trim(),
+                overview: document.getElementById('projectEntryOverview').value.trim()
+            });
+        }
+        await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id));
+    } catch (error) {
+        if (status) status.textContent = `Could not save: ${error.message}`;
+    }
 }

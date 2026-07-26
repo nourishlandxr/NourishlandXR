@@ -19,3 +19,10 @@ Consequences:
 - Hold means magnetise the chosen element to the centre aim until release.
 - An Area remains the normal container for spatial placement, while information created before Area assignment is explicitly “Not placed.”
 - Physical QR/code anchoring belongs directly in Totem and Trail Entrance panels.
+# V0.8510 — placement and editing rules
+
+- Holding is persistent and explicit: first press acquires, second press releases.
+- Horizontal and vertical placement follow the centre aim; distance is controlled separately through Push/Pull.
+- A Note defaults to street-sign readability and remains a flat information surface.
+- AR editors avoid long text and automatic keyboard focus. Full descriptions and Plant Profiles belong in Web Mode.
+- Moving an entry to another Area clears its old physical placement; the creator places it again deliberately.

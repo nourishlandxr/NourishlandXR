@@ -263,3 +263,13 @@ Before promoting an idea into the release plan, ask:
 - Plants may be saved as Not placed without an Area; Area creation has a compatibility fallback for older persistence services.
 - Organizer Folder and Home & Entrances live under Stories & Checkpoints rather than general dashboard settings.
 - Area Totems and Trail Entrances can store a physical QR or location code so future spatial anchors can lock to installed markers.
+# V0.8510 — precision spatial placement
+
+- Hold becomes a two-press interaction: press an element to magnetise it to the centre aim, move naturally, then press again to save and release.
+- A virtual Push/Pull control appears while holding, adjusting distance along the viewing direction for precise depth placement.
+- The same hold and depth language is demonstrated in Try It Now.
+- Notes become large, readable spatial signs rather than small labels.
+- Plant Profile honeycomb cells remain genuinely transparent so other spatial information stays visible behind them.
+- AR Quick Edit contains only rename, type, colour, five sizes and a direct route to the complete Web Mode editor.
+- Latest entries and creator Field Guide Plants open an editor that can rename, move to another Area, and create or update a Plant Profile.
+- Special Markers is a compact row: Add/Hide Totem, Import Marker/Plant, and Create Area only when no Area is active.

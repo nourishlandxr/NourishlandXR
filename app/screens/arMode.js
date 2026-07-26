@@ -58,7 +58,7 @@ const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker',
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
-const markerAppearanceSize = marker => ['small', 'medium', 'large'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
+const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
     ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
     : marker;
@@ -75,11 +75,11 @@ function markerRgb(marker, fallback) {
 }
 
 function markerScale(marker) {
-    return ({ small: .034, medium: .045, large: .06 })[markerAppearanceSize(marker)] || .045;
+    return ({ tiny: .026, small: .034, medium: .045, large: .06, huge: .082 })[markerAppearanceSize(marker)] || .045;
 }
 
 function markerSizeFactor(marker) {
-    return ({ small: .76, medium: 1, large: 1.34 })[markerAppearanceSize(marker)] || 1;
+    return ({ tiny: .58, small: .76, medium: 1, large: 1.34, huge: 1.82 })[markerAppearanceSize(marker)] || 1;
 }
 
 function markerShape(type) {
@@ -93,7 +93,8 @@ function markerDimensions(marker) {
         // and 1.2m x 2.3m respectively at the default size.
         area_checkpoint: [.225 * factor, 1 * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
-        note: [.11 * factor, .07 * factor],
+        // Notes are readable spatial signs rather than tiny object labels.
+        note: [.44 * factor, .28 * factor],
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
     })[marker.type] || [markerScale(marker), markerScale(marker)];
@@ -170,10 +171,16 @@ function spatialAnchor(position, context = null) {
 
 function cleanupDrag() {
     window.removeEventListener('pointermove', moveMarkerDrag);
-    window.removeEventListener('pointerup', finishMarkerDrag);
     window.removeEventListener('pointercancel', cancelMarkerDrag);
     dragState?.element?.classList.remove('is-adjusting');
     dragState = null;
+    overlayRoot?.classList.remove('is-holding-item');
+    const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
+    if (joystick) {
+        joystick.hidden = true;
+        const control = joystick.querySelector('input');
+        if (control) control.value = '0';
+    }
 }
 
 function updateInteractionControls() {
@@ -205,7 +212,7 @@ function setInteractionMode(mode) {
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'view') setPlacementStatus('View mode is on. Hover over a Marker to reveal its name.');
-    else if (interactionMode === 'grab') setPlacementStatus('Hold mode is on. Touch one Marker to carry it to the pointer; release and View mode returns.');
+    else if (interactionMode === 'grab') setPlacementStatus('Hold mode is on. Press an element to carry it at the aim; press it again to release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Interaction is off. Markers cannot be selected or moved.');
 }
@@ -299,27 +306,22 @@ function showPlacedMarkerActions(record) {
 
 function renderSpecialMarkerChoices(picker) {
     const existingTotem = sessionMarkers.find(record => record.areaId === activeAreaId && record.marker.type === 'area_checkpoint');
-    const existingEntrance = sessionMarkers.find(record => record.marker.type === 'intro_checkpoint' && (!activeAreaId || record.areaId === activeAreaId));
-    const visibilityControls = [
-        existingTotem ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong><small>Change visibility for this AR session.</small></span></button>` : '',
-        existingEntrance ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingEntrance.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingEntrance.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingEntrance.marker.id) ? 'Show' : 'Hide'} Trail Entrance</strong><small>Change visibility for this AR session.</small></span></button>` : ''
-    ].join('');
     const totemAction = existingTotem
-        ? `<button class="creator-ar-special-totem creator-ar-locate-totem" type="button" data-ar-locate-totem><b aria-hidden="true">➜</b><span><strong>Go to Totem</strong><small>${escapeHtml(existingTotem.areaName || activeAreaName || 'Area Totem')}</small></span></button>`
+        ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong></span></button>`
         : activeAreaId
-            ? `<button class="creator-ar-special-totem" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Place ${escapeHtml(activeAreaName || 'this Area')} Totem</strong><small>Raise the Totem for this existing Area.</small></span></button>`
+            ? `<button class="creator-ar-special-totem" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
             : '';
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>${totemAction}<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create New Area</strong><small>Name an Area, then place its Totem.</small></span></button>${visibilityControls}`;
+    const areaAction = activeAreaId ? '' : `<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create Area</strong></span></button>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><div class="creator-ar-special-grid">${totemAction}${areaAction}<button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-place-area-totem]')?.addEventListener('click', () => {
         closePlacePicker();
         void armPlacement('area_checkpoint');
     });
-    picker.querySelector('[data-ar-create-area]').addEventListener('click', () => void openArAreaCreationForm());
-    picker.querySelector('[data-ar-locate-totem]')?.addEventListener('click', () => {
-        locatedTotemRecord = existingTotem;
+    picker.querySelector('[data-ar-create-area]')?.addEventListener('click', () => void openArAreaCreationForm());
+    picker.querySelector('[data-ar-import-marker]').addEventListener('click', () => {
         closePlacePicker();
-        setPlacementStatus(`Ground guide active. Follow it to ${existingTotem.areaName || 'the Area Totem'}.`);
+        void openUnplacedBag();
     });
     picker.querySelectorAll('[data-ar-toggle-structural]').forEach(button => button.addEventListener('click', () => {
         const markerId = button.dataset.arToggleStructural;
@@ -580,14 +582,17 @@ function openInlineEditor(record, force = false) {
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
     const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · ${record.marker.type === 'area_checkpoint' ? 'Area Totem' : 'Trail Entrance'}</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option></select></label>`;
-    const markerControls = `<fieldset class="creator-ar-appearance"><legend>Marker appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option></select></label></fieldset>`;
+    const markerControls = `<fieldset class="creator-ar-appearance"><legend>Quick appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="tiny" ${markerAppearanceSize(record.marker) === 'tiny' ? 'selected' : ''}>Tiny</option><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option><option value="huge" ${markerAppearanceSize(record.marker) === 'huge' ? 'selected' : ''}>Huge</option></select></label></fieldset>`;
     const board = areaBoard(record.marker);
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
     const noticeBoard = record.marker.notice_board || {};
     const startingBoardControls = startingPoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Trail Entrance notice board</legend><label>Board title<input name="noticeBoardTitle" value="${escapeHtml(noticeBoard.title || record.marker.name)}" /></label><label>Welcome notice<textarea name="noticeBoardMessage" rows="3" placeholder="Add a welcome, orientation or important notice.">${escapeHtml(noticeBoard.message || '')}</textarea></label><p>Leave the notice blank when this entrance needs no spatial text.</p></fieldset>` : '';
-    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div><p class="welcome-label">Marker details</p><h2>${escapeHtml(record.marker.name)}</h2><p>Saved as a draft in ${escapeHtml(record.areaName)}.</p></div><label>Name<input name="name" value="${escapeHtml(record.marker.name)}" required /></label><label>Description<textarea name="description" rows="2" placeholder="Add details now or finish later in Web Mode.">${escapeHtml(record.marker.description || record.marker.notes || '')}</textarea></label>${markerControls}${areaBoardControls}${startingBoardControls}${plant ? '<p class="creator-ar-profile-note">Plant knowledge such as climate, uses and relationships belongs in Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
-    if (force) requestAnimationFrame(() => editor.querySelector('textarea')?.focus());
+    editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${plant ? '<p class="creator-ar-profile-note">Open Web Mode to build the full Plant Profile.</p>' : ''}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
+    editor.querySelector('[data-ar-edit-in-web]').addEventListener('click', () => {
+        arReturnContext = `web-marker:${record.marker.id}`;
+        exitArMode();
+    });
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
         const button = event.currentTarget;
         const status = editor.querySelector('[data-ar-editor-status]');
@@ -615,7 +620,7 @@ function openInlineEditor(record, force = false) {
         const form = event.currentTarget;
         const status = form.querySelector('[data-ar-editor-status]');
         const name = form.elements.name.value.trim();
-        const description = form.elements.description.value.trim();
+        const description = record.marker.description || record.marker.notes || '';
         const type = form.elements.markerType?.value || record.marker.type;
         if (!name) {
             status.textContent = 'A name is required.';
@@ -674,6 +679,16 @@ function beginMarkerInteraction(record, event) {
         openInlineEditor(record);
         return;
     }
+    if (dragState) {
+        if (dragState.record === record) void finishMarkerDrag();
+        return;
+    }
+    const camera = latestViewerMatrix
+        ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
+        : null;
+    const distance = camera
+        ? Math.max(.35, Math.hypot(record.position.x - camera.x, record.position.y - camera.y, record.position.z - camera.z))
+        : 1.2;
     dragState = {
         record,
         element: event.currentTarget,
@@ -681,17 +696,23 @@ function beginMarkerInteraction(record, event) {
         startX: event.clientX,
         startY: event.clientY,
         position: { ...record.position },
-        cameraPosition: latestViewerMatrix ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } : null,
+        cameraPosition: camera,
+        distance,
+        depthOffset: 0,
         pointerOffset: { x: 0, y: 0 }
     };
     event.currentTarget.classList.add('is-adjusting');
+    overlayRoot?.classList.add('is-holding-item');
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    window.addEventListener('pointermove', moveMarkerDrag);
-    window.addEventListener('pointerup', finishMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
+    const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
+    if (joystick) {
+        joystick.hidden = false;
+        joystick.querySelector('[data-ar-depth-name]').textContent = record.marker.name;
+    }
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
-    setPlacementStatus(`Holding ${record.marker.name} at the centre aim. Move your phone; release to place it.`);
+    setPlacementStatus(`Holding ${record.marker.name}. Aim to move, use Push/Pull for depth, then press it again to release.`);
 }
 
 function moveMarkerDrag(event) {
@@ -703,21 +724,16 @@ function moveMarkerDrag(event) {
 
 function updateGrabbedMarkerFromCamera() {
     if (!dragState) return;
-    const aimedPosition = placementPoint();
-    if (aimedPosition) {
-        dragState.record.position = { ...aimedPosition };
-        return;
-    }
     if (!latestViewerMatrix) return;
-    const origin = dragState.cameraPosition || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
-    dragState.record.position.x = dragState.position.x + (latestViewerMatrix[12] - origin.x) + dragState.pointerOffset.x;
-    dragState.record.position.y = dragState.position.y + (latestViewerMatrix[13] - origin.y) + dragState.pointerOffset.y;
-    dragState.record.position.z = dragState.position.z + (latestViewerMatrix[14] - origin.z);
+    const distance = Math.max(.3, Math.min(8, dragState.distance + dragState.depthOffset));
+    dragState.record.position.x = latestViewerMatrix[12] - latestViewerMatrix[8] * distance;
+    dragState.record.position.y = latestViewerMatrix[13] - latestViewerMatrix[9] * distance;
+    dragState.record.position.z = latestViewerMatrix[14] - latestViewerMatrix[10] * distance;
 }
 
 async function finishMarkerDrag(event) {
     const state = dragState;
-    if (!state || event?.pointerId !== state.pointerId) return;
+    if (!state || (event?.pointerId != null && event.pointerId !== state.pointerId)) return;
     const operation = captureArOperationContext();
     cleanupDrag();
     interactionMode = 'view';
@@ -732,6 +748,18 @@ async function finishMarkerDrag(event) {
         state.record.position = state.position;
         positionSessionMarkers();
         setPlacementStatus(`Could not save the move: ${error.message}`);
+    }
+}
+
+function adjustHeldMarkerDepth(value) {
+    if (!dragState) return;
+    dragState.depthOffset = Number(value) / 100;
+    updateGrabbedMarkerFromCamera();
+    positionSessionMarkers();
+    const readout = overlayRoot?.querySelector('[data-ar-depth-readout]');
+    if (readout) {
+        const distance = Math.max(.3, dragState.distance + dragState.depthOffset);
+        readout.textContent = `${distance.toFixed(1)} m`;
     }
 }
 
@@ -1125,6 +1153,11 @@ function createOverlay() {
             ${placementPointerMarkup('Place Marker', true)}
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
+        <aside class="creator-ar-depth-joystick" data-ar-depth-joystick hidden aria-label="Push or pull held element">
+            <strong data-ar-depth-name>Held element</strong>
+            <div><span>Pull</span><input type="range" min="-200" max="200" value="0" step="5" aria-label="Pull closer or push farther" /><span>Push</span></div>
+            <small data-ar-depth-readout>1.2 m</small>
+        </aside>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <div class="creator-ar-control-dock">
           <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
@@ -1156,6 +1189,7 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
+    overlayRoot.querySelector('[data-ar-depth-joystick] input').addEventListener('input', event => adjustHeldMarkerDepth(event.currentTarget.value));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();
         event.stopPropagation();
@@ -1210,7 +1244,9 @@ function cleanup() {
 function navigateAfterAr(projectId, areaId, returnContext) {
     if (!projectId) return;
     queueMicrotask(() => {
-        if (returnContext && areaId && window.resumeAreaCreationFlow) {
+        if (String(returnContext || '').startsWith('web-marker:')) {
+            window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)));
+        } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
         } else {
             window.renderProjectDashboard?.(encodeURIComponent(projectId), '', false, 'returning');

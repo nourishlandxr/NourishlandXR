@@ -29,6 +29,8 @@ let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
 let placementReady = false;
+let demoHeldIndex = -1;
+let suppressDemoMarkerClick = false;
 const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
@@ -63,6 +65,7 @@ function clearSessionState() {
     markerType = 'marker';
     demoStage = 'plant';
     placementReady = false;
+    demoHeldIndex = -1;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     boardTypingTimer = null;
@@ -361,7 +364,7 @@ function capturedSimulatedAnchor() {
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant${record.demoExpanded ? ' has-information' : ''}" data-demo-marker-index="${index}" style="${anchorVariables}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
@@ -384,7 +387,7 @@ function updateSimulatedMarkers() {
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -399,8 +402,46 @@ function applyPlantPanelOffset(profile, tether, offset) {
 
 function bindSimulatedInformationPanels(layer) {
     layer.querySelectorAll('.tryit-sim-marker').forEach(compactMarker => {
-        const record = markers[Number(compactMarker.dataset.demoMarkerIndex)];
+        const index = Number(compactMarker.dataset.demoMarkerIndex);
+        const record = markers[index];
         if (!record) return;
+        let holdTimer = null;
+        compactMarker.addEventListener('pointerdown', () => {
+            if (demoHeldIndex === index) return;
+            holdTimer = setTimeout(() => {
+                demoHeldIndex = index;
+                suppressDemoMarkerClick = true;
+                record.simulatedAnchor = { x: 50, y: 50 };
+                compactMarker.style.setProperty('--marker-x', '50%');
+                compactMarker.style.setProperty('--marker-y', '50%');
+                layer.querySelector(`[data-demo-plant-tether="${index}"]`)?.style.setProperty('--marker-x', '50%');
+                layer.querySelector(`[data-demo-plant-tether="${index}"]`)?.style.setProperty('--marker-y', '50%');
+                layer.querySelector(`[data-demo-plant-profile="${index}"]`)?.style.setProperty('--marker-x', '50%');
+                layer.querySelector(`[data-demo-plant-profile="${index}"]`)?.style.setProperty('--marker-y', '50%');
+                compactMarker.classList.add('is-held');
+                const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
+                joystick.hidden = false;
+                joystick.querySelector('strong').textContent = record.name || 'Held element';
+                setGuide(`Holding ${record.name || 'this element'} at the aim. Use Pull or Push, then press it again to release.`);
+            }, 420);
+        });
+        const cancelHoldTimer = () => { clearTimeout(holdTimer); holdTimer = null; };
+        compactMarker.addEventListener('pointerup', cancelHoldTimer);
+        compactMarker.addEventListener('pointercancel', cancelHoldTimer);
+        compactMarker.addEventListener('click', event => {
+            if (suppressDemoMarkerClick) {
+                suppressDemoMarkerClick = false;
+                event.stopImmediatePropagation();
+                return;
+            }
+            if (demoHeldIndex === index) {
+                demoHeldIndex = -1;
+                compactMarker.classList.remove('is-held');
+                appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
+                setGuide(`${record.name || 'Element'} released in its refined position.`);
+                event.stopImmediatePropagation();
+            }
+        });
         if (record.demoType === 'plant') {
             compactMarker.addEventListener('click', () => {
                 record.demoExpanded = !record.demoExpanded;
@@ -594,12 +635,18 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><aside class="tryit-depth-joystick" data-demo-depth-joystick hidden><strong>Held element</strong><span>Pull</span><input type="range" min="-100" max="100" value="0" step="5" aria-label="Pull closer or push farther" /><span>Push</span></aside><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
+    appRoot.querySelector('[data-demo-depth-joystick] input').addEventListener('input', event => {
+        const record = markers[demoHeldIndex];
+        if (!record) return;
+        record.demoDepthScale = Math.max(.55, Math.min(1.8, 1 - Number(event.currentTarget.value) / 180));
+        appRoot.querySelector(`[data-demo-marker-index="${demoHeldIndex}"]`)?.style.setProperty('--depth-scale', record.demoDepthScale);
+    });
     showGuidedChoice('<h2>Welcome to our quick demo</h2><p>Hey there, welcome to NourishlandXR. Imagine your space coming alive with rich information—plants sharing their stories, useful knowledge appearing where it matters, and each place becoming easier to understand.</p><button type="button" data-demo-choice="discover">Let’s explore</button>', choice => {
         if (choice !== 'discover') return;
         showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place three simple Markers together. One will become a Plant, one a Focus Point, and one an Area Totem. Nothing from this quick demo is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {
@@ -947,6 +994,7 @@ function drawMarker(view) {
         if (orbOnly) return;
         const compact = !record.demoExpanded;
         const totem = record.demoType === 'zone';
+        const noteSign = record.demoType === 'note';
         const plantProfile = record.demoType === 'plant' && record.demoExpanded;
         const displayPosition = plantProfile
             ? record.informationPosition || (record.informationPosition = plantInformationPosition(record))
@@ -955,15 +1003,17 @@ function drawMarker(view) {
             : compact ? record.position : { ...record.position, y: record.position.y + 0.72 };
         const model = billboardMatrix(
             displayPosition,
-            plantProfile ? 1.85 : totem ? 1.125 : compact ? .38 : 2.35,
-            plantProfile ? 2.55 : totem ? 12.5 : compact ? .38 : 3.45
+            plantProfile ? 1.85 : totem ? 1.125 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
+            plantProfile ? 2.55 : totem ? 12.5 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
         );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
+        if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+        if (plantProfile) gl.depthMask(true);
         if (record.isBoundary) {
             record.boundaryTexture ||= createBoundaryTexture();
             const boundaryMvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, groundMatrix(record.position, 4.6)));
