@@ -4775,6 +4775,22 @@ body.ar-dashboard-open .ar-tutorial-panel {
     min-height: 82px;
     padding: 0.85rem 1rem;
 }
+.latest-entry-row.change-entry-row {
+    display: block;
+    min-height: 0;
+    padding: .62rem .75rem;
+}
+.recent-record-line {
+    display: block;
+    overflow: hidden;
+    color: #34483a;
+    font-size: .8rem;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recent-record-line strong { font-size: .68rem; letter-spacing: .055em; text-transform: uppercase; }
+.recent-record-line small { color: #69766d; font-size: .74rem; }
 
 .project-area-list {
     gap: 0.7rem;

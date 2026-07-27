@@ -164,8 +164,10 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /Skip this step/);
     assert.match(entrySource, />See all</);
     assert.match(entrySource, /No entries have been added yet/);
-    assert.match(entrySource, />Date</);
-    assert.match(entrySource, />Added by</);
+    assert.doesNotMatch(entrySource, />Date</);
+    assert.doesNotMatch(entrySource, />Added by</);
+    assert.match(entrySource, /recent-record-line/);
+    assert.match(entrySource, /Location:/);
     assert.match(source, /renderAllProjectEntries/);
     assert.match(source, /filterAllProjectEntries/);
     assert.match(source, /Search entries/);

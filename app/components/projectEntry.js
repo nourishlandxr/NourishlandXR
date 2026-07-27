@@ -32,9 +32,7 @@ function tutorialSpotlight(guidance) {
 
 function latestEntryRow(item) {
     return `<button class="latest-entry-row change-entry-row database-record-card" type="button" onclick="${item.action}">
-        <span class="latest-entry-copy"><small class="record-file-tab">${item.type}</small><strong>${item.label}</strong><span>${item.identifier || 'Saved record'}</span></span>
-        <span class="latest-entry-detail"><span>Date</span><strong>${item.date}</strong></span>
-        <span class="latest-entry-detail latest-entry-author"><span>Added by</span><strong>${item.creator}</strong></span>
+        <span class="recent-record-line"><strong>${item.type}:</strong> <span>${item.label}</span> <small>— Location: ${item.location || 'N/A'}</small></span>
     </button>`;
 }
 

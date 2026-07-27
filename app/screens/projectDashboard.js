@@ -922,6 +922,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 label: escapeHtml(marker.name),
                 type: escapeHtml(markerTypeLabel(markerType)),
                 identifier: escapeHtml(marker.plant_code || marker.id),
+                location: escapeHtml(place.name === 'Unassigned' ? 'N/A' : (place.name || 'N/A')),
                 date: escapeHtml(entryDateLabel(marker.created || marker.modified)),
                 creator: escapeHtml(entryCreatorLabel(marker)),
                 action: markerType === 'area_checkpoint'
