@@ -637,7 +637,7 @@ h1 {
 .tryit-depth-track i::before { width: 13px; height: 3px; }
 .tryit-depth-track i::after { width: 3px; height: 13px; }
 .tryit-depth-joystick small { position: absolute; left: 4px; right: 4px; bottom: 8px; color: #fff; font-size: .62rem; font-weight: 800; text-align: center; }
-.spatial-move-control { --depth-shift: 0px; position: fixed; left: 50%; top: 68%; z-index: 12006; display: grid; grid-template: 52px 52px 52px / 52px 52px 52px; place-items: stretch; width: 156px; height: 156px; transform: translate(-50%, -50%); color: #fff; filter: drop-shadow(0 10px 20px rgba(0,0,0,.24)); pointer-events: auto; touch-action: none; }
+.spatial-move-control { --depth-shift: 0px; position: fixed; left: var(--move-control-x, 50%); top: var(--move-control-y, 68%); z-index: 12006; display: grid; grid-template: 52px 52px 52px / 52px 52px 52px; place-items: stretch; width: 156px; height: 156px; transform: translate(-50%, -50%); color: #fff; filter: drop-shadow(0 10px 20px rgba(0,0,0,.24)); pointer-events: auto; touch-action: none; }
 .spatial-move-control[hidden] { display: none; }
 .spatial-move-instruction { position: absolute; left: 50%; bottom: calc(100% + 12px); display: grid; gap: 2px; width: max-content; max-width: min(76vw,260px); margin: 0; padding: 8px 12px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.28); border-radius: 14px; background: rgba(13,31,21,.76); color: #fff; font-size: .72rem; font-weight: 800; text-align: center; box-shadow: 0 7px 18px rgba(0,0,0,.16); backdrop-filter: blur(9px); }
 .spatial-move-instruction small { color: rgba(255,255,255,.72); font-size: .58rem; font-weight: 650; }

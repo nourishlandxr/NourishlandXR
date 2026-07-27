@@ -939,6 +939,12 @@ function beginMarkerInteraction(record, event) {
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = false;
+        const pointer = overlayRoot?.querySelector('.creator-ar-mode-pointer');
+        const pointerRect = pointer?.getBoundingClientRect();
+        const controlX = pointerRect ? pointerRect.left + pointerRect.width / 2 : event.clientX;
+        const controlY = pointerRect ? pointerRect.top + pointerRect.height / 2 : event.clientY;
+        joystick.style.setProperty('--move-control-x', `${controlX}px`);
+        joystick.style.setProperty('--move-control-y', `${controlY}px`);
         const readout = joystick.querySelector('[data-ar-depth-readout]');
         if (readout) readout.textContent = `${distance.toFixed(1)} m`;
         joystick.style.setProperty('--depth-shift', '0px');

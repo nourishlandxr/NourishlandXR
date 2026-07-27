@@ -526,7 +526,7 @@ function bindSimulatedInformationPanels(layer) {
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
             if (demoHeldIndex === index) return;
-            holdGesture = { pointerId: event.pointerId, startY: event.clientY };
+            holdGesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
             compactMarker.setPointerCapture?.(event.pointerId);
             compactMarker.classList.add('is-drag-ready');
             holdTimer = setTimeout(() => {
@@ -542,6 +542,8 @@ function bindSimulatedInformationPanels(layer) {
                 compactMarker.classList.add('is-held');
                 const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
                 joystick.hidden = false;
+                joystick.style.setProperty('--move-control-x', `${holdGesture.startX}px`);
+                joystick.style.setProperty('--move-control-y', `${holdGesture.startY}px`);
                 joystick.querySelector('strong').textContent = record.name || 'Held element';
                 const readout = joystick.querySelector('[data-demo-depth-readout]');
                 if (readout) readout.textContent = `${(record.demoDistance || 1).toFixed(1)} m`;

@@ -535,7 +535,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /spatialMoveControlMarkup\('demo'\)/);
     assert.match(styles, /\.spatial-move-control/);
     assert.match(styles, /\.spatial-move-release/);
-    assert.match(styles, /\.spatial-move-control \{[\s\S]*top: 68%/);
+    assert.match(styles, /\.spatial-move-control \{[\s\S]*left: var\(--move-control-x, 50%\); top: var\(--move-control-y, 68%\)/);
     assert.match(styles, /\.spatial-move-instruction/);
     assert.match(styles, /\.spatial-grab-handle/);
     assert.doesNotMatch(source, /data-demo-move-mode|demoMoveMode|✋/);
