@@ -550,17 +550,11 @@ function setupSpatialMarkerRenderer() {
             float backRect=box(backQ,vec2(.40,.28));
             float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));
 
-            float totemFront=roundBox(q+vec2(0.,.015),vec2(.285,.455),.055);
-            float totemBack=roundBox(q+vec2(.038,-.022),vec2(.285,.455),.055);
-            float crown=roundBox(q-vec2(0.,.442),vec2(.20,.045),.035);
-            float crownBack=roundBox(q+vec2(.038,-.022)-vec2(0.,.442),vec2(.20,.045),.035);
-            totemFront=max(totemFront,crown);
-            totemBack=max(totemBack,crownBack);
+            float totemFront=roundBox(q+vec2(-.012,.012),vec2(.245,.46),.035);
+            float totemBack=roundBox(q+vec2(.045,-.018),vec2(.245,.46),.035);
             float totemSide=max(0.,totemBack-totemFront);
-            float inset=roundBox(q+vec2(0.,.004),vec2(.225,.375),.04);
-            float innerPanel=roundBox(q+vec2(-.008,.012),vec2(.205,.35),.032);
-            float frame=max(0.,inset-innerPanel);
-            float edgeLight=max(0.,totemFront-roundBox(q+vec2(.014,.004),vec2(.255,.425),.04));
+            float totemTop=max(0.,roundBox(q-vec2(.016,.425),vec2(.225,.055),.03)-roundBox(q-vec2(.016,.395),vec2(.225,.035),.025));
+            float edgeLight=max(0.,totemFront-roundBox(q+vec2(.002,.012),vec2(.228,.445),.025));
 
             float front=shape<.5?sphere:(shape<1.5?totemFront:(shape<2.5?jade:(shape<3.5?rect:sphere)));
             float back=shape<.5?sphere:(shape<1.5?totemBack:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));
@@ -569,13 +563,12 @@ function setupSpatialMarkerRenderer() {
             float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);
             vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);
             if(shape>.5&&shape<1.5){
-                vec3 warm=mix(color,vec3(.68,.82,.68),.2);
-                float faceLight=clamp(.62-q.x*.5+q.y*.12,0.,1.);
-                shaded=mix(color*.44,warm,faceLight*front);
-                shaded=mix(shaded,color*.18,side*.92);
-                shaded=mix(shaded,vec3(.9,.95,.88),edgeLight*.58);
-                shaded=mix(shaded,vec3(.82,.9,.82),frame*.22);
-                shaded=mix(shaded,color*.62,innerPanel*.12);
+                float verticalLight=clamp(.42+q.y*.62,0.,1.);
+                vec3 face=mix(color*.52,mix(color,vec3(1.),.28),verticalLight);
+                shaded=mix(color*.38,face,front);
+                shaded=mix(shaded,color*.25,side*.94);
+                shaded=mix(shaded,mix(color,vec3(1.),.48),totemTop*.9);
+                shaded=mix(shaded,vec3(1.),edgeLight*.18);
             } else if(shape>.5&&shape<3.5){
                 shaded=mix(color*.28,shaded,front);
                 shaded=mix(shaded,color*.22,side*.88);

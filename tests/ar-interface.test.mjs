@@ -689,9 +689,9 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /area_checkpoint: \[\.14 \* factor, \.72 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
-    assert.match(arSource, /roundBox\(q\+vec2\(0\.,\.015\),vec2\(\.285,.455\),.055\)/);
-    assert.match(arSource, /float innerPanel/);
-    assert.match(arSource, /float frame/);
+    assert.match(arSource, /roundBox\(q\+vec2\(-\.012,.012\),vec2\(\.245,.46\),.035\)/);
+    assert.match(arSource, /float totemTop/);
+    assert.match(arSource, /float verticalLight/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);
