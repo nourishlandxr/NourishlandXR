@@ -509,7 +509,8 @@ function bindSimulatedInformationPanels(layer) {
                 const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
                 joystick.hidden = false;
                 joystick.querySelector('strong').textContent = record.name || 'Held element';
-                joystick.querySelector('[data-demo-depth-readout]').textContent = `${(record.demoDistance || 1).toFixed(1)} m`;
+                const readout = joystick.querySelector('[data-demo-depth-readout]');
+                if (readout) readout.textContent = `${(record.demoDistance || 1).toFixed(1)} m`;
                 joystick.style.setProperty('--depth-shift', '0px');
                 setGuide(`Holding ${record.name || 'this element'} at the aim. Keep this finger down: slide up to push away or down to pull closer.`);
             }, 420);
@@ -523,7 +524,8 @@ function bindSimulatedInformationPanels(layer) {
             const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
             const visualMotion = Math.max(-1, Math.min(1, verticalTravel / 180));
             joystick.style.setProperty('--depth-shift', `${(-visualMotion * 38).toFixed(1)}px`);
-            joystick.querySelector('[data-demo-depth-readout]').textContent = `${record.demoDistance.toFixed(1)} m`;
+            const readout = joystick.querySelector('[data-demo-depth-readout]');
+            if (readout) readout.textContent = `${record.demoDistance.toFixed(1)} m`;
         });
         const cancelHoldTimer = () => { clearTimeout(holdTimer); holdTimer = null; };
         compactMarker.addEventListener('pointerup', cancelHoldTimer);
@@ -1093,6 +1095,10 @@ function createMarkerTexture(record) {
         ctx.arc(108, 105, 18, 0, Math.PI * 2);
         ctx.fill();
     } else if (record.demoType === 'zone') {
+        ctx.fillStyle = 'rgba(19,67,64,.82)';
+        ctx.beginPath();
+        ctx.roundRect(92, 15, 108, 224, 14);
+        ctx.fill();
         const post = ctx.createLinearGradient(76, 0, 180, 0);
         post.addColorStop(0, 'rgba(31,96,89,.96)');
         post.addColorStop(.48, 'rgba(103,211,194,.98)');
@@ -1103,6 +1109,11 @@ function createMarkerTexture(record) {
         ctx.fill();
         ctx.strokeStyle = 'rgba(215,255,247,.72)';
         ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(231,255,244,.38)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(88, 24, 74, 208, 9);
         ctx.stroke();
     } else if (record.type === 'marker' || record.type === 'sub_checkpoint') {
         const glow = ctx.createRadialGradient(128, 128, 18, 128, 128, 118);

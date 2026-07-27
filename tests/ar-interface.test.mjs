@@ -481,6 +481,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /spatialMoveControlMarkup\('demo'\)/);
     assert.match(styles, /\.spatial-move-control/);
     assert.match(styles, /\.spatial-move-release/);
+    assert.match(styles, /\.spatial-move-control \{[\s\S]*top: 68%/);
+    assert.match(styles, /\.spatial-move-instruction/);
     assert.match(styles, /\.spatial-grab-handle/);
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
@@ -615,7 +617,8 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /roundBox\(q\+vec2\(0\.,\.015\),vec2\(\.285,.455\),.055\)/);
-    assert.match(arSource, /float segmentLine/);
+    assert.match(arSource, /float innerPanel/);
+    assert.match(arSource, /float frame/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);

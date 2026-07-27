@@ -537,16 +537,16 @@ function setupSpatialMarkerRenderer() {
             float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));
 
             float totemFront=roundBox(q+vec2(0.,.015),vec2(.285,.455),.055);
-            float totemBack=roundBox(q+vec2(.06,-.015),vec2(.285,.455),.055);
-            float finial=1.-smoothstep(.068,.088,length((q-vec2(0.,.425))*vec2(1.,.82)));
-            float finialBack=1.-smoothstep(.068,.088,length((q+vec2(.055,-.035)-vec2(0.,.425))*vec2(1.,.82)));
-            totemFront=max(totemFront,finial);
-            totemBack=max(totemBack,finialBack);
+            float totemBack=roundBox(q+vec2(.038,-.022),vec2(.285,.455),.055);
+            float crown=roundBox(q-vec2(0.,.442),vec2(.20,.045),.035);
+            float crownBack=roundBox(q+vec2(.038,-.022)-vec2(0.,.442),vec2(.20,.045),.035);
+            totemFront=max(totemFront,crown);
+            totemBack=max(totemBack,crownBack);
             float totemSide=max(0.,totemBack-totemFront);
-            float segmentLine=1.-smoothstep(.012,.026,abs(fract((q.y+.43)*5.)-.5));
-            float inset=roundBox(q+vec2(0.,.005),vec2(.235,.398),.035);
-            float inlay=inset*(.5+.5*sin(q.y*32.+sin(q.x*9.)*1.4));
-            float edgeLight=max(0.,totemFront-roundBox(q+vec2(.012,.003),vec2(.255,.425),.04));
+            float inset=roundBox(q+vec2(0.,.004),vec2(.225,.375),.04);
+            float innerPanel=roundBox(q+vec2(-.008,.012),vec2(.205,.35),.032);
+            float frame=max(0.,inset-innerPanel);
+            float edgeLight=max(0.,totemFront-roundBox(q+vec2(.014,.004),vec2(.255,.425),.04));
 
             float front=shape<.5?sphere:(shape<1.5?totemFront:(shape<2.5?jade:(shape<3.5?rect:sphere)));
             float back=shape<.5?sphere:(shape<1.5?totemBack:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));
@@ -556,11 +556,12 @@ function setupSpatialMarkerRenderer() {
             vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);
             if(shape>.5&&shape<1.5){
                 vec3 warm=mix(color,vec3(.68,.82,.68),.2);
-                shaded=mix(color*.28,warm,front);
-                shaded=mix(shaded,color*.2,side*.82);
-                shaded=mix(shaded,vec3(.88,.93,.82),edgeLight*.48);
-                shaded=mix(shaded,vec3(.36,.52,.42),segmentLine*inset*.13);
-                shaded=mix(shaded,vec3(.76,.69,.52),inlay*.07);
+                float faceLight=clamp(.62-q.x*.5+q.y*.12,0.,1.);
+                shaded=mix(color*.44,warm,faceLight*front);
+                shaded=mix(shaded,color*.18,side*.92);
+                shaded=mix(shaded,vec3(.9,.95,.88),edgeLight*.58);
+                shaded=mix(shaded,vec3(.82,.9,.82),frame*.22);
+                shaded=mix(shaded,color*.62,innerPanel*.12);
             } else if(shape>.5&&shape<3.5){
                 shaded=mix(color*.28,shaded,front);
                 shaded=mix(shaded,color*.22,side*.88);
@@ -924,8 +925,8 @@ function beginMarkerInteraction(record, event) {
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = false;
-        joystick.querySelector('[data-ar-depth-name]').textContent = record.marker.name;
-        joystick.querySelector('[data-ar-depth-readout]').textContent = `${distance.toFixed(1)} m`;
+        const readout = joystick.querySelector('[data-ar-depth-readout]');
+        if (readout) readout.textContent = `${distance.toFixed(1)} m`;
         joystick.style.setProperty('--depth-shift', '0px');
     }
     updateGrabbedMarkerFromCamera();
