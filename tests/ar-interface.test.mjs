@@ -125,8 +125,11 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
     assert.equal((taskbar.match(/<button/g) || []).length, 6);
-    assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:hover::after/);
+    assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width: 88px; height: 72px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 86px; height: 132px/);
+    assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
     assert.match(arSource, /creator-ar-mode-pointer/);
     assert.match(arSource, /is-hold-mode/);
     assert.match(styles, /\.creator-ar-overlay\.is-view-mode \.creator-ar-mode-pointer/);
