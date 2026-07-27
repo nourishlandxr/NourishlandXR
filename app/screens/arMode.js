@@ -94,9 +94,9 @@ function markerShape(type) {
 function markerDimensions(marker) {
     const factor = markerSizeFactor(marker);
     return ({
-        // WebXR model scales are half-extents: these render at 0.5m x 2.1m
-        // and 1.2m x 2.3m respectively at the default size.
-        area_checkpoint: [.225 * factor, 1 * factor],
+        // WebXR model scales are half-extents: Totems render as slender
+        // 0.28m x 1.44m crafted posts at the default size.
+        area_checkpoint: [.14 * factor, .72 * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         // Notes are readable spatial signs rather than tiny object labels.
         note: [.44 * factor, .28 * factor],
@@ -517,7 +517,62 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.025,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totemOuter=roundBox(q,vec2(.43,.48),.075);float totemInner=roundBox(q,vec2(.31,.36),.055);float totem=max(0.,totemOuter-totemInner*.92);float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.055,-.035);float backRect=box(backQ,vec2(.40,.28));float backTotemOuter=roundBox(backQ,vec2(.43,.48),.075);float backTotemInner=roundBox(backQ,vec2(.31,.36),.055);float backTotem=max(0.,backTotemOuter-backTotemInner*.92);float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.72:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, `
+        precision mediump float;
+        varying vec2 uv;
+        uniform vec3 color;
+        uniform float shape;
+        float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.018,max(abs(p.x)-s.x,abs(p.y)-s.y));}
+        float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.018,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}
+        void main(){
+            vec2 q=uv-vec2(.5);
+            float d=length(q);
+            float sphere=1.-smoothstep(.42,.5,d);
+            float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));
+            float core=1.-smoothstep(.08,.22,d);
+            float rect=box(q,vec2(.40,.28));
+            float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));
+            vec2 backQ=q+vec2(.055,-.035);
+            float backRect=box(backQ,vec2(.40,.28));
+            float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));
+
+            float totemFront=roundBox(q+vec2(0.,.015),vec2(.285,.455),.055);
+            float totemBack=roundBox(q+vec2(.06,-.015),vec2(.285,.455),.055);
+            float finial=1.-smoothstep(.068,.088,length((q-vec2(0.,.425))*vec2(1.,.82)));
+            float finialBack=1.-smoothstep(.068,.088,length((q+vec2(.055,-.035)-vec2(0.,.425))*vec2(1.,.82)));
+            totemFront=max(totemFront,finial);
+            totemBack=max(totemBack,finialBack);
+            float totemSide=max(0.,totemBack-totemFront);
+            float segmentLine=1.-smoothstep(.012,.026,abs(fract((q.y+.43)*5.)-.5));
+            float inset=roundBox(q+vec2(0.,.005),vec2(.235,.398),.035);
+            float inlay=inset*(.5+.5*sin(q.y*32.+sin(q.x*9.)*1.4));
+            float edgeLight=max(0.,totemFront-roundBox(q+vec2(.012,.003),vec2(.255,.425),.04));
+
+            float front=shape<.5?sphere:(shape<1.5?totemFront:(shape<2.5?jade:(shape<3.5?rect:sphere)));
+            float back=shape<.5?sphere:(shape<1.5?totemBack:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));
+            float side=shape<1.5?totemSide:max(0.,back-front);
+            float body=max(front,back);
+            float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);
+            vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);
+            if(shape>.5&&shape<1.5){
+                vec3 warm=mix(color,vec3(.68,.82,.68),.2);
+                shaded=mix(color*.28,warm,front);
+                shaded=mix(shaded,color*.2,side*.82);
+                shaded=mix(shaded,vec3(.88,.93,.82),edgeLight*.48);
+                shaded=mix(shaded,vec3(.36,.52,.42),segmentLine*inset*.13);
+                shaded=mix(shaded,vec3(.76,.69,.52),inlay*.07);
+            } else if(shape>.5&&shape<3.5){
+                shaded=mix(color*.28,shaded,front);
+                shaded=mix(shaded,color*.22,side*.88);
+            }
+            if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);
+            if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}
+            float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.04);
+            float alpha=body*(shape<.5?.58:(shape<1.5?.9:(shape<2.5?.56:(shape>4.5?.42:.82))))+glow;
+            if(body<.01&&glow<.01)discard;
+            gl_FragColor=vec4(shaded,alpha);
+        }
+    `);
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -549,11 +604,12 @@ function drawSpatialMarkers(view) {
                 y: Math.sin(performance.now() / 58) * .0025
             }
             : { x: 0, y: 0 };
+        const livingRadius = Math.max(scaleX, scaleY) * (1 + Math.sin(performance.now() / 1450 + record.position.x * 4) * .014);
         drawSpatialOrb(gl, sphereRenderer, view, {
             ...record.position,
             x: record.position.x + hoverVibration.x,
             y: record.position.y + hoverVibration.y
-        }, Math.max(scaleX, scaleY), {
+        }, livingRadius, {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor)
         });

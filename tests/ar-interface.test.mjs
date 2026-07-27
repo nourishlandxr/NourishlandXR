@@ -254,8 +254,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const restoredGroups = await Promise\.all\(areas\.map/);
-    assert.match(arSource, /float backTotem/);
-    assert.match(arSource, /float side=max\(0\.,back-front\)/);
+    assert.match(arSource, /float totemBack/);
+    assert.match(arSource, /float totemSide=max\(0\.,totemBack-totemFront\)/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
@@ -606,11 +606,11 @@ test('plant creation separates Local records from read-only Global discovery', (
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.225 \* factor, 1 \* factor\]/);
+    assert.match(arSource, /area_checkpoint: \[\.14 \* factor, \.72 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
-    assert.match(arSource, /roundBox\(q,vec2\(\.43,.48\),\.075\)/);
-    assert.match(arSource, /shape<1\.5\?\.72:\.50/);
+    assert.match(arSource, /roundBox\(q\+vec2\(0\.,\.015\),vec2\(\.285,.455\),.055\)/);
+    assert.match(arSource, /float segmentLine/);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);

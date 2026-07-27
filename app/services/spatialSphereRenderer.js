@@ -93,13 +93,15 @@ export function createSpatialSphereRenderer(gl) {
             vec3 lightDirection = normalize(vec3(-0.42, 0.72, 0.56));
             float diffuse = max(dot(normal, lightDirection), 0.0);
             float facing = max(dot(normal, viewer), 0.0);
-            float rim = pow(1.0 - facing, 2.0);
-            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 28.0);
-            vec3 shaded = color * (0.34 + diffuse * 0.62);
-            shaded += vec3(0.46) * highlight;
-            shaded = mix(shaded, vec3(1.0), emissive * (0.14 + diffuse * 0.24));
-            shaded += color * rim * 0.12;
-            gl_FragColor = vec4(shaded, alpha * (1.0 - rim * 0.14));
+            float rim = pow(1.0 - facing, 2.4);
+            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 38.0);
+            float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
+            vec3 shaded = color * (0.4 + diffuse * 0.48);
+            shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
+            shaded += vec3(0.34) * highlight;
+            shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
+            shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
+            gl_FragColor = vec4(shaded, alpha * (1.0 - rim * 0.22));
         }
     `;
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
@@ -170,6 +172,17 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
 
+    gl.depthMask(false);
+    drawSpatialSphere(
+        gl,
+        renderer,
+        view.projectionMatrix,
+        view.transform.inverse.matrix,
+        position,
+        radius * 1.08,
+        { color: shellColor, alpha: plant ? 0.07 : 0.055, emissive: 0.2 }
+    );
+    gl.depthMask(true);
     if (plant) {
         drawSpatialSphere(
             gl,
@@ -188,7 +201,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.68 : 0.58, emissive: plant ? 0.18 : 0.12 }
+        { color: shellColor, alpha: plant ? 0.56 : 0.49, emissive: plant ? 0.16 : 0.1 }
     );
 
     gl.depthMask(true);
