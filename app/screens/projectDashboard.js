@@ -854,6 +854,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             return {
                 label: escapeHtml(marker.name),
                 type: escapeHtml(markerTypeLabel(effectiveMarkerType(marker))),
+                identifier: escapeHtml(marker.plant_code || marker.id),
                 date: escapeHtml(entryDateLabel(marker.created || marker.modified)),
                 creator: escapeHtml(entryCreatorLabel(marker)),
                 action: marker.type === 'intro_checkpoint' ? `window.openProjectStartingPoint('${encoded(project.id)}')` : `window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}')`
@@ -864,6 +865,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             return {
                 label: escapeHtml(area.name),
                 type: escapeHtml(area.type || 'Area'),
+                identifier: escapeHtml(area.id),
                 contentCount: areaEntries.length,
                 hasLocation: hasGpsCoordinates(area.anchor),
                 hasStartingPoint: areaEntries.some(entry => entry.marker.type === 'intro_checkpoint'),
@@ -1238,7 +1240,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         const areaBoxFields = `${areaTextBoxes.map(text => `<p class="saved-information-box">${escapeHtml(text)}</p>`).join('')}<div class="field"><label for="areaInformationBoxNew">+ Text box</label><textarea id="areaInformationBoxNew" rows="2" placeholder="Add one useful item at a time."></textarea></div>`;
         const plantCount = areaEntries.filter(entry => entry.marker.type === 'plant').length;
         const totemCount = areaEntries.filter(entry => entry.marker.type === 'area_checkpoint' || entry.marker.semantic_type === 'area_checkpoint').length;
-        app.innerHTML = `<div class="screen area-dashboard">
+        app.innerHTML = `<div class="screen area-dashboard database-record-page">
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
                 <h1>${escapeHtml(context.area.name)}</h1>

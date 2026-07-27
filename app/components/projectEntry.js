@@ -31,8 +31,8 @@ function tutorialSpotlight(guidance) {
 }
 
 function latestEntryRow(item) {
-    return `<button class="latest-entry-row change-entry-row" type="button" onclick="${item.action}">
-        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type}</span></span>
+    return `<button class="latest-entry-row change-entry-row database-record-card" type="button" onclick="${item.action}">
+        <span class="latest-entry-copy"><small class="record-file-tab">${item.type}</small><strong>${item.label}</strong><span>${item.identifier || 'Saved record'}</span></span>
         <span class="latest-entry-detail"><span>Date</span><strong>${item.date}</strong></span>
         <span class="latest-entry-detail latest-entry-author"><span>Added by</span><strong>${item.creator}</strong></span>
     </button>`;
@@ -46,9 +46,9 @@ export function renderProjectEntry(config) {
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
-        ? areas.map(area => `<button class="project-area-link" type="button" onclick="${area.action}">
+        ? areas.map(area => `<button class="project-area-link database-record-card area-record-card" type="button" onclick="${area.action}">
             <span class="project-area-link-icon" aria-hidden="true">▧</span>
-            <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.type} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
+            <span class="project-area-link-copy"><small class="record-file-tab">AREA FILE</small><strong>${area.label}</strong><span>${area.type} · ${area.identifier} · ${area.contentCount} record${area.contentCount === 1 ? '' : 's'}</span></span>
             <span class="project-area-link-meta">${area.hasHomeBase ? 'Home Base' : area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
@@ -107,7 +107,7 @@ export function renderProjectEntry(config) {
     return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
             <h1>${config.locationName}</h1>
-            <span class="dashboard-identity">Dashboard</span>
+            <span class="dashboard-identity">WEB DATABASE</span>
             <p class="dashboard-location-name">${config.siteName}</p>
         </header>
 
@@ -166,7 +166,7 @@ export function renderProjectEntry(config) {
         </nav>
 
         <section class="latest-entries-section">
-            <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
+            <div class="section-heading-row"><div><h2>Recent record files</h2><p>Plants, Totems, Notes and other saved database records.</p></div><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
         <footer class="dashboard-location-footer">

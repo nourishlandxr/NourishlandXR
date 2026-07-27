@@ -4637,3 +4637,75 @@ body.ar-dashboard-open .ar-tutorial-panel {
         grid-template-columns: 1fr;
     }
 }
+.database-record-card {
+    position: relative;
+    overflow: visible;
+    border: 1px solid rgba(62, 91, 69, 0.2) !important;
+    border-radius: 16px !important;
+    background: linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(246, 247, 239, 0.96)) !important;
+    box-shadow: 0 5px 14px rgba(43, 66, 48, 0.06) !important;
+}
+
+.database-record-card:hover {
+    border-color: rgba(53, 102, 63, 0.42) !important;
+    background: #fff !important;
+    transform: translateY(-1px) !important;
+}
+
+.record-file-tab {
+    width: max-content;
+    padding: 0.2rem 0.48rem;
+    border-radius: 6px 6px 2px 2px;
+    background: rgba(75, 120, 82, 0.12);
+    color: #315d39;
+    font-size: 0.58rem;
+    font-weight: 850;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.latest-entry-list {
+    gap: 0.65rem;
+}
+
+.latest-entry-row.database-record-card {
+    min-height: 82px;
+    padding: 0.85rem 1rem;
+}
+
+.project-area-list {
+    gap: 0.7rem;
+}
+
+.area-record-card {
+    padding: 1rem !important;
+}
+
+.area-record-card .project-area-link-copy {
+    gap: 0.3rem;
+}
+
+.database-record-page .page-header,
+.project-entry-editor .page-header {
+    padding: 1.2rem 1.3rem;
+    border: 1px solid rgba(62, 91, 69, 0.18);
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(240, 245, 235, 0.96));
+}
+
+.database-record-page .panel,
+.project-entry-editor > form.panel {
+    border-color: rgba(62, 91, 69, 0.18);
+    border-radius: 22px;
+    background: rgba(255, 255, 252, 0.96);
+    box-shadow: 0 8px 22px rgba(43, 66, 48, 0.06);
+}
+
+.database-record-page fieldset,
+.project-entry-editor fieldset {
+    border-color: rgba(62, 91, 69, 0.17);
+}
+
+.dashboard-identity {
+    letter-spacing: 0.12em;
+}
