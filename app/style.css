@@ -691,11 +691,13 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-totem-system { width: min(88vw, 390px); height: min(68vh, 500px); border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; backdrop-filter: none; }
 .tryit-sim-totem-branches { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .tryit-sim-totem-branches path { fill: none; stroke: rgba(220,248,241,.72); stroke-width: 1.7; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(136,220,209,.3)); }
-.tryit-sim-totem-pillar { position: absolute; left: 43%; top: 45%; width: 18%; height: 53%; border: 2px solid rgba(226,255,249,.84); border-radius: 18px 18px 10px 10px; background: linear-gradient(90deg, rgba(24,74,68,.96), rgba(102,202,187,.94) 48%, rgba(17,57,52,.96)); box-shadow: inset 0 0 0 6px rgba(226,255,249,.05), 0 0 24px rgba(116,220,204,.22); }
-.tryit-sim-totem-card { position: absolute; display: grid; place-items: center; box-sizing: border-box; width: 36%; min-height: 76px; padding: 11px 12px; border: 1px solid rgba(226,255,249,.82); border-radius: 19px 15px 21px 16px; background: rgba(10,38,34,.88); color: #fff; font-size: clamp(.66rem, 2.5vw, .82rem); font-weight: 750; line-height: 1.28; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.98), 0 0 6px rgba(0,0,0,.88); backdrop-filter: blur(7px); }
-.tryit-sim-totem-card-1 { left: 0; top: 11%; }
-.tryit-sim-totem-card-2 { left: 32%; top: 0; }
-.tryit-sim-totem-card-3 { right: 0; top: 11%; }
+.tryit-sim-totem-pillar { position: absolute; left: 43%; top: 37%; width: 18%; height: 61%; border: 2px solid rgba(226,255,249,.84); border-radius: 18px 18px 10px 10px; background: linear-gradient(90deg, rgba(24,74,68,.96), rgba(102,202,187,.94) 48%, rgba(17,57,52,.96)); box-shadow: inset 0 0 0 6px rgba(226,255,249,.05), 0 0 24px rgba(116,220,204,.22); }
+.tryit-sim-totem-card { position: absolute; display: grid; place-items: center; box-sizing: border-box; width: 31%; min-height: 68px; padding: 10px 11px; border: 1px solid rgba(226,255,249,.82); border-radius: 19px 15px 21px 16px; background: rgba(10,38,34,.88); color: #fff; font-size: clamp(.62rem, 2.35vw, .78rem); font-weight: 800; line-height: 1.22; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.98), 0 0 6px rgba(0,0,0,.88); backdrop-filter: blur(7px); }
+.tryit-sim-totem-card-1 { left: 1%; top: 4%; }
+.tryit-sim-totem-card-2 { right: 1%; top: 0; width: 39%; min-height: 78px; }
+.tryit-sim-totem-card-3 { right: -1%; top: 29%; }
+.tryit-sim-totem-card-4 { left: -1%; top: 55%; width: 25%; }
+.tryit-sim-totem-card-5 { right: 7%; top: 59%; width: 35%; }
 @keyframes tryit-frame-arrive { from { opacity: 0; transform: translate(calc(-50% + var(--panel-x)), calc(-45% + var(--panel-y))) scale(.88); } to { opacity: 1; transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))) scale(1); } }
 @keyframes tryit-subtitle-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .tryit-sim-marker.is-expanded { transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); }

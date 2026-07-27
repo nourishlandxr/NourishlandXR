@@ -310,7 +310,8 @@ function guideAreaConversion(record) {
         record.demoContent = {
             title: 'Citrus Guild Totem',
             accent: '#89c8ef',
-            lines: ['A living classroom for citrus, herbs and pollinators.', 'Notice how shade and moisture change across this Area.', 'Plants waiting for precise placement gather around this Totem.']
+            lines: ['A living classroom for citrus, herbs and pollinators.', 'Notice how shade and moisture change across this Area.', 'Plants waiting for precise placement gather around this Totem.'],
+            bubbles: ['CITRUS GUILD', 'LIVING CLASSROOM', 'SHADE + MOISTURE', 'CITRUS · HERBS · POLLINATORS', 'CONNECTED PLANTS']
         };
         record.isBoundary = false;
         record.revealTitle = true;
@@ -463,8 +464,8 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 
 function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
-    const bubbles = (content?.lines || []).filter(Boolean).slice(0, 3);
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 208 C142 178 104 146 68 118"/><path d="M180 205 C180 162 180 120 180 84"/><path d="M180 208 C220 178 258 148 294 120"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
+    const bubbles = (content?.bubbles || content?.lines || []).filter(Boolean).slice(0, 5);
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -954,20 +955,22 @@ function createSpatialKnowledgeTexture(record) {
 }
 
 function drawTotemKnowledgeTexture(ctx, label, content) {
-    const cards = content.lines.filter(Boolean).slice(0, 3);
+    const cards = (content.bubbles || content.lines).filter(Boolean).slice(0, 5);
     const cardLayouts = [
-        [18, 126, 214, 154],
-        [245, 22, 230, 166],
-        [488, 126, 214, 154]
+        [24, 90, 190, 142],
+        [388, 52, 292, 160],
+        [476, 300, 220, 140],
+        [20, 506, 172, 150],
+        [392, 528, 250, 140]
     ];
-    const branchEnds = [[125, 280], [360, 188], [595, 280]];
+    const branchEnds = [[118, 232], [534, 212], [586, 370], [106, 576], [516, 598]];
     ctx.strokeStyle = 'rgba(221,246,238,.72)';
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     branchEnds.forEach(([x, y]) => {
         ctx.beginPath();
-        ctx.moveTo(360, 392);
-        ctx.bezierCurveTo(360 + (x - 360) * .35, 356, 360 + (x - 360) * .66, y, x, y);
+        ctx.moveTo(360, 408);
+        ctx.bezierCurveTo(360 + (x - 360) * .34, 386, 360 + (x - 360) * .68, y, x, y);
         ctx.stroke();
     });
     const pillar = ctx.createLinearGradient(288, 0, 432, 0);
@@ -976,7 +979,7 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
     pillar.addColorStop(1, 'rgba(18,59,55,.98)');
     ctx.fillStyle = pillar;
     ctx.beginPath();
-    ctx.roundRect(290, 380, 140, 720, [30, 30, 18, 18]);
+    ctx.roundRect(290, 390, 140, 710, [30, 30, 18, 18]);
     ctx.fill();
     ctx.strokeStyle = 'rgba(226,255,249,.9)';
     ctx.lineWidth = 7;
@@ -992,10 +995,10 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
         ctx.stroke();
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.font = '750 25px system-ui, sans-serif';
+        ctx.font = `${index === 1 ? '850 27px' : '800 24px'} system-ui, sans-serif`;
         ctx.shadowColor = 'rgba(0,0,0,.95)';
         ctx.shadowBlur = 5;
-        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 22, width - 32, 30, 4);
+        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 16, width - 30, 30, 3);
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
     });
