@@ -1,5 +1,21 @@
 # Nourishland XR Idea Box
 
+## V0.8543 — BIOMAP spatial faceted discovery
+
+Status: interactive demo prototype; standalone explorer is a future idea
+
+- **BIOMAP** is a persistent spatial constellation for exploring and combining plant attributes without opening a conventional filter form.
+- Main honeycombs represent understandable facets such as Micro Climate, Uses, Propagation, Plant Literacy and Forest Layers.
+- Hover, focus or tap permanently unfolds a facet into more specific honeycombs. Several facets can remain open together so a person can build a visual search such as `warm temperate + culinary + shrub layer`.
+- The first demo vocabulary includes:
+  - Micro Climate: tropical, subtropical, warm temperate, cool temperate, Mediterranean and arid.
+  - Uses: culinary, medicinal and industrial.
+  - Propagation: grafting, germination, marcotts, cuttings and cloning.
+  - Plant Literacy: dwarf, deciduous, evergreen, annual and perennial.
+  - Layers: canopy, low tree, shrub, herbaceous, groundcover, rhizosphere and vertical.
+- A future standalone BIOMAP could filter real Local and trusted Global plant records, show result counts inside cells, combine active facets, and hand a selected Plant back to Web Mode or AR placement.
+- Keep the first interaction playful and visual. Safety-sensitive uses such as medicinal or edible claims still require curated sources and must never be inferred from the filter label alone.
+
 ## V0.8515 — Area and profile editing clarity
 
 - Every Area dashboard has an editable description and several Area information text boxes directly below About this Area.

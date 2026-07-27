@@ -456,12 +456,20 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /NOURISHLANDXR/);
     assert.match(source, /A web of living knowledge…/);
     assert.match(source, /INTRO_KNOWLEDGE_KEYWORDS/);
-    for (const keyword of ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO', 'MACRO']) {
+    for (const keyword of ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO CLIMATE', 'USES', 'PROPAGATION', 'LAYERS']) {
         assert.match(source, new RegExp(keyword));
     }
+    assert.doesNotMatch(source, /['"]MICRO['"]/);
+    assert.doesNotMatch(source, /['"]MACRO['"]/);
+    for (const child of ['CULINARY', 'MEDICINAL', 'INDUSTRIAL', 'GRAFTING', 'GERMINATION', 'MARCOTTS', 'CUTTINGS', 'CLONING', 'DWARF', 'DECIDUOUS', 'EVERGREEN', 'ANNUAL', 'PERENNIAL', 'CANOPY', 'LOW TREE', 'SHRUB', 'HERBACEOUS', 'GROUNDCOVER', 'RHIZOSPHERE', 'VERTICAL']) {
+        assert.match(source, new RegExp(child));
+    }
     assert.match(source, /createIntroKnowledgeTexture/);
-    assert.match(source, /introKnowledgeVisible = false/);
-    assert.match(styles, /\.tryit-intro-knowledge > span/);
+    assert.match(source, /data-biomap-category/);
+    assert.match(source, /classList\.add\('is-expanded'\)/);
+    assert.match(source, /button\.addEventListener\('mouseenter', expand\)/);
+    assert.match(styles, /\.biomap-branch > button/);
+    assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /introTaglineVisible = false/);
     assert.match(source, /data-tryit-spatial-tagline/);
