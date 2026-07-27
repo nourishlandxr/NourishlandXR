@@ -617,7 +617,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /trail entrance gateway/);
 });
 
-test('Creator Plants deliberately upgrade into collapsible AR Plant Profiles', () => {
+test('Creator Plants use a compact encyclopedia file and collapsible AR information', () => {
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
@@ -628,15 +628,15 @@ test('Creator Plants deliberately upgrade into collapsible AR Plant Profiles', (
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
-    assert.match(dashboardSource, /Upgrade this Plant/);
-    assert.match(dashboardSource, /Create Plant Profile/);
+    assert.match(dashboardSource, /plant-encyclopedia-card/);
+    assert.match(dashboardSource, /plant-info-drawer/);
     assert.match(dashboardSource, /projectEntryRelationships/);
     assert.match(dashboardSource, /if \(profileEnabled\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = true/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
-    assert.match(dashboardSource, /Practical &amp; ecological/);
-    assert.match(dashboardSource, /Scientific &amp; historical/);
-    assert.match(dashboardSource, /Profile card/);
+    assert.match(dashboardSource, /Growing knowledge/);
+    assert.match(dashboardSource, /Origin &amp; story/);
+    assert.match(dashboardSource, /plant-card-hero/);
     assert.match(dashboardSource, /plantProfileReady \? `<section class="spatial-focus-panel"/);
 });
 

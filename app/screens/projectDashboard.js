@@ -2004,28 +2004,34 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 }
 
 function plantProfileEditorMarkup(entry, profile) {
-    const upgraded = isPlantProfileUpgraded(entry.marker, profile);
     const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
-    const fields = `<div class="plant-profile-card-editor">
-        <div class="plant-profile-card-visual"><div class="field"><label for="projectEntryPhoto">Plant photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(profile.photo || profile.image || '')}" placeholder="https://…" /></div><div class="plant-orb-settings"><div class="field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(profile.orb_color || entry.marker.appearance?.color || '#5fbf73')}" /></div><div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div></div></div>
-        <fieldset class="plant-profile-branch plant-profile-branch-left"><legend>Practical &amp; ecological</legend>
-            <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="3">${escapeHtml(profile.uses || '')}</textarea></div>
-            <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="3">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
-            <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select><small>Used for filtering and future layer-specific orb styles.</small></div>
-        </fieldset>
-        <fieldset class="plant-profile-branch plant-profile-branch-right"><legend>Scientific &amp; historical</legend>
+    const photo = profile.photo || profile.image || '';
+    const orbColor = profile.orb_color || entry.marker.appearance?.color || '#8fc9a3';
+    return `<section class="plant-encyclopedia-card">
+        <input id="projectEntryProfileEnabled" type="hidden" value="true">
+        <div class="plant-card-hero">
+            <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
+            <div class="plant-vital-grid">
+                <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
+                <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select></div>
+                <div class="field plant-color-field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(orbColor)}" /></div>
+                <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
+            </div>
+        </div>
+        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A short, useful introduction—add it whenever you are ready.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Identity &amp; photo</strong><small>Name, scientific identity and image</small></summary><div class="plant-drawer-fields">
+            <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
             <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
-            <div class="field"><label for="projectEntryOrigin">Origin and history</label><input id="projectEntryOrigin" value="${escapeHtml(profile.origin || '')}" /></div>
-            <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="3">${escapeHtml(profile.propagation || '')}</textarea></div>
-        </fieldset>
-        <fieldset class="plant-profile-core-editor"><legend>Profile card</legend>
-            <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" /></div>
-            <p class="plant-id-label">Plant ID: ${escapeHtml(entry.marker.plant_code || 'Assigned on creation')}</p>
-            <div class="field"><label for="projectEntryOverview">Profile overview</label><textarea id="projectEntryOverview" rows="5">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
-        </fieldset>
-    </div>`;
-    return `<section class="plant-profile-upgrade ${upgraded ? 'is-upgraded' : ''}"><input id="projectEntryProfileEnabled" type="hidden" value="${upgraded}">${upgraded ? '<p class="plant-profile-state"><strong>Plant Profile enabled</strong><span>This Plant now reveals an interactive information tree in AR.</span></p>' : '<div class="plant-profile-invitation"><strong>Upgrade this Plant</strong><p>Enable a Plant Profile to unlock scientific, practical and relationship data—and its interactive AR information tree.</p><button type="button" onclick="document.getElementById(\'projectEntryProfileEnabled\').value=\'true\';document.getElementById(\'projectEntryProfileFields\').hidden=false;this.closest(\'.plant-profile-invitation\').hidden=true">Create Plant Profile</button></div>'}<div id="projectEntryProfileFields" class="plant-profile-fields" ${upgraded ? '' : 'hidden'}>${fields}</div></section>`;
+            <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
+        </div></details>
+        <details class="plant-info-drawer"><summary><span aria-hidden="true">☀</span><strong>Growing knowledge</strong><small>Uses, relationships and propagation</small></summary><div class="plant-drawer-fields">
+            <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="2">${escapeHtml(profile.uses || '')}</textarea></div>
+            <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="2">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
+            <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="2">${escapeHtml(profile.propagation || '')}</textarea></div>
+        </div></details>
+        <details class="plant-info-drawer"><summary><span aria-hidden="true">◌</span><strong>Origin &amp; story</strong><small>Optional history and context</small></summary><div class="plant-drawer-fields"><div class="field"><label for="projectEntryOrigin">Origin and history</label><textarea id="projectEntryOrigin" rows="2">${escapeHtml(profile.origin || '')}</textarea></div></div></details>
+    </section>`;
 }
 
 export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
@@ -2040,6 +2046,22 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
     app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
+    if (plant) {
+        app.querySelector('form')?.classList.add('plant-file-form');
+        const headerLabel = app.querySelector('.page-header .welcome-label');
+        const headerSubtitle = app.querySelector('.page-header .subtitle');
+        if (headerLabel) headerLabel.textContent = 'PLANT · WEB MODE';
+        if (headerSubtitle) headerSubtitle.textContent = `${entry.place.name} · ${placement.isPlaced ? 'PLACED' : 'NOT PLACED'} · ${entry.marker.plant_code || entry.marker.id}`;
+        const spatialCopy = app.querySelector('.spatial-focus-panel p');
+        const spatialButton = app.querySelector('.spatial-focus-panel button');
+        if (spatialCopy) spatialCopy.textContent = 'Open this Plant in spatial view.';
+        if (spatialButton) spatialButton.textContent = 'OPEN IN AR';
+        const overviewArea = document.getElementById('projectEntryAreaOverview');
+        if (overviewArea) {
+            overviewArea.innerHTML = areaOptions;
+            overviewArea.value = entry.place.id;
+        }
+    }
 }
 
 export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId) {

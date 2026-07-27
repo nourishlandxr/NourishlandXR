@@ -29,6 +29,9 @@ import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } f
 import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
+new MutationObserver(() => {
+    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
+}).observe(app, { childList: true });
 const siteManager = new SiteManager();
 const escapeMainHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const decodeMainValue = value => {
