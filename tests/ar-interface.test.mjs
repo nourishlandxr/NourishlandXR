@@ -535,6 +535,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell/);
     assert.match(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
+    assert.match(styles, /\.plant-knowledge-core strong \{ color: #fff;[\s\S]*font-weight: 850;/);
+    assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
+    assert.match(styles, /\.creator-ar-totem-bubble \{[\s\S]*color: #fff;[\s\S]*text-shadow: 0 1px 2px rgba\(0,0,0,.98\)/);
+    assert.match(source, /ctx\.strokeText\(cell\.item\[0\], cell\.x/);
+    assert.match(source, /ctx\.strokeText\('PLANT PROFILE', center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /Garden plaque/);

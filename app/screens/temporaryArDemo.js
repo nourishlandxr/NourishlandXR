@@ -1108,24 +1108,36 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0
     ];
     cells.forEach(cell => {
         const open = cell.key === activeBranch;
-        drawHexagon(ctx, cell.x, cell.y, 80, 'rgba(24,52,37,.24)', 'rgba(224,240,211,.30)', 2);
+        drawHexagon(ctx, cell.x, cell.y, 80, 'rgba(13,42,28,.72)', 'rgba(240,250,233,.68)', 2);
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(226,240,207,.84)';
-        ctx.font = '650 20px system-ui, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,0,0,.94)';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.font = '850 20px system-ui, sans-serif';
+        ctx.strokeText(cell.item[0], cell.x, cell.y + (open ? -10 : 7));
         ctx.fillText(cell.item[0], cell.x, cell.y + (open ? -10 : 7));
         if (open) {
-            ctx.fillStyle = 'rgba(255,255,255,.80)';
-            ctx.font = '18px system-ui, sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.font = '700 18px system-ui, sans-serif';
+            ctx.shadowColor = 'rgba(0,0,0,.98)';
+            ctx.shadowBlur = 6;
             drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 17, 126, 22, 2);
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
         }
     });
-    drawHexagon(ctx, center.x, center.y, 88, 'rgba(34,68,49,.30)', 'rgba(232,245,221,.38)', 3);
+    drawHexagon(ctx, center.x, center.y, 88, 'rgba(18,51,34,.76)', 'rgba(242,251,236,.72)', 3);
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(223,237,209,.70)';
-    ctx.font = '650 16px system-ui, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,0,0,.94)';
+    ctx.lineWidth = 4;
+    ctx.font = '800 16px system-ui, sans-serif';
+    ctx.strokeText('PLANT PROFILE', center.x, center.y - 15);
     ctx.fillText('PLANT PROFILE', center.x, center.y - 15);
-    ctx.fillStyle = 'rgba(255,255,255,.92)';
-    ctx.font = '650 28px system-ui, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.font = '850 28px system-ui, sans-serif';
+    ctx.strokeText(knowledge.title, center.x, center.y + 20);
     ctx.fillText(knowledge.title, center.x, center.y + 20);
 }
 
