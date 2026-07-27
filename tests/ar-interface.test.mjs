@@ -440,9 +440,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /placementReady/);
-    assert.match(source, /aimRevealTimer = setTimeout/);
     assert.match(source, /placementPointerMarkup/);
-    assert.match(source, /It will appear one metre in front of you/);
+    assert.match(source, /Tap the circle to place your first Plant\./);
+    assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
+    assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
     assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);

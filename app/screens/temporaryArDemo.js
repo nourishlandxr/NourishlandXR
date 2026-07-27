@@ -364,14 +364,16 @@ function armDemoPlacement(type) {
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice !== 'continue') return;
         hideGuidedChoice();
-        setGuide('Take a moment to follow the centre aim as you look around.');
+        setGuide(type === 'plant'
+            ? 'Tap the circle to place your first Plant.'
+            : type === 'plant2'
+                ? 'Tap the circle to place Moringa nearby.'
+                : type === 'note'
+                    ? 'Tap the circle to place a Note.'
+                    : 'Tap the circle to place the Area Totem.');
+        placementReady = true;
         place?.removeAttribute('hidden');
-        requestAnimationFrame(() => place?.classList.add('is-revealing'));
-        aimRevealTimer = setTimeout(() => {
-            place?.classList.add('is-ready');
-            placementReady = true;
-            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Plant' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place a Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Use the Move tool in the bottom bar whenever you want to refine its position.</p>`);
-        }, 1900);
+        requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
     });
 }
 
