@@ -1030,6 +1030,21 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         setPlacementStatus('The saved Marker could not be loaded for placement.');
         return false;
     }
+    const focusedRecord = sessionMarkers.find(record => record.marker.id === marker.id);
+    const focusedProfileView = marker.type === 'plant'
+        && hasPlantProfile(focusedRecord)
+        && String(arReturnContext).startsWith('web-marker:');
+    if (focusedRecord && focusedProfileView) {
+        sessionMarkers = [focusedRecord];
+        focusedRecord.profileExpanded = true;
+        focusedRecord.infoVisible = true;
+        interactionMode = 'view';
+        readyPlacementType = '';
+        updateReadyPlacementControl();
+        renderSessionMarkers();
+        setPlacementStatus(`${marker.name} Plant Profile is open. Use the honeycomb to explore it, or choose Move to adjust its position.`);
+        return true;
+    }
     sessionMarkers = sessionMarkers.filter(record => record.marker.id !== marker.id);
     renderSessionMarkers();
     pendingBagRecord = {

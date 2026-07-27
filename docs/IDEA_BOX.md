@@ -1,5 +1,13 @@
 # Nourishland XR Idea Box
 
+## V0.8515 — Area and profile editing clarity
+
+- Every Area dashboard has an editable description and several Area information text boxes directly below About this Area.
+- Blue consistently means an AR action; every Area keeps a prominent blue Go to Area action.
+- The Area Totem is the first content entry, with compact Web Mode and AR editing actions instead of a separate oversized Totem panel.
+- Plants with Profiles expose a blue focused AR action; the Plant loads alone with its full honeycomb already open.
+- Plant Profile content remains a Web Mode task and is organised to match the left, right and centre honeycomb structure.
+
 ## V0.8514 — calm grab-anytime spatial editing
 
 - New Markers arrive at a predictable one-metre working distance on phones.

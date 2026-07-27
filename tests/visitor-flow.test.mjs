@@ -242,10 +242,11 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
-    assert.match(areaDashboardSource, /View \/ edit this Totem in AR/);
-    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place its Totem in AR/);
+    assert.match(areaDashboardSource, /GO TO AREA · AR/);
+    assert.match(areaDashboardSource, /is-totem-entry/);
+    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place in AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
-    assert.match(areaDashboardSource, /encoded\(checkpoint\.marker\.id\)[\s\S]*View \/ edit this Totem in AR/);
+    assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
 });
 
 test('Organizer Folder excludes compatibility Area Totems by semantic type', () => {

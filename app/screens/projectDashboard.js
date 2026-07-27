@@ -1099,21 +1099,42 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
     try {
         const context = await projectAreaContext(projectId, areaId);
         recordTutorialEvent(projectId, 'first_area_created_or_selected');
-        const areaEntries = await entriesWithPlacement(context.project, context.site, context.areaEntries);
+        const placedAreaEntries = await entriesWithPlacement(context.project, context.site, context.areaEntries);
+        const areaEntries = await Promise.all(placedAreaEntries.map(async entry => ({
+            ...entry,
+            plantProfile: effectiveMarkerType(entry.marker) === 'plant'
+                ? await loadPlantProfile(context.project.id, context.site.id, context.area.id, entry.marker.id).catch(() => entry.marker.plant_profile || {})
+                : {}
+        })));
         const checkpoint = context.areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
-        const rows = areaEntries.map(({ marker, isPlaced }) => {
+        const orderedEntries = [...areaEntries].sort((left, right) => {
+            const leftTotem = effectiveMarkerType(left.marker) === 'area_checkpoint' ? 0 : 1;
+            const rightTotem = effectiveMarkerType(right.marker) === 'area_checkpoint' ? 0 : 1;
+            return leftTotem - rightTotem;
+        });
+        const rows = orderedEntries.map(({ marker, isPlaced, plantProfile }) => {
             const markerType = effectiveMarkerType(marker);
             const status = entryStatus(marker);
-            const action = markerType === 'intro_checkpoint'
-                ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
-                : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', '${encoded(context.area.id)}')`;
             const placementLabel = markerType === 'area_checkpoint' ? 'Physical anchor' : isPlaced ? 'Placed' : 'Not yet placed';
-            return `<button class="latest-entry-row" type="button" onclick="${action}">
+            const webAction = markerType === 'area_checkpoint'
+                ? `window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
+                : markerType === 'intro_checkpoint'
+                    ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
+                    : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', '${encoded(context.area.id)}')`;
+            const profileArAction = markerType === 'plant' && isPlantProfileUpgraded(marker, plantProfile)
+                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">View / edit in AR</button>`
+                : '';
+            const totemArAction = markerType === 'area_checkpoint'
+                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'dashboard', '${encoded(context.site.id)}')">Edit in AR</button>`
+                : '';
+            return `<article class="latest-entry-row area-content-entry${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
                 <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · ${editedLabel(marker.modified || marker.created)}</span><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel}</span></span>
                 <span class="entry-status entry-status-${status.tone}">${status.label}</span>
-            </button>`;
+                <span class="area-entry-actions"><button type="button" onclick="${webAction}">Edit in Web Mode</button>${totemArAction}${profileArAction}</span>
+            </article>`;
         }).join('');
+        const unplacedTotemRow = checkpoint ? '' : `<article class="latest-entry-row area-content-entry is-totem-entry"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Area Totem · Not yet placed</span></span><span class="area-entry-actions"><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Edit in Web Mode</button><button class="spatial-focus-button compact-ar-action" type="button" onclick="window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">Place in AR</button></span></article>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const locationStatus = anchor
             ? `GPS location assigned${Number.isFinite(Number(anchor.accuracy)) ? ` · accuracy ${Math.round(Number(anchor.accuracy))} m` : ''}`
@@ -1122,6 +1143,8 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
                 <button type="button" onclick="window.renderProjectAreaLocationForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>${anchor ? 'Update GPS location' : 'Assign GPS location'}</strong><span>Tag the physical position of this Area.</span></button>
             </div>` : '';
+        const areaTextBoxes = Array.isArray(context.area.information_boxes) ? context.area.information_boxes : [];
+        const areaBoxFields = [0, 1, 2, 3].map(index => `<div class="field"><label for="areaInformationBox${index}">${index === 0 ? 'Text box' : '+ Text box'}</label><textarea id="areaInformationBox${index}" rows="2" placeholder="Add useful Area information.">${escapeHtml(areaTextBoxes[index] || '')}</textarea></div>`).join('');
         app.innerHTML = `<div class="screen area-dashboard">
             <header class="page-header area-dashboard-header">
                 <button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button>
@@ -1131,19 +1154,20 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </header>
             <section class="panel area-profile-summary">
                 <h2>About this Area</h2>
-                <p>${escapeHtml(context.area.description || 'No description has been added yet.')}</p>
+                <form class="area-information-form" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
+                    <div class="field"><label for="areaDescription">Description</label><textarea id="areaDescription" rows="4" placeholder="Describe what this Area is and why it matters.">${escapeHtml(context.area.description || '')}</textarea></div>
+                    <fieldset class="area-information-boxes"><legend>Add text boxes</legend><p>Add several short information boxes for stories, guidance or observations.</p>${areaBoxFields}</fieldset>
+                    <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
+                    <button type="submit">Save Area information</button>
+                </form>
                 <p class="area-location-status ${anchor ? 'is-assigned' : 'is-unassigned'}">${context.project.expertMode === true ? locationStatus : 'Precise GPS anchoring is optional and stays out of the everyday flow.'}</p>
             </section>
-            <section class="panel area-checkpoint-summary">
-                <h2>Area Totem</h2>
-                <p>${checkpoint ? `<strong>${escapeHtml(checkpoint.marker.name)}</strong> holds the spatial information belonging to this Area.` : 'This Area is saved. Raise its Totem on site now, or leave it unplaced until you visit.'}</p>
-                <div class="button-row">${checkpoint ? `<button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(checkpoint.marker.id)}', 'dashboard', '${encoded(context.site.id)}')">View / edit this Totem in AR</button><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Edit Totem information</button>` : `<button class="spatial-focus-button" type="button" onclick="window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">Place its Totem in AR</button>`}</div>
-                <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
-            </section>
+            <button class="spatial-focus-button area-go-ar" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button>
+            <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
             <section class="latest-entries-section area-content-section">
                 <div class="section-heading-row"><div><h2>Content in this Area</h2><p>${areaEntries.length} existing element${areaEntries.length === 1 ? '' : 's'}</p></div></div>
-                <div class="latest-entry-list">${rows || '<p class="project-empty-state">No content has been added to this Area yet.</p>'}</div>
+                <div class="latest-entry-list">${unplacedTotemRow}${rows}</div>
             </section>
             <section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
                 <h2 id="deleteAreaTitle">Delete Area</h2>
@@ -1154,6 +1178,28 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         </div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export async function saveAreaInformation(event, encodedProjectId, encodedAreaId) {
+    event.preventDefault();
+    const projectId = decodeURIComponent(encodedProjectId);
+    const areaId = decodeURIComponent(encodedAreaId);
+    const status = document.getElementById('areaInformationStatus');
+    try {
+        const context = await projectAreaContext(projectId, areaId);
+        const description = document.getElementById('areaDescription').value.trim();
+        const informationBoxes = [0, 1, 2, 3]
+            .map(index => document.getElementById(`areaInformationBox${index}`).value.trim())
+            .filter(Boolean);
+        if (status) status.textContent = 'Saving Area information…';
+        await updateSitePlace(projectId, context.site.id, areaId, {
+            description,
+            information_boxes: informationBoxes
+        });
+        await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
+    } catch (error) {
+        if (status) status.textContent = `Area information could not be saved: ${error.message}`;
     }
 }
 
@@ -1865,16 +1911,23 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 
 function plantProfileEditorMarkup(entry, profile) {
     const upgraded = isPlantProfileUpgraded(entry.marker, profile);
-    const fields = `
-        <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" /></div>
-        <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
-        <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
-        <div class="field"><label for="projectEntryOrigin">Origin and history</label><input id="projectEntryOrigin" value="${escapeHtml(profile.origin || '')}" /></div>
-        <div class="field"><label for="projectEntryLayer">Forest layer</label><input id="projectEntryLayer" value="${escapeHtml(profile.layer || '')}" /></div>
-        <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="3">${escapeHtml(profile.uses || '')}</textarea></div>
-        <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="3">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
-        <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="3">${escapeHtml(profile.propagation || '')}</textarea></div>
-        <div class="field"><label for="projectEntryOverview">Profile overview</label><textarea id="projectEntryOverview" rows="5">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>`;
+    const fields = `<div class="plant-profile-honeycomb-editor">
+        <fieldset class="plant-profile-branch plant-profile-branch-left"><legend>Left honeycomb · practical &amp; ecological</legend>
+            <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="3">${escapeHtml(profile.uses || '')}</textarea></div>
+            <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="3">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
+            <div class="field"><label for="projectEntryLayer">Forest layer</label><input id="projectEntryLayer" value="${escapeHtml(profile.layer || '')}" /></div>
+        </fieldset>
+        <fieldset class="plant-profile-branch plant-profile-branch-right"><legend>Right honeycomb · scientific &amp; historical</legend>
+            <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
+            <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
+            <div class="field"><label for="projectEntryOrigin">Origin and history</label><input id="projectEntryOrigin" value="${escapeHtml(profile.origin || '')}" /></div>
+            <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="3">${escapeHtml(profile.propagation || '')}</textarea></div>
+        </fieldset>
+        <fieldset class="plant-profile-core-editor"><legend>Honeycomb centre</legend>
+            <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" /></div>
+            <div class="field"><label for="projectEntryOverview">Profile overview</label><textarea id="projectEntryOverview" rows="5">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        </fieldset>
+    </div>`;
     return `<section class="plant-profile-upgrade ${upgraded ? 'is-upgraded' : ''}"><input id="projectEntryProfileEnabled" type="hidden" value="${upgraded}">${upgraded ? '<p class="plant-profile-state"><strong>Plant Profile enabled</strong><span>This Plant now reveals an interactive information tree in AR.</span></p>' : '<div class="plant-profile-invitation"><strong>Upgrade this Plant</strong><p>Enable a Plant Profile to unlock scientific, practical and relationship data—and its interactive AR information tree.</p><button type="button" onclick="document.getElementById(\'projectEntryProfileEnabled\').value=\'true\';document.getElementById(\'projectEntryProfileFields\').hidden=false;this.closest(\'.plant-profile-invitation\').hidden=true">Create Plant Profile</button></div>'}<div id="projectEntryProfileFields" class="plant-profile-fields" ${upgraded ? '' : 'hidden'}>${fields}</div></section>`;
 }
 
@@ -1887,8 +1940,9 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const [placement] = await entriesWithPlacement(project, site, [entry]);
     const plant = entry.marker.type === 'plant';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
+    const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
-    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plant ? `<section class="spatial-focus-panel"><p>Load only this Plant in front of you for a calm spatial viewing or editing session.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'dashboard', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form></div>`;
+    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone with its full honeycomb ready to view. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form></div>`;
 }
 
 export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId) {
