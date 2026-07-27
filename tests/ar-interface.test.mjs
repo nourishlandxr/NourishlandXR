@@ -471,6 +471,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /button\.addEventListener\('mouseenter', expand\)/);
     assert.match(styles, /\.biomap-branch > button/);
     assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
+    assert.match(source, /tryit-welcome-core-cell/);
+    assert.match(styles, /\.tryit-welcome-core-cell:nth-child\(2\)/);
+    assert.match(styles, /\.biomap-branch:nth-child\(1\) \{ left:29\.9%; top:16\.5%; \}/);
+    assert.doesNotMatch(styles, /\.tryit-intro-knowledge::before/);
     assert.match(styles, /color:#fff/);
     assert.match(styles, /font-weight:850/);
     assert.match(source, /ctx\.strokeText\(keyword, x, y\)/);
@@ -493,8 +497,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /\[0, \.68, -1\.9 \+ \.38 \* easedNote\]/);
-    assert.match(styles, /width: min\(88vw, 520px\)/);
+    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.68, -1\.9\]\)/);
+    assert.match(styles, /width:\s*min\(45vw, 252px\)/);
     assert.match(styles, /top: 23%/);
     assert.match(styles, /filter:blur\(10px\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
