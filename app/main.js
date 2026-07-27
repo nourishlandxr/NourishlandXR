@@ -29,8 +29,25 @@ import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } f
 import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
+function placeGlobalNavigationAtBottom() {
+    app.querySelectorAll('.screen').forEach(screen => {
+        const buttons = [...screen.querySelectorAll(':scope > .page-header > button:first-child, :scope > header.page-header > button:first-child')]
+            .filter(button => /^(back|return|exit|close|save and exit)/i.test(button.textContent.trim()));
+        if (!buttons.length) return;
+        let navigation = screen.querySelector(':scope > .bottom-navigation');
+        if (!navigation) {
+            navigation = document.createElement('nav');
+            navigation.className = 'bottom-navigation global-bottom-navigation';
+            screen.append(navigation);
+        }
+        buttons.forEach(button => navigation.append(button));
+    });
+}
 new MutationObserver(() => {
-    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
+    requestAnimationFrame(() => {
+        placeGlobalNavigationAtBottom();
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
 }).observe(app, { childList: true });
 const siteManager = new SiteManager();
 const escapeMainHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);

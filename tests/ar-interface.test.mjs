@@ -187,7 +187,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /let interactionMode = 'neutral'/);
     assert.match(arSource, /interactionMode = interactionMode === mode && \['grab', 'select'\]\.includes\(mode\) \? 'neutral' : mode/);
     assert.match(arSource, /View only mode\. The pointer is hidden; tap a Marker to reveal or hide its information/);
-    assert.match(arSource, /Move mode is on\. Tap the hand beneath any element/);
+    assert.match(arSource, /Move mode is on\. Select a glowing element/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
     assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
@@ -216,7 +216,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
-    assert.match(arSource, /moved\. Tap another hand handle, turn off Move, or choose View/);
+    assert.match(arSource, /moved\. Select another glowing element, turn off Move, or choose View/);
     assert.match(arSource, /Move cancelled\. Move mode remains on/);
     const finishHold = arSource.slice(arSource.indexOf('async function finishMarkerDrag'), arSource.indexOf('function cancelMarkerDrag'));
     assert.doesNotMatch(finishHold, /interactionMode\s*=/);
@@ -393,7 +393,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
     assert.match(arSource, /saveMarkerAnchor\(operation\.projectId, state\.record\.siteId, state\.record\.areaId/);
-    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Tap another hand handle/);
+    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Select another glowing element/);
     assert.match(arSource, /function finishNaturalArExit/);
     assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
     assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, areaId, returnContext\), \{ once: true \}\)/);

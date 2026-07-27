@@ -272,7 +272,7 @@ function setInteractionMode(mode) {
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
-    else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Tap the hand beneath any element, adjust it with the plus control, then press Release.');
+    else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Aim dot ready. Hover over Markers to reveal their names.');
 }
@@ -717,7 +717,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span><span class="spatial-grab-handle" aria-hidden="true">✋</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -985,7 +985,7 @@ async function finishMarkerDrag(event) {
     try {
         await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation));
         if (!isArOperationCurrent(operation)) return;
-        setPlacementStatus(`${state.record.marker.name} moved. Tap another hand handle, turn off Move, or choose View.`);
+        setPlacementStatus(`${state.record.marker.name} moved. Select another glowing element, turn off Move, or choose View.`);
     } catch (error) {
         if (!isArOperationCurrent(operation)) return;
         state.record.position = state.position;

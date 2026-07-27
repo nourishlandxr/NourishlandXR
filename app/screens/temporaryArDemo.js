@@ -38,6 +38,7 @@ let introNoteTexture = null;
 let introTaglineVisible = true;
 let placementReady = false;
 let demoHeldIndex = -1;
+let demoMoveMode = false;
 let suppressDemoMarkerClick = false;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
@@ -89,6 +90,7 @@ function clearSessionState() {
     demoStage = 'plant';
     placementReady = false;
     demoHeldIndex = -1;
+    demoMoveMode = false;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(knowledgeTourTimer);
@@ -354,7 +356,7 @@ function armDemoPlacement(type) {
         aimRevealTimer = setTimeout(() => {
             place?.classList.add('is-ready');
             placementReady = true;
-            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Plant' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place a Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Settle the circle, place it, then use the hand underneath whenever you want to refine its position.</p>`);
+            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Plant' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place a Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Use the Move tool in the bottom bar whenever you want to refine its position.</p>`);
         }, 1900);
     });
 }
@@ -436,7 +438,7 @@ function capturedSimulatedAnchor() {
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span><span class="spatial-grab-handle" aria-hidden="true">✋</span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
@@ -472,7 +474,7 @@ function updateSimulatedMarkers() {
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}<span class="spatial-grab-handle" aria-hidden="true">✋</span></span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -493,6 +495,7 @@ function bindSimulatedInformationPanels(layer) {
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
+            if (!demoMoveMode) return;
             if (demoHeldIndex === index) return;
             holdGesture = { pointerId: event.pointerId, startY: event.clientY };
             compactMarker.setPointerCapture?.(event.pointerId);
@@ -735,15 +738,22 @@ function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
     introSceneActive = true;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro aria-hidden="true"><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro aria-hidden="true"><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-demo-move-mode aria-pressed="false"><span aria-hidden="true">✋</span><strong>Move</strong></button><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
+    appRoot.querySelector('[data-demo-move-mode]').addEventListener('click', event => {
+        demoMoveMode = !demoMoveMode;
+        event.currentTarget.classList.toggle('is-active', demoMoveMode);
+        event.currentTarget.setAttribute('aria-pressed', String(demoMoveMode));
+        appRoot.querySelector('.tryit-demo')?.classList.toggle('is-move-mode', demoMoveMode);
+        setGuide(demoMoveMode ? 'Move is ready. Select a glowing object and hold briefly to adjust it.' : 'Move is off. Tap objects to explore them.');
+    });
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
         demoHeldIndex = -1;
         appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
         updateSimulatedMarkers();
-        setGuide('Released in its refined position. The hand remains available whenever you want to move it again.');
+        setGuide('Released in its refined position. Use Move again whenever you want to adjust another object.');
     });
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
@@ -757,7 +767,7 @@ function renderInterface(simulated) {
             tagline?.classList.add('is-leaving');
             if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
             introNoteTexture = null;
-            showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Every item can be grabbed again using the hand beneath it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
+            showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. The bottom Move tool lets you adjust an object when needed.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
                 if (nextChoice === 'continue') {
                     armDemoPlacement('plant');
                 }
