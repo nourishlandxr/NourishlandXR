@@ -72,8 +72,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, />OPEN AR</);
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, /Add Starting Point/);
-    assert.match(entrySource, />\+ CREATE AREA</);
-    assert.match(entrySource, /config\.createAreaAction \|\| ''/);
+    assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.match(entrySource, /Home Base/);
     assert.match(entrySource, /Trail Entrance/);
     assert.match(entrySource, /living-map-progress/);
@@ -190,7 +189,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
         tools: [],
         growthJourney: null
     });
-    assert.match(dashboardHtml, /onclick="window\.createArea\(\)">\+ CREATE AREA/);
+    assert.doesNotMatch(dashboardHtml, /\+ CREATE AREA/);
     assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
 });
 

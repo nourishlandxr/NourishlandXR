@@ -6,12 +6,12 @@ import test from 'node:test';
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-test('dashboard Site Map renders a visual plan with areas and placed content', () => {
+test('Field Guide Spatial Plan renders a site map with areas and placed content', () => {
     const dashboard = read('app/screens/projectDashboard.js');
-    const entry = read('app/components/projectEntry.js');
+    const fieldGuide = read('app/screens/fieldGuide.js');
     const styles = read('app/style.css');
 
-    assert.match(entry, /Site Map/);
+    assert.match(fieldGuide, /Spatial Plan/);
     assert.match(dashboard, /function buildSiteMapLayout/);
     assert.match(dashboard, /site-map-canvas/);
     assert.match(dashboard, /terrace-marking\.png/);

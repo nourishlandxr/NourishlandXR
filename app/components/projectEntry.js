@@ -90,21 +90,7 @@ export function renderProjectEntry(config) {
                 <span class="content-mode-icon" aria-hidden="true">⚑</span>
                 <div><strong>Stories &amp; Exhibitions</strong><span>Manage interpretation, provenance and guided experiences.</span></div>
             </button>
-        </section>` : `
-        <section class="content-mode-section">
-            <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
-                <span class="content-mode-icon" aria-hidden="true">🌿</span>
-                <div><strong>Field Guide</strong><span>Browse and edit Plants and their information.</span></div>
-            </button>
-            <button class="content-mode-card" type="button" onclick="${config.mapAction}">
-                <span class="content-mode-icon" aria-hidden="true">⌕</span>
-                <div><strong>Site Map</strong><span>See Areas, paths and placed content across the property.</span></div>
-            </button>
-            <button class="content-mode-card" type="button" onclick="${config.storiesAction}">
-                <span class="content-mode-icon" aria-hidden="true">⚑</span>
-                <div><strong>Stories & Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></div>
-            </button>
-        </section>`;
+        </section>` : '';
 
     return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
@@ -145,7 +131,6 @@ export function renderProjectEntry(config) {
                     <h2 id="projectAreasTitle">Areas</h2>
                     <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
                 </button>
-                <button class="project-create-area" type="button" onclick="${config.createAreaAction || ''}">+ CREATE AREA</button>
             </div>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>

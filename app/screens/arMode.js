@@ -35,6 +35,7 @@ let suspendedInteractionMode = '';
 let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
+let readySpecialMarker = null;
 let pendingPlacedRecord = null;
 let hitTestSource = null;
 let latestHitMatrix = null;
@@ -373,7 +374,11 @@ function renderSpecialMarkerChoices(picker) {
             ? `<button class="creator-ar-special-totem" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
             : '';
     const areaAction = activeAreaId ? '' : `<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create Area</strong></span></button>`;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><div class="creator-ar-special-grid">${totemAction}${areaAction}<button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div>`;
+    const wayfinding = [
+        ['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'],
+        ['!', 'Important'], ['?', 'Question']
+    ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><div class="creator-ar-special-grid">${totemAction}${areaAction}${wayfinding}<button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-place-area-totem]')?.addEventListener('click', () => {
         closePlacePicker();
@@ -384,6 +389,14 @@ function renderSpecialMarkerChoices(picker) {
         closePlacePicker();
         void openUnplacedBag();
     });
+    picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
+        readySpecialMarker = {
+            name: button.dataset.arSpecialLabel,
+            special_symbol: button.dataset.arSpecialSymbol,
+            appearance: { color: ['!', '?'].includes(button.dataset.arSpecialSymbol) ? '#eaa45d' : '#75a9cc', size: 'large' }
+        };
+        void armPlacement('sub_checkpoint');
+    }));
     picker.querySelectorAll('[data-ar-toggle-structural]').forEach(button => button.addEventListener('click', () => {
         const markerId = button.dataset.arToggleStructural;
         const record = sessionMarkers.find(item => item.marker.id === markerId);
@@ -719,7 +732,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -1365,10 +1378,13 @@ async function quickPlace(type) {
         while (existingNames.has(draftName.toLocaleLowerCase())) {
             draftName = `${baseName} (${suffix++})`;
         }
+        const specialMarker = type === 'sub_checkpoint' ? readySpecialMarker : null;
+        readySpecialMarker = null;
         const draft = createMinimalMarkerDraft(type, {
-            name: draftName,
+            name: specialMarker?.name || draftName,
             description: type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : ''
         });
+        if (specialMarker) Object.assign(draft, specialMarker);
         if (type === 'area_checkpoint') {
             draft.area_information_board = {
                 title: operation.areaName || 'Area',

@@ -748,6 +748,22 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(styles, /\.totem-bottom-navigation/);
 });
 
+test('Field Guide owns spatial preparation and Special Markers include wayfinding symbols', () => {
+    const fieldGuideSource = read('app/screens/fieldGuide.js');
+    const projectEntrySource = read('app/components/projectEntry.js');
+    const arSource = read('app/screens/arMode.js');
+    assert.match(fieldGuideSource, /Prepare this location/);
+    assert.match(fieldGuideSource, /Spatial Plan/);
+    assert.match(fieldGuideSource, /Organizer Folder/);
+    assert.match(fieldGuideSource, /records anchored/);
+    assert.match(fieldGuideSource, /renderProjectAreaForm/);
+    assert.doesNotMatch(projectEntrySource, />\+ CREATE AREA</);
+    assert.match(arSource, /data-ar-special-symbol/);
+    assert.match(arSource, /\['↑', 'Arrow up'\]/);
+    assert.match(arSource, /\['!', 'Important'\]/);
+    assert.match(arSource, /special_symbol/);
+});
+
 test('Notes stay simple and return to AR after contextual web editing', () => {
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
