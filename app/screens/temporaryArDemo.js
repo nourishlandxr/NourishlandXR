@@ -1004,11 +1004,15 @@ function createIntroKnowledgeTexture() {
     cells.forEach(([x, y], index) => {
         const keyword = INTRO_KNOWLEDGE_KEYWORDS[index];
         const longLabel = keyword.length > 10;
-        drawHexagon(ctx, x, y, longLabel ? 96 : 82, 'rgba(27,59,42,.24)', 'rgba(220,239,207,.48)', 3);
+        drawHexagon(ctx, x, y, longLabel ? 96 : 82, 'rgba(13,46,28,.68)', 'rgba(241,251,234,.8)', 4);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(237,246,228,.88)';
-        ctx.font = `${longLabel ? '650 22px' : '650 28px'} system-ui, sans-serif`;
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,12,5,.9)';
+        ctx.lineWidth = 5;
+        ctx.lineJoin = 'round';
+        ctx.font = `${longLabel ? '800 24px' : '800 32px'} system-ui, sans-serif`;
+        ctx.strokeText(keyword, x, y);
         ctx.fillText(keyword, x, y);
     });
     ctx.strokeStyle = 'rgba(220,239,207,.25)';

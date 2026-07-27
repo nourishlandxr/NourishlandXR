@@ -470,6 +470,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /button\.addEventListener\('mouseenter', expand\)/);
     assert.match(styles, /\.biomap-branch > button/);
     assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
+    assert.match(styles, /color:#fff/);
+    assert.match(styles, /font-weight:850/);
+    assert.match(source, /ctx\.strokeText\(keyword, x, y\)/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /introTaglineVisible = false/);
     assert.match(source, /data-tryit-spatial-tagline/);
