@@ -45,6 +45,15 @@ function readCurrentView() {
         return null;
     }
 }
+function pushViewHistory(view, args = [], extra = {}) {
+    const state = { nourishlandView: view, viewArgs: args, ...extra };
+    const sameView = history.state?.nourishlandView === view
+        && JSON.stringify(history.state?.viewArgs || []) === JSON.stringify(args);
+    if (!sameView) history.pushState(state, '', window.location.href);
+}
+function replaceViewHistory(view, args = [], extra = {}) {
+    history.replaceState({ nourishlandView: view, viewArgs: args, ...extra }, '', window.location.href);
+}
 function placeGlobalNavigationAtBottom() {
     app.querySelectorAll('.screen').forEach(screen => {
         const buttons = [...screen.querySelectorAll(':scope > .page-header > button:first-child, :scope > header.page-header > button:first-child')]
@@ -164,26 +173,37 @@ async function bootstrap() {
         const rememberedView = !params.size ? readCurrentView() : null;
         if (rememberedView?.view === 'projects') {
             setExperienceRole('creator');
+            replaceViewHistory('projects');
             await renderDemoProjects(app);
             return;
         }
         if (rememberedView?.view === 'dashboard' && rememberedView.args?.[0]) {
             setExperienceRole('creator');
+            replaceViewHistory('dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '' });
             await window.renderProjectDashboard(...rememberedView.args);
             return;
         }
         if (rememberedView?.view === 'area' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
             setExperienceRole('creator');
+            replaceViewHistory('area', rememberedView.args);
             await renderProjectAreaDashboard(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'totem' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            replaceViewHistory('totem', rememberedView.args);
+            await renderAreaCheckpointForm(app, ...rememberedView.args);
             return;
         }
         if (rememberedView?.view === 'entry' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
             setExperienceRole('creator');
+            replaceViewHistory('entry', rememberedView.args);
             await openProjectEntry(app, ...rememberedView.args);
             return;
         }
         if (rememberedView?.view === 'field-guide' && rememberedView.args?.[0]) {
             setExperienceRole(rememberedView.args?.[1] ? 'creator' : 'visitor');
+            replaceViewHistory('field-guide', rememberedView.args);
             await renderFieldGuide(app, ...rememberedView.args);
             return;
         }
@@ -212,7 +232,7 @@ async function bootstrap() {
     }
 }
 
-window.renderLaunchScreen = () => { forgetCurrentView(); setExperienceRole('launch'); renderLaunchScreen(app); };
+window.renderLaunchScreen = () => { forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); renderLaunchScreen(app); };
 window.renderHillyardsDemo = () => renderDemoHome(app);
 window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${error.message}</p></div>`; }); };
 window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${error.message}</p></div>`; });
@@ -301,6 +321,31 @@ window.addEventListener('popstate', event => {
         void renderDemoProjects(app);
         return;
     }
+    const args = event.state?.viewArgs || [];
+    if (event.state?.nourishlandView === 'area' && args[0] && args[1]) {
+        rememberCurrentView('area', args);
+        setExperienceRole('creator');
+        void renderProjectAreaDashboard(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'totem' && args[0] && args[1]) {
+        rememberCurrentView('totem', args);
+        setExperienceRole('creator');
+        void renderAreaCheckpointForm(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'entry' && args[0] && args[1]) {
+        rememberCurrentView('entry', args);
+        setExperienceRole('creator');
+        void openProjectEntry(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'field-guide' && args[0]) {
+        rememberCurrentView('field-guide', args);
+        setExperienceRole(args[1] ? 'creator' : 'visitor');
+        void renderFieldGuide(app, ...args);
+        return;
+    }
     forgetCurrentView();
     setExperienceRole('launch');
     renderLaunchScreen(app);
@@ -343,11 +388,18 @@ window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, proje
 window.filterAllProjectEntries = filterAllProjectEntries;
 window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
 window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
-window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => renderAreaCheckpointForm(app, projectId, areaId, flow);
+window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => {
+    const args = [projectId, areaId, flow];
+    rememberCurrentView('totem', args);
+    pushViewHistory('totem', args);
+    return renderAreaCheckpointForm(app, projectId, areaId, flow);
+};
 window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
 window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
 window.renderProjectAreaDashboard = (projectId, areaId) => {
-    rememberCurrentView('area', [projectId, areaId]);
+    const args = [projectId, areaId];
+    rememberCurrentView('area', args);
+    pushViewHistory('area', args);
     return renderProjectAreaDashboard(app, projectId, areaId);
 };
 window.saveAreaInformation = (event, projectId, areaId) => saveAreaInformation(event, projectId, areaId);
@@ -373,7 +425,9 @@ window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
 window.openProjectEntry = (projectId, markerId) => {
-    rememberCurrentView('entry', [projectId, markerId]);
+    const args = [projectId, markerId];
+    rememberCurrentView('entry', args);
+    pushViewHistory('entry', args);
     return openProjectEntry(app, projectId, markerId).catch(error => window.alert(error.message));
 };
 window.saveProjectEntryChanges = saveProjectEntryChanges;
@@ -483,7 +537,9 @@ window.renderVisitorLocationIntro = (projectId, creatorPreview = false, exploreP
 window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
 window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
 window.renderFieldGuide = (projectId, creator = false) => {
-    rememberCurrentView('field-guide', [projectId, creator]);
+    const args = [projectId, creator];
+    rememberCurrentView('field-guide', args);
+    pushViewHistory('field-guide', args);
     setExperienceRole(creator ? 'creator' : 'visitor');
     return renderFieldGuide(app, projectId, creator);
 };

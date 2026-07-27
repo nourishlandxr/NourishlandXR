@@ -642,7 +642,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         }
         checkpointSetupFlows.delete(flowKey);
         if (nextFlow === 'quick') await renderCheckpointPlacementChoice(document.getElementById('app'), encoded(projectId), encoded(areaId), encoded(savedMarker.id));
-        else await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
+        else await window.renderProjectAreaDashboard(encoded(projectId), encoded(areaId));
     } catch (error) {
         if (status) status.textContent = `Area Marker could not be saved: ${error.message}`;
     }
