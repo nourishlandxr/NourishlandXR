@@ -1038,14 +1038,14 @@ function createIntroNoteTexture() {
     label.width = 1400;
     label.height = 900;
     const ctx = label.getContext('2d');
-    const noteGradient = ctx.createLinearGradient(510, 390, 890, 510);
+    const noteGradient = ctx.createLinearGradient(150, 315, 1250, 585);
     noteGradient.addColorStop(0, 'rgba(34,69,47,.88)');
     noteGradient.addColorStop(1, 'rgba(13,37,24,.8)');
     ctx.fillStyle = noteGradient;
     ctx.strokeStyle = 'rgba(239,250,235,.7)';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.roundRect(505, 380, 390, 140, [28, 22, 30, 24]);
+    ctx.roundRect(150, 315, 1100, 270, [42, 34, 46, 38]);
     ctx.fill();
     ctx.stroke();
     ctx.shadowColor = 'rgba(0,0,0,.45)';
@@ -1054,13 +1054,13 @@ function createIntroNoteTexture() {
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = 'rgba(0,15,6,.9)';
     ctx.lineWidth = 4;
-    ctx.font = '720 49px system-ui, sans-serif';
-    ctx.strokeText('NOURISHLANDXR', 700, introTaglineVisible ? 438 : 466);
-    ctx.fillText('NOURISHLANDXR', 700, introTaglineVisible ? 438 : 466);
+    ctx.font = '720 92px system-ui, sans-serif';
+    ctx.strokeText('NOURISHLANDXR', 700, introTaglineVisible ? 430 : 472);
+    ctx.fillText('NOURISHLANDXR', 700, introTaglineVisible ? 430 : 472);
     if (introTaglineVisible) {
-        ctx.font = '600 23px system-ui, sans-serif';
-        ctx.strokeText('A web of living knowledge…', 700, 488);
-        ctx.fillText('A web of living knowledge…', 700, 488);
+        ctx.font = '600 42px system-ui, sans-serif';
+        ctx.strokeText('A web of living knowledge…', 700, 515);
+        ctx.fillText('A web of living knowledge…', 700, 515);
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -1119,22 +1119,22 @@ function drawIntroSpatial(view) {
     };
     const noteProgress = Math.min(1, Math.max(0, (elapsed - 300) / 1800));
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
-    const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1050) / 1900));
+    const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
     if (introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
-            introLocalPosition(introWorldAnchor, [0, .68, -1.9]),
-            2.65,
-            1.7,
+            introLocalPosition(introWorldAnchor, [0, .35, -3]),
+            3.05,
+            1.95,
             easedKnowledge * .9
         );
     }
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, .68, -1.9]),
-        2.65,
-        1.7,
+        introLocalPosition(introWorldAnchor, [0, .35, -3]),
+        3.05,
+        1.95,
         easedNote
     );
 }

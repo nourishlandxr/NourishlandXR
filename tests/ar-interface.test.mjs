@@ -502,9 +502,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.68, -1\.9\]\)/);
-    assert.match(styles, /width:min\(46vw,240px\)/);
-    assert.match(styles, /top:23%/);
+    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.35, -3\]\)/);
+    assert.match(styles, /width:min\(88vw,760px\)/);
+    assert.match(styles, /top:38%/);
     assert.match(styles, /filter:blur\(10px\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /\}, 2800\)/);
