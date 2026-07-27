@@ -155,8 +155,8 @@ function setGuide(message) {
 
 function showDemoAction(nextStage) {
     const messages = {
-        plant2: ['Lemon Myrtle is alive', 'Its profile now lives in space. Next, meet a second Plant with a different story.'],
-        note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second Marker somewhere nearby.'],
+        plant2: ['Add a second Plant', 'The first profile now lives in space. Let’s try Moringa in another nearby position.'],
+        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge. Next, place a simple Note nearby.'],
         zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
@@ -262,8 +262,11 @@ function runKnowledgeTour(record, onComplete) {
 function guidePlantConversion(record) {
     const moringa = record.tutorialStage === 'plant2';
     const plantName = moringa ? 'Moringa Tree' : 'Lemon Myrtle';
-    setGuide('Your first Marker is placed.');
-    showGuidedChoice('<h2>A simple Plant Marker</h2><p>This orb begins as a clear spatial marker. Its real potential appears when it becomes a Plant Profile: knowledge connected directly to a living place.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+    setGuide(`${moringa ? 'Your second' : 'Your first'} Plant orb is placed.`);
+    const introduction = moringa
+        ? '<h2>A second Plant orb</h2><p>Let’s use Moringa for this example. This orb can hold a different profile while remaining part of the same living map.</p><button type="button" data-demo-choice="continue">Create Moringa profile</button>'
+        : '<h2>A simple Plant orb</h2><p>This is an example Plant marker. A simple orb can become a living Plant Profile; let’s use Lemon Myrtle to show how.</p><button type="button" data-demo-choice="continue">Create Plant Profile</button>';
+    showGuidedChoice(introduction, choice => {
         if (choice !== 'continue') return;
         record.type = 'plant';
         record.demoType = 'plant';
@@ -277,7 +280,7 @@ function guidePlantConversion(record) {
         record.revealLines = 3;
         refreshDemoRecord(record);
         navigator.vibrate?.([45, 40, 75]);
-        showGuidedChoice(`<h2>${plantName} comes alive</h2><p>Watch its information honeycomb respond as we explore origin, growth conditions, uses, scientific knowledge, and fruit or flower details. Hover or tap any honeycomb to explore it yourself.</p>`, () => {}, {
+        showGuidedChoice(`<h2>${moringa ? 'Moringa comes alive' : 'The profile comes alive'}</h2><p>Its information honeycomb connects uses, growing conditions, origin, scientific knowledge, and fruit or flower details. Hover or tap a cell to explore.</p>`, () => {}, {
             onTextComplete: () => runKnowledgeTour(record, () => {
                 showDemoAction(moringa ? 'note' : 'plant2');
             })
@@ -355,8 +358,8 @@ function armDemoPlacement(type) {
             ? 'Take in the space before choosing the next position.'
             : 'Look for the natural centre of this Area.');
     const introductions = {
-        plant: ['Find your first place', 'Look around slowly and choose a calm, clear spot. In a moment, an aiming circle will appear in the centre to help you place with intention.'],
-        plant2: ['Place a second Plant', 'Choose another nearby position for Moringa Tree and let the scene settle around it.'],
+        plant: ['Place an example Plant', 'Look around slowly and choose a calm, clear spot. Continue when you are ready, then press the aiming circle to place the orb.'],
+        plant2: ['Let’s try Moringa', 'Choose another nearby position. Continue when ready, then press the aiming circle to place its orb.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.'],
         zone: ['Find the heart of the Area', 'Look toward the centre of the place you want this Area to gather. The aiming circle will appear when this introduction finishes.']
     };
@@ -366,9 +369,9 @@ function armDemoPlacement(type) {
         if (choice !== 'continue') return;
         hideGuidedChoice();
         setGuide(type === 'plant'
-            ? 'Tap the circle to place your first Plant.'
+            ? 'Press the aiming circle to place the example Plant orb.'
             : type === 'plant2'
-                ? 'Tap the circle to place Moringa nearby.'
+                ? 'Press the aiming circle to place the Moringa orb.'
                 : type === 'note'
                     ? 'Tap the circle to place a Note.'
                     : 'Tap the circle to place the Area Totem.');
@@ -752,7 +755,7 @@ function placeMarker() {
     const panelOffsets = {
         plant: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
         plant2: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
-        note: { x: 105, y: 75 },
+        note: { x: 0, y: 0 },
         zone: { x: 0, y: 0 }
     };
     marker = {
@@ -786,7 +789,7 @@ function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
     introSceneActive = true;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><span class="tryit-welcome-core-cell" aria-hidden="true"></span><span class="tryit-welcome-core-cell" aria-hidden="true"></span><span class="tryit-welcome-core-cell" aria-hidden="true"></span><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -819,6 +822,8 @@ function renderInterface(simulated) {
             introNoteTexture = null;
                 showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Hold and drag any element whenever you want to adjust it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
                 if (nextChoice === 'continue') {
+                    appRoot.querySelector('.tryit-intro-knowledge')?.classList.add('is-leaving');
+                    introKnowledgeVisible = false;
                     armDemoPlacement('plant');
                 }
             });
@@ -1033,20 +1038,27 @@ function createIntroNoteTexture() {
     label.width = 1400;
     label.height = 900;
     const ctx = label.getContext('2d');
-    [550, 700, 850].forEach((x, index) => {
-        drawHexagon(ctx, x, 450, 100, index === 1 ? 'rgba(69,126,83,.96)' : 'rgba(30,83,53,.93)', 'rgba(239,255,220,.92)', 5);
-    });
-    ctx.shadowColor = 'rgba(190,245,154,.55)';
-    ctx.shadowBlur = 24;
+    const noteGradient = ctx.createLinearGradient(510, 390, 890, 510);
+    noteGradient.addColorStop(0, 'rgba(34,69,47,.88)');
+    noteGradient.addColorStop(1, 'rgba(13,37,24,.8)');
+    ctx.fillStyle = noteGradient;
+    ctx.strokeStyle = 'rgba(239,250,235,.7)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(505, 380, 390, 140, [28, 22, 30, 24]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowColor = 'rgba(0,0,0,.45)';
+    ctx.shadowBlur = 10;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = 'rgba(0,15,6,.9)';
-    ctx.lineWidth = 7;
-    ctx.font = '850 58px system-ui, sans-serif';
+    ctx.lineWidth = 4;
+    ctx.font = '720 49px system-ui, sans-serif';
     ctx.strokeText('NOURISHLANDXR', 700, introTaglineVisible ? 438 : 466);
     ctx.fillText('NOURISHLANDXR', 700, introTaglineVisible ? 438 : 466);
     if (introTaglineVisible) {
-        ctx.font = '750 25px system-ui, sans-serif';
+        ctx.font = '600 23px system-ui, sans-serif';
         ctx.strokeText('A web of living knowledge…', 700, 488);
         ctx.fillText('A web of living knowledge…', 700, 488);
     }
@@ -1061,23 +1073,22 @@ function createIntroKnowledgeTexture() {
     label.height = 900;
     const ctx = label.getContext('2d');
     const cells = [
-        [475, 277], [625, 277], [775, 277], [925, 277],
-        [475, 623], [625, 623], [775, 623], [925, 623],
-        [400, 450], [1000, 450], [250, 450], [1150, 450]
+        [490, 285], [630, 285], [770, 285], [910, 285],
+        [490, 615], [630, 615], [770, 615], [910, 615],
+        [405, 370], [995, 370], [405, 530], [995, 530]
     ];
     cells.forEach(([x, y], index) => {
         const keyword = INTRO_KNOWLEDGE_KEYWORDS[index];
         const longLabel = keyword.length > 10;
-        drawHexagon(ctx, x, y, 100, 'rgba(13,46,28,.82)', 'rgba(241,251,234,.88)', 4);
+        drawHexagon(ctx, x, y, 78, 'rgba(34,69,47,.36)', 'rgba(241,251,234,.58)', 3);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fff';
-        ctx.strokeStyle = 'rgba(0,12,5,.9)';
-        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'rgba(0,12,5,.72)';
+        ctx.lineWidth = 3;
         ctx.lineJoin = 'round';
-        ctx.font = `${longLabel ? '800 24px' : '800 32px'} system-ui, sans-serif`;
-        ctx.strokeText(keyword, x, y);
-        ctx.fillText(keyword, x, y);
+        ctx.font = `${longLabel ? '650 21px' : '650 27px'} system-ui, sans-serif`;
+        drawWrappedTextureText(ctx, keyword, x, y - (longLabel ? 18 : 14), 118, longLabel ? 24 : 28, 2);
     });
     return canvasTexture(label);
 }
