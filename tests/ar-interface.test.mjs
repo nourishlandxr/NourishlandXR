@@ -768,9 +768,16 @@ test('Field Guide owns spatial preparation and Special Markers include wayfindin
     assert.match(fieldGuideSource, /renderProjectAreaForm/);
     assert.doesNotMatch(projectEntrySource, />\+ CREATE AREA</);
     assert.match(arSource, /data-ar-special-symbol/);
-    assert.match(arSource, /\['↑', 'Arrow up'\]/);
+    assert.match(arSource, /\['⬇', 'Block arrow down'\]/);
+    assert.match(arSource, /\['〉', 'Outline arrow right'\]/);
     assert.match(arSource, /\['!', 'Important'\]/);
     assert.match(arSource, /special_symbol/);
+    assert.match(arSource, /data-ar-arrow-style="\$\{index \+ 1\}"/);
+    assert.match(arSource, /DIRECTION ARROWS/);
+    assert.match(arSource, /function rotateHeldArrow/);
+    assert.match(arSource, /rotation_degrees: roundCoordinate\(rotationDegrees\)/);
+    assert.match(arSource, /data-ar-rotate-left/);
+    assert.match(arSource, /data-ar-rotate-right/);
 });
 
 test('Notes stay simple and return to AR after contextual web editing', () => {

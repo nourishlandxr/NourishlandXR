@@ -646,6 +646,8 @@ h1 {
 .spatial-move-arm small { font-size: .53rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .spatial-move-up { grid-area: 1 / 2; border-radius: 18px 18px 5px 5px; transform: translateY(var(--depth-shift)); }
 .spatial-move-left { grid-area: 2 / 1; border-radius: 18px 5px 5px 18px; }
+.spatial-move-control:not(.can-rotate-arrow) .spatial-move-left,
+.spatial-move-control:not(.can-rotate-arrow) .spatial-move-right { opacity: .42; pointer-events: none; }
 .spatial-move-release { grid-area: 2 / 2; border-radius: 7px; border: 1px solid rgba(235,247,235,.5); background: linear-gradient(145deg, rgba(68,91,75,.96), rgba(22,38,27,.98)); box-shadow: inset 0 1px 3px rgba(255,255,255,.14); }
 .spatial-move-release span { font-size: .8rem; line-height: 1; }
 .spatial-move-release small { font-size: .5rem; font-weight: 850; text-transform: uppercase; }
@@ -5198,7 +5200,9 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-anchored-list button span { display:grid; gap:.1rem; }
 .field-guide-anchored-list button small { color:#66736a; font-size:.64rem; }
 .field-guide-anchored-list button b { color:#397964; font-size:.68rem; }
-.creator-ar-special-symbol { display:grid; place-items:center; position:absolute; left:50%; top:50%; width:44px; height:44px; transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.9); border-radius:50%; background:var(--marker-accent,#75a9cc); color:#fff; font-size:1.65rem; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.32); box-shadow:0 0 20px color-mix(in srgb,var(--marker-accent,#75a9cc) 72%,transparent); }
+.creator-ar-special-symbol { display:grid; place-items:center; position:absolute; left:50%; top:50%; width:44px; height:44px; transform:translate(-50%,-50%) rotate(var(--marker-rotation,0deg)); border:2px solid rgba(255,255,255,.9); border-radius:50%; background:var(--marker-accent,#75a9cc); color:#fff; font-size:1.65rem; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.32); box-shadow:0 0 20px color-mix(in srgb,var(--marker-accent,#75a9cc) 72%,transparent); }
+.creator-ar-arrow-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.creator-ar-symbol-marker[data-ar-arrow-style] b { font-size:1.8rem; line-height:1; }
 .creator-ar-marker-hit-target.is-symbol-marker .creator-ar-spatial-name { margin-top:42px; }
 
 .area-content-grid {

@@ -211,7 +211,7 @@ function isArOperationCurrent(context, { matchLocation = true, matchGeneration =
         && (!matchLocation || (activeSiteId === context.siteId && activeAreaId === context.areaId));
 }
 
-function spatialAnchor(position, context = null) {
+function spatialAnchor(position, context = null, rotationDegrees = 0) {
     const origin = context ? context.checkpointOrigin : checkpointSessionOrigin;
     const checkpointId = context ? context.checkpointId : activeCheckpointId;
     const checkpointPosition = origin
@@ -230,6 +230,7 @@ function spatialAnchor(position, context = null) {
             y: roundCoordinate(position.y),
             z: roundCoordinate(position.z)
         },
+        rotation_degrees: roundCoordinate(rotationDegrees),
         captured_at: new Date().toISOString()
     };
 }
@@ -243,6 +244,7 @@ function cleanupDrag() {
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = true;
+        joystick.classList.remove('can-rotate-arrow');
         joystick.style.setProperty('--depth-shift', '0px');
     }
 }
@@ -377,11 +379,15 @@ function renderSpecialMarkerChoices(picker) {
             ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
             : '';
     const areaAction = activeAreaId ? '' : `<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create Area</strong></span></button>`;
-    const wayfinding = [
-        ['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'],
+    const arrows = [
+        ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
+        ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
+        ['⇧', 'Rounded arrow up'], ['⇩', 'Rounded arrow down'], ['〉', 'Outline arrow right']
+    ].map(([symbol, label], index) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}" data-ar-arrow-style="${index + 1}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
+    const alerts = [
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Spatial tools</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-totem-section"><strong>AREA TOTEM</strong><div class="creator-ar-special-grid">${totemAction}${areaAction}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>INDICATOR MARKERS</strong><div class="creator-ar-special-grid">${wayfinding}</div></section><section class="creator-ar-special-section"><strong>EXISTING RECORDS</strong><div class="creator-ar-special-grid"><button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div></section>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Spatial tools</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-totem-section"><strong>AREA TOTEM</strong><div class="creator-ar-special-grid">${totemAction}${areaAction}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>DIRECTION ARROWS</strong><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>INFORMATION MARKERS</strong><div class="creator-ar-special-grid">${alerts}</div></section><section class="creator-ar-special-section"><strong>EXISTING RECORDS</strong><div class="creator-ar-special-grid"><button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-place-area-totem]')?.addEventListener('click', () => {
         closePlacePicker();
@@ -396,6 +402,7 @@ function renderSpecialMarkerChoices(picker) {
         readySpecialMarker = {
             name: button.dataset.arSpecialLabel,
             special_symbol: button.dataset.arSpecialSymbol,
+            arrow_style: button.dataset.arArrowStyle ? Number(button.dataset.arArrowStyle) : undefined,
             appearance: { color: ['!', '?'].includes(button.dataset.arSpecialSymbol) ? '#eaa45d' : '#75a9cc', size: 'large' }
         };
         void armPlacement('sub_checkpoint');
@@ -692,6 +699,7 @@ function positionSessionMarkers(view = latestView) {
         element.hidden = !visible;
         if (visible) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
+            element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
             positionCreatorPlantProfile(record, x, y);
         }
     });
@@ -732,7 +740,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -929,6 +937,7 @@ function beginMarkerInteraction(record, event) {
         cameraPosition: camera,
         distance,
         depthOffset: 0,
+        rotationDegrees: Number(record.rotationDegrees) || 0,
         pointerOffset: { x: 0, y: 0 }
     };
     event.currentTarget.classList.add('is-adjusting');
@@ -939,6 +948,7 @@ function beginMarkerInteraction(record, event) {
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
         joystick.hidden = false;
+        joystick.classList.toggle('can-rotate-arrow', Boolean(record.marker.arrow_style));
         const pointer = overlayRoot?.querySelector('.creator-ar-mode-pointer');
         const pointerRect = pointer?.getBoundingClientRect();
         const controlX = pointerRect ? pointerRect.left + pointerRect.width / 2 : event.clientX;
@@ -1004,7 +1014,7 @@ async function finishMarkerDrag(event) {
     updateInteractionControls();
     setPlacementStatus(`Saving ${state.record.marker.name}… Move mode remains on.`);
     try {
-        await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation));
+        await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation, state.record.rotationDegrees));
         if (!isArOperationCurrent(operation)) return;
         setPlacementStatus(`${state.record.marker.name} moved. Select another glowing element, turn off Move, or choose View.`);
     } catch (error) {
@@ -1028,10 +1038,17 @@ function setHeldMarkerDepthOffset(value) {
     }
 }
 
+function rotateHeldArrow(delta) {
+    if (!dragState?.record?.marker?.arrow_style) return;
+    dragState.record.rotationDegrees = ((Number(dragState.record.rotationDegrees) || 0) + delta + 360) % 360;
+    positionSessionMarkers();
+}
+
 function cancelMarkerDrag(event) {
     const state = dragState;
     if (!state || event?.pointerId !== state.pointerId) return;
     state.record.position = state.position;
+    state.record.rotationDegrees = state.rotationDegrees;
     cleanupDrag();
     updateInteractionControls();
     positionSessionMarkers();
@@ -1085,10 +1102,11 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             plantProfile,
             profileExpanded: false,
             position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
-            siteId: operation.siteId,
-            areaId: area.id,
-            areaName: area.name,
-            coordinateSpace: anchor.coordinate_space || 'session-local'
+                siteId: operation.siteId,
+                areaId: area.id,
+                areaName: area.name,
+                coordinateSpace: anchor.coordinate_space || 'session-local',
+                rotationDegrees: Number(anchor.rotation_degrees) || 0
         };
     }));
     if (!isArOperationCurrent(operation, guardOptions)) return;
@@ -1405,9 +1423,9 @@ async function quickPlace(type) {
             marker = { ...draft, ...(response.marker || response) };
         }
         if (!operationIsCurrent() || !marker) return;
-        await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation));
+        await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation, 0));
         if (!operationIsCurrent()) return;
-        const record = { marker, position, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName };
+        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName };
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {
@@ -1479,6 +1497,10 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
+    overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });
+    overlayRoot.querySelector('[data-ar-move-nearer]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset - .2); });
+    overlayRoot.querySelector('[data-ar-rotate-left]').addEventListener('click', () => rotateHeldArrow(-15));
+    overlayRoot.querySelector('[data-ar-rotate-right]').addEventListener('click', () => rotateHeldArrow(15));
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();
