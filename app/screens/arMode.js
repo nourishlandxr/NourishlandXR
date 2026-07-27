@@ -65,6 +65,15 @@ const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'hug
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
     ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
     : marker;
+const normalizeSpecialMarker = marker => {
+    if (!marker || marker.type !== 'sub_checkpoint' || marker.special_symbol) return marker;
+    const inferred = {
+        'arrow up': '↑', 'arrow right': '→', 'arrow down': '↓', 'arrow left': '←',
+        important: '!', question: '?'
+    }[String(marker.name || '').trim().toLocaleLowerCase()];
+    return inferred ? { ...marker, special_symbol: inferred } : marker;
+};
+const normalizeSpatialMarker = marker => normalizeSpecialMarker(normalizeAreaCheckpointMarker(marker));
 const areaBoard = marker => ({
     title: marker?.area_information_board?.title || String(marker?.name || 'Area').replace(/\s+checkpoint$/i, ''),
     introduction: marker?.area_information_board?.introduction || marker?.description || 'Welcome to this Area.',
@@ -321,7 +330,7 @@ async function openUnplacedBag() {
         const areas = await loadSitePlaces(activeProjectId, activeSiteId);
         const groups = await Promise.all(areas.map(async area => {
             const markers = await loadPlaceMarkers(activeProjectId, activeSiteId, area.id).catch(() => []);
-            const entries = await Promise.all(markers.filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type)).map(async marker => {
+            const entries = await Promise.all(markers.map(normalizeSpatialMarker).filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type)).map(async marker => {
                 const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, area.id, marker.id).catch(() => null);
                 return anchor?.type === 'spatial' ? null : { marker, areaId: area.id, areaName: area.name };
             }));
@@ -369,16 +378,16 @@ function showPlacedMarkerActions(record) {
 function renderSpecialMarkerChoices(picker) {
     const existingTotem = sessionMarkers.find(record => record.areaId === activeAreaId && record.marker.type === 'area_checkpoint');
     const totemAction = existingTotem
-        ? `<button class="creator-ar-special-totem" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong></span></button>`
+        ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong></span></button>`
         : activeAreaId
-            ? `<button class="creator-ar-special-totem" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
+            ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
             : '';
     const areaAction = activeAreaId ? '' : `<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create Area</strong></span></button>`;
     const wayfinding = [
         ['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'],
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><div class="creator-ar-special-grid">${totemAction}${areaAction}${wayfinding}<button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Spatial tools</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-totem-section"><strong>AREA TOTEM</strong><div class="creator-ar-special-grid">${totemAction}${areaAction}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>INDICATOR MARKERS</strong><div class="creator-ar-special-grid">${wayfinding}</div></section><section class="creator-ar-special-section"><strong>EXISTING RECORDS</strong><div class="creator-ar-special-grid"><button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-place-area-totem]')?.addEventListener('click', () => {
         closePlacePicker();
@@ -1063,7 +1072,7 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     const restoredGroups = await Promise.all(areas.map(async area => {
         const savedMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, area.id).catch(() => []);
         return Promise.all(savedMarkers.map(async savedMarker => {
-            const marker = normalizeAreaCheckpointMarker(savedMarker);
+            const marker = normalizeSpatialMarker(savedMarker);
             const [anchor, plantProfile] = await Promise.all([
                 loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null),
                 marker.type === 'plant'
@@ -1095,7 +1104,7 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
     if (!markerId || !operation.projectId || !operation.siteId || !operation.areaId || !isArOperationCurrent(operation)) return false;
     const markers = await loadPlaceMarkers(operation.projectId, operation.siteId, operation.areaId).catch(() => []);
     if (!isArOperationCurrent(operation)) return false;
-    const marker = normalizeAreaCheckpointMarker(markers.find(item => item.id === markerId));
+    const marker = normalizeSpatialMarker(markers.find(item => item.id === markerId));
     if (!marker) {
         setPlacementStatus('The saved Marker could not be loaded for placement.');
         return false;
@@ -1395,7 +1404,7 @@ async function quickPlace(type) {
             marker = await createAreaCompatibleMarker(draft, operation);
         } else {
             const response = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, draft);
-            marker = response.marker || response;
+            marker = { ...draft, ...(response.marker || response) };
         }
         if (!operationIsCurrent() || !marker) return;
         await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation));
