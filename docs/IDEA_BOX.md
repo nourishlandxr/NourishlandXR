@@ -16,7 +16,7 @@
 - Plant and Totem profile pages offer one blue action to load that single element for focused AR viewing or editing.
 - Area Totems are framed translucent rectangles with soft attached information balloons edited in Web Mode.
 - Notes use an organic translucent plaque/balloon form rather than an opaque flat panel.
-- Try It Now demonstrates Lemon Myrtle, Moringa Tree, an inspirational Note and a Totem with three information examples.
+- Try It Now introduces a web of decorative knowledge honeycombs, then demonstrates Lemon Myrtle, Moringa Tree, a Note and a Totem with three information examples.
 
 ## V0.8513 — Persistent spatial tools
 
@@ -298,7 +298,8 @@ Before promoting an idea into the release plan, ask:
 
 - Try It Now follows an intentional sequence: introduction, reveal the centre aim, place an unassigned Marker, convert it to a living Plant orb, reveal its tethered information tree, add a flat Note, then introduce the Area Totem.
 - Hold movement is centre-aim based: hold an element, move the view, and release it at the pointer.
-- The beginner project journey uses four literal tasks: add one Area, five Plants, a Home or Entrance, and one Note. It is hidden when advanced controls are enabled or the tutorial is switched off.
+- The beginner project journey uses five literal tasks: add one Area, five Plants, two Plant Profiles, a Home or Entrance, and one Note. It is hidden when advanced controls are enabled or the tutorial is switched off.
+- The dashboard tutorial also teaches two Plant Profile upgrades and removes its entire progress section once every tutorial task is complete.
 - Project creation offers “Include guided tutorial” separately from “Show advanced controls.”
 - Plants may be saved as Not placed without an Area; Area creation has a compatibility fallback for older persistence services.
 - Organizer Folder and Home & Entrances live under Stories & Checkpoints rather than general dashboard settings.

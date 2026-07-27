@@ -426,10 +426,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
-    assert.match(source, /Welcome to our quick demo/);
-    assert.match(source, /Imagine your space coming alive with rich information/);
-    assert.match(source, /Let’s test some NourishlandXR features/);
-    assert.match(source, /Start the demo/);
+    assert.match(source, /tryit-intro-honeycombs/);
+    assert.match(source, /Welcome to Nourishland XR/);
+    assert.match(source, /A web of knowledge in your space/);
+    assert.match(source, /Let’s bring a garden to life/);
+    assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
+    assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 46\)/);
@@ -437,6 +439,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
+    assert.match(source, /runKnowledgeTour/);
+    assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
+    assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
@@ -473,7 +478,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /Garden plaque/);
-    assert.match(source, /Raise the Area Totem/);
+    assert.match(source, /Give the Area a Totem/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
 

@@ -712,11 +712,22 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const missingTotemArea = areas.find(area => !placedTotemAreaIds.has(area.id)) || null;
         const allAreasHavePlacedTotems = areas.length > 0 && !missingTotemArea;
         const homeArea = areas.find(area => area.id === project.homeBaseAreaId) || null;
-        const plantCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant').length;
+        const plantEntries = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant');
+        const plantCount = plantEntries.length;
+        const plantProfiles = await Promise.all(plantEntries.map(async entry => ({
+            entry,
+            profile: entry.marker.plant_profile_path
+                ? await loadPlantProfile(project.id, site?.id || '', entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {})
+                : entry.marker.plant_profile || {}
+        })));
+        const profiledPlants = plantProfiles.filter(({ entry, profile }) => isPlantProfileUpgraded(entry.marker, profile));
+        const plantProfileCount = profiledPlants.length;
+        const nextPlantWithoutProfile = plantProfiles.find(({ entry, profile }) => !isPlantProfileUpgraded(entry.marker, profile))?.entry || null;
         const noteCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'note').length;
         const growthSteps = [
             { label: 'Add 1 Area', complete: hasArea },
             { label: 'Add 5 Plants', complete: plantCount >= 5, progress: `${Math.min(plantCount, 5)}/5` },
+            { label: 'Create 2 Plant Profiles', complete: plantProfileCount >= 2, progress: `${Math.min(plantProfileCount, 2)}/2` },
             { label: 'Add a Home or Entrance', complete: Boolean(homeArea || startingPoint) },
             { label: 'Add 1 Note', complete: noteCount >= 1 }
         ];
@@ -734,7 +745,15 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                         description: `${5 - plantCount} Plant${5 - plantCount === 1 ? '' : 's'} remaining.`,
                         action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`
                     }
-                    : !homeArea && !startingPoint
+                    : plantProfileCount < 2
+                        ? {
+                            label: 'Create a Plant Profile',
+                            description: `${2 - plantProfileCount} Plant Profile${2 - plantProfileCount === 1 ? '' : 's'} remaining.`,
+                            action: nextPlantWithoutProfile
+                                ? `window.openProjectEntry('${encoded(project.id)}','${encoded(nextPlantWithoutProfile.marker.id)}')`
+                                : `window.renderFieldGuide('${encoded(project.id)}', true)`
+                        }
+                        : !homeArea && !startingPoint
                         ? {
                             label: 'Add a Home or Entrance',
                             description: 'Choose an optional return point or visitor beginning.',
@@ -751,7 +770,11 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                                 description: 'Your essential mapping tools are ready.',
                                 action: `window.startArMode('${encoded(project.id)}')`
                             };
-        const growthJourney = project.expertMode === true || !isProjectTutorialEnabled(project.id) ? null : {
+        const growthJourney = project.expertMode === true
+            || !isProjectTutorialEnabled(project.id)
+            || growthCompleted === growthSteps.length
+            ? null
+            : {
             steps: growthSteps,
             completed: growthCompleted,
             stage: 'Getting started',

@@ -80,6 +80,10 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /escapeAttribute\(growth\.nextDescription\)/);
     assert.match(entrySource, /tutorial-task-list/);
     assert.match(entrySource, /step\.complete \? '✓' : '○'/);
+    assert.match(source, /Create 2 Plant Profiles/);
+    assert.match(source, /plantProfileCount >= 2/);
+    assert.match(source, /growthCompleted === growthSteps\.length/);
+    assert.match(source, /Create a Plant Profile/);
     assert.doesNotMatch(entrySource, /Choose what to add and where it belongs/);
     assert.doesNotMatch(entrySource, /dashboard-vital-notice/);
     assert.ok(entrySource.indexOf('dashboard-location-footer') > entrySource.indexOf('latest-entries-section'));
@@ -273,26 +277,28 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('Try It Now guides two Plants, an inspirational Note and a Totem without saving', () => {
+test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(source, /Place a Marker/);
+    assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /place two Plants, an inspirational Note and one framed Area Totem/i);
+    assert.match(source, /place two Plants, a Note, and one framed Area Totem/i);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /Add an inspirational Note/);
+    assert.match(source, /<h2>Add a Note<\/h2>/);
     assert.match(source, /markers\.length >= 4/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
-    assert.match(source, /Inspirational plaque/);
+    assert.doesNotMatch(source, /Inspirational plaque/);
     assert.match(source, /createBoundaryTexture/);
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
-    assert.match(source, /Plant name<input value="\$\{plantName\}" readonly>/);
+    assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
+    assert.match(source, /runKnowledgeTour/);
+    assert.match(source, /navigator\.vibrate/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
@@ -343,7 +349,7 @@ test('new projects separate guided tutorial choice from advanced controls', () =
     assert.match(dashboardSource, /setProjectTutorialMode\(projectId, !enabled\)/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
     assert.match(dashboardSource, /if \(project\.expertMode === true\) return renderProjectDashboard/);
-    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true \|\| !isProjectTutorialEnabled\(project\.id\) \? null/);
+    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true[\s\S]*\|\| !isProjectTutorialEnabled\(project\.id\)[\s\S]*\|\| growthCompleted === growthSteps\.length/);
     assert.match(dashboardSource, /const guidance = project\.expertMode === true \? null/);
     assert.match(dashboardSource, /What should visitors call this entrance\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);

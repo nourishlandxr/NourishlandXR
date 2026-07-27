@@ -29,6 +29,7 @@ let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
+let knowledgeTourTimer = null;
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -42,26 +43,26 @@ const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
     title: 'Lemon Myrtle',
     left: [
         ['USES', 'Tea · spice · aromatic oils'],
-        ['RELATIONSHIPS', 'Pollinators · people · habitat'],
-        ['FOREST LAYER', 'Understory · sheltered edge']
+        ['GROWTH', 'Warm temperate · sheltered edge'],
+        ['FRUIT & FLOWER', 'Cream flowers · small nutlets']
     ],
     right: [
-        ['SCIENTIFIC', 'Backhousia citriodora'],
-        ['BIOLOGY', 'Myrtaceae · citral-rich leaves'],
-        ['HISTORY', 'First Nations knowledge']
+        ['ORIGIN', 'Subtropical eastern Australia'],
+        ['SCIENTIFIC', 'Backhousia citriodora · Myrtaceae'],
+        ['STORY', 'First Nations knowledge · living culture']
     ]
 });
 const MORINGA_KNOWLEDGE = Object.freeze({
     title: 'Moringa Tree',
     left: [
         ['USES', 'Nutritious leaves · shade · mulch'],
-        ['RELATIONSHIPS', 'People · pollinators · soil life'],
-        ['FOREST LAYER', 'Small tree · sunny edge']
+        ['GROWTH', 'Warm climate · sun · free drainage'],
+        ['FRUIT & FLOWER', 'White flowers · long seed pods']
     ],
     right: [
-        ['SCIENTIFIC', 'Moringa oleifera'],
-        ['BIOLOGY', 'Moringaceae · fast growing'],
-        ['HISTORY', 'South Asia · tropical food cultures']
+        ['ORIGIN', 'South Asia · tropical regions'],
+        ['SCIENTIFIC', 'Moringa oleifera · Moringaceae'],
+        ['STORY', 'Food cultures · medicine · resilience']
     ]
 });
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : LEMON_MYRTLE_KNOWLEDGE;
@@ -84,8 +85,10 @@ function clearSessionState() {
     demoHeldIndex = -1;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
+    clearTimeout(knowledgeTourTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
+    knowledgeTourTimer = null;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -116,14 +119,14 @@ function setGuide(message) {
     if (guide) guide.textContent = message;
 }
 
-function showDemoAction(label, nextStage) {
+function showDemoAction(nextStage) {
     const messages = {
         plant2: ['Lemon Myrtle is alive', 'Its profile now lives in space. Next, meet a second Plant with a different story.'],
         note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second Marker somewhere nearby.'],
         zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
-    showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">${label}</button>`, choice => {
+    showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice === 'continue') armDemoPlacement(nextStage);
     });
 }
@@ -188,61 +191,92 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
 }
 
+function setIntroDecorations(visible) {
+    appRoot?.querySelector('[data-tryit-intro]')?.toggleAttribute('hidden', !visible);
+}
+
+function runKnowledgeTour(record, onComplete) {
+    const topics = [
+        ['left-0', 'USES'],
+        ['left-1', 'GROWTH CONDITIONS'],
+        ['left-2', 'FRUIT & FLOWER'],
+        ['right-0', 'ORIGIN'],
+        ['right-1', 'SCIENTIFIC'],
+        ['right-2', 'STORY']
+    ];
+    let index = 0;
+    clearTimeout(knowledgeTourTimer);
+    const revealNext = () => {
+        const [branchKey, topic] = topics[index];
+        record.demoActiveBranch = branchKey;
+        if (!simulatedMode) {
+            if (record.texture) gl?.deleteTexture(record.texture);
+            record.texture = createMarkerTexture(record);
+        }
+        const profile = appRoot?.querySelector(`[data-demo-plant-profile="${markers.indexOf(record)}"]`);
+        profile?.querySelectorAll('[data-plant-branch]').forEach(cell => {
+            const open = cell.dataset.plantBranch === branchKey;
+            cell.classList.toggle('is-open', open);
+            cell.classList.toggle('is-guided-highlight', open);
+            cell.setAttribute('aria-expanded', String(open));
+            cell.querySelector('small')?.setAttribute('aria-hidden', String(!open));
+        });
+        setGuide(`${topic} is connected to this living Plant Profile.`);
+        index += 1;
+        if (index < topics.length) knowledgeTourTimer = setTimeout(revealNext, 900);
+        else knowledgeTourTimer = setTimeout(onComplete, 700);
+    };
+    revealNext();
+}
+
 function guidePlantConversion(record) {
     const moringa = record.tutorialStage === 'plant2';
     const plantName = moringa ? 'Moringa Tree' : 'Lemon Myrtle';
-    const presetKey = moringa ? 'moringa' : 'lemon-myrtle';
     setGuide('Your first Marker is placed.');
-    showGuidedChoice('<h2>Beautiful — your first Marker is placed</h2><p>A new Marker is an unassigned orb. It can become a Plant, a flat Note, or a Special Marker such as an Area Totem. Let’s use a Plant.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="plant">Plant</button><button type="button" disabled>Note</button><button type="button" disabled>Special Marker</button></div>', choice => {
-        if (choice !== 'plant') return;
+    showGuidedChoice('<h2>A simple Plant Marker</h2><p>This orb begins as a clear spatial marker. Its real potential appears when it becomes a Plant Profile: knowledge connected directly to a living place.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+        if (choice !== 'continue') return;
         record.type = 'plant';
         record.demoType = 'plant';
+        record.name = plantName;
+        record.demoPlantPreset = moringa ? 'moringa' : 'lemon-myrtle';
+        record.demoExpanded = true;
+        record.profileRevealStarted = performance.now();
+        record.demoActiveBranch = '';
+        record.informationPosition = plantInformationPosition(record);
+        record.revealTitle = true;
+        record.revealLines = 3;
         refreshDemoRecord(record);
-        setGuide('The Marker has become a living Plant orb.');
-        showGuidedChoice(`<h2>Name your Plant</h2><p>You can search your own plants or the global catalogue. For this example, choose ${plantName}.</p><label>Plant name<input value="${plantName}" readonly></label><button type="button" data-demo-choice="${presetKey}">Choose ${plantName}</button>`, preset => {
-            if (preset !== presetKey) return;
-            record.name = plantName;
-            record.demoPlantPreset = moringa ? 'moringa' : 'lemon-myrtle';
-            record.demoExpanded = true;
-            record.profileRevealStarted = performance.now();
-            record.demoActiveBranch = '';
-            record.informationPosition = plantInformationPosition(record);
-            record.revealTitle = true;
-            record.revealLines = 3;
-            refreshDemoRecord(record);
-            hideGuidedChoice();
-            setGuide('Its soft information tree opens at reading height, always tethered to the original living orb.');
-            showDemoAction(moringa ? 'Add an inspirational Note →' : 'Meet Moringa Tree →', moringa ? 'note' : 'plant2');
+        navigator.vibrate?.([45, 40, 75]);
+        showGuidedChoice(`<h2>${plantName} comes alive</h2><p>Watch its information honeycomb respond as we explore origin, growth conditions, uses, scientific knowledge, and fruit or flower details. Hover or tap any honeycomb to explore it yourself.</p>`, () => {}, {
+            onTextComplete: () => runKnowledgeTour(record, () => {
+                showDemoAction(moringa ? 'note' : 'plant2');
+            })
         });
     });
 }
 
 function guideNoteConversion(record) {
     setGuide('A second Marker is ready.');
-    showGuidedChoice('<h2>Turn this Marker into a Note</h2><p>A Note is always a flat information bubble—not a 3D object. Its title remains easy to recognise from a distance.</p><button type="button" data-demo-choice="note">Make it a Note</button>', choice => {
-        if (choice !== 'note') return;
+    showGuidedChoice('<h2>Add a Note</h2><p>A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+        if (choice !== 'continue') return;
         record.type = 'note';
         record.demoType = 'note';
+        record.demoContent = NOTE_TEMPLATES.poi;
+        record.name = 'Seasonal observation';
+        record.demoExpanded = true;
+        record.revealTitle = true;
+        record.revealLines = 3;
         refreshDemoRecord(record);
-        showGuidedChoice('<h2>Choose a Note template</h2><p>Notes can be observations, guidance, or a quiet garden plaque.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="plaque">Inspirational plaque</button><button type="button" data-demo-choice="poi">Point of Interest</button></div>', template => {
-            if (!NOTE_TEMPLATES[template]) return;
-            record.demoContent = NOTE_TEMPLATES[template];
-            record.name = template === 'plaque' ? 'Grow gently' : 'Point of Interest';
-            record.demoExpanded = true;
-            record.revealTitle = true;
-            record.revealLines = 3;
-            refreshDemoRecord(record);
-            hideGuidedChoice();
-            setGuide('Use Hold mode and the centre aim to fine-tune it: hold the Note, move your view, then release it where it belongs.');
-            showDemoAction('See how Areas work →', 'zone');
-        });
+        hideGuidedChoice();
+        setGuide('The new Note stays softly connected to this place and can be grabbed whenever you want to adjust it.');
+        showDemoAction('zone');
     });
 }
 
 function guideAreaConversion(record) {
     setGuide('The final Marker can become the checkpoint for one defined Area.');
-    showGuidedChoice('<h2>Give the Area a Totem</h2><p>A Totem is the main information centre of an Area. Crucial guidance can gather here, and Plants without a permanent position can wait nearby until you place them.</p><button type="button" data-demo-choice="area">Raise the Area Totem</button>', choice => {
-        if (choice !== 'area') return;
+    showGuidedChoice('<h2>Give the Area a Totem</h2><p>A Totem is the framed information centre of an Area. Knowledge, guidance, and Plants waiting for precise placement can gather around it.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+        if (choice !== 'continue') return;
         record.type = 'sub_checkpoint';
         record.demoType = 'zone';
         record.name = 'Citrus Guild';
@@ -257,7 +291,7 @@ function guideAreaConversion(record) {
         record.revealLines = 3;
         refreshDemoRecord(record);
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, an inspirational Note and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, a Note, and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
             if (action === 'finish') returnToWelcome();
             if (action === 'reset') {
                 markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
@@ -287,7 +321,7 @@ function armDemoPlacement(type) {
     place?.setAttribute('hidden', '');
     place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
-    if (label) label.textContent = 'Place a Marker';
+    if (label) label.textContent = '';
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type === 'note'
@@ -295,13 +329,14 @@ function armDemoPlacement(type) {
             : 'Look for the natural centre of this Area.');
     const introductions = {
         plant: ['Find your first place', 'Look around slowly and choose a calm, clear spot. In a moment, an aiming circle will appear in the centre to help you place with intention.'],
+        plant2: ['Place a second Plant', 'Choose another nearby position for Moringa Tree and let the scene settle around it.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.'],
         zone: ['Find the heart of the Area', 'Look toward the centre of the place you want this Area to gather. The aiming circle will appear when this introduction finishes.']
     };
     const [title, introduction] = introductions[type];
     clearTimeout(aimRevealTimer);
-    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="show-aim">Show the centre aim</button>`, choice => {
-        if (choice !== 'show-aim') return;
+    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
+        if (choice !== 'continue') return;
         hideGuidedChoice();
         setGuide('Take a moment to follow the centre aim as you look around.');
         place?.removeAttribute('hidden');
@@ -309,7 +344,7 @@ function armDemoPlacement(type) {
         aimRevealTimer = setTimeout(() => {
             place?.classList.add('is-ready');
             placementReady = true;
-            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place an inspirational Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Settle the circle, place it, then use the hand underneath whenever you want to refine its position.</p>`);
+            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Plant' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place a Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Settle the circle, place it, then use the hand underneath whenever you want to refine its position.</p>`);
         }, 1900);
     });
 }
@@ -688,7 +723,7 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-knowledge-intro" data-tryit-intro aria-hidden="true"><div class="tryit-intro-honeycombs"><span>PLANT</span><span>ORIGIN</span><span>GROWTH</span><span>PLACE</span><span>STORY</span><span>USES</span><span>ECOLOGY</span></div><div class="tryit-welcome-note"><small>WELCOME TO</small><strong>Nourishland XR</strong><span>A web of living knowledge, connected to place.</span></div></div><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to Nourishland XR.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
@@ -701,10 +736,13 @@ function renderInterface(simulated) {
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    showGuidedChoice('<h2>Welcome to our quick demo</h2><p>Hey there, welcome to NourishlandXR. Imagine your space coming alive with rich information—plants sharing their stories, useful knowledge appearing where it matters, and each place becoming easier to understand.</p><button type="button" data-demo-choice="discover">Let’s explore</button>', choice => {
-        if (choice !== 'discover') return;
-        showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place two Plants, an inspirational Note and one framed Area Totem. Every item can be grabbed again using the hand beneath it. Nothing from Try It Now is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {
-            if (nextChoice === 'continue') armDemoPlacement('plant');
+    showGuidedChoice('<h2>A web of knowledge in your space</h2><p>Honeycombs can gather the stories, science, uses, and living relationships of a place—then reveal them exactly where they belong.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+        if (choice !== 'continue') return;
+        showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Every item can be grabbed again using the hand beneath it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
+            if (nextChoice === 'continue') {
+                setIntroDecorations(false);
+                armDemoPlacement('plant');
+            }
         });
     });
 }
