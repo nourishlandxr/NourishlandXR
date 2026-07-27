@@ -35,12 +35,15 @@ let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introWorldAnchor = null;
 let introNoteTexture = null;
+let introKnowledgeTexture = null;
 let introTaglineVisible = true;
+let introKnowledgeVisible = true;
 let placementReady = false;
 let demoHeldIndex = -1;
 let demoMoveMode = false;
 let suppressDemoMarkerClick = false;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
+const INTRO_KNOWLEDGE_KEYWORDS = ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO', 'MACRO'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
@@ -103,8 +106,11 @@ function clearSessionState() {
     introSceneActive = true;
     introWorldAnchor = null;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+    if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
     introNoteTexture = null;
+    introKnowledgeTexture = null;
     introTaglineVisible = true;
+    introKnowledgeVisible = true;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -751,7 +757,7 @@ function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
     introSceneActive = true;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro aria-hidden="true"><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-demo-move-mode aria-pressed="false"><span aria-hidden="true">✋</span><strong>Move</strong></button><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro aria-hidden="true"><div class="tryit-intro-knowledge">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span style="--knowledge-index:${index}">${keyword}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-demo-move-mode aria-pressed="false"><span aria-hidden="true">✋</span><strong>Move</strong></button><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-demo-move-mode]').addEventListener('click', event => {
         demoMoveMode = !demoMoveMode;
@@ -776,8 +782,10 @@ function renderInterface(simulated) {
         showGuidedChoice('<h2>Imagine knowledge living around you</h2><p>Imagine stories, science, uses, and living relationships appearing exactly where they belong in the space around you.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
             if (choice !== 'continue') return;
             introTaglineVisible = false;
+            introKnowledgeVisible = false;
             const tagline = appRoot.querySelector('[data-tryit-spatial-tagline]');
             tagline?.classList.add('is-leaving');
+            appRoot.querySelector('[data-tryit-intro]')?.classList.add('is-settled');
             if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
             introNoteTexture = null;
             showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. The bottom Move tool lets you adjust an object when needed.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
@@ -963,6 +971,35 @@ function createIntroNoteTexture() {
     return canvasTexture(label);
 }
 
+function createIntroKnowledgeTexture() {
+    const label = document.createElement('canvas');
+    label.width = 1400;
+    label.height = 900;
+    const ctx = label.getContext('2d');
+    const cells = [
+        [260, 190], [490, 115], [745, 105], [990, 155], [1180, 300],
+        [1220, 570], [1010, 735], [745, 790], [470, 755], [235, 590]
+    ];
+    cells.forEach(([x, y], index) => {
+        drawHexagon(ctx, x, y, index === 2 || index === 3 ? 96 : 82, 'rgba(27,59,42,.24)', 'rgba(220,239,207,.48)', 3);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(237,246,228,.88)';
+        ctx.font = `${index === 2 || index === 3 ? '650 25px' : '650 28px'} system-ui, sans-serif`;
+        ctx.fillText(INTRO_KNOWLEDGE_KEYWORDS[index], x, y);
+    });
+    ctx.strokeStyle = 'rgba(220,239,207,.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    cells.forEach(([x, y], index) => {
+        if (!index) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.stroke();
+    return canvasTexture(label);
+}
+
 function introLocalPosition(matrix, [x, y, z]) {
     return {
         x: matrix[12] + matrix[0] * x + matrix[4] * y + matrix[8] * z,
@@ -975,6 +1012,7 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     introNoteTexture ||= createIntroNoteTexture();
+    introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
     const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
         const model = billboardMatrix(position, scaleX, scaleY);
@@ -988,6 +1026,17 @@ function drawIntroSpatial(view) {
     };
     const noteProgress = Math.min(1, Math.max(0, (elapsed - 300) / 1800));
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
+    const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1050) / 1900));
+    const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
+    if (introKnowledgeVisible) {
+        drawTexture(
+            introKnowledgeTexture,
+            introLocalPosition(introWorldAnchor, [0, .69, -1.82 + .18 * easedKnowledge]),
+            2.65,
+            2.75,
+            easedKnowledge * .82
+        );
+    }
     drawTexture(
         introNoteTexture,
         introLocalPosition(introWorldAnchor, [0, .68, -1.9 + .38 * easedNote]),

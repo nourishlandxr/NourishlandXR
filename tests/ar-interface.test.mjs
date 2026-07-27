@@ -455,6 +455,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /tryit-spatial-honeycombs/);
     assert.match(source, /NOURISHLANDXR/);
     assert.match(source, /A web of living knowledge…/);
+    assert.match(source, /INTRO_KNOWLEDGE_KEYWORDS/);
+    for (const keyword of ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO', 'MACRO']) {
+        assert.match(source, new RegExp(keyword));
+    }
+    assert.match(source, /createIntroKnowledgeTexture/);
+    assert.match(source, /introKnowledgeVisible = false/);
+    assert.match(styles, /\.tryit-intro-knowledge > span/);
+    assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /introTaglineVisible = false/);
     assert.match(source, /data-tryit-spatial-tagline/);
     assert.match(source, /Imagine knowledge living around you/);
