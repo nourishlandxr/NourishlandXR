@@ -360,13 +360,7 @@ function showPlacedMarkerActions(record) {
     if (!picker) return;
     pendingPlacedRecord = record;
     picker.hidden = false;
-    const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${fixedType ? `${readyPlacementLabel(record.marker.type)} placed` : 'Choose its purpose'}</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div>${fixedType ? `<p class="creator-ar-picker-status">Its details and size can be changed later in Pointer mode.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>` : `<div class="creator-ar-type-options creator-ar-common-types"><button type="button" data-ar-placed-type="plant">${markerIcon('plant')} Plant</button><button type="button" data-ar-placed-type="note">${markerIcon('note')} Note</button><button type="button" data-ar-placed-type="sub_checkpoint">${markerIcon('sub_checkpoint')} Marker</button></div>`}`;
-    picker.querySelectorAll('[data-ar-placed-type]').forEach(button => button.addEventListener('click', () => {
-        const type = button.dataset.arPlacedType;
-        closePlacePicker();
-        void setPlacedMarkerType(record, type);
-    }));
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${readyPlacementLabel(record.marker.type)} placed</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div><p class="creator-ar-picker-status">Edit this ${markerLabel(record.marker.type)} now, or continue placing content.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
     picker.querySelector('[data-ar-edit-placed]')?.addEventListener('click', () => {
         closePlacePicker();
         openInlineEditor(record, true);
@@ -632,7 +626,7 @@ function drawSpatialMarkers(view) {
         });
     });
 
-    if (readyPlacementType && latestHitMatrix && !readySpecialMarker) {
+    if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestHitMatrix && !readySpecialMarker) {
         const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .07, z: latestHitMatrix[14] };
         drawSpatialOrb(gl, sphereRenderer, view, target, .07, {
             type: readyPlacementType === 'plant' ? 'plant' : 'marker',
@@ -786,12 +780,12 @@ function openInlineEditor(record, force = false) {
     const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
     if (!editor) return;
     const plant = record.marker.type === 'plant';
-    const fixedType = ['intro_checkpoint', 'area_checkpoint'].includes(record.marker.type);
+    const fixedType = true;
     const startingPoint = record.marker.type === 'intro_checkpoint';
     const areaCheckpoint = record.marker.type === 'area_checkpoint';
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
-    const typeControl = fixedType ? `<p class="creator-ar-fixed-type">Type · ${record.marker.type === 'area_checkpoint' ? 'Area Totem' : 'Trail Entrance'}</p>` : `<label>Type<select name="markerType"><option value="sub_checkpoint" ${record.marker.type === 'sub_checkpoint' ? 'selected' : ''}>Marker</option><option value="plant" ${record.marker.type === 'plant' ? 'selected' : ''}>Plant</option><option value="note" ${record.marker.type === 'note' ? 'selected' : ''}>Note</option></select></label>`;
+    const typeControl = `<p class="creator-ar-fixed-type">Type · ${readyPlacementLabel(record.marker.type)}</p>`;
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Quick appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="tiny" ${markerAppearanceSize(record.marker) === 'tiny' ? 'selected' : ''}>Tiny</option><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option><option value="huge" ${markerAppearanceSize(record.marker) === 'huge' ? 'selected' : ''}>Huge</option></select></label></fieldset>`;
     const board = areaBoard(record.marker);
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
@@ -834,7 +828,7 @@ function openInlineEditor(record, force = false) {
         const status = form.querySelector('[data-ar-editor-status]');
         const name = form.elements.name.value.trim();
         const description = record.marker.description || record.marker.notes || '';
-        const type = form.elements.markerType?.value || record.marker.type;
+        const type = record.marker.type;
         if (!name) {
             status.textContent = 'A name is required.';
             return;

@@ -111,10 +111,9 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
-    assert.match(arSource, /Choose its purpose/);
-    assert.match(arSource, /data-ar-placed-type="plant"/);
-    assert.match(arSource, /data-ar-placed-type="sub_checkpoint"/);
-    assert.match(arSource, /data-ar-placed-type="note"/);
+    assert.doesNotMatch(arSource, /Choose its purpose/);
+    assert.doesNotMatch(arSource, /data-ar-placed-type=/);
+    assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
     assert.doesNotMatch(arSource.slice(arSource.indexOf('function showPlacedMarkerActions'), arSource.indexOf('function openSpecialMarkerPicker')), /data-ar-placed-type="area_checkpoint"/);
     assert.match(arSource, /data-ar-create-area/);
     assert.match(arSource, /data-ar-place-area-totem/);
@@ -160,7 +159,7 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-capture \{ pointer-events: auto; \}/);
     assert.match(styles, /\.creator-ar-status/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
-    assert.match(arSource, /readyPlacementType && latestHitMatrix/);
+    assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\) && latestHitMatrix/);
 });
 
 test('Special Marker tools open immediately while recorded Markers restore', () => {
@@ -212,9 +211,9 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /deletePlaceMarker/);
     assert.match(arSource, /name="markerColor" type="color"/);
     assert.match(arSource, /name="markerSize"/);
-    assert.match(arSource, /name="markerType"/);
+    assert.doesNotMatch(arSource, /name="markerType"/);
     assert.match(arSource, /Quick edit ·/);
-    assert.match(arSource, /plant_profile: type === 'plant'/);
+    assert.match(arSource, /const type = record\.marker\.type/);
     assert.match(arSource, /Confirm delete/);
     assert.match(arSource, /appearance: \{/);
     assert.match(arSource, /markerRgb\(record\.marker/);
@@ -239,7 +238,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /readyPlacementType = '';/);
     assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. The aim dot is ready; press plus when you want to place a Marker/);
-    assert.match(arSource, /Choose its purpose/);
+    assert.doesNotMatch(arSource, /Choose its purpose/);
     assert.match(arSource, /data-ar-close-placed/);
     assert.doesNotMatch(arSource, /data-ar-size-step|resizePlacedMarker/);
     assert.match(arSource, /markerDimensions/);
@@ -249,7 +248,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Create &amp; Place Totem/);
     assert.match(arSource, /async function createAreaCompatibleMarker/);
     assert.match(arSource, /convertRecordToAreaCheckpoint/);
-    assert.match(arSource, /const type = button\.dataset\.arPlacedType;[\s\S]*closePlacePicker\(\);[\s\S]*setPlacedMarkerType\(record, type\)/);
+    assert.doesNotMatch(arSource, /button\.dataset\.arPlacedType/);
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
     assert.match(arSource, /data-ar-import-marker/);
@@ -584,7 +583,8 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /creator-ar-session-active/);
     assert.doesNotMatch(source, /Test session - no physical code/);
     assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
-    assert.match(source, /Choose its purpose/);
+    assert.doesNotMatch(source, /Choose its purpose/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \.creator-ar-spatial-name \{ opacity:1; visibility:visible/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);

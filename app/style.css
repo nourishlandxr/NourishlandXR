@@ -911,6 +911,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-area-board-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(137,200,239,.35); border-radius: 12px; }
 .creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name { position:relative; display:grid; place-content:center; box-sizing:border-box; width:100%; min-height:100%; padding:14px 18px; border:1px solid rgba(245,248,243,.78); border-radius:9px; background:rgba(28,34,30,.7); box-shadow:0 8px 20px rgba(0,0,0,.14); text-align:center; }
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name { opacity:1; visibility:visible; transform:translate(-50%,0); white-space:normal; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name::before,
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name::after { content:""; position:absolute; width:20px; height:20px; border-color:#fff; pointer-events:none; }
 .creator-ar-marker-hit-target-note .creator-ar-spatial-name::before { right:-3px; top:-3px; border-top:5px solid; border-right:5px solid; border-radius:0 8px 0 0; }
