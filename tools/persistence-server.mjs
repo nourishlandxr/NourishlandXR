@@ -574,6 +574,26 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     const instancesExisted = fs.existsSync(instancesFile);
     const library = loadPlantRegistryData().data;
     const instanceData = loadPlantInstanceData(projectId, siteId).data;
+    const usedPlantCodes = new Set();
+    const projectSitesDir = path.join(getSitePath(projectId), 'sites');
+    if (fs.existsSync(projectSitesDir)) {
+        for (const siteEntry of fs.readdirSync(projectSitesDir, { withFileTypes: true })) {
+            const placesDir = path.join(projectSitesDir, siteEntry.name, 'places');
+            if (!siteEntry.isDirectory() || !fs.existsSync(placesDir)) continue;
+            for (const placeEntry of fs.readdirSync(placesDir, { withFileTypes: true })) {
+                const existingMarkersDir = path.join(placesDir, placeEntry.name, 'markers');
+                if (!placeEntry.isDirectory() || !fs.existsSync(existingMarkersDir)) continue;
+                for (const markerEntry of fs.readdirSync(existingMarkersDir, { withFileTypes: true })) {
+                    if (!markerEntry.isDirectory()) continue;
+                    const existingMarker = readJson(path.join(existingMarkersDir, markerEntry.name, 'marker.json'), null);
+                    if (existingMarker?.plant_code) usedPlantCodes.add(existingMarker.plant_code);
+                }
+            }
+        }
+    }
+    let plantCodeNumber = 1;
+    while (usedPlantCodes.has(`A${String(plantCodeNumber).padStart(4, '0')}`)) plantCodeNumber += 1;
+    const plantCode = `A${String(plantCodeNumber).padStart(4, '0')}`;
     const plantBaseId = toPlantId(scientificName || commonName) || 'plant';
     let plantId = existingPlant?.id || plantBaseId, plantSuffix = 2;
     while (!existingPlant && library.plants.some(plant => plant.id === plantId)) plantId = `${plantBaseId}-${plantSuffix++}`;
@@ -587,7 +607,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     const now = new Date().toISOString();
     const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', source: String(data.source || ''), sourceId: String(data.sourceId || ''), sourceUrl: String(data.sourceUrl || ''), visibility, created: now, modified: now };
     const instance = { id: instanceId, plantId, placeId, zoneId: '', markerId, cultivarOverride: '', status: data.status || '', plantingDate: '', localNotes: '', map: { latitude, longitude, x: null, y: null }, visibility, created: now, modified: now };
-    const marker = { id: markerId, type: 'plant', name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
+    const marker = { id: markerId, type: 'plant', plant_code: plantCode, name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
     const anchor = hasAnyPosition ? { type: 'gps', latitude, longitude, altitude: data.altitude ?? '', accuracy, captured_at: data.captured_at || now, qr_code: '', description: '', created: now, modified: now } : null;
     const markerDir = path.join(markersDir, markerId);
     try {

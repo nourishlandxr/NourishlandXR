@@ -541,7 +541,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /Physical QR or location code/);
     assert.match(dashboardSource, /Attached information bubbles/);
     assert.match(dashboardSource, /GO TO AREA · AR/);
-    assert.match(dashboardSource, /Add text boxes/);
+    assert.match(dashboardSource, /Add one new text box at a time/);
     assert.match(serverSource, /'area_checkpoint'/);
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
 });
@@ -593,9 +593,9 @@ test('plant creation separates Local records from read-only Global discovery', (
     const fieldMarker = read('app/screens/fieldMarker.js');
     const plantService = read('app/services/plantDataService.js');
     const server = read('tools/persistence-server.mjs');
-    assert.match(fieldMarker, />Local<\/button>/);
+    assert.match(fieldMarker, />Saved<\/button>/);
     assert.match(fieldMarker, />Global<\/button>/);
-    assert.match(fieldMarker, /Read-only results from GBIF/);
+    assert.match(fieldMarker, /Advanced plant search/);
     assert.match(fieldMarker, /searchGlobalPlants\(query\)/);
     assert.match(fieldMarker, /sourceId: selectedGlobalPlant\?\.sourceId/);
     assert.match(plantService, /plant-search\/global/);
@@ -634,16 +634,16 @@ test('Creator Plants deliberately upgrade into collapsible AR Plant Profiles', (
     assert.match(dashboardSource, /if \(profileEnabled\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = true/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
-    assert.match(dashboardSource, /Left honeycomb · practical &amp; ecological/);
-    assert.match(dashboardSource, /Right honeycomb · scientific &amp; historical/);
-    assert.match(dashboardSource, /Honeycomb centre/);
+    assert.match(dashboardSource, /Practical &amp; ecological/);
+    assert.match(dashboardSource, /Scientific &amp; historical/);
+    assert.match(dashboardSource, /Profile card/);
     assert.match(dashboardSource, /plantProfileReady \? `<section class="spatial-focus-panel"/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {
     const source = read('app/screens/fieldMarker.js');
-    assert.match(source, /Optional - an untitled draft will be created/);
-    assert.match(source, /Save draft/);
+    assert.match(source, /Name \(optional\)/);
+    assert.match(source, /value="later">Add/);
     assert.match(source, /Untitled plant/);
     assert.match(source, /Untitled note/);
     assert.match(source, /Untitled marker/);

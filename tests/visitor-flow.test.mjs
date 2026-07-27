@@ -277,10 +277,10 @@ test('Organizer Folder excludes compatibility Area Totems by semantic type', () 
 test('quick access creation is minimal and separates Area assignment from placement', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
     assert.match(source, /<label for="fieldArea">Area<\/label>/);
-    assert.match(source, /Find a plant/);
+    assert.match(source, /Use existing/);
     assert.match(source, /Unassigned — decide later/);
-    assert.match(source, /Create a new Area/);
-    assert.match(source, /Placement status:<\/strong> Not yet placed/);
+    assert.match(source, /Create new Area/);
+    assert.match(source, /Not yet placed · can be placed later/);
     assert.doesNotMatch(source, /<label>Project<\/label>/);
     assert.doesNotMatch(source, /<label>Location<\/label>/);
     assert.doesNotMatch(source, /<label>Site<\/label>/);

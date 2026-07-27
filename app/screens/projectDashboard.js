@@ -1235,31 +1235,33 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <button type="button" onclick="window.renderProjectAreaLocationForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>${anchor ? 'Update GPS location' : 'Assign GPS location'}</strong><span>Tag the physical position of this Area.</span></button>
             </div>` : '';
         const areaTextBoxes = Array.isArray(context.area.information_boxes) ? context.area.information_boxes : [];
-        const areaBoxFields = [0, 1, 2, 3].map(index => `<div class="field"><label for="areaInformationBox${index}">${index === 0 ? 'Text box' : '+ Text box'}</label><textarea id="areaInformationBox${index}" rows="2" placeholder="Add useful Area information.">${escapeHtml(areaTextBoxes[index] || '')}</textarea></div>`).join('');
+        const areaBoxFields = `${areaTextBoxes.map(text => `<p class="saved-information-box">${escapeHtml(text)}</p>`).join('')}<div class="field"><label for="areaInformationBoxNew">+ Text box</label><textarea id="areaInformationBoxNew" rows="2" placeholder="Add one useful item at a time."></textarea></div>`;
+        const plantCount = areaEntries.filter(entry => entry.marker.type === 'plant').length;
+        const totemCount = areaEntries.filter(entry => entry.marker.type === 'area_checkpoint' || entry.marker.semantic_type === 'area_checkpoint').length;
         app.innerHTML = `<div class="screen area-dashboard">
             <header class="page-header area-dashboard-header">
-                <button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button>
                 <p class="welcome-label">Area dashboard</p>
                 <h1>${escapeHtml(context.area.name)}</h1>
                 <p class="subtitle">${escapeHtml(context.area.type || 'Area')} · ${escapeHtml(context.project.name)}</p>
+                <div class="area-top-actions"><button class="area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
             </header>
             <section class="panel area-profile-summary">
                 <h2>About this Area</h2>
                 <form class="area-information-form" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
                     <div class="field"><label for="areaDescription">Description</label><textarea id="areaDescription" rows="4" placeholder="Describe what this Area is and why it matters.">${escapeHtml(context.area.description || '')}</textarea></div>
-                    <fieldset class="area-information-boxes"><legend>Add text boxes</legend><p>Add several short information boxes for stories, guidance or observations.</p>${areaBoxFields}</fieldset>
+                    <fieldset class="area-information-boxes"><legend>Area information</legend><p>Saved information stays readable. Add one new text box at a time.</p>${areaBoxFields}</fieldset>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit">Save Area information</button>
                 </form>
                 <p class="area-location-status ${anchor ? 'is-assigned' : 'is-unassigned'}">${context.project.expertMode === true ? locationStatus : 'Precise GPS anchoring is optional and stays out of the everyday flow.'}</p>
             </section>
-            <button class="spatial-focus-button area-go-ar" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
             <section class="latest-entries-section area-content-section">
                 <div class="section-heading-row"><div><h2>Content in this Area</h2><p>${areaEntries.length} existing element${areaEntries.length === 1 ? '' : 's'}</p></div></div>
                 <div class="latest-entry-list">${unplacedTotemRow}${rows}</div>
             </section>
+            <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button></nav>
             <section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
                 <h2 id="deleteAreaTitle">Delete Area</h2>
                 <p>Deleting this Area also deletes its content, Totem and any Trail Entrance stored inside it.</p>
@@ -1280,9 +1282,8 @@ export async function saveAreaInformation(event, encodedProjectId, encodedAreaId
     try {
         const context = await projectAreaContext(projectId, areaId);
         const description = document.getElementById('areaDescription').value.trim();
-        const informationBoxes = [0, 1, 2, 3]
-            .map(index => document.getElementById(`areaInformationBox${index}`).value.trim())
-            .filter(Boolean);
+        const newInformationBox = document.getElementById('areaInformationBoxNew').value.trim();
+        const informationBoxes = [...(Array.isArray(context.area.information_boxes) ? context.area.information_boxes : []), newInformationBox].filter(Boolean);
         if (status) status.textContent = 'Saving Area information…';
         await updateSitePlace(projectId, context.site.id, areaId, {
             description,
@@ -2002,20 +2003,23 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 
 function plantProfileEditorMarkup(entry, profile) {
     const upgraded = isPlantProfileUpgraded(entry.marker, profile);
-    const fields = `<div class="plant-profile-honeycomb-editor">
-        <fieldset class="plant-profile-branch plant-profile-branch-left"><legend>Left honeycomb · practical &amp; ecological</legend>
+    const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
+    const fields = `<div class="plant-profile-card-editor">
+        <div class="plant-profile-card-visual"><div class="field"><label for="projectEntryPhoto">Plant photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(profile.photo || profile.image || '')}" placeholder="https://…" /></div><div class="plant-orb-settings"><div class="field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(profile.orb_color || entry.marker.appearance?.color || '#5fbf73')}" /></div><div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div></div></div>
+        <fieldset class="plant-profile-branch plant-profile-branch-left"><legend>Practical &amp; ecological</legend>
             <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="3">${escapeHtml(profile.uses || '')}</textarea></div>
             <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="3">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
-            <div class="field"><label for="projectEntryLayer">Forest layer</label><input id="projectEntryLayer" value="${escapeHtml(profile.layer || '')}" /></div>
+            <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select><small>Used for filtering and future layer-specific orb styles.</small></div>
         </fieldset>
-        <fieldset class="plant-profile-branch plant-profile-branch-right"><legend>Right honeycomb · scientific &amp; historical</legend>
+        <fieldset class="plant-profile-branch plant-profile-branch-right"><legend>Scientific &amp; historical</legend>
             <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
             <div class="field"><label for="projectEntryOrigin">Origin and history</label><input id="projectEntryOrigin" value="${escapeHtml(profile.origin || '')}" /></div>
             <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="3">${escapeHtml(profile.propagation || '')}</textarea></div>
         </fieldset>
-        <fieldset class="plant-profile-core-editor"><legend>Honeycomb centre</legend>
+        <fieldset class="plant-profile-core-editor"><legend>Profile card</legend>
             <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" /></div>
+            <p class="plant-id-label">Plant ID: ${escapeHtml(entry.marker.plant_code || 'Assigned on creation')}</p>
             <div class="field"><label for="projectEntryOverview">Profile overview</label><textarea id="projectEntryOverview" rows="5">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
         </fieldset>
     </div>`;
@@ -2033,7 +2037,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
-    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone with its full honeycomb ready to view. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form></div>`;
+    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
 }
 
 export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId) {
@@ -2084,6 +2088,9 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 family: document.getElementById('projectEntryFamily').value.trim(),
                 origin: document.getElementById('projectEntryOrigin').value.trim(),
                 layer: document.getElementById('projectEntryLayer').value.trim(),
+                photo: document.getElementById('projectEntryPhoto').value.trim(),
+                orb_color: document.getElementById('projectEntryOrbColor').value,
+                orb_size: document.getElementById('projectEntryOrbSize').value,
                 uses: document.getElementById('projectEntryUses').value.trim(),
                 relationships: document.getElementById('projectEntryRelationships').value.trim(),
                 propagation: document.getElementById('projectEntryPropagation').value.trim(),

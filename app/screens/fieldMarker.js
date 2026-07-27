@@ -25,34 +25,29 @@ function draw() {
     app.innerHTML = `
         <div class="screen">
             <div class="page-header">
-                <button class="ghost" type="button" onclick="window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')">Back</button>
                 <p class="welcome-label">Organizer Folder</p>
                 <h1>Add ${typeLabel}</h1>
-                <p class="subtitle">${placementMode === 'ar' ? 'Create a draft now, then continue to AR placement.' : 'Save a draft now and complete its details later.'}</p>
+                <p class="subtitle">${plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
             </div>
             <form class="panel minimal-creation-form" onsubmit="window.saveFieldMarker(event)">
-                <div class="field">
+                <div class="field compact-area-field">
                     <label for="fieldArea">Area</label>
-                    <select id="fieldArea" onchange="window.selectFieldPlace(this.value)">
+                    <div class="compact-inline-control"><select id="fieldArea" onchange="window.selectFieldPlace(this.value)">
                         <option value="">Select an Area</option>
                         ${areaOptions}
                         <option value="__unassigned__" ${selected.place === '__unassigned__' ? 'selected' : ''}>Unassigned — decide later</option>
-                    </select>
-                    <button class="inline-form-action" type="button" onclick="window.createFieldArea()">Create a new Area</button>
+                    </select><button class="inline-form-action" type="button" onclick="window.createFieldArea()">Create new Area</button></div>
                 </div>
-                <div class="field">
-                    <label for="fieldName">${plant ? 'Common name' : markerType === 'note' ? 'Name or short title' : 'Name'}</label>
-                    <input id="fieldName" placeholder="Optional - an untitled draft will be created" />
-                </div>
-                ${plant ? `<div class="field plant-source-picker"><label>Find a plant</label><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Local</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div><p class="meta">${plantSearchScope === 'local' ? 'Plants already saved in Nourishland.' : 'Read-only results from GBIF. Choose one to add an editable copy to this project.'}</p>${plantSearchScope === 'local' ? `<select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create a new profile to complete later</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}${profile.scientificName ? ` · ${escapeHtml(profile.scientificName)}` : ''}</option>`).join('')}</select>` : `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected from GBIF: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em>${result.family ? ` · ${escapeHtml(result.family)}` : ''}</span><small>Global · GBIF</small></button>`).join('')}</div>`}</div>` : ''}
-                <p class="placement-status is-unplaced"><strong>Placement status:</strong> Not yet placed</p>
-                <p class="meta">Area assignment records where this item belongs. You can leave the name blank, save a draft, and add details or an AR position later.</p>
+                <div class="compact-identity-row"><div class="field"><label for="fieldName">${plant ? 'Name (optional)' : 'Name'}</label><input id="fieldName" placeholder="Untitled is okay" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
+                ${plant ? `<details class="compact-advanced"><summary>Advanced plant search</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div>${plantSearchScope === 'global' ? `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em></span></button>`).join('')}</div>` : '<p class="meta">Choose a saved plant from “Use existing” above.</p>'}</div></details>` : ''}
+                <div class="placement-compact"><span><strong>Placement</strong><small>Not yet placed · can be placed later</small></span><button type="submit" name="saveIntent" value="ar">AR MODE</button></div>
+                ${plant ? '<p class="meta">A unique Plant ID (for example A0001) is generated automatically.</p>' : ''}
                 <div class="button-row">
-                    <button type="button" onclick="window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')">Cancel</button>
-                    <button class="primary" type="submit">Save draft</button>
+                    <button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>
                 </div>
                 <p id="fieldError" class="meta"></p>
             </form>
+            <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')">Back</button><button type="button" onclick="window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')">Return to Dashboard</button></nav>
         </div>
     `;
 }
@@ -162,6 +157,7 @@ export async function saveFieldMarker(event) {
     const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: nonPlantMode ? 'Untitled dynamic marker' : 'Untitled marker' };
     const name = document.getElementById('fieldName').value.trim() || defaults[type];
     const plantId = plantSearchScope === 'local' ? (document.getElementById('fieldPlantProfile')?.value || '') : '';
+    const saveIntent = event?.submitter?.value || (placementMode === 'ar' ? 'ar' : 'later');
 
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
     if (!selected.place) { error.textContent = 'Select an Area or choose Unassigned.'; return; }
@@ -193,8 +189,8 @@ export async function saveFieldMarker(event) {
                 ...(nonPlantMode && type === 'sub_checkpoint' ? { content_domain: 'nonplant', marker_kind: 'np_marker', dynamic_marker: true } : {})
             });
         recordTutorialEvent(selected.project, 'first_item_created');
-        if (placementMode === 'without-ar') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
-        if (placementMode === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));
+        if (saveIntent === 'later') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
+        if (saveIntent === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));
         else window.renderProjectDashboard(encodeURIComponent(selected.project));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;

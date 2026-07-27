@@ -4539,3 +4539,101 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-profile-core-editor { grid-column: 1 / -1; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); background: rgba(239,243,225,.52); }
 .plant-profile-branch legend, .plant-profile-core-editor legend { padding: 0 7px; color: #365f42; font-size: .74rem; font-weight: 850; }
 @media (max-width: 620px) { .plant-profile-honeycomb-editor, .plant-profile-core-editor { grid-template-columns: 1fr; } .plant-profile-core-editor { grid-column: auto; } .area-entry-actions { grid-column: 1 / -1; justify-content: stretch; } .area-entry-actions button { flex: 1; } }
+.compact-inline-control,
+.compact-identity-row,
+.placement-compact,
+.area-top-actions,
+.plant-orb-settings {
+    display: flex;
+    align-items: end;
+    gap: 0.75rem;
+}
+
+.compact-inline-control select,
+.compact-identity-row .field {
+    flex: 1;
+}
+
+.compact-advanced {
+    border: 1px solid rgba(93, 126, 102, 0.22);
+    border-radius: 14px;
+    padding: 0.7rem 0.9rem;
+}
+
+.compact-advanced summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.placement-compact {
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 18px;
+    padding: 0.9rem;
+    background: rgba(38, 111, 214, 0.07);
+}
+
+.placement-compact span,
+.placement-compact small {
+    display: block;
+}
+
+.bottom-navigation {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.plant-profile-card-editor {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(244, 249, 239, 0.94), rgba(255, 252, 244, 0.96));
+}
+
+.plant-profile-card-visual,
+.plant-profile-core-editor {
+    grid-column: 1 / -1;
+}
+
+.plant-profile-card-editor fieldset,
+.plant-profile-card-visual {
+    border: 1px solid rgba(78, 112, 84, 0.18);
+    border-radius: 18px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.plant-id-label,
+.saved-information-box {
+    border-radius: 14px;
+    padding: 0.75rem 0.9rem;
+    background: rgba(84, 120, 91, 0.08);
+}
+
+.area-top-actions {
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+}
+
+.area-go-ar-compact {
+    width: auto;
+    background: #1769d2;
+    color: white;
+}
+
+@media (max-width: 680px) {
+    .compact-inline-control,
+    .compact-identity-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .plant-profile-card-editor {
+        grid-template-columns: 1fr;
+    }
+}
