@@ -528,6 +528,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.spatial-move-control \{[\s\S]*top: 68%/);
     assert.match(styles, /\.spatial-move-instruction/);
     assert.match(styles, /\.spatial-grab-handle/);
+    assert.doesNotMatch(source, /data-demo-move-mode|demoMoveMode|✋/);
+    assert.match(source, /Hold and drag any element to reposition it\./);
+    assert.match(source, /compactMarker\.classList\.add\('is-drag-ready'\)/);
+    assert.match(styles, /\.tryit-demo \.tryit-sim-marker:is\(:hover, :focus-visible, \.is-drag-ready\)/);
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);

@@ -40,7 +40,6 @@ let introTaglineVisible = true;
 let introKnowledgeVisible = true;
 let placementReady = false;
 let demoHeldIndex = -1;
-let demoMoveMode = false;
 let suppressDemoMarkerClick = false;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const BIOMAP_CATEGORIES = Object.freeze({
@@ -107,7 +106,6 @@ function clearSessionState() {
     demoStage = 'plant';
     placementReady = false;
     demoHeldIndex = -1;
-    demoMoveMode = false;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(knowledgeTourTimer);
@@ -511,10 +509,10 @@ function bindSimulatedInformationPanels(layer) {
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
-            if (!demoMoveMode) return;
             if (demoHeldIndex === index) return;
             holdGesture = { pointerId: event.pointerId, startY: event.clientY };
             compactMarker.setPointerCapture?.(event.pointerId);
+            compactMarker.classList.add('is-drag-ready');
             holdTimer = setTimeout(() => {
                 demoHeldIndex = index;
                 suppressDemoMarkerClick = true;
@@ -547,7 +545,11 @@ function bindSimulatedInformationPanels(layer) {
             const readout = joystick.querySelector('[data-demo-depth-readout]');
             if (readout) readout.textContent = `${record.demoDistance.toFixed(1)} m`;
         });
-        const cancelHoldTimer = () => { clearTimeout(holdTimer); holdTimer = null; };
+        const cancelHoldTimer = () => {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+            compactMarker.classList.remove('is-drag-ready');
+        };
         compactMarker.addEventListener('pointerup', cancelHoldTimer);
         compactMarker.addEventListener('pointercancel', cancelHoldTimer);
         compactMarker.addEventListener('click', event => {
@@ -771,7 +773,7 @@ function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
     introSceneActive = true;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-demo-move-mode aria-pressed="false"><span aria-hidden="true">✋</span><strong>Move</strong></button><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -782,20 +784,13 @@ function renderInterface(simulated) {
         button.addEventListener('click', expand);
     });
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
-    appRoot.querySelector('[data-demo-move-mode]').addEventListener('click', event => {
-        demoMoveMode = !demoMoveMode;
-        event.currentTarget.classList.toggle('is-active', demoMoveMode);
-        event.currentTarget.setAttribute('aria-pressed', String(demoMoveMode));
-        appRoot.querySelector('.tryit-demo')?.classList.toggle('is-move-mode', demoMoveMode);
-        setGuide(demoMoveMode ? 'Move is ready. Select a glowing object and hold briefly to adjust it.' : 'Move is off. Tap objects to explore them.');
-    });
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
         demoHeldIndex = -1;
         appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
         updateSimulatedMarkers();
-        setGuide('Released in its refined position. Use Move again whenever you want to adjust another object.');
+        setGuide('Released in its refined position. Hold and drag any element whenever you want to adjust it.');
     });
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
