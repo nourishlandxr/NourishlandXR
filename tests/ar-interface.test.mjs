@@ -373,6 +373,10 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /hasStartingPoint/);
     assert.match(source, /field-guide-totem-symbol/);
     assert.match(source, /field-guide-starting-symbol/);
+    assert.match(source, /totems: markers\.filter/);
+    assert.match(source, /Area Totems/);
+    assert.match(source, /Area checkpoints and their information boards/);
+    assert.match(source, /data-field-guide-totem/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {

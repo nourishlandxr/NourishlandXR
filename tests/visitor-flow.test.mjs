@@ -344,8 +344,9 @@ test('new location asks only for core details and supported templates', () => {
         assert.match(templates, new RegExp(label));
     }
     assert.match(templates, /Inventory & Exhibitions · Non-plant/);
-    assert.match(form, /TRY NON-PLANT MODE/);
-    assert.match(form, /libraries · offices · collections · exhibitions/);
+    assert.match(form, /type="checkbox"/);
+    assert.match(form, /Non-plant project/);
+    assert.match(form, /collections, libraries, offices or exhibitions/);
     assert.match(fieldMarker, /content_domain: 'nonplant'/);
     assert.match(fieldMarker, /marker_kind: 'np_marker'/);
     assert.match(fieldMarker, /dynamic_marker: true/);

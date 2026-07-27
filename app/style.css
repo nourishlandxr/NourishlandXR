@@ -3346,7 +3346,6 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .site-map-summary strong { color: #1f4c2e; }
 
 .dashboard-ar-path { display: grid; grid-template-columns: repeat(2,minmax(0,260px)); gap: 10px; align-items: stretch; }
-.dashboard-ar-path:has(.dashboard-vital-actions:empty) { grid-template-columns: minmax(150px, 230px); }
 .dashboard-open-ar { display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-items: center; width: 100%; min-height: 72px; padding: 13px 15px; border: 1px solid rgba(58,116,71,.48); border-radius: 17px; background: linear-gradient(135deg, #214c30, #3f7248); color: #fff; text-align: left; box-shadow: 0 9px 24px rgba(31,76,46,.18); }
 .dashboard-open-ar { min-height: 60px; max-width: 260px; padding: 10px 13px; }
 .dashboard-field-guide { display:grid; grid-template-columns:auto 1fr; gap:2px 9px; align-items:center; min-height:60px; max-width:260px; padding:10px 13px; border:1px solid rgba(76,126,66,.3); border-radius:17px; background:linear-gradient(135deg,#edf5e5,#dfeff2); color:#31523a; text-align:left; }
@@ -3416,11 +3415,11 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .tutorial-quick-starts button strong { font-size: .72rem; line-height: 1.2; }
 .tutorial-quick-starts button small { color: #785a55; font-size: .6rem; line-height: 1.2; }
 @media (max-width: 620px) { .tutorial-quick-starts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.nonplant-template-choice { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 13px; align-items: center; width: 100%; margin: 15px 0; padding: 17px; border: 2px solid #747a80; border-radius: 16px; background: linear-gradient(145deg, #e4e6e8, #c8cdd1); color: #30353a; text-align: left; box-shadow: 0 8px 18px rgba(45,50,55,.13); }
-.nonplant-template-choice.is-selected { border-color: #343a40; box-shadow: 0 0 0 3px rgba(70,76,82,.16), 0 8px 18px rgba(45,50,55,.15); }
-.nonplant-template-choice > span:not(.nonplant-template-icon) { display: grid; gap: 3px; }
-.nonplant-template-choice small, .nonplant-template-choice em { color: #555d64; font-size: .72rem; font-style: normal; }
-.nonplant-template-icon { display: grid; place-items: center; width: 50px; height: 50px; border: 2px solid #555c62; border-radius: 10px; background: #737a80; color: #fff; font-size: .82rem; font-weight: 900; letter-spacing: .08em; }
+.nonplant-template-choice { display: inline-grid; grid-template-columns: auto minmax(0,1fr); gap: 9px; align-items: center; width: fit-content; max-width: 100%; margin: 10px 0; padding: 7px 9px; border: 1px solid rgba(75,82,87,.2); border-radius: 10px; background: rgba(226,229,231,.4); color: #3f474c; }
+.nonplant-template-choice input { width: 17px; height: 17px; margin: 0; accent-color: #596268; }
+.nonplant-template-choice > span { display: grid; gap: 1px; }
+.nonplant-template-choice strong { font-size: .76rem; }
+.nonplant-template-choice small { color: #687076; font-size: .64rem; }
 .nonplant-project { --accent: #5e666d; --accent-strong: #343b41; }
 .nonplant-project .dashboard-open-ar { border-color: #737c83; background: linear-gradient(135deg, #343b41, #687178); }
 .nonplant-project .living-map-progress, .nonplant-project .content-mode-section { filter: saturate(.15); }
@@ -3464,7 +3463,9 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
 .dashboard-location-footer { display: flex; justify-content: flex-start; padding-top: 8px; border-top: 1px solid rgba(48,91,57,.16); }
 
 @media (max-width: 620px) {
-    .dashboard-ar-path { grid-template-columns: 1fr; }
+    .dashboard-ar-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-open-ar, .dashboard-field-guide { min-width: 0; padding: 9px; }
+    .dashboard-open-ar small, .dashboard-field-guide small { font-size: .64rem; }
     .dashboard-vital-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .setup-choice-grid { grid-template-columns: 1fr; }
     .location-map-row { grid-template-columns: 1fr; }
@@ -5077,6 +5078,11 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-card-icon { display:grid; place-items:center; width:34px; height:34px; border-radius:12px; background:rgba(91,139,93,.13); }
 .field-guide-plant-card > span:last-child { display:grid; gap:.15rem; min-width:0; }
 .field-guide-plant-card small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#657269; font-size:.65rem; }
+.field-guide-totem-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr)); gap:.6rem; }
+.field-guide-totem-card { display:grid; grid-template-columns:34px minmax(0,1fr); gap:.55rem; min-height:78px; padding:.7rem; border:1px solid rgba(66,114,125,.2); border-radius:17px; background:linear-gradient(145deg,#fff,var(--guide-sky)); color:#304d42; text-align:left; }
+.field-guide-totem-card > span:last-child { display:grid; gap:.15rem; min-width:0; }
+.field-guide-totem-card small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#657478; font-size:.65rem; }
+.field-guide-totem-icon { background:rgba(73,137,151,.14); color:#337080; }
 
 .area-content-grid {
     display: grid;
