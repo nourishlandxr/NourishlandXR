@@ -87,6 +87,8 @@ export function createSpatialSphereRenderer(gl) {
         uniform vec3 color;
         uniform float alpha;
         uniform float emissive;
+        uniform float time;
+        uniform float motion;
         void main() {
             vec3 normal = normalize(surfaceNormal);
             vec3 viewer = normalize(viewDirection);
@@ -96,12 +98,17 @@ export function createSpatialSphereRenderer(gl) {
             float rim = pow(1.0 - facing, 2.4);
             float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 38.0);
             float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
+            float ribbonA = .5 + .5 * sin(normal.x * 10.0 + normal.y * 7.0 + normal.z * 5.0 + time * .72);
+            float ribbonB = .5 + .5 * sin(normal.z * 13.0 - normal.y * 8.0 - normal.x * 3.0 - time * .48);
+            float wisps = smoothstep(.68, .96, ribbonA * .58 + ribbonB * .42);
             vec3 shaded = color * (0.4 + diffuse * 0.48);
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
             shaded += vec3(0.34) * highlight;
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
             shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
-            gl_FragColor = vec4(shaded, alpha * (1.0 - rim * 0.22));
+            shaded += mix(color, vec3(0.82, 0.94, 1.0), .52) * wisps * motion * .48;
+            float transparentShell = mix(1.0 - rim * .22, .12 + rim * .82 + wisps * .72, motion);
+            gl_FragColor = vec4(shaded, alpha * transparentShell);
         }
     `;
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
@@ -137,7 +144,9 @@ export function createSpatialSphereRenderer(gl) {
         modelViewLocation: gl.getUniformLocation(program, 'modelView'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         alphaLocation: gl.getUniformLocation(program, 'alpha'),
-        emissiveLocation: gl.getUniformLocation(program, 'emissive')
+        emissiveLocation: gl.getUniformLocation(program, 'emissive'),
+        timeLocation: gl.getUniformLocation(program, 'time'),
+        motionLocation: gl.getUniformLocation(program, 'motion')
     };
 }
 
@@ -156,6 +165,8 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.uniform3fv(renderer.colorLocation, material.color || DEFAULT_MARKER_COLOR);
     gl.uniform1f(renderer.alphaLocation, Number.isFinite(material.alpha) ? material.alpha : 0.64);
     gl.uniform1f(renderer.emissiveLocation, Number.isFinite(material.emissive) ? material.emissive : 0.12);
+    gl.uniform1f(renderer.timeLocation, performance.now() * .001);
+    gl.uniform1f(renderer.motionLocation, material.motion ? 1 : 0);
     gl.drawElements(gl.TRIANGLES, renderer.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
@@ -180,7 +191,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius * 1.08,
-        { color: shellColor, alpha: plant ? 0.07 : 0.055, emissive: 0.2 }
+        { color: shellColor, alpha: plant ? 0.12 : 0.1, emissive: 0.28, motion: true }
     );
     gl.depthMask(true);
     if (plant) {
@@ -201,7 +212,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.56 : 0.49, emissive: plant ? 0.16 : 0.1 }
+        { color: shellColor, alpha: plant ? 0.34 : 0.3, emissive: plant ? 0.28 : 0.22, motion: true }
     );
 
     gl.depthMask(true);
