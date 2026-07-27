@@ -438,6 +438,10 @@ async function openArAreaCreationForm() {
             if (session !== activeSession || overlayRoot !== activeOverlay || !activeOverlay?.isConnected || activeProjectId !== projectId) return;
             activeAreaId = area.id;
             activeAreaName = area.name;
+            sessionMarkers = [];
+            selectedMarker = null;
+            locatedTotemRecord = null;
+            renderSessionMarkers();
             closePlacePicker();
             await armPlacement('area_checkpoint');
         } catch (error) {
@@ -1063,32 +1067,32 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     if (!operation.projectId || !operation.siteId || !operation.areaId || !isArOperationCurrent(operation, guardOptions)) return;
     const areas = await loadSitePlaces(operation.projectId, operation.siteId).catch(() => []);
     if (!isArOperationCurrent(operation, guardOptions)) return;
-    const restoredGroups = await Promise.all(areas.map(async area => {
-        const savedMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, area.id).catch(() => []);
-        return Promise.all(savedMarkers.map(async savedMarker => {
-            const marker = normalizeSpatialMarker(savedMarker);
-            const [anchor, plantProfile] = await Promise.all([
-                loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null),
-                marker.type === 'plant'
-                    ? loadPlantProfile(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null)
-                    : null
-            ]);
-            const position = anchor?.position;
-            if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
-            return {
-                marker,
-                plantProfile,
-                profileExpanded: false,
-                position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
-                siteId: operation.siteId,
-                areaId: area.id,
-                areaName: area.name,
-                coordinateSpace: anchor.coordinate_space || 'session-local'
-            };
-        }));
+    const area = areas.find(item => item.id === operation.areaId);
+    if (!area) return;
+    const savedMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, area.id).catch(() => []);
+    const restored = await Promise.all(savedMarkers.map(async savedMarker => {
+        const marker = normalizeSpatialMarker(savedMarker);
+        const [anchor, plantProfile] = await Promise.all([
+            loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null),
+            marker.type === 'plant'
+                ? loadPlantProfile(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null)
+                : null
+        ]);
+        const position = anchor?.position;
+        if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
+        return {
+            marker,
+            plantProfile,
+            profileExpanded: false,
+            position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
+            siteId: operation.siteId,
+            areaId: area.id,
+            areaName: area.name,
+            coordinateSpace: anchor.coordinate_space || 'session-local'
+        };
     }));
     if (!isArOperationCurrent(operation, guardOptions)) return;
-    const restored = restoredGroups.flat();
+    sessionMarkers = sessionMarkers.filter(record => record.areaId === operation.areaId);
     const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();

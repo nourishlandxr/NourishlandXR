@@ -259,7 +259,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(styles, /\.creator-ar-special-grid/);
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
-    assert.match(arSource, /const restoredGroups = await Promise\.all\(areas\.map/);
+    assert.match(arSource, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
     assert.match(arSource, /float totemBack/);
     assert.match(arSource, /float totemSide=max\(0\.,totemBack-totemFront\)/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
@@ -598,6 +598,9 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(styles, /\.creator-ar-marker-hit-target \{/);
     assert.match(styles, /\.creator-ar-spatial-name \{/);
     assert.match(source, /async function restoreRecordedMarkers/);
+    assert.match(source, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
+    assert.match(source, /sessionMarkers = sessionMarkers\.filter\(record => record\.areaId === operation\.areaId\)/);
+    assert.doesNotMatch(source.slice(source.indexOf('async function restoreRecordedMarkers'), source.indexOf('async function prepareExistingMarkerPlacement')), /areas\.map\(async area/);
     assert.match(source, /loadMarkerAnchor/);
     assert.match(source, /loadPlacementAreas\(loadingOperation, restorationGuard\)[\s\S]*restoreRecordedMarkers\(restoringOperation, restorationGuard\)/);
     assert.match(styles, /\.creator-ar-place-picker\[hidden\]/);
