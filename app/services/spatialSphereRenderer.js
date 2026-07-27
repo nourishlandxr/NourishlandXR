@@ -107,7 +107,7 @@ export function createSpatialSphereRenderer(gl) {
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
             shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
             shaded += mix(color, vec3(0.82, 0.94, 1.0), .52) * wisps * motion * .48;
-            float transparentShell = mix(1.0 - rim * .22, .12 + rim * .82 + wisps * .72, motion);
+            float transparentShell = mix(1.0 - rim * .22, min(1.0, .28 + rim * .72 + wisps * .64), motion);
             gl_FragColor = vec4(shaded, alpha * transparentShell);
         }
     `;
@@ -191,7 +191,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius * 1.08,
-        { color: shellColor, alpha: plant ? 0.12 : 0.1, emissive: 0.28, motion: true }
+        { color: shellColor, alpha: plant ? 0.22 : 0.2, emissive: 0.34, motion: true }
     );
     gl.depthMask(true);
     if (plant) {
@@ -212,7 +212,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.34 : 0.3, emissive: plant ? 0.28 : 0.22, motion: true }
+        { color: shellColor, alpha: plant ? 0.64 : 0.58, emissive: plant ? 0.38 : 0.32, motion: true }
     );
 
     gl.depthMask(true);

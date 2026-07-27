@@ -892,13 +892,13 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-hit-target::after { content: ""; position: absolute; inset: 3px; border: 2px solid transparent; border-radius: inherit; transform: scale(.82); opacity: 0; box-shadow: 0 0 0 0 transparent; transition: transform .16s ease, opacity .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target { pointer-events: auto; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target { cursor: grab; touch-action: none; }
-.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target::after,
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:hover::after,
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:focus-visible::after { border-color: rgba(216,239,190,.72); transform: scale(.94); opacity: .78; box-shadow: 0 0 0 7px rgba(216,239,190,.08), 0 0 18px rgba(184,220,158,.25); }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; }
-.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target::after { border-color: rgba(220,239,149,.45); opacity: .42; animation: creator-ar-marker-breathe 2.2s ease-in-out infinite; }
-.creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target::after { border-color: rgba(155,221,255,.75); border-style: dashed; opacity: .75; transform: scale(.9); }
+.creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target:is(:hover,:focus-visible)::after { border-color: rgba(226,244,181,.82); transform: scale(.96); opacity: .86; box-shadow: 0 0 18px rgba(192,230,151,.28); }
+.creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:is(:hover,:focus-visible)::after { border-color: rgba(220,239,149,.55); opacity: .68; animation: creator-ar-marker-breathe 2.2s ease-in-out infinite; }
+.creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:is(:hover,:focus-visible)::after { border-color: rgba(155,221,255,.75); border-style: dashed; opacity: .75; transform: scale(.94); }
 @keyframes creator-ar-marker-breathe { 50% { transform: scale(.94); opacity: .72; box-shadow: 0 0 15px rgba(220,239,149,.25); } }
 .creator-ar-spatial-name { position: absolute; left: 50%; bottom: calc(100% + 4px); max-width: min(42vw, 180px); padding: 4px 8px; transform: translate(-50%, 3px); overflow: hidden; border: 1px solid rgba(238,248,235,.34); border-radius: 999px; background: rgba(8,24,14,.72); color: #fff !important; box-shadow: 0 4px 14px rgba(0,0,0,.2); opacity: 0; visibility: hidden; backdrop-filter: blur(8px); font-size: .68rem; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; text-shadow: 0 1px 4px rgba(0,0,0,.75); white-space: nowrap; transition: opacity .16s ease, transform .16s ease, visibility .16s; }
 .creator-ar-marker-layer.is-select-mode .creator-ar-marker-hit-target:hover .creator-ar-spatial-name,
