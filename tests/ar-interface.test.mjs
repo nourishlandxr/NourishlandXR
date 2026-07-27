@@ -187,7 +187,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /let interactionMode = 'neutral'/);
     assert.match(arSource, /interactionMode = interactionMode === mode && \['grab', 'select'\]\.includes\(mode\) \? 'neutral' : mode/);
     assert.match(arSource, /View only mode\. The pointer is hidden; tap a Marker to reveal or hide its information/);
-    assert.match(arSource, /Hold mode is on\. Press an element to carry it at the aim; press it again to release/);
+    assert.match(arSource, /Move mode is on\. Tap the hand beneath any element/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
     assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
@@ -216,8 +216,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
-    assert.match(arSource, /moved\. Hold another element, unpress Hold, or choose View/);
-    assert.match(arSource, /Move cancelled\. Hold mode remains on/);
+    assert.match(arSource, /moved\. Tap another hand handle, turn off Move, or choose View/);
+    assert.match(arSource, /Move cancelled\. Move mode remains on/);
     const finishHold = arSource.slice(arSource.indexOf('async function finishMarkerDrag'), arSource.indexOf('function cancelMarkerDrag'));
     assert.doesNotMatch(finishHold, /interactionMode\s*=/);
     assert.match(finishHold, /state\.record\.position = state\.position/);
@@ -393,7 +393,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
     assert.match(arSource, /saveMarkerAnchor\(operation\.projectId, state\.record\.siteId, state\.record\.areaId/);
-    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Hold another element/);
+    assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Tap another hand handle/);
     assert.match(arSource, /function finishNaturalArExit/);
     assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
     assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, areaId, returnContext\), \{ once: true \}\)/);
@@ -416,7 +416,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementReady/);
     assert.match(source, /aimRevealTimer = setTimeout/);
     assert.match(source, /placementPointerMarkup/);
-    assert.match(source, /Let’s place it around you using our centre aim/);
+    assert.match(source, /It will appear one metre in front of you/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
     assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
@@ -436,7 +436,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
-    assert.match(source, /Choose Lemon Myrtle/);
+    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
@@ -459,8 +459,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
     assert.match(source, /uniform float opacity/);
     assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
-    assert.match(source, /Keep this finger down: slide up to push away or down to pull closer/);
-    assert.match(styles, /\.tryit-depth-track i/);
+    assert.match(source, /spatialMoveControlMarkup\('demo'\)/);
+    assert.match(styles, /\.spatial-move-control/);
+    assert.match(styles, /\.spatial-move-release/);
+    assert.match(styles, /\.spatial-grab-handle/);
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
@@ -470,7 +472,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
-    assert.match(source, /DON’T GO HERE/);
+    assert.match(source, /Garden plaque/);
     assert.match(source, /Raise the Area Totem/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
@@ -483,7 +485,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
-    assert.match(source, /spatialPosition\(latestHitMatrix, latestViewerMatrix/);
+    assert.match(source, /spatialPosition\(null, latestViewerMatrix, 0\)/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
     assert.doesNotMatch(source, /Test session - no physical code/);
@@ -549,7 +551,7 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.doesNotMatch(arSource, /const boardHtml/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-select-mode \.creator-ar-marker-hit-target:hover \.creator-ar-spatial-name/);
     assert.match(arSource, /readyPlacementType = pendingExistingMarkerId \? '' : AR_EXPERIENCE_CONFIG\.markerTypes\.includes\(initialPlacementType\)/);
-    assert.match(configSource, /placementDistanceMetres: 1\.2/);
+    assert.match(configSource, /placementDistanceMetres: 1,/);
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);

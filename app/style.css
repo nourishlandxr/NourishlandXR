@@ -589,6 +589,39 @@ h1 {
 .tryit-depth-track i::before { width: 13px; height: 3px; }
 .tryit-depth-track i::after { width: 3px; height: 13px; }
 .tryit-depth-joystick small { position: absolute; left: 4px; right: 4px; bottom: 8px; color: #fff; font-size: .62rem; font-weight: 800; text-align: center; }
+.spatial-move-control { --depth-shift: 0px; position: fixed; left: 50%; top: 50%; z-index: 12006; display: grid; grid-template: 58px 58px 58px / 58px 58px 58px; place-items: stretch; width: 174px; height: 174px; transform: translate(-50%, -50%); color: #fff; filter: drop-shadow(0 12px 24px rgba(0,0,0,.26)); pointer-events: auto; touch-action: none; }
+.spatial-move-control[hidden] { display: none; }
+.spatial-move-name { position: absolute; left: 50%; bottom: calc(100% + 12px); width: min(70vw, 260px); transform: translateX(-50%); overflow: hidden; color: #fff; font-size: .72rem; text-align: center; text-overflow: ellipsis; text-shadow: 0 2px 7px rgba(0,0,0,.8); white-space: nowrap; }
+.spatial-move-arm, .spatial-move-release { display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 1px solid rgba(235,247,235,.54); background: linear-gradient(145deg, rgba(53,84,64,.9), rgba(13,31,21,.92)); color: #fff; box-shadow: inset 0 1px 2px rgba(255,255,255,.14); backdrop-filter: blur(9px); }
+.spatial-move-arm b { font-size: 1.35rem; line-height: 1; }
+.spatial-move-arm small { font-size: .53rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.spatial-move-up { grid-area: 1 / 2; border-radius: 18px 18px 5px 5px; transform: translateY(var(--depth-shift)); }
+.spatial-move-left { grid-area: 2 / 1; border-radius: 18px 5px 5px 18px; }
+.spatial-move-release { grid-area: 2 / 2; border-radius: 16px; border: 2px solid rgba(219,241,181,.92); background: rgba(18,54,32,.97); box-shadow: 0 0 0 8px rgba(219,241,181,.09), inset 0 1px 3px rgba(255,255,255,.18); }
+.spatial-move-release span { font-size: 1.35rem; line-height: 1; }
+.spatial-move-release small { font-size: .5rem; font-weight: 850; text-transform: uppercase; }
+.spatial-move-right { grid-area: 2 / 3; border-radius: 5px 18px 18px 5px; }
+.spatial-move-down { grid-area: 3 / 2; border-radius: 5px 5px 18px 18px; transform: translateY(var(--depth-shift)); }
+.spatial-move-readout { position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%); color: #fff; font-size: .72rem; font-weight: 850; text-shadow: 0 2px 7px rgba(0,0,0,.8); }
+.spatial-grab-handle { position: absolute; left: 50%; top: calc(100% + 9px); display: grid; place-items: center; width: 27px; height: 22px; transform: translateX(-50%); border: 1px solid rgba(238,247,230,.46); border-radius: 12px 12px 15px 15px; background: rgba(17,45,29,.72); color: rgba(255,243,205,.92); box-shadow: 0 4px 12px rgba(0,0,0,.18); font-size: .76rem; opacity: .92; pointer-events: none; }
+.creator-ar-overlay.is-holding-item .creator-ar-mode-pointer, .creator-ar-overlay.is-holding-item .creator-ar-placement-guide { opacity: 0 !important; visibility: hidden !important; }
+.creator-ar-overlay.is-holding-item .creator-ar-taskbar { opacity: .32; }
+.creator-ar-marker-hit-target.is-adjusting .spatial-grab-handle, .tryit-sim-marker.is-held .spatial-grab-handle { opacity: 0; }
+.tryit-demo:has(.tryit-sim-marker.is-held) .tryit-place { opacity: 0 !important; visibility: hidden; pointer-events: none; }
+.creator-ar-totem-information { position: absolute; left: 50%; top: 50%; width: 1px; height: 1px; pointer-events: none; }
+.creator-ar-totem-bubble { position: absolute; display: block; box-sizing: border-box; width: min(52vw, 220px); padding: 12px 15px; border: 1px solid rgba(191,229,241,.48); border-radius: 38% 28% 34% 24% / 22% 34% 24% 38%; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.12), transparent 35%), rgba(19,48,54,.58); color: rgba(255,255,255,.92); box-shadow: 0 8px 22px rgba(0,0,0,.16); backdrop-filter: blur(8px); font-size: .72rem; line-height: 1.35; text-align: left; text-shadow: 0 1px 4px rgba(0,0,0,.58); }
+.creator-ar-totem-bubble::after { content: ""; position: absolute; width: 52px; height: 1px; background: linear-gradient(90deg, rgba(191,229,241,.62), transparent); }
+.creator-ar-totem-bubble-1 { right: 34px; bottom: 20px; }
+.creator-ar-totem-bubble-1::after { left: 100%; bottom: 18px; transform: rotate(18deg); transform-origin: left; }
+.creator-ar-totem-bubble-2 { left: 34px; bottom: -12px; }
+.creator-ar-totem-bubble-2::after { right: 100%; bottom: 20px; transform: rotate(164deg); transform-origin: right; }
+.creator-ar-totem-bubble-3 { left: 12px; top: 64px; }
+.creator-ar-totem-bubble-3::after { right: 100%; top: 16px; transform: rotate(202deg); transform-origin: right; }
+.totem-information-editor { display: grid; gap: 10px; margin: 14px 0; padding: 14px; border: 1px solid rgba(57,112,92,.24); border-radius: 18px; background: rgba(222,239,226,.32); }
+.totem-information-editor > p { margin: 0; color: var(--muted, #536457); font-size: .82rem; }
+.spatial-focus-panel { display: grid; gap: 10px; margin: 0 0 14px; padding: 15px; border: 1px solid rgba(47,124,190,.26); border-radius: 18px; background: linear-gradient(145deg, rgba(224,241,252,.72), rgba(234,247,242,.62)); }
+.spatial-focus-panel p { margin: 0; color: #425761; font-size: .84rem; line-height: 1.45; }
+button.spatial-focus-button { border-color: #2378bd; background: linear-gradient(145deg, #3b95dc, #176caf); color: #fff; box-shadow: 0 7px 18px rgba(24,106,170,.2); }
 .tryit-sim-marker.is-expanded { display: grid; box-sizing: border-box; gap: 12px; width: min(88vw, 560px); min-height: min(36vh, 280px); max-height: calc(100dvh - 180px); padding: clamp(20px, 4vw, 30px); overflow: auto; border-radius: 30px; background: radial-gradient(circle at 24% 18%, rgba(92,133,91,.30), transparent 38%), linear-gradient(145deg, rgba(18,48,32,.76), rgba(15,39,28,.54)); box-shadow: 0 10px 28px rgba(0,0,0,.16), inset 0 0 18px rgba(255,255,255,.035); color: rgba(255,255,255,.9); text-align: left; backdrop-filter: blur(11px); animation: tryit-frame-arrive .36s ease-out both; touch-action: none; cursor: grab; }
 .tryit-sim-marker.is-expanded.is-dragging { cursor: grabbing; box-shadow: 0 14px 34px rgba(0,0,0,.24), 0 0 0 1px rgba(220,239,149,.32); }
 .tryit-sim-marker.is-expanded strong { display: block; min-width: 0; min-height: 1.2em; overflow-wrap: anywhere; color: #fff; font-size: clamp(1.25rem, 4.8vw, 1.75rem); line-height: 1.18; }
@@ -637,8 +670,10 @@ h1 {
     .plant-knowledge-right .plant-knowledge-cell:nth-child(2) { left: 80%; top: 50%; }
     .plant-knowledge-right .plant-knowledge-cell:nth-child(3) { left: 67%; top: 76%; }
 }
-.tryit-sim-marker-note.is-expanded { min-height: 0; width: min(82vw, 470px); border: 1px solid rgba(240,207,112,.52); border-radius: 18px; background: rgba(27,31,23,.76); }
-.tryit-sim-marker-note:not(.is-expanded) { width: min(82vw, 448px); min-height: 112px; padding: 18px 22px; border-radius: 15px; background: rgba(27,31,23,.66); }
+.tryit-sim-marker-note.is-expanded { min-height: 0; width: min(82vw, 470px); border: 1px solid rgba(244,224,159,.55); border-radius: 38% 28% 34% 24% / 22% 34% 24% 38%; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.11), transparent 32%), rgba(27,38,28,.55); }
+.tryit-sim-marker-note:not(.is-expanded) { width: min(82vw, 448px); min-height: 112px; padding: 18px 22px; border: 1px solid rgba(244,224,159,.48); border-radius: 38% 28% 34% 24% / 22% 34% 24% 38%; background: radial-gradient(circle at 18% 12%, rgba(255,255,255,.1), transparent 35%), rgba(27,38,28,.48); backdrop-filter: blur(8px); }
+.tryit-sim-marker-note::after { content: ""; position: absolute; left: 30%; top: 100%; width: 1px; height: 52px; background: linear-gradient(rgba(244,224,159,.68), transparent); transform: rotate(8deg); transform-origin: top; }
+.tryit-sim-marker-zone:not(.is-expanded) { width: 92px; height: 150px; border: 2px solid rgba(187,229,245,.78); border-radius: 18px; background: linear-gradient(145deg, rgba(164,220,237,.18), rgba(20,62,74,.18)); box-shadow: inset 0 0 0 7px rgba(226,248,253,.035), 0 0 24px rgba(137,200,239,.23); backdrop-filter: blur(5px); }
 .tryit-sim-marker-note:not(.is-expanded) strong { display: block; color: #fff; font-size: 1.05rem; font-weight: 750; white-space: normal; }
 .tryit-sim-marker-area.is-expanded { border-color: rgba(137,200,239,.72); }
 .tryit-demo.is-immersive .tryit-sim-marker,

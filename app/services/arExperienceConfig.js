@@ -3,7 +3,7 @@
  * Projects store content and anchors; they do not redefine this interface.
  */
 export const AR_EXPERIENCE_CONFIG = Object.freeze({
-    placementDistanceMetres: 1.2,
+    placementDistanceMetres: 1,
     defaultSite: Object.freeze({
         name: 'Main Location',
         description: 'Primary Location for this project.',

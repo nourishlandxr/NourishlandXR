@@ -5,6 +5,7 @@
 import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
+import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 
@@ -31,7 +32,7 @@ let aimRevealTimer = null;
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
-const DEMO_SEQUENCE = ['plant', 'note', 'zone'];
+const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
@@ -50,8 +51,23 @@ const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
         ['HISTORY', 'First Nations knowledge']
     ]
 });
+const MORINGA_KNOWLEDGE = Object.freeze({
+    title: 'Moringa Tree',
+    left: [
+        ['USES', 'Nutritious leaves · shade · mulch'],
+        ['RELATIONSHIPS', 'People · pollinators · soil life'],
+        ['FOREST LAYER', 'Small tree · sunny edge']
+    ],
+    right: [
+        ['SCIENTIFIC', 'Moringa oleifera'],
+        ['BIOLOGY', 'Moringaceae · fast growing'],
+        ['HISTORY', 'South Asia · tropical food cultures']
+    ]
+});
+const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : LEMON_MYRTLE_KNOWLEDGE;
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
+    plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
     warning: { title: 'Warning Note · DON’T GO HERE', accent: '#ef9b78', lines: ['WARNING  Do not enter this place', 'GUIDANCE  Explain the risk or boundary', 'FUTURE  Sound · alerts · animation'] }
 });
 
@@ -102,6 +118,7 @@ function setGuide(message) {
 
 function showDemoAction(label, nextStage) {
     const messages = {
+        plant2: ['Lemon Myrtle is alive', 'Its profile now lives in space. Next, meet a second Plant with a different story.'],
         note: ['Plant profile complete', 'The Lemon Myrtle profile now lives in this space. Next, place a second Marker somewhere nearby.'],
         zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
     };
@@ -172,6 +189,9 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function guidePlantConversion(record) {
+    const moringa = record.tutorialStage === 'plant2';
+    const plantName = moringa ? 'Moringa Tree' : 'Lemon Myrtle';
+    const presetKey = moringa ? 'moringa' : 'lemon-myrtle';
     setGuide('Your first Marker is placed.');
     showGuidedChoice('<h2>Beautiful — your first Marker is placed</h2><p>A new Marker is an unassigned orb. It can become a Plant, a flat Note, or a Special Marker such as an Area Totem. Let’s use a Plant.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="plant">Plant</button><button type="button" disabled>Note</button><button type="button" disabled>Special Marker</button></div>', choice => {
         if (choice !== 'plant') return;
@@ -179,9 +199,10 @@ function guidePlantConversion(record) {
         record.demoType = 'plant';
         refreshDemoRecord(record);
         setGuide('The Marker has become a living Plant orb.');
-        showGuidedChoice('<h2>Name your Plant</h2><p>You can search your own plants or the global catalogue. For this example, choose Lemon Myrtle.</p><label>Plant name<input value="Lemon Myrtle" readonly></label><button type="button" data-demo-choice="lemon-myrtle">Choose Lemon Myrtle</button>', preset => {
-            if (preset !== 'lemon-myrtle') return;
-            record.name = 'Lemon Myrtle';
+        showGuidedChoice(`<h2>Name your Plant</h2><p>You can search your own plants or the global catalogue. For this example, choose ${plantName}.</p><label>Plant name<input value="${plantName}" readonly></label><button type="button" data-demo-choice="${presetKey}">Choose ${plantName}</button>`, preset => {
+            if (preset !== presetKey) return;
+            record.name = plantName;
+            record.demoPlantPreset = moringa ? 'moringa' : 'lemon-myrtle';
             record.demoExpanded = true;
             record.profileRevealStarted = performance.now();
             record.demoActiveBranch = '';
@@ -191,7 +212,7 @@ function guidePlantConversion(record) {
             refreshDemoRecord(record);
             hideGuidedChoice();
             setGuide('Its soft information tree opens at reading height, always tethered to the original living orb.');
-            showDemoAction('Place another Marker →', 'note');
+            showDemoAction(moringa ? 'Add an inspirational Note →' : 'Meet Moringa Tree →', moringa ? 'note' : 'plant2');
         });
     });
 }
@@ -203,10 +224,10 @@ function guideNoteConversion(record) {
         record.type = 'note';
         record.demoType = 'note';
         refreshDemoRecord(record);
-        showGuidedChoice('<h2>Choose a Note template</h2><p>Notes can become stories, warnings, media and interactive Focus Points.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="poi">Point of Interest</button><button type="button" data-demo-choice="warning">Warning note<br><small>DON’T GO HERE</small></button></div>', template => {
+        showGuidedChoice('<h2>Choose a Note template</h2><p>Notes can be observations, guidance, or a quiet garden plaque.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="plaque">Inspirational plaque</button><button type="button" data-demo-choice="poi">Point of Interest</button></div>', template => {
             if (!NOTE_TEMPLATES[template]) return;
             record.demoContent = NOTE_TEMPLATES[template];
-            record.name = template === 'warning' ? 'DON’T GO HERE' : 'Point of Interest';
+            record.name = template === 'plaque' ? 'Grow gently' : 'Point of Interest';
             record.demoExpanded = true;
             record.revealTitle = true;
             record.revealLines = 3;
@@ -225,13 +246,18 @@ function guideAreaConversion(record) {
         record.type = 'sub_checkpoint';
         record.demoType = 'zone';
         record.name = 'Citrus Guild';
-        record.demoExpanded = false;
+        record.demoExpanded = true;
+        record.demoContent = {
+            title: 'Citrus Guild Totem',
+            accent: '#89c8ef',
+            lines: ['A living classroom for citrus, herbs and pollinators.', 'Notice how shade and moisture change across this Area.', 'Plants waiting for precise placement gather around this Totem.']
+        };
         record.isBoundary = false;
         record.revealTitle = true;
         record.revealLines = 3;
         refreshDemoRecord(record);
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        showGuidedChoice('<h2>Your first spatial story is ready</h2><p>You placed a Plant, a Focus Point and a translucent Area Totem that gathers the knowledge belonging to this place.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, an inspirational Note and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
             if (action === 'finish') returnToWelcome();
             if (action === 'reset') {
                 markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
@@ -250,7 +276,7 @@ function armDemoPlacement(type) {
     placementReady = false;
     const place = appRoot?.querySelector('[data-tryit-place]');
     const simulatedAim = simulatedMode
-        ? ({ plant: { x: 50, y: 50 }, note: { x: 68, y: 58 }, zone: { x: 80, y: 44 } })[type]
+        ? ({ plant: { x: 42, y: 52 }, plant2: { x: 62, y: 47 }, note: { x: 70, y: 62 }, zone: { x: 82, y: 42 } })[type]
         : { x: 50, y: 50 };
     if (place && simulatedAim) {
         place.dataset.aimX = String(simulatedAim.x);
@@ -262,7 +288,7 @@ function armDemoPlacement(type) {
     place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
     if (label) label.textContent = 'Place a Marker';
-    setGuide(type === 'plant'
+    setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type === 'note'
             ? 'Take in the space before choosing the next position.'
@@ -283,7 +309,7 @@ function armDemoPlacement(type) {
         aimRevealTimer = setTimeout(() => {
             place?.classList.add('is-ready');
             placementReady = true;
-            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'note' ? 'Place a second Marker' : 'Place the Area Totem'}</h2><p>Let’s place it around you using our centre aim. Look slowly, settle the circle on the right place, then tap the circle.</p>`);
+            showGuidedChoice(`<h2>${type === 'plant' ? 'Place your first Marker' : type === 'plant2' ? 'Place Moringa nearby' : type === 'note' ? 'Place an inspirational Note' : 'Place the Area Totem'}</h2><p>It will appear one metre in front of you. Settle the circle, place it, then use the hand underneath whenever you want to refine its position.</p>`);
         }, 1900);
     });
 }
@@ -365,11 +391,11 @@ function capturedSimulatedAnchor() {
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span><span class="spatial-grab-handle" aria-hidden="true">✋</span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(LEMON_MYRTLE_KNOWLEDGE, record.demoActiveBranch)}</span>`;
+    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), record.demoActiveBranch)}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -401,7 +427,7 @@ function updateSimulatedMarkers() {
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}<span class="spatial-grab-handle" aria-hidden="true">✋</span></span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -606,7 +632,7 @@ function refreshDemoRecord(record) {
 }
 
 function placementPosition() {
-    return spatialPosition(hitMatrix, viewerMatrix, .14);
+    return spatialPosition(null, viewerMatrix, 0);
 }
 
 function plantInformationPosition(record) {
@@ -628,7 +654,7 @@ function plantInformationPosition(record) {
 }
 
 function placeMarker() {
-    if (!placementReady || marker || markers.length >= 3 || markers.some(record => record.tutorialStage === demoStage)) return;
+    if (!placementReady || marker || markers.length >= 4 || markers.some(record => record.tutorialStage === demoStage)) return;
     placementReady = false;
     const position = placementPosition();
     if (!position) {
@@ -637,12 +663,13 @@ function placeMarker() {
     }
     const type = demoStage;
     const sample = createMinimalMarkerDraft('sub_checkpoint', {
-        name: type === 'plant' ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
+        name: ['plant', 'plant2'].includes(type) ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
     const simulatedAnchor = simulatedMode ? capturedSimulatedAnchor() : null;
     const panelOffsets = {
         plant: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
+        plant2: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
         note: { x: 105, y: 75 },
         zone: { x: 0, y: 0 }
     };
@@ -654,22 +681,29 @@ function placeMarker() {
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
     updateSimulatedMarkers();
     marker = null;
-    if (type === 'plant') guidePlantConversion(placedRecord);
+    if (type === 'plant' || type === 'plant2') guidePlantConversion(placedRecord);
     else if (type === 'note') guideNoteConversion(placedRecord);
     else guideAreaConversion(placedRecord);
 }
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button><aside class="tryit-depth-joystick" data-demo-depth-joystick hidden aria-label="Slide up to push away or down to pull closer"><strong>Held element</strong><span class="tryit-depth-label">Push away</span><span class="tryit-depth-track" aria-hidden="true"><i></i></span><span class="tryit-depth-label">Pull closer</span><small data-demo-depth-readout>1.0 m</small></aside><button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place a Marker" hidden>${placementPointerMarkup('Place a Marker')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to our quick demo.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
+    appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
+        if (demoHeldIndex < 0) return;
+        demoHeldIndex = -1;
+        appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
+        updateSimulatedMarkers();
+        setGuide('Released in its refined position. The hand remains available whenever you want to move it again.');
+    });
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
     showGuidedChoice('<h2>Welcome to our quick demo</h2><p>Hey there, welcome to NourishlandXR. Imagine your space coming alive with rich information—plants sharing their stories, useful knowledge appearing where it matters, and each place becoming easier to understand.</p><button type="button" data-demo-choice="discover">Let’s explore</button>', choice => {
         if (choice !== 'discover') return;
-        showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place three simple Markers together. One will become a Plant, one a Focus Point, and one an Area Totem. Nothing from this quick demo is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {
+        showGuidedChoice('<h2>Let’s test some NourishlandXR features</h2><p>We’ll place two Plants, an inspirational Note and one framed Area Totem. Every item can be grabbed again using the hand beneath it. Nothing from Try It Now is saved.</p><button type="button" data-demo-choice="continue">Start the demo</button>', nextChoice => {
             if (nextChoice === 'continue') armDemoPlacement('plant');
         });
     });
@@ -766,7 +800,7 @@ function createSpatialKnowledgeTexture(record) {
     label.height = 720;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
-        drawPlantKnowledgeTexture(ctx, label, LEMON_MYRTLE_KNOWLEDGE, record.demoActiveBranch || 'left-0');
+        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoActiveBranch || 'left-0');
         return canvasTexture(label);
     }
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);

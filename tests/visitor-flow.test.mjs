@@ -242,10 +242,10 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
-    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '\$\{encoded\(checkpoint\.marker\.id\)\}'\)">Open this Area in AR/);
+    assert.match(areaDashboardSource, /View \/ edit this Totem in AR/);
     assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place its Totem in AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
-    assert.doesNotMatch(areaDashboardSource, /onclick="window\.startArMode\([^)]*\)">(?:Open this Area in AR|Place its Totem in AR)/);
+    assert.match(areaDashboardSource, /encoded\(checkpoint\.marker\.id\)[\s\S]*View \/ edit this Totem in AR/);
 });
 
 test('Organizer Folder excludes compatibility Area Totems by semantic type', () => {
@@ -272,25 +272,26 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('temporary AR demo guides three Marker purposes without saving', () => {
+test('Try It Now guides two Plants, an inspirational Note and a Totem without saving', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /Place a Marker/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /place three simple Markers/i);
-    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'note', 'zone'\]/);
+    assert.match(source, /place two Plants, an inspirational Note and one framed Area Totem/i);
+    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /See how Areas work/);
-    assert.match(source, /markers\.length >= 3/);
+    assert.match(source, /Add an inspirational Note/);
+    assert.match(source, /markers\.length >= 4/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
-    assert.match(source, /Choose Lemon Myrtle/);
+    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
+    assert.match(source, /Inspirational plaque/);
     assert.match(source, /createBoundaryTexture/);
     assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
-    assert.match(source, /Plant name<input value="Lemon Myrtle" readonly>/);
+    assert.match(source, /Plant name<input value="\$\{plantName\}" readonly>/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);
     assert.match(source, /function placeMarker/);
@@ -305,7 +306,7 @@ test('temporary AR demo guides three Marker purposes without saving', () => {
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /Finish demo/);
-    assert.match(source, /spatialPosition\(hitMatrix, viewerMatrix/);
+    assert.match(source, /spatialPosition\(null, viewerMatrix, 0\)/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
 

@@ -11,6 +11,7 @@ import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarke
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
+import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
@@ -65,7 +66,10 @@ const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_
     : marker;
 const areaBoard = marker => ({
     title: marker?.area_information_board?.title || String(marker?.name || 'Area').replace(/\s+checkpoint$/i, ''),
-    introduction: marker?.area_information_board?.introduction || marker?.description || 'Welcome to this Area.'
+    introduction: marker?.area_information_board?.introduction || marker?.description || 'Welcome to this Area.',
+    informationBubbles: Array.isArray(marker?.area_information_board?.information_bubbles)
+        ? marker.area_information_board.information_bubbles.filter(Boolean).slice(0, 6)
+        : []
 });
 
 function markerRgb(marker, fallback) {
@@ -141,6 +145,12 @@ function creatorPlantKnowledgeMarkup(record) {
     return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
+function creatorTotemInformationMarkup(record) {
+    const board = areaBoard(record.marker);
+    const bubbles = board.informationBubbles.length ? board.informationBubbles : [board.introduction];
+    return `<aside class="creator-ar-totem-information" aria-label="${escapeHtml(board.title)} information">${bubbles.map((text, index) => `<span class="creator-ar-totem-bubble creator-ar-totem-bubble-${index + 1}">${escapeHtml(text)}</span>`).join('')}</aside>`;
+}
+
 function setPlacementStatus(message) {
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
     if (status) status.textContent = message;
@@ -158,7 +168,9 @@ function updateReadyPlacementControl() {
 }
 
 function placementPoint() {
-    return spatialPosition(latestHitMatrix, latestViewerMatrix, 0.06);
+    // Phone-first global rule: new spatial content arrives at a predictable,
+    // relaxed one-metre working distance before the creator refines it.
+    return spatialPosition(null, latestViewerMatrix, 0);
 }
 
 function roundCoordinate(value) {
@@ -260,7 +272,7 @@ function setInteractionMode(mode) {
     if (interactionMode !== 'select') closeInlineEditor();
     updateInteractionControls();
     if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
-    else if (interactionMode === 'grab') setPlacementStatus('Hold mode is on. Press an element to carry it at the aim; press it again to release.');
+    else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Tap the hand beneath any element, adjust it with the plus control, then press Release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
     else setPlacementStatus('Aim dot ready. Hover over Markers to reveal their names.');
 }
@@ -505,7 +517,7 @@ function setupSpatialMarkerRenderer() {
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.025,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totem=roundBox(q,vec2(.43,.48),.075);float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.055,-.035);float backRect=box(backQ,vec2(.40,.28));float backTotem=roundBox(backQ,vec2(.43,.48),.075);float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.72:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform vec3 color;uniform float shape;float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.025,max(abs(p.x)-s.x,abs(p.y)-s.y));}float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.025,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}void main(){vec2 q=uv-vec2(.5);float d=length(q);float sphere=1.-smoothstep(.42,.5,d);float sphereDepth=sqrt(max(0.,1.-pow(d/.5,2.)));float core=1.-smoothstep(.08,.22,d);float rect=box(q,vec2(.40,.28));float totemOuter=roundBox(q,vec2(.43,.48),.075);float totemInner=roundBox(q,vec2(.31,.36),.055);float totem=max(0.,totemOuter-totemInner*.92);float jade=1.-smoothstep(.0,.025,max(abs(q.x)*.78+abs(q.y)*.28-.38,abs(q.y)-.46));vec2 backQ=q+vec2(.055,-.035);float backRect=box(backQ,vec2(.40,.28));float backTotemOuter=roundBox(backQ,vec2(.43,.48),.075);float backTotemInner=roundBox(backQ,vec2(.31,.36),.055);float backTotem=max(0.,backTotemOuter-backTotemInner*.92);float backJade=1.-smoothstep(.0,.035,max(abs(backQ.x)*.78+abs(backQ.y)*.28-.38,abs(backQ.y)-.46));float front=shape<.5?sphere:(shape<1.5?totem:(shape<2.5?jade:(shape<3.5?rect:sphere)));float back=shape<.5?sphere:(shape<1.5?backTotem:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));float side=max(0.,back-front);float body=max(front,back);float light=clamp(.28+.68*sphereDepth+.24*(-q.x+q.y),0.,1.);vec3 shaded=mix(color*.42,mix(color,vec3(1.),.38),light);if(shape>.5&&shape<3.5){shaded=mix(color*.28,shaded,front);shaded=mix(shaded,color*.22,side*.88);}if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.06);float structuralAlpha=shape<1.5?.72:.50;float alpha=body*(shape<.5?.58:(shape<2.5?structuralAlpha:(shape>4.5?.42:.82)))+glow;if(body<.01&&glow<.01)discard;gl_FragColor=vec4(shaded,alpha);}');
     gl.compileShader(fragment);
     markerProgram = gl.createProgram();
     gl.attachShader(markerProgram, vertex);
@@ -646,8 +658,10 @@ function renderSessionMarkers() {
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
-            : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>${profileLayer}`;
+            : record.marker.type === 'area_checkpoint' && record.infoVisible
+                ? creatorTotemInformationMarkup(record)
+                : '';
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)}"><span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span><span class="spatial-grab-handle" aria-hidden="true">✋</span>${profileLayer}</span>`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -773,7 +787,8 @@ function openInlineEditor(record, force = false) {
             if (type === 'area_checkpoint') {
                 update.area_information_board = {
                     title: form.elements.areaBoardTitle?.value.trim() || name.replace(/\s+checkpoint$/i, ''),
-                    introduction: form.elements.areaBoardIntroduction?.value.trim() || description || `Welcome to ${name}.`
+                    introduction: form.elements.areaBoardIntroduction?.value.trim() || description || `Welcome to ${name}.`,
+                    information_bubbles: board.informationBubbles
                 };
             }
             if (type === 'intro_checkpoint') {
@@ -831,7 +846,7 @@ function beginMarkerInteraction(record, event) {
         : null;
     const distance = camera
         ? Math.max(.35, Math.hypot(record.position.x - camera.x, record.position.y - camera.y, record.position.z - camera.z))
-        : 1.2;
+        : 1;
     dragState = {
         record,
         element: event.currentTarget,
@@ -859,7 +874,7 @@ function beginMarkerInteraction(record, event) {
     }
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
-    setPlacementStatus(`Holding ${record.marker.name}. Keep the same finger down: slide up to push away or down to pull closer. Press again to release.`);
+    setPlacementStatus(`Moving ${record.marker.name}. Look around to guide it, slide up to push or down to pull, then press Release.`);
 }
 
 function moveMarkerDrag(event) {
@@ -910,11 +925,11 @@ async function finishMarkerDrag(event) {
     const operation = captureArOperationContext();
     cleanupDrag();
     updateInteractionControls();
-    setPlacementStatus(`Saving ${state.record.marker.name}… Hold mode remains on.`);
+    setPlacementStatus(`Saving ${state.record.marker.name}… Move mode remains on.`);
     try {
         await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation));
         if (!isArOperationCurrent(operation)) return;
-        setPlacementStatus(`${state.record.marker.name} moved. Hold another element, unpress Hold, or choose View.`);
+        setPlacementStatus(`${state.record.marker.name} moved. Tap another hand handle, turn off Move, or choose View.`);
     } catch (error) {
         if (!isArOperationCurrent(operation)) return;
         state.record.position = state.position;
@@ -943,7 +958,7 @@ function cancelMarkerDrag(event) {
     cleanupDrag();
     updateInteractionControls();
     positionSessionMarkers();
-    setPlacementStatus('Move cancelled. Hold mode remains on.');
+    setPlacementStatus('Move cancelled. Move mode remains on.');
 }
 
 async function loadPlacementAreas(operation = captureArOperationContext(), guardOptions = {}) {
@@ -1333,13 +1348,7 @@ function createOverlay() {
             ${placementPointerMarkup('Place Marker', true)}
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
-        <aside class="creator-ar-depth-joystick" data-ar-depth-joystick hidden aria-label="Slide up to push away or down to pull closer">
-            <strong data-ar-depth-name>Held element</strong>
-            <span class="creator-ar-depth-label creator-ar-depth-push">Push away</span>
-            <span class="creator-ar-depth-track" aria-hidden="true"><i></i></span>
-            <span class="creator-ar-depth-label creator-ar-depth-pull">Pull closer</span>
-            <small data-ar-depth-readout>1.2 m</small>
-        </aside>
+        ${spatialMoveControlMarkup('ar')}
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
         <div class="creator-ar-control-dock">
           <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
@@ -1349,7 +1358,7 @@ function createOverlay() {
             <button class="creator-ar-add-marker" type="button" data-ar-add-marker aria-label="Add Marker"><strong>+ MARKER</strong></button>
             <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Hold mode: move one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Hold mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
           </nav>
@@ -1370,6 +1379,7 @@ function createOverlay() {
     overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', () => void openSpecialMarkerPicker());
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));
+    overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();

@@ -1,5 +1,15 @@
 # Nourishland XR Idea Box
 
+## V0.8514 — calm grab-anytime spatial editing
+
+- New Markers arrive at a predictable one-metre working distance on phones.
+- A persistent hand beneath each spatial element makes movement available throughout the experience.
+- While moving, the aim disappears and one shared plus-shaped control becomes dominant; its centre releases the element.
+- Plant and Totem profile pages offer one blue action to load that single element for focused AR viewing or editing.
+- Area Totems are framed translucent rectangles with soft attached information balloons edited in Web Mode.
+- Notes use an organic translucent plaque/balloon form rather than an opaque flat panel.
+- Try It Now demonstrates Lemon Myrtle, Moringa Tree, an inspirational Note and a Totem with three information examples.
+
 ## V0.8513 — Persistent spatial tools
 
 - Neutral: small aim dot and quiet hover information.
