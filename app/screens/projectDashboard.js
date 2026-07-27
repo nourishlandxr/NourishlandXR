@@ -584,9 +584,19 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
             },
             visibility: existing?.marker.visibility || 'draft'
         };
-        const savedMarker = existing
-            ? await updatePlaceMarker(projectId, context.site.id, areaId, existing.marker.id, checkpointData)
-            : await createPlaceMarker(projectId, context.site.id, areaId, checkpointData);
+        let savedMarker;
+        try {
+            savedMarker = existing
+                ? await updatePlaceMarker(projectId, context.site.id, areaId, existing.marker.id, checkpointData)
+                : await createPlaceMarker(projectId, context.site.id, areaId, checkpointData);
+        } catch (error) {
+            if (!/unsupported|marker type|place type/i.test(String(error?.message || ''))) throw error;
+            const compatibleData = { ...checkpointData, type: 'sub_checkpoint', semantic_type: 'area_checkpoint', storage_type: 'sub_checkpoint' };
+            savedMarker = existing
+                ? await updatePlaceMarker(projectId, context.site.id, areaId, existing.marker.id, compatibleData)
+                : await createPlaceMarker(projectId, context.site.id, areaId, compatibleData);
+        }
+        savedMarker = savedMarker?.marker || savedMarker;
         if (qrCode) await saveMarkerAnchor(projectId, context.site.id, areaId, savedMarker.id, {
             type: 'qr',
             qr_code: qrCode,

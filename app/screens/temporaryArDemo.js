@@ -268,13 +268,9 @@ function guidePlantConversion(record) {
 }
 
 function guideNoteConversion(record) {
-    setGuide('A second Marker is ready.');
+    setGuide('Your Note is placed.');
     showGuidedChoice('<h2>Add a Note</h2><p>A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
         if (choice !== 'continue') return;
-        record.type = 'note';
-        record.demoType = 'note';
-        record.demoContent = NOTE_TEMPLATES.poi;
-        record.name = 'Seasonal observation';
         record.demoExpanded = true;
         record.revealTitle = true;
         record.revealLines = 3;
@@ -710,7 +706,8 @@ function placeMarker() {
         return;
     }
     const type = demoStage;
-    const sample = createMinimalMarkerDraft('sub_checkpoint', {
+    const directType = type === 'note' ? 'note' : 'sub_checkpoint';
+    const sample = createMinimalMarkerDraft(directType, {
         name: ['plant', 'plant2'].includes(type) ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
@@ -721,7 +718,21 @@ function placeMarker() {
         note: { x: 105, y: 75 },
         zone: { x: 0, y: 0 }
     };
-    marker = { ...sample, position, type: 'marker', demoType: 'marker', tutorialStage: type, demoExpanded: false, demoPanelOffset: panelOffsets[type], simulatedAnchor, informationPosition: null, revealTitle: true, revealLines: 3, texture: null };
+    marker = {
+        ...sample,
+        position,
+        type: type === 'note' ? 'note' : 'marker',
+        demoType: type === 'note' ? 'note' : 'marker',
+        tutorialStage: type,
+        demoExpanded: false,
+        demoPanelOffset: panelOffsets[type],
+        simulatedAnchor,
+        informationPosition: null,
+        revealTitle: true,
+        revealLines: 3,
+        texture: null,
+        ...(type === 'note' ? { name: 'Seasonal observation', demoContent: NOTE_TEMPLATES.poi } : {})
+    };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);

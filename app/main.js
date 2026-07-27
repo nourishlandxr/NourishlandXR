@@ -29,6 +29,22 @@ import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } f
 import { projectTemplates } from './templates/projectTemplates.js';
 
 const app = document.getElementById('app');
+const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
+function rememberCurrentView(view, args = []) {
+    try { sessionStorage.setItem(CURRENT_VIEW_KEY, JSON.stringify({ view, args })); }
+    catch {}
+}
+function forgetCurrentView() {
+    try { sessionStorage.removeItem(CURRENT_VIEW_KEY); }
+    catch {}
+}
+function readCurrentView() {
+    try { return JSON.parse(sessionStorage.getItem(CURRENT_VIEW_KEY) || 'null'); }
+    catch {
+        forgetCurrentView();
+        return null;
+    }
+}
 function placeGlobalNavigationAtBottom() {
     app.querySelectorAll('.screen').forEach(screen => {
         const buttons = [...screen.querySelectorAll(':scope > .page-header > button:first-child, :scope > header.page-header > button:first-child')]
@@ -145,6 +161,32 @@ async function bootstrap() {
             await renderProjectDashboard(app, encodeURIComponent(recovery.projectId));
             return;
         }
+        const rememberedView = !params.size ? readCurrentView() : null;
+        if (rememberedView?.view === 'projects') {
+            setExperienceRole('creator');
+            await renderDemoProjects(app);
+            return;
+        }
+        if (rememberedView?.view === 'dashboard' && rememberedView.args?.[0]) {
+            setExperienceRole('creator');
+            await window.renderProjectDashboard(...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'area' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            await renderProjectAreaDashboard(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'entry' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            await openProjectEntry(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'field-guide' && rememberedView.args?.[0]) {
+            setExperienceRole(rememberedView.args?.[1] ? 'creator' : 'visitor');
+            await renderFieldGuide(app, ...rememberedView.args);
+            return;
+        }
         if (!HOSTED_MODE) {
             await siteManager.loadSitesFromDisk();
             await loadDemoMarkers();
@@ -170,7 +212,7 @@ async function bootstrap() {
     }
 }
 
-window.renderLaunchScreen = () => { setExperienceRole('launch'); renderLaunchScreen(app); };
+window.renderLaunchScreen = () => { forgetCurrentView(); setExperienceRole('launch'); renderLaunchScreen(app); };
 window.renderHillyardsDemo = () => renderDemoHome(app);
 window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${error.message}</p></div>`; }); };
 window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${error.message}</p></div>`; });
@@ -182,6 +224,7 @@ window.renderDemoProjects = async () => {
     try {
         if (!await ensureCreatorAuthentication()) return;
         setExperienceRole('creator');
+        rememberCurrentView('projects');
         history.replaceState({ nourishlandView: 'projects' }, '', window.location.href);
         await renderDemoProjects(app);
     } catch (error) {
@@ -189,6 +232,7 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+    rememberCurrentView('dashboard', [projectId, projectName]);
     const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
     const gardenLoadingComments = [
         'Adding the trellis…',
@@ -257,6 +301,7 @@ window.addEventListener('popstate', event => {
         void renderDemoProjects(app);
         return;
     }
+    forgetCurrentView();
     setExperienceRole('launch');
     renderLaunchScreen(app);
 });
@@ -301,7 +346,10 @@ window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, pr
 window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => renderAreaCheckpointForm(app, projectId, areaId, flow);
 window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
 window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
-window.renderProjectAreaDashboard = (projectId, areaId) => renderProjectAreaDashboard(app, projectId, areaId);
+window.renderProjectAreaDashboard = (projectId, areaId) => {
+    rememberCurrentView('area', [projectId, areaId]);
+    return renderProjectAreaDashboard(app, projectId, areaId);
+};
 window.saveAreaInformation = (event, projectId, areaId) => saveAreaInformation(event, projectId, areaId);
 window.openProjectAreaAr = (projectId, areaId, checkpointId = '', initialPlacementType = '') => openProjectAreaAr(app, projectId, areaId, checkpointId, initialPlacementType);
 window.navigateToProjectArea = (projectId, areaId) => navigateToProjectArea(app, projectId, areaId);
@@ -324,7 +372,10 @@ window.saveProjectStartingPoint = (event, projectId, flow = '') => saveProjectSt
 window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
-window.openProjectEntry = (projectId, markerId) => openProjectEntry(app, projectId, markerId).catch(error => window.alert(error.message));
+window.openProjectEntry = (projectId, markerId) => {
+    rememberCurrentView('entry', [projectId, markerId]);
+    return openProjectEntry(app, projectId, markerId).catch(error => window.alert(error.message));
+};
 window.saveProjectEntryChanges = saveProjectEntryChanges;
 window.renderFirstSteps = () => renderFirstSteps(app);
 window.renderHillyardsProject = () => renderHillyardsProject(app);
@@ -431,7 +482,11 @@ window.renderVisitorLocationExperience = projectId => { setExperienceRole('visit
 window.renderVisitorLocationIntro = (projectId, creatorPreview = false, explorePreview = false) => { setExperienceRole(creatorPreview ? 'creator' : 'visitor'); return renderVisitorLocationIntro(app, projectId, creatorPreview, explorePreview); };
 window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
 window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
-window.renderFieldGuide = (projectId, creator = false) => { setExperienceRole(creator ? 'creator' : 'visitor'); return renderFieldGuide(app, projectId, creator); };
+window.renderFieldGuide = (projectId, creator = false) => {
+    rememberCurrentView('field-guide', [projectId, creator]);
+    setExperienceRole(creator ? 'creator' : 'visitor');
+    return renderFieldGuide(app, projectId, creator);
+};
 window.openFieldGuidePlant = instanceId => openFieldGuidePlant(app, instanceId);
 window.positionFieldGuidePlant = instanceId => positionFieldGuidePlant(instanceId);
 window.applyFieldGuideFilter = () => applyFieldGuideFilter();

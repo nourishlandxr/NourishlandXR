@@ -41,7 +41,6 @@ function draw() {
                 <div class="compact-identity-row"><div class="field"><label for="fieldName">${plant ? 'Name (optional)' : 'Name'}</label><input id="fieldName" placeholder="Untitled is okay" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
                 ${plant ? `<details class="compact-advanced"><summary>Advanced plant search</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div>${plantSearchScope === 'global' ? `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em></span></button>`).join('')}</div>` : '<p class="meta">Choose a saved plant from “Use existing” above.</p>'}</div></details>` : ''}
                 <div class="placement-compact"><span><strong>Placement</strong><small>Not yet placed · can be placed later</small></span><button type="submit" name="saveIntent" value="ar">AR MODE</button></div>
-                ${plant ? '<p class="meta">A unique Plant ID (for example A0001) is generated automatically.</p>' : ''}
                 <div class="button-row">
                     <button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>
                 </div>
@@ -56,7 +55,9 @@ export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
     nonPlantMode = defaults?.nonPlantMode === true;
-    plantProfiles = nonPlantMode ? [] : (await loadPlantLibrary(true)).plants || [];
+    plantProfiles = nonPlantMode
+        ? []
+        : ((await loadPlantLibrary(true)).plants || []).filter(profile => !/^lemon drop(?: old profile| garcinia)?$/i.test(String(profile.commonName || profile.name || '').trim()));
     plantSearchScope = 'local';
     globalPlantResults = [];
     selectedGlobalPlant = null;

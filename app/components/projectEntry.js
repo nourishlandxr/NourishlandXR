@@ -18,16 +18,16 @@ function contextualGuidance(guidance, target) {
 
 function tutorialSpotlight(guidance) {
     if (!guidance || !['dashboardWelcome', 'arMode', 'contentMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
-    return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
-        <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
-            <span class="guidance-stage">First steps</span>
-            <strong>${guidance.title}</strong>
+    return `<details class="tutorial-spotlight-callout tutorial-subtle-tip tutorial-spotlight-${guidance.target}">
+            <summary><span class="guidance-stage">First steps</span><strong>${guidance.title}</strong><i aria-hidden="true">⌄</i></summary>
+            <div class="tutorial-subtle-tip-body">
             <p>${guidance.body}</p>
             <div class="tutorial-spotlight-actions">
                 <button type="button" onclick="${guidance.dismissAction}">Skip this step</button>
                 <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
             </div>
-        </aside>`;
+            </div>
+        </details>`;
 }
 
 function latestEntryRow(item) {
@@ -58,19 +58,21 @@ export function renderProjectEntry(config) {
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
     const growth = config.growthJourney;
-    const growthJourneyHtml = growth ? `<section class="living-map-progress" aria-labelledby="livingMapProgressTitle">
-        <div class="living-map-progress-heading">
+    const growthJourneyHtml = growth ? `<details class="living-map-progress subtle-project-tutorial">
+        <summary class="living-map-progress-heading">
             <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">${escapeAttribute(growth.message)}</h2></div>
-            <strong>${growth.completed} of ${growth.steps.length}</strong>
-        </div>
+            <span class="tutorial-summary-progress"><strong>${growth.completed} of ${growth.steps.length}</strong><i aria-hidden="true">⌄</i></span>
+        </summary>
+        <div class="project-tutorial-details">
         <div class="tutorial-task-list" role="list" aria-label="Getting started tasks">
             ${growth.steps.map(step => `<span class="${step.complete ? 'is-complete' : ''}" role="listitem"><i aria-hidden="true">${step.complete ? '✓' : '○'}</i><strong>${escapeAttribute(step.label)}</strong>${step.progress ? `<small>${escapeAttribute(step.progress)}</small>` : ''}</span>`).join('')}
         </div>
-        <div class="tutorial-purpose"><strong>Why begin here?</strong><p>Spatial knowledge becomes useful when information is attached to a real object or place. These four small actions show the complete idea—identify something, organise its place, give the place a Totem, then let its information grow.</p></div>
+        <div class="tutorial-purpose"><strong>Why begin here?</strong><p>Spatial knowledge becomes useful when information is attached to a real object or place. These small actions show the complete idea—identify something, organise its place, give the place a Totem, then let its information grow. Plant records receive a unique ID automatically when they are created.</p></div>
         <div class="tutorial-quick-starts${config.guidance?.target === 'quickStarts' ? ' tutorial-spotlight-target' : ''}" aria-label="Tutorial quick starts">
             ${growth.starterActions.map(action => `<button type="button" onclick="${action.action}"><span aria-hidden="true">${action.icon}</span><strong>${escapeAttribute(action.label)}</strong><small>${escapeAttribute(action.description)}</small></button>`).join('')}
         </div>
-    </section>` : '';
+        </div>
+    </details>` : '';
     const spotlightTarget = config.guidance?.target || '';
 
     // Quiet management tools displayed below the primary AR path.

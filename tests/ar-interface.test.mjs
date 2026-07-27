@@ -340,6 +340,11 @@ test('opening a project paints a dashboard loading state before data work begins
     assert.match(mainSource, /clearInterval\(loadingCommentTimer\)/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
     assert.match(mainSource, /window\.addEventListener\('popstate'/);
+    assert.match(mainSource, /nourishland-xr-current-view-v1/);
+    assert.match(mainSource, /rememberedView\?\.view === 'dashboard'/);
+    assert.match(mainSource, /rememberedView\?\.view === 'area'/);
+    assert.match(mainSource, /rememberedView\?\.view === 'entry'/);
+    assert.match(mainSource, /rememberedView\?\.view === 'field-guide'/);
     assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
     assert.match(styles, /\.project-loading-track span/);
     assert.match(styles, /@keyframes project-loading-progress/);

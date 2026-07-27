@@ -3375,6 +3375,22 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .living-map-progress-heading > strong { padding: 5px 9px; border-radius: 999px; background: rgba(49,99,58,.1); color: #315f3b; font-size: .72rem; white-space: nowrap; }
 .growth-stage { color: #4f8055; font-size: .66rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
 .tutorial-task-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.subtle-project-tutorial { padding: 0; overflow: hidden; }
+.subtle-project-tutorial > summary { cursor: pointer; list-style: none; padding: 12px 14px; }
+.subtle-project-tutorial > summary::-webkit-details-marker { display: none; }
+.subtle-project-tutorial .tutorial-summary-progress { display: inline-flex; align-items: center; gap: 8px; }
+.subtle-project-tutorial .tutorial-summary-progress i { font-style: normal; transition: transform .2s ease; }
+.subtle-project-tutorial[open] .tutorial-summary-progress i { transform: rotate(180deg); }
+.subtle-project-tutorial .project-tutorial-details { padding: 0 14px 14px; }
+.tutorial-spotlight-callout.tutorial-subtle-tip { position: relative; inset: auto; z-index: auto; width: auto; max-width: none; margin: 10px 0 0; padding: 0; transform: none; border: 1px solid rgba(70,111,73,.15); border-radius: 14px; background: rgba(255,255,255,.48); box-shadow: none; color: var(--theme-text, #26362c); }
+.tutorial-subtle-tip > summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.tutorial-subtle-tip > summary::-webkit-details-marker { display: none; }
+.tutorial-subtle-tip > summary strong { flex: 1; font-size: .75rem; }
+.tutorial-subtle-tip > summary i { font-style: normal; transition: transform .2s ease; }
+.tutorial-subtle-tip[open] > summary i { transform: rotate(180deg); }
+.tutorial-subtle-tip-body { padding: 0 12px 12px; }
+.tutorial-spotlight-callout.tutorial-subtle-tip::before { display: none; }
+.tutorial-spotlight-callout.tutorial-subtle-tip p { color: var(--theme-muted, #56675b); }
 .tutorial-task-list > span { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 7px; align-items: center; min-height: 38px; padding: 7px 9px; border: 1px solid rgba(70,111,73,.14); border-radius: 11px; background: rgba(255,255,255,.62); color: #526158; }
 .tutorial-task-list > span i { color: #708077; font-style: normal; font-size: 1rem; text-align: center; }
 .tutorial-task-list > span strong { font-size: .74rem; }

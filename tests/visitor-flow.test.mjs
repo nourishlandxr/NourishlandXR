@@ -159,7 +159,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /dashboard-identity/);
     assert.doesNotMatch(entrySource, /dashboard-introduction/);
     assert.match(entrySource, /tutorial-spotlight-callout/);
-    assert.match(entrySource, /tutorial-spotlight-shield/);
+    assert.match(entrySource, /tutorial-subtle-tip/);
     assert.match(entrySource, /contextual-guidance/);
     assert.match(entrySource, /First-use guidance/);
     assert.match(entrySource, /Skip this step/);
@@ -299,6 +299,8 @@ test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
     assert.match(source, /<h2>Add a Note<\/h2>/);
+    assert.match(source, /const directType = type === 'note' \? 'note' : 'sub_checkpoint'/);
+    assert.doesNotMatch(source, /record\.type = 'note'/);
     assert.match(source, /markers\.length >= 4/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
