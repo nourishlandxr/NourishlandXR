@@ -788,7 +788,7 @@ function openInlineEditor(record, force = false) {
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${profileNote}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-edit-in-web]').addEventListener('click', () => {
-        arReturnContext = `web-marker:${record.marker.id}`;
+        arReturnContext = areaCheckpoint ? `web-totem:${record.areaId}` : `web-marker:${record.marker.id}`;
         exitArMode();
     });
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
@@ -1512,6 +1512,8 @@ function navigateAfterAr(projectId, areaId, returnContext) {
     queueMicrotask(() => {
         if (String(returnContext || '').startsWith('web-marker:')) {
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)), true);
+        } else if (String(returnContext || '').startsWith('web-totem:')) {
+            window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
         } else {

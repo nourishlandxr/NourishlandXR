@@ -2657,8 +2657,8 @@ body.ar-session-active::after {
     align-items: center;
     min-width: min(100%, 210px);
 }
-.field-guide-area-manage { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
-.field-guide-area-manage > button:last-child { min-height: 58px; padding-inline: 10px; font-size: .67rem; }
+.field-guide-fireplace-symbol { display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:linear-gradient(145deg,#f7e8d1,#ecd3b2); font-style:normal; font-size:1.15rem; box-shadow:inset 0 0 0 1px rgba(139,89,52,.14); }
+.field-guide-area-card.is-creator-area { cursor:pointer; }
 
 .field-guide-area-card > span:last-child {
     display: grid;
@@ -5036,7 +5036,21 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .area-profile-visual span { font-size: 2.2rem; }
 .area-profile-visual small,
 .totem-profile-visual strong { font-size: .67rem; letter-spacing: .12em; }
-.totem-profile-visual span { width: 42px; height: 92px; border: 2px solid rgba(67,111,91,.5); border-radius: 13px 13px 8px 8px; background: linear-gradient(155deg, rgba(255,255,255,.7), rgba(116,170,146,.35)); box-shadow: inset -8px -5px 14px rgba(42,83,67,.1), 8px 9px 18px rgba(42,83,67,.12); }
+.totem-profile-visual span { width: 42px; height: 92px; border: 2px solid color-mix(in srgb,var(--totem-color,#68c7b8),#173f37 34%); border-radius: 13px 13px 8px 8px; background: linear-gradient(155deg, color-mix(in srgb,var(--totem-color,#68c7b8),#fff 36%), var(--totem-color,#68c7b8)); box-shadow: inset -8px -5px 14px rgba(42,83,67,.1), 8px 9px 18px rgba(42,83,67,.12); }
+.totem-title-row { display:flex; align-items:center; gap:.5rem; }
+.totem-title-row h1 { margin:0; }
+.totem-title-row button { min-width:34px; min-height:34px; padding:.25rem; border-radius:50%; }
+.totem-essential-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem; align-content:center; }
+.totem-essential-controls .totem-name-editor { grid-column:1/-1; }
+.totem-essential-controls .totem-name-editor[hidden] { display:none; }
+.totem-color-control input[type="color"] { min-height:44px; padding:3px; cursor:pointer; }
+.totem-welcome-card > p { margin:0; color:#6b614f; font-size:.74rem; }
+.totem-bottom-navigation { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.totem-bottom-navigation button { min-width:0; padding-inline:.5rem; }
+.area-precise-location { display:grid; gap:.35rem; padding:.75rem .85rem; border:1px solid rgba(69,116,126,.17); border-radius:17px; background:linear-gradient(145deg,rgba(239,248,247,.9),rgba(224,239,242,.76)); }
+.area-precise-location > div { display:flex; align-items:center; justify-content:space-between; gap:.65rem; }
+.area-precise-location small { padding:.2rem .45rem; border-radius:999px; background:rgba(63,114,124,.1); color:#52727a; font-size:.62rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.area-precise-location p { margin:0; color:#5d6d6e; font-size:.74rem; }
 
 .area-vital-grid,
 .totem-vital-grid {
@@ -5155,6 +5169,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
     border-radius: 17px;
     background: rgba(255,255,252,.92);
     box-shadow: 0 6px 16px rgba(43,66,48,.05);
+    cursor: pointer;
 }
 
 .area-content-card .latest-entry-icon { grid-row: 1 / 3; }

@@ -258,7 +258,7 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
     assert.match(areaDashboardSource, /GO TO AREA · AR/);
     assert.match(areaDashboardSource, /is-totem-entry/);
-    assert.match(areaDashboardSource, /onclick="window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place in AR/);
+    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">Place in AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
 });

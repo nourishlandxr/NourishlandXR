@@ -614,7 +614,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /saveAreaCheckpoint/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /Physical QR or location code/);
-    assert.match(dashboardSource, /Attached text boxes/);
+    assert.match(dashboardSource, /Additional information balloons/);
     assert.match(dashboardSource, /GO TO AREA · AR/);
     assert.match(dashboardSource, /data-add-totem-text-box/);
     assert.match(serverSource, /'area_checkpoint'/);
@@ -718,6 +718,8 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
 
 test('Area and Totem records use compact profile cards with Totem-owned text boxes', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
+    const fieldGuideSource = read('app/screens/fieldGuide.js');
+    const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
     assert.match(dashboardSource, /area-encyclopedia-card/);
     assert.match(dashboardSource, /area-content-grid/);
@@ -731,6 +733,19 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /Relate this Totem to a real marking or QR code/);
     assert.match(dashboardSource, /target_area_id/);
     assert.match(dashboardSource, /site-map-totem-links/);
+    assert.match(dashboardSource, /Main welcome text/);
+    assert.match(dashboardSource, /areaCheckpointColor/);
+    assert.match(dashboardSource, /isPlaced \? 'VIEW IN AR' : 'PLACE IN AR'/);
+    assert.match(dashboardSource, /Back to Area/);
+    assert.match(dashboardSource, /Back to Dashboard/);
+    assert.match(dashboardSource, /Precise location/);
+    assert.match(dashboardSource, /Coming soon/);
+    assert.doesNotMatch(dashboardSource, />Open profile</);
+    assert.doesNotMatch(fieldGuideSource, /Open &amp; manage/);
+    assert.match(fieldGuideSource, /field-guide-fireplace-symbol/);
+    assert.match(arSource, /web-totem:/);
+    assert.match(arSource, /window\.renderAreaCheckpointForm/);
+    assert.match(styles, /\.totem-bottom-navigation/);
 });
 
 test('Notes stay simple and return to AR after contextual web editing', () => {
