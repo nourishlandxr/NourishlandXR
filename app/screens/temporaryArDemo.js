@@ -933,12 +933,18 @@ function createIntroNoteTexture() {
     label.width = 960;
     label.height = 600;
     const ctx = label.getContext('2d');
-    const gradient = ctx.createRadialGradient(210, 100, 20, 480, 300, 520);
-    gradient.addColorStop(0, 'rgba(61,91,65,.96)');
-    gradient.addColorStop(1, 'rgba(17,45,29,.92)');
+    const gradient = ctx.createLinearGradient(70, 30, 890, 570);
+    gradient.addColorStop(0, 'rgba(75,112,82,.88)');
+    gradient.addColorStop(.48, 'rgba(33,71,49,.86)');
+    gradient.addColorStop(1, 'rgba(12,39,28,.9)');
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.roundRect(32, 32, 896, 536, 72);
+    ctx.fill();
+    const light = ctx.createRadialGradient(190, 90, 10, 240, 150, 390);
+    light.addColorStop(0, 'rgba(255,255,255,.24)');
+    light.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = light;
     ctx.fill();
     ctx.strokeStyle = 'rgba(238,225,168,.72)';
     ctx.lineWidth = 5;
@@ -984,10 +990,10 @@ function drawIntroSpatial(view) {
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, .42, -1.78 + .28 * easedNote]),
-        1.05,
-        1.45,
-        easedNote * .88
+        introLocalPosition(introWorldAnchor, [0, .68, -1.9 + .38 * easedNote]),
+        1.5,
+        1.85,
+        easedNote * .94
     );
 }
 

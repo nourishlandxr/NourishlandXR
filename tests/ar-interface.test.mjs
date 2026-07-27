@@ -470,6 +470,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
+    assert.match(source, /\[0, \.68, -1\.9 \+ \.38 \* easedNote\]/);
+    assert.match(styles, /width: min\(88vw, 520px\)/);
+    assert.match(styles, /top: 23%/);
+    assert.match(styles, /filter:blur\(10px\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /\}, 2800\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
