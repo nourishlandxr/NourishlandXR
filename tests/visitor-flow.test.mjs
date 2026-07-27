@@ -77,7 +77,17 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /Home Base/);
     assert.match(entrySource, /Trail Entrance/);
     assert.match(entrySource, /living-map-progress/);
-    assert.match(entrySource, /escapeAttribute\(growth\.nextDescription\)/);
+    assert.match(entrySource, /growth\.starterActions\.map/);
+    assert.match(entrySource, /Why begin here\?/);
+    assert.match(entrySource, /See your knowledge come alive in the place it belongs/);
+    assert.match(source, /Add first Plant/);
+    assert.match(source, /Create first Area/);
+    assert.match(source, /Create first Totem/);
+    assert.match(source, /Create first Plant Profile/);
+    assert.match(source, /tutorial-totem/);
+    assert.match(source, /\['arMode', 'arPath'\]/);
+    assert.match(source, /\['contentMode', 'contentModes'\]/);
+    assert.match(source, /\['area', 'areas'\]/);
     assert.match(entrySource, /tutorial-task-list/);
     assert.match(entrySource, /step\.complete \? '✓' : '○'/);
     assert.match(source, /Create 2 Plant Profiles/);
@@ -320,6 +330,8 @@ test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
 test('new location asks only for core details and supported templates', () => {
     const form = fs.readFileSync(path.join(root, 'app/components/siteForm.js'), 'utf8');
     const templates = fs.readFileSync(path.join(root, 'app/templates/projectTemplates.js'), 'utf8');
+    const fieldMarker = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
+    const server = fs.readFileSync(path.join(root, 'tools/persistence-server.mjs'), 'utf8');
     const sites = fs.readFileSync(path.join(root, 'app/screens/sites.js'), 'utf8');
     const dashboard = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     assert.match(form, /Location name/);
@@ -329,6 +341,14 @@ test('new location asks only for core details and supported templates', () => {
     for (const label of ['Blank', 'Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
         assert.match(templates, new RegExp(label));
     }
+    assert.match(templates, /Inventory & Exhibitions · Non-plant/);
+    assert.match(form, /TRY NON-PLANT MODE/);
+    assert.match(form, /libraries · offices · collections · exhibitions/);
+    assert.match(fieldMarker, /content_domain: 'nonplant'/);
+    assert.match(fieldMarker, /marker_kind: 'np_marker'/);
+    assert.match(fieldMarker, /dynamic_marker: true/);
+    assert.match(server, /content_domain: data\.content_domain \|\| undefined/);
+    assert.match(server, /marker_kind: data\.marker_kind \|\| undefined/);
     assert.match(form, /templateKey = 'empty'/);
     assert.match(sites, /let selectedTemplate = 'empty'/);
     assert.ok(templates.indexOf('empty:') < templates.indexOf('food_forest:'));

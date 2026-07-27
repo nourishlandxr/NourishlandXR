@@ -426,9 +426,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
-    assert.match(source, /tryit-intro-honeycombs/);
-    assert.match(source, /Welcome to Nourishland XR/);
-    assert.match(source, /A web of knowledge in your space/);
+    assert.doesNotMatch(source, /tryit-spatial-honeycombs/);
+    assert.match(source, /NOURISHLANDXR/);
+    assert.match(source, /A web of living knowledge…/);
+    assert.match(source, /introTaglineVisible = false/);
+    assert.match(source, /data-tryit-spatial-tagline/);
+    assert.match(source, /Imagine knowledge living around you/);
     assert.match(source, /Let’s bring a garden to life/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
@@ -442,6 +445,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /runKnowledgeTour/);
     assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
+    assert.match(source, /function drawIntroSpatial\(view\)/);
+    assert.match(source, /introLocalPosition\(introWorldAnchor/);
+    assert.match(source, /introNarrationTimer = setTimeout/);
+    assert.match(source, /\}, 2800\)/);
+    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
+    assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
     assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);

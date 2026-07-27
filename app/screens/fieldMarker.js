@@ -14,12 +14,13 @@ let plantSearchScope = 'local';
 let globalPlantResults = [];
 let selectedGlobalPlant = null;
 let globalSearchTimer = null;
+let nonPlantMode = false;
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function draw() {
     const plant = markerType === 'plant';
-    const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? 'Checkpoint' : 'Note';
+    const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
     const areaOptions = places.filter(place => place.name !== 'Unassigned').map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
     app.innerHTML = `
         <div class="screen">
@@ -59,7 +60,8 @@ function draw() {
 export async function renderFieldMarker(target, defaults = null) {
     app = target || app;
     if (!app) return;
-    plantProfiles = (await loadPlantLibrary(true)).plants || [];
+    nonPlantMode = defaults?.nonPlantMode === true;
+    plantProfiles = nonPlantMode ? [] : (await loadPlantLibrary(true)).plants || [];
     plantSearchScope = 'local';
     globalPlantResults = [];
     selectedGlobalPlant = null;
@@ -157,7 +159,7 @@ export async function saveFieldMarker(event) {
     event?.preventDefault();
     const error = document.getElementById('fieldError');
     const type = markerType;
-    const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: 'Untitled marker' };
+    const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: nonPlantMode ? 'Untitled dynamic marker' : 'Untitled marker' };
     const name = document.getElementById('fieldName').value.trim() || defaults[type];
     const plantId = plantSearchScope === 'local' ? (document.getElementById('fieldPlantProfile')?.value || '') : '';
 
@@ -183,7 +185,13 @@ export async function saveFieldMarker(event) {
                 sourceUrl: selectedGlobalPlant?.sourceUrl || '',
                 visibility
             })).marker
-            : await createPlaceMarker(selected.project, selected.site, place.id, { name, type, description: '', visibility });
+            : await createPlaceMarker(selected.project, selected.site, place.id, {
+                name,
+                type,
+                description: '',
+                visibility,
+                ...(nonPlantMode && type === 'sub_checkpoint' ? { content_domain: 'nonplant', marker_kind: 'np_marker', dynamic_marker: true } : {})
+            });
         recordTutorialEvent(selected.project, 'first_item_created');
         if (placementMode === 'without-ar') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
         if (placementMode === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));

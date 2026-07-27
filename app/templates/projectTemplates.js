@@ -6,5 +6,10 @@ export const projectTemplates = {
     home_garden: { label: 'Home Garden', sites: ['Front Garden', 'Back Garden', 'Growing Areas'] },
     kitchen_garden: { label: 'Kitchen Garden', sites: ['Vegetable Beds', 'Herbs', 'Compost Area'] },
     plant_nursery: { label: 'Plant Nursery', sites: ['Retail Area', 'Propagation Area', 'Stock Area', 'Dispatch Area'] },
-    stock_inventory: { label: 'Stock Inventory', sites: ['Stock Area', 'Storage', 'Dispatch Area'] }
+    stock_inventory: { label: 'Stock Inventory', sites: ['Stock Area', 'Storage', 'Dispatch Area'] },
+    inventory_exhibition: {
+        label: 'Inventory & Exhibitions · Non-plant',
+        mode: 'nonplant',
+        sites: ['Main Collection', 'Storage', 'Exhibition Areas']
+    }
 };

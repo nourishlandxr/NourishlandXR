@@ -336,6 +336,7 @@ window.openFieldTestExplorer = (url) => { window.location.href = url; };
 window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
 window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false, preferredAreaId = '') => {
     const decodedProjectId = decodeURIComponent(projectId);
+    const project = (await loadProjects().catch(() => [])).find(item => item.id === decodedProjectId);
     let sites = await loadProjectSites(decodedProjectId);
     let site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
     const areas = site ? await loadSitePlaces(decodedProjectId, site.id) : [];
@@ -346,7 +347,7 @@ window.renderLocationFieldMarker = async (projectId, type, placementMode = 'with
     }
     const decodedAreaId = preferredAreaId ? decodeURIComponent(preferredAreaId) : '';
     const selectedArea = areas.some(area => area.id === decodedAreaId) ? decodedAreaId : allowUnassigned ? '__unassigned__' : '';
-    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: selectedArea, type, placementMode, dashboardProjectId: decodedProjectId });
+    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: selectedArea, type, placementMode, dashboardProjectId: decodedProjectId, nonPlantMode: project?.template === 'inventory_exhibition' });
 };
 window.renderPlaceForLocation = async (projectId) => {
     const decodedProjectId = decodeURIComponent(projectId);

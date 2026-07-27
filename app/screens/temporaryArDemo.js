@@ -30,6 +30,12 @@ let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
 let knowledgeTourTimer = null;
+let introNarrationTimer = null;
+let introSceneStartedAt = 0;
+let introSceneActive = true;
+let introWorldAnchor = null;
+let introNoteTexture = null;
+let introTaglineVisible = true;
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -86,9 +92,17 @@ function clearSessionState() {
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(knowledgeTourTimer);
+    clearTimeout(introNarrationTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
     knowledgeTourTimer = null;
+    introNarrationTimer = null;
+    introSceneStartedAt = 0;
+    introSceneActive = true;
+    introWorldAnchor = null;
+    if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+    introNoteTexture = null;
+    introTaglineVisible = true;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -189,10 +203,6 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         const choice = event.target.closest('[data-demo-choice]')?.dataset.demoChoice;
         if (choice) onClick(choice);
     };
-}
-
-function setIntroDecorations(visible) {
-    appRoot?.querySelector('[data-tryit-intro]')?.toggleAttribute('hidden', !visible);
 }
 
 function runKnowledgeTour(record, onComplete) {
@@ -723,7 +733,9 @@ function placeMarker() {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-knowledge-intro" data-tryit-intro aria-hidden="true"><div class="tryit-intro-honeycombs"><span>PLANT</span><span>ORIGIN</span><span>GROWTH</span><span>PLACE</span><span>STORY</span><span>USES</span><span>ECOLOGY</span></div><div class="tryit-welcome-note"><small>WELCOME TO</small><strong>Nourishland XR</strong><span>A web of living knowledge, connected to place.</span></div></div><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite"></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">Welcome to Nourishland XR.</p><div data-tryit-sim-markers></div></div></div>`;
+    introSceneStartedAt = performance.now();
+    introSceneActive = true;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro aria-hidden="true"><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-exit" type="button" data-tryit-exit>Finish demo</button><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div></div></div>`;
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
@@ -736,15 +748,22 @@ function renderInterface(simulated) {
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
-    showGuidedChoice('<h2>A web of knowledge in your space</h2><p>Honeycombs can gather the stories, science, uses, and living relationships of a place—then reveal them exactly where they belong.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
-        if (choice !== 'continue') return;
-        showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Every item can be grabbed again using the hand beneath it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
-            if (nextChoice === 'continue') {
-                setIntroDecorations(false);
-                armDemoPlacement('plant');
-            }
+    clearTimeout(introNarrationTimer);
+    introNarrationTimer = setTimeout(() => {
+        showGuidedChoice('<h2>Imagine knowledge living around you</h2><p>Imagine stories, science, uses, and living relationships appearing exactly where they belong in the space around you.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
+            if (choice !== 'continue') return;
+            introTaglineVisible = false;
+            const tagline = appRoot.querySelector('[data-tryit-spatial-tagline]');
+            tagline?.classList.add('is-leaving');
+            if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+            introNoteTexture = null;
+            showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Every item can be grabbed again using the hand beneath it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
+                if (nextChoice === 'continue') {
+                    armDemoPlacement('plant');
+                }
+            });
         });
-    });
+    }, 2800);
 }
 
 function multiply(a, b) {
@@ -884,6 +903,69 @@ function canvasTexture(label) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return texture;
+}
+
+function createIntroNoteTexture() {
+    const label = document.createElement('canvas');
+    label.width = 960;
+    label.height = 600;
+    const ctx = label.getContext('2d');
+    const gradient = ctx.createRadialGradient(210, 100, 20, 480, 300, 520);
+    gradient.addColorStop(0, 'rgba(61,91,65,.96)');
+    gradient.addColorStop(1, 'rgba(17,45,29,.92)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(32, 32, 896, 536, 72);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(238,225,168,.72)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(220,239,200,.82)';
+    ctx.font = '800 30px system-ui, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.font = '750 72px system-ui, sans-serif';
+    ctx.fillText('NOURISHLANDXR', 480, introTaglineVisible ? 282 : 318);
+    if (introTaglineVisible) {
+        ctx.fillStyle = 'rgba(255,255,255,.76)';
+        ctx.font = '32px system-ui, sans-serif';
+        ctx.fillText('A web of living knowledge…', 480, 362);
+    }
+    return canvasTexture(label);
+}
+
+function introLocalPosition(matrix, [x, y, z]) {
+    return {
+        x: matrix[12] + matrix[0] * x + matrix[4] * y + matrix[8] * z,
+        y: matrix[13] + matrix[1] * x + matrix[5] * y + matrix[9] * z,
+        z: matrix[14] + matrix[2] * x + matrix[6] * y + matrix[10] * z
+    };
+}
+
+function drawIntroSpatial(view) {
+    if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
+    introWorldAnchor ||= Float32Array.from(viewerMatrix);
+    introNoteTexture ||= createIntroNoteTexture();
+    const elapsed = performance.now() - introSceneStartedAt;
+    const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
+        const model = billboardMatrix(position, scaleX, scaleY);
+        const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
+        gl.uniform1f(gl.getUniformLocation(program, 'opacity'), opacity);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    };
+    const noteProgress = Math.min(1, Math.max(0, (elapsed - 300) / 1800));
+    const easedNote = 1 - Math.pow(1 - noteProgress, 3);
+    drawTexture(
+        introNoteTexture,
+        introLocalPosition(introWorldAnchor, [0, .42, -1.78 + .28 * easedNote]),
+        1.05,
+        1.45,
+        easedNote * .88
+    );
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -1080,6 +1162,7 @@ function drawMarker(view) {
     const p = gl.getAttribLocation(program, 'p'); const uv = gl.getAttribLocation(program, 'uv');
     gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p, 3, gl.FLOAT, false, 20, 0);
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
+    drawIntroSpatial(view);
     markers.forEach(record => {
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;

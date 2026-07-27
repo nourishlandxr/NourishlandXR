@@ -17,7 +17,7 @@ function contextualGuidance(guidance, target) {
 }
 
 function tutorialSpotlight(guidance) {
-    if (!guidance || !['dashboardWelcome', 'arMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
+    if (!guidance || !['dashboardWelcome', 'arMode', 'contentMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
     return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
         <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
             <span class="guidance-stage">First steps</span>
@@ -66,14 +66,29 @@ export function renderProjectEntry(config) {
         <div class="tutorial-task-list" role="list" aria-label="Getting started tasks">
             ${growth.steps.map(step => `<span class="${step.complete ? 'is-complete' : ''}" role="listitem"><i aria-hidden="true">${step.complete ? '✓' : '○'}</i><strong>${escapeAttribute(step.label)}</strong>${step.progress ? `<small>${escapeAttribute(step.progress)}</small>` : ''}</span>`).join('')}
         </div>
-        <div class="living-map-next"><span>${escapeAttribute(growth.nextDescription)}</span><button class="primary" type="button" onclick="${growth.nextAction}">${escapeAttribute(growth.nextLabel)}</button></div>
+        <div class="tutorial-purpose"><strong>Why begin here?</strong><p>Spatial knowledge becomes useful when information is attached to a real object or place. These four small actions show the complete idea—identify something, organise its place, give the place a Totem, then let its information grow.</p></div>
+        <div class="tutorial-quick-starts${config.guidance?.target === 'quickStarts' ? ' tutorial-spotlight-target' : ''}" aria-label="Tutorial quick starts">
+            ${growth.starterActions.map(action => `<button type="button" onclick="${action.action}"><span aria-hidden="true">${action.icon}</span><strong>${escapeAttribute(action.label)}</strong><small>${escapeAttribute(action.description)}</small></button>`).join('')}
+        </div>
     </section>` : '';
-    const spotlightTarget = ['arMode', 'startingPoint', 'area', 'quickAccess'].includes(config.guidance?.feature)
-            ? 'quickAccess'
-            : '';
+    const spotlightTarget = config.guidance?.target || '';
 
     // Quiet management tools displayed below the primary AR path.
-    const contentSections = `
+    const contentSections = config.nonPlantMode ? `
+        <section class="content-mode-section">
+            <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
+                <span class="content-mode-icon" aria-hidden="true">▦</span>
+                <div><strong>Collection Library</strong><span>Browse Dynamic Markers, records and attached information.</span></div>
+            </button>
+            <button class="content-mode-card" type="button" onclick="${config.mapAction}">
+                <span class="content-mode-icon" aria-hidden="true">⌕</span>
+                <div><strong>Location Map</strong><span>See rooms, zones, Totems and placed objects.</span></div>
+            </button>
+            <button class="content-mode-card" type="button" onclick="${config.storiesAction}">
+                <span class="content-mode-icon" aria-hidden="true">⚑</span>
+                <div><strong>Stories &amp; Exhibitions</strong><span>Manage interpretation, provenance and guided experiences.</span></div>
+            </button>
+        </section>` : `
         <section class="content-mode-section">
             <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
                 <span class="content-mode-icon" aria-hidden="true">🌿</span>
@@ -89,7 +104,7 @@ export function renderProjectEntry(config) {
             </button>
         </section>`;
 
-    return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
+    return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
             <h1>${config.locationName}</h1>
             <span class="dashboard-identity">Dashboard</span>
@@ -98,33 +113,33 @@ export function renderProjectEntry(config) {
 
         ${growthJourneyHtml}
 
-        <section class="dashboard-ar-path${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
+        <section class="dashboard-ar-path${spotlightTarget === 'arPath' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
             <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
                 <strong id="openArTitle">OPEN AR</strong>
-                <small>Place or update Markers on site.</small>
+                <small>See your knowledge come alive in the place it belongs.</small>
             </button>
             <div class="dashboard-vital-actions">
                 ${config.homeConfigured ? `<button class="dashboard-spatial-home" type="button" onclick="${config.homeAction}"><b aria-hidden="true">◊</b><strong>${config.homeLabel}</strong></button>` : ''}
             </div>
         </section>
 
-        ${contentSections}
+        <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>
 
         <section class="project-search-section" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">
-                <div><h2 id="projectSearchTitle">Search</h2><p>Find an Area, Plant, Note, checkpoint or saved information.</p></div>
+                <div><h2 id="projectSearchTitle">Search</h2><p>${config.nonPlantMode ? 'Find a Location, Dynamic Marker, Totem, Note or collection record.' : 'Find an Area, Plant, Note, checkpoint or saved information.'}</p></div>
             </div>
             <div class="project-search-box">
                 <span aria-hidden="true">⌕</span>
-                <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="Search Areas, Plants, Notes and information…" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
+                <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="${config.nonPlantMode ? 'Search Locations, Dynamic Markers, Totems and records…' : 'Search Areas, Plants, Notes and information…'}" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
             </div>
             <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Type to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
             <div id="projectSearchResults" class="project-search-results">${searchResultsHtml}</div>
-            <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
+            <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a ${config.nonPlantMode ? 'Marker, Location, Totem or record description' : 'Plant name, Area, Note text or description'}.</p>
         </section>
 
-        <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
+        <section class="project-areas-section collapsed-areas${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
             <div class="section-heading-row areas-heading-row">
                 <button class="areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
                     <h2 id="projectAreasTitle">Areas</h2>

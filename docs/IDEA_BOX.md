@@ -16,7 +16,8 @@
 - Plant and Totem profile pages offer one blue action to load that single element for focused AR viewing or editing.
 - Area Totems are framed translucent rectangles with soft attached information balloons edited in Web Mode.
 - Notes use an organic translucent plaque/balloon form rather than an opaque flat panel.
-- Try It Now introduces a web of decorative knowledge honeycombs, then demonstrates Lemon Myrtle, Moringa Tree, a Note and a Totem with three information examples.
+- Try It Now begins its restrained spatial identity panel with `NOURISHLANDXR` and “A web of living knowledge…”. The tagline disappears after the first introduction while `NOURISHLANDXR` remains throughout the experience.
+- The introductory decorative honeycomb web is removed. Honeycombs appear only when the programmed Plant Profile experience needs them.
 
 ## V0.8513 — Persistent spatial tools
 
@@ -300,6 +301,8 @@ Before promoting an idea into the release plan, ask:
 - Hold movement is centre-aim based: hold an element, move the view, and release it at the pointer.
 - The beginner project journey uses five literal tasks: add one Area, five Plants, two Plant Profiles, a Home or Entrance, and one Note. It is hidden when advanced controls are enabled or the tutorial is switched off.
 - The dashboard tutorial also teaches two Plant Profile upgrades and removes its entire progress section once every tutorial task is complete.
+- A fresh dashboard explains why spatial knowledge matters and offers four equal temporary starts: first Plant, first Area, first Totem and first Plant Profile. Guidance moves through Header, AR, Web tools, Areas and the quick starts instead of repeatedly framing one section.
+- Inventory & Exhibitions is a separate neutral-grey non-plant project mode for offices, libraries, assets, collections and displays. It creates database records as `np_marker`-kind Dynamic Markers (`content_domain: nonplant`) while retaining Locations, Notes and Totems; plant-library discovery is not part of this mode.
 - Project creation offers “Include guided tutorial” separately from “Show advanced controls.”
 - Plants may be saved as Not placed without an Area; Area creation has a compatibility fallback for older persistence services.
 - Organizer Folder and Home & Entrances live under Stories & Checkpoints rather than general dashboard settings.

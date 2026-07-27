@@ -375,16 +375,19 @@ const GUIDANCE_EVENTS = {
 };
 const forcedGuidanceFeatures = new Map();
 
-function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProject }) {
+function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProject, nonPlantMode = false }) {
     if (!isProjectTutorialEnabled(projectId)) return null;
     const candidates = [
         freshProject ? ['dashboardWelcome', 'header'] : null,
-        !hasArea ? ['area', 'quickAccess'] : null,
-        ['quickAccess', 'quickAccess']
+        ['arMode', 'arPath'],
+        ['contentMode', 'contentModes'],
+        ['area', 'areas'],
+        ['quickAccess', 'quickStarts']
     ].filter(Boolean);
     const forcedFeature = forcedGuidanceFeatures.get(projectId);
+    const forcedTargets = { arMode: 'arPath', contentMode: 'contentModes', area: 'areas', quickAccess: 'quickStarts' };
     const selected = forcedFeature
-        ? [forcedFeature, 'workMode']
+        ? [forcedFeature, forcedTargets[forcedFeature] || 'header']
         : candidates.find(([feature]) => getTutorialStage(projectId, feature) !== 'understood');
     forcedGuidanceFeatures.delete(projectId);
     if (!selected) return null;
@@ -393,28 +396,34 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
     const content = {
         dashboardWelcome: {
             title: 'WELCOME TO YOUR LIVING SPACE',
-            full: 'This is your Dashboard: the calm home for creating a path of information through a real place. In Web Mode it acts as your database, notebook and organiser—collect Plants, Notes, Areas and stories here, then position them when you are ready.',
+            full: 'This new technology gives information a place in the real world. Your Dashboard is where a garden, collection or exhibition becomes understandable: identify what matters, organise where it belongs, and reveal its knowledge exactly where people encounter it.',
             short: 'Your Dashboard is the Web Mode home for organising knowledge about this living place.',
             actionLabel: '',
             action: ''
         },
         area: {
             title: 'An Area Totem holds a place together',
-            full: 'A translucent Totem marks one garden bed, grove or learning zone. The information and Markers belonging to that Area can gather naturally around it.',
+            full: nonPlantMode
+                ? 'A framed Totem marks one room, collection zone or exhibition. Its Dynamic Markers, records and guidance can gather naturally around it.'
+                : 'A translucent Totem marks one garden bed, grove or learning zone. The information and Markers belonging to that Area can gather naturally around it.',
             short: 'Use an Area Totem to give one part of the landscape its own identity.',
             actionLabel: hasArea ? 'View Areas' : 'Create Area',
             action: hasArea ? `window.openCreatorContentMode('${encoded(projectId)}')` : `window.renderProjectAreaForm('${encoded(projectId)}', 'dashboard')`
         },
         quickAccess: {
-            title: 'Place your first Marker',
-            full: 'Open AR and tap a surface to place one Marker. Then choose whether it represents a Plant, a Note or another point of interest. You can add details later.',
-            short: 'Place one Marker first. Give it a purpose when you are ready.',
+            title: 'Four small ways to understand the system',
+            full: nonPlantMode
+                ? 'Try any pathway: a Dynamic Marker identifies an object, a Location organises its place, a Totem introduces that Location, and a Note adds provenance, instructions or interpretation.'
+                : 'Try any pathway: a Plant identifies a living object, an Area organises a place, a Totem introduces that Area, and a Plant Profile turns a simple Marker into a living library of knowledge.',
+            short: 'Use these four pathways whenever you want to practise the foundations.',
             actionLabel: '',
             action: ''
         },
         arMode: {
             title: 'Now meet AR Mode',
-            full: 'AR Mode lets you experiment with the same information in spatial form. Place a simple Marker first, then decide whether it becomes a Plant, Note or another element. Find the guide below whenever you need help—and enjoy exploring your living space.',
+            full: nonPlantMode
+                ? 'AR Mode lets you experience collection information in spatial form. Place a Dynamic Marker beside an object, exhibit or asset, then connect the record people need at that exact place.'
+                : 'AR Mode lets you experiment with the same information in spatial form. Place a simple Marker first, then decide whether it becomes a Plant, Note or another element. Find the guide below whenever you need help—and enjoy exploring your living space.',
             short: 'Use AR Mode to place and explore the same knowledge in spatial form.',
             actionLabel: 'Create your first Marker',
             action: `window.openCreatorArMode('${encoded(projectId)}')`
@@ -700,6 +709,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project, site, places, entries, startingPoint } = await projectContent(projectId);
+        const nonPlantMode = project.template === 'inventory_exhibition';
         const areas = places.filter(place => place.name !== 'Unassigned');
         const hasArea = areas.length > 0;
         const placedEntries = await entriesWithPlacement(project, site, entries);
@@ -724,7 +734,13 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const plantProfileCount = profiledPlants.length;
         const nextPlantWithoutProfile = plantProfiles.find(({ entry, profile }) => !isPlantProfileUpgraded(entry.marker, profile))?.entry || null;
         const noteCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'note').length;
-        const growthSteps = [
+        const dynamicMarkerCount = projectEntries.filter(entry => effectiveMarkerType(entry.marker) === 'sub_checkpoint').length;
+        const growthSteps = nonPlantMode ? [
+            { label: 'Add 1 Location Area', complete: hasArea },
+            { label: 'Add 5 Dynamic Markers', complete: dynamicMarkerCount >= 5, progress: `${Math.min(dynamicMarkerCount, 5)}/5` },
+            { label: 'Create 1 Totem', complete: placedTotemAreaIds.size > 0 },
+            { label: 'Add 1 Information Note', complete: noteCount >= 1 }
+        ] : [
             { label: 'Add 1 Area', complete: hasArea },
             { label: 'Add 5 Plants', complete: plantCount >= 5, progress: `${Math.min(plantCount, 5)}/5` },
             { label: 'Create 2 Plant Profiles', complete: plantProfileCount >= 2, progress: `${Math.min(plantProfileCount, 2)}/2` },
@@ -733,7 +749,17 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         ];
         const growthCompleted = growthSteps.filter(step => step.complete).length;
         const firstArea = areas[0];
-        const growthNext = !hasArea
+        const growthNext = nonPlantMode
+            ? !hasArea
+                ? { label: 'Create your first Location', description: 'Define one room, shelf, zone or exhibition space.', action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')` }
+                : dynamicMarkerCount < 5
+                    ? { label: 'Add a Dynamic Marker', description: `${5 - dynamicMarkerCount} Marker${5 - dynamicMarkerCount === 1 ? '' : 's'} remaining.`, action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'sub_checkpoint', 'without-ar', true)` }
+                    : placedTotemAreaIds.size < 1
+                        ? { label: 'Create a Totem', description: 'Give the collection a spatial information centre.', action: `window.renderAreaCheckpointForm('${encoded(project.id)}', '${encoded(firstArea.id)}')` }
+                        : noteCount < 1
+                            ? { label: 'Add an Information Note', description: 'Attach useful context to this collection.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)` }
+                            : { label: 'Tutorial complete', description: 'Your spatial collection is ready.', action: `window.startArMode('${encoded(project.id)}')` }
+            : !hasArea
             ? {
                 label: 'Create your first Area',
                 description: 'Begin with one meaningful section of the landscape.',
@@ -782,9 +808,44 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             nextLabel: growthNext.label,
             nextDescription: growthNext.description,
             nextAction: growthNext.action,
+            starterActions: nonPlantMode ? [
+                { icon: '◆', label: 'Add Dynamic Marker', description: 'Identify an object, asset or exhibit.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'sub_checkpoint', 'without-ar', true)` },
+                { icon: '▧', label: 'Create first Location', description: 'Organise a room, shelf, zone or display.', action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')` },
+                { icon: '⌖', label: 'Create first Totem', description: 'Give the Location an information centre.', action: firstArea ? `window.renderAreaCheckpointForm('${encoded(project.id)}', '${encoded(firstArea.id)}')` : `window.renderProjectAreaForm('${encoded(project.id)}', 'tutorial-totem')` },
+                { icon: '✎', label: 'Add Information Note', description: 'Attach instructions, provenance or a story.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)` }
+            ] : [
+                {
+                    icon: '🌱',
+                    label: 'Add first Plant',
+                    description: 'Identify one living thing and give it a Marker.',
+                    action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`
+                },
+                {
+                    icon: '▧',
+                    label: 'Create first Area',
+                    description: 'Organise one meaningful part of the real place.',
+                    action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`
+                },
+                {
+                    icon: '⌖',
+                    label: 'Create first Totem',
+                    description: 'Give an Area a welcoming information centre.',
+                    action: firstArea
+                        ? `window.renderAreaCheckpointForm('${encoded(project.id)}', '${encoded(firstArea.id)}')`
+                        : `window.renderProjectAreaForm('${encoded(project.id)}', 'tutorial-totem')`
+                },
+                {
+                    icon: '⬡',
+                    label: 'Create first Plant Profile',
+                    description: 'Turn a Plant Marker into a living knowledge library.',
+                    action: nextPlantWithoutProfile
+                        ? `window.openProjectEntry('${encoded(project.id)}','${encoded(nextPlantWithoutProfile.marker.id)}')`
+                        : `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`
+                }
+            ],
             optionalFeature: null
         };
-        const guidance = project.expertMode === true ? null : dashboardGuidance(project.id, { hasArea, startingConfigured: Boolean(startingPoint), freshProject: !hasArea && projectEntries.length === 0 });
+        const guidance = project.expertMode === true ? null : dashboardGuidance(project.id, { hasArea, startingConfigured: Boolean(startingPoint), freshProject: !hasArea && projectEntries.length === 0, nonPlantMode });
         const latestDate = [
             ...projectEntries.map(entry => entry.marker.modified || entry.marker.created),
             ...areas.map(area => area.modified || area.created)
@@ -813,6 +874,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const searchItems = await buildProjectSearchItems(project, site, areas, entries);
         app.innerHTML = renderProjectEntry({
             locationId: escapeHtml(project.id),
+            nonPlantMode,
             areas: areaLinks,
             searchItems,
             locationName: escapeHtml(project.name),
@@ -838,7 +900,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
             createQuickPlantAction: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`,
             guidance,
-            fieldGuideAction: `window.renderFieldGuide('${encoded(project.id)}', true)`,
+            fieldGuideAction: nonPlantMode
+                ? `window.renderBrowseContent('${encoded(project.id)}', true)`
+                : `window.renderFieldGuide('${encoded(project.id)}', true)`,
             mapAction: `window.renderLocationMap('${encoded(project.id)}', true)`,
             storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
@@ -853,6 +917,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         if (guidance?.stage === 'new' && guidance.introducedEvent) {
             recordTutorialEvent(project.id, guidance.introducedEvent);
         }
+        if (guidance?.target) requestAnimationFrame(() => {
+            document.querySelector('.tutorial-spotlight-target')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back</button><h1>Location unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1054,6 +1121,7 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
 
 async function continueAfterAreaCreation(app, projectId, areaId, intent = 'dashboard') {
     if (intent === 'checkpoint-quick') return renderAreaCheckpointForm(app, encoded(projectId), encoded(areaId), 'quick');
+    if (intent === 'tutorial-totem') return renderAreaCheckpointForm(app, encoded(projectId), encoded(areaId), 'tutorial');
     if (intent === 'home-base') return renderHomeBaseForm(app, encoded(projectId));
     if (['starting-point', 'trail-entrance'].includes(intent)) return renderStartingPointForm(app, encoded(projectId), encoded(areaId), 'trail-entrance');
     if (intent.startsWith('quick:')) {

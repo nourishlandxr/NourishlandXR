@@ -22,6 +22,10 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
                 ${options}
             </select>
         </div>
+        ${project ? '' : `<button class="nonplant-template-choice${selectedTemplate === 'inventory_exhibition' ? ' is-selected' : ''}" type="button" onclick="window.setProjectTemplate('inventory_exhibition')">
+            <span class="nonplant-template-icon" aria-hidden="true">NP</span>
+            <span><strong>TRY NON-PLANT MODE</strong><small>Inventory · libraries · offices · collections · exhibitions</small><em>Use neutral Dynamic Markers, Locations and Totems without plant language or plant-library search.</em></span>
+        </button>`}
 
         ${project ? '' : `<label class="tutorial-mode-toggle project-tutorial-toggle">
             <span><strong>Include guided tutorial</strong><small>Turn this off if you already know how you want to begin.</small></span>
