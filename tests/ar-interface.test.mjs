@@ -449,7 +449,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
-    assert.match(source, /label\.width = 1120/);
+    assert.match(source, /label\.width = record\.demoType === 'zone' \? 720 : 1120/);
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
@@ -543,6 +543,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-core strong \{ color: #fff;[\s\S]*font-weight: 850;/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
     assert.match(styles, /\.creator-ar-totem-bubble \{[\s\S]*color: #fff;[\s\S]*text-shadow: 0 1px 2px rgba\(0,0,0,.98\)/);
+    assert.match(source, /function renderSimulatedTotem/);
+    assert.match(source, /tryit-sim-totem-branches/);
+    assert.match(source, /function drawTotemKnowledgeTexture/);
+    assert.match(styles, /\.tryit-sim-totem-pillar/);
+    assert.match(styles, /\.tryit-sim-totem-card-5/);
     assert.match(source, /ctx\.strokeText\(cell\.item\[0\], cell\.x/);
     assert.match(source, /ctx\.strokeText\('PLANT PROFILE', center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);

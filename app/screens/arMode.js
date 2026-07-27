@@ -148,7 +148,8 @@ function creatorPlantKnowledgeMarkup(record) {
 function creatorTotemInformationMarkup(record) {
     const board = areaBoard(record.marker);
     const bubbles = board.informationBubbles.length ? board.informationBubbles : [board.introduction];
-    return `<aside class="creator-ar-totem-information" aria-label="${escapeHtml(board.title)} information">${bubbles.map((text, index) => `<span class="creator-ar-totem-bubble creator-ar-totem-bubble-${index + 1}">${escapeHtml(text)}</span>`).join('')}</aside>`;
+    const cards = [board.title, ...bubbles].filter(Boolean).slice(0, 5);
+    return `<aside class="creator-ar-totem-information" aria-label="${escapeHtml(board.title)} information"><svg class="creator-ar-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 215 C130 180 110 100 64 72"/><path d="M180 205 C205 150 224 90 274 72"/><path d="M190 228 C245 220 264 178 310 170"/><path d="M170 248 C118 256 92 300 48 304"/><path d="M190 262 C236 278 248 330 286 338"/></svg>${cards.map((text, index) => `<span class="creator-ar-totem-bubble creator-ar-totem-bubble-${index + 1}">${escapeHtml(text)}</span>`).join('')}</aside>`;
 }
 
 function setPlacementStatus(message) {

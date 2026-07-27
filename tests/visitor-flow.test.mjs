@@ -307,7 +307,9 @@ test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
     assert.doesNotMatch(source, /Inspirational plaque/);
     assert.match(source, /createBoundaryTexture/);
-    assert.match(styles, /tryit-sim-marker-zone\.is-expanded::before/);
+    assert.match(source, /function renderSimulatedTotem/);
+    assert.match(styles, /\.tryit-sim-totem-system/);
+    assert.match(styles, /\.tryit-sim-totem-branches path/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.match(source, /runKnowledgeTour/);
     assert.match(source, /navigator\.vibrate/);

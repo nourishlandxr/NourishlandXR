@@ -461,6 +461,12 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), record.demoActiveBranch)}</span>`;
 }
 
+function renderSimulatedTotem(record, index, anchor) {
+    const content = demoContentFor(record);
+    const cards = [content?.title, ...(content?.lines || [])].filter(Boolean).slice(0, 5);
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 215 C130 180 110 100 64 72"/><path d="M180 205 C205 150 224 90 274 72"/><path d="M190 228 C245 220 264 178 310 170"/><path d="M170 248 C118 256 92 300 48 304"/><path d="M190 262 C236 278 248 330 286 338"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${cards.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
+}
+
 function toggleDemoPlantProfile(record) {
     if (!record || record.demoType !== 'plant') return;
     record.demoExpanded = !record.demoExpanded;
@@ -485,6 +491,7 @@ function updateSimulatedMarkers() {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
             return renderSimulatedPlant(record, index, anchor, offset);
         }
+        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor);
         const defaultOffsets = { note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
@@ -902,11 +909,15 @@ function createSpatialKnowledgeTexture(record) {
     const content = demoContentFor(record);
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
-    label.width = 1120;
-    label.height = 720;
+    label.width = record.demoType === 'zone' ? 720 : 1120;
+    label.height = record.demoType === 'zone' ? 1120 : 720;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
         drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoActiveBranch || 'left-0');
+        return canvasTexture(label);
+    }
+    if (record.demoType === 'zone') {
+        drawTotemKnowledgeTexture(ctx, label, content);
         return canvasTexture(label);
     }
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
@@ -940,6 +951,56 @@ function createSpatialKnowledgeTexture(record) {
         drawWrappedTextureText(ctx, line.slice(split + 2), 62, rowY + 42, 990, 38, 2);
     });
     return canvasTexture(label);
+}
+
+function drawTotemKnowledgeTexture(ctx, label, content) {
+    const cards = [content.title, ...content.lines].filter(Boolean).slice(0, 5);
+    const cardLayouts = [
+        [18, 82, 220, 130],
+        [452, 46, 250, 140],
+        [478, 286, 224, 130],
+        [18, 520, 220, 136],
+        [452, 640, 250, 136]
+    ];
+    const branchEnds = [[132, 212], [574, 186], [590, 346], [130, 576], [574, 700]];
+    ctx.strokeStyle = 'rgba(221,246,238,.72)';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    branchEnds.forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.moveTo(360, 410);
+        ctx.bezierCurveTo(360 + (x - 360) * .35, 410, 360 + (x - 360) * .62, y, x, y);
+        ctx.stroke();
+    });
+    const pillar = ctx.createLinearGradient(288, 0, 432, 0);
+    pillar.addColorStop(0, 'rgba(25,77,71,.98)');
+    pillar.addColorStop(.48, 'rgba(103,211,194,.98)');
+    pillar.addColorStop(1, 'rgba(18,59,55,.98)');
+    ctx.fillStyle = pillar;
+    ctx.beginPath();
+    ctx.roundRect(290, 346, 140, 754, [30, 30, 18, 18]);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(226,255,249,.9)';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    cards.forEach((text, index) => {
+        const [x, y, width, height] = cardLayouts[index];
+        ctx.fillStyle = 'rgba(10,38,34,.88)';
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, 28);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(226,255,249,.8)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.font = `${index === 0 ? '850 27px' : '700 22px'} system-ui, sans-serif`;
+        ctx.shadowColor = 'rgba(0,0,0,.95)';
+        ctx.shadowBlur = 5;
+        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 8, width - 34, index === 0 ? 31 : 27, 3);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+    });
 }
 
 function canvasTexture(label) {
@@ -1301,8 +1362,8 @@ function drawMarker(view) {
             : compact ? record.position : { ...record.position, y: record.position.y + 0.72 };
         const model = billboardMatrix(
             displayPosition,
-            plantProfile ? 1.85 : totem ? 1.125 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
-            plantProfile ? 2.55 : totem ? 12.5 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
+            plantProfile ? 1.85 : totem ? 1.9 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
+            plantProfile ? 2.55 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
         );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
