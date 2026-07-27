@@ -986,13 +986,22 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
     ctx.stroke();
     cards.forEach((text, index) => {
         const [x, y, width, height] = cardLayouts[index];
-        ctx.fillStyle = 'rgba(10,38,34,.88)';
+        const balloonLight = ctx.createRadialGradient(x + width * .25, y + height * .18, 8, x + width * .5, y + height * .5, width * .7);
+        balloonLight.addColorStop(0, 'rgba(73,121,104,.96)');
+        balloonLight.addColorStop(.46, 'rgba(19,62,51,.94)');
+        balloonLight.addColorStop(1, 'rgba(8,35,30,.94)');
+        ctx.fillStyle = balloonLight;
         ctx.beginPath();
-        ctx.roundRect(x, y, width, height, 28);
+        ctx.roundRect(x, y, width, height, [34, 23, 37, 27]);
         ctx.fill();
         ctx.strokeStyle = 'rgba(226,255,249,.8)';
         ctx.lineWidth = 5;
         ctx.stroke();
+        const [attachmentX, attachmentY] = branchEnds[index];
+        ctx.fillStyle = 'rgba(218,250,241,.9)';
+        ctx.beginPath();
+        ctx.arc(attachmentX, attachmentY, 6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
         ctx.font = `${index === 1 ? '850 27px' : '800 24px'} system-ui, sans-serif`;

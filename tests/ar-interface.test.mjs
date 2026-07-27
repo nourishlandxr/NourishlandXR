@@ -554,6 +554,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const bubbles = \(content\?\.bubbles \|\| content\?\.lines \|\| \[\]\)\.filter\(Boolean\)\.slice\(0, 5\)/);
     assert.match(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
+    assert.match(styles, /border-radius: 32% 23% 35% 25% \/ 25% 34% 24% 37%/);
+    assert.match(styles, /\.tryit-sim-totem-card::after/);
+    assert.match(source, /ctx\.arc\(attachmentX, attachmentY, 6/);
     assert.match(source, /ctx\.strokeText\(cell\.item\[0\], cell\.x/);
     assert.match(source, /ctx\.strokeText\('PLANT PROFILE', center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
