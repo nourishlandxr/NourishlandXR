@@ -328,7 +328,7 @@ async function openUnplacedBag() {
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Organizer Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>This folder is empty. Save information here only when you want to organise or place it later.</p>'}`;
+        bag.innerHTML = `<div><strong>Unassigned Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>This folder is empty. Save information here only when you want to organise or place it later.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];
@@ -341,7 +341,7 @@ async function openUnplacedBag() {
             setPlacementStatus(`${item.marker.name} selected from your Bag. Aim the breathing circle, then tap to place it.`);
         }));
     } catch (error) {
-        bag.innerHTML = `<div><strong>Organizer Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div><p>Could not load the folder: ${escapeHtml(error.message)}</p>`;
+        bag.innerHTML = `<div><strong>Unassigned Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div><p>Could not load the folder: ${escapeHtml(error.message)}</p>`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
     }
 }
@@ -610,7 +610,7 @@ function drawSpatialMarkers(view) {
     sessionMarkers.forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
-        if (shape !== 0 && shape !== 4) return;
+        if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         const hoverVibration = record.profileHovered && hasPlantProfile(record)
@@ -630,7 +630,7 @@ function drawSpatialMarkers(view) {
         });
     });
 
-    if (readyPlacementType && latestHitMatrix) {
+    if (readyPlacementType && latestHitMatrix && !readySpecialMarker) {
         const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .07, z: latestHitMatrix[14] };
         drawSpatialOrb(gl, sphereRenderer, view, target, .07, {
             type: readyPlacementType === 'plant' ? 'plant' : 'marker',
@@ -646,7 +646,7 @@ function drawSpatialMarkers(view) {
     sessionMarkers.forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
-        if (shape === 0 || shape === 4) return;
+        if (shape === 0 || shape === 3 || shape === 4) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
@@ -1407,8 +1407,8 @@ async function quickPlace(type) {
         if (type === 'area_checkpoint') {
             setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. Your previous interaction mode is still active.`);
         } else {
-            setPlacementStatus(`${marker.name} placed. Choose its purpose.`);
-            showPlacedMarkerActions(record);
+            setPlacementStatus(`${marker.name} placed. Select it whenever you want to edit or move it.`);
+            if (!['plant', 'note'].includes(type) && !marker.special_symbol) showPlacedMarkerActions(record);
         }
     } catch (error) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
@@ -1444,7 +1444,8 @@ function createOverlay() {
           <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button class="creator-ar-add-marker" type="button" data-ar-add-marker aria-label="Add Marker"><strong>+ MARKER</strong></button>
+            <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
+            <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
             <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
@@ -1453,18 +1454,21 @@ function createOverlay() {
           </nav>
         </div>`;
 
-    overlayRoot.querySelector('[data-ar-add-marker]').addEventListener('click', () => {
+    const armDirectPlacement = type => {
         if (readyPlacementType) {
             placementArmGeneration += 1;
             readyPlacementType = '';
+            readySpecialMarker = null;
             updateReadyPlacementControl();
             setPlacementStatus('Placement cancelled.');
             return;
         }
         closeInlineEditor();
         closePlacePicker();
-        void armPlacement('sub_checkpoint');
-    });
+        void armPlacement(type);
+    };
+    overlayRoot.querySelector('[data-ar-add-plant]').addEventListener('click', () => armDirectPlacement('plant'));
+    overlayRoot.querySelector('[data-ar-add-note]').addEventListener('click', () => armDirectPlacement('note'));
     overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', () => void openSpecialMarkerPicker());
     overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
     overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));

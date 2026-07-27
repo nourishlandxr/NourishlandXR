@@ -715,7 +715,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-demo .tryit-sim-marker:is(:hover, :focus-visible, .is-drag-ready) { outline: 2px solid rgba(226,244,181,.86); outline-offset: 7px; box-shadow: 0 0 0 8px rgba(226,244,181,.1), 0 0 24px rgba(192,230,151,.36); touch-action: none; }
 .tryit-demo .tryit-sim-marker-plant:is(:hover, :focus-visible, .is-drag-ready),
 .tryit-demo .tryit-sim-marker-marker:is(:hover, :focus-visible, .is-drag-ready) { border-radius: 50%; }
-.tryit-demo .tryit-sim-marker-note:is(:hover, :focus-visible, .is-drag-ready) { border-radius: 38% 28% 34% 24% / 22% 34% 24% 38%; }
+.tryit-demo .tryit-sim-marker-note:is(:hover, :focus-visible, .is-drag-ready) { border-radius:9px; }
 .tryit-demo .tryit-sim-marker-zone:is(:hover, :focus-visible, .is-drag-ready) { border-radius: 18px; }
 @keyframes tryit-plant-profile-ready { from { transform: translate(-50%, -50%) translate(-1px, 0) scale(.99); } to { transform: translate(-50%, -50%) translate(1px, -1px) scale(1.015); } }
 .tryit-sim-plant-tether { position: fixed; left: var(--marker-x, 50%); top: calc(var(--marker-y, 50%) - 9px); z-index: 12000; width: var(--tether-length, 120px); height: 18px; transform: rotate(var(--tether-angle, -90deg)); transform-origin: 0 9px; overflow: visible; filter: drop-shadow(0 0 3px rgba(183,232,149,.20)); opacity: .9; pointer-events: none; }
@@ -753,6 +753,10 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 }
 .tryit-sim-marker-note.is-expanded { width:min(76vw,300px); min-height:96px; padding:14px 17px; border:1px solid rgba(235,240,231,.5); border-radius:19px 15px 21px 17px; background:rgba(25,31,27,.64); box-shadow:0 10px 24px rgba(0,0,0,.14); backdrop-filter:blur(8px); }
 .tryit-sim-marker-note:not(.is-expanded) { width:min(68vw,250px); min-height:72px; padding:14px 17px; border:1px solid rgba(235,240,231,.46); border-radius:19px 15px 21px 17px; background:rgba(25,31,27,.62); box-shadow:0 10px 24px rgba(0,0,0,.14); backdrop-filter:blur(8px); }
+.tryit-sim-marker-note { border-radius:9px !important; }
+.tryit-sim-marker-note::before,.tryit-sim-marker-note::after { content:""; position:absolute; width:20px; height:20px; border-color:#fff; pointer-events:none; }
+.tryit-sim-marker-note::before { right:-3px; top:-3px; border-top:5px solid; border-right:5px solid; border-radius:0 8px 0 0; }
+.tryit-sim-marker-note::after { left:-3px; bottom:-3px; border-left:5px solid; border-bottom:5px solid; border-radius:0 0 0 8px; }
 .tryit-sim-marker-zone:not(.is-expanded) { width: 92px; height: 150px; border: 2px solid rgba(187,229,245,.78); border-radius: 18px; background: linear-gradient(145deg, rgba(164,220,237,.18), rgba(20,62,74,.18)); box-shadow: inset 0 0 0 7px rgba(226,248,253,.035), 0 0 24px rgba(137,200,239,.23); backdrop-filter: blur(5px); }
 .tryit-sim-marker-note:not(.is-expanded) strong { display: block; color: #fff; font-size: 1.05rem; font-weight: 750; white-space: normal; }
 .tryit-sim-marker-area.is-expanded { border-color: rgba(137,200,239,.72); }
@@ -872,7 +876,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-note { background: linear-gradient(145deg,rgba(238,242,235,.62),rgba(91,101,94,.34)) !important; }
 .creator-ar-marker-intro_checkpoint, .creator-ar-marker-sub_checkpoint { background: radial-gradient(circle at 38% 32%, rgba(236,247,255,.78) 0 14%, rgba(82,157,211,.5) 28% 62%, rgba(29,91,139,.2) 100%) !important; }
 .creator-ar-marker-hit-target { position: fixed; display: block; box-sizing: border-box; width: 64px; height: 64px; border-radius: 50%; background: transparent !important; pointer-events: none; }
-.creator-ar-marker-hit-target-note { width: 88px; height: 72px; border-radius: 18px 13px 20px 15px; }
+.creator-ar-marker-hit-target-note { width: min(42vw, 210px); height: 102px; border: 0; border-radius: 0; background: transparent; }
 .creator-ar-marker-hit-target-intro_checkpoint,
 .creator-ar-marker-hit-target-sub_checkpoint { width: 76px; height: 94px; border-radius: 24px; }
 .creator-ar-marker-hit-target-area_checkpoint { width: 86px; height: 132px; border-radius: 16px; }
@@ -898,7 +902,11 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .creator-ar-area-board-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid rgba(137,200,239,.35); border-radius: 12px; }
 .creator-ar-area-board-editor p { margin: 0; color: rgba(255,255,255,.7); font-size: .68rem; line-height: 1.35; }
-.creator-ar-marker-hit-target-note .creator-ar-spatial-name { border-color: rgba(235,240,231,.42); border-radius:16px 12px 18px 13px; background: rgba(24,31,27,.72); }
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name { position:relative; display:grid; place-content:center; box-sizing:border-box; width:100%; min-height:100%; padding:14px 18px; border:1px solid rgba(245,248,243,.78); border-radius:9px; background:rgba(28,34,30,.7); box-shadow:0 8px 20px rgba(0,0,0,.14); text-align:center; }
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name::before,
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name::after { content:""; position:absolute; width:20px; height:20px; border-color:#fff; pointer-events:none; }
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name::before { right:-3px; top:-3px; border-top:5px solid; border-right:5px solid; border-radius:0 8px 0 0; }
+.creator-ar-marker-hit-target-note .creator-ar-spatial-name::after { left:-3px; bottom:-3px; border-left:5px solid; border-bottom:5px solid; border-radius:0 0 0 8px; }
 .creator-ar-marker-hit-target-plant .creator-ar-spatial-name { border-color: color-mix(in srgb, var(--marker-accent) 58%, transparent); }
 .creator-ar-spatial-name > small { display: none; }
 .creator-ar-marker-hit-target.has-plant-profile .creator-ar-spatial-name small { display: block; margin-top: 2px; color: rgba(220,239,149,.76); font-size: .52rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
@@ -5154,9 +5162,15 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-preparation-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
 .field-guide-preparation-grid button { display:grid; gap:.2rem; min-height:72px; padding:.7rem; border:1px solid rgba(73,111,78,.17); border-radius:15px; background:rgba(255,255,252,.9); color:#304d3a; text-align:left; }
 .field-guide-preparation-grid button span { color:#68766c; font-size:.67rem; line-height:1.35; }
-.field-guide-anchor-readiness { display:grid; grid-template-columns:38px minmax(0,1fr); gap:.65rem; align-items:center; margin-top:.65rem; padding:.65rem; border-radius:15px; background:rgba(75,130,112,.1); }
-.field-guide-anchor-readiness > span { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:#fff; color:#397964; font-size:1.2rem; }
+.field-guide-anchor-readiness { margin-top:.65rem; padding:.65rem; border-radius:15px; background:rgba(75,130,112,.1); }
+.field-guide-anchor-readiness > summary { display:grid; grid-template-columns:38px minmax(0,1fr); gap:.65rem; align-items:center; cursor:pointer; list-style:none; }
+.field-guide-anchor-readiness > summary > span { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:#fff; color:#397964; font-size:1.2rem; }
 .field-guide-anchor-readiness p { margin:.16rem 0 0; color:#637269; font-size:.68rem; line-height:1.4; }
+.field-guide-anchored-list { display:grid; gap:.4rem; margin-top:.6rem; }
+.field-guide-anchored-list button { display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%; padding:.55rem .65rem; border:1px solid rgba(65,108,84,.16); border-radius:12px; background:rgba(255,255,252,.86); text-align:left; }
+.field-guide-anchored-list button span { display:grid; gap:.1rem; }
+.field-guide-anchored-list button small { color:#66736a; font-size:.64rem; }
+.field-guide-anchored-list button b { color:#397964; font-size:.68rem; }
 .creator-ar-special-symbol { display:grid; place-items:center; position:absolute; left:50%; top:50%; width:44px; height:44px; transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.9); border-radius:50%; background:var(--marker-accent,#75a9cc); color:#fff; font-size:1.65rem; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.32); box-shadow:0 0 20px color-mix(in srgb,var(--marker-accent,#75a9cc) 72%,transparent); }
 .creator-ar-marker-hit-target.is-symbol-marker .creator-ar-spatial-name { margin-top:42px; }
 

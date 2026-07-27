@@ -499,7 +499,7 @@ function updateSimulatedMarkers() {
             return renderSimulatedPlant(record, index, anchor, offset);
         }
         if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor);
-        const defaultOffsets = { note: { x: 105, y: 75 }, zone: { x: 0, y: 0 } };
+        const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
@@ -1291,12 +1291,18 @@ function createMarkerTexture(record) {
         ctx.arc(128, 128, 78, 0, Math.PI * 2);
         ctx.stroke();
     } else if (record.type === 'note') {
-        ctx.fillStyle = 'rgba(30,35,32,.84)';
+        ctx.fillStyle = 'rgba(30,35,32,.72)';
         ctx.beginPath();
-        ctx.roundRect(8, 64, 240, 128, [22, 15, 24, 17]);
+        ctx.roundRect(12, 68, 232, 120, 10);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(235,240,231,.68)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(245,248,243,.78)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(210, 68); ctx.lineTo(237, 68); ctx.lineTo(237, 95);
+        ctx.moveTo(46, 188); ctx.lineTo(19, 188); ctx.lineTo(19, 161);
         ctx.stroke();
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 22px system-ui, sans-serif';

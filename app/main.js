@@ -424,11 +424,11 @@ window.saveProjectStartingPoint = (event, projectId, flow = '') => saveProjectSt
 window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
-window.openProjectEntry = (projectId, markerId, returnToAr = false) => {
-    const args = [projectId, markerId, returnToAr];
+window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContext = '') => {
+    const args = [projectId, markerId, returnToAr, returnContext];
     rememberCurrentView('entry', args);
     pushViewHistory('entry', args);
-    return openProjectEntry(app, projectId, markerId, returnToAr).catch(error => window.alert(error.message));
+    return openProjectEntry(app, projectId, markerId, returnToAr, returnContext).catch(error => window.alert(error.message));
 };
 window.saveProjectEntryChanges = saveProjectEntryChanges;
 window.renderFirstSteps = () => renderFirstSteps(app);

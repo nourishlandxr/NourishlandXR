@@ -1148,7 +1148,7 @@ export async function renderAddToLocation(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     const project = await projectById(projectId);
     const action = (label, description, onclick) => `<button class="content-type-row" type="button" onclick="${onclick}"><strong>${label}</strong><span>${description}</span></button>`;
-    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Add to Organizer Folder</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>Save information here only when you want to organise it or assign its physical position later.</p></div><div class="content-type-list">${action('Plant', 'Save a plant now and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`)}${action('Neutral marker', 'Save an unclassified marker for later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'sub_checkpoint', 'without-ar', true)`)}${action('Note', 'Record an observation and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)`)}</div></div>`;
+    app.innerHTML = `<div class="screen add-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderUnplacedContent('${encoded(project.id)}')">Back to Unassigned Folder</button><h1>Add to Unassigned Folder</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><div class="panel"><p>Save information here only when you want to organise it or assign its physical position later.</p></div><div class="content-type-list">${action('Plant', 'Save a Plant now and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`)}${action('Note', 'Record an observation and position it later.', `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)`)}</div></div>`;
 }
 
 export async function renderPlacementChoice(app, encodedProjectId, type) {
@@ -1184,6 +1184,8 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
                 : '';
         const returnAction = intent === 'checkpoint-quick'
             ? `window.openCheckpointQuickSetup('${encoded(project.id)}')`
+            : intent === 'field-guide'
+                ? `window.renderFieldGuide('${encoded(project.id)}', true)`
             : `window.renderProjectDashboard('${encoded(project.id)}')`;
         const nextAreaNumber = places.filter(place => place.name !== 'Unassigned').length + 1;
         const expertAreaFields = project.expertMode === true ? `<details class="area-advanced-fields"><summary>Optional Area details</summary><div class="field"><label for="projectAreaType">Area type</label><select id="projectAreaType"><option value="Outdoor Area">Outdoor Area</option><option value="Indoor Area">Indoor Area</option><option value="Bed or Plot">Bed or Plot</option><option value="Room">Room</option><option value="Enclosure">Enclosure</option><option value="Path or Route">Path or Route</option><option value="Other">Other</option></select></div><div class="field"><label for="projectAreaDescription">Short description</label><textarea id="projectAreaDescription" rows="3" placeholder="What belongs in this Area?"></textarea></div></details>` : '';
@@ -1517,7 +1519,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(place.name || 'Unassigned')}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;
         }).join('');
-        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Organizer Folder</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>This is a secondary workspace for information that still needs an Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to folder</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">The folder is empty.</p>'}</div></div>`;
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Field Guide</button><h1>Unassigned Folder</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>This is a secondary workspace for information that still needs an Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to folder</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">The folder is empty.</p>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1845,6 +1847,8 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
         const mapTotemDiagram = mapTotemLinks.length ? `<section class="site-map-totem-links"><h2>Totem links</h2>${mapTotemLinks.map(link => `<span>${escapeHtml(link.from.name)} → ${escapeHtml(link.to.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</section>` : '';
         const backAction = creator && returnContext === 'content-mode'
             ? `window.openCreatorContentMode('${encoded(project.id)}')`
+            : creator && returnContext === 'field-guide'
+                ? `window.renderFieldGuide('${encoded(project.id)}', true)`
             : creator
                 ? `window.renderProjectDashboard('${encoded(project.id)}')`
                 : `window.renderBrowseContent('${encoded(project.id)}', false)`;
@@ -2015,6 +2019,8 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
                 : '';
         const returnAction = flow === 'checkpoint-quick'
             ? `window.openCheckpointQuickSetup('${encoded(project.id)}')`
+            : flow === 'field-guide'
+                ? `window.renderFieldGuide('${encoded(project.id)}', true)`
             : `window.renderProjectDashboard('${encoded(project.id)}')`;
         const expertMode = project.expertMode === true;
         const areaField = startingPoint
@@ -2075,6 +2081,7 @@ export async function saveProjectStartingPoint(event, encodedProjectId, flow = '
         if (hasCoordinates || qrReference) await saveMarkerAnchor(projectId, context.site.id, place.id, savedMarker.id, { type: hasCoordinates ? 'gps' : 'qr', latitude: hasCoordinates ? Number(latitude) : '', longitude: hasCoordinates ? Number(longitude) : '', accuracy: accuracy === '' ? '' : Number(accuracy), qr_code: qrReference, description: data.directions });
         recordTutorialEvent(projectId, 'starting_point_configured');
         if (nextFlow === 'checkpoint-quick') await openCheckpointQuickSetup(document.getElementById('app'), encoded(projectId));
+        else if (nextFlow === 'field-guide') await window.renderFieldGuide(encoded(projectId), true);
         else await renderProjectDashboard(document.getElementById('app'), encoded(projectId));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;
@@ -2120,7 +2127,7 @@ function plantProfileEditorMarkup(entry, profile) {
     </section>`;
 }
 
-export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, returnToAr = false) {
+export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, returnToAr = false, returnContext = '') {
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
     const { project, site, places, entries } = await projectContent(projectId);
@@ -2133,6 +2140,13 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
     const returnArAction = returnToAr ? `<button class="ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">BACK TO AR</button>` : '';
     app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation">${returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
+    if (returnContext === 'field-guide') {
+        const backButton = app.querySelector('.bottom-navigation .ghost');
+        if (backButton) {
+            backButton.textContent = 'Back to Field Guide';
+            backButton.onclick = () => window.renderFieldGuide(encoded(project.id), true);
+        }
+    }
     if (plant) {
         app.querySelector('form')?.classList.add('plant-file-form');
         const headerLabel = app.querySelector('.page-header .welcome-label');

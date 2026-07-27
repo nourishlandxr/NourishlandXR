@@ -99,8 +99,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
-    assert.match(arSource, /data-ar-add-marker/);
-    assert.match(arSource, /\+ MARKER/);
+    assert.match(arSource, /data-ar-add-plant/);
+    assert.match(arSource, /data-ar-add-note/);
+    assert.doesNotMatch(arSource, /data-ar-add-marker/);
+    assert.doesNotMatch(arSource, /\+ MARKER/);
     assert.match(arSource, /data-ar-add-special/);
     assert.match(arSource, /\+ SPECIAL/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-marker/);
@@ -124,10 +126,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(styles, /\.creator-ar-view-icon/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 6);
+    assert.equal((taskbar.match(/<button/g) || []).length, 7);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width: 88px; height: 72px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width: min\(42vw, 210px\); height: 102px/);
     assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 86px; height: 132px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
     assert.match(arSource, /creator-ar-mode-pointer/);
@@ -142,7 +144,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /launchedSession\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
-    assert.match(arSource, /querySelector\('\[data-ar-add-marker\]'\)\.addEventListener\('click'/);
+    assert.match(arSource, /querySelector\('\[data-ar-add-plant\]'\)\.addEventListener\('click'/);
+    assert.match(arSource, /querySelector\('\[data-ar-add-note\]'\)\.addEventListener\('click'/);
     assert.match(arSource, /querySelector\('\[data-ar-add-special\]'\)\.addEventListener\('click'/);
     assert.match(arSource, /placementPointerMarkup/);
     assert.match(pointerSource, /creator-ar-breathing-target/);
@@ -756,7 +759,7 @@ test('Field Guide owns spatial preparation and Special Markers include wayfindin
     const arSource = read('app/screens/arMode.js');
     assert.match(fieldGuideSource, /Prepare this location/);
     assert.match(fieldGuideSource, /Spatial Plan/);
-    assert.match(fieldGuideSource, /Organizer Folder/);
+    assert.match(fieldGuideSource, /Unassigned Folder/);
     assert.match(fieldGuideSource, /records anchored/);
     assert.match(fieldGuideSource, /renderProjectAreaForm/);
     assert.doesNotMatch(projectEntrySource, />\+ CREATE AREA</);
@@ -775,8 +778,8 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     assert.match(dashboardSource, /returnToAr = false/);
     assert.match(dashboardSource, /BACK TO AR/);
     assert.match(dashboardSource, /note-record-editor/);
-    assert.match(demoSource, /rgba\(235,240,231,.68\)/);
-    assert.doesNotMatch(styles, /\.tryit-sim-marker-note::after/);
+    assert.match(demoSource, /rgba\(245,248,243,.78\)/);
+    assert.match(styles, /\.tryit-sim-marker-note::after/);
     assert.match(styles, /\.note-record-editor #projectEntryDescription/);
 });
 
