@@ -3402,10 +3402,13 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .tutorial-purpose strong { color: #315b3b; font-size: .78rem; }
 .tutorial-purpose p { color: #56675b; font-size: .75rem; line-height: 1.42; }
 .tutorial-quick-starts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-.tutorial-quick-starts button { display: grid; grid-template-rows: auto auto 1fr; align-content: start; gap: 4px; min-width: 0; min-height: 112px; padding: 11px 9px; border: 1px solid rgba(66,119,75,.22); border-radius: 14px; background: rgba(255,255,255,.68); color: #31523a; text-align: left; }
-.tutorial-quick-starts button > span { font-size: 1.15rem; }
+.tutorial-quick-starts button { display: grid; grid-template-columns: 22px minmax(0,1fr); align-content: center; gap: 2px 6px; min-width: 0; min-height: 58px; padding: 7px 8px; border: 1px solid rgba(161,70,61,.3); border-radius: 12px; background: #f7d9d2; color: #713f39; text-align: left; }
+.tutorial-quick-starts button:nth-child(2) { background: #f4dfc7; }
+.tutorial-quick-starts button:nth-child(3) { background: #efd2d8; }
+.tutorial-quick-starts button:nth-child(4) { background: #ead7e7; }
+.tutorial-quick-starts button > span { grid-row: 1 / 3; font-size: 1rem; }
 .tutorial-quick-starts button strong { font-size: .72rem; line-height: 1.2; }
-.tutorial-quick-starts button small { color: #607067; font-size: .64rem; line-height: 1.3; }
+.tutorial-quick-starts button small { color: #785a55; font-size: .6rem; line-height: 1.2; }
 @media (max-width: 620px) { .tutorial-quick-starts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .nonplant-template-choice { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 13px; align-items: center; width: 100%; margin: 15px 0; padding: 17px; border: 2px solid #747a80; border-radius: 16px; background: linear-gradient(145deg, #e4e6e8, #c8cdd1); color: #30353a; text-align: left; box-shadow: 0 8px 18px rgba(45,50,55,.13); }
 .nonplant-template-choice.is-selected { border-color: #343a40; box-shadow: 0 0 0 3px rgba(70,76,82,.16), 0 8px 18px rgba(45,50,55,.15); }
@@ -5022,6 +5025,9 @@ body.ar-dashboard-open .ar-tutorial-panel {
 
 .area-overview-card label,
 .totem-welcome-card label { color: #725b41; font-weight: 850; }
+.area-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: .7rem; }
+.area-overview-heading button { min-height: 32px; padding: .3rem .6rem; font-size: .68rem; }
+.area-overview-card > p { margin: .25rem 0; color: #4d584f; line-height: 1.55; }
 .area-overview-card textarea,
 .totem-welcome-card textarea { min-height: 66px; resize: vertical; border-color: rgba(162,119,74,.2); border-radius: 12px; background: rgba(255,255,255,.7); }
 
@@ -5037,6 +5043,32 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .totem-text-box { padding: .7rem; border: 1px solid rgba(74,110,78,.15); border-radius: 16px 22px 16px 20px; background: linear-gradient(145deg, rgba(255,255,255,.72), var(--pastel-lilac)); }
 .totem-text-box textarea { min-height: 64px; resize: vertical; background: rgba(255,255,255,.7); }
 .totem-physical-drawer .plant-drawer-fields { align-items: center; }
+.totem-relationship-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .65rem; }
+.totem-anchor-card, .totem-link-card { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: .6rem; padding: .8rem; border: 1px solid rgba(74,110,78,.16); border-radius: 18px; background: linear-gradient(145deg,#f9fcf4,var(--pastel-sky)); }
+.totem-link-card { background: linear-gradient(145deg,#fdfaf4,var(--pastel-lilac)); }
+.totem-anchor-card > span, .totem-link-card > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px; background: rgba(74,110,78,.12); }
+.totem-anchor-card p, .totem-link-card p { margin: .2rem 0 .55rem; color: #617067; font-size: .72rem; }
+.totem-link-measure { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; margin-top: .4rem; }
+.totem-existing-links { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .45rem; }
+.totem-existing-links span, .area-totem-links span, .site-map-totem-links span { padding: .3rem .5rem; border-radius: 999px; background: rgba(83,132,100,.1); color: #42604b; font-size: .67rem; }
+.area-totem-links, .site-map-totem-links { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .7rem; border-radius: 15px; background: rgba(223,239,242,.55); }
+
+.field-guide-hub { --guide-mint:#e4f1df; --guide-sky:#e2f0f2; --guide-peach:#f7e5d4; }
+.field-guide-header { background: radial-gradient(circle at 90% 10%,var(--guide-sky),transparent 30%),linear-gradient(145deg,#fbfdf5,var(--guide-mint)); }
+.field-guide-summary { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; margin-top: .7rem; }
+.field-guide-summary > span { padding: .4rem .6rem; border-radius: 12px; background: rgba(255,255,255,.7); color:#506256; font-size:.68rem; }
+.field-guide-summary > span strong { color:#31563c; font-size:.9rem; }
+.field-guide-summary .is-unassigned { background:var(--guide-peach); }
+.field-guide-add-plant { margin-left:auto; min-height:36px; padding:.4rem .7rem; }
+.field-guide-search-deck { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,.35fr); gap:.65rem; padding:.75rem; border:1px solid rgba(70,111,73,.15); border-radius:18px; background:rgba(255,255,255,.72); }
+.field-guide-section-heading { display:flex; align-items:end; justify-content:space-between; gap:.7rem; }
+.field-guide-section-heading h2,.field-guide-section-heading p { margin:0; }
+.field-guide-section-heading p { color:#68766c; font-size:.7rem; }
+.field-guide-plant-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr)); gap:.6rem; }
+.field-guide-plant-card { display:grid; grid-template-columns:34px minmax(0,1fr); min-height:78px; padding:.7rem; border-radius:17px; background:linear-gradient(145deg,#fff,var(--guide-mint)); text-align:left; }
+.field-guide-card-icon { display:grid; place-items:center; width:34px; height:34px; border-radius:12px; background:rgba(91,139,93,.13); }
+.field-guide-plant-card > span:last-child { display:grid; gap:.15rem; min-width:0; }
+.field-guide-plant-card small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#657269; font-size:.65rem; }
 
 .area-content-grid {
     display: grid;
@@ -5100,6 +5132,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
     .totem-profile-visual { min-height: 124px; }
     .area-vital-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .totem-text-box-grid { grid-template-columns: 1fr; }
+    .totem-relationship-grid, .field-guide-search-deck { grid-template-columns: 1fr; }
     .totem-editor-heading { align-items: stretch; flex-direction: column; }
     .totem-editor-heading button { align-self: start; }
 

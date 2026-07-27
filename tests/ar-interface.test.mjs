@@ -657,6 +657,9 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.doesNotMatch(dashboardSource, /id="areaInformationBoxNew"/);
     assert.match(styles, /\.area-content-grid/);
     assert.match(styles, /\.totem-text-box-grid/);
+    assert.match(dashboardSource, /Relate this Totem to a real marking or QR code/);
+    assert.match(dashboardSource, /target_area_id/);
+    assert.match(dashboardSource, /site-map-totem-links/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

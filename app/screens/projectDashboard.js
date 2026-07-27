@@ -544,6 +544,9 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const title = existing ? `Edit ${context.area.name} Totem` : `Add ${context.area.name} Totem`;
         const submitLabel = existing ? 'Save Totem changes' : 'Save Totem';
         const board = existing?.marker.area_information_board || {};
+        const linkableAreas = context.places.filter(place => place.name !== 'Unassigned' && place.id !== context.area.id);
+        const existingLinks = Array.isArray(context.area.totem_links) ? context.area.totem_links : [];
+        const linkOptions = linkableAreas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('');
         const bubbles = Array.isArray(board.information_bubbles) ? board.information_bubbles : [];
         const startingBubbles = bubbles.length ? bubbles : [''];
         const bubbleFields = startingBubbles.map((text, index) => `<div class="field totem-text-box"><label for="areaCheckpointBubble${index}">Text box ${index + 1}</label><textarea id="areaCheckpointBubble${index}" data-totem-information-box rows="2" placeholder="${index === 0 ? 'What does this Totem help people understand?' : 'Add another useful idea, story or instruction.'}">${escapeHtml(text)}</textarea></div>`).join('');
@@ -558,7 +561,10 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             </section>
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Welcome text</label><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
             <section class="totem-information-editor" aria-labelledby="totemTextBoxesTitle"><div class="totem-editor-heading"><div><h2 id="totemTextBoxesTitle">Attached text boxes</h2><p>These soft information bubbles appear with the Totem in spatial view.</p></div><button type="button" data-add-totem-text-box><span aria-hidden="true">+</span> Add text box</button></div><div class="totem-text-box-grid" data-totem-text-boxes>${bubbleFields}</div></section>
-            <details class="plant-info-drawer totem-physical-drawer"><summary><span aria-hidden="true">⌖</span><strong>Physical reference</strong><small>Optional QR or installed location code</small></summary><div class="plant-drawer-fields"><div class="field"><label for="areaCheckpointCode">Physical QR or location code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Optional code installed beside this Totem" /></div><p class="meta">This can lock the Totem and nearby elements back onto the same real-world point.</p></div></details>
+            <section class="totem-relationship-grid">
+                <div class="totem-anchor-card"><span aria-hidden="true">⌖</span><div><strong>ANCHOR</strong><p>Relate this Totem to a real marking or QR code.</p><label for="areaCheckpointCode">Marking / QR code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Optional physical reference" /></div></div>
+                <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem to another Totem in the location.</p>${linkOptions ? `<label for="areaCheckpointLinkTarget">Link to Totem</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area Totem</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" /></div>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}</span>`).join('')}</div></div></div>
+            </section>
             <p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button class="primary" type="submit">${submitLabel}</button></div>
         </form><nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Return to Area</button></nav></div>`;
         app.querySelector('[data-add-totem-text-box]')?.addEventListener('click', () => {
@@ -593,6 +599,9 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const qrCode = document.getElementById('areaCheckpointCode').value.trim();
         const introduction = document.getElementById('areaCheckpointIntroduction').value.trim();
         const informationBubbles = [...document.querySelectorAll('[data-totem-information-box]')].map(field => field.value.trim()).filter(Boolean);
+        const linkTarget = document.getElementById('areaCheckpointLinkTarget')?.value || '';
+        const linkSteps = document.getElementById('areaCheckpointLinkSteps')?.value || '';
+        const linkDistance = document.getElementById('areaCheckpointLinkDistance')?.value || '';
         if (!name) throw new Error('Checkpoint name is required.');
         const existing = context.areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
         if (status) status.textContent = 'Saving Area Marker…';
@@ -626,6 +635,11 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
             qr_code: qrCode,
             description: `Physical Area Marker for ${context.area.name}.`
         });
+        if (linkTarget) {
+            const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
+            links.push({ target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) });
+            await updateSitePlace(projectId, context.site.id, areaId, { totem_links: links });
+        }
         checkpointSetupFlows.delete(flowKey);
         if (nextFlow === 'quick') await renderCheckpointPlacementChoice(document.getElementById('app'), encoded(projectId), encoded(areaId), encoded(savedMarker.id));
         else await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
@@ -1272,6 +1286,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </div>` : '';
         const plantCount = areaEntries.filter(entry => entry.marker.type === 'plant').length;
         const totemCount = areaEntries.filter(entry => entry.marker.type === 'area_checkpoint' || entry.marker.semantic_type === 'area_checkpoint').length;
+        const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
@@ -1289,12 +1304,13 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                         <div><small>LOCATION</small><strong>${anchor ? 'GPS assigned' : 'Spatial Area'}</strong></div>
                     </div>
                 </div>
-                <form class="area-information-form" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
-                    <div class="area-overview-card"><label for="areaDescription"><span aria-hidden="true">✦</span> About this Area</label><textarea id="areaDescription" rows="3" placeholder="Describe what this Area is and why it matters.">${escapeHtml(context.area.description || '')}</textarea></div>
+                <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
+                    <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong><button type="button" data-edit-area-description>${context.area.description ? 'Edit' : 'Add description'}</button></div><p data-area-description-reading>${escapeHtml(context.area.description || 'No description has been added yet.')}</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(context.area.description || '')}</textarea></div>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
-                    <button type="submit">Save Area overview</button>
+                    <button type="submit" data-save-area-description hidden>Save description</button>
                 </form>
                 <p class="area-location-status ${anchor ? 'is-assigned' : 'is-unassigned'}">${context.project.expertMode === true ? locationStatus : 'Precise GPS anchoring is optional and stays out of the everyday flow.'}</p>
+                ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
@@ -1310,6 +1326,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <p id="deleteProjectAreaStatus" class="meta"></p>
             </section>
         </div>`;
+        app.querySelector('[data-edit-area-description]')?.addEventListener('click', () => {
+            app.querySelector('[data-area-description-reading]')?.setAttribute('hidden', '');
+            const textarea = document.getElementById('areaDescription');
+            textarea?.removeAttribute('hidden');
+            app.querySelector('label[for="areaDescription"]')?.removeAttribute('hidden');
+            app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
+            textarea?.focus();
+        });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1794,12 +1818,14 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
                 ? `<button class="${pinClass}" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.openProjectEntry('${encoded(project.id)}', '${encoded(entry.marker.id)}')" aria-label="Open ${escapeHtml(label)}">${pin}</button>`
                 : `<span class="${pinClass}" style="--map-x:${point.x}%;--map-y:${point.y}%">${pin}</span>`;
         }).join('');
+        const mapTotemLinks = visiblePlaces.flatMap(place => (Array.isArray(place.totem_links) ? place.totem_links : []).map(link => ({ from: place, to: visiblePlaces.find(candidate => candidate.id === link.target_area_id), ...link }))).filter(link => link.to);
+        const mapTotemDiagram = mapTotemLinks.length ? `<section class="site-map-totem-links"><h2>Totem links</h2>${mapTotemLinks.map(link => `<span>${escapeHtml(link.from.name)} → ${escapeHtml(link.to.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</section>` : '';
         const backAction = creator && returnContext === 'content-mode'
             ? `window.openCreatorContentMode('${encoded(project.id)}')`
             : creator
                 ? `window.renderProjectDashboard('${encoded(project.id)}')`
                 : `window.renderBrowseContent('${encoded(project.id)}', false)`;
-        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div>${mapEditor}<section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas onclick="window.placeLinkedAreaOnSiteMap(event)" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen location-map-screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p></div>${mapEditor}<section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas onclick="window.placeLinkedAreaOnSiteMap(event)" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${mapTotemDiagram}${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
