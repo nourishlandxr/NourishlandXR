@@ -574,7 +574,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                 <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem to another Totem in the location.</p>${linkOptions ? `<label for="areaCheckpointLinkTarget">Link to Totem</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area Totem</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" /></div>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}</span>`).join('')}</div></div></div>
             </section>
             <p id="areaCheckpointStatus" class="meta"></p>
-        </form><nav class="bottom-navigation totem-bottom-navigation"><button class="primary" type="submit" form="totemFileForm">${submitLabel}</button><button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button><button type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button></nav></div>`;
+        </form><nav class="bottom-navigation totem-bottom-navigation"><button class="primary" type="submit" form="totemFileForm">${submitLabel}</button>${existing ? `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(context.project.id)}','${encoded(existing.marker.id)}')">Delete</button>` : ''}<button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button><button type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button></nav></div>`;
         app.querySelector('[data-edit-totem-name]')?.addEventListener('click', () => {
             const editor = app.querySelector('.totem-name-editor');
             editor?.removeAttribute('hidden');
@@ -2139,7 +2139,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
     const returnArAction = returnToAr ? `<button class="ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">BACK TO AR</button>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation">${returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
+        const specialMarkerEditor = entry.marker.type === 'sub_checkpoint' ? `<div class="field"><label for="projectEntrySpecialSymbol">Marker symbol</label><select id="projectEntrySpecialSymbol"><option value="" ${entry.marker.special_symbol ? '' : 'selected'}>Standard checkpoint</option>${[['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'], ['!', 'Exclamation point'], ['?', 'Question mark']].map(([symbol, label]) => `<option value="${symbol}" ${entry.marker.special_symbol === symbol ? 'selected' : ''}>${label}</option>`).join('')}</select></div>` : '';
+        app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button><button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button></div></form><nav class="bottom-navigation">${returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
@@ -2178,6 +2179,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const name = document.getElementById('projectEntryName').value.trim();
         const description = document.getElementById('projectEntryDescription').value.trim();
         const targetAreaId = document.getElementById('projectEntryArea').value;
+        const specialSymbol = document.getElementById('projectEntrySpecialSymbol')?.value;
         const profileEnabled = entry.marker.type === 'plant' && document.getElementById('projectEntryProfileEnabled')?.value === 'true';
         let savedMarker = entry.marker;
         if (targetAreaId !== entry.place.id) {
@@ -2186,6 +2188,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...portableMarker,
                 name,
                 description,
+                ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
             savedMarker = response.marker || response;
@@ -2201,6 +2204,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...entry.marker,
                 name,
                 description,
+                ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
         }
@@ -2226,4 +2230,15 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
     } catch (error) {
         if (status) status.textContent = `Could not save: ${error.message}`;
     }
+}
+
+export async function deleteProjectEntry(encodedProjectId, encodedMarkerId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const markerId = decodeURIComponent(encodedMarkerId);
+    const { project, site, entries } = await projectContent(projectId);
+    const entry = entries.find(item => item.marker.id === markerId);
+    if (!entry) throw new Error('Entry not found.');
+    if (!window.confirm(`Delete “${entry.marker.name}”? This cannot be undone.`)) return;
+    await deletePlaceMarker(project.id, site.id, entry.place.id, entry.marker.id);
+    await renderProjectDashboard(document.getElementById('app'), encoded(project.id));
 }

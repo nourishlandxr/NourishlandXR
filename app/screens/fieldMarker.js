@@ -192,7 +192,7 @@ export async function saveFieldMarker(event) {
         recordTutorialEvent(selected.project, 'first_item_created');
         if (saveIntent === 'later') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
         if (saveIntent === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));
-        else window.renderProjectDashboard(encodeURIComponent(selected.project));
+        else window.openProjectEntry(encodeURIComponent(selected.project), encodeURIComponent(marker.id));
     } catch (failure) {
         error.textContent = `Save failed: ${failure.message}`;
     }
