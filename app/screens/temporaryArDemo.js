@@ -1137,11 +1137,11 @@ function createMarkerTexture(record) {
         ctx.arc(128, 128, 78, 0, Math.PI * 2);
         ctx.stroke();
     } else if (record.type === 'note') {
-        ctx.fillStyle = 'rgba(31,35,26,.82)';
+        ctx.fillStyle = 'rgba(30,35,32,.84)';
         ctx.beginPath();
-        ctx.roundRect(8, 64, 240, 128, 18);
+        ctx.roundRect(8, 64, 240, 128, [22, 15, 24, 17]);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(240,207,112,.72)';
+        ctx.strokeStyle = 'rgba(235,240,231,.68)';
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.fillStyle = '#fff';

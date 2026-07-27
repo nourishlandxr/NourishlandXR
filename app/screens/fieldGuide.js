@@ -101,17 +101,13 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
         const searchDeck = app.querySelector('.field-guide-search-deck');
         const advancedField = document.getElementById('fieldGuideLayer')?.closest('.field');
         if (searchDeck && advancedField) {
-            advancedField.hidden = true;
-            const advancedButton = document.createElement('button');
-            advancedButton.type = 'button';
-            advancedButton.className = 'field-guide-advanced-toggle';
-            advancedButton.textContent = 'Advanced search';
-            advancedButton.setAttribute('aria-expanded', 'false');
-            advancedButton.addEventListener('click', () => {
-                advancedField.hidden = !advancedField.hidden;
-                advancedButton.setAttribute('aria-expanded', String(!advancedField.hidden));
-            });
-            searchDeck.insertBefore(advancedButton, advancedField);
+            const searchLabel = document.querySelector('label[for="fieldGuideSearch"]');
+            if (searchLabel) searchLabel.textContent = 'Search';
+            const advanced = document.createElement('details');
+            advanced.className = 'field-guide-advanced-search';
+            advanced.innerHTML = '<summary>Advanced search options</summary>';
+            advanced.appendChild(advancedField);
+            searchDeck.appendChild(advanced);
         }
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuideProjects()">Back</button><h1>Field Guide unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;

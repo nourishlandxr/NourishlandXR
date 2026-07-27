@@ -2096,7 +2096,7 @@ function plantProfileEditorMarkup(entry, profile) {
     </section>`;
 }
 
-export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
+export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, returnToAr = false) {
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
     const { project, site, places, entries } = await projectContent(projectId);
@@ -2107,7 +2107,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
-    app.innerHTML = `<div class="screen project-entry-editor"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}')"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
+    const returnArAction = returnToAr ? `<button class="ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">BACK TO AR</button>` : '';
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div><div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button></div></form><nav class="bottom-navigation">${returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Return to Dashboard</button></nav></div>`;
     if (plant) {
         app.querySelector('form')?.classList.add('plant-file-form');
         const headerLabel = app.querySelector('.page-header .welcome-label');
@@ -2126,7 +2127,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId) {
     }
 }
 
-export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId) {
+export async function saveProjectEntryChanges(event, encodedProjectId, encodedMarkerId, returnToAr = false) {
     event.preventDefault();
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
@@ -2183,7 +2184,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 overview: document.getElementById('projectEntryOverview').value.trim()
             });
         }
-        await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id));
+        await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id), returnToAr);
     } catch (error) {
         if (status) status.textContent = `Could not save: ${error.message}`;
     }

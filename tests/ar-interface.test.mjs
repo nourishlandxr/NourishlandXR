@@ -380,6 +380,9 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /Area Totems/);
     assert.match(source, /Area checkpoints and their information boards/);
     assert.match(source, /data-field-guide-totem/);
+    assert.match(source, /field-guide-advanced-search/);
+    assert.match(source, /Advanced search options/);
+    assert.match(source, /searchLabel\.textContent = 'Search'/);
 });
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
@@ -685,6 +688,20 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /Relate this Totem to a real marking or QR code/);
     assert.match(dashboardSource, /target_area_id/);
     assert.match(dashboardSource, /site-map-totem-links/);
+});
+
+test('Notes stay simple and return to AR after contextual web editing', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const demoSource = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /String\(returnContext\)\.slice\('web-marker:'\.length\)\), true\)/);
+    assert.match(dashboardSource, /returnToAr = false/);
+    assert.match(dashboardSource, /BACK TO AR/);
+    assert.match(dashboardSource, /note-record-editor/);
+    assert.match(demoSource, /rgba\(235,240,231,.68\)/);
+    assert.doesNotMatch(styles, /\.tryit-sim-marker-note::after/);
+    assert.match(styles, /\.note-record-editor #projectEntryDescription/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

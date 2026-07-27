@@ -58,7 +58,7 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d6a928', sub_checkpoint: '#91a29a', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#a9aea4', sub_checkpoint: '#91a29a', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
@@ -591,7 +591,7 @@ function drawSpatialMarkers(view) {
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.88, .66, .16], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
+    const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
 
     sessionMarkers.forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
@@ -1510,7 +1510,7 @@ function navigateAfterAr(projectId, areaId, returnContext) {
     if (!projectId) return;
     queueMicrotask(() => {
         if (String(returnContext || '').startsWith('web-marker:')) {
-            window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)));
+            window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)), true);
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
         } else {
