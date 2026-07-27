@@ -544,9 +544,9 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /saveAreaCheckpoint/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /Physical QR or location code/);
-    assert.match(dashboardSource, /Attached information bubbles/);
+    assert.match(dashboardSource, /Attached text boxes/);
     assert.match(dashboardSource, /GO TO AREA · AR/);
-    assert.match(dashboardSource, /Add one new text box at a time/);
+    assert.match(dashboardSource, /data-add-totem-text-box/);
     assert.match(serverSource, /'area_checkpoint'/);
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
 });
@@ -643,6 +643,20 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /Origin &amp; story/);
     assert.match(dashboardSource, /plant-card-hero/);
     assert.match(dashboardSource, /plantProfileReady \? `<section class="spatial-focus-panel"/);
+});
+
+test('Area and Totem records use compact profile cards with Totem-owned text boxes', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const styles = read('app/style.css');
+    assert.match(dashboardSource, /area-encyclopedia-card/);
+    assert.match(dashboardSource, /area-content-grid/);
+    assert.match(dashboardSource, /totem-profile-page/);
+    assert.match(dashboardSource, /data-add-totem-text-box/);
+    assert.match(dashboardSource, /data-totem-information-box/);
+    assert.match(dashboardSource, /querySelectorAll\('\[data-totem-information-box\]'\)/);
+    assert.doesNotMatch(dashboardSource, /id="areaInformationBoxNew"/);
+    assert.match(styles, /\.area-content-grid/);
+    assert.match(styles, /\.totem-text-box-grid/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

@@ -545,11 +545,35 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const submitLabel = existing ? 'Save Totem changes' : 'Save Totem';
         const board = existing?.marker.area_information_board || {};
         const bubbles = Array.isArray(board.information_bubbles) ? board.information_bubbles : [];
-        const bubbleFields = [0, 1, 2].map(index => `<div class="field"><label for="areaCheckpointBubble${index}">${index ? '+ Text box' : 'Information text box'}</label><textarea id="areaCheckpointBubble${index}" rows="2" placeholder="${index === 0 ? 'What does this Area represent?' : 'Add another useful idea, story or instruction.'}">${escapeHtml(bubbles[index] || '')}</textarea></div>`).join('');
-        app.innerHTML = `<div class="screen area-checkpoint-form"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button><p class="welcome-label">Area Totem</p><h1>${escapeHtml(title)}</h1><p class="subtitle">Build its information, then load this single Totem in front of you.</p></div><form class="panel" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')"><div class="field"><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} Totem`)}" required /></div><div class="field"><label for="areaCheckpointIntroduction">Welcome text</label><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></div><fieldset class="totem-information-editor"><legend>Attached information bubbles</legend><p>Soft text balloons appear around the framed Totem, like a Plant Profile.</p>${bubbleFields}</fieldset><div class="field"><label for="areaCheckpointCode">Physical QR or location code <span class="meta">(optional)</span></label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter the code installed beside this Totem" /></div><p class="meta">This code lets a future visit lock the Area and its nearby elements back onto the same real-world point.</p><p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Cancel</button><button class="primary" type="submit">${submitLabel}</button></div></form></div>`;
+        const startingBubbles = bubbles.length ? bubbles : [''];
+        const bubbleFields = startingBubbles.map((text, index) => `<div class="field totem-text-box"><label for="areaCheckpointBubble${index}">Text box ${index + 1}</label><textarea id="areaCheckpointBubble${index}" data-totem-information-box rows="2" placeholder="${index === 0 ? 'What does this Totem help people understand?' : 'Add another useful idea, story or instruction.'}">${escapeHtml(text)}</textarea></div>`).join('');
+        app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><h1>${escapeHtml(title)}</h1><p class="subtitle">${escapeHtml(context.area.name)} · ${existing ? 'Saved Totem' : 'New Totem'}</p></div><form class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
+            <section class="totem-profile-hero">
+                <div class="totem-profile-visual" aria-hidden="true"><span></span><strong>TOTEM</strong></div>
+                <div class="totem-vital-grid">
+                    <div class="field"><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(existing?.marker.name || `${context.area.name} Totem`)}" required /></div>
+                    <div class="totem-area-chip"><small>AREA</small><strong>${escapeHtml(context.area.name)}</strong></div>
+                    <div class="totem-placement-chip"><small>PLACEMENT</small><strong>${existing ? 'Totem record ready' : 'Can be placed later'}</strong></div>
+                </div>
+            </section>
+            <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Welcome text</label><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
+            <section class="totem-information-editor" aria-labelledby="totemTextBoxesTitle"><div class="totem-editor-heading"><div><h2 id="totemTextBoxesTitle">Attached text boxes</h2><p>These soft information bubbles appear with the Totem in spatial view.</p></div><button type="button" data-add-totem-text-box><span aria-hidden="true">+</span> Add text box</button></div><div class="totem-text-box-grid" data-totem-text-boxes>${bubbleFields}</div></section>
+            <details class="plant-info-drawer totem-physical-drawer"><summary><span aria-hidden="true">⌖</span><strong>Physical reference</strong><small>Optional QR or installed location code</small></summary><div class="plant-drawer-fields"><div class="field"><label for="areaCheckpointCode">Physical QR or location code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Optional code installed beside this Totem" /></div><p class="meta">This can lock the Totem and nearby elements back onto the same real-world point.</p></div></details>
+            <p id="areaCheckpointStatus" class="meta"></p><div class="button-row"><button class="primary" type="submit">${submitLabel}</button></div>
+        </form><nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Return to Area</button></nav></div>`;
+        app.querySelector('[data-add-totem-text-box]')?.addEventListener('click', () => {
+            const grid = app.querySelector('[data-totem-text-boxes]');
+            const index = grid?.querySelectorAll('[data-totem-information-box]').length || 0;
+            if (!grid) return;
+            const field = document.createElement('div');
+            field.className = 'field totem-text-box';
+            field.innerHTML = `<label for="areaCheckpointBubble${index}">Text box ${index + 1}</label><textarea id="areaCheckpointBubble${index}" data-totem-information-box rows="2" placeholder="Add another useful idea, story or instruction."></textarea>`;
+            grid.append(field);
+            field.querySelector('textarea')?.focus();
+        });
         if (flow === 'quick') {
-            app.querySelector('.page-header .ghost').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
-            app.querySelector('.button-row button[type="button"]').onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
+            const returnButton = app.querySelector('.bottom-navigation button');
+            if (returnButton) returnButton.onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
         }
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>Checkpoint unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
@@ -568,7 +592,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const name = document.getElementById('areaCheckpointName').value.trim();
         const qrCode = document.getElementById('areaCheckpointCode').value.trim();
         const introduction = document.getElementById('areaCheckpointIntroduction').value.trim();
-        const informationBubbles = [0, 1, 2].map(index => document.getElementById(`areaCheckpointBubble${index}`).value.trim()).filter(Boolean);
+        const informationBubbles = [...document.querySelectorAll('[data-totem-information-box]')].map(field => field.value.trim()).filter(Boolean);
         if (!name) throw new Error('Checkpoint name is required.');
         const existing = context.areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
         if (status) status.textContent = 'Saving Area Marker…';
@@ -1230,14 +1254,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             const totemArAction = markerType === 'area_checkpoint'
                 ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'dashboard', '${encoded(context.site.id)}')">Edit in AR</button>`
                 : '';
-            return `<article class="latest-entry-row area-content-entry${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}">
+            return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
                 <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · ${editedLabel(marker.modified || marker.created)}</span><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel}</span></span>
                 <span class="entry-status entry-status-${status.tone}">${status.label}</span>
-                <span class="area-entry-actions"><button type="button" onclick="${webAction}">Edit in Web Mode</button>${totemArAction}${profileArAction}</span>
+                <span class="area-entry-actions"><button type="button" onclick="${webAction}">Open profile</button>${totemArAction}${profileArAction}</span>
             </article>`;
         }).join('');
-        const unplacedTotemRow = checkpoint ? '' : `<article class="latest-entry-row area-content-entry is-totem-entry"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Area Totem · Not yet placed</span></span><span class="area-entry-actions"><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Edit in Web Mode</button><button class="spatial-focus-button compact-ar-action" type="button" onclick="window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">Place in AR</button></span></article>`;
+        const unplacedTotemRow = checkpoint ? '' : `<article class="area-content-entry area-content-card is-totem-entry"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Area Totem · Not yet placed</span></span><span class="area-entry-actions"><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Open profile</button><button class="spatial-focus-button compact-ar-action" type="button" onclick="window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">Place in AR</button></span></article>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const locationStatus = anchor
             ? `GPS location assigned${Number.isFinite(Number(anchor.accuracy)) ? ` · accuracy ${Math.round(Number(anchor.accuracy))} m` : ''}`
@@ -1246,8 +1270,6 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
                 <button type="button" onclick="window.renderProjectAreaLocationForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>${anchor ? 'Update GPS location' : 'Assign GPS location'}</strong><span>Tag the physical position of this Area.</span></button>
             </div>` : '';
-        const areaTextBoxes = Array.isArray(context.area.information_boxes) ? context.area.information_boxes : [];
-        const areaBoxFields = `${areaTextBoxes.map(text => `<p class="saved-information-box">${escapeHtml(text)}</p>`).join('')}<div class="field"><label for="areaInformationBoxNew">+ Text box</label><textarea id="areaInformationBoxNew" rows="2" placeholder="Add one useful item at a time."></textarea></div>`;
         const plantCount = areaEntries.filter(entry => entry.marker.type === 'plant').length;
         const totemCount = areaEntries.filter(entry => entry.marker.type === 'area_checkpoint' || entry.marker.semantic_type === 'area_checkpoint').length;
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
@@ -1257,13 +1279,20 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <p class="subtitle">${escapeHtml(context.area.type || 'Area')} · ${escapeHtml(context.project.name)}</p>
                 <div class="area-top-actions"><button class="area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
             </header>
-            <section class="panel area-profile-summary">
-                <h2>About this Area</h2>
+            <section class="area-profile-summary area-encyclopedia-card">
+                <div class="area-profile-hero">
+                    <div class="area-profile-visual" aria-hidden="true"><span>▧</span><small>AREA</small></div>
+                    <div class="area-vital-grid">
+                        <div><small>TYPE</small><strong>${escapeHtml(context.area.type || 'Area')}</strong></div>
+                        <div><small>PLANTS</small><strong>${plantCount}</strong></div>
+                        <div><small>TOTEMS</small><strong>${totemCount}</strong></div>
+                        <div><small>LOCATION</small><strong>${anchor ? 'GPS assigned' : 'Spatial Area'}</strong></div>
+                    </div>
+                </div>
                 <form class="area-information-form" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
-                    <div class="field"><label for="areaDescription">Description</label><textarea id="areaDescription" rows="4" placeholder="Describe what this Area is and why it matters.">${escapeHtml(context.area.description || '')}</textarea></div>
-                    <fieldset class="area-information-boxes"><legend>Area information</legend><p>Saved information stays readable. Add one new text box at a time.</p>${areaBoxFields}</fieldset>
+                    <div class="area-overview-card"><label for="areaDescription"><span aria-hidden="true">✦</span> About this Area</label><textarea id="areaDescription" rows="3" placeholder="Describe what this Area is and why it matters.">${escapeHtml(context.area.description || '')}</textarea></div>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
-                    <button type="submit">Save Area information</button>
+                    <button type="submit">Save Area overview</button>
                 </form>
                 <p class="area-location-status ${anchor ? 'is-assigned' : 'is-unassigned'}">${context.project.expertMode === true ? locationStatus : 'Precise GPS anchoring is optional and stays out of the everyday flow.'}</p>
             </section>
@@ -1271,7 +1300,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ${advancedAreaActions}
             <section class="latest-entries-section area-content-section">
                 <div class="section-heading-row"><div><h2>Content in this Area</h2><p>${areaEntries.length} existing element${areaEntries.length === 1 ? '' : 's'}</p></div></div>
-                <div class="latest-entry-list">${unplacedTotemRow}${rows}</div>
+                <div class="area-content-grid">${unplacedTotemRow}${rows}</div>
             </section>
             <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button></nav>
             <section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
@@ -1294,12 +1323,9 @@ export async function saveAreaInformation(event, encodedProjectId, encodedAreaId
     try {
         const context = await projectAreaContext(projectId, areaId);
         const description = document.getElementById('areaDescription').value.trim();
-        const newInformationBox = document.getElementById('areaInformationBoxNew').value.trim();
-        const informationBoxes = [...(Array.isArray(context.area.information_boxes) ? context.area.information_boxes : []), newInformationBox].filter(Boolean);
         if (status) status.textContent = 'Saving Area information…';
         await updateSitePlace(projectId, context.site.id, areaId, {
-            description,
-            information_boxes: informationBoxes
+            description
         });
         await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
     } catch (error) {
