@@ -463,8 +463,8 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 
 function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
-    const cards = [content?.title, ...(content?.lines || [])].filter(Boolean).slice(0, 5);
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 215 C130 180 110 100 64 72"/><path d="M180 205 C205 150 224 90 274 72"/><path d="M190 228 C245 220 264 178 310 170"/><path d="M170 248 C118 256 92 300 48 304"/><path d="M190 262 C236 278 248 330 286 338"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${cards.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
+    const bubbles = (content?.lines || []).filter(Boolean).slice(0, 3);
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 208 C142 178 104 146 68 118"/><path d="M180 205 C180 162 180 120 180 84"/><path d="M180 208 C220 178 258 148 294 120"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -954,22 +954,20 @@ function createSpatialKnowledgeTexture(record) {
 }
 
 function drawTotemKnowledgeTexture(ctx, label, content) {
-    const cards = [content.title, ...content.lines].filter(Boolean).slice(0, 5);
+    const cards = content.lines.filter(Boolean).slice(0, 3);
     const cardLayouts = [
-        [18, 82, 220, 130],
-        [452, 46, 250, 140],
-        [478, 286, 224, 130],
-        [18, 520, 220, 136],
-        [452, 640, 250, 136]
+        [18, 126, 214, 154],
+        [245, 22, 230, 166],
+        [488, 126, 214, 154]
     ];
-    const branchEnds = [[132, 212], [574, 186], [590, 346], [130, 576], [574, 700]];
+    const branchEnds = [[125, 280], [360, 188], [595, 280]];
     ctx.strokeStyle = 'rgba(221,246,238,.72)';
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     branchEnds.forEach(([x, y]) => {
         ctx.beginPath();
-        ctx.moveTo(360, 410);
-        ctx.bezierCurveTo(360 + (x - 360) * .35, 410, 360 + (x - 360) * .62, y, x, y);
+        ctx.moveTo(360, 392);
+        ctx.bezierCurveTo(360 + (x - 360) * .35, 356, 360 + (x - 360) * .66, y, x, y);
         ctx.stroke();
     });
     const pillar = ctx.createLinearGradient(288, 0, 432, 0);
@@ -978,7 +976,7 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
     pillar.addColorStop(1, 'rgba(18,59,55,.98)');
     ctx.fillStyle = pillar;
     ctx.beginPath();
-    ctx.roundRect(290, 346, 140, 754, [30, 30, 18, 18]);
+    ctx.roundRect(290, 380, 140, 720, [30, 30, 18, 18]);
     ctx.fill();
     ctx.strokeStyle = 'rgba(226,255,249,.9)';
     ctx.lineWidth = 7;
@@ -994,10 +992,10 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
         ctx.stroke();
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.font = `${index === 0 ? '850 27px' : '700 22px'} system-ui, sans-serif`;
+        ctx.font = '750 25px system-ui, sans-serif';
         ctx.shadowColor = 'rgba(0,0,0,.95)';
         ctx.shadowBlur = 5;
-        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 8, width - 34, index === 0 ? 31 : 27, 3);
+        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 22, width - 32, 30, 4);
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
     });
