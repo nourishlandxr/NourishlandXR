@@ -496,7 +496,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /font-weight:650/);
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
-    assert.match(source, /NourishLand XR - a quick AR demo/);
+    assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Augmented reality lets information appear where it belongs/);
     assert.match(source, /Follow your curiosity, move gently/);
@@ -508,9 +508,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /Press it to place a Plant orb one metre ahead/);
     assert.match(source, /onTextComplete/);
-    assert.match(source, /typingStartDelay = 650/);
+    assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /\? 220 : \/\[,;\]\//);
-    assert.match(styles, /tryit-board-arrive 1s/);
+    assert.match(styles, /tryit-board-arrive 1\.4s/);
+    assert.match(styles, /tryit-board-identity 1\.15s \.25s/);
     assert.doesNotMatch(styles, /tryit-board-leave/);
     assert.match(source, /function prepareTutorialBoard\(panel\)/);
     assert.match(source, /const firstArrival = !introBoardHasEntered/);
@@ -558,7 +559,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /boardPosition: \[0, 0, -2\.8\]/);
+    assert.match(source, /boardPosition: \[0, 0\.42, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 8\.75\]/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
@@ -573,7 +574,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardControlTimer = setTimeout/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(92vw,760px\)/);
-    assert.match(styles, /top:max\(16px,env\(safe-area-inset-top\)\)/);
+    assert.match(styles, /top:max\(10px,env\(safe-area-inset-top\)\)/);
     assert.match(styles, /max-height:calc\(100dvh - 148px\)/);
     assert.match(styles, /top:calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 2cm\)/);
@@ -581,6 +582,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:grid; align-content:start;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
     assert.match(styles, /font-size:clamp\(\.94rem,2\.7vw,1\.35rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);

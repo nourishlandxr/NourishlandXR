@@ -619,17 +619,21 @@ h1 {
 .tryit-guided-choice .is-awaiting-text { visibility: hidden; }
 .tryit-guided-choice.is-typing p.is-current::after,
 .tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after { content: "▋"; display: inline-block; margin-left: 2px; color: #dcef95; animation: tryit-cursor-blink 1.4s ease-in-out infinite; }
-.tryit-guided-choice.is-welcome-board { left:50%; top:max(16px,env(safe-area-inset-top)); bottom:auto; align-content:center; width:min(92vw,760px); height:min(76dvh,700px); max-height:calc(100dvh - 148px); min-height:0; padding:clamp(22px,5vw,46px); transform:translateX(-50%); overflow:hidden; border:1px solid rgba(240,255,232,.72); border-radius:38px 28px 46px 32px; background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.2),transparent 35%),radial-gradient(circle at 88% 82%,rgba(178,210,154,.18),transparent 36%),linear-gradient(145deg,rgba(59,111,76,.7),rgba(10,38,25,.5)); text-align:left; box-shadow:0 24px 72px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(15px); }
-.tryit-guided-choice.is-welcome-board.is-entering { animation:tryit-board-arrive 1s cubic-bezier(.2,.72,.2,1) both; }
+.tryit-guided-choice.is-welcome-board { left:50%; top:max(10px,env(safe-area-inset-top)); bottom:auto; align-content:center; row-gap:clamp(12px,1.8vh,18px); width:min(92vw,760px); height:min(76dvh,700px); max-height:calc(100dvh - 148px); min-height:0; padding:clamp(24px,5.5vw,48px); transform:translateX(-50%); overflow:hidden; border:1px solid rgba(240,255,232,.72); border-radius:38px 28px 46px 32px; background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.2),transparent 35%),radial-gradient(circle at 88% 82%,rgba(178,210,154,.18),transparent 36%),linear-gradient(145deg,rgba(59,111,76,.7),rgba(10,38,25,.5)); text-align:left; box-shadow:0 24px 72px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(15px); }
+.tryit-guided-choice.is-welcome-board.is-entering { animation:tryit-board-arrive 1.4s cubic-bezier(.2,.72,.2,1) both; }
+.tryit-guided-choice.is-welcome-board.is-entering > small,
+.tryit-guided-choice.is-welcome-board.is-entering > h2 { animation:tryit-board-identity 1.15s .25s ease-out both; }
 .tryit-guided-choice.is-welcome-board > small { color:#dcef95; font-size:.66rem; font-weight:760; letter-spacing:.12em; }
 .tryit-guided-choice.is-welcome-board h2 { max-width:660px; margin:0; font-size:clamp(1.45rem,4.5vw,2.8rem); font-weight:720; line-height:1.06; text-wrap:balance; }
-.tryit-board-text-window { display:grid; align-content:start; gap:clamp(9px,1.8vh,16px); width:100%; min-height:0; margin:0; padding-top:clamp(13px,2.4vh,22px); border-top:1px solid rgba(220,239,149,.38); text-align:left; }
+.tryit-board-text-window { display:grid; align-content:start; gap:clamp(11px,2vh,18px); width:100%; min-height:0; margin:0; padding-top:clamp(20px,3.2vh,30px); border-top:1px solid rgba(220,239,149,.38); text-align:left; opacity:0; transition:opacity .55s ease; }
+.tryit-guided-choice.is-copy-ready .tryit-board-text-window { opacity:1; }
 .tryit-board-text-window p + p { padding-top:clamp(7px,1.3vh,12px); border-top:1px solid rgba(255,255,255,.1); }
 .tryit-guided-choice.is-welcome-board p { width:100%; max-width:none; color:rgba(255,255,255,.94); font-size:clamp(.94rem,2.7vw,1.35rem); font-weight:560; line-height:1.43; text-wrap:pretty; }
 .tryit-demo.is-immersive .tryit-guided-choice.is-welcome-board { display:none; }
 .tryit-intro-continue { position:fixed; left:50%; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 70px); z-index:12009; width:auto; min-width:148px; min-height:50px; padding:11px 25px; transform:translateX(-50%); border:1px solid rgba(220,239,149,.54); border-radius:999px; background:rgba(44,78,56,.68); color:#fff; font-size:.9rem; font-weight:750; box-shadow:0 8px 24px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.16); backdrop-filter:blur(12px); pointer-events:auto; }
 .tryit-intro-continue[hidden] { display:none; }
 @keyframes tryit-board-arrive { from { opacity:0; transform:translate(-50%,18px) scale(.96); filter:blur(5px); } to { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0); } }
+@keyframes tryit-board-identity { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 @keyframes tryit-cursor-blink { 0%, 100% { opacity: .28; } 50% { opacity: 1; } }
 .tryit-guided-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .tryit-final-actions { display: flex; gap: 8px; width: max-content; }

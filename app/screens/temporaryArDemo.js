@@ -45,7 +45,7 @@ let introBoardTextureDirty = true;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
-let introBoardTitle = 'NourishLand XR - a quick AR demo';
+let introBoardTitle = 'Nourishland XR';
 let introBoardBody = 'A short guided demo of Plant orbs, Notes and Areas.';
 let placementReady = false;
 let demoHeldIndex = -1;
@@ -53,7 +53,7 @@ let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '2cm',
-    boardPosition: [0, 0, -2.8],
+    boardPosition: [0, 0.42, -2.8],
     boardScale: [5.6, 8.75]
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
@@ -358,6 +358,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         introBoardVisibleBody = bodyText;
         introBoardTextureDirty = true;
         paintBoardParagraphs(bodyText);
+        board?.classList.add('is-copy-ready');
         board?.classList.remove('is-typing');
         typing = false;
         if (continueButton && buttonLabel) continueButton.hidden = false;
@@ -368,6 +369,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     const typeNextCharacter = () => {
         if (!typing) return;
+        board?.classList.add('is-copy-ready');
         typedLength = Math.min(bodyText.length, typedLength + 1);
         introBoardVisibleBody = bodyText.slice(0, typedLength);
         introBoardTextureDirty = true;
@@ -379,11 +381,12 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     if (board) {
         board.classList.add('is-typing');
+        board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>A LIVING INTRODUCTION</small><h2>${title}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
         if (firstArrival) {
             introSceneStartedAt = performance.now();
-            typingStartDelay = 650;
+            typingStartDelay = 1800;
         }
         board.onclick = () => {
             if (typing) finishTyping();
@@ -415,7 +418,7 @@ function finishIntroBoard() {
 
 function runArWelcomeTutorial() {
     showIntroBoard(
-        'NourishLand XR - a quick AR demo',
+        'Nourishland XR',
         WELCOME_BOARD_PARAGRAPHS,
         'Continue',
         () => {
@@ -1352,6 +1355,7 @@ function createIntroNoteTexture(texture = null) {
         titleSize -= 4;
     } while (titleSize > 58 && ctx.measureText(introBoardTitle).width > 1120);
     drawWrappedTextureText(ctx, introBoardTitle, 700, 330, 1120, titleSize + 14, 2);
+    if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -1371,6 +1375,7 @@ function createIntroNoteTexture(texture = null) {
         });
     } else {
         drawWrappedTextureText(ctx, typedBody, 150, 555, 1100, 62, 4);
+    }
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -1430,7 +1435,7 @@ function drawIntroSpatial(view) {
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), opacity);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
-    const noteProgress = Math.min(1, Math.max(0, (elapsed - 80) / 900));
+    const noteProgress = Math.min(1, Math.max(0, (elapsed - 80) / 1200));
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
