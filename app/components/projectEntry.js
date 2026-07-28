@@ -18,7 +18,8 @@ function contextualGuidance(guidance, target) {
 
 function tutorialSpotlight(guidance) {
     if (!guidance || !['dashboardWelcome', 'arMode', 'contentMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
-    return `<details class="tutorial-spotlight-callout tutorial-subtle-tip tutorial-spotlight-${guidance.target}">
+    return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
+        <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" role="dialog" aria-modal="true">
             <summary><span class="guidance-stage">First steps</span><strong>${guidance.title}</strong><i aria-hidden="true">⌄</i></summary>
             <div class="tutorial-subtle-tip-body">
             <p>${guidance.body}</p>
@@ -27,7 +28,7 @@ function tutorialSpotlight(guidance) {
                 <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
             </div>
             </div>
-        </details>`;
+        </aside>`;
 }
 
 function latestEntryRow(item) {

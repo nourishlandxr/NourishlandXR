@@ -10,7 +10,7 @@
 import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
-import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
+import { matrixFromPose } from '../services/spatialPlacement.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
@@ -179,9 +179,18 @@ function updateReadyPlacementControl() {
 }
 
 function placementPoint() {
-    // Phone-first global rule: new spatial content arrives at a predictable,
-    // relaxed one-metre working distance before the creator refines it.
-    return spatialPosition(null, latestViewerMatrix, 0);
+    if (!latestViewerMatrix) return null;
+    const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
+    const ray = pointerWorldRay() || {
+        x: -latestViewerMatrix[8],
+        y: -latestViewerMatrix[9],
+        z: -latestViewerMatrix[10]
+    };
+    return {
+        x: latestViewerMatrix[12] + ray.x * distance,
+        y: latestViewerMatrix[13] + ray.y * distance,
+        z: latestViewerMatrix[14] + ray.z * distance
+    };
 }
 
 function roundCoordinate(value) {
@@ -618,14 +627,20 @@ function drawSpatialMarkers(view) {
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
-        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY), {
+        const arrivalProgress = Number.isFinite(record.spawnedAt)
+            ? Math.min(1, Math.max(0, (performance.now() - record.spawnedAt) / 850))
+            : 1;
+        const arrivalEase = 1 - Math.pow(1 - arrivalProgress, 3);
+        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
-            color: markerRgb(record.marker, baseColor)
+            color: markerRgb(record.marker, baseColor),
+            opacity: arrivalEase
         });
     });
 
-    if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestHitMatrix && !readySpecialMarker) {
-        const target = { x: latestHitMatrix[12], y: latestHitMatrix[13] + .07, z: latestHitMatrix[14] };
+    if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestViewerMatrix && !readySpecialMarker) {
+        const target = placementPoint();
+        if (!target) return;
         drawSpatialOrb(gl, sphereRenderer, view, target, .07, {
             type: readyPlacementType === 'plant' ? 'plant' : 'marker',
             color: readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]
@@ -971,7 +986,7 @@ function moveMarkerDrag(event) {
     positionSessionMarkers();
 }
 
-function heldPointerRay() {
+function pointerWorldRay() {
     if (!latestViewerMatrix || !latestView?.projectionMatrix) return null;
     const pointer = overlayRoot?.querySelector('.creator-ar-mode-pointer');
     const rect = pointer?.getBoundingClientRect();
@@ -992,6 +1007,10 @@ function heldPointerRay() {
     const worldZ = latestViewerMatrix[2] * x + latestViewerMatrix[6] * y + latestViewerMatrix[10] * z;
     const worldLength = Math.hypot(worldX, worldY, worldZ) || 1;
     return { x: worldX / worldLength, y: worldY / worldLength, z: worldZ / worldLength };
+}
+
+function heldPointerRay() {
+    return pointerWorldRay();
 }
 
 function updateGrabbedMarkerFromCamera() {
@@ -1363,7 +1382,7 @@ async function quickPlace(type) {
                 }
                 await saveMarkerAnchor(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, bagAnchor);
                 if (!operationIsCurrent()) return;
-                const record = { ...bagRecord, position };
+                const record = { ...bagRecord, position, spawnedAt: performance.now() };
                 sessionMarkers.push(record);
                 renderSessionMarkers();
                 setPlacementStatus(`${record.marker.name} placed. Your previous interaction mode is still active.`);
@@ -1425,7 +1444,7 @@ async function quickPlace(type) {
         if (!operationIsCurrent() || !marker) return;
         await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation, 0));
         if (!operationIsCurrent()) return;
-        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName };
+        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName, spawnedAt: performance.now() };
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {

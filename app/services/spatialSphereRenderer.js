@@ -154,7 +154,8 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.uniformMatrix4fv(renderer.projectionLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
     gl.uniform3fv(renderer.colorLocation, material.color || DEFAULT_MARKER_COLOR);
-    gl.uniform1f(renderer.alphaLocation, Number.isFinite(material.alpha) ? material.alpha : 0.64);
+    const opacity = Number.isFinite(material.opacity) ? Math.max(0, Math.min(1, material.opacity)) : 1;
+    gl.uniform1f(renderer.alphaLocation, (Number.isFinite(material.alpha) ? material.alpha : 0.64) * opacity);
     gl.uniform1f(renderer.emissiveLocation, Number.isFinite(material.emissive) ? material.emissive : 0.12);
     gl.drawElements(gl.TRIANGLES, renderer.indexCount, gl.UNSIGNED_SHORT, 0);
 }
@@ -181,7 +182,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
             view.transform.inverse.matrix,
             position,
             radius * 0.38,
-            { color: coreColor, alpha: 0.98, emissive: 0.82 }
+            { color: coreColor, alpha: 0.98, emissive: 0.82, opacity: options.opacity }
         );
     }
     drawSpatialSphere(
@@ -191,7 +192,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.84 : 0.92, emissive: plant ? 0.34 : 0.24 }
+        { color: shellColor, alpha: plant ? 0.84 : 0.92, emissive: plant ? 0.34 : 0.24, opacity: options.opacity }
     );
 
     gl.depthMask(true);

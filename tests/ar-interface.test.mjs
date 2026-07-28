@@ -168,7 +168,10 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-capture \{ pointer-events: auto; \}/);
     assert.match(styles, /\.creator-ar-status/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
-    assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\) && latestHitMatrix/);
+    assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\) && latestViewerMatrix/);
+    assert.match(arSource, /function pointerWorldRay\(\)/);
+    assert.match(arSource, /spawnedAt: performance\.now\(\)/);
+    assert.match(arSource, /opacity: arrivalEase/);
 });
 
 test('Special Marker tools open immediately while recorded Markers restore', () => {
@@ -491,6 +494,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
     assert.doesNotMatch(source, /tryit-welcome-core-cell/);
     assert.match(source, /tryit-spatial-welcome-note/);
+    assert.match(styles, /\.tryit-spatial-welcome-note \{[^}]*height:clamp\(380px,76vh,760px\);[^}]*max-height:calc\(100vh - 32px\)/);
     assert.match(styles, /\.biomap-branch:nth-child\(1\) \{ left:29%; top:22%; \}/);
     assert.doesNotMatch(styles, /\.tryit-intro-knowledge::before/);
     assert.match(styles, /color:#fff/);
@@ -661,7 +665,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
-    assert.match(source, /spatialPosition\(null, latestViewerMatrix, 0\)/);
+    assert.match(source, /const ray = pointerWorldRay\(\)/);
     assert.match(source, /id = 'creatorArOverlay'/);
     assert.match(source, /creator-ar-session-active/);
     assert.doesNotMatch(source, /Test session - no physical code/);

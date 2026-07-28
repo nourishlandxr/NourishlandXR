@@ -172,7 +172,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /dashboard-identity/);
     assert.doesNotMatch(entrySource, /dashboard-introduction/);
     assert.match(entrySource, /tutorial-spotlight-callout/);
-    assert.match(entrySource, /tutorial-subtle-tip/);
+    assert.match(entrySource, /tutorial-spotlight-shield/);
+    assert.match(entrySource, /role="dialog" aria-modal="true"/);
     assert.match(entrySource, /contextual-guidance/);
     assert.match(entrySource, /First-use guidance/);
     assert.match(entrySource, /Skip this step/);
