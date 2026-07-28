@@ -492,6 +492,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /INTRODUCING AIM/);
     assert.match(source, /CREATE A PLANT ORB/);
     assert.match(source, /exactly 1 metre away/);
+    assert.match(source, /function pressPlacementPointer\(event\)/);
+    assert.match(source, /\[data-tryit-place\]'\)\.addEventListener\('click', pressPlacementPointer\)/);
+    const immersiveSelectHandler = source.slice(
+        source.indexOf("session.addEventListener('select'"),
+        source.indexOf("session.addEventListener('end'")
+    );
+    assert.doesNotMatch(immersiveSelectHandler, /placeMarker\(\)/);
+    assert.match(immersiveSelectHandler, /Press the glowing centre pointer to place the Plant orb/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
     assert.match(source, /Aim with the centre circle/);

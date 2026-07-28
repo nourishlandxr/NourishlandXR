@@ -46,6 +46,7 @@ let introBoardBody = 'A short guided demo of Plant orbs, Notes and Areas.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
+let suppressSessionSelectUntil = 0;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const BIOMAP_CATEGORIES = Object.freeze({
     FOOD: [],
@@ -111,6 +112,7 @@ function clearSessionState() {
     demoStage = 'plant';
     placementReady = false;
     demoHeldIndex = -1;
+    suppressSessionSelectUntil = 0;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(knowledgeTourTimer);
@@ -889,6 +891,12 @@ function placeMarker() {
     else guideAreaConversion(placedRecord);
 }
 
+function pressPlacementPointer(event) {
+    event?.stopPropagation();
+    suppressSessionSelectUntil = performance.now() + 700;
+    placeMarker();
+}
+
 function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
@@ -911,7 +919,7 @@ function renderInterface(simulated) {
         button.addEventListener('click', expand);
     });
     appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
-    appRoot.querySelector('[data-tryit-place]').addEventListener('click', placeMarker);
+    appRoot.querySelector('[data-tryit-place]').addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
         demoHeldIndex = -1;
@@ -1537,8 +1545,9 @@ async function startImmersive() {
         hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         setupRenderer();
         session.addEventListener('select', () => {
+            if (performance.now() < suppressSessionSelectUntil) return;
             if (placementReady && !marker) {
-                placeMarker();
+                setGuide('Press the glowing centre pointer to place the Plant orb.');
                 return;
             }
             const profiledPlant = markers.find(record => record.demoType === 'plant');
