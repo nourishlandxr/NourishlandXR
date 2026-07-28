@@ -703,31 +703,24 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
-    const panelWidth = Math.min(window.innerWidth * .92, 520);
-    const panelHeight = Math.min(360, Math.max(270, window.innerWidth * .58));
+    const panelWidth = Math.min(window.innerWidth * .96, 620);
+    const panelHeight = Math.min(320, Math.max(270, window.innerWidth * .52));
     const halfWidth = panelWidth / 2;
     const halfHeight = panelHeight / 2;
-    const edge = 14;
-    const gap = 42;
+    const edge = 10;
+    const gap = 28;
     const minX = halfWidth + edge;
     const maxX = window.innerWidth - halfWidth - edge;
-    const minY = halfHeight + edge;
-    const maxY = window.innerHeight - halfHeight - edge;
-    let panelX = Math.max(minX, Math.min(maxX, markerX));
-    let panelY;
-    if (window.innerWidth >= 720) {
-        const direction = markerX < window.innerWidth / 2 ? 1 : -1;
-        panelX = Math.max(minX, Math.min(maxX, markerX + direction * (halfWidth + gap)));
-        panelY = Math.max(minY, Math.min(maxY, markerY));
-    } else {
-        const above = markerY - gap - halfHeight;
-        const below = markerY + gap + halfHeight;
-        panelY = above >= minY ? above : below <= maxY ? below : Math.max(minY, Math.min(maxY, markerY));
-    }
+    const panelX = Math.max(minX, Math.min(maxX, markerX));
+    const panelY = markerY - gap - halfHeight;
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
-    const dx = panelX - markerX;
-    const dy = panelY - markerY;
+    profile.style.width = `${panelWidth}px`;
+    profile.style.height = `${panelHeight}px`;
+    const diagramAnchorX = panelX;
+    const diagramAnchorY = panelY + panelHeight * .41;
+    const dx = diagramAnchorX - markerX;
+    const dy = diagramAnchorY - markerY;
     tether.style.left = `${markerX}px`;
     tether.style.top = `${markerY - 9}px`;
     tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
@@ -746,7 +739,7 @@ function renderSessionMarkers() {
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
+            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-overhead-diagram" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
