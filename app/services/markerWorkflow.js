@@ -6,6 +6,17 @@ const DEFAULT_NAMES = Object.freeze({
     intro_checkpoint: 'Trail Entrance'
 });
 
+const storageSegment = value => String(value || '')
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+export function scopedMarkerStorageId(projectId, siteId, placeId, role = 'marker') {
+    const scope = [projectId, siteId, placeId, role].map(storageSegment).filter(Boolean);
+    return scope.length ? scope.join('_') : 'marker';
+}
+
 export function createMinimalMarkerDraft(type, overrides = {}) {
     const name = overrides.name || DEFAULT_NAMES[type] || 'New marker';
     return {

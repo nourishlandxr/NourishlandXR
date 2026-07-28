@@ -12,7 +12,7 @@ import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { createMinimalMarkerDraft } from '../services/markerWorkflow.js';
+import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 
@@ -1217,7 +1217,7 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     const areaMarker = {
         ...record.marker,
         ...overrides,
-        id: undefined,
+        id: scopedMarkerStorageId(activeProjectId, record.siteId, area.id, 'area-totem'),
         type: 'area_checkpoint',
         name: `${areaName} checkpoint`,
         description: overrides.description || `Entry checkpoint for ${areaName}.`,
@@ -1275,14 +1275,18 @@ async function updateAreaCompatibleMarker(record, update) {
 }
 
 async function createAreaCompatibleMarker(draft, operation = captureArOperationContext()) {
+    const scopedDraft = {
+        ...draft,
+        id: draft.id || scopedMarkerStorageId(operation.projectId, operation.siteId, operation.areaId, 'area-totem')
+    };
     try {
-        const created = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, draft);
+        const created = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, scopedDraft);
         return normalizeAreaCheckpointMarker(created.marker || created);
     } catch (error) {
         if (!/unsupported|marker type|place type/i.test(String(error?.message || ''))) throw error;
         if (!isArOperationCurrent(operation)) return null;
         const created = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, {
-            ...draft,
+            ...scopedDraft,
             type: 'sub_checkpoint',
             semantic_type: 'area_checkpoint',
             storage_type: 'sub_checkpoint'

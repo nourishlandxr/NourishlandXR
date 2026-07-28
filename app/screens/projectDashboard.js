@@ -9,6 +9,7 @@ import { createAreaRecord } from '../services/areaWorkflow.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
+import { scopedMarkerStorageId } from '../services/markerWorkflow.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -663,6 +664,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const existing = context.areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
         if (status) status.textContent = 'Saving Area Marker…';
         const checkpointData = {
+            id: existing?.marker.id || scopedMarkerStorageId(projectId, context.site.id, areaId, 'area-totem'),
             name,
             type: 'area_checkpoint',
             description: `Physical anchor for ${context.area.name}.`,

@@ -4,8 +4,22 @@ import path from 'node:path';
 import test from 'node:test';
 import { renderProjectEntry } from '../app/components/projectEntry.js';
 import { renderLaunchScreen } from '../app/screens/launch.js';
+import { scopedMarkerStorageId } from '../app/services/markerWorkflow.js';
 
 const root = path.resolve(import.meta.dirname, '..');
+
+test('matching Totem names remain independent across projects', () => {
+    const firstId = scopedMarkerStorageId('Community Garden', 'Main Site', 'Orchard', 'area-totem');
+    const secondId = scopedMarkerStorageId('School Garden', 'Main Site', 'Orchard', 'area-totem');
+    assert.equal(firstId, 'community_garden_main_site_orchard_area_totem');
+    assert.equal(secondId, 'school_garden_main_site_orchard_area_totem');
+    assert.notEqual(firstId, secondId);
+
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const arSource = fs.readFileSync(path.join(root, 'app/screens/arMode.js'), 'utf8');
+    assert.match(dashboardSource, /scopedMarkerStorageId\(projectId, context\.site\.id, areaId, 'area-totem'\)/);
+    assert.match(arSource, /scopedMarkerStorageId\(operation\.projectId, operation\.siteId, operation\.areaId, 'area-totem'\)/);
+});
 
 test('welcome keeps primary roles separate and pairs About with the existing AR demo', () => {
     const app = { innerHTML: '' };
