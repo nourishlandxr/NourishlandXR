@@ -234,6 +234,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /deletePlaceMarker/);
     assert.match(arSource, /name="markerColor" type="color"/);
     assert.match(arSource, /name="markerSize"/);
+    assert.match(arSource, /name="noteSurface"/);
+    assert.match(arSource, /surface: form\.elements\.noteSurface\?\.value === 'outline' \? 'outline' : 'filled'/);
     assert.doesNotMatch(arSource, /name="markerType"/);
     assert.match(arSource, /Quick edit ·/);
     assert.match(arSource, /const type = record\.marker\.type/);
@@ -565,6 +567,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /coreColor: material\?\.core/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
+    assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*border-radius:50% !important;[^}]*background:transparent !important;/);
     assert.match(source, /\[data-tryit-place\]'\)\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
@@ -603,9 +606,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
     assert.match(source, /boardControlTimer = setTimeout/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
-    assert.match(styles, /width:min\(92vw,760px\)/);
-    assert.match(styles, /top:max\(10px,env\(safe-area-inset-top\)\)/);
-    assert.match(styles, /height:calc\(100dvh - max\(16px,env\(safe-area-inset-top\)\)\)/);
+    assert.match(styles, /width:min\(94vw,820px\)/);
+    assert.match(styles, /top:max\(4px,env\(safe-area-inset-top\)\)/);
+    assert.match(styles, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/);
     assert.match(styles, /max-height:none/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*\+ 44px\)/);
     assert.match(styles, /top:calc\(50% \+ 2cm\)/);
@@ -614,7 +617,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:grid; align-content:start;/);
-    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*height:calc\(100dvh - max\(16px,env\(safe-area-inset-top\)\)\);[^}]*max-height:none;[^}]*overflow-y:auto;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow-y:auto;/);
+    assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
     assert.match(styles, /font-size:clamp\(\.94rem,2\.7vw,1\.35rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
@@ -842,14 +846,21 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
     assert.match(arSource, /function hasPlantProfile\(record\)/);
-    assert.match(arSource, /record\.profileExpanded = !record\.profileExpanded/);
+    assert.match(arSource, /const opening = !record\.profileExpanded/);
+    assert.match(arSource, /sessionMarkers\.forEach\(candidate => \{[\s\S]*candidate\.profileExpanded = false/);
     assert.match(arSource, /information opened\. Tap the orb again to hide the honeycomb/);
     assert.match(arSource, /creator-ar-plant-profile/);
+    assert.match(arSource, /function positionCreatorPlantProfile\(record, markerX, markerY\)/);
+    assert.match(arSource, /window\.innerWidth >= 720/);
+    assert.match(arSource, /markerY - gap - halfHeight/);
+    assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
     assert.match(arSource, /const open = candidate === cell/);
     assert.doesNotMatch(arSource, /const open = !cell\.classList\.contains\('is-open'\)/);
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
+    assert.match(styles, /\.creator-ar-plant-tether path/);
+    assert.match(styles, /body\[data-project-theme\] \.creator-ar-plant-profile \.plant-knowledge-cell \{[^}]*background:rgba\(15,48,32/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
     assert.match(dashboardSource, /plant-info-drawer/);
     assert.match(dashboardSource, /projectEntryRelationships/);
@@ -947,8 +958,13 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     assert.match(dashboardSource, /returnToAr = false/);
     assert.match(dashboardSource, /BACK TO AR/);
     assert.match(dashboardSource, /note-record-editor/);
+    assert.match(dashboardSource, /id="projectEntryNoteSurface"/);
+    assert.match(dashboardSource, /Transparent with color outline/);
+    assert.match(dashboardSource, /surface: noteSurface === 'outline' \? 'outline' : 'filled'/);
+    assert.match(arSource, /is-note-outline/);
     assert.match(demoSource, /rgba\(245,248,243,.78\)/);
     assert.match(styles, /\.tryit-sim-marker-note::after/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note\.is-note-outline \.creator-ar-spatial-name/);
     assert.match(styles, /\.note-record-editor #projectEntryDescription/);
 });
 

@@ -64,6 +64,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d7834f', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
+const markerNoteSurface = marker => marker?.appearance?.surface === 'outline' ? 'outline' : 'filled';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
     ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
     : marker;
@@ -702,19 +703,35 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
-    const panelWidth = Math.min(window.innerWidth * .96, 640);
-    const panelHeight = Math.min(400, Math.max(300, window.innerWidth * .6));
-    const horizontalDirection = markerX < window.innerWidth / 2 ? 1 : -1;
-    const panelX = Math.max(panelWidth / 2 + 12, Math.min(window.innerWidth - panelWidth / 2 - 12, markerX + horizontalDirection * Math.min(210, window.innerWidth * .32)));
-    const panelY = Math.max(panelHeight / 2 + 12, Math.min(window.innerHeight - panelHeight / 2 - 150, markerY - Math.min(150, window.innerHeight * .2)));
+    const panelWidth = Math.min(window.innerWidth * .92, 520);
+    const panelHeight = Math.min(360, Math.max(270, window.innerWidth * .58));
+    const halfWidth = panelWidth / 2;
+    const halfHeight = panelHeight / 2;
+    const edge = 14;
+    const gap = 42;
+    const minX = halfWidth + edge;
+    const maxX = window.innerWidth - halfWidth - edge;
+    const minY = halfHeight + edge;
+    const maxY = window.innerHeight - halfHeight - edge;
+    let panelX = Math.max(minX, Math.min(maxX, markerX));
+    let panelY;
+    if (window.innerWidth >= 720) {
+        const direction = markerX < window.innerWidth / 2 ? 1 : -1;
+        panelX = Math.max(minX, Math.min(maxX, markerX + direction * (halfWidth + gap)));
+        panelY = Math.max(minY, Math.min(maxY, markerY));
+    } else {
+        const above = markerY - gap - halfHeight;
+        const below = markerY + gap + halfHeight;
+        panelY = above >= minY ? above : below <= maxY ? below : Math.max(minY, Math.min(maxY, markerY));
+    }
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
     const dx = panelX - markerX;
     const dy = panelY - markerY;
     tether.style.left = `${markerX}px`;
-    tether.style.top = `${markerY}px`;
+    tether.style.top = `${markerY - 9}px`;
     tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
-    tether.style.transform = `translateY(-50%) rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+    tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
 
 function renderSessionMarkers() {
@@ -729,11 +746,11 @@ function renderSessionMarkers() {
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
+            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     visibleMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -803,7 +820,8 @@ function openInlineEditor(record, force = false) {
     editor.hidden = false;
     const appearance = record.marker.appearance || {};
     const typeControl = `<p class="creator-ar-fixed-type">Type · ${readyPlacementLabel(record.marker.type)}</p>`;
-    const markerControls = `<fieldset class="creator-ar-appearance"><legend>Quick appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="tiny" ${markerAppearanceSize(record.marker) === 'tiny' ? 'selected' : ''}>Tiny</option><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option><option value="huge" ${markerAppearanceSize(record.marker) === 'huge' ? 'selected' : ''}>Huge</option></select></label></fieldset>`;
+    const noteSurfaceControl = record.marker.type === 'note' ? `<label>Board style<select name="noteSurface"><option value="filled" ${markerNoteSurface(record.marker) === 'filled' ? 'selected' : ''}>Filled color</option><option value="outline" ${markerNoteSurface(record.marker) === 'outline' ? 'selected' : ''}>Transparent · color outline</option></select></label>` : '';
+    const markerControls = `<fieldset class="creator-ar-appearance"><legend>Quick appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="tiny" ${markerAppearanceSize(record.marker) === 'tiny' ? 'selected' : ''}>Tiny</option><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option><option value="huge" ${markerAppearanceSize(record.marker) === 'huge' ? 'selected' : ''}>Huge</option></select></label>${noteSurfaceControl}</fieldset>`;
     const board = areaBoard(record.marker);
     const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
     const noticeBoard = record.marker.notice_board || {};
@@ -860,7 +878,8 @@ function openInlineEditor(record, force = false) {
                 appearance: {
                     ...appearance,
                     color: form.elements.markerColor.value,
-                    size: form.elements.markerSize.value
+                    size: form.elements.markerSize.value,
+                    ...(type === 'note' ? { surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled' } : {})
                 },
                 plant_profile: type === 'plant' ? {
                     ...(record.marker.plant_profile || {}),
@@ -901,7 +920,14 @@ function beginMarkerInteraction(record, event) {
         event.preventDefault();
         event.stopPropagation();
         if (hasPlantProfile(record)) {
-            record.profileExpanded = !record.profileExpanded;
+            const opening = !record.profileExpanded;
+            sessionMarkers.forEach(candidate => {
+                if (candidate !== record && candidate.marker.type === 'plant') {
+                    candidate.profileExpanded = false;
+                    candidate.infoVisible = false;
+                }
+            });
+            record.profileExpanded = opening;
             record.infoVisible = record.profileExpanded;
         } else {
             record.infoVisible = !record.infoVisible;
