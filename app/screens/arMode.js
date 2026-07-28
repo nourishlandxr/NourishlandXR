@@ -1080,11 +1080,9 @@ async function loadPlacementAreas(operation = captureArOperationContext(), guard
     if (!isArOperationCurrent(operation, guardOptions)) return [];
     activeSiteId = site.id;
     const selected = areas.find(area => area.id === operation.areaId);
-    if (selected) activeAreaName = selected.name;
-    else if (areas.length) {
-        const firstArea = areas[0];
-        activeAreaId = firstArea.id;
-        activeAreaName = firstArea.name;
+    if (selected) {
+        activeAreaId = selected.id;
+        activeAreaName = selected.name;
     } else {
         activeAreaId = '';
         activeAreaName = '';
@@ -1462,7 +1460,9 @@ function createOverlay() {
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
         : hasCheckpoint
         ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
-        : 'Aim dot ready. Hover over Markers to reveal their names.';
+        : activeAreaId
+        ? 'Aim dot ready. Hover over Markers to reveal their names.'
+        : '';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
@@ -1652,7 +1652,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeProjectId = projectId;
     activeSiteId = preferredSiteId || '';
     activeAreaId = areaId;
+    activeAreaName = '';
     activeCheckpointId = checkpointId;
+    sessionMarkers = [];
+    selectedMarker = null;
+    locatedTotemRecord = null;
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';

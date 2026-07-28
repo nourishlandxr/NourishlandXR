@@ -779,6 +779,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
     .plant-knowledge-right .plant-knowledge-cell:nth-child(2) { left: 80%; top: 50%; }
     .plant-knowledge-right .plant-knowledge-cell:nth-child(3) { left: 67%; top: 76%; }
 }
+
 .tryit-sim-marker-note.is-expanded { width:min(76vw,300px); min-height:96px; padding:14px 17px; border:1px solid rgba(235,240,231,.5); border-radius:19px 15px 21px 17px; background:rgba(25,31,27,.64); box-shadow:0 10px 24px rgba(0,0,0,.14); backdrop-filter:blur(8px); }
 .tryit-sim-marker-note:not(.is-expanded) { width:min(68vw,250px); min-height:72px; padding:14px 17px; border:1px solid rgba(235,240,231,.46); border-radius:19px 15px 21px 17px; background:rgba(25,31,27,.62); box-shadow:0 10px 24px rgba(0,0,0,.14); backdrop-filter:blur(8px); }
 .tryit-sim-marker-note { border-radius:9px !important; }
@@ -3544,7 +3545,7 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 button[onclick*="renderArPreparation"],
 button[onclick*="openCreatorArMode"],
 button[onclick*="startArMode"],
-button[onclick*="navigateToProjectArea"] { border-color: rgba(44,132,151,.62) !important; background: linear-gradient(135deg, #14596b, #277b86) !important; color: #fff !important; box-shadow: 0 7px 20px rgba(20,89,107,.18); }
+button[onclick*="navigateToProjectArea"] { border-color: #365218 !important; background: linear-gradient(135deg, #365218, #5f7133) !important; color: #fff !important; box-shadow: none; }
 .ar-portal span,
 button[onclick*="renderArPreparation"] span,
 button[onclick*="openCreatorArMode"] span,
@@ -3972,31 +3973,31 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
 
 /* Project-selectable themes */
 body[data-project-theme="forest-light"] {
-    --theme-bg: #eaf0e7;
-    --theme-surface: rgba(249, 250, 243, .92);
-    --theme-surface-soft: #eef4e9;
-    --theme-text: #173126;
-    --theme-muted: #5b6a60;
-    --theme-accent: #315f3b;
-    --theme-accent-hover: #254c30;
+    --theme-bg: #ffffff;
+    --theme-surface: #ffffff;
+    --theme-surface-soft: #f7f8f3;
+    --theme-text: #111111;
+    --theme-muted: #323b19;
+    --theme-accent: #365218;
+    --theme-accent-hover: #323b19;
     --theme-on-accent: #ffffff;
-    --theme-button-bg: #eef4e9;
-    --theme-button-hover: #e1ebdc;
-    --theme-button-text: #173126;
-    --theme-button-muted: #526158;
+    --theme-button-bg: #ffffff;
+    --theme-button-hover: #f7f8f3;
+    --theme-button-text: #111111;
+    --theme-button-muted: #323b19;
     --theme-quick-text: #ffffff;
     --theme-danger-bg: #fff1ef;
     --theme-danger-hover: #ffe3df;
     --theme-danger-text: #8a241e;
     --theme-danger-border: #c6544b;
-    --theme-line: rgba(58, 91, 61, .24);
-    --theme-quick-access: linear-gradient(135deg, #315f3b, #467a4e);
-    --leaf-ink: #173126;
-    --leaf-deep: #285f3d;
-    --leaf-mid: #6f976b;
-    --leaf-soft: #dce9d5;
-    --paper-wash: rgba(249, 250, 243, .92);
-    --earth-line: rgba(58, 91, 61, .24);
+    --theme-line: rgba(50, 59, 25, .2);
+    --theme-quick-access: linear-gradient(135deg, #365218, #5f7133);
+    --leaf-ink: #323b19;
+    --leaf-deep: #365218;
+    --leaf-mid: #778257;
+    --leaf-soft: #eef0e7;
+    --paper-wash: #ffffff;
+    --earth-line: rgba(50, 59, 25, .22);
 }
 
 body[data-project-theme="light"] {
@@ -4121,6 +4122,11 @@ body[data-project-theme] {
         radial-gradient(ellipse at 96% 28%, color-mix(in srgb, var(--leaf-deep) 12%, transparent), transparent 31%);
     color: var(--theme-text);
     transition: background-color .2s ease, color .2s ease;
+}
+
+body[data-project-theme="forest-light"] {
+    background:#ffffff;
+    background-image:none;
 }
 
 body[data-project-theme] p,
@@ -5305,4 +5311,92 @@ body.ar-dashboard-open .ar-tutorial-panel {
     .project-entry-editor .spatial-focus-panel {
         grid-template-columns: 1fr;
     }
+}
+
+/* Final cascade: keep every Web Mode screen in the live Nourishland brand. */
+:root {
+    --leaf-ink:#323b19;
+    --leaf-deep:#365218;
+    --leaf-mid:#778257;
+    --leaf-soft:#eef0e7;
+    --moss-wash:#f7f8f3;
+    --paper-wash:#fff;
+    --earth-line:rgba(50,59,25,.22);
+    --soft-shadow:none;
+}
+html,body { background:#fff; background-image:none; }
+body { color:#111; font-family:"Montserrat",sans-serif; font-weight:500; line-height:1.65; }
+body::before,body::after { display:none; }
+#app { width:min(860px,calc(100% - 32px)); }
+h1,h2,h3 { color:#111; font-family:"Montserrat",sans-serif; letter-spacing:-.02em; }
+p,.subtitle,.meta { color:#323b19; }
+.page-header,.project-entry-header { border-bottom:0; }
+.page-header::after,.project-entry-header::after { height:1px; border-radius:0; background:linear-gradient(90deg,#778257,rgba(119,130,87,0)); }
+.welcome-label,.section-label { color:#365218; font-family:"Montserrat",sans-serif; font-weight:600; letter-spacing:.09em; }
+.menu-card span,.role-card span { font-family:"Montserrat Alternates","Montserrat",sans-serif; }
+.panel,.card,
+.menu-card,.menu-card:nth-child(even),
+.project-action,.project-row-list>.project-action:nth-child(even),
+.analog-plant-row,.analog-plant-row:nth-child(even),
+.role-card,.role-card:nth-child(even) {
+    border:1px solid rgba(50,59,25,.2);
+    border-radius:4px;
+    background:#fff;
+    box-shadow:none;
+}
+.menu-card:hover,.project-action:hover,.analog-plant-row:hover {
+    border-color:#778257;
+    background:#f7f8f3;
+    transform:translateY(-1px);
+}
+button,input,select,textarea,button.ghost { border-radius:3px; font-family:"Montserrat",sans-serif; }
+button { border-color:rgba(50,59,25,.32); background:#fff; color:#111; font-weight:600; }
+button:hover,button:focus-visible { border-color:#365218; }
+button.primary { border-color:#365218; background:#365218; color:#fff; }
+button.primary:hover { background:#323b19; }
+button.ghost { border-color:transparent; background:transparent; color:#323b19; }
+input,select,textarea { border-color:rgba(50,59,25,.28); background:#fff; }
+input:focus,select:focus,textarea:focus { border-color:#365218; }
+.intro-launch .intro-heading h1 {
+    color:#111;
+    font-family:"Montserrat",sans-serif;
+    font-weight:700;
+    letter-spacing:.035em;
+}
+.intro-launch .intro-heading h1 span { color:#365218; }
+.intro-launch .intro-heading .subtitle { color:#323b19; font-family:"Montserrat",sans-serif; font-weight:500; }
+.intro-launch .intro-copy h2 {
+    color:#111;
+    font-family:"Montserrat",sans-serif;
+    font-weight:700;
+    letter-spacing:-.035em;
+}
+.intro-launch .intro-copy p { color:#323b19; }
+.intro-launch .creator-role,
+.intro-launch .visitor-role,
+.intro-launch .welcome-complementary-card,
+.intro-launch .welcome-complementary-card:first-child,
+.intro-launch .welcome-complementary-card:last-child {
+    border-color:rgba(50,59,25,.22);
+    background:#fff;
+}
+.intro-launch .role-card:hover,
+.intro-launch .welcome-complementary-card:hover {
+    border-color:#778257;
+    background:#f7f8f3;
+}
+.intro-launch .welcome-complementary-card>span,
+.intro-launch .welcome-complementary-card:first-child>span,
+.intro-launch .welcome-complementary-card:last-child>span { color:#323b19; }
+body[data-project-theme="forest-light"] .dashboard-open-ar {
+    border-color:#365218;
+    border-radius:4px;
+    background:linear-gradient(135deg,#365218,#5f7133);
+    box-shadow:none;
+}
+body[data-project-theme="forest-light"] .dashboard-field-guide {
+    border-color:rgba(50,59,25,.22);
+    border-radius:4px;
+    background:#f7f8f3;
+    color:#111;
 }

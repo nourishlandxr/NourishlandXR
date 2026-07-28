@@ -412,6 +412,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(restoration, /loadProjectSites\(operation\.projectId\)/);
     assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, operation\.siteId, area\.id\)/);
     assert.match(restoration, /isArOperationCurrent\(operation, guardOptions\)/);
+    assert.match(restoration, /if \(selected\) \{[\s\S]*activeAreaId = selected\.id;[\s\S]*\} else \{[\s\S]*activeAreaId = '';[\s\S]*activeAreaName = '';/);
+    assert.doesNotMatch(restoration, /const firstArea = areas\[0\]/);
     assert.match(quickPlace, /const loadingOperation = captureArOperationContext\(\)/);
     assert.match(quickPlace, /const operation = captureArOperationContext\(\)/);
     assert.match(quickPlace, /operationIsCurrent/);
@@ -419,6 +421,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(quickPlace, /saveMarkerAnchor\(operation\.projectId, operation\.siteId, operation\.areaId/);
     assert.match(quickPlace, /if \(!operationIsCurrent\(\)\) return;[\s\S]*sessionMarkers\.push\(record\)/);
     assert.match(launch, /const launchedSession = session/);
+    assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*selectedMarker = null;/);
+    assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hover over Markers to reveal their names\.'[\s\S]*: '';/);
     assert.match(launch, /if \(session !== launchedSession\) return/);
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
