@@ -140,13 +140,14 @@ export async function loadMarkerAnchor(projectId, siteId, placeId, markerId, vis
         if (!marker?.spatial_anchor) throw error;
         return marker.spatial_anchor;
     }
-    if (anchor?.type === 'qr' && String(anchor.qr_code || '').startsWith('nxr-spatial:') && anchor.spatial_position) {
+    if (anchor?.type === 'qr' && anchor.spatial_position) {
         return {
             ...anchor,
             type: 'spatial',
             position: anchor.spatial_position,
             coordinate_space: anchor.spatial_coordinate_space || 'session-local',
-            checkpoint_id: anchor.spatial_checkpoint_id || ''
+            checkpoint_id: anchor.spatial_checkpoint_id || '',
+            rotation_degrees: anchor.spatial_rotation_degrees ?? anchor.rotation_degrees
         };
     }
     return anchor;
@@ -179,6 +180,9 @@ export async function saveMarkerAnchor(projectId, siteId, placeId, markerId, anc
             return { ...anchor, marker_id: savedMarker.id || markerId, compatibility_format: 'nxr-marker-spatial-v1' };
         }
     }
+}
+export async function deleteMarkerAnchor(projectId, siteId, placeId, markerId) {
+    return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}/anchor`, { method: 'DELETE' });
 }
 
 const demoMarkerUrl = markerId => `${API_BASE}/demo-markers${markerId ? `/${encodeURIComponent(markerId)}` : ''}`;

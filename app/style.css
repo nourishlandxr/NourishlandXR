@@ -4905,6 +4905,42 @@ body.ar-dashboard-open .ar-tutorial-panel {
     gap: 0.7rem;
 }
 
+.plant-qr-anchor-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.7rem;
+    padding: 0.9rem;
+    border: 1px solid rgba(65, 105, 75, 0.18);
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(250, 253, 245, 0.98), rgba(224, 240, 232, 0.92));
+    box-shadow: 0 9px 24px rgba(57, 88, 59, 0.07);
+}
+
+.plant-qr-anchor-card > span {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: rgba(74, 116, 84, 0.13);
+    color: #3f6849;
+    font-size: 1.2rem;
+}
+
+.plant-qr-anchor-card strong {
+    color: #365b40;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.plant-qr-anchor-card p {
+    margin: 0.25rem 0 0.65rem;
+    color: #617067;
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
+
 .plant-card-hero {
     display: grid;
     grid-template-columns: minmax(128px, 0.42fr) minmax(0, 1fr);

@@ -1290,6 +1290,16 @@ function handleApi(req, res) {
         });
         return true;
     }
+    if (anchorMatch && req.method === 'DELETE') {
+        const [ , projectId, siteId, placeId, markerId ] = anchorMatch;
+        const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
+        const markerFile = path.join(markerDir, 'marker.json');
+        const anchorFile = path.join(markerDir, 'anchor.json');
+        if (!fs.existsSync(markerFile)) return sendJson(res, 404, { error: 'Marker not found' });
+        if (fs.existsSync(anchorFile)) fs.rmSync(anchorFile);
+        sendJson(res, 200, { deleted: true, markerId: decodeURIComponent(markerId) });
+        return true;
+    }
 
     const markerMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sites\/([^/]+)\/places\/([^/]+)\/markers\/([^/]+)$/);
     if (markerMatch && req.method === 'PUT') {

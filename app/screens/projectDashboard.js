@@ -2,7 +2,7 @@
 import { renderProjectEntry } from '../components/projectEntry.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
-import { loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
+import { deleteMarkerAnchor, loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
 import { loadProject } from '../services/persistence.js';
 import { deletePlaceMarker, savePlantProfile } from '../services/persistence.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
@@ -29,6 +29,46 @@ const isAreaTotemMarker = (marker, areaName = '') => effectiveMarkerType(marker)
         && String(marker?.name || '').trim().toLocaleLowerCase() === `${String(areaName || '').trim().toLocaleLowerCase()} totem`);
 const markerTypeLabel = type => ({ plant: 'Plant', note: 'Note', intro_checkpoint: 'Trail Entrance', sub_checkpoint: 'Checkpoint', area_checkpoint: 'Area Totem' })[type] || 'Content';
 const markerIcon = type => ({ plant: '🌱', note: '✎', intro_checkpoint: '⚑', sub_checkpoint: '⚑', area_checkpoint: '⌖' })[type] || '◆';
+const visibleQrCode = value => String(value || '').startsWith('nxr-spatial:') ? '' : String(value || '');
+async function syncMarkerQrAnchor(projectId, siteId, placeId, markerId, qrCode, description = '', knownAnchor) {
+    let anchor = knownAnchor;
+    if (anchor === undefined) {
+        anchor = await loadMarkerAnchor(projectId, siteId, placeId, markerId).catch(() => null);
+    }
+    const code = String(qrCode || '').trim();
+    const spatialPosition = anchor?.position || anchor?.spatial_position;
+    if (code) {
+        if (anchor?.type === 'gps') {
+            return saveMarkerAnchor(projectId, siteId, placeId, markerId, { ...anchor, type: 'gps', qr_code: code, description: description || anchor.description || '' });
+        }
+        return saveMarkerAnchor(projectId, siteId, placeId, markerId, {
+            type: 'qr',
+            qr_code: code,
+            description,
+            ...(spatialPosition ? {
+                spatial_position: spatialPosition,
+                spatial_coordinate_space: anchor?.coordinate_space || anchor?.spatial_coordinate_space || 'session-local',
+                spatial_checkpoint_id: anchor?.checkpoint_id || anchor?.spatial_checkpoint_id || '',
+                spatial_rotation_degrees: anchor?.rotation_degrees ?? anchor?.spatial_rotation_degrees
+            } : {})
+        });
+    }
+    if (!anchor || !visibleQrCode(anchor.qr_code)) return anchor;
+    if (anchor.type === 'gps') {
+        return saveMarkerAnchor(projectId, siteId, placeId, markerId, { ...anchor, qr_code: '' });
+    }
+    if (spatialPosition) {
+        return saveMarkerAnchor(projectId, siteId, placeId, markerId, {
+            type: 'spatial',
+            position: spatialPosition,
+            coordinate_space: anchor.coordinate_space || anchor.spatial_coordinate_space || 'session-local',
+            checkpoint_id: anchor.checkpoint_id || anchor.spatial_checkpoint_id || '',
+            rotation_degrees: anchor.rotation_degrees ?? anchor.spatial_rotation_degrees,
+            qr_code: ''
+        });
+    }
+    return deleteMarkerAnchor(projectId, siteId, placeId, markerId);
+}
 const isPlantProfileUpgraded = (marker, profile = {}) => Boolean(
     profile.profile_enabled === true
     || profile.scientific_name
@@ -545,7 +585,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const isPlaced = Boolean(placedExisting?.isPlaced);
         let savedCode = existing?.marker.qr_reference || '';
         if (existing && !savedCode) {
-            try { savedCode = (await loadMarkerAnchor(projectId, context.site.id, areaId, existing.marker.id)).qr_code || ''; }
+            try { savedCode = visibleQrCode((await loadMarkerAnchor(projectId, context.site.id, areaId, existing.marker.id)).qr_code); }
             catch { savedCode = ''; }
         }
         const submitLabel = existing ? 'Save Totem changes' : 'Save Totem';
@@ -570,7 +610,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Main welcome text</label><p>The main information bubble is usually the first thing visitors need.</p><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
             <section class="totem-information-editor" aria-labelledby="totemTextBoxesTitle"><div class="totem-editor-heading"><div><h2 id="totemTextBoxesTitle">Additional information balloons</h2><p>Attach more text boxes only when this Totem needs them.</p></div><button type="button" data-add-totem-text-box><span aria-hidden="true">+</span> Text box</button></div><div class="totem-text-box-grid" data-totem-text-boxes>${bubbleFields}</div></section>
             <section class="totem-relationship-grid">
-                <div class="totem-anchor-card"><span aria-hidden="true">⌖</span><div><strong>ANCHOR</strong><p>Relate this Totem to a real marking or QR code.</p><label for="areaCheckpointCode">Marking / QR code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Optional physical reference" /></div></div>
+                <div class="totem-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Totem to the QR label installed at its real-world position.</p><label for="areaCheckpointCode">Totem QR code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter the code on this Totem" /></div></div>
                 <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem to another Totem in the location.</p>${linkOptions ? `<label for="areaCheckpointLinkTarget">Link to Totem</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area Totem</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" /></div>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}</span>`).join('')}</div></div></div>
             </section>
             <p id="areaCheckpointStatus" class="meta"></p>
@@ -648,11 +688,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 : await createPlaceMarker(projectId, context.site.id, areaId, compatibleData);
         }
         savedMarker = savedMarker?.marker || savedMarker;
-        if (qrCode) await saveMarkerAnchor(projectId, context.site.id, areaId, savedMarker.id, {
-            type: 'qr',
-            qr_code: qrCode,
-            description: `Physical Area Marker for ${context.area.name}.`
-        });
+        await syncMarkerQrAnchor(projectId, context.site.id, areaId, savedMarker.id, qrCode, `Physical Totem for ${context.area.name}.`);
         if (linkTarget) {
             const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
             links.push({ target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) });
@@ -2136,6 +2172,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     if (!entry) throw new Error('Entry not found.');
     const [placement] = await entriesWithPlacement(project, site, [entry]);
     const plant = entry.marker.type === 'plant';
+    const markerAnchor = plant ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
+    const plantQrCode = plant ? visibleQrCode(entry.marker.qr_reference || markerAnchor?.qr_code) : '';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
@@ -2146,7 +2184,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const returnArAction = returnToAr ? `<button class="ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
     const arHandoff = returnToAr ? `<aside class="ar-web-handoff" aria-label="Return to augmented reality"><div><strong>WEB MODE</strong><p>${returnArCopy}</p></div>${returnArAction}</aside>` : '';
         const specialMarkerEditor = entry.marker.type === 'sub_checkpoint' ? `<div class="field"><label for="projectEntrySpecialSymbol">Marker symbol</label><select id="projectEntrySpecialSymbol"><option value="" ${entry.marker.special_symbol ? '' : 'selected'}>Standard checkpoint</option>${[['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'], ['!', 'Exclamation point'], ['?', 'Question mark']].map(([symbol, label]) => `<option value="${symbol}" ${entry.marker.special_symbol === symbol ? 'selected' : ''}>${label}</option>`).join('')}</select></div>` : '';
-        app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? plantProfileEditorMarkup(entry, profile) : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button><button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button></div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">${returnToAr ? 'Stay in Web Mode · Project' : 'Return to Dashboard'}</button></nav></div>`;
+        app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button><button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button></div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">${returnToAr ? 'Stay in Web Mode · Project' : 'Return to Dashboard'}</button></nav></div>`;
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
@@ -2187,6 +2225,8 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const targetAreaId = document.getElementById('projectEntryArea').value;
         const specialSymbol = document.getElementById('projectEntrySpecialSymbol')?.value;
         const profileEnabled = entry.marker.type === 'plant' && document.getElementById('projectEntryProfileEnabled')?.value === 'true';
+        const qrCode = profileEnabled ? document.getElementById('projectEntryQrCode')?.value.trim() || '' : '';
+        const sourceAnchor = profileEnabled ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
         let savedMarker = entry.marker;
         if (targetAreaId !== entry.place.id) {
             const { created, modified, plant_profile_path, spatial_anchor, ...portableMarker } = entry.marker;
@@ -2194,6 +2234,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...portableMarker,
                 name,
                 description,
+                ...(profileEnabled ? { qr_reference: qrCode } : {}),
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
@@ -2210,9 +2251,17 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...entry.marker,
                 name,
                 description,
+                ...(profileEnabled ? { qr_reference: qrCode } : {}),
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
+        }
+        savedMarker = savedMarker?.marker || savedMarker;
+        if (profileEnabled) {
+            const movableAnchor = targetAreaId !== entry.place.id && sourceAnchor
+                ? { ...sourceAnchor, position: null, spatial_position: null }
+                : undefined;
+            await syncMarkerQrAnchor(project.id, site.id, targetAreaId, savedMarker.id, qrCode, `Physical QR label for ${name}.`, movableAnchor);
         }
         if (profileEnabled) {
             await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, {

@@ -796,6 +796,10 @@ test('an open AR Plant profile hands off to Web Mode and returns to the same orb
     assert.match(dashboardSource, /BACK TO AR · SAME PLANT/);
     assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
     assert.match(dashboardSource, /is-ar-web-handoff/);
+    assert.match(dashboardSource, /projectEntryQrCode/);
+    assert.match(dashboardSource, /Plant QR code/);
+    assert.match(dashboardSource, /syncMarkerQrAnchor/);
+    assert.match(styles, /\.plant-qr-anchor-card/);
     assert.match(styles, /\.creator-ar-open-web-profile/);
     assert.match(styles, /\.ar-web-handoff/);
 });
@@ -814,7 +818,8 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.doesNotMatch(dashboardSource, /id="areaInformationBoxNew"/);
     assert.match(styles, /\.area-content-grid/);
     assert.match(styles, /\.totem-text-box-grid/);
-    assert.match(dashboardSource, /Relate this Totem to a real marking or QR code/);
+    assert.match(dashboardSource, /Totem QR code/);
+    assert.match(dashboardSource, /QR label installed at its real-world position/);
     assert.match(dashboardSource, /target_area_id/);
     assert.match(dashboardSource, /site-map-totem-links/);
     assert.match(dashboardSource, /Main welcome text/);
