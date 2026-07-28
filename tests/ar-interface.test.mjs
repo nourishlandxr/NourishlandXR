@@ -528,8 +528,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
     assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
-    assert.match(source, /The red orb keeps its colour as it becomes a Plant marker/);
-    assert.match(source, /The green Moringa orb keeps its colour as it becomes a Plant marker/);
+    assert.match(source, /A Plant orb contains a plant’s information and its location/);
+    assert.match(source, /This Plant orb contains Moringa’s information and its location/);
+    assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
     assert.match(source, /demoOrbColor: type === 'plant' \? 'red' : type === 'plant2' \? 'green'/);
     assert.match(source, /red:[\s\S]*radius: 0\.07/);
     assert.match(source, /green:[\s\S]*radius: 0\.074/);

@@ -501,8 +501,8 @@ function guidePlantConversion(record) {
     showIntroBoard(
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
         moringa
-            ? 'The green Moringa orb keeps its colour as it becomes a Plant marker.'
-            : 'The red orb keeps its colour as it becomes a Plant marker.',
+            ? 'This Plant orb contains Moringa’s information and its location, keeping its knowledge connected to where it grows.'
+            : 'A Plant orb contains a plant’s information and its location, keeping its knowledge connected to where it grows.',
         moringa ? 'Create Moringa profile' : 'Create Plant Profile',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
