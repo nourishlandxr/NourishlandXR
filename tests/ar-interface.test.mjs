@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
+import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -120,8 +121,6 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-placed-type=/);
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
     assert.doesNotMatch(arSource.slice(arSource.indexOf('function showPlacedMarkerActions'), arSource.indexOf('function openSpecialMarkerPicker')), /data-ar-placed-type="area_checkpoint"/);
-    assert.match(arSource, /data-ar-create-area/);
-    assert.match(arSource, /data-ar-place-area-totem/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-view-mode/);
@@ -152,13 +151,19 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /launchedSession\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
-    assert.match(arSource, /querySelector\('\[data-ar-add-plant\]'\)\.addEventListener\('click'/);
-    assert.match(arSource, /querySelector\('\[data-ar-add-note\]'\)\.addEventListener\('click'/);
-    assert.match(arSource, /querySelector\('\[data-ar-add-special\]'\)\.addEventListener\('click'/);
+    assert.match(arSource, /const bindTaskbarAction = \(selector, action\) =>/);
+    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-plant\]'/);
+    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-note\]'/);
+    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-special\]'/);
+    assert.match(arSource, /addEventListener\('pointerup'/);
+    assert.match(arSource, /event\.stopImmediatePropagation\(\)/);
+    assert.doesNotMatch(arSource, /querySelector\('\.creator-ar-taskbar'\)\.addEventListener\('click'/);
+    assert.match(arSource, /event\.stopPropagation\(\)/);
     assert.match(arSource, /placementPointerMarkup/);
     assert.match(pointerSource, /creator-ar-breathing-target/);
     assert.match(pointerSource, /creator-ar-placement-pointer/);
     assert.match(pointerSource, /creator-ar-placement-guide-label/);
+    assert.match(styles, /\.tryit-place\.creator-ar-placement-guide \.creator-ar-placement-pointer \{[^}]*border-radius:999px !important/);
     assert.match(arSource, /data-ar-placement-guide-label/);
     assert.match(arSource, /creator-ar-spatial-name/);
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-guide/);
@@ -170,23 +175,29 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\) && latestViewerMatrix/);
     assert.match(arSource, /function pointerWorldRay\(\)/);
+    assert.match(arSource, /readyPlacementType \? '\.creator-ar-placement-guide' : '\.creator-ar-mode-pointer'/);
     assert.match(arSource, /spawnedAt: performance\.now\(\)/);
     assert.match(arSource, /opacity: arrivalEase/);
 });
 
-test('Special Marker tools open immediately while recorded Markers restore', () => {
+test('Special Marker opens immediately with symbols only', () => {
     const arSource = read('app/screens/arMode.js');
     const start = arSource.indexOf('async function openSpecialMarkerPicker()');
     const end = arSource.indexOf('function resetArControls()', start);
     const specialPicker = arSource.slice(start, end);
     assert.ok(start >= 0 && end > start);
-    assert.ok(specialPicker.indexOf('picker.hidden = false') < specialPicker.indexOf('await restoreRecordedMarkers(restoringOperation)'));
-    assert.ok(specialPicker.indexOf('await loadPlacementAreas(loadingOperation)') < specialPicker.indexOf('await restoreRecordedMarkers(restoringOperation)'));
-    assert.match(specialPicker, /Loading Area tools/);
-    assert.match(specialPicker, /picker\.dataset\.panel !== panelId/);
-    assert.match(specialPicker, /requestId !== specialPickerRequest/);
-    assert.match(arSource, /createAreaRecord\(projectId, siteId/);
+    assert.match(specialPicker, /picker\.hidden = false/);
+    assert.doesNotMatch(specialPicker, /restoreRecordedMarkers|loadPlacementAreas|Loading Area tools/);
     assert.match(specialPicker, /renderSpecialMarkerChoices\(picker\)/);
+    const renderStart = arSource.indexOf('function renderSpecialMarkerChoices(picker)');
+    const renderEnd = arSource.indexOf('async function openArAreaCreationForm()', renderStart);
+    const specialChoices = arSource.slice(renderStart, renderEnd);
+    assert.match(specialChoices, /<p>Symbols<\/p>/);
+    assert.match(specialChoices, />ARROWS</);
+    assert.match(specialChoices, />SYMBOLS</);
+    assert.match(specialChoices, /\['!', 'Important'\]/);
+    assert.match(specialChoices, /\['\?', 'Question'\]/);
+    assert.doesNotMatch(specialChoices, /AREA TOTEM|EXISTING RECORDS|data-ar-import-marker|data-ar-place-area-totem|data-ar-create-area/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
@@ -263,16 +274,15 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.doesNotMatch(arSource, /button\.dataset\.arPlacedType/);
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
-    assert.match(arSource, /data-ar-import-marker/);
-    assert.match(arSource, /Import Marker \/ Plant/);
-    assert.match(arSource, /data-ar-toggle-structural/);
-    assert.match(arSource, /Hide.*Totem/);
+    assert.doesNotMatch(arSource, /data-ar-import-marker/);
+    assert.doesNotMatch(arSource, /Import Marker \/ Plant/);
+    assert.doesNotMatch(arSource, /data-ar-toggle-structural/);
     assert.match(styles, /\.creator-ar-special-grid/);
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
-    assert.match(arSource, /float totemBack/);
-    assert.match(arSource, /float totemSide=max\(0\.,totemBack-totemFront\)/);
+    assert.match(arSource, /createSpatialPrismRenderer/);
+    assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, record\.position/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
@@ -422,8 +432,18 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(restoration, /loadProjectSites\(operation\.projectId\)/);
     assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, operation\.siteId, area\.id\)/);
     assert.match(restoration, /isArOperationCurrent\(operation, guardOptions\)/);
-    assert.match(restoration, /if \(selected\) \{[\s\S]*activeAreaId = selected\.id;[\s\S]*\} else \{[\s\S]*activeAreaId = '';[\s\S]*activeAreaName = '';/);
+    assert.match(restoration, /if \(selected\) \{[\s\S]*activateArea\(selected\);[\s\S]*\} else \{[\s\S]*activateArea\(null\);/);
     assert.doesNotMatch(restoration, /const firstArea = areas\[0\]/);
+    const areaFallback = arSource.slice(arSource.indexOf('async function ensurePlacementArea('), arSource.indexOf('async function armPlacement('));
+    assert.match(areaFallback, /areas\.find\(area => area\.name === AR_EXPERIENCE_CONFIG\.fallbackArea\.name\)/);
+    assert.match(areaFallback, /createSitePlace\([\s\S]*AR_EXPERIENCE_CONFIG\.fallbackArea/);
+    assert.match(areaFallback, /activateArea\(fallback\)/);
+    assert.doesNotMatch(areaFallback, /Create your first Area|Create or open an Area/);
+    assert.match(arSource, /function activeAreaMarkers\(\) \{[\s\S]*record\.areaId === activeAreaId/);
+    assert.match(arSource, /function activateArea\(area\) \{[\s\S]*activeAreaId !== nextAreaId[\s\S]*sessionMarkers = \[\];[\s\S]*locatedTotemRecord = null/);
+    assert.equal((arSource.match(/activeAreaMarkers\(\)\.forEach/g) || []).length, 3);
+    assert.match(arSource, /const visibleMarkers = activeAreaMarkers\(\);[\s\S]*layer\.innerHTML = visibleMarkers\.map/);
+    assert.match(arSource, /locatedTotemRecord\?\.areaId === activeAreaId/);
     assert.match(quickPlace, /const loadingOperation = captureArOperationContext\(\)/);
     assert.match(quickPlace, /const operation = captureArOperationContext\(\)/);
     assert.match(quickPlace, /operationIsCurrent/);
@@ -455,6 +475,8 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
 test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
     const styles = read('app/style.css');
+    assert.match(source, /function demoPointerWorldRay\(\)/);
+    assert.match(source, /const ray = demoPointerWorldRay\(\)/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
@@ -532,8 +554,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
     assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
-    assert.match(source, /A Plant orb contains a plant’s information and its location/);
-    assert.match(source, /This Plant orb contains Moringa’s information and its location/);
+    assert.match(source, /Plant Markers can be updated to Plant Profiles in Creator Mode/);
+    assert.match(source, /press the orb to reveal its information diagram/);
+    assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
+    assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
     assert.match(source, /demoOrbColor: type === 'plant' \? 'red' : type === 'plant2' \? 'green'/);
     assert.match(source, /red:[\s\S]*radius: 0\.07/);
@@ -581,8 +605,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(92vw,760px\)/);
     assert.match(styles, /top:max\(10px,env\(safe-area-inset-top\)\)/);
-    assert.match(styles, /height:min\(84dvh,800px\)/);
-    assert.match(styles, /max-height:calc\(100dvh - 118px\)/);
+    assert.match(styles, /height:calc\(100dvh - max\(16px,env\(safe-area-inset-top\)\)\)/);
+    assert.match(styles, /max-height:none/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*\+ 44px\)/);
     assert.match(styles, /top:calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 2cm\)/);
@@ -590,6 +614,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:grid; align-content:start;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*height:calc\(100dvh - max\(16px,env\(safe-area-inset-top\)\)\);[^}]*max-height:none;[^}]*overflow-y:auto;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
     assert.match(styles, /font-size:clamp\(\.94rem,2\.7vw,1\.35rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
@@ -631,6 +656,18 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
+    assert.match(source, /plant-knowledge-connectors/);
+    assert.match(styles, /\.plant-knowledge-connectors path/);
+    assert.match(styles, /--honey-cell-size:clamp\(84px,23vw,112px\)/);
+    assert.match(styles, /--honey-cell-height:clamp\(73px,19\.92vw,97px\)/);
+    assert.match(styles, /\.plant-knowledge-connectors circle/);
+    assert.match(styles, /\.plant-knowledge-left \.plant-knowledge-cell:nth-child\(1\) \{ left:calc\(50% - var\(--honey-x-half\)\); top:calc\(50% - var\(--honey-y-step\)\); \}/);
+    assert.match(styles, /\.plant-knowledge-right \.plant-knowledge-cell:nth-child\(6\)/);
+    assert.match(source, /activateBranch\(branchKey\)/);
+    assert.doesNotMatch(source, /activateBranch\(record\.demoActiveBranch === branchKey \? '' : branchKey\)/);
+    const sessionSelectStart = source.indexOf("session.addEventListener('select'");
+    const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));
+    assert.doesNotMatch(sessionSelect, /toggleDemoPlantProfile/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
     assert.match(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
@@ -642,6 +679,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);
     assert.match(styles, /\.tryit-sim-totem-pillar/);
+    assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
+    assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
+    assert.match(source, /drawSpatialPrism\(gl, prismRenderer, view, record\.position/);
     assert.match(source, /const bubbles = \(content\?\.bubbles \|\| content\?\.lines \|\| \[\]\)\.filter\(Boolean\)\.slice\(0, 5\)/);
     assert.match(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
@@ -775,13 +815,22 @@ test('plant creation separates Local records from read-only Global discovery', (
 
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
+    const prismSource = read('app/services/spatialPrismRenderer.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
     assert.match(arSource, /area_checkpoint: \[\.14 \* factor, \.72 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
-    assert.match(arSource, /roundBox\(q\+vec2\(-\.012,.012\),vec2\(\.245,.46\),.035\)/);
-    assert.match(arSource, /float totemTop/);
-    assert.match(arSource, /float verticalLight/);
+    assert.match(arSource, /createSpatialPrismRenderer/);
+    assert.match(arSource, /shape === 1[\s\S]*drawSpatialPrism/);
+    assert.match(arSource, /shape === 0 \|\| shape === 1 \|\| shape === 3 \|\| shape === 4/);
+    assert.match(prismSource, /attribute vec3 position/);
+    assert.match(prismSource, /attribute vec3 normal/);
+    assert.match(prismSource, /float topFace = smoothstep/);
+    assert.equal(createPrismGeometry().length, 216);
+    const prismMatrix = prismModelMatrix({ x: 1, y: 2, z: 3 }, { halfWidth: .14, halfHeight: .72, halfDepth: .14 }, 0);
+    assert.equal(prismMatrix[12], 1);
+    assert.ok(Math.abs(prismMatrix[13] - 2.72) < 1e-6);
+    assert.equal(prismMatrix[14], 3);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /Area Totem/);
@@ -794,8 +843,10 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     const styles = read('app/style.css');
     assert.match(arSource, /function hasPlantProfile\(record\)/);
     assert.match(arSource, /record\.profileExpanded = !record\.profileExpanded/);
-    assert.match(arSource, /information opened\. Tap the Marker again to hide it/);
+    assert.match(arSource, /information opened\. Tap the orb again to hide the honeycomb/);
     assert.match(arSource, /creator-ar-plant-profile/);
+    assert.match(arSource, /const open = candidate === cell/);
+    assert.doesNotMatch(arSource, /const open = !cell\.classList\.contains\('is-open'\)/);
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
@@ -879,7 +930,8 @@ test('Field Guide owns spatial preparation and Special Markers include wayfindin
     assert.match(arSource, /\['!', 'Important'\]/);
     assert.match(arSource, /special_symbol/);
     assert.match(arSource, /data-ar-arrow-style="\$\{index \+ 1\}"/);
-    assert.match(arSource, /DIRECTION ARROWS/);
+    assert.match(arSource, />ARROWS</);
+    assert.match(arSource, />SYMBOLS</);
     assert.match(arSource, /function rotateHeldArrow/);
     assert.match(arSource, /rotation_degrees: roundCoordinate\(rotationDegrees\)/);
     assert.match(arSource, /data-ar-rotate-left/);

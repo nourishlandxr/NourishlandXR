@@ -17,14 +17,14 @@ function contextualGuidance(guidance, target) {
 }
 
 function tutorialSpotlight(guidance) {
-    if (!guidance || !['dashboardWelcome', 'arMode', 'contentMode', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
+    if (!guidance || !['dashboardWelcome', 'projectTutorial', 'arMode', 'helpGuide', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
     return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
         <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" role="dialog" aria-modal="true">
             <summary><span class="guidance-stage">First steps</span><strong>${guidance.title}</strong><i aria-hidden="true">⌄</i></summary>
             <div class="tutorial-subtle-tip-body">
             <p>${guidance.body}</p>
             <div class="tutorial-spotlight-actions">
-                <button type="button" onclick="${guidance.dismissAction}">Skip this step</button>
+                <button type="button" onclick="${guidance.closeAction || guidance.dismissAction}">Close tutorial</button>
                 <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
             </div>
             </div>
@@ -57,7 +57,7 @@ export function renderProjectEntry(config) {
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
     const growth = config.growthJourney;
-    const growthJourneyHtml = growth ? `<details class="living-map-progress subtle-project-tutorial">
+    const growthJourneyHtml = growth ? `<details class="living-map-progress subtle-project-tutorial${config.guidance?.target === 'projectTutorial' ? ' tutorial-spotlight-target' : ''}"${config.guidance?.target === 'projectTutorial' ? ' open' : ''}>
         <summary class="living-map-progress-heading">
             <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">${escapeAttribute(growth.message)}</h2></div>
             <span class="tutorial-summary-progress"><strong>${growth.completed} of ${growth.steps.length}</strong><i aria-hidden="true">⌄</i></span>
@@ -92,10 +92,9 @@ export function renderProjectEntry(config) {
         </section>` : '';
 
     return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
-        <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
+        <header class="location-dashboard-header">
             <h1>${config.locationName}</h1>
-            <span class="dashboard-identity">WEB DATABASE</span>
-            <p class="dashboard-location-name">${config.siteName}</p>
+            <p>Dashboard</p>
         </header>
 
         ${growthJourneyHtml}
@@ -145,7 +144,7 @@ export function renderProjectEntry(config) {
             </div>
         </section>
 
-        <nav class="location-tool-grid" aria-label="Location tools">
+        <nav class="location-tool-grid${spotlightTarget === 'helpGuide' ? ' tutorial-spotlight-target' : ''}" aria-label="Location tools">
             ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
         </nav>
 

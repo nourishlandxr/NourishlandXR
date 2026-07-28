@@ -8,6 +8,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 
 let appRoot = null;
 let session = null;
@@ -16,6 +17,7 @@ let gl = null;
 let referenceSpace = null;
 let hitTestSource = null;
 let viewerMatrix = null;
+let latestDemoView = null;
 let hitMatrix = null;
 let marker = null;
 let markerType = 'marker';
@@ -25,6 +27,7 @@ let program = null;
 let buffer = null;
 let sphereRenderer = null;
 let tetherRenderer = null;
+let prismRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -134,6 +137,7 @@ function clearSessionState() {
     hitTestSource = null;
     referenceSpace = null;
     viewerMatrix = null;
+    latestDemoView = null;
     hitMatrix = null;
     marker = null;
     markerType = 'marker';
@@ -174,8 +178,10 @@ function clearSessionState() {
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialTetherRenderer(gl, tetherRenderer);
+    destroySpatialPrismRenderer(gl, prismRenderer);
     sphereRenderer = null;
     tetherRenderer = null;
+    prismRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -484,26 +490,19 @@ function guidePlantConversion(record) {
         record.demoType = 'plant';
         record.name = plantName;
         record.demoPlantPreset = moringa ? 'moringa' : 'lemon-myrtle';
-        record.demoExpanded = true;
-        record.profileRevealStarted = performance.now();
+        record.demoExpanded = false;
         record.demoActiveBranch = '';
         record.informationPosition = plantInformationPosition(record);
         record.revealTitle = true;
         record.revealLines = 3;
+        record.awaitingProfileReveal = true;
         refreshDemoRecord(record);
-        navigator.vibrate?.([45, 40, 75]);
-        showGuidedChoice(`<h2>${moringa ? 'Moringa comes alive' : 'The profile comes alive'}</h2><p>Its information honeycomb connects uses, growing conditions, origin, scientific knowledge, and fruit or flower details. Hover or tap a cell to explore.</p>`, () => {}, {
-            onTextComplete: () => runKnowledgeTour(record, () => {
-                showDemoAction(moringa ? 'note' : 'plant2');
-            })
-        });
+        setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     showIntroBoard(
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
-        moringa
-            ? 'This Plant orb contains Moringa’s information and its location, keeping its knowledge connected to where it grows.'
-            : 'A Plant orb contains a plant’s information and its location, keeping its knowledge connected to where it grows.',
-        moringa ? 'Create Moringa profile' : 'Create Plant Profile',
+        `Plant Markers can be updated to Plant Profiles in Creator Mode. A profile provides in-depth information about ${plantName} while keeping that knowledge connected to where it grows. Next, press the orb to reveal its information diagram.`,
+        'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
             finishIntroBoard();
@@ -745,6 +744,12 @@ function toggleDemoPlantProfile(record) {
         if (!record.demoActiveBranch) record.demoActiveBranch = 'left-0';
     }
     refreshDemoRecord(record);
+    if (record.demoExpanded && record.awaitingProfileReveal) {
+        record.awaitingProfileReveal = false;
+        navigator.vibrate?.([45, 40, 75]);
+        runKnowledgeTour(record, () => showDemoAction(record.tutorialStage === 'plant2' ? 'note' : 'plant2'));
+        return;
+    }
     setGuide(record.demoExpanded
         ? `${record.name || 'Plant'} profile opened gently. Press the living orb again to hide it.`
         : `${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
@@ -925,7 +930,7 @@ function bindSimulatedInformationPanels(layer) {
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 const branchKey = cell.dataset.plantBranch;
-                activateBranch(record.demoActiveBranch === branchKey ? '' : branchKey);
+                activateBranch(branchKey);
             });
             cell.addEventListener('mouseenter', () => activateBranch(cell.dataset.plantBranch));
         });
@@ -975,7 +980,7 @@ function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE, activeBranch =
         const open = activeBranch === key;
         return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${label}</b><small aria-hidden="${!open}">${value}</small></button>`;
     }).join('')}</span>`;
-    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${knowledge.title} information cluster"><small>PLANT PROFILE</small><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
+    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="plant-knowledge-lattice" d="M50 50 L38 28 L27 50 L38 72 L50 50 L62 28 L73 50 L62 72 Z"/><path class="plant-knowledge-terminals" d="M34 20 L28 9 M66 20 L72 9 M34 80 L28 91 M66 80 L72 91"/><circle cx="28" cy="9" r="1.7"/><circle cx="72" cy="9" r="1.7"/><circle cx="28" cy="91" r="1.7"/><circle cx="72" cy="91" r="1.7"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${knowledge.title} information cluster"><small>PLANT PROFILE</small><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -984,8 +989,37 @@ function refreshDemoRecord(record) {
     updateSimulatedMarkers();
 }
 
+function demoPointerWorldRay() {
+    if (!viewerMatrix || !latestDemoView?.projectionMatrix) return null;
+    const pointer = appRoot?.querySelector('[data-tryit-place]');
+    const rect = pointer?.getBoundingClientRect();
+    const screenX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const screenY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const projection = latestDemoView.projectionMatrix;
+    let x = (screenX / window.innerWidth * 2 - 1 + projection[8]) / projection[0];
+    let y = (1 - screenY / window.innerHeight * 2 + projection[9]) / projection[5];
+    let z = -1;
+    const viewLength = Math.hypot(x, y, z) || 1;
+    x /= viewLength;
+    y /= viewLength;
+    z /= viewLength;
+    const worldX = viewerMatrix[0] * x + viewerMatrix[4] * y + viewerMatrix[8] * z;
+    const worldY = viewerMatrix[1] * x + viewerMatrix[5] * y + viewerMatrix[9] * z;
+    const worldZ = viewerMatrix[2] * x + viewerMatrix[6] * y + viewerMatrix[10] * z;
+    const worldLength = Math.hypot(worldX, worldY, worldZ) || 1;
+    return { x: worldX / worldLength, y: worldY / worldLength, z: worldZ / worldLength };
+}
+
 function placementPosition() {
-    return spatialPosition(null, viewerMatrix, 0);
+    if (!viewerMatrix) return null;
+    const ray = demoPointerWorldRay();
+    if (!ray) return spatialPosition(null, viewerMatrix, 0);
+    const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
+    return {
+        x: viewerMatrix[12] + ray.x * distance,
+        y: viewerMatrix[13] + ray.y * distance,
+        z: viewerMatrix[14] + ray.z * distance
+    };
 }
 
 function plantInformationPosition(record) {
@@ -1146,6 +1180,7 @@ function setupRenderer() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
     tetherRenderer = createSpatialTetherRenderer(gl);
+    prismRenderer = createSpatialPrismRenderer(gl);
 }
 
 function unusedLegacyMarkerTexture() {
@@ -1261,22 +1296,6 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
         ctx.bezierCurveTo(360 + (x - 360) * .34, 386, 360 + (x - 360) * .68, y, x, y);
         ctx.stroke();
     });
-    const pillar = ctx.createLinearGradient(306, 0, 414, 0);
-    pillar.addColorStop(0, 'rgba(24,104,119,.98)');
-    pillar.addColorStop(.24, 'rgba(100,215,216,.98)');
-    pillar.addColorStop(.72, 'rgba(35,148,162,.98)');
-    pillar.addColorStop(1, 'rgba(12,65,86,.98)');
-    ctx.fillStyle = pillar;
-    ctx.beginPath();
-    ctx.roundRect(306, 390, 108, 710, [14, 14, 8, 8]);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(220,250,247,.72)';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(117,226,224,.98)';
-    ctx.beginPath();
-    ctx.roundRect(309, 382, 102, 24, [12, 12, 5, 5]);
-    ctx.fill();
     cards.forEach((text, index) => {
         const [x, y, width, height] = cardLayouts[index];
         const balloonLight = ctx.createRadialGradient(x + width * .25, y + height * .18, 8, x + width * .5, y + height * .5, width * .7);
@@ -1573,26 +1592,18 @@ function createMarkerTexture(record) {
         ctx.arc(108, 105, 18, 0, Math.PI * 2);
         ctx.fill();
     } else if (record.demoType === 'zone') {
-        ctx.fillStyle = 'rgba(19,67,64,.82)';
+        ctx.fillStyle = 'rgba(77,174,174,.98)';
         ctx.beginPath();
-        ctx.roundRect(92, 15, 108, 224, 14);
+        ctx.moveTo(68, 30); ctx.lineTo(158, 42); ctx.lineTo(158, 238); ctx.lineTo(68, 226); ctx.closePath();
         ctx.fill();
-        const post = ctx.createLinearGradient(76, 0, 180, 0);
-        post.addColorStop(0, 'rgba(31,96,89,.96)');
-        post.addColorStop(.48, 'rgba(103,211,194,.98)');
-        post.addColorStop(1, 'rgba(24,78,73,.96)');
-        ctx.fillStyle = post;
+        ctx.fillStyle = 'rgba(22,91,108,.98)';
         ctx.beginPath();
-        ctx.roundRect(76, 8, 104, 240, 12);
+        ctx.moveTo(158, 42); ctx.lineTo(194, 24); ctx.lineTo(194, 218); ctx.lineTo(158, 238); ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = 'rgba(215,255,247,.72)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(231,255,244,.38)';
-        ctx.lineWidth = 3;
+        ctx.fillStyle = 'rgba(132,226,215,.98)';
         ctx.beginPath();
-        ctx.roundRect(88, 24, 74, 208, 9);
-        ctx.stroke();
+        ctx.moveTo(68, 30); ctx.lineTo(104, 12); ctx.lineTo(194, 24); ctx.lineTo(158, 42); ctx.closePath();
+        ctx.fill();
     } else if (record.type === 'marker' || record.type === 'sub_checkpoint') {
         const glow = ctx.createRadialGradient(128, 128, 18, 128, 128, 118);
         glow.addColorStop(0, 'rgba(226,244,181,.7)');
@@ -1648,7 +1659,7 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
-    if (!program || !buffer || !sphereRenderer || !tetherRenderer) return;
+    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -1666,6 +1677,17 @@ function drawMarker(view) {
             material?.radius || (orbType === 'plant' ? .068 : .05),
             { type: orbType, color: material?.shell, coreColor: material?.core }
         );
+    });
+    markers.forEach(record => {
+        if (record.demoType !== 'zone') return;
+        drawSpatialPrism(gl, prismRenderer, view, record.position, {
+            halfWidth: .16,
+            halfHeight: .9,
+            halfDepth: .16,
+            color: [.3, .7, .69],
+            topColor: [.62, .92, .84],
+            rotationY: Math.PI / 7
+        });
     });
 
     markers.forEach(record => {
@@ -1693,6 +1715,7 @@ function drawMarker(view) {
         if (orbOnly) return;
         const compact = !record.demoExpanded;
         const totem = record.demoType === 'zone';
+        if (totem && compact) return;
         const noteSign = record.demoType === 'note';
         const plantProfile = record.demoType === 'plant' && record.demoExpanded;
         const displayPosition = plantProfile
@@ -1742,10 +1765,7 @@ async function startImmersive() {
             if (performance.now() < suppressSessionSelectUntil) return;
             if (placementReady && !marker) {
                 setGuide('Press the glowing centre pointer to place the Plant orb.');
-                return;
             }
-            const profiledPlant = markers.find(record => record.demoType === 'plant');
-            if (profiledPlant) toggleDemoPlantProfile(profiledPlant);
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
@@ -1753,6 +1773,7 @@ async function startImmersive() {
             session.requestAnimationFrame(draw);
             const pose = frame.getViewerPose(referenceSpace);
             viewerMatrix = pose ? Float32Array.from(pose.transform.matrix) : null;
+            latestDemoView = pose?.views?.[0] || null;
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;

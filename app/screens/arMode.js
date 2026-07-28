@@ -15,6 +15,7 @@ import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
+import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 
 let session = null;
 let gl = null;
@@ -42,6 +43,7 @@ let latestHitMatrix = null;
 let markerProgram = null;
 let markerBuffer = null;
 let sphereRenderer = null;
+let prismRenderer = null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
@@ -115,6 +117,21 @@ function markerDimensions(marker) {
     })[marker.type] || [markerScale(marker), markerScale(marker)];
 }
 
+function activeAreaMarkers() {
+    return sessionMarkers.filter(record => record.areaId === activeAreaId);
+}
+
+function activateArea(area) {
+    const nextAreaId = area?.id || '';
+    if (activeAreaId !== nextAreaId) {
+        sessionMarkers = [];
+        locatedTotemRecord = null;
+        renderSessionMarkers();
+    }
+    activeAreaId = nextAreaId;
+    activeAreaName = area?.name || '';
+}
+
 function hasPlantProfile(record) {
     const profile = record?.plantProfile || record?.marker?.plant_profile || {};
     return record?.marker?.type === 'plant' && Boolean(
@@ -152,7 +169,7 @@ function creatorPlantKnowledge(record) {
 function creatorPlantKnowledgeMarkup(record) {
     const knowledge = creatorPlantKnowledge(record);
     const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-expanded="false"><b>${escapeHtml(label)}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
-    return `<span class="plant-knowledge-map">${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
+    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="plant-knowledge-lattice" d="M50 50 L38 28 L27 50 L38 72 L50 50 L62 28 L73 50 L62 72 Z"/><path class="plant-knowledge-terminals" d="M34 20 L28 9 M66 20 L72 9 M34 80 L28 91 M66 80 L72 91"/><circle cx="28" cy="9" r="1.7"/><circle cx="72" cy="9" r="1.7"/><circle cx="28" cy="91" r="1.7"/><circle cx="72" cy="91" r="1.7"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -380,13 +397,6 @@ function showPlacedMarkerActions(record) {
 }
 
 function renderSpecialMarkerChoices(picker) {
-    const existingTotem = sessionMarkers.find(record => record.areaId === activeAreaId && record.marker.type === 'area_checkpoint');
-    const totemAction = existingTotem
-        ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-structural="${escapeHtml(existingTotem.marker.id)}"><b aria-hidden="true">${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? '&#x25C9;' : '&#x25CE;'}</b><span><strong>${hiddenStructuralMarkerIds.has(existingTotem.marker.id) ? 'Show' : 'Hide'} Totem</strong></span></button>`
-        : activeAreaId
-            ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-place-area-totem><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Add Totem</strong></span></button>`
-            : '';
-    const areaAction = activeAreaId ? '' : `<button class="creator-ar-special-totem creator-ar-create-area" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create Area</strong></span></button>`;
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
         ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
@@ -395,17 +405,8 @@ function renderSpecialMarkerChoices(picker) {
     const alerts = [
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Spatial tools</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-totem-section"><strong>AREA TOTEM</strong><div class="creator-ar-special-grid">${totemAction}${areaAction}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>DIRECTION ARROWS</strong><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>INFORMATION MARKERS</strong><div class="creator-ar-special-grid">${alerts}</div></section><section class="creator-ar-special-section"><strong>EXISTING RECORDS</strong><div class="creator-ar-special-grid"><button class="creator-ar-special-totem" type="button" data-ar-import-marker><b aria-hidden="true">↥</b><span><strong>Import Marker / Plant</strong></span></button></div></section>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Symbols</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-indicator-section"><strong>ARROWS</strong><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><div class="creator-ar-special-grid">${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-place-area-totem]')?.addEventListener('click', () => {
-        closePlacePicker();
-        void armPlacement('area_checkpoint');
-    });
-    picker.querySelector('[data-ar-create-area]')?.addEventListener('click', () => void openArAreaCreationForm());
-    picker.querySelector('[data-ar-import-marker]').addEventListener('click', () => {
-        closePlacePicker();
-        void openUnplacedBag();
-    });
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         readySpecialMarker = {
             name: button.dataset.arSpecialLabel,
@@ -414,17 +415,6 @@ function renderSpecialMarkerChoices(picker) {
             appearance: { color: ['!', '?'].includes(button.dataset.arSpecialSymbol) ? '#eaa45d' : '#75a9cc', size: 'large' }
         };
         void armPlacement('sub_checkpoint');
-    }));
-    picker.querySelectorAll('[data-ar-toggle-structural]').forEach(button => button.addEventListener('click', () => {
-        const markerId = button.dataset.arToggleStructural;
-        const record = sessionMarkers.find(item => item.marker.id === markerId);
-        if (!record) return;
-        if (hiddenStructuralMarkerIds.has(markerId)) hiddenStructuralMarkerIds.delete(markerId);
-        else hiddenStructuralMarkerIds.add(markerId);
-        if (locatedTotemRecord?.marker.id === markerId && hiddenStructuralMarkerIds.has(markerId)) locatedTotemRecord = null;
-        renderSessionMarkers();
-        setPlacementStatus(`${readyPlacementLabel(record.marker.type)} ${hiddenStructuralMarkerIds.has(markerId) ? 'hidden' : 'visible'} for this AR session.`);
-        renderSpecialMarkerChoices(picker);
     }));
 }
 
@@ -476,19 +466,6 @@ async function openSpecialMarkerPicker() {
     updateReadyPlacementControl();
     picker.hidden = false;
     picker.dataset.panel = panelId;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special Markers</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><p class="creator-ar-picker-status">Loading Area tools…</p>`;
-    picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    const loadingOperation = captureArOperationContext();
-    await loadPlacementAreas(loadingOperation).catch(error => {
-        if (isArOperationCurrent(loadingOperation, { matchLocation: false })) {
-            setPlacementStatus(`Area tools could not refresh: ${error.message}`);
-        }
-    });
-    if (!isArOperationCurrent(loadingOperation, { matchLocation: false }) || picker.hidden || picker.dataset.panel !== panelId || requestId !== specialPickerRequest) return;
-    const restoringOperation = captureArOperationContext();
-    await restoreRecordedMarkers(restoringOperation).catch(() => {});
-    if (!isArOperationCurrent(restoringOperation)) return;
-    if (picker.hidden || picker.dataset.panel !== panelId || requestId !== specialPickerRequest) return;
     renderSpecialMarkerChoices(picker);
 }
 
@@ -611,19 +588,32 @@ function setupSpatialMarkerRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
+    prismRenderer = createSpatialPrismRenderer(gl);
 }
 
 function drawSpatialMarkers(view) {
-    if (!markerProgram || !markerBuffer || !sphereRenderer) return;
+    if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
 
-    sessionMarkers.forEach(record => {
+    activeAreaMarkers().forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
+        if (shape === 1) {
+            const [halfWidth, halfHeight] = markerDimensions(record.marker);
+            drawSpatialPrism(gl, prismRenderer, view, record.position, {
+                halfWidth,
+                halfHeight,
+                halfDepth: halfWidth,
+                color: markerRgb(record.marker, colors.area_checkpoint),
+                topColor: [.68, .95, .87],
+                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
+            });
+            return;
+        }
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
@@ -652,10 +642,10 @@ function drawSpatialMarkers(view) {
     const positionLocation = gl.getAttribLocation(markerProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    sessionMarkers.forEach(record => {
+    activeAreaMarkers().forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
-        if (shape === 0 || shape === 3 || shape === 4) return;
+        if (shape === 0 || shape === 1 || shape === 3 || shape === 4) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
@@ -666,7 +656,7 @@ function drawSpatialMarkers(view) {
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
-    if (locatedTotemRecord) {
+    if (locatedTotemRecord?.areaId === activeAreaId) {
         const guideModel = groundGuideMatrix(locatedTotemRecord.position);
         if (guideModel) {
             const guideMvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, guideModel));
@@ -682,7 +672,7 @@ function positionSessionMarkers(view = latestView) {
     if (!view || !overlayRoot) return;
     const inverse = view.transform?.inverse?.matrix;
     if (!inverse || !view.projectionMatrix) return;
-    sessionMarkers.forEach(record => {
+    activeAreaMarkers().forEach(record => {
         const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         if (!element) return;
         if (hiddenStructuralMarkerIds.has(record.marker.id)) {
@@ -730,7 +720,8 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
 function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
-    layer.innerHTML = sessionMarkers.map(record => {
+    const visibleMarkers = activeAreaMarkers();
+    layer.innerHTML = visibleMarkers.map(record => {
         const profileAvailable = hasPlantProfile(record);
         const profileLabel = profileAvailable ? (record.profileExpanded ? ' Hide Plant Profile' : ' Open Plant Profile') : '';
         const informationSummary = record.marker.description
@@ -744,7 +735,7 @@ function renderSessionMarkers() {
                 : '';
         return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
-    sessionMarkers.forEach(record => {
+    visibleMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         element?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
         element?.addEventListener('keydown', event => {
@@ -758,11 +749,11 @@ function renderSessionMarkers() {
         });
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(cell => {
             const activate = () => {
-                const open = !cell.classList.contains('is-open');
                 layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(candidate => {
-                    candidate.classList.toggle('is-open', candidate === cell && open);
-                    candidate.setAttribute('aria-expanded', String(candidate === cell && open));
-                    candidate.querySelector('small')?.setAttribute('aria-hidden', String(!(candidate === cell && open)));
+                    const open = candidate === cell;
+                    candidate.classList.toggle('is-open', open);
+                    candidate.setAttribute('aria-expanded', String(open));
+                    candidate.querySelector('small')?.setAttribute('aria-hidden', String(!open));
                 });
             };
             cell.addEventListener('pointerdown', event => {
@@ -773,7 +764,7 @@ function renderSessionMarkers() {
                 activate();
             });
             cell.addEventListener('mouseenter', () => {
-                if (!cell.classList.contains('is-open')) activate();
+                activate();
             });
         });
         const webProfileButton = layer.querySelector(`[data-ar-open-web-profile="${CSS.escape(record.marker.id)}"]`);
@@ -918,7 +909,7 @@ function beginMarkerInteraction(record, event) {
         renderSessionMarkers();
         const visible = hasPlantProfile(record) ? record.profileExpanded : record.infoVisible;
         setPlacementStatus(visible
-            ? `${record.marker.name} information opened. Tap the Marker again to hide it.`
+            ? `${record.marker.name} information opened. Tap the orb again to hide the honeycomb.`
             : `${record.marker.name} information hidden.`);
         return;
     }
@@ -988,7 +979,7 @@ function moveMarkerDrag(event) {
 
 function pointerWorldRay() {
     if (!latestViewerMatrix || !latestView?.projectionMatrix) return null;
-    const pointer = overlayRoot?.querySelector('.creator-ar-mode-pointer');
+    const pointer = overlayRoot?.querySelector(readyPlacementType ? '.creator-ar-placement-guide' : '.creator-ar-mode-pointer');
     const rect = pointer?.getBoundingClientRect();
     const screenX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const screenY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
@@ -1086,11 +1077,9 @@ async function loadPlacementAreas(operation = captureArOperationContext(), guard
     activeSiteId = site.id;
     const selected = areas.find(area => area.id === operation.areaId);
     if (selected) {
-        activeAreaId = selected.id;
-        activeAreaName = selected.name;
+        activateArea(selected);
     } else {
-        activeAreaId = '';
-        activeAreaName = '';
+        activateArea(null);
     }
     return areas;
 }
@@ -1178,12 +1167,20 @@ async function ensurePlacementArea(operation = captureArOperationContext()) {
         const areas = await loadPlacementAreas(operation);
         if (!isArOperationCurrent(operation, { matchLocation: false })) return false;
         if (areas.some(area => area.id === activeAreaId)) return true;
+        const existingFallback = areas.find(area => area.name === AR_EXPERIENCE_CONFIG.fallbackArea.name);
+        const fallback = existingFallback || await createSitePlace(
+            operation.projectId,
+            activeSiteId || operation.siteId,
+            { ...AR_EXPERIENCE_CONFIG.fallbackArea }
+        );
+        if (!isArOperationCurrent(operation, { matchLocation: false })) return false;
+        activateArea(fallback);
+        return true;
     } catch (error) {
         if (isArOperationCurrent(operation, { matchLocation: false })) {
             setPlacementStatus(`Marker storage is unavailable: ${error.message}`);
         }
     }
-    if (!activeAreaId) setPlacementStatus('Create your first Area from Special Markers before placing ordinary Markers.');
     return false;
 }
 
@@ -1207,7 +1204,7 @@ async function armPlacement(type) {
     readyPlacementType = '';
     updateReadyPlacementControl();
     updateInteractionControls();
-    if (!activeAreaId) void openSpecialMarkerPicker();
+    if (!activeAreaId) setPlacementStatus('This item could not be prepared for placement.');
 }
 
 async function convertRecordToAreaCheckpoint(record, overrides = {}) {
@@ -1512,23 +1509,32 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement(type);
     };
-    overlayRoot.querySelector('[data-ar-add-plant]').addEventListener('click', () => armDirectPlacement('plant'));
-    overlayRoot.querySelector('[data-ar-add-note]').addEventListener('click', () => armDirectPlacement('note'));
-    overlayRoot.querySelector('[data-ar-add-special]').addEventListener('click', () => void openSpecialMarkerPicker());
-    overlayRoot.querySelector('[data-ar-view-mode]').addEventListener('click', () => setInteractionMode('view'));
-    overlayRoot.querySelector('[data-ar-hold-mode]').addEventListener('click', () => setInteractionMode('grab'));
+    const bindTaskbarAction = (selector, action) => {
+        overlayRoot.querySelector(selector).addEventListener('pointerup', event => {
+            if (event.button != null && event.button !== 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            action();
+        });
+    };
+    bindTaskbarAction('[data-ar-add-plant]', () => armDirectPlacement('plant'));
+    bindTaskbarAction('[data-ar-add-note]', () => armDirectPlacement('note'));
+    bindTaskbarAction('[data-ar-add-special]', () => void openSpecialMarkerPicker());
+    bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
+    bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
+    bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
+    bindTaskbarAction('[data-ar-exit]', exitArMode);
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });
     overlayRoot.querySelector('[data-ar-move-nearer]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset - .2); });
     overlayRoot.querySelector('[data-ar-rotate-left]').addEventListener('click', () => rotateHeldArrow(-15));
     overlayRoot.querySelector('[data-ar-rotate-right]').addEventListener('click', () => rotateHeldArrow(15));
-    overlayRoot.querySelector('[data-ar-select-mode]').addEventListener('click', () => setInteractionMode('select'));
     overlayRoot.querySelector('[data-ar-placement-capture]').addEventListener('pointerup', event => {
         event.preventDefault();
         event.stopPropagation();
         if (readyPlacementType && performance.now() - placementArmedAt > 180) void quickPlace(readyPlacementType);
     });
-    overlayRoot.querySelector('[data-ar-exit]').addEventListener('click', exitArMode);
     overlayRoot.querySelector('.creator-ar-control-dock').addEventListener('beforexrselect', event => event.preventDefault());
     updateReadyPlacementControl();
     updateInteractionControls();
@@ -1560,7 +1566,9 @@ function cleanup() {
     readyPlacementType = '';
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    destroySpatialPrismRenderer(gl, prismRenderer);
     sphereRenderer = null;
+    prismRenderer = null;
     markerProgram = null;
     markerBuffer = null;
     placementArmedAt = 0;

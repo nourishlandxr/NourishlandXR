@@ -99,7 +99,9 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /Create first Plant Profile/);
     assert.match(source, /tutorial-totem/);
     assert.match(source, /\['arMode', 'arPath'\]/);
-    assert.match(source, /\['contentMode', 'contentModes'\]/);
+    assert.doesNotMatch(source, /\['contentMode', 'contentModes'\]/);
+    assert.match(source, /projectTutorial: 'projectTutorial'/);
+    assert.match(source, /helpGuide: 'helpGuide'/);
     assert.match(source, /\['area', 'areas'\]/);
     assert.match(entrySource, /tutorial-task-list/);
     assert.match(entrySource, /step\.complete \? '✓' : '○'/);
@@ -169,14 +171,16 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /filterProjectSearch/);
     assert.match(entrySource, /Unplaced/);
     assert.match(entrySource, /Project Status/);
-    assert.match(entrySource, /dashboard-identity/);
+    assert.doesNotMatch(entrySource, /dashboard-identity/);
+    assert.match(entrySource, /<p>Dashboard<\/p>/);
     assert.doesNotMatch(entrySource, /dashboard-introduction/);
     assert.match(entrySource, /tutorial-spotlight-callout/);
     assert.match(entrySource, /tutorial-spotlight-shield/);
     assert.match(entrySource, /role="dialog" aria-modal="true"/);
     assert.match(entrySource, /contextual-guidance/);
     assert.match(entrySource, /First-use guidance/);
-    assert.match(entrySource, /Skip this step/);
+    assert.match(entrySource, /Close tutorial/);
+    assert.match(entrySource, /config\.guidance\?\.target === 'projectTutorial' \? ' open' : ''/);
     assert.match(entrySource, />See all</);
     assert.match(entrySource, /No entries have been added yet/);
     assert.doesNotMatch(entrySource, />Date</);
@@ -208,6 +212,15 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     });
     assert.doesNotMatch(dashboardHtml, /\+ CREATE AREA/);
     assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
+});
+
+test('Home owns no-Area experiments while named Areas remain isolated', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const arSource = fs.readFileSync(path.join(root, 'app/screens/arMode.js'), 'utf8');
+    assert.match(dashboardSource, /place\.name === 'Unassigned' \? 'Home'/);
+    assert.match(arSource, /activeAreaMarkers\(\)/);
+    assert.match(arSource, /activateArea\(selected\)/);
+    assert.match(arSource, /activateArea\(null\)/);
 });
 
 test('fresh projects begin with a simple Area and can place its Totem now or later', () => {

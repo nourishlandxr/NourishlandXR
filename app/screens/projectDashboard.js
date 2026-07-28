@@ -424,14 +424,13 @@ const forcedGuidanceFeatures = new Map();
 function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProject, nonPlantMode = false }) {
     if (!isProjectTutorialEnabled(projectId)) return null;
     const candidates = [
-        freshProject ? ['dashboardWelcome', 'header'] : null,
+        freshProject ? ['dashboardWelcome', 'welcome'] : null,
         ['arMode', 'arPath'],
-        ['contentMode', 'contentModes'],
         ['area', 'areas'],
         ['quickAccess', 'quickStarts']
     ].filter(Boolean);
     const forcedFeature = forcedGuidanceFeatures.get(projectId);
-    const forcedTargets = { arMode: 'arPath', contentMode: 'contentModes', area: 'areas', quickAccess: 'quickStarts' };
+    const forcedTargets = { projectTutorial: 'projectTutorial', arMode: 'arPath', helpGuide: 'helpGuide', area: 'areas', quickAccess: 'quickStarts' };
     const selected = forcedFeature
         ? [forcedFeature, forcedTargets[forcedFeature] || 'header']
         : candidates.find(([feature]) => getTutorialStage(projectId, feature) !== 'understood');
@@ -441,9 +440,16 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
     const stage = getTutorialStage(projectId, feature);
     const content = {
         dashboardWelcome: {
-            title: 'WELCOME TO YOUR LIVING SPACE',
-            full: 'This new technology gives information a place in the real world. Your Dashboard is where a garden, collection or exhibition becomes understandable: identify what matters, organise where it belongs, and reveal its knowledge exactly where people encounter it.',
-            short: 'Your Dashboard is the Web Mode home for organising knowledge about this living place.',
+            title: 'WELCOME TO YOUR DASHBOARD',
+            full: 'This is your project home. Nothing is selected yet—take a moment to see the whole Dashboard before we begin.',
+            short: 'This is your project home. Nothing is selected yet.',
+            actionLabel: '',
+            action: ''
+        },
+        projectTutorial: {
+            title: 'This is a good way to start!',
+            full: 'The Project Tutorial is now expanded. Its tasks—such as adding one Plant, creating an Area and placing a Totem—give you a simple path through the foundations.',
+            short: 'Follow these practical tasks whenever you want a clear next step.',
             actionLabel: '',
             action: ''
         },
@@ -466,13 +472,20 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: ''
         },
         arMode: {
-            title: 'Now meet AR Mode',
+            title: 'AR Mode and Field Guide work together',
             full: nonPlantMode
-                ? 'AR Mode lets you experience collection information in spatial form. Place a Dynamic Marker beside an object, exhibit or asset, then connect the record people need at that exact place.'
-                : 'AR Mode lets you experiment with the same information in spatial form. Place a simple Marker first, then decide whether it becomes a Plant, Note or another element. Find the guide below whenever you need help—and enjoy exploring your living space.',
-            short: 'Use AR Mode to place and explore the same knowledge in spatial form.',
+                ? 'AR Mode places knowledge beside real objects. The Field Guide is your searchable Web Mode library for reviewing and managing the same records. Use them together: place spatially, then organise and deepen the information.'
+                : 'AR Mode places Plants, Notes and knowledge in the real landscape. The Field Guide is your searchable Web Mode library for reviewing, editing and learning from those same records. One gives knowledge a place; the other helps it grow.',
+            short: 'AR Mode gives knowledge a place, while the Field Guide helps you manage and deepen it.',
             actionLabel: 'Create your first Marker',
             action: `window.openCreatorArMode('${encoded(projectId)}')`
+        },
+        helpGuide: {
+            title: 'You can find more help here',
+            full: 'More project guidance and settings live further down the Dashboard. Return here whenever you need another explanation or want to adjust how the project works.',
+            short: 'More guidance and project tools are available here whenever you need them.',
+            actionLabel: '',
+            action: ''
         },
         contentMode: {
             title: 'About Content Mode',
@@ -498,7 +511,8 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
         actionLabel: content.actionLabel,
         action: content.action,
         dismissAction: `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
-        nextAction: feature === 'dashboardWelcome' ? `window.showWorkModeGuidance('${encoded(projectId)}')` : `window.dismissProjectGuidance('${encoded(projectId)}', '${feature}')`,
+        closeAction: `window.advanceDashboardTutorial('${encoded(projectId)}', 'finish')`,
+        nextAction: `window.advanceDashboardTutorial('${encoded(projectId)}', '${feature}')`,
         introducedEvent: GUIDANCE_EVENTS[feature]
     };
 }
@@ -510,11 +524,26 @@ export async function dismissProjectGuidance(app, encodedProjectId, feature) {
 }
 
 export async function showWorkModeGuidance(app, encodedProjectId) {
+    return advanceDashboardTutorial(app, encodedProjectId, 'dashboardWelcome');
+}
+
+export async function advanceDashboardTutorial(app, encodedProjectId, currentStep) {
     const projectId = decodeURIComponent(encodedProjectId);
-    dismissTutorialFeature(projectId, 'dashboardWelcome');
-    recallTutorialFeatures(projectId, ['arMode', 'contentMode']);
-    forcedGuidanceFeatures.set(projectId, 'arMode');
+    const nextFeature = {
+        dashboardWelcome: 'projectTutorial',
+        projectTutorial: 'arMode',
+        arMode: 'helpGuide'
+    }[currentStep];
+    if (currentStep === 'dashboardWelcome') dismissTutorialFeature(projectId, 'dashboardWelcome');
+    if (currentStep === 'projectTutorial') dismissTutorialFeature(projectId, 'contentMode');
+    if (nextFeature) {
+        forcedGuidanceFeatures.set(projectId, nextFeature);
+        await renderProjectDashboard(app, encoded(projectId));
+        return;
+    }
+    ['dashboardWelcome', 'arMode', 'contentMode', 'quickAccess', 'area'].forEach(feature => dismissTutorialFeature(projectId, feature));
     await renderProjectDashboard(app, encoded(projectId));
+    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }));
 }
 
 export async function openCreatorArMode(app, encodedProjectId) {
@@ -960,7 +989,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 label: escapeHtml(marker.name),
                 type: escapeHtml(markerTypeLabel(markerType)),
                 identifier: escapeHtml(marker.plant_code || marker.id),
-                location: escapeHtml(place.name === 'Unassigned' ? 'N/A' : (place.name || 'N/A')),
+                location: escapeHtml(place.name === 'Unassigned' ? 'Home' : (place.name || 'N/A')),
                 date: escapeHtml(entryDateLabel(marker.created || marker.modified)),
                 creator: escapeHtml(entryCreatorLabel(marker)),
                 action: markerType === 'area_checkpoint'
