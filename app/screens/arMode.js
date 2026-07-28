@@ -59,7 +59,7 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#a9aea4', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d7834f', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
@@ -698,8 +698,8 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
-    const panelWidth = Math.min(window.innerWidth * .9, 520);
-    const panelHeight = Math.min(310, Math.max(240, window.innerWidth * .5));
+    const panelWidth = Math.min(window.innerWidth * .96, 640);
+    const panelHeight = Math.min(400, Math.max(300, window.innerWidth * .6));
     const horizontalDirection = markerX < window.innerWidth / 2 ? 1 : -1;
     const panelX = Math.max(panelWidth / 2 + 12, Math.min(window.innerWidth - panelWidth / 2 - 12, markerX + horizontalDirection * Math.min(210, window.innerWidth * .32)));
     const panelY = Math.max(panelHeight / 2 + 12, Math.min(window.innerHeight - panelHeight / 2 - 150, markerY - Math.min(150, window.innerHeight * .2)));
@@ -738,6 +738,10 @@ function renderSessionMarkers() {
             event.preventDefault();
             beginMarkerInteraction(record, event);
         });
+        const profilePanel = layer.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
+        profilePanel?.addEventListener('pointerdown', event => {
+            event.stopPropagation();
+        });
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(cell => {
             const activate = () => {
                 const open = !cell.classList.contains('is-open');
@@ -747,6 +751,9 @@ function renderSessionMarkers() {
                     candidate.querySelector('small')?.setAttribute('aria-hidden', String(!(candidate === cell && open)));
                 });
             };
+            cell.addEventListener('pointerdown', event => {
+                event.stopPropagation();
+            });
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 activate();

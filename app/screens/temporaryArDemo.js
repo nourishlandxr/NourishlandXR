@@ -28,10 +28,12 @@ let tetherRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
+let boardControlTimer = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
 let knowledgeTourTimer = null;
 let introNarrationTimer = null;
+let totemRevealTimer = null;
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardHasEntered = false;
@@ -140,15 +142,19 @@ function clearSessionState() {
     demoHeldIndex = -1;
     suppressSessionSelectUntil = 0;
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardControlTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
     clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
+    clearTimeout(totemRevealTimer);
     boardTypingTimer = null;
+    boardControlTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
     knowledgeTourTimer = null;
     introNarrationTimer = null;
+    totemRevealTimer = null;
     introSceneStartedAt = 0;
     introSceneActive = true;
     introBoardHasEntered = false;
@@ -247,6 +253,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardControlTimer);
     const fullText = paragraph?.textContent || '';
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
     const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
@@ -276,6 +283,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
+        clearTimeout(boardControlTimer);
         if (paragraph) paragraph.textContent = fullText;
         introBoardVisibleBody = fullText;
         introBoardTextureDirty = true;
@@ -296,13 +304,14 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         introBoardTextureDirty = true;
         if (typedLength >= fullText.length) return finishTyping();
         const typedCharacter = fullText[typedLength - 1] || '';
-        const typingDelay = /[.!?]/.test(typedCharacter) ? 360 : /[,;]/.test(typedCharacter) ? 190 : 92;
+        const typingDelay = /[.!?]/.test(typedCharacter) ? 190 : /[,;]/.test(typedCharacter) ? 95 : 50;
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (typing) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
-        boardTypingTimer = setTimeout(typeNextCharacter, 320);
+        boardTypingTimer = setTimeout(typeNextCharacter, 180);
+        if (choiceButtons.length) boardControlTimer = setTimeout(revealControls, 3600);
     } else {
         finishTyping();
     }
@@ -323,10 +332,11 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardControlTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
-    let typingStartDelay = 420;
+    let typingStartDelay = 220;
     let typedLength = 0;
     let typing = true;
     let completionNotified = false;
@@ -344,6 +354,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
+        clearTimeout(boardControlTimer);
         introBoardVisibleBody = bodyText;
         introBoardTextureDirty = true;
         paintBoardParagraphs(bodyText);
@@ -363,7 +374,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         paintBoardParagraphs(introBoardVisibleBody);
         if (typedLength >= bodyText.length) return finishTyping();
         const typedCharacter = bodyText[typedLength - 1] || '';
-        const typingDelay = /[.!?]/.test(typedCharacter) ? 420 : /[,;]/.test(typedCharacter) ? 220 : 105;
+        const typingDelay = /[.!?]/.test(typedCharacter) ? 220 : /[,;]/.test(typedCharacter) ? 110 : 58;
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
@@ -372,7 +383,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         const firstArrival = prepareTutorialBoard(board);
         if (firstArrival) {
             introSceneStartedAt = performance.now();
-            typingStartDelay = 1100;
+            typingStartDelay = 650;
         }
         board.onclick = () => {
             if (typing) finishTyping();
@@ -388,11 +399,15 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
+    if (continueButton && buttonLabel) boardControlTimer = setTimeout(() => {
+        continueButton.hidden = false;
+    }, 5000);
     setGuide(`${title}. ${bodyText}`);
 }
 
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardControlTimer);
     appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
@@ -527,16 +542,21 @@ function guideAreaConversion(record) {
         record.revealLines = 3;
         refreshDemoRecord(record);
         setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, a Note, and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
-            if (action === 'finish') returnToWelcome();
-            if (action === 'reset') {
-                markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
-                markers = [];
-                marker = null;
-                demoStage = 'plant';
-                renderInterface(simulatedMode);
-            }
-        });
+        const board = appRoot?.querySelector('[data-tryit-guided-choice]');
+        if (board) board.hidden = true;
+        clearTimeout(totemRevealTimer);
+        totemRevealTimer = setTimeout(() => {
+            showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, a Note, and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+                if (action === 'finish') returnToWelcome();
+                if (action === 'reset') {
+                    markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
+                    markers = [];
+                    marker = null;
+                    demoStage = 'plant';
+                    renderInterface(simulatedMode);
+                }
+            });
+        }, 850);
     });
 }
 
@@ -650,8 +670,8 @@ function tetherMetrics(offset) {
 function clampPlantPanelOffset(anchor, offset) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileWidth = Math.min(viewportWidth * 0.9, 520);
-    const profileHeight = Math.min(310, Math.max(240, viewportWidth * 0.5));
+    const profileWidth = Math.min(viewportWidth * 0.96, 640);
+    const profileHeight = Math.min(400, Math.max(300, viewportWidth * 0.6));
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
     const minimumX = 16 + profileWidth / 2 - anchorX;
@@ -667,11 +687,11 @@ function clampPlantPanelOffset(anchor, offset) {
 function defaultPlantPanelOffset(anchor) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileHeight = Math.min(310, Math.max(240, viewportWidth * 0.5));
+    const profileHeight = Math.min(400, Math.max(300, viewportWidth * 0.6));
     const anchorY = viewportHeight * anchor.y / 100;
     const upwardRoom = anchorY - 72 - profileHeight / 2;
     if (upwardRoom >= 48) return clampPlantPanelOffset(anchor, { x: 0, y: -Math.min(132, upwardRoom) });
-    const profileWidth = Math.min(viewportWidth * 0.9, 520);
+    const profileWidth = Math.min(viewportWidth * 0.96, 640);
     const anchorX = viewportWidth * anchor.x / 100;
     const rightRoom = viewportWidth - 16 - profileWidth / 2 - anchorX;
     const leftRoom = 16 + profileWidth / 2 - anchorX;
@@ -895,6 +915,10 @@ function bindSimulatedInformationPanels(layer) {
             });
         };
         cells.forEach(cell => {
+            cell.addEventListener('pointerdown', event => {
+                event.stopPropagation();
+                suppressSessionSelectUntil = performance.now() + 500;
+            });
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 const branchKey = cell.dataset.plantBranch;
@@ -1451,19 +1475,19 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0
         ...knowledge.left.map((item, index) => ({
             item,
             key: `left-${index}`,
-            x: [477, 394, 477][index],
-            y: [216, 360, 504][index]
+            x: [390, 270, 390][index],
+            y: [150, 360, 570][index]
         })),
         ...knowledge.right.map((item, index) => ({
             item,
             key: `right-${index}`,
-            x: [643, 726, 643][index],
-            y: [216, 360, 504][index]
+            x: [730, 850, 730][index],
+            y: [150, 360, 570][index]
         }))
     ];
     cells.forEach(cell => {
         const open = cell.key === activeBranch;
-        drawHexagon(ctx, cell.x, cell.y, 80, 'rgba(13,42,28,.72)', 'rgba(240,250,233,.68)', 2);
+        drawHexagon(ctx, cell.x, cell.y, 92, 'rgba(13,42,28,.84)', 'rgba(240,250,233,.76)', 2);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
         ctx.strokeStyle = 'rgba(0,0,0,.94)';
@@ -1477,7 +1501,7 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0
             ctx.font = '700 18px system-ui, sans-serif';
             ctx.shadowColor = 'rgba(0,0,0,.98)';
             ctx.shadowBlur = 6;
-            drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 17, 126, 22, 2);
+            drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 17, 150, 22, 3);
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
         }

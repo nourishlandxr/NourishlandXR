@@ -134,7 +134,9 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:min\(76vw,300px\); height:124px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:min\(72vw,280px\); height:116px/);
+    assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-note[\s\S]*background:#a95d32 !important/);
+    assert.match(styles, /\.creator-ar-taskbar \[data-ar-view-mode\][\s\S]*background:#246ea6 !important/);
     assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
     assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 86px; height: 132px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
@@ -506,7 +508,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /Press it to place a Plant orb one metre ahead/);
     assert.match(source, /onTextComplete/);
-    assert.match(source, /typingStartDelay = 1100/);
+    assert.match(source, /typingStartDelay = 650/);
+    assert.match(source, /\? 220 : \/\[,;\]\//);
     assert.match(styles, /tryit-board-arrive 1s/);
     assert.doesNotMatch(styles, /tryit-board-leave/);
     assert.match(source, /function prepareTutorialBoard\(panel\)/);
@@ -545,7 +548,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 320\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 180\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
@@ -565,12 +568,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = Math\.min\(bodyText\.length, typedLength \+ 1\)/);
     assert.match(source, /const typingDelay = \/\[\.!\?\]\//);
-    assert.match(source, /: 105;/);
+    assert.match(source, /: 58;/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
+    assert.match(source, /boardControlTimer = setTimeout/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(92vw,760px\)/);
-    assert.match(styles, /top:42%/);
-    assert.match(styles, /max-height:calc\(100dvh - 150px\)/);
+    assert.match(styles, /top:max\(16px,env\(safe-area-inset-top\)\)/);
+    assert.match(styles, /max-height:calc\(100dvh - 148px\)/);
     assert.match(styles, /top:calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*border-radius:999px/);
