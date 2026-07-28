@@ -880,7 +880,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /Growing knowledge/);
     assert.match(dashboardSource, /Origin &amp; story/);
     assert.match(dashboardSource, /plant-card-hero/);
-    assert.match(dashboardSource, /plantProfileReady \? `<section class="spatial-focus-panel"/);
+    assert.match(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
 });
 
 test('an open AR Plant profile hands off to Web Mode and returns to the same orb', () => {
@@ -894,6 +894,8 @@ test('an open AR Plant profile hands off to Web Mode and returns to the same orb
     assert.match(dashboardSource, /BACK TO AR · SAME PLANT/);
     assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
     assert.match(dashboardSource, /is-ar-web-handoff/);
+    assert.match(dashboardSource, /\$\{arHandoff\}\$\{plantProfileReady && !returnToAr \?/);
+    assert.doesNotMatch(dashboardSource, /\$\{arHandoff\}\$\{plantProfileReady \?/);
     assert.match(dashboardSource, /projectEntryQrCode/);
     assert.match(dashboardSource, /Plant QR code/);
     assert.match(dashboardSource, /syncMarkerQrAnchor/);
