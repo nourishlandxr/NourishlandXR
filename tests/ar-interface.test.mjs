@@ -507,11 +507,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.78, -3\.2\]\)/);
-    assert.match(source, /createIntroTickerTexture/);
-    assert.match(source, /\(elapsed % 18000\) \/ 18000/);
+    assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
+    assert.match(source, /introBoardVisibleBody = body\.slice\(0, typedLength\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 32\)/);
     assert.match(styles, /width:min\(96vw,1080px\)/);
-    assert.match(styles, /top:32%/);
-    assert.match(styles, /tryit-board-text-scroll/);
+    assert.match(styles, /top:34%/);
+    assert.doesNotMatch(styles, /tryit-board-text-scroll/);
+    assert.match(styles, /\.tryit-board-text-window \{ display:flex; align-items:flex-start;/);
+    assert.match(styles, /font-size:clamp\(1\.2rem,3\.2vw,2rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
