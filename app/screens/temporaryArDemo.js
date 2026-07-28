@@ -41,8 +41,8 @@ let introBoardTextureDirty = true;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
-let introBoardTitle = 'WELCOME TO AUGMENTED REALITY';
-let introBoardBody = 'AR places digital information in the real space around you. Move your phone slowly and this board stays anchored like a 130-inch screen.';
+let introBoardTitle = 'INTRODUCING YOUR AR GARDEN';
+let introBoardBody = 'This guided demo shows how Plant orbs, Notes and Areas can live alongside a real garden. Follow each step and choose Continue when you are ready.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -254,13 +254,13 @@ function showIntroBoard(title, body, buttonLabel, onContinue) {
     };
     const typeNextCharacter = () => {
         if (!typing) return;
-        typedLength = Math.min(body.length, typedLength + 2);
+        typedLength = Math.min(body.length, typedLength + 1);
         introBoardVisibleBody = body.slice(0, typedLength);
         introBoardTextureDirty = true;
         const paragraph = board?.querySelector('p');
         if (paragraph) paragraph.textContent = introBoardVisibleBody;
         if (typedLength >= body.length) return finishTyping();
-        boardTypingTimer = setTimeout(typeNextCharacter, 32);
+        boardTypingTimer = setTimeout(typeNextCharacter, 42);
     };
     if (board) {
         board.classList.add('is-welcome-board');
@@ -292,8 +292,8 @@ function finishIntroBoard() {
 
 function runArWelcomeTutorial() {
     showIntroBoard(
-        'WELCOME TO AUGMENTED REALITY',
-        'AR places digital information in the real space around you. Move your phone slowly and this board stays anchored like a 130-inch screen.',
+        'INTRODUCING YOUR AR GARDEN',
+        'This guided demo shows how Plant orbs, Notes and Areas can live alongside a real garden. Follow each step and choose Continue when you are ready.',
         'Continue',
         () => showIntroBoard(
             'INTRODUCING AIM',
