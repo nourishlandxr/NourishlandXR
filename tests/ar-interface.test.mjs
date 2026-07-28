@@ -576,7 +576,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(92vw,760px\)/);
     assert.match(styles, /top:max\(10px,env\(safe-area-inset-top\)\)/);
-    assert.match(styles, /max-height:calc\(100dvh - 148px\)/);
+    assert.match(styles, /height:min\(84dvh,800px\)/);
+    assert.match(styles, /max-height:calc\(100dvh - 118px\)/);
+    assert.match(styles, /\.tryit-intro-continue \{[\s\S]*\+ 44px\)/);
     assert.match(styles, /top:calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 2cm\)/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*border-radius:999px/);
