@@ -493,9 +493,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /Press it to place a Plant orb one metre ahead/);
     assert.match(source, /onTextComplete/);
-    assert.match(source, /setTimeout\(typeNextCharacter, 1100\)/);
+    assert.match(source, /typingStartDelay = 1100/);
     assert.match(styles, /tryit-board-arrive 1s/);
-    assert.match(styles, /tryit-board-leave \.7s/);
+    assert.doesNotMatch(styles, /tryit-board-leave/);
+    assert.match(source, /function prepareTutorialBoard\(panel\)/);
+    assert.match(source, /const firstArrival = !introBoardHasEntered/);
+    assert.doesNotMatch(source, /introSceneActive = false/);
+    assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
     assert.match(source, /\}, 360\)/);
@@ -528,7 +532,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /typeNextCharacter/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 46\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 320\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /data-tryit-guided-choice/);
@@ -538,7 +542,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.78, -3\.2\]\)/);
+    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, 1\.15, -3\.2\]\)/);
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
     assert.match(source, /introBoardVisibleBody = body\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = Math\.min\(body\.length, typedLength \+ 1\)/);
@@ -547,7 +551,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(96vw,1080px\)/);
-    assert.match(styles, /top:34%/);
+    assert.match(styles, /top:25%/);
+    assert.match(styles, /\.tryit-intro-continue \{[\s\S]*border-radius:999px/);
+    assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:flex; align-items:flex-start;/);
     assert.match(styles, /font-size:clamp\(1\.2rem,3\.2vw,2rem\)/);

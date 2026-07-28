@@ -34,6 +34,7 @@ let knowledgeTourTimer = null;
 let introNarrationTimer = null;
 let introSceneStartedAt = 0;
 let introSceneActive = true;
+let introBoardHasEntered = false;
 let introWorldAnchor = null;
 let introNoteTexture = null;
 let introNoteCanvas = null;
@@ -140,6 +141,7 @@ function clearSessionState() {
     introNarrationTimer = null;
     introSceneStartedAt = 0;
     introSceneActive = true;
+    introBoardHasEntered = false;
     introWorldAnchor = null;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
@@ -197,32 +199,80 @@ function demoContentFor(record) {
 }
 
 function hideGuidedChoice() {
-    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
-    if (panel) {
-        panel.hidden = true;
-        panel.innerHTML = '';
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
+}
+
+function prepareTutorialBoard(panel) {
+    const firstArrival = !introBoardHasEntered;
+    panel.classList.add('is-welcome-board');
+    panel.classList.remove('is-leaving');
+    panel.hidden = false;
+    if (firstArrival) {
+        introBoardHasEntered = true;
+        panel.classList.add('is-entering');
+    } else {
+        panel.classList.remove('is-entering');
     }
+    return firstArrival;
 }
 
 function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
     panel.innerHTML = html;
-    panel.hidden = false;
-    clearTimeout(boardTypingTimer);
+    const title = panel.querySelector('h2');
     const paragraph = panel.querySelector('p');
+    const controls = [...panel.children].filter(child => child !== title && child !== paragraph);
+    const boardLabel = document.createElement('small');
+    const textWindow = document.createElement('div');
+    boardLabel.textContent = 'LIVE AR TUTORIAL';
+    textWindow.className = 'tryit-board-text-window';
+    panel.replaceChildren(boardLabel);
+    if (title) panel.append(title);
+    if (paragraph) {
+        textWindow.append(paragraph);
+        panel.append(textWindow);
+    }
+    controls.forEach(control => panel.append(control));
+    prepareTutorialBoard(panel);
+    clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
+    const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
+    introSceneActive = true;
+    introBoardTitle = title?.textContent || 'NourishLand XR';
+    introBoardBody = fullText;
+    introBoardVisibleBody = '';
+    introBoardTextureDirty = true;
+    continueButton?.setAttribute('hidden', '');
+    finalActions?.setAttribute('hidden', '');
+    choiceButtons.forEach(button => button.setAttribute('hidden', ''));
     revealTargets.forEach(target => target.classList.add('is-awaiting-text'));
     let typedLength = 0;
     let typing = Boolean(paragraph && fullText);
     let completionNotified = false;
+    const revealControls = () => {
+        if (choiceButtons.length === 1 && continueButton) {
+            const choiceButton = choiceButtons[0];
+            continueButton.textContent = choiceButton.textContent.trim();
+            continueButton.onclick = () => onClick(choiceButton.dataset.demoChoice);
+            continueButton.hidden = false;
+        } else if (choiceButtons.length > 1 && finalActions) {
+            finalActions.hidden = false;
+        }
+    };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
         if (paragraph) paragraph.textContent = fullText;
+        introBoardVisibleBody = fullText;
+        introBoardTextureDirty = true;
         typing = false;
         revealTargets.forEach(target => target.classList.remove('is-awaiting-text'));
         panel.classList.remove('is-typing');
+        revealControls();
         if (!completionNotified) {
             completionNotified = true;
             options.onTextComplete?.();
@@ -232,24 +282,26 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         if (!typing || !paragraph) return;
         typedLength += 1;
         paragraph.textContent = fullText.slice(0, typedLength);
+        introBoardVisibleBody = fullText.slice(0, typedLength);
+        introBoardTextureDirty = true;
         if (typedLength >= fullText.length) return finishTyping();
-        boardTypingTimer = setTimeout(typeNextCharacter, 46);
+        const typedCharacter = fullText[typedLength - 1] || '';
+        const typingDelay = /[.!?]/.test(typedCharacter) ? 360 : /[,;]/.test(typedCharacter) ? 190 : 92;
+        boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (typing) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
-        typeNextCharacter();
+        boardTypingTimer = setTimeout(typeNextCharacter, 320);
     } else {
         finishTyping();
     }
-    panel.onclick = event => {
+    panel.onclick = () => {
         if (typing) {
             finishTyping();
-            return;
         }
-        const choice = event.target.closest('[data-demo-choice]')?.dataset.demoChoice;
-        if (choice) onClick(choice);
     };
+    setGuide(`${introBoardTitle}. ${fullText}`);
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
@@ -258,10 +310,11 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardBody = body;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
-    introSceneStartedAt = performance.now();
     clearTimeout(boardTypingTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
+    let typingStartDelay = 420;
     let typedLength = 0;
     let typing = true;
     let completionNotified = false;
@@ -273,6 +326,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         if (paragraph) paragraph.textContent = body;
         board?.classList.remove('is-typing');
         typing = false;
+        if (continueButton && buttonLabel) continueButton.hidden = false;
         if (!completionNotified) {
             completionNotified = true;
             options.onTextComplete?.();
@@ -291,37 +345,35 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
-        board.classList.add('is-welcome-board');
         board.classList.add('is-typing');
-        board.classList.remove('is-entering', 'is-leaving');
         board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><div class="tryit-board-text-window"><p></p></div>`;
-        board.hidden = false;
-        void board.offsetWidth;
-        board.classList.add('is-entering');
+        const firstArrival = prepareTutorialBoard(board);
+        if (firstArrival) {
+            introSceneStartedAt = performance.now();
+            typingStartDelay = 1100;
+        }
         board.onclick = () => {
             if (typing) finishTyping();
         };
     }
+    finalActions?.setAttribute('hidden', '');
     if (continueButton && buttonLabel) {
         continueButton.textContent = buttonLabel;
-        continueButton.hidden = false;
+        continueButton.hidden = true;
         continueButton.onclick = onContinue;
     } else if (continueButton) {
         continueButton.hidden = true;
         continueButton.onclick = null;
     }
-    boardTypingTimer = setTimeout(typeNextCharacter, 1100);
+    boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
     setGuide(`${title}. ${body}`);
 }
 
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
-    introSceneActive = false;
     appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
-    const board = appRoot?.querySelector('[data-tryit-guided-choice]');
-    board?.classList.remove('is-welcome-board', 'is-entering', 'is-leaving');
-    if (board) board.hidden = true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
 }
 
 function runArWelcomeTutorial() {
@@ -947,6 +999,7 @@ function renderInterface(simulated) {
     simulatedMode = simulated;
     introSceneStartedAt = performance.now();
     introSceneActive = true;
+    introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
     const introContinue = document.createElement('button');
     introContinue.className = 'tryit-intro-continue';
@@ -954,7 +1007,11 @@ function renderInterface(simulated) {
     introContinue.type = 'button';
     introContinue.hidden = true;
     appRoot.querySelector('.tryit-stage')?.append(introContinue);
+    appRoot.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
     appRoot.querySelector('.tryit-drag-hint')?.remove();
+    const exitButton = appRoot.querySelector('[data-tryit-exit]');
+    exitButton.textContent = 'Close';
+    exitButton.setAttribute('aria-label', 'Close demo');
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -964,7 +1021,7 @@ function renderInterface(simulated) {
         button.addEventListener('focus', expand);
         button.addEventListener('click', expand);
     });
-    appRoot.querySelector('[data-tryit-exit]').addEventListener('click', returnToWelcome);
+    exitButton.addEventListener('click', returnToWelcome);
     appRoot.querySelector('[data-tryit-place]').addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
@@ -1302,17 +1359,17 @@ function drawIntroSpatial(view) {
     if (introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
-            introLocalPosition(introWorldAnchor, [0, .78, -3.2]),
-            9.2,
-            12.4,
+            introLocalPosition(introWorldAnchor, [0, 1.15, -3.2]),
+            9.6,
+            9.4,
             easedKnowledge * .9
         );
     }
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, .78, -3.2]),
-        9.2,
-        12.4,
+        introLocalPosition(introWorldAnchor, [0, 1.15, -3.2]),
+        9.6,
+        9.4,
         easedNote
     );
 }
