@@ -129,7 +129,8 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width: min\(42vw, 210px\); height: 102px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:min\(76vw,300px\); height:124px/);
+    assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
     assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 86px; height: 132px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
     assert.match(arSource, /creator-ar-mode-pointer/);
@@ -505,10 +506,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.15, -2\.4\]\)/);
-    assert.match(styles, /width:min\(88vw,760px\)/);
-    assert.match(styles, /top:38%/);
-    assert.match(styles, /filter:blur\(10px\)/);
+    assert.match(source, /introLocalPosition\(introWorldAnchor, \[0, \.78, -3\.2\]\)/);
+    assert.match(source, /createIntroTickerTexture/);
+    assert.match(source, /\(elapsed % 18000\) \/ 18000/);
+    assert.match(styles, /width:min\(96vw,1080px\)/);
+    assert.match(styles, /top:32%/);
+    assert.match(styles, /tryit-board-text-scroll/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
@@ -542,7 +545,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.spatial-move-instruction/);
     assert.match(styles, /\.spatial-grab-handle/);
     assert.doesNotMatch(source, /data-demo-move-mode|demoMoveMode|✋/);
-    assert.match(source, /Hold and drag any element to reposition it\./);
+    assert.match(source, /querySelector\('\.tryit-drag-hint'\)\?\.remove\(\)/);
     assert.match(source, /compactMarker\.classList\.add\('is-drag-ready'\)/);
     assert.match(styles, /\.tryit-demo \.tryit-sim-marker:is\(:hover, :focus-visible, \.is-drag-ready\)/);
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
@@ -554,7 +557,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
     assert.match(styles, /\.plant-knowledge-core strong \{ color: #fff;[\s\S]*font-weight: 850;/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
-    assert.match(styles, /\.creator-ar-totem-bubble \{[\s\S]*color: #fff;[\s\S]*text-shadow: 0 1px 2px rgba\(0,0,0,.98\)/);
+    assert.match(styles, /\.creator-ar-totem-bubble \{[\s\S]*height:82px;[\s\S]*overflow:hidden;[\s\S]*color:#fff;[\s\S]*text-shadow:0 1px 2px rgba\(0,0,0,.98\)/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);

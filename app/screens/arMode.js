@@ -109,7 +109,7 @@ function markerDimensions(marker) {
         area_checkpoint: [.14 * factor, .72 * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         // Notes are readable spatial signs rather than tiny object labels.
-        note: [.44 * factor, .28 * factor],
+        note: [.94 * factor, .345 * factor],
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
     })[marker.type] || [markerScale(marker), markerScale(marker)];

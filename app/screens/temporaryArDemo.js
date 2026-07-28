@@ -35,6 +35,7 @@ let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introWorldAnchor = null;
 let introNoteTexture = null;
+let introTickerTexture = null;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
@@ -120,8 +121,10 @@ function clearSessionState() {
     introSceneActive = true;
     introWorldAnchor = null;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+    if (introTickerTexture) gl?.deleteTexture(introTickerTexture);
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
     introNoteTexture = null;
+    introTickerTexture = null;
     introKnowledgeTexture = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
@@ -231,12 +234,14 @@ function showIntroBoard(title, body, buttonLabel, onContinue) {
     introBoardTitle = title;
     introBoardBody = body;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+    if (introTickerTexture) gl?.deleteTexture(introTickerTexture);
     introNoteTexture = null;
+    introTickerTexture = null;
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (board) {
         board.classList.add('is-welcome-board');
-        board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><p>${body}</p>`;
+        board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
         board.hidden = false;
     }
     if (continueButton) {
@@ -864,6 +869,7 @@ function renderInterface(simulated) {
     introContinue.type = 'button';
     introContinue.hidden = true;
     appRoot.querySelector('.tryit-stage')?.append(introContinue);
+    appRoot.querySelector('.tryit-drag-hint')?.remove();
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -880,7 +886,7 @@ function renderInterface(simulated) {
         demoHeldIndex = -1;
         appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
         updateSimulatedMarkers();
-        setGuide('Released in its refined position. Hold and drag any element whenever you want to adjust it.');
+        setGuide('Released in its refined position.');
     });
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
@@ -915,7 +921,7 @@ function setupRenderer() {
     gl.shaderSource(vertex, 'attribute vec3 p;attribute vec2 uv;uniform mat4 mvp;varying vec2 v;void main(){gl_Position=mvp*vec4(p,1.);v=uv;}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;uniform float scroll;void main(){vec4 sampleColor=texture2D(t,vec2(fract(v.x+scroll),v.y));gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
     gl.compileShader(fragment);
     program = gl.createProgram();
     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
@@ -1101,30 +1107,80 @@ function createIntroNoteTexture() {
     label.width = 1400;
     label.height = 900;
     const ctx = label.getContext('2d');
-    const noteGradient = ctx.createLinearGradient(150, 315, 1250, 585);
-    noteGradient.addColorStop(0, 'rgba(34,69,47,.88)');
-    noteGradient.addColorStop(1, 'rgba(13,37,24,.8)');
+    const noteGradient = ctx.createLinearGradient(70, 100, 1330, 800);
+    noteGradient.addColorStop(0, 'rgba(74,122,91,.64)');
+    noteGradient.addColorStop(.48, 'rgba(24,70,48,.54)');
+    noteGradient.addColorStop(1, 'rgba(8,32,21,.42)');
     ctx.fillStyle = noteGradient;
-    ctx.strokeStyle = 'rgba(239,250,235,.7)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(239,255,229,.82)';
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.roundRect(70, 100, 1260, 700, [52, 44, 58, 46]);
+    ctx.roundRect(48, 62, 1304, 776, [62, 48, 68, 52]);
     ctx.fill();
     ctx.stroke();
-    ctx.shadowColor = 'rgba(0,0,0,.45)';
-    ctx.shadowBlur = 10;
+    const glassLight = ctx.createRadialGradient(280, 130, 20, 350, 190, 520);
+    glassLight.addColorStop(0, 'rgba(255,255,255,.2)');
+    glassLight.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glassLight;
+    ctx.beginPath();
+    ctx.roundRect(54, 68, 1292, 764, [58, 44, 64, 48]);
+    ctx.fill();
+    ctx.shadowColor = 'rgba(0,0,0,.35)';
+    ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
-    ctx.font = '700 42px system-ui, sans-serif';
-    ctx.fillText('LIVE AR TUTORIAL', 700, 215);
+    ctx.font = '750 38px system-ui, sans-serif';
+    ctx.fillText('LIVE AR TUTORIAL  ·  LOOK UP', 700, 190);
     ctx.fillStyle = '#fff';
-    ctx.font = '760 74px system-ui, sans-serif';
-    drawWrappedTextureText(ctx, introBoardTitle, 700, 350, 1110, 82, 2);
-    ctx.font = '560 40px system-ui, sans-serif';
-    drawWrappedTextureText(ctx, introBoardBody, 700, 545, 1080, 52, 4);
+    let titleSize = 94;
+    do {
+        ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
+        titleSize -= 4;
+    } while (titleSize > 58 && ctx.measureText(introBoardTitle).width > 1120);
+    drawWrappedTextureText(ctx, introBoardTitle, 700, 365, 1120, titleSize + 14, 2);
+    ctx.strokeStyle = 'rgba(220,239,149,.56)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(210, 575);
+    ctx.lineTo(1190, 575);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.76)';
+    ctx.font = '650 32px system-ui, sans-serif';
+    ctx.fillText('READ THE RUNNING TEXT  ·  CONTINUE BELOW', 700, 690);
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     return canvasTexture(label);
+}
+
+function createIntroTickerTexture() {
+    const label = document.createElement('canvas');
+    label.width = 2048;
+    label.height = 256;
+    const ctx = label.getContext('2d');
+    const strip = ctx.createLinearGradient(0, 0, label.width, 0);
+    strip.addColorStop(0, 'rgba(6,24,15,.64)');
+    strip.addColorStop(.5, 'rgba(32,77,51,.7)');
+    strip.addColorStop(1, 'rgba(6,24,15,.64)');
+    ctx.fillStyle = strip;
+    ctx.fillRect(0, 20, label.width, 216);
+    ctx.strokeStyle = 'rgba(220,239,149,.62)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 20, label.width, 216);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    let fontSize = 58;
+    do {
+        ctx.font = `650 ${fontSize}px system-ui, sans-serif`;
+        fontSize -= 2;
+    } while (fontSize > 38 && ctx.measureText(introBoardBody).width > 1840);
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(introBoardBody, 104, 128);
+    const texture = canvasTexture(label);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    return texture;
 }
 
 function createIntroKnowledgeTexture() {
@@ -1165,9 +1221,10 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     introNoteTexture ||= createIntroNoteTexture();
+    introTickerTexture ||= createIntroTickerTexture();
     introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
-    const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
+    const drawTexture = (texture, position, scaleX, scaleY, opacity, scroll = 0) => {
         const model = billboardMatrix(position, scaleX, scaleY);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
@@ -1175,6 +1232,7 @@ function drawIntroSpatial(view) {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), opacity);
+        gl.uniform1f(gl.getUniformLocation(program, 'scroll'), scroll);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
     const noteProgress = Math.min(1, Math.max(0, (elapsed - 300) / 1800));
@@ -1184,19 +1242,28 @@ function drawIntroSpatial(view) {
     if (introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
-            introLocalPosition(introWorldAnchor, [0, .15, -2.4]),
-            7.1,
-            4.6,
+            introLocalPosition(introWorldAnchor, [0, .78, -3.2]),
+            9.2,
+            12.4,
             easedKnowledge * .9
         );
     }
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, .15, -2.4]),
-        7.1,
-        4.6,
+        introLocalPosition(introWorldAnchor, [0, .78, -3.2]),
+        9.2,
+        12.4,
         easedNote
     );
+    drawTexture(
+        introTickerTexture,
+        introLocalPosition(introWorldAnchor, [0, .31, -3.18]),
+        8.45,
+        1.3,
+        easedNote,
+        (elapsed % 18000) / 18000
+    );
+    gl.uniform1f(gl.getUniformLocation(program, 'scroll'), 0);
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
