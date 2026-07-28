@@ -486,8 +486,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /INTRODUCING YOUR AR GARDEN/);
-    assert.match(source, /This guided demo shows how Plant orbs, Notes and Areas/);
+    assert.match(source, /A short guided demo of Plant orbs, Notes and Areas\./);
     assert.doesNotMatch(source, /130-inch|130 inch/);
+    assert.doesNotMatch(source, /LOOK UP/);
     assert.match(source, /INTRODUCING AIM/);
     assert.match(source, /CREATE A PLANT ORB/);
     assert.match(source, /exactly 1 metre away/);
@@ -512,7 +513,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
     assert.match(source, /introBoardVisibleBody = body\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = Math\.min\(body\.length, typedLength \+ 1\)/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 42\)/);
+    assert.match(source, /const typingDelay = \/\[\.!\?\]\//);
+    assert.match(source, /: 105;/);
+    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
+    assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(96vw,1080px\)/);
     assert.match(styles, /top:34%/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);

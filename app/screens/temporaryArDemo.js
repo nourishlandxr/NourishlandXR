@@ -42,7 +42,7 @@ let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
 let introBoardTitle = 'INTRODUCING YOUR AR GARDEN';
-let introBoardBody = 'This guided demo shows how Plant orbs, Notes and Areas can live alongside a real garden. Follow each step and choose Continue when you are ready.';
+let introBoardBody = 'A short guided demo of Plant orbs, Notes and Areas.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -260,7 +260,9 @@ function showIntroBoard(title, body, buttonLabel, onContinue) {
         const paragraph = board?.querySelector('p');
         if (paragraph) paragraph.textContent = introBoardVisibleBody;
         if (typedLength >= body.length) return finishTyping();
-        boardTypingTimer = setTimeout(typeNextCharacter, 42);
+        const typedCharacter = body[typedLength - 1] || '';
+        const typingDelay = /[.!?]/.test(typedCharacter) ? 420 : /[,;]/.test(typedCharacter) ? 220 : 105;
+        boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
         board.classList.add('is-welcome-board');
@@ -293,7 +295,7 @@ function finishIntroBoard() {
 function runArWelcomeTutorial() {
     showIntroBoard(
         'INTRODUCING YOUR AR GARDEN',
-        'This guided demo shows how Plant orbs, Notes and Areas can live alongside a real garden. Follow each step and choose Continue when you are ready.',
+        'A short guided demo of Plant orbs, Notes and Areas.',
         'Continue',
         () => showIntroBoard(
             'INTRODUCING AIM',
@@ -1160,7 +1162,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText('LIVE AR TUTORIAL  ·  LOOK UP', 700, 190);
+    ctx.fillText('LIVE AR TUTORIAL', 700, 190);
     ctx.fillStyle = '#fff';
     let titleSize = 94;
     do {
