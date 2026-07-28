@@ -485,14 +485,21 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /font-weight:650/);
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
-    assert.match(source, /INTRODUCING YOUR AR GARDEN/);
+    assert.match(source, /NourishLand XR - a quick AR demo/);
     assert.match(source, /A short guided demo of Plant orbs, Notes and Areas\./);
     assert.doesNotMatch(source, /130-inch|130 inch/);
     assert.doesNotMatch(source, /LOOK UP/);
     assert.match(source, /INTRODUCING AIM/);
-    assert.match(source, /CREATE A PLANT ORB/);
-    assert.match(source, /exactly 1 metre away/);
+    assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
+    assert.match(source, /Press it to place a Plant orb one metre ahead/);
+    assert.match(source, /onTextComplete/);
+    assert.match(source, /setTimeout\(typeNextCharacter, 1100\)/);
+    assert.match(styles, /tryit-board-arrive 1s/);
+    assert.match(styles, /tryit-board-leave \.7s/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
+    assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
+    assert.match(source, /\}, 360\)/);
+    assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /\[data-tryit-place\]'\)\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
@@ -502,7 +509,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /Press the glowing centre pointer to place the Plant orb/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
-    assert.match(source, /Aim with the centre circle/);
+    assert.match(source, /Press the glowing centre pointer to place the Plant orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);

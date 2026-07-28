@@ -29,6 +29,7 @@ let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
+let pointerPressTimer = null;
 let knowledgeTourTimer = null;
 let introNarrationTimer = null;
 let introSceneStartedAt = 0;
@@ -41,7 +42,7 @@ let introBoardTextureDirty = true;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
-let introBoardTitle = 'INTRODUCING YOUR AR GARDEN';
+let introBoardTitle = 'NourishLand XR - a quick AR demo';
 let introBoardBody = 'A short guided demo of Plant orbs, Notes and Areas.';
 let placementReady = false;
 let demoHeldIndex = -1;
@@ -115,10 +116,12 @@ function clearSessionState() {
     suppressSessionSelectUntil = 0;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
+    clearTimeout(pointerPressTimer);
     clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
+    pointerPressTimer = null;
     knowledgeTourTimer = null;
     introNarrationTimer = null;
     introSceneStartedAt = 0;
@@ -235,16 +238,18 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
 }
 
-function showIntroBoard(title, body, buttonLabel, onContinue) {
+function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardTitle = title;
     introBoardBody = body;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
+    introSceneStartedAt = performance.now();
     clearTimeout(boardTypingTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     let typedLength = 0;
     let typing = true;
+    let completionNotified = false;
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
         introBoardVisibleBody = body;
@@ -253,6 +258,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue) {
         if (paragraph) paragraph.textContent = body;
         board?.classList.remove('is-typing');
         typing = false;
+        if (!completionNotified) {
+            completionNotified = true;
+            options.onTextComplete?.();
+        }
     };
     const typeNextCharacter = () => {
         if (!typing) return;
@@ -269,18 +278,24 @@ function showIntroBoard(title, body, buttonLabel, onContinue) {
     if (board) {
         board.classList.add('is-welcome-board');
         board.classList.add('is-typing');
+        board.classList.remove('is-entering', 'is-leaving');
         board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><div class="tryit-board-text-window"><p></p></div>`;
         board.hidden = false;
+        void board.offsetWidth;
+        board.classList.add('is-entering');
         board.onclick = () => {
             if (typing) finishTyping();
         };
     }
-    if (continueButton) {
+    if (continueButton && buttonLabel) {
         continueButton.textContent = buttonLabel;
         continueButton.hidden = false;
         continueButton.onclick = onContinue;
+    } else if (continueButton) {
+        continueButton.hidden = true;
+        continueButton.onclick = null;
     }
-    typeNextCharacter();
+    boardTypingTimer = setTimeout(typeNextCharacter, 1100);
     setGuide(`${title}. ${body}`);
 }
 
@@ -289,35 +304,36 @@ function finishIntroBoard() {
     introSceneActive = false;
     appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
-    board?.classList.remove('is-welcome-board');
+    board?.classList.remove('is-welcome-board', 'is-entering', 'is-leaving');
     if (board) board.hidden = true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
 }
 
 function runArWelcomeTutorial() {
     showIntroBoard(
-        'INTRODUCING YOUR AR GARDEN',
+        'NourishLand XR - a quick AR demo',
         'A short guided demo of Plant orbs, Notes and Areas.',
         'Continue',
-        () => showIntroBoard(
-            'INTRODUCING AIM',
-            'The glowing circle is your pointer. It marks the exact direction you are aiming, so look through the centre of your screen and choose a clear space.',
-            'Show aim',
-            () => {
-                const place = appRoot?.querySelector('[data-tryit-place]');
-                place?.removeAttribute('hidden');
-                requestAnimationFrame(() => place?.classList.add('is-revealing'));
-                showIntroBoard(
-                    'CREATE A PLANT ORB',
-                    'Aim at a clear space in front of you. One press on the glowing circle will load a Plant orb exactly 1 metre away.',
-                    'Continue',
-                    () => {
-                        finishIntroBoard();
-                        armDemoPlacement('plant', { direct: true });
+        () => {
+            const place = appRoot?.querySelector('[data-tryit-place]');
+            place?.removeAttribute('hidden');
+            requestAnimationFrame(() => place?.classList.add('is-revealing'));
+            showIntroBoard(
+                'INTRODUCING AIM',
+                'The glowing circle is your pointer. Press it to place a Plant orb one metre ahead.',
+                '',
+                null,
+                {
+                    onTextComplete: () => {
+                        clearTimeout(aimRevealTimer);
+                        aimRevealTimer = setTimeout(() => {
+                            appRoot?.querySelector('[data-tryit-guided-choice]')?.classList.add('is-leaving');
+                            aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 700);
+                        }, 900);
                     }
-                );
-            }
-        )
+                }
+            );
+        }
     );
 }
 
@@ -444,6 +460,15 @@ function armDemoPlacement(type, { direct = false } = {}) {
         place.style.setProperty('--aim-x', `${simulatedAim.x}%`);
         place.style.setProperty('--aim-y', `${simulatedAim.y}%`);
     }
+    clearTimeout(aimRevealTimer);
+    if (direct) {
+        finishIntroBoard();
+        setGuide('Press the glowing centre pointer to place the Plant orb.');
+        placementReady = true;
+        place?.removeAttribute('hidden');
+        place?.classList.add('is-revealing', 'is-ready');
+        return;
+    }
     place?.setAttribute('hidden', '');
     place?.classList.remove('is-revealing', 'is-ready');
     const label = place?.querySelector('strong');
@@ -460,15 +485,6 @@ function armDemoPlacement(type, { direct = false } = {}) {
         zone: ['Find the heart of the Area', 'Look toward the centre of the place you want this Area to gather. The aiming circle will appear when this introduction finishes.']
     };
     const [title, introduction] = introductions[type];
-    clearTimeout(aimRevealTimer);
-    if (direct) {
-        finishIntroBoard();
-        setGuide('Aim with the centre circle, then press it once to create the Plant orb 1 metre away.');
-        placementReady = true;
-        place?.removeAttribute('hidden');
-        requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
-        return;
-    }
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice !== 'continue') return;
         hideGuidedChoice();
@@ -892,9 +908,17 @@ function placeMarker() {
 }
 
 function pressPlacementPointer(event) {
+    if (!placementReady || marker || pointerPressTimer) return;
     event?.stopPropagation();
-    suppressSessionSelectUntil = performance.now() + 700;
-    placeMarker();
+    suppressSessionSelectUntil = performance.now() + 1000;
+    const place = event?.currentTarget || appRoot?.querySelector('[data-tryit-place]');
+    place?.classList.add('is-pressed');
+    setGuide('Placing Plant orb…');
+    pointerPressTimer = setTimeout(() => {
+        place?.classList.remove('is-pressed');
+        pointerPressTimer = null;
+        placeMarker();
+    }, 360);
 }
 
 function renderInterface(simulated) {
@@ -1249,7 +1273,7 @@ function drawIntroSpatial(view) {
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), opacity);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
-    const noteProgress = Math.min(1, Math.max(0, (elapsed - 300) / 1800));
+    const noteProgress = Math.min(1, Math.max(0, (elapsed - 80) / 900));
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
