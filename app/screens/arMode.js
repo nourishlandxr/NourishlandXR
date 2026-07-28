@@ -59,7 +59,7 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#a9aea4', sub_checkpoint: '#91a29a', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#91a29a';
+const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#a9aea4', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
@@ -278,7 +278,6 @@ function setInteractionMode(mode) {
         positionSessionMarkers();
     }
     interactionMode = interactionMode === mode && ['grab', 'select'].includes(mode) ? 'neutral' : mode;
-    sessionMarkers.forEach(record => { record.profileHovered = false; });
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
@@ -383,7 +382,7 @@ function renderSpecialMarkerChoices(picker) {
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
         ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
         ['⇧', 'Rounded arrow up'], ['⇩', 'Rounded arrow down'], ['〉', 'Outline arrow right']
-    ].map(([symbol, label], index) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}" data-ar-arrow-style="${index + 1}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
+    ].map(([symbol, label], index) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" aria-label="${escapeHtml(label)}" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}" data-ar-arrow-style="${index + 1}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span class="sr-only">${escapeHtml(label)}</span></button>`).join('');
     const alerts = [
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
@@ -612,7 +611,7 @@ function drawSpatialMarkers(view) {
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.57, .64, .6], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
+    const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
 
     sessionMarkers.forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
@@ -620,18 +619,7 @@ function drawSpatialMarkers(view) {
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
-        const hoverVibration = record.profileHovered && hasPlantProfile(record)
-            ? {
-                x: Math.sin(performance.now() / 42) * .0035,
-                y: Math.sin(performance.now() / 58) * .0025
-            }
-            : { x: 0, y: 0 };
-        const livingRadius = Math.max(scaleX, scaleY) * (1 + Math.sin(performance.now() / 1450 + record.position.x * 4) * .014);
-        drawSpatialOrb(gl, sphereRenderer, view, {
-            ...record.position,
-            x: record.position.x + hoverVibration.x,
-            y: record.position.y + hoverVibration.y
-        }, livingRadius, {
+        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor)
         });
@@ -740,7 +728,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     sessionMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -750,13 +738,6 @@ function renderSessionMarkers() {
             event.preventDefault();
             beginMarkerInteraction(record, event);
         });
-        if (hasPlantProfile(record)) {
-            const setHovered = value => { record.profileHovered = value && ['neutral', 'view'].includes(interactionMode); };
-            element?.addEventListener('mouseenter', () => setHovered(true));
-            element?.addEventListener('mouseleave', () => setHovered(false));
-            element?.addEventListener('focus', () => setHovered(true));
-            element?.addEventListener('blur', () => setHovered(false));
-        }
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(cell => {
             const activate = () => {
                 const open = !cell.classList.contains('is-open');
@@ -913,7 +894,6 @@ function beginMarkerInteraction(record, event) {
         } else {
             record.infoVisible = !record.infoVisible;
         }
-        record.profileHovered = false;
         renderSessionMarkers();
         const visible = hasPlantProfile(record) ? record.profileExpanded : record.infoVisible;
         setPlacementStatus(visible

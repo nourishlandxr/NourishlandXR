@@ -5400,3 +5400,63 @@ body[data-project-theme="forest-light"] .dashboard-field-guide {
     background:#f7f8f3;
     color:#111;
 }
+
+/* Lightweight static AR markers */
+.creator-ar-arrow-grid .creator-ar-symbol-marker {
+    display:grid !important;
+    place-items:center !important;
+    grid-template-columns:1fr !important;
+    min-height:48px !important;
+    padding:3px !important;
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    filter:none !important;
+}
+.creator-ar-arrow-grid .creator-ar-symbol-marker > b {
+    width:auto !important;
+    height:auto !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:rgba(255,255,255,.94);
+    font-size:2rem !important;
+    text-shadow:0 2px 5px rgba(0,0,0,.72);
+}
+.creator-ar-marker-hit-target.is-arrow-marker {
+    width:72px;
+    height:72px;
+    border-radius:0;
+}
+.creator-ar-marker-hit-target.is-arrow-marker::before {
+    display:none;
+}
+.creator-ar-marker-hit-target.is-arrow-marker .creator-ar-special-symbol {
+    width:auto;
+    height:auto;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:color-mix(in srgb,var(--marker-accent,#75a9cc) 44%,#fff);
+    box-shadow:none;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.78));
+    font-size:3.4rem;
+    line-height:1;
+    text-shadow:none;
+}
+.creator-ar-marker-hit-target.is-arrow-marker .creator-ar-spatial-name {
+    margin-top:34px;
+}
+.tryit-sim-orb {
+    --demo-orb-light:#eef5c8;
+    --demo-orb-mid:#7e913f;
+    --demo-orb-dark:#344818;
+    animation:none !important;
+    transition:none !important;
+}
+.tryit-sim-orb.is-plant,
+.tryit-sim-marker-plant.has-plant-profile:is(:hover,:focus-visible) .tryit-sim-orb,
+.creator-ar-marker-hit-target-plant::after,
+.creator-ar-marker-hit-target.has-plant-profile::after {
+    animation:none !important;
+}
