@@ -728,6 +728,21 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /plantProfileReady \? `<section class="spatial-focus-panel"/);
 });
 
+test('an open AR Plant profile hands off to Web Mode and returns to the same orb', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /data-ar-open-web-profile/);
+    assert.match(arSource, /OPEN IN WEB MODE/);
+    assert.match(arSource, /arReturnContext = `web-marker:\$\{record\.marker\.id\}`/);
+    assert.match(arSource, /Back to AR will return to this orb/);
+    assert.match(dashboardSource, /BACK TO AR · SAME PLANT/);
+    assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
+    assert.match(dashboardSource, /is-ar-web-handoff/);
+    assert.match(styles, /\.creator-ar-open-web-profile/);
+    assert.match(styles, /\.ar-web-handoff/);
+});
+
 test('Area and Totem records use compact profile cards with Totem-owned text boxes', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
     const fieldGuideSource = read('app/screens/fieldGuide.js');

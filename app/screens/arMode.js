@@ -714,7 +714,7 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const panelHeight = Math.min(310, Math.max(240, window.innerWidth * .5));
     const horizontalDirection = markerX < window.innerWidth / 2 ? 1 : -1;
     const panelX = Math.max(panelWidth / 2 + 12, Math.min(window.innerWidth - panelWidth / 2 - 12, markerX + horizontalDirection * Math.min(210, window.innerWidth * .32)));
-    const panelY = Math.max(panelHeight / 2 + 12, Math.min(window.innerHeight - panelHeight / 2 - 84, markerY - Math.min(150, window.innerHeight * .2)));
+    const panelY = Math.max(panelHeight / 2 + 12, Math.min(window.innerHeight - panelHeight / 2 - 150, markerY - Math.min(150, window.innerHeight * .2)));
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
     const dx = panelX - markerX;
@@ -736,7 +736,7 @@ function renderSessionMarkers() {
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            ? `<span class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" aria-hidden="true"></span><aside class="creator-ar-plant-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
@@ -773,6 +773,18 @@ function renderSessionMarkers() {
             cell.addEventListener('mouseenter', () => {
                 if (!cell.classList.contains('is-open')) activate();
             });
+        });
+        const webProfileButton = layer.querySelector(`[data-ar-open-web-profile="${CSS.escape(record.marker.id)}"]`);
+        webProfileButton?.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        webProfileButton?.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            arReturnContext = `web-marker:${record.marker.id}`;
+            setPlacementStatus(`Opening ${record.marker.name} in Web Mode. Back to AR will return to this orb.`);
+            exitArMode();
         });
     });
     updateInteractionControls();
