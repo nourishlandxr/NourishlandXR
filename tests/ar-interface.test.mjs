@@ -428,7 +428,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(quickPlace, /saveMarkerAnchor\(operation\.projectId, operation\.siteId, operation\.areaId/);
     assert.match(quickPlace, /if \(!operationIsCurrent\(\)\) return;[\s\S]*sessionMarkers\.push\(record\)/);
     assert.match(launch, /const launchedSession = session/);
-    assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*selectedMarker = null;/);
+    assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*locatedTotemRecord = null;/);
+    assert.doesNotMatch(arSource, /selectedMarker/);
     assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hover over Markers to reveal their names\.'[\s\S]*: '';/);
     assert.match(launch, /if \(session !== launchedSession\) return/);
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);

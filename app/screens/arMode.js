@@ -445,7 +445,6 @@ async function openArAreaCreationForm() {
             activeAreaId = area.id;
             activeAreaName = area.name;
             sessionMarkers = [];
-            selectedMarker = null;
             locatedTotemRecord = null;
             renderSessionMarkers();
             closePlacePicker();
@@ -1646,7 +1645,6 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeAreaName = '';
     activeCheckpointId = checkpointId;
     sessionMarkers = [];
-    selectedMarker = null;
     locatedTotemRecord = null;
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
