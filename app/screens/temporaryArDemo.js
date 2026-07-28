@@ -49,6 +49,16 @@ let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
+const AR_PHONE_COMFORT = Object.freeze({
+    pointerOffsetCss: '2cm',
+    boardPosition: [0, 0, -2.8],
+    boardScale: [5.6, 8.75]
+});
+const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
+    'Augmented reality lets information appear where it belongs — in the living landscape around you.',
+    'In this short demo, you’ll place a Plant, open its story, leave a Note, and gather discoveries around an Area Totem.',
+    'There is nothing to memorise. Follow your curiosity, move gently, and see how a familiar place can begin to reveal what it knows.'
+]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
@@ -226,7 +236,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const controls = [...panel.children].filter(child => child !== title && child !== paragraph);
     const boardLabel = document.createElement('small');
     const textWindow = document.createElement('div');
-    boardLabel.textContent = 'LIVE AR TUTORIAL';
+    boardLabel.textContent = 'A LIVING INTRODUCTION';
     textWindow.className = 'tryit-board-text-window';
     panel.replaceChildren(boardLabel);
     if (title) panel.append(title);
@@ -305,9 +315,11 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    const paragraphs = (Array.isArray(body) ? body : [body]).map(value => String(value || '').trim()).filter(Boolean);
+    const bodyText = paragraphs.join('\n\n');
     introSceneActive = true;
     introBoardTitle = title;
-    introBoardBody = body;
+    introBoardBody = bodyText;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
     clearTimeout(boardTypingTimer);
@@ -318,12 +330,23 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     let typedLength = 0;
     let typing = true;
     let completionNotified = false;
+    const paintBoardParagraphs = visibleText => {
+        const paragraphElements = [...(board?.querySelectorAll('.tryit-board-text-window p') || [])];
+        let start = 0;
+        paragraphs.forEach((paragraph, index) => {
+            const end = start + paragraph.length;
+            if (paragraphElements[index]) {
+                paragraphElements[index].textContent = visibleText.slice(start, end);
+                paragraphElements[index].classList.toggle('is-current', visibleText.length >= start && visibleText.length <= end);
+            }
+            start = end + 2;
+        });
+    };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
-        introBoardVisibleBody = body;
+        introBoardVisibleBody = bodyText;
         introBoardTextureDirty = true;
-        const paragraph = board?.querySelector('p');
-        if (paragraph) paragraph.textContent = body;
+        paintBoardParagraphs(bodyText);
         board?.classList.remove('is-typing');
         typing = false;
         if (continueButton && buttonLabel) continueButton.hidden = false;
@@ -334,19 +357,18 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     const typeNextCharacter = () => {
         if (!typing) return;
-        typedLength = Math.min(body.length, typedLength + 1);
-        introBoardVisibleBody = body.slice(0, typedLength);
+        typedLength = Math.min(bodyText.length, typedLength + 1);
+        introBoardVisibleBody = bodyText.slice(0, typedLength);
         introBoardTextureDirty = true;
-        const paragraph = board?.querySelector('p');
-        if (paragraph) paragraph.textContent = introBoardVisibleBody;
-        if (typedLength >= body.length) return finishTyping();
-        const typedCharacter = body[typedLength - 1] || '';
+        paintBoardParagraphs(introBoardVisibleBody);
+        if (typedLength >= bodyText.length) return finishTyping();
+        const typedCharacter = bodyText[typedLength - 1] || '';
         const typingDelay = /[.!?]/.test(typedCharacter) ? 420 : /[,;]/.test(typedCharacter) ? 220 : 105;
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
         board.classList.add('is-typing');
-        board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><div class="tryit-board-text-window"><p></p></div>`;
+        board.innerHTML = `<small>A LIVING INTRODUCTION</small><h2>${title}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
         if (firstArrival) {
             introSceneStartedAt = performance.now();
@@ -366,7 +388,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
-    setGuide(`${title}. ${body}`);
+    setGuide(`${title}. ${bodyText}`);
 }
 
 function finishIntroBoard() {
@@ -379,7 +401,7 @@ function finishIntroBoard() {
 function runArWelcomeTutorial() {
     showIntroBoard(
         'NourishLand XR - a quick AR demo',
-        'A short guided demo of Plant orbs, Notes and Areas.',
+        WELCOME_BOARD_PARAGRAPHS,
         'Continue',
         () => {
             const place = appRoot?.querySelector('[data-tryit-place]');
@@ -518,19 +540,44 @@ function guideAreaConversion(record) {
     });
 }
 
+function shiftSimulatedSceneForStage(type) {
+    if (!simulatedMode || type === 'plant') return;
+    const shift = {
+        plant2: { x: -24, y: 2 },
+        note: { x: -16, y: -12 },
+        zone: { x: -14, y: 15 }
+    }[type];
+    if (!shift) return;
+    markers.forEach(record => {
+        record.simulatedSceneShifts ||= [];
+        if (record.simulatedSceneShifts.includes(type)) return;
+        const anchor = record.simulatedAnchor || { x: 50, y: 50 };
+        record.simulatedAnchor = {
+            x: Math.max(8, Math.min(92, anchor.x + shift.x)),
+            y: Math.max(12, Math.min(84, anchor.y + shift.y))
+        };
+        record.simulatedSceneShifts.push(type);
+        if (record.demoType === 'plant') record.demoPanelOffset = defaultPlantPanelOffset(record.simulatedAnchor);
+    });
+    updateSimulatedMarkers();
+}
+
 function armDemoPlacement(type, { direct = false } = {}) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     placementReady = false;
+    shiftSimulatedSceneForStage(type);
     const place = appRoot?.querySelector('[data-tryit-place]');
-    const simulatedAim = simulatedMode
-        ? ({ plant: { x: 42, y: 52 }, plant2: { x: 62, y: 47 }, note: { x: 70, y: 62 }, zone: { x: 82, y: 42 } })[type]
-        : { x: 50, y: 50 };
-    if (place && simulatedAim) {
-        place.dataset.aimX = String(simulatedAim.x);
-        place.dataset.aimY = String(simulatedAim.y);
-        place.style.setProperty('--aim-x', `${simulatedAim.x}%`);
-        place.style.setProperty('--aim-y', `${simulatedAim.y}%`);
+    if (place && simulatedMode) {
+        const comfortOffsetPercent = 75.6 / Math.max(320, window.innerHeight || 640) * 100;
+        const comfortableY = Math.min(86, 50 + comfortOffsetPercent);
+        place.dataset.aimX = '50';
+        place.dataset.aimY = String(comfortableY);
+        place.style.setProperty('--aim-x', '50%');
+        place.style.setProperty('--aim-y', `${comfortableY}%`);
+    } else if (place) {
+        place.style.setProperty('--aim-x', '50%');
+        place.style.setProperty('--aim-y', `calc(50% + ${AR_PHONE_COMFORT.pointerOffsetCss})`);
     }
     clearTimeout(aimRevealTimer);
     if (direct) {
@@ -1273,7 +1320,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText('LIVE AR TUTORIAL', 700, 190);
+    ctx.fillText('A LIVING INTRODUCTION', 700, 190);
     ctx.fillStyle = '#fff';
     let titleSize = 94;
     do {
@@ -1289,11 +1336,18 @@ function createIntroNoteTexture(texture = null) {
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
-    ctx.font = '650 52px system-ui, sans-serif';
+    ctx.font = '650 48px system-ui, sans-serif';
     const typedBody = introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
-    drawWrappedTextureText(ctx, typedBody, 150, 555, 1100, 68, 4);
+    const bodyParagraphs = typedBody.split(/\n\n/);
+    if (bodyParagraphs.length > 1) {
+        bodyParagraphs.slice(0, 3).forEach((paragraph, index) => {
+            drawWrappedTextureText(ctx, paragraph, 150, 535 + index * 102, 1100, 46, 2);
+        });
+    } else {
+        drawWrappedTextureText(ctx, typedBody, 150, 555, 1100, 62, 4);
+    }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     return canvasTexture(label, texture);
@@ -1359,17 +1413,17 @@ function drawIntroSpatial(view) {
     if (introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
-            introLocalPosition(introWorldAnchor, [0, 1.15, -3.2]),
-            9.6,
-            9.4,
+            introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
+            AR_PHONE_COMFORT.boardScale[0],
+            AR_PHONE_COMFORT.boardScale[1],
             easedKnowledge * .9
         );
     }
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, 1.15, -3.2]),
-        9.6,
-        9.4,
+        introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
+        AR_PHONE_COMFORT.boardScale[0],
+        AR_PHONE_COMFORT.boardScale[1],
         easedNote
     );
 }
