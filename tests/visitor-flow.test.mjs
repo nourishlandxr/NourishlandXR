@@ -293,7 +293,7 @@ test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /place two Plants, a Note, and one framed Area Totem/i);
+    assert.match(source, /One press on the glowing circle will load a Plant orb exactly 1 metre away/i);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'zone'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.match(source, /Area · Citrus Guild/);

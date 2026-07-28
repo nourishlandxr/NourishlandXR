@@ -37,7 +37,9 @@ let introWorldAnchor = null;
 let introNoteTexture = null;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
-let introKnowledgeVisible = true;
+let introKnowledgeVisible = false;
+let introBoardTitle = 'WELCOME TO AUGMENTED REALITY';
+let introBoardBody = 'AR places digital information in the real space around you. Move your phone slowly and this board stays anchored like a 130-inch screen.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -122,7 +124,7 @@ function clearSessionState() {
     introNoteTexture = null;
     introKnowledgeTexture = null;
     introTaglineVisible = true;
-    introKnowledgeVisible = true;
+    introKnowledgeVisible = false;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
@@ -223,6 +225,62 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         const choice = event.target.closest('[data-demo-choice]')?.dataset.demoChoice;
         if (choice) onClick(choice);
     };
+}
+
+function showIntroBoard(title, body, buttonLabel, onContinue) {
+    introBoardTitle = title;
+    introBoardBody = body;
+    if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
+    introNoteTexture = null;
+    const board = appRoot?.querySelector('[data-tryit-guided-choice]');
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (board) {
+        board.classList.add('is-welcome-board');
+        board.innerHTML = `<small>LIVE AR TUTORIAL</small><h2>${title}</h2><p>${body}</p>`;
+        board.hidden = false;
+    }
+    if (continueButton) {
+        continueButton.textContent = buttonLabel;
+        continueButton.hidden = false;
+        continueButton.onclick = onContinue;
+    }
+    setGuide(`${title}. ${body}`);
+}
+
+function finishIntroBoard() {
+    introSceneActive = false;
+    appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
+    const board = appRoot?.querySelector('[data-tryit-guided-choice]');
+    board?.classList.remove('is-welcome-board');
+    if (board) board.hidden = true;
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
+}
+
+function runArWelcomeTutorial() {
+    showIntroBoard(
+        'WELCOME TO AUGMENTED REALITY',
+        'AR places digital information in the real space around you. Move your phone slowly and this board stays anchored like a 130-inch screen.',
+        'Continue',
+        () => showIntroBoard(
+            'INTRODUCING AIM',
+            'The glowing circle is your pointer. It marks the exact direction you are aiming, so look through the centre of your screen and choose a clear space.',
+            'Show aim',
+            () => {
+                const place = appRoot?.querySelector('[data-tryit-place]');
+                place?.removeAttribute('hidden');
+                requestAnimationFrame(() => place?.classList.add('is-revealing'));
+                showIntroBoard(
+                    'CREATE A PLANT ORB',
+                    'Aim at a clear space in front of you. One press on the glowing circle will load a Plant orb exactly 1 metre away.',
+                    'Continue',
+                    () => {
+                        finishIntroBoard();
+                        armDemoPlacement('plant', { direct: true });
+                    }
+                );
+            }
+        )
+    );
 }
 
 function runKnowledgeTour(record, onComplete) {
@@ -334,7 +392,7 @@ function guideAreaConversion(record) {
     });
 }
 
-function armDemoPlacement(type) {
+function armDemoPlacement(type, { direct = false } = {}) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     placementReady = false;
@@ -365,6 +423,14 @@ function armDemoPlacement(type) {
     };
     const [title, introduction] = introductions[type];
     clearTimeout(aimRevealTimer);
+    if (direct) {
+        finishIntroBoard();
+        setGuide('Aim with the centre circle, then press it once to create the Plant orb 1 metre away.');
+        placementReady = true;
+        place?.removeAttribute('hidden');
+        requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
+        return;
+    }
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice !== 'continue') return;
         hideGuidedChoice();
@@ -792,6 +858,12 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
+    const introContinue = document.createElement('button');
+    introContinue.className = 'tryit-intro-continue';
+    introContinue.dataset.tryitIntroContinue = '';
+    introContinue.type = 'button';
+    introContinue.hidden = true;
+    appRoot.querySelector('.tryit-stage')?.append(introContinue);
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -814,23 +886,7 @@ function renderInterface(simulated) {
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
     clearTimeout(introNarrationTimer);
-    introNarrationTimer = setTimeout(() => {
-        showGuidedChoice('<h2>Imagine knowledge living around you</h2><p>Imagine stories, science, uses, and living relationships appearing exactly where they belong in the space around you.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
-            if (choice !== 'continue') return;
-            introTaglineVisible = false;
-            const tagline = appRoot.querySelector('[data-tryit-spatial-tagline]');
-            tagline?.classList.add('is-leaving');
-            if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
-            introNoteTexture = null;
-                showGuidedChoice('<h2>Let’s bring a garden to life</h2><p>We’ll place two Plants, a Note, and one framed Area Totem. Hold and drag any element whenever you want to adjust it.</p><button type="button" data-demo-choice="continue">Continue</button>', nextChoice => {
-                if (nextChoice === 'continue') {
-                    appRoot.querySelector('.tryit-intro-knowledge')?.classList.add('is-leaving');
-                    introKnowledgeVisible = false;
-                    armDemoPlacement('plant');
-                }
-            });
-        });
-    }, 2800);
+    introNarrationTimer = setTimeout(runArWelcomeTutorial, 700);
 }
 
 function multiply(a, b) {
@@ -1052,23 +1108,20 @@ function createIntroNoteTexture() {
     ctx.strokeStyle = 'rgba(239,250,235,.7)';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.roundRect(150, 315, 1100, 270, [42, 34, 46, 38]);
+    ctx.roundRect(70, 100, 1260, 700, [52, 44, 58, 46]);
     ctx.fill();
     ctx.stroke();
     ctx.shadowColor = 'rgba(0,0,0,.45)';
     ctx.shadowBlur = 10;
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#dcef95';
+    ctx.font = '700 42px system-ui, sans-serif';
+    ctx.fillText('LIVE AR TUTORIAL', 700, 215);
     ctx.fillStyle = '#fff';
-    ctx.strokeStyle = 'rgba(0,15,6,.9)';
-    ctx.lineWidth = 4;
-    ctx.font = '720 92px system-ui, sans-serif';
-    ctx.strokeText('NOURISHLANDXR', 700, introTaglineVisible ? 430 : 472);
-    ctx.fillText('NOURISHLANDXR', 700, introTaglineVisible ? 430 : 472);
-    if (introTaglineVisible) {
-        ctx.font = '600 42px system-ui, sans-serif';
-        ctx.strokeText('A web of living knowledge…', 700, 515);
-        ctx.fillText('A web of living knowledge…', 700, 515);
-    }
+    ctx.font = '760 74px system-ui, sans-serif';
+    drawWrappedTextureText(ctx, introBoardTitle, 700, 350, 1110, 82, 2);
+    ctx.font = '560 40px system-ui, sans-serif';
+    drawWrappedTextureText(ctx, introBoardBody, 700, 545, 1080, 52, 4);
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     return canvasTexture(label);
@@ -1131,17 +1184,17 @@ function drawIntroSpatial(view) {
     if (introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
-            introLocalPosition(introWorldAnchor, [0, .35, -3]),
-            3.05,
-            1.95,
+            introLocalPosition(introWorldAnchor, [0, .15, -2.4]),
+            7.1,
+            4.6,
             easedKnowledge * .9
         );
     }
     drawTexture(
         introNoteTexture,
-        introLocalPosition(introWorldAnchor, [0, .35, -3]),
-        3.05,
-        1.95,
+        introLocalPosition(introWorldAnchor, [0, .15, -2.4]),
+        7.1,
+        4.6,
         easedNote
     );
 }
