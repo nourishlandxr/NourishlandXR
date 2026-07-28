@@ -451,7 +451,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
-    assert.match(styles, /\.tryit-place\.is-ready \{ pointer-events: auto;/);
+    assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010; pointer-events:auto;/);
     assert.doesNotMatch(source, /Dashboard|draggable-window/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
@@ -500,6 +500,20 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
     assert.match(source, /\}, 360\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
+    const directPlacementBranch = source.slice(
+        source.indexOf('if (direct) {'),
+        source.indexOf('place?.setAttribute', source.indexOf('if (direct) {'))
+    );
+    assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
+    assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
+    assert.match(source, /The red orb keeps its colour as it becomes a Plant marker/);
+    assert.match(source, /The green Moringa orb keeps its colour as it becomes a Plant marker/);
+    assert.match(source, /demoOrbColor: type === 'plant' \? 'red' : type === 'plant2' \? 'green'/);
+    assert.match(source, /red:[\s\S]*radius: 0\.07/);
+    assert.match(source, /green:[\s\S]*radius: 0\.074/);
+    assert.match(source, /coreColor: material\?\.core/);
+    assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
+    assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
     assert.match(source, /\[data-tryit-place\]'\)\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),

@@ -174,6 +174,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     if (!view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     const plant = options.type === 'plant';
     const shellColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
+    const coreColor = options.coreColor || PLANT_CORE_COLOR;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -202,7 +203,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
             view.transform.inverse.matrix,
             position,
             radius * 0.38,
-            { color: PLANT_CORE_COLOR, alpha: 0.98, emissive: 0.82 }
+            { color: coreColor, alpha: 0.98, emissive: 0.82 }
         );
     }
     drawSpatialSphere(

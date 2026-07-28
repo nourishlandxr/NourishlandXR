@@ -49,6 +49,20 @@ let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
+const DEMO_ORB_MATERIALS = Object.freeze({
+    red: {
+        shell: [0.82, 0.15, 0.12],
+        core: [1, 0.43, 0.3],
+        radius: 0.07,
+        style: '--demo-orb-size:52px;--demo-orb-light:#ffd8d1;--demo-orb-mid:#e65345;--demo-orb-dark:#7c1818;--demo-orb-core-light:#ffe8df;--demo-orb-core-mid:#ef6757;--demo-orb-core-dark:#8f1f1b'
+    },
+    green: {
+        shell: [0.34, 0.72, 0.28],
+        core: [0.75, 0.95, 0.42],
+        radius: 0.074,
+        style: '--demo-orb-size:62px;--demo-orb-light:#efffd8;--demo-orb-mid:#79ad65;--demo-orb-dark:#315d3c;--demo-orb-core-light:#f2ffd9;--demo-orb-core-mid:#b9e66f;--demo-orb-core-dark:#3f7f38'
+    }
+});
 const BIOMAP_CATEGORIES = Object.freeze({
     FOOD: [],
     FOREST: [],
@@ -239,6 +253,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    introSceneActive = true;
     introBoardTitle = title;
     introBoardBody = body;
     introBoardVisibleBody = '';
@@ -326,10 +341,7 @@ function runArWelcomeTutorial() {
                 {
                     onTextComplete: () => {
                         clearTimeout(aimRevealTimer);
-                        aimRevealTimer = setTimeout(() => {
-                            appRoot?.querySelector('[data-tryit-guided-choice]')?.classList.add('is-leaving');
-                            aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 700);
-                        }, 900);
+                        aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 900);
                     }
                 }
             );
@@ -375,11 +387,7 @@ function guidePlantConversion(record) {
     const moringa = record.tutorialStage === 'plant2';
     const plantName = moringa ? 'Moringa Tree' : 'Lemon Myrtle';
     setGuide(`${moringa ? 'Your second' : 'Your first'} Plant orb is placed.`);
-    const introduction = moringa
-        ? '<h2>A second Plant orb</h2><p>Let’s use Moringa for this example. This orb can hold a different profile while remaining part of the same living map.</p><button type="button" data-demo-choice="continue">Create Moringa profile</button>'
-        : '<h2>A simple Plant orb</h2><p>This is an example Plant marker. A simple orb can become a living Plant Profile; let’s use Lemon Myrtle to show how.</p><button type="button" data-demo-choice="continue">Create Plant Profile</button>';
-    showGuidedChoice(introduction, choice => {
-        if (choice !== 'continue') return;
+    const completeConversion = () => {
         record.type = 'plant';
         record.demoType = 'plant';
         record.name = plantName;
@@ -397,7 +405,19 @@ function guidePlantConversion(record) {
                 showDemoAction(moringa ? 'note' : 'plant2');
             })
         });
-    });
+    };
+    showIntroBoard(
+        moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
+        moringa
+            ? 'The green Moringa orb keeps its colour as it becomes a Plant marker.'
+            : 'The red orb keeps its colour as it becomes a Plant marker.',
+        moringa ? 'Create Moringa profile' : 'Create Plant Profile',
+        () => {
+            suppressSessionSelectUntil = performance.now() + 700;
+            finishIntroBoard();
+            completeConversion();
+        }
+    );
 }
 
 function guideNoteConversion(record) {
@@ -462,7 +482,6 @@ function armDemoPlacement(type, { direct = false } = {}) {
     }
     clearTimeout(aimRevealTimer);
     if (direct) {
-        finishIntroBoard();
         setGuide('Press the glowing centre pointer to place the Plant orb.');
         placementReady = true;
         place?.removeAttribute('hidden');
@@ -575,13 +594,15 @@ function capturedSimulatedAnchor() {
     };
 }
 
+function demoOrbStyle(record) {
+    return DEMO_ORB_MATERIALS[record?.demoOrbColor]?.style || '';
+}
+
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
-    const orbAppearance = record.demoPlantPreset === 'moringa'
-        ? '--demo-orb-size:58px;--demo-orb-light:#efffd8;--demo-orb-mid:#79ad65;--demo-orb-dark:#315d3c'
-        : '--demo-orb-size:44px;--demo-orb-light:#fff4cd;--demo-orb-mid:#d6ad5e;--demo-orb-dark:#6f7f48';
+    const orbAppearance = demoOrbStyle(record);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
@@ -624,7 +645,7 @@ function updateSimulatedMarkers() {
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -886,6 +907,7 @@ function placeMarker() {
         type: type === 'note' ? 'note' : 'marker',
         demoType: type === 'note' ? 'note' : 'marker',
         tutorialStage: type,
+        demoOrbColor: type === 'plant' ? 'red' : type === 'plant2' ? 'green' : '',
         demoExpanded: false,
         demoPanelOffset: panelOffsets[type],
         simulatedAnchor,
@@ -1495,7 +1517,15 @@ function drawMarker(view) {
     markers.forEach(record => {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
         if (!orbType) return;
-        drawSpatialOrb(gl, sphereRenderer, view, record.position, orbType === 'plant' ? .062 : .045, { type: orbType });
+        const material = DEMO_ORB_MATERIALS[record.demoOrbColor];
+        drawSpatialOrb(
+            gl,
+            sphereRenderer,
+            view,
+            record.position,
+            material?.radius || (orbType === 'plant' ? .068 : .05),
+            { type: orbType, color: material?.shell, coreColor: material?.core }
+        );
     });
 
     markers.forEach(record => {
