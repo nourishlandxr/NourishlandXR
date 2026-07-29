@@ -115,6 +115,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(styles, /\.dashboard-ar-path \{ display: grid; grid-template-columns:/);
     assert.doesNotMatch(entrySource, />Work Mode</);
     assert.doesNotMatch(entrySource, />Quick Access</);
+    assert.match(entrySource, /'WEB HUB'/);
     assert.match(source, /openArAction/);
     assert.match(source, /addUnplacedAction/);
     assert.match(source, /renderContentMode/);
@@ -214,23 +215,23 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
 });
 
-test('creator Web Hub keeps Home, maps, projects and the plant database in one workspace', () => {
+test('Create and Manage opens saved projects while each project owns its Web Hub', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
-    assert.match(dashboardSource, /<h1>Web Hub<\/h1>/);
-    assert.match(dashboardSource, /<strong>Home<\/strong>/);
-    assert.match(dashboardSource, /<strong>Global Map<\/strong>/);
-    assert.match(dashboardSource, /<strong>Projects &amp; Areas<\/strong>/);
-    assert.match(dashboardSource, /<strong>Plant Database<\/strong>/);
-    assert.match(dashboardSource, /export async function renderWebHubHome/);
-    assert.match(dashboardSource, /export async function renderWebHubMap/);
-    assert.match(dashboardSource, /export async function renderWebHubProjects/);
-    assert.match(dashboardSource, /export async function renderWebHubPlants/);
-    assert.match(dashboardSource, /isDefaultHomeArea\(entry\.place\)/);
-    assert.match(dashboardSource, /window\.renderLocationMap/);
-    assert.match(dashboardSource, /data-web-hub-plant/);
-    assert.match(mainSource, /window\.renderWebHubHome/);
-    assert.match(mainSource, /window\.filterWebHubPlants = filterWebHubPlants/);
+    const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
+    assert.match(dashboardSource, /<h1>Home<\/h1>/);
+    assert.match(dashboardSource, /project-selection-list/);
+    assert.match(dashboardSource, /window\.renderProjectDashboard/);
+    assert.match(dashboardSource, /window\.renderProjectForm/);
+    assert.doesNotMatch(dashboardSource, /export async function renderWebHubHome/);
+    assert.doesNotMatch(mainSource, /window\.renderWebHubHome/);
+    assert.match(dashboardSource, /<strong>Web Hub<\/strong>/);
+    assert.match(fieldGuideSource, /const guideTitle = creator \? 'Web Hub' : 'Field Guide'/);
+    assert.match(fieldGuideSource, /loadSitePlaces\(project\.id, site\.id\)\.catch\(\(\) => \[\]\)/);
+    assert.match(fieldGuideSource, /<strong>\$\{DEFAULT_HOME_AREA_NAME\}<\/strong>/);
+    assert.match(fieldGuideSource, /Spatial Plan/);
+    assert.match(fieldGuideSource, /Area Totems/);
+    assert.match(fieldGuideSource, /Plant records/);
 });
 
 test('Home owns no-Area experiments while named Areas remain isolated', () => {

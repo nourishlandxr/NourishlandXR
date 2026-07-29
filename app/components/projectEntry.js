@@ -105,7 +105,7 @@ export function renderProjectEntry(config) {
                 <strong id="openArTitle">OPEN AR</strong>
                 <small>See your knowledge come alive in the place it belongs.</small>
             </button>
-            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'FIELD GUIDE'}</strong><small>Search and manage your records.</small></button>
+            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong><small>Home, Areas, Plants and project records.</small></button>
         </section>
 
         <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>

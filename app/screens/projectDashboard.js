@@ -474,11 +474,11 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: ''
         },
         arMode: {
-            title: 'AR Mode and Field Guide work together',
+            title: 'AR Mode and Web Hub work together',
             full: nonPlantMode
-                ? 'AR Mode places knowledge beside real objects. The Field Guide is your searchable Web Mode library for reviewing and managing the same records. Use them together: place spatially, then organise and deepen the information.'
-                : 'AR Mode places Plants, Notes and knowledge in the real landscape. The Field Guide is your searchable Web Mode library for reviewing, editing and learning from those same records. One gives knowledge a place; the other helps it grow.',
-            short: 'AR Mode gives knowledge a place, while the Field Guide helps you manage and deepen it.',
+                ? 'AR Mode places knowledge beside real objects. The Web Hub is your searchable workspace for reviewing and managing the same records. Use them together: place spatially, then organise and deepen the information.'
+                : 'AR Mode places Plants, Notes and knowledge in the real landscape. The Web Hub is your searchable workspace for reviewing, editing and learning from those same records. One gives knowledge a place; the other helps it grow.',
+            short: 'AR Mode gives knowledge a place, while the Web Hub helps you manage and deepen it.',
             actionLabel: 'Create your first Marker',
             action: `window.openCreatorArMode('${encoded(projectId)}')`
         },
@@ -753,82 +753,25 @@ export function openCreatorVisitorPreview(encodedProjectId) {
     window.renderVisitorLocationIntro(encoded(projectId), true);
 }
 
-async function loadWebHubInventory() {
-    const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
-    return Promise.all(projects.map(async project => {
-        const sites = await loadProjectSites(project.id);
-        const site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
-        const places = site ? await loadSitePlaces(project.id, site.id) : [];
-        const markerGroups = site ? await Promise.all(places.map(async place => ({ place, markers: await loadPlaceMarkers(project.id, site.id, place.id) }))) : [];
-        const entries = markerGroups.flatMap(group => group.markers.map(marker => ({ marker, place: group.place })));
-        return { project, site, places, entries };
-    }));
-}
-
-const webHubProjectName = project => PROJECT_NAMES[project.id] || project.name;
-
 export async function renderPlatformHome(app) {
     applyProjectTheme('forest-light');
-    const inventory = await loadWebHubInventory();
-    const homeCount = inventory.reduce((count, item) => count + item.entries.filter(entry => isDefaultHomeArea(entry.place) && ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker))).length, 0);
-    const plantCount = inventory.reduce((count, item) => count + item.entries.filter(entry => effectiveMarkerType(entry.marker) === 'plant').length, 0);
-    const areaCount = inventory.reduce((count, item) => count + item.places.filter(place => !isDefaultHomeArea(place)).length, 0);
-    app.innerHTML = `<div class="screen platform-home creator-project-menu web-hub">
+    const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
+    const cards = projects.map(project => {
+        const name = PROJECT_NAMES[project.id] || project.name;
+        return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><strong>${escapeHtml(name)}</strong></button>`;
+    }).join('');
+    app.innerHTML = `<div class="screen platform-home creator-project-menu">
         <div class="page-header">
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
             <p class="welcome-label">Nourishland XR</p>
-            <h1>Web Hub</h1>
-            <p class="subtitle">Your web workspace for places, plants and living information.</p>
+            <h1>Home</h1>
+            <p class="subtitle">Create once. Publish everywhere.</p>
         </div>
-        <section class="panel web-hub-summary"><strong>${inventory.length}</strong> Projects <strong>${areaCount}</strong> Areas <strong>${plantCount}</strong> Plants <strong>${homeCount}</strong> in Home</section>
-        <nav class="content-mode-tool-grid" aria-label="Web Hub sections">
-            <button type="button" onclick="window.renderWebHubHome()"><strong>Home</strong><span>${homeCount} unassigned item${homeCount === 1 ? '' : 's'} · add, manage and review.</span></button>
-            <button type="button" onclick="window.renderWebHubMap()"><strong>Global Map</strong><span>Open every project’s mapped location and spatial plan.</span></button>
-            <button type="button" onclick="window.renderWebHubProjects()"><strong>Projects &amp; Areas</strong><span>Browse the ${inventory.length} projects and their Areas.</span></button>
-            <button type="button" onclick="window.renderWebHubPlants()"><strong>Plant Database</strong><span>Search ${plantCount} saved plant record${plantCount === 1 ? '' : 's'}.</span></button>
-        </nav>
-        <button class="menu-card create-project-action" onclick="window.renderProjectForm()"><strong>Create a new location, experience or project</strong></button>
+        <section class="project-section">
+            <h2 class="project-section-title">Locations</h2>
+            <div class="menu-stack project-selection-list">${cards || '<div class="panel"><p>No locations are available.</p></div>'}<button class="menu-card create-project-action" onclick="window.renderProjectForm()"><strong>Create a new location, experience or project</strong></button></div>
+        </section>
     </div>`;
-}
-
-export async function renderWebHubHome(app) {
-    const inventory = await loadWebHubInventory();
-    const groups = inventory.map(({ project, entries }) => {
-        const homeEntries = entries.filter(entry => isDefaultHomeArea(entry.place) && ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)));
-        if (!homeEntries.length) return '';
-        return `<section class="panel"><div class="section-heading-row"><div><h2>${escapeHtml(webHubProjectName(project))}</h2><p>${homeEntries.length} item${homeEntries.length === 1 ? '' : 's'} in Home.</p></div><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add</button></div><div class="latest-entry-list">${homeEntries.map(({ marker }) => `<button class="latest-entry-row" type="button" onclick="window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}',false,'web-hub')"><span class="latest-entry-icon">${markerIcon(effectiveMarkerType(marker))}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name || 'Untitled item')}</strong><span>${markerTypeLabel(effectiveMarkerType(marker))} · Home</span></span></button>`).join('')}</div></section>`;
-    }).join('');
-    app.innerHTML = `<div class="screen web-hub-home"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back to Web Hub</button><p class="welcome-label">Web Hub</p><h1>Home</h1><p class="subtitle">Unassigned items ready to organise, edit or place.</p></div>${groups || '<section class="panel"><p>Home is clear. New items saved without an Area will appear here.</p></section>'}</div>`;
-}
-
-export async function renderWebHubMap(app) {
-    const inventory = await loadWebHubInventory();
-    app.innerHTML = `<div class="screen web-hub-map"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back to Web Hub</button><p class="welcome-label">Web Hub</p><h1>Global Map</h1><p class="subtitle">Every project location, with its own spatial plan.</p></div><div class="latest-entry-list">${inventory.map(({ project, site, places, entries }) => `<button class="latest-entry-row" type="button" onclick="window.renderLocationMap('${encoded(project.id)}',true,'web-hub')"><span class="latest-entry-icon">⌖</span><span class="latest-entry-copy"><strong>${escapeHtml(webHubProjectName(project))}</strong><span>${places.filter(place => !isDefaultHomeArea(place)).length} Areas · ${entries.length} records${site ? '' : ' · location setup needed'}</span></span><b>Open map</b></button>`).join('') || '<p class="project-empty-state">No projects are available.</p>'}</div></div>`;
-}
-
-export async function renderWebHubProjects(app) {
-    const inventory = await loadWebHubInventory();
-    const projects = inventory.map(({ project, places }) => `<section class="panel"><div class="section-heading-row"><div><h2>${escapeHtml(webHubProjectName(project))}</h2><p>${places.filter(place => !isDefaultHomeArea(place)).length} Areas</p></div><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}','${encoded(webHubProjectName(project))}')">Open project</button></div><div class="latest-entry-list">${places.filter(place => !isDefaultHomeArea(place)).map(place => `<button class="latest-entry-row" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(place.id)}')"><span class="latest-entry-icon">⌖</span><span class="latest-entry-copy"><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.type || 'Area')}</span></span></button>`).join('') || '<p class="meta">No Areas yet.</p>'}</div></section>`).join('');
-    app.innerHTML = `<div class="screen web-hub-projects"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back to Web Hub</button><p class="welcome-label">Web Hub</p><h1>Projects &amp; Areas</h1><p class="subtitle">Open a project or jump directly into one of its Areas.</p></div>${projects || '<section class="panel"><p>No projects are available.</p></section>'}</div>`;
-}
-
-export async function renderWebHubPlants(app) {
-    const inventory = await loadWebHubInventory();
-    const plants = inventory.flatMap(({ project, entries }) => entries.filter(entry => effectiveMarkerType(entry.marker) === 'plant').map(entry => ({ ...entry, project })));
-    app.innerHTML = `<div class="screen web-hub-plants"><div class="page-header"><button class="ghost" onclick="window.renderDemoProjects()">Back to Web Hub</button><p class="welcome-label">Web Hub</p><h1>Plant Database</h1><p class="subtitle">Search saved Plants across every project.</p></div><section class="field-guide-search-deck"><div class="field"><label for="webHubPlantSearch">Search plants</label><input id="webHubPlantSearch" type="search" placeholder="Plant name, scientific name, Area or project…" oninput="window.filterWebHubPlants()" /></div></section><p id="webHubPlantCount" class="meta">${plants.length} plant${plants.length === 1 ? '' : 's'}</p><div class="latest-entry-list">${plants.map(({ project, place, marker }) => `<button class="latest-entry-row" type="button" data-web-hub-plant data-search="${escapeHtml([marker.name, marker.scientific_name, marker.plant_profile?.scientific_name, place.name, webHubProjectName(project)].join(' ').toLowerCase())}" onclick="window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}',false,'web-hub')"><span class="latest-entry-icon">🌱</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name || 'Untitled plant')}</strong><span>${escapeHtml(webHubProjectName(project))} · ${escapeHtml(displayAreaName(place))}</span></span></button>`).join('') || '<p class="project-empty-state">No saved plant records yet.</p>'}</div></div>`;
-}
-
-export function filterWebHubPlants() {
-    const query = String(document.getElementById('webHubPlantSearch')?.value || '').trim().toLowerCase();
-    const rows = [...document.querySelectorAll('[data-web-hub-plant]')];
-    let visible = 0;
-    rows.forEach(row => {
-        const matches = !query || String(row.dataset.search || '').includes(query);
-        row.hidden = !matches;
-        if (matches) visible += 1;
-    });
-    const count = document.getElementById('webHubPlantCount');
-    if (count) count.textContent = `${visible} plant${visible === 1 ? '' : 's'}`;
 }
 
 export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
@@ -1198,7 +1141,7 @@ export async function renderContentMode(app, encodedProjectId) {
                 <p>Everything here works without camera or location permission. Content can be positioned later using the map or AR Mode.</p>
             </section>
             <nav class="content-mode-tool-grid" aria-label="Content Mode tools">
-                <button type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', true)"><strong>Field Guide</strong><span>Browse and edit Plants and their information.</span></button>
+                <button type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', true)"><strong>Web Hub</strong><span>Manage Home, Plants, Areas, Totems and their information.</span></button>
                 <button type="button" onclick="window.renderLocationMap('${encoded(project.id)}', true, 'content-mode')"><strong>Map</strong><span>Review Areas and spatial organisation without the camera.</span></button>
                 <button type="button" onclick="window.renderStoriesAndFocus('${encoded(project.id)}')"><strong>Stories &amp; Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></button>
                 <button type="button" onclick="window.renderUnplacedContent('${encoded(project.id)}')"><strong>Unplaced Content</strong><span>${unplacedCount} item${unplacedCount === 1 ? '' : 's'} can be positioned later.</span></button>
@@ -1629,7 +1572,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(displayAreaName(place))}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;
         }).join('');
-        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Field Guide</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>Home is the default workspace for information that still needs a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home is empty.</p>'}</div></div>`;
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>Home is the default workspace for unassigned items, experiments and play that still need a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home is empty.</p>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1951,7 +1894,7 @@ export async function renderBrowseContent(app, encodedProjectId, creator = false
         : `<article class="latest-entry-row visitor-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(effectiveMarkerType(marker))}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(effectiveMarkerType(marker))}</span><span>${escapeHtml(marker.description || marker.notes || '')}</span></span></article>`
     ).join('');
     const back = creator ? `window.renderProjectDashboard('${encoded(project.id)}')` : `window.renderVisitorLocationIntro('${encoded(project.id)}')`;
-    app.innerHTML = `<div class="screen browse-content-screen"><div class="page-header"><button class="ghost" onclick="${back}">Back</button><h1>Browse Content</h1><p class="subtitle">Access the project’s plants, stories, checkpoints and maps without entering AR.</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', ${creator})"><strong>Field Guide</strong><span>Browse plants and visitor-visible information.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationMap('${encoded(project.id)}', ${creator})"><strong>Map</strong><span>View content by location without using the camera.</span></button></div>${rows ? `<section class="latest-entries-section"><h2>Stories and checkpoints</h2><div class="latest-entry-list">${rows}</div></section>` : ''}</div>`;
+    app.innerHTML = `<div class="screen browse-content-screen"><div class="page-header"><button class="ghost" onclick="${back}">Back</button><h1>Browse Content</h1><p class="subtitle">Access the project’s plants, stories, checkpoints and maps without entering AR.</p></div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderFieldGuide('${encoded(project.id)}', ${creator})"><strong>${creator ? 'Web Hub' : 'Field Guide'}</strong><span>Browse plants and visitor-visible information.</span></button><button class="content-type-row" type="button" onclick="window.renderLocationMap('${encoded(project.id)}', ${creator})"><strong>Map</strong><span>View content by location without using the camera.</span></button></div>${rows ? `<section class="latest-entries-section"><h2>Stories and checkpoints</h2><div class="latest-entry-list">${rows}</div></section>` : ''}</div>`;
 }
 
 export async function renderLocationMap(app, encodedProjectId, creator = true, returnContext = '') {
@@ -2089,7 +2032,7 @@ export async function renderStartingPoints(app, encodedProjectId) {
         const { project, entries } = await projectContent(projectId);
         const startingPoints = entries.filter(entry => entry.marker.type === 'intro_checkpoint');
         const entranceRows = startingPoints.map(({ marker }) => `<button class="latest-entry-row" type="button" onclick="window.openProjectStartingPoint('${encoded(project.id)}')"><span class="latest-entry-icon" aria-hidden="true">⌖</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>Trail Entrance · ${escapeHtml(marker.visibility || 'draft')}</span></span></button>`).join('');
-        app.innerHTML = `<div class="screen home-and-entrances"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Field Guide</button><p class="welcome-label">Physical-world preparation</p><h1>Visitor Entrances</h1><p class="subtitle">Add a guided beginning only when visitors need one.</p></div><section class="panel guide"><h2>Home is already available</h2><p>Home automatically holds anything that has not been assigned to an Area. A Visitor Entrance is optional and becomes a real-world gateway when it receives a GPS or QR anchor.</p></section><div class="latest-entry-list">${entranceRows || '<p class="project-empty-state">No Visitor Entrance has been added.</p>'}</div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderStartingPointForm('${encoded(project.id)}', '', 'trail-entrance')"><strong>${startingPoints.length ? 'Manage Visitor Entrance' : 'Create a Visitor Entrance'}</strong><span>Add GPS or a physical QR code to connect Explorer visitors to this place.</span></button></div></div>`;
+        app.innerHTML = `<div class="screen home-and-entrances"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><p class="welcome-label">Physical-world preparation</p><h1>Visitor Entrances</h1><p class="subtitle">Add a guided beginning only when visitors need one.</p></div><section class="panel guide"><h2>Home is already available</h2><p>Home automatically holds anything that has not been assigned to an Area. A Visitor Entrance is optional and becomes a real-world gateway when it receives a GPS or QR anchor.</p></section><div class="latest-entry-list">${entranceRows || '<p class="project-empty-state">No Visitor Entrance has been added.</p>'}</div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderStartingPointForm('${encoded(project.id)}', '', 'trail-entrance')"><strong>${startingPoints.length ? 'Manage Visitor Entrance' : 'Create a Visitor Entrance'}</strong><span>Add GPS or a physical QR code to connect Explorer visitors to this place.</span></button></div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Visitor Entrances unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -2258,7 +2201,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
-            backButton.textContent = 'Back to Field Guide';
+            backButton.textContent = 'Back to Web Hub';
             backButton.onclick = () => window.renderFieldGuide(encoded(project.id), true);
         }
     }
