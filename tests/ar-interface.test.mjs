@@ -146,7 +146,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-note[\s\S]*background:#a95d32 !important/);
     assert.match(styles, /\.creator-ar-taskbar \[data-ar-view-mode\][\s\S]*background:#246ea6 !important/);
     assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 86px; height: 132px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 72px; height: 132px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
     assert.match(arSource, /creator-ar-mode-pointer/);
     assert.match(arSource, /is-hold-mode/);
@@ -200,7 +200,8 @@ test('Creator AR opens with an editable spatial Location Note and one global Not
     assert.match(arSource, /data-ar-location-title/);
     assert.match(arSource, /data-ar-location-area>AREA · \$\{escapeHtml\(activeAreaName \|\| 'Unassigned'\)\}/);
     assert.match(arSource, /function ensureLocationNoteAnchor\(\)/);
-    assert.match(arSource, /groundY \+ 2\.8/);
+    assert.match(arSource, /forwardLength \* 4\.5/);
+    assert.match(arSource, /groundY \+ 3\.2/);
     assert.match(arSource, /function positionLocationNote\(view = latestView\)/);
     assert.match(arSource, /location-stick-length/);
     assert.match(arSource, /loadProject\(operation\.projectId\)\.catch/);
@@ -208,6 +209,9 @@ test('Creator AR opens with an editable spatial Location Note and one global Not
     assert.match(styles, /\.creator-ar-location-note-board/);
     assert.match(styles, /\.creator-ar-location-stick/);
     assert.match(styles, /\.creator-ar-location-ground/);
+    assert.match(styles, /\.creator-ar-location-note-board \{[^}]*width:min\(62vw,520px\)/);
+    assert.match(styles, /\.creator-ar-location-stick \{[^}]*height:1px;[^}]*repeating-linear-gradient/);
+    assert.match(styles, /100% \{ opacity:\.7;[^}]*translate\(-50%,-50%\)/);
     assert.match(styles, /\.nourishland-spatial-note-surface/);
     assert.match(demoSource, /tryit-spatial-welcome-note nourishland-spatial-note-surface/);
     assert.match(demoSource, /record\.demoType === 'note' \? ' nourishland-spatial-note-surface'/);
@@ -230,6 +234,8 @@ test('Note placement preview uses the shared Note surface instead of the shader 
     assert.match(arSource, /function positionNotePlacementPreview\(view = latestView\)/);
     assert.match(arSource, /surface\.style\.setProperty\('--spatial-note-color', markerAppearanceColor\(marker\)\)/);
     assert.match(arSource, /--note-preview-width/);
+    assert.match(arSource, /const marginX = noteFactor \? Math\.min\(window\.innerWidth \* \.48, 140 \* noteFactor \+ 48\) : 40/);
+    assert.match(arSource, /const marginY = noteFactor \? 58 \* noteFactor \+ 56 : 40/);
     assert.doesNotMatch(drawSource, /readyPlacementType === 'note'/);
     assert.doesNotMatch(drawSource, /markerShape\('note'\)/);
     assert.match(styles, /\.creator-ar-note-placement-preview/);
@@ -340,7 +346,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
     assert.match(arSource, /createSpatialPrismRenderer/);
-    assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, record\.position/);
+    assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, groundPosition/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /name: 'Unassigned'/);
@@ -883,11 +889,17 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     const prismSource = read('app/services/spatialPrismRenderer.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.14 \* factor, \.72 \* factor\]/);
+    assert.match(arSource, /area_checkpoint: \[\.11 \* factor, \.68 \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /createSpatialPrismRenderer/);
     assert.match(arSource, /shape === 1[\s\S]*drawSpatialPrism/);
+    assert.match(arSource, /function groundedTotemPosition\(position\)/);
+    assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - 1\.55/);
+    assert.match(arSource, /const baseHalfHeight = \.04 \* markerSizeFactor\(record\.marker\)/);
+    assert.match(arSource, /halfWidth: halfWidth \* 1\.62/);
+    assert.match(arSource, /groundPosition\.y \+ baseHalfHeight \* 2/);
+    assert.match(arSource, /type === 'area_checkpoint'[\s\S]*groundedTotemPosition\(placementPosition\)/);
     assert.match(arSource, /shape === 0 \|\| shape === 1 \|\| shape === 3 \|\| shape === 4/);
     assert.match(prismSource, /attribute vec3 position/);
     assert.match(prismSource, /attribute vec3 normal/);

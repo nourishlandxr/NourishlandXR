@@ -60,6 +60,7 @@ let pendingExistingMarkerId = '';
 let arReturnContext = '';
 let locationNoteAnchor = null;
 let referenceSpaceHasFloor = false;
+let sessionGroundY = null;
 let locationNoteConfig = null;
 const hiddenStructuralMarkerIds = new Set();
 
@@ -134,15 +135,31 @@ function markerShape(type) {
 function markerDimensions(marker) {
     const factor = markerSizeFactor(marker);
     return ({
-        // WebXR model scales are half-extents: Totems render as slender
-        // 0.28m x 1.44m crafted posts at the default size.
-        area_checkpoint: [.14 * factor, .72 * factor],
+        // WebXR model scales are half-extents. The Totem body is a slender
+        // 0.22m post; its separate base completes the grounded silhouette.
+        area_checkpoint: [.11 * factor, .68 * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         // Notes are readable spatial signs rather than tiny object labels.
         note: [.94 * factor, .345 * factor],
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
     })[marker.type] || [markerScale(marker), markerScale(marker)];
+}
+
+function currentGroundY() {
+    if (referenceSpaceHasFloor) return .02;
+    if (Number.isFinite(sessionGroundY)) return sessionGroundY;
+    if (!latestViewerMatrix) return 0;
+    sessionGroundY = latestViewerMatrix[13] - 1.55;
+    return sessionGroundY;
+}
+
+function groundedTotemPosition(position) {
+    return {
+        x: Number(position?.x) || 0,
+        y: currentGroundY(),
+        z: Number(position?.z) || 0
+    };
 }
 
 function appearancePayload(appearance = {}) {
@@ -890,16 +907,15 @@ function projectWorldPoint(view, point) {
 function ensureLocationNoteAnchor() {
     if (locationNoteAnchor || !latestViewerMatrix) return locationNoteAnchor;
     const cameraX = latestViewerMatrix[12];
-    const cameraY = latestViewerMatrix[13];
     const cameraZ = latestViewerMatrix[14];
     const forwardX = -latestViewerMatrix[8];
     const forwardZ = -latestViewerMatrix[10];
     const forwardLength = Math.hypot(forwardX, forwardZ) || 1;
-    const groundY = referenceSpaceHasFloor ? .02 : cameraY - 1.55;
+    const groundY = currentGroundY();
     locationNoteAnchor = {
-        x: cameraX + forwardX / forwardLength * 4,
-        y: groundY + 2.8,
-        z: cameraZ + forwardZ / forwardLength * 4,
+        x: cameraX + forwardX / forwardLength * 4.5,
+        y: groundY + 3.2,
+        z: cameraZ + forwardZ / forwardLength * 4.5,
         groundY
     };
     return locationNoteAnchor;
@@ -924,7 +940,7 @@ function positionLocationNote(view = latestView) {
         && boardPoint.y < window.innerHeight + marginY;
     note.hidden = !visible;
     if (!visible) return;
-    const boardHalfHeight = Math.min(104, Math.max(76, window.innerHeight * .105));
+    const boardHalfHeight = Math.min(78, Math.max(58, window.innerHeight * .075));
     const stickStart = { x: boardPoint.x, y: boardPoint.y + boardHalfHeight };
     const dx = groundPoint.x - stickStart.x;
     const dy = groundPoint.y - stickStart.y;
@@ -1054,10 +1070,20 @@ function drawSpatialMarkers(view) {
         const shape = markerShape(record.marker.type);
         if (shape === 1) {
             const [halfWidth, halfHeight] = markerDimensions(record.marker);
-            drawSpatialPrism(gl, prismRenderer, view, record.position, {
+            const groundPosition = groundedTotemPosition(record.position);
+            const baseHalfHeight = .04 * markerSizeFactor(record.marker);
+            drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
+                halfWidth: halfWidth * 1.62,
+                halfHeight: baseHalfHeight,
+                halfDepth: halfWidth * 1.62,
+                color: [.16, .38, .31],
+                topColor: [.48, .78, .64],
+                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
+            });
+            drawSpatialPrism(gl, prismRenderer, view, { ...groundPosition, y: groundPosition.y + baseHalfHeight * 2 }, {
                 halfWidth,
                 halfHeight,
-                halfDepth: halfWidth,
+                halfDepth: halfWidth * .92,
                 color: markerRgb(record.marker, colors.area_checkpoint),
                 topColor: [.68, .95, .87],
                 rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
@@ -1136,7 +1162,14 @@ function positionSessionMarkers(view = latestView) {
             element.hidden = true;
             return;
         }
-        const eye = multiplyMatrixVector(inverse, [record.position.x, record.position.y, record.position.z, 1]);
+        const projectedPosition = record.marker.type === 'area_checkpoint'
+            ? (() => {
+                const ground = groundedTotemPosition(record.position);
+                const [, halfHeight] = markerDimensions(record.marker);
+                return { ...ground, y: ground.y + .08 * markerSizeFactor(record.marker) + halfHeight };
+            })()
+            : record.position;
+        const eye = multiplyMatrixVector(inverse, [projectedPosition.x, projectedPosition.y, projectedPosition.z, 1]);
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
         if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
             element.hidden = true;
@@ -1144,7 +1177,13 @@ function positionSessionMarkers(view = latestView) {
         }
         const x = (clip[0] / clip[3] * 0.5 + 0.5) * window.innerWidth;
         const y = (-clip[1] / clip[3] * 0.5 + 0.5) * window.innerHeight;
-        const visible = x > -40 && x < window.innerWidth + 40 && y > -40 && y < window.innerHeight + 40;
+        const noteFactor = record.marker.type === 'note' ? markerSizeFactor(record.marker) : 0;
+        const marginX = noteFactor ? Math.min(window.innerWidth * .48, 140 * noteFactor + 48) : 40;
+        const marginY = noteFactor ? 58 * noteFactor + 56 : 40;
+        const visible = x > -marginX
+            && x < window.innerWidth + marginX
+            && y > -marginY
+            && y < window.innerHeight + marginY;
         element.hidden = !visible;
         if (visible) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
@@ -1493,6 +1532,9 @@ async function finishMarkerDrag(event) {
     const state = dragState;
     if (!state || (event?.pointerId != null && event.pointerId !== state.pointerId)) return;
     const operation = captureArOperationContext();
+    if (state.record.marker.type === 'area_checkpoint') {
+        state.record.position = groundedTotemPosition(state.record.position);
+    }
     cleanupDrag();
     updateInteractionControls();
     setPlacementStatus(`Saving ${state.record.marker.name}… Move mode remains on.`);
@@ -1742,6 +1784,7 @@ async function convertRecordToAreaCheckpoint(record, overrides = {}) {
     }
     const storedMarker = response.marker || response;
     const marker = normalizeAreaCheckpointMarker(compatibilityMode ? { ...storedMarker, semantic_type: 'area_checkpoint', storage_type: 'sub_checkpoint' } : storedMarker);
+    record.position = groundedTotemPosition(record.position);
     const anchor = {
         ...spatialAnchor(record.position),
         coordinate_space: 'session-local',
@@ -1846,11 +1889,14 @@ async function quickPlace(type) {
         const operation = captureArOperationContext();
         const operationIsCurrent = () => activePlacementOperation === placementToken && isArOperationCurrent(operation);
         if (!operationIsCurrent()) return;
-        const position = placementPoint();
-        if (!position) {
+        const placementPosition = placementPoint();
+        if (!placementPosition) {
             setPlacementStatus('Move your phone briefly, then use Place again.');
             return;
         }
+        const position = type === 'area_checkpoint'
+            ? groundedTotemPosition(placementPosition)
+            : placementPosition;
         placementAppearance = ['plant', 'note'].includes(type)
             ? appearancePayload(currentPlacementAppearance(type))
             : null;
@@ -2100,6 +2146,7 @@ function cleanup() {
     arReturnContext = '';
     locationNoteAnchor = null;
     referenceSpaceHasFloor = false;
+    sessionGroundY = null;
     locationNoteConfig = null;
     placementArmGeneration += 1;
     specialPickerRequest += 1;
@@ -2199,6 +2246,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     locatedTotemRecord = null;
     locationNoteAnchor = null;
     referenceSpaceHasFloor = false;
+    sessionGroundY = null;
     locationNoteConfig = normalizedLocationNote();
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
