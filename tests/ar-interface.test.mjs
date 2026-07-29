@@ -807,7 +807,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
     assert.match(source, /drawSpatialPrism\(gl, prismRenderer, view, record\.position/);
     assert.match(source, /const bubbles = \(content\?\.bubbles \|\| content\?\.lines \|\| \[\]\)\.filter\(Boolean\)\.slice\(0, 5\)/);
-    assert.match(source, /CITRUS · HERBS · POLLINATORS/);
+    assert.doesNotMatch(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
     assert.match(styles, /border-radius: 32% 23% 35% 25% \/ 25% 34% 24% 37%/);
     assert.match(styles, /\.tryit-sim-totem-card::after/);
@@ -817,7 +817,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /Garden plaque/);
-    assert.match(source, /Give the Area a Totem/);
+    assert.doesNotMatch(source, /Give the Area a Totem/);
+    assert.match(source, /Totems belong to Areas and are created separately in Creator Mode/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
 

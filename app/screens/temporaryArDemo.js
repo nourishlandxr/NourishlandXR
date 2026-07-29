@@ -36,7 +36,6 @@ let aimRevealTimer = null;
 let pointerPressTimer = null;
 let knowledgeTourTimer = null;
 let introNarrationTimer = null;
-let totemRevealTimer = null;
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardHasEntered = false;
@@ -49,7 +48,7 @@ let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
 let introBoardTitle = 'Nourishland XR';
-let introBoardBody = 'A short guided demo of Plant orbs, Notes and Areas.';
+let introBoardBody = 'A short guided demo of Plant orbs and Notes.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -67,7 +66,7 @@ const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'In Mobile Mode, the aim helps you interact with the space. Here, you will use it to create an orb—a Plant Marker. Orbs are one kind of Marker; you will discover others as you continue.',
     'Choose a place, then press the aim once to place it.'
 ]);
-const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
+const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
         shell: [0.82, 0.15, 0.12],
@@ -99,8 +98,7 @@ const BIOMAP_CATEGORIES = Object.freeze({
 const INTRO_KNOWLEDGE_KEYWORDS = Object.keys(BIOMAP_CATEGORIES);
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
-    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
-    zone: { title: 'Area · Citrus Guild', accent: '#89c8ef', lines: ['BOUNDARY  One defined place', 'USE  Guild · microclimate · crop', 'FLOW  Loads this Area’s markers and stories'] }
+    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] }
 });
 const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
     title: 'Lemon Myrtle',
@@ -153,13 +151,11 @@ function clearSessionState() {
     clearTimeout(pointerPressTimer);
     clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
-    clearTimeout(totemRevealTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
     knowledgeTourTimer = null;
     introNarrationTimer = null;
-    totemRevealTimer = null;
     introSceneStartedAt = 0;
     introSceneActive = true;
     introBoardHasEntered = false;
@@ -208,8 +204,7 @@ function setGuide(message) {
 function showDemoAction(nextStage) {
     const messages = {
         plant2: ['Add a second Plant', 'The first profile now lives in space. Let’s try Moringa in another nearby position.'],
-        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge. Next, place a simple Note nearby.'],
-        zone: ['Focus Point complete', 'This Note can grow into sound, animation, images or alerts. Next, create the checkpoint for an Area.']
+        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge. Next, place a simple Note nearby.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
@@ -506,44 +501,16 @@ function guideNoteConversion(record) {
         refreshDemoRecord(record);
         hideGuidedChoice();
         setGuide('The new Note stays softly connected to this place and can be grabbed whenever you want to adjust it.');
-        showDemoAction('zone');
-    });
-}
-
-function guideAreaConversion(record) {
-    setGuide('The final Marker can become the checkpoint for one defined Area.');
-    showGuidedChoice('<h2>Give the Area a Totem</h2><p>A Totem is the framed information centre of an Area. Knowledge, guidance, and Plants waiting for precise placement can gather around it.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
-        if (choice !== 'continue') return;
-        record.type = 'sub_checkpoint';
-        record.demoType = 'zone';
-        record.name = 'Citrus Guild';
-        record.demoExpanded = true;
-        record.demoContent = {
-            title: 'Citrus Guild Totem',
-            accent: '#89c8ef',
-            lines: ['A living classroom for citrus, herbs and pollinators.', 'Notice how shade and moisture change across this Area.', 'Plants waiting for precise placement gather around this Totem.'],
-            bubbles: ['CITRUS GUILD', 'LIVING CLASSROOM', 'SHADE + MOISTURE', 'CITRUS · HERBS · POLLINATORS', 'CONNECTED PLANTS']
-        };
-        record.isBoundary = false;
-        record.revealTitle = true;
-        record.revealLines = 3;
-        refreshDemoRecord(record);
-        setGuide('Area defined. Its use, microclimate and connected markers can now load together.');
-        const board = appRoot?.querySelector('[data-tryit-guided-choice]');
-        if (board) board.hidden = true;
-        clearTimeout(totemRevealTimer);
-        totemRevealTimer = setTimeout(() => {
-            showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plants, a Note, and a framed Area Totem with three attached information bubbles.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
-                if (action === 'finish') returnToWelcome();
-                if (action === 'reset') {
-                    markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
-                    markers = [];
-                    marker = null;
-                    demoStage = 'plant';
-                    renderInterface(simulatedMode);
-                }
-            });
-        }, 850);
+        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plant Markers, opened their Plant Profiles, and added a Note. Totems belong to Areas and are created separately in Creator Mode.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+            if (action === 'finish') returnToWelcome();
+            if (action === 'reset') {
+                markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
+                markers = [];
+                marker = null;
+                demoStage = 'plant';
+                renderInterface(simulatedMode);
+            }
+        });
     });
 }
 
@@ -551,8 +518,7 @@ function shiftSimulatedSceneForStage(type) {
     if (!simulatedMode || type === 'plant') return;
     const shift = {
         plant2: { x: -24, y: 2 },
-        note: { x: -16, y: -12 },
-        zone: { x: -14, y: 15 }
+        note: { x: -16, y: -12 }
     }[type];
     if (!shift) return;
     markers.forEach(record => {
@@ -600,14 +566,11 @@ function armDemoPlacement(type, { direct = false } = {}) {
     if (label) label.textContent = '';
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
-        : type === 'note'
-            ? 'Take in the space before choosing the next position.'
-            : 'Look for the natural centre of this Area.');
+        : 'Take in the space before choosing the next position.');
     const introductions = {
         plant: ['Place an example Plant', 'Look around slowly and choose a calm, clear spot. Continue when you are ready, then press the aiming circle to place the orb.'],
         plant2: ['Let’s try Moringa', 'Choose another nearby position. Continue when ready, then press the aiming circle to place its orb.'],
-        note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.'],
-        zone: ['Find the heart of the Area', 'Look toward the centre of the place you want this Area to gather. The aiming circle will appear when this introduction finishes.']
+        note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
     };
     const [title, introduction] = introductions[type];
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
@@ -617,9 +580,7 @@ function armDemoPlacement(type, { direct = false } = {}) {
             ? 'Press the aiming circle to place the example Plant orb.'
             : type === 'plant2'
                 ? 'Press the aiming circle to place the Moringa orb.'
-                : type === 'note'
-                    ? 'Tap the circle to place a Note.'
-                    : 'Tap the circle to place the Area Totem.');
+                : 'Tap the circle to place a Note.');
         placementReady = true;
         place?.removeAttribute('hidden');
         requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
@@ -1040,7 +1001,7 @@ function plantInformationPosition(record) {
 }
 
 function placeMarker() {
-    if (!placementReady || marker || markers.length >= 4 || markers.some(record => record.tutorialStage === demoStage)) return;
+    if (!placementReady || marker || markers.length >= DEMO_SEQUENCE.length || markers.some(record => record.tutorialStage === demoStage)) return;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
@@ -1050,15 +1011,14 @@ function placeMarker() {
     const type = demoStage;
     const directType = type === 'note' ? 'note' : 'sub_checkpoint';
     const sample = createMinimalMarkerDraft(directType, {
-        name: ['plant', 'plant2'].includes(type) ? 'A living plant' : type === 'note' ? 'A small observation' : 'New Area',
+        name: ['plant', 'plant2'].includes(type) ? 'A living plant' : 'A small observation',
         description: type === 'note' ? 'A small observation can become useful knowledge over time.' : ''
     });
     const simulatedAnchor = simulatedMode ? capturedSimulatedAnchor() : null;
     const panelOffsets = {
         plant: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
         plant2: simulatedAnchor ? defaultPlantPanelOffset(simulatedAnchor) : { x: 0, y: 0 },
-        note: { x: 0, y: 0 },
-        zone: { x: 0, y: 0 }
+        note: { x: 0, y: 0 }
     };
     marker = {
         ...sample,
@@ -1085,8 +1045,7 @@ function placeMarker() {
     updateSimulatedMarkers();
     marker = null;
     if (type === 'plant' || type === 'plant2') guidePlantConversion(placedRecord);
-    else if (type === 'note') guideNoteConversion(placedRecord);
-    else guideAreaConversion(placedRecord);
+    else guideNoteConversion(placedRecord);
 }
 
 function pressPlacementPointer(event) {
