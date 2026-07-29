@@ -623,7 +623,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /finishIntroBoard\(\);[\s\S]*armDemoPlacement\('plant', \{ direct: true \}\)/);
+    assert.match(source, /finishIntroBoard\(\);[\s\S]*suppressSessionSelectUntil = performance\.now\(\) \+ 700;[\s\S]*armDemoPlacement\('plant', \{ direct: true \}\)/);
     assert.doesNotMatch(source, /setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
     assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /\? 160 : \/\[,;\]\//);
