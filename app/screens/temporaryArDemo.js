@@ -60,9 +60,9 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardScale: [5.6, 8.75]
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Augmented reality lets information appear where it belongs — in the living landscape around you.',
-    'In this short demo, you’ll place a Plant, open its story, leave a Note, and gather discoveries around an Area Totem.',
-    'Use the centre aim to find virtual information, select Plants, and interact with the space around you.'
+    'Welcome to the Nourishland XR demo interface.',
+    'Augmented reality (AR) is a technology that can help us better understand and interact with the world around us by connecting virtual information to real places.',
+    'This is a gentle introduction to using the centre aim to discover information, select Plants, and interact with space.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_ORB_MATERIALS = Object.freeze({
@@ -418,6 +418,7 @@ function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
     clearTimeout(boardControlTimer);
     appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
 }
@@ -428,6 +429,7 @@ function runArWelcomeTutorial() {
         WELCOME_BOARD_PARAGRAPHS,
         'Continue',
         () => {
+            finishIntroBoard();
             const place = appRoot?.querySelector('[data-tryit-place]');
             place?.removeAttribute('hidden');
             requestAnimationFrame(() => place?.classList.add('is-revealing'));
@@ -483,6 +485,7 @@ function guidePlantConversion(record) {
         record.demoExpanded = false;
         record.demoActiveBranch = '';
         record.informationPosition = plantInformationPosition(record);
+        record.demoInteractive = true;
         record.revealTitle = true;
         record.revealLines = 3;
         record.awaitingProfileReveal = true;
@@ -713,7 +716,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbAppearance = demoOrbStyle(record);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
@@ -762,7 +765,7 @@ function updateSimulatedMarkers() {
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
     bindSimulatedInformationPanels(layer);
 }
@@ -779,7 +782,7 @@ function bindSimulatedInformationPanels(layer) {
     layer.querySelectorAll('.tryit-sim-marker').forEach(compactMarker => {
         const index = Number(compactMarker.dataset.demoMarkerIndex);
         const record = markers[index];
-        if (!record) return;
+        if (!record || record.demoInteractive === false) return;
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
@@ -1059,6 +1062,7 @@ function placeMarker() {
         tutorialStage: type,
         demoOrbColor: type === 'plant' ? 'red' : type === 'plant2' ? 'green' : '',
         demoExpanded: false,
+        demoInteractive: !['plant', 'plant2'].includes(type),
         demoPanelOffset: panelOffsets[type],
         simulatedAnchor,
         informationPosition: null,
@@ -1081,6 +1085,7 @@ function placeMarker() {
 
 function pressPlacementPointer(event) {
     if (!placementReady || marker || pointerPressTimer) return;
+    event?.preventDefault();
     event?.stopPropagation();
     suppressSessionSelectUntil = performance.now() + 1000;
     const place = event?.currentTarget || appRoot?.querySelector('[data-tryit-place]');
@@ -1098,7 +1103,7 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
     const introContinue = document.createElement('button');
     introContinue.className = 'tryit-intro-continue';
     introContinue.dataset.tryitIntroContinue = '';
@@ -1120,7 +1125,14 @@ function renderInterface(simulated) {
         button.addEventListener('click', expand);
     });
     exitButton.addEventListener('click', returnToWelcome);
-    appRoot.querySelector('[data-tryit-place]').addEventListener('click', pressPlacementPointer);
+    const placementPointer = appRoot.querySelector('[data-tryit-place]');
+    placementPointer.addEventListener('beforexrselect', event => event.preventDefault());
+    placementPointer.addEventListener('pointerdown', event => {
+        if (!placementReady) return;
+        event.stopPropagation();
+        suppressSessionSelectUntil = performance.now() + 1000;
+    });
+    placementPointer.addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
         demoHeldIndex = -1;

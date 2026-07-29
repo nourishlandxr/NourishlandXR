@@ -97,7 +97,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(panelSource, /opts\.drawSpatialContent\(view\)/);
 });
 
-test('Creator AR exposes the compact placement toolbar', () => {
+test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact context tools', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
     const pointerSource = read('app/services/placementPointer.js');
@@ -113,6 +113,16 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /\+ SPECIAL/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-marker/);
     assert.match(arSource, /data-ar-place-picker/);
+    assert.match(arSource, /data-ar-taskbar-version="2"/);
+    assert.match(arSource, /data-ar-context-toolbar/);
+    assert.match(arSource, /data-ar-cycle-color/);
+    assert.match(arSource, /data-ar-cycle-size/);
+    assert.match(arSource, /data-ar-cycle-opacity/);
+    assert.match(arSource, /data-ar-context-web/);
+    assert.match(arSource, /const TASKBAR_V2_SIZES = Object\.freeze\(\['small', 'medium', 'large', 'huge'\]\)/);
+    assert.match(arSource, /const TASKBAR_V2_OPACITIES = Object\.freeze\(\[1, \.8, \.6, \.4\]\)/);
+    assert.match(styles, /\.creator-ar-context-toolbar\[hidden\] \{ display:none; \}/);
+    assert.doesNotMatch(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-taskbar \[data-ar-view-mode\]/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /function armPlacement\(type\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
@@ -120,7 +130,6 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(arSource, /Choose its purpose/);
     assert.doesNotMatch(arSource, /data-ar-placed-type=/);
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
-    assert.doesNotMatch(arSource.slice(arSource.indexOf('function showPlacedMarkerActions'), arSource.indexOf('function openSpecialMarkerPicker')), /data-ar-placed-type="area_checkpoint"/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(arSource, /data-ar-view-mode/);
@@ -133,7 +142,7 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:min\(72vw,280px\); height:116px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:var\(--marker-note-width,min\(72vw,280px\)\); height:var\(--marker-note-height,116px\)/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-note[\s\S]*background:#a95d32 !important/);
     assert.match(styles, /\.creator-ar-taskbar \[data-ar-view-mode\][\s\S]*background:#246ea6 !important/);
     assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
@@ -177,10 +186,39 @@ test('Creator AR exposes the compact placement toolbar', () => {
     assert.match(arSource, /function pointerWorldRay\(\)/);
     assert.match(arSource, /readyPlacementType \? '\.creator-ar-placement-guide' : '\.creator-ar-mode-pointer'/);
     assert.match(arSource, /spawnedAt: performance\.now\(\)/);
-    assert.match(arSource, /opacity: arrivalEase/);
+    assert.match(arSource, /opacity: arrivalEase \* markerAppearanceOpacity\(record\.marker\)/);
 });
 
-test('Special Marker opens immediately with symbols only', () => {
+test('Creator AR opens with an editable spatial Location Note and one global Note surface', () => {
+    const arSource = read('app/screens/arMode.js');
+    const demoSource = read('app/screens/temporaryArDemo.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const mainSource = read('app/main.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /const DEFAULT_LOCATION_NOTE = Object\.freeze\(\{[\s\S]*prompt: 'WHERE AM I NOW\?'/);
+    assert.match(arSource, /data-ar-location-note/);
+    assert.match(arSource, /data-ar-location-title/);
+    assert.match(arSource, /data-ar-location-area>AREA · \$\{escapeHtml\(activeAreaName \|\| 'Unassigned'\)\}/);
+    assert.match(arSource, /function ensureLocationNoteAnchor\(\)/);
+    assert.match(arSource, /groundY \+ 2\.8/);
+    assert.match(arSource, /function positionLocationNote\(view = latestView\)/);
+    assert.match(arSource, /location-stick-length/);
+    assert.match(arSource, /loadProject\(operation\.projectId\)\.catch/);
+    assert.match(arSource, /project\?\.arLocationNote/);
+    assert.match(styles, /\.creator-ar-location-note-board/);
+    assert.match(styles, /\.creator-ar-location-stick/);
+    assert.match(styles, /\.creator-ar-location-ground/);
+    assert.match(styles, /\.nourishland-spatial-note-surface/);
+    assert.match(demoSource, /tryit-spatial-welcome-note nourishland-spatial-note-surface/);
+    assert.match(demoSource, /record\.demoType === 'note' \? ' nourishland-spatial-note-surface'/);
+    assert.match(arSource, /record\.marker\.type === 'note' \? ' nourishland-spatial-note-surface'/);
+    assert.match(dashboardSource, /<h2 id="projectLocationNoteTitle">AR Location Note<\/h2>/);
+    assert.match(dashboardSource, /export async function saveArLocationNoteSettings/);
+    assert.match(dashboardSource, /arLocationNote: \{ enabled, prompt, title \}/);
+    assert.match(mainSource, /window\.saveArLocationNoteSettings/);
+});
+
+test('Special opens immediately with Totem tools above symbols', () => {
     const arSource = read('app/screens/arMode.js');
     const start = arSource.indexOf('async function openSpecialMarkerPicker()');
     const end = arSource.indexOf('function resetArControls()', start);
@@ -192,12 +230,19 @@ test('Special Marker opens immediately with symbols only', () => {
     const renderStart = arSource.indexOf('function renderSpecialMarkerChoices(picker)');
     const renderEnd = arSource.indexOf('async function openArAreaCreationForm()', renderStart);
     const specialChoices = arSource.slice(renderStart, renderEnd);
-    assert.match(specialChoices, /<p>Symbols<\/p>/);
+    assert.match(specialChoices, /<p>Special<\/p>/);
+    assert.match(specialChoices, />TOTEM</);
+    assert.match(specialChoices, /data-ar-point-to-totem/);
+    assert.match(specialChoices, /data-ar-toggle-totem/);
+    assert.match(specialChoices, /data-ar-create-area/);
+    assert.match(specialChoices, />Point to Totem</);
+    assert.match(specialChoices, /'Hide Totem'/);
+    assert.match(specialChoices, />Create</);
     assert.match(specialChoices, />ARROWS</);
     assert.match(specialChoices, />SYMBOLS</);
     assert.match(specialChoices, /\['!', 'Important'\]/);
     assert.match(specialChoices, /\['\?', 'Question'\]/);
-    assert.doesNotMatch(specialChoices, /AREA TOTEM|EXISTING RECORDS|data-ar-import-marker|data-ar-place-area-totem|data-ar-create-area/);
+    assert.doesNotMatch(specialChoices, /EXISTING RECORDS|data-ar-import-marker/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {
@@ -229,20 +274,15 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
     assert.match(arSource, /if \(interactionMode === 'neutral'\) return/);
-    assert.match(arSource, /openInlineEditor/);
-    assert.match(arSource, /openInlineEditor\(record, true\)/);
-    assert.match(arSource, /deletePlaceMarker/);
-    assert.match(arSource, /name="markerColor" type="color"/);
-    assert.match(arSource, /name="markerSize"/);
-    assert.match(arSource, /name="noteSurface"/);
-    assert.match(arSource, /surface: form\.elements\.noteSurface\?\.value === 'outline' \? 'outline' : 'filled'/);
-    assert.doesNotMatch(arSource, /name="markerType"/);
-    assert.match(arSource, /Quick edit ·/);
-    assert.match(arSource, /const type = record\.marker\.type/);
-    assert.match(arSource, /Confirm delete/);
-    assert.match(arSource, /appearance: \{/);
+    assert.match(arSource, /openMarkerContextToolbar\(record\)/);
+    assert.match(arSource, /function updateContextToolbar\(\)/);
+    assert.match(arSource, /function cycleContextAppearance\(property\)/);
+    assert.match(arSource, /function queueContextAppearanceSave\(record, appearance, property\)/);
+    assert.match(arSource, /appearancePayload\(currentPlacementAppearance\(type\)\)/);
+    assert.doesNotMatch(arSource.slice(arSource.indexOf('function createOverlay()'), arSource.indexOf('function cleanup()')), /data-ar-inline-editor/);
+    assert.doesNotMatch(arSource, /showPlacedMarkerActions/);
     assert.match(arSource, /markerRgb\(record\.marker/);
-    assert.match(arSource, /Edit in Web Mode/);
+    assert.match(arSource, /openContextInWebMode/);
     assert.match(arSource, /finishMarkerDrag/);
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
@@ -261,11 +301,9 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-info-open \.creator-ar-spatial-name/);
     assert.match(arSource, /function resetArControls\(\)/);
     assert.match(arSource, /readyPlacementType = '';/);
-    assert.match(arSource, /showPlacedMarkerActions\(record\)/);
     assert.match(arSource, /AR controls reset\. The aim dot is ready; press plus when you want to place a Marker/);
     assert.doesNotMatch(arSource, /Choose its purpose/);
-    assert.match(arSource, /data-ar-close-placed/);
-    assert.doesNotMatch(arSource, /data-ar-size-step|resizePlacedMarker/);
+    assert.doesNotMatch(arSource, /data-ar-close-placed/);
     assert.match(arSource, /markerDimensions/);
     assert.match(arSource, /note: 3, plant: 4/);
     assert.match(arSource, /notice_board/);
@@ -527,8 +565,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
-    assert.match(source, /Augmented reality lets information appear where it belongs/);
-    assert.match(source, /find virtual information, select Plants, and interact with the space around you/);
+    assert.match(source, /Welcome to the Nourishland XR demo interface/);
+    assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
+    assert.match(source, /gentle introduction to using the centre aim to discover information, select Plants, and interact with space/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
     assert.match(source, /A LIVING INTRODUCTION/);
@@ -536,7 +575,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
+    assert.match(source, /finishIntroBoard\(\);[\s\S]*setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
     assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /\? 220 : \/\[,;\]\//);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
@@ -546,7 +585,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const firstArrival = !introBoardHasEntered/);
     assert.doesNotMatch(source, /introSceneActive = false/);
     assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
+    assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
+    assert.match(source, /addEventListener\('beforexrselect', event => event\.preventDefault\(\)\)/);
+    assert.match(source, /demoInteractive: !\['plant', 'plant2'\]\.includes\(type\)/);
+    assert.match(source, /record\.demoInteractive = true/);
+    assert.match(styles, /\.tryit-sim-marker\.is-arriving \{ pointer-events:none; \}/);
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
     assert.match(source, /\}, 360\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
@@ -568,7 +612,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*border-radius:50% !important;[^}]*background:transparent !important;/);
-    assert.match(source, /\[data-tryit-place\]'\)\.addEventListener\('click', pressPlacementPointer\)/);
+    assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
         source.indexOf("session.addEventListener('end'")
@@ -715,7 +759,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.doesNotMatch(source, /Test session - no physical code/);
     assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
     assert.doesNotMatch(source, /Choose its purpose/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-note \.creator-ar-spatial-name \{ opacity:1; visibility:visible/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \.creator-ar-spatial-name \{ opacity:var\(--marker-opacity,1\); visibility:visible/);
     assert.doesNotMatch(source, /Choose an Area/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
@@ -785,7 +829,7 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(configSource, /name: 'Unassigned'/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
-    assert.match(arSource, /readyPlacementType = '';\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
+    assert.match(arSource, /readyPlacementType = '';\s*pendingPlacementAppearance = null;\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = ''\)/);
     assert.match(mainSource, /window\.startExistingMarkerPlacement/);
     assert.doesNotMatch(styles, /\.creator-ar-ready-placement|creator-ar-ready-pulse/);

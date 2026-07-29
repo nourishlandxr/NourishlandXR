@@ -1605,6 +1605,11 @@ export async function renderProjectSettings(app, encodedProjectId) {
     const tutorialEnabled = isProjectTutorialEnabled(project.id);
     const arTutorial = getArTutorialProgress();
     const settings = readPlatformSettings();
+    const arLocationNote = {
+        enabled: project.arLocationNote?.enabled !== false,
+        title: project.arLocationNote?.title || project.name,
+        prompt: project.arLocationNote?.prompt || 'WHERE AM I NOW?'
+    };
     const arTutorialLabel = {
         not_started: 'Not started',
         in_progress: 'In progress',
@@ -1625,6 +1630,17 @@ export async function renderProjectSettings(app, encodedProjectId) {
                 <div class="field"><label for="projectSettingsCoverImage">Cover image (optional)</label><input id="projectSettingsCoverImage" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div>
                 <div class="button-row"><button class="primary" type="submit">Save Project Details</button></div>
                 <p id="projectNameStatus" class="meta"></p>
+            </form>
+        </section>
+        <section class="panel project-location-note-setting" aria-labelledby="projectLocationNoteTitle">
+            <div class="section-heading-row"><div><h2 id="projectLocationNoteTitle">AR Location Note</h2><p>A large transparent note appears in the sky when AR opens, with a guide stick connecting it to the ground.</p></div><span class="tutorial-status">${arLocationNote.enabled ? 'Shown' : 'Hidden'}</span></div>
+            <form onsubmit="window.saveArLocationNoteSettings(event, '${encoded(project.id)}')">
+                <label class="tutorial-mode-toggle"><span><strong>Show on AR entry</strong><small>Orient visitors by naming the current Location and Area.</small></span><input id="projectLocationNoteEnabled" type="checkbox" ${arLocationNote.enabled ? 'checked' : ''} /></label>
+                <div class="field"><label for="projectLocationNotePrompt">Opening question</label><input id="projectLocationNotePrompt" value="${escapeHtml(arLocationNote.prompt)}" placeholder="WHERE AM I NOW?" /></div>
+                <div class="field"><label for="projectLocationNoteName">Location name</label><input id="projectLocationNoteName" value="${escapeHtml(arLocationNote.title)}" placeholder="${escapeHtml(project.name)}" /></div>
+                <p class="meta">The Area name is added automatically from the Area used to enter AR. Sessions without a chosen Area display Unassigned.</p>
+                <div class="button-row"><button class="primary" type="submit">Save Location Note</button></div>
+                <p id="projectLocationNoteStatus" class="meta"></p>
             </form>
         </section>
         <section class="panel project-publishing-setting" aria-labelledby="projectPublishingTitle">
@@ -1770,6 +1786,28 @@ export async function saveProjectName(app, event, encodedProjectId) {
         if (status) status.textContent = 'Project details saved.';
     } catch (error) {
         if (status) status.textContent = `Project details could not be saved: ${error.message}`;
+    }
+}
+
+export async function saveArLocationNoteSettings(app, event, encodedProjectId) {
+    event.preventDefault();
+    const projectId = decodeURIComponent(encodedProjectId);
+    const status = document.getElementById('projectLocationNoteStatus');
+    const enabled = document.getElementById('projectLocationNoteEnabled')?.checked !== false;
+    const prompt = document.getElementById('projectLocationNotePrompt')?.value.trim() || 'WHERE AM I NOW?';
+    try {
+        if (status) status.textContent = 'Saving Location Note...';
+        const project = await projectById(projectId);
+        const title = document.getElementById('projectLocationNoteName')?.value.trim() || project.name;
+        await renameProjectOnDisk(projectId, {
+            ...project,
+            preserveId: true,
+            name: project.name,
+            arLocationNote: { enabled, prompt, title }
+        });
+        if (status) status.textContent = 'Location Note saved. It will appear the next time AR opens.';
+    } catch (error) {
+        if (status) status.textContent = `Location Note could not be saved: ${error.message}`;
     }
 }
 

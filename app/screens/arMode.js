@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProject, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose } from '../services/spatialPlacement.js';
@@ -23,6 +23,7 @@ let refSpace = null;
 let canvas = null;
 let overlayRoot = null;
 let activeProjectId = '';
+let activeProjectName = '';
 let activeSiteId = '';
 let activeAreaId = '';
 let activeAreaName = '';
@@ -37,6 +38,8 @@ let sessionMarkers = [];
 let dragState = null;
 let readyPlacementType = '';
 let readySpecialMarker = null;
+let pendingPlacementAppearance = null;
+let contextToolbarRecord = null;
 let pendingPlacedRecord = null;
 let hitTestSource = null;
 let latestHitMatrix = null;
@@ -55,6 +58,9 @@ let placementArmGeneration = 0;
 let activePlacementOperation = null;
 let pendingExistingMarkerId = '';
 let arReturnContext = '';
+let locationNoteAnchor = null;
+let referenceSpaceHasFloor = false;
+let locationNoteConfig = null;
 const hiddenStructuralMarkerIds = new Set();
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'area totem' })[type] || 'item';
@@ -64,7 +70,28 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d7834f', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
+const markerAppearanceOpacity = marker => [1, .8, .6, .4].includes(Number(marker?.appearance?.opacity)) ? Number(marker.appearance.opacity) : 1;
 const markerNoteSurface = marker => marker?.appearance?.surface === 'outline' ? 'outline' : 'filled';
+const TASKBAR_V2_COLORS = Object.freeze({
+    plant: Object.freeze([
+        { name: 'Forest', value: '#6fb85a' },
+        { name: 'Lime', value: '#b7e895' },
+        { name: 'Coral', value: '#dd6b55' },
+        { name: 'Sky', value: '#5fa8d3' }
+    ]),
+    note: Object.freeze([
+        { name: 'Amber', value: '#d7834f' },
+        { name: 'Leaf', value: '#78a96b' },
+        { name: 'Sky', value: '#5fa8d3' },
+        { name: 'Violet', value: '#8d74b8' }
+    ])
+});
+const TASKBAR_V2_SIZES = Object.freeze(['small', 'medium', 'large', 'huge']);
+const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
+const DEFAULT_LOCATION_NOTE = Object.freeze({
+    enabled: true,
+    prompt: 'WHERE AM I NOW?'
+});
 const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
     ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
     : marker;
@@ -118,6 +145,88 @@ function markerDimensions(marker) {
     })[marker.type] || [markerScale(marker), markerScale(marker)];
 }
 
+function appearancePayload(appearance = {}) {
+    return {
+        color: appearance.color,
+        size: appearance.size,
+        opacity: appearance.opacity
+    };
+}
+
+function preparePlacementAppearance(type, marker = null) {
+    if (!['plant', 'note'].includes(type)) {
+        pendingPlacementAppearance = null;
+        return null;
+    }
+    pendingPlacementAppearance = {
+        type,
+        color: markerAppearanceColor(marker || { type }),
+        size: TASKBAR_V2_SIZES.includes(markerAppearanceSize(marker)) ? markerAppearanceSize(marker) : 'medium',
+        opacity: type === 'plant' ? markerAppearanceOpacity(marker) : 1
+    };
+    return pendingPlacementAppearance;
+}
+
+function currentPlacementAppearance(type = readyPlacementType) {
+    if (!['plant', 'note'].includes(type)) return null;
+    if (pendingPlacementAppearance?.type !== type) {
+        preparePlacementAppearance(type, pendingBagRecord?.marker || null);
+    }
+    return pendingPlacementAppearance;
+}
+
+function placementPreviewMarker(type = readyPlacementType) {
+    const appearance = currentPlacementAppearance(type);
+    return {
+        ...(pendingBagRecord?.marker || {}),
+        type,
+        appearance: appearance ? appearancePayload(appearance) : pendingBagRecord?.marker?.appearance
+    };
+}
+
+function nextCycleValue(current, values) {
+    const index = values.indexOf(current);
+    return values[(index + 1 + values.length) % values.length];
+}
+
+function colorOption(type, value) {
+    const options = TASKBAR_V2_COLORS[type] || TASKBAR_V2_COLORS.plant;
+    return options.find(option => option.value.toLocaleLowerCase() === String(value || '').toLocaleLowerCase()) || options[0];
+}
+
+function markerDomAppearanceStyle(marker) {
+    const factor = markerSizeFactor(marker);
+    const opacity = markerAppearanceOpacity(marker);
+    const noteWidth = Math.round(280 * factor);
+    const noteHeight = Math.round(116 * factor);
+    return `--marker-accent:${markerAppearanceColor(marker)};--marker-rotation:0deg;--marker-hit-size:${Math.round(64 * factor)}px;--marker-note-width:min(86vw,${noteWidth}px);--marker-note-height:${noteHeight}px;--marker-opacity:${opacity}`;
+}
+
+function normalizedLocationNote(project = null, site = null) {
+    const saved = project?.arLocationNote || {};
+    return {
+        enabled: saved.enabled !== false,
+        prompt: String(saved.prompt || DEFAULT_LOCATION_NOTE.prompt).trim() || DEFAULT_LOCATION_NOTE.prompt,
+        title: String(saved.title || project?.name || site?.name || activeProjectName || activeProjectId || 'This location').trim()
+    };
+}
+
+function updateLocationNote() {
+    const note = overlayRoot?.querySelector('[data-ar-location-note]');
+    if (!note) return;
+    const config = locationNoteConfig || normalizedLocationNote();
+    const areaName = activeAreaName || 'Unassigned';
+    note.dataset.locationNoteEnabled = String(config.enabled);
+    note.hidden = !config.enabled;
+    note.setAttribute('aria-label', `${config.prompt} ${config.title}. Area: ${areaName}.`);
+    const prompt = note.querySelector('[data-ar-location-prompt]');
+    const title = note.querySelector('[data-ar-location-title]');
+    const area = note.querySelector('[data-ar-location-area]');
+    if (prompt) prompt.textContent = config.prompt;
+    if (title) title.textContent = config.title;
+    if (area) area.textContent = `AREA · ${areaName}`;
+}
+
 function activeAreaMarkers() {
     return sessionMarkers.filter(record => record.areaId === activeAreaId);
 }
@@ -131,6 +240,7 @@ function activateArea(area) {
     }
     activeAreaId = nextAreaId;
     activeAreaName = area?.name || '';
+    updateLocationNote();
 }
 
 function hasPlantProfile(record) {
@@ -185,8 +295,201 @@ function setPlacementStatus(message) {
     if (status) status.textContent = message;
 }
 
+function contextAppearanceButtons(type, appearance) {
+    if (!['plant', 'note'].includes(type)) return '';
+    const color = colorOption(type, appearance.color);
+    const size = String(appearance.size || 'medium').toUpperCase();
+    const opacity = Math.round(Number(appearance.opacity ?? 1) * 100);
+    return `<button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
+        <button type="button" data-ar-cycle-size aria-label="Cycle ${readyPlacementLabel(type)} size. Current ${escapeHtml(size)}"><b aria-hidden="true">&#9670;</b><span>SIZE</span><small>${escapeHtml(size)}</small></button>
+        ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}`;
+}
+
+function bindContextToolbarAction(toolbar, selector, action) {
+    toolbar.querySelector(selector)?.addEventListener('pointerup', event => {
+        if (event.button != null && event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        action();
+    });
+}
+
+function updateContextToolbar() {
+    const toolbar = overlayRoot?.querySelector('[data-ar-context-toolbar]');
+    if (!toolbar) return;
+    const placementType = ['plant', 'note'].includes(readyPlacementType) ? readyPlacementType : '';
+    const selectedRecord = !placementType && contextToolbarRecord && sessionMarkers.includes(contextToolbarRecord)
+        ? contextToolbarRecord
+        : null;
+    const type = placementType || selectedRecord?.marker?.type || '';
+    if (!type) {
+        toolbar.hidden = true;
+        toolbar.innerHTML = '';
+        toolbar.removeAttribute('aria-label');
+        return;
+    }
+    const appearance = placementType
+        ? currentPlacementAppearance(placementType)
+        : {
+            color: markerAppearanceColor(selectedRecord.marker),
+            size: markerAppearanceSize(selectedRecord.marker),
+            opacity: markerAppearanceOpacity(selectedRecord.marker)
+        };
+    const stateLabel = placementType ? `Create ${readyPlacementLabel(type)}` : `Edit ${selectedRecord.marker.name}`;
+    toolbar.hidden = false;
+    toolbar.setAttribute('aria-label', `${stateLabel} tools`);
+    toolbar.innerHTML = `<span class="creator-ar-context-label">${placementType ? 'CREATE' : 'EDIT'}</span>
+        ${contextAppearanceButtons(type, appearance)}
+        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>WEB MODE</span></button>
+        <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
+    bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
+    bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
+    bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
+    bindContextToolbarAction(toolbar, '[data-ar-context-web]', () => void openContextInWebMode());
+    bindContextToolbarAction(toolbar, '[data-ar-context-close]', () => {
+        if (placementType) {
+            placementArmGeneration += 1;
+            readyPlacementType = '';
+            readySpecialMarker = null;
+            pendingBagRecord = null;
+            pendingPlacementAppearance = null;
+            updateReadyPlacementControl();
+            setPlacementStatus('Placement cancelled.');
+            return;
+        }
+        contextToolbarRecord = null;
+        updateContextToolbar();
+        setPlacementStatus('Pointer mode remains on. Select another object to edit it.');
+    });
+}
+
+function cycleContextAppearance(property) {
+    const type = ['plant', 'note'].includes(readyPlacementType)
+        ? readyPlacementType
+        : contextToolbarRecord?.marker?.type;
+    if (!['plant', 'note'].includes(type)) return;
+    const appearance = readyPlacementType
+        ? currentPlacementAppearance(type)
+        : {
+            color: markerAppearanceColor(contextToolbarRecord.marker),
+            size: markerAppearanceSize(contextToolbarRecord.marker),
+            opacity: markerAppearanceOpacity(contextToolbarRecord.marker)
+        };
+    if (property === 'color') {
+        const values = TASKBAR_V2_COLORS[type].map(option => option.value);
+        appearance.color = nextCycleValue(colorOption(type, appearance.color).value, values);
+    } else if (property === 'size') {
+        appearance.size = nextCycleValue(appearance.size, TASKBAR_V2_SIZES);
+    } else if (property === 'opacity' && type === 'plant') {
+        appearance.opacity = nextCycleValue(Number(appearance.opacity), TASKBAR_V2_OPACITIES);
+    } else {
+        return;
+    }
+    if (readyPlacementType) {
+        pendingPlacementAppearance = { type, ...appearance };
+        updateContextToolbar();
+        setPlacementStatus(`${readyPlacementLabel(type)} ${property} updated. Tap the centre circle when it looks right.`);
+        return;
+    }
+    const record = contextToolbarRecord;
+    const previousAppearance = record.marker.appearance || {};
+    const nextAppearance = {
+        ...previousAppearance,
+        ...appearancePayload(appearance),
+        ...(type === 'note' ? { opacity: previousAppearance.opacity } : {})
+    };
+    record.marker = { ...record.marker, appearance: nextAppearance };
+    renderSessionMarkers();
+    updateContextToolbar();
+    queueContextAppearanceSave(record, nextAppearance, property);
+}
+
+function queueContextAppearanceSave(record, appearance, property) {
+    const revision = (record.appearanceRevision || 0) + 1;
+    record.appearanceRevision = revision;
+    const markerSnapshot = { ...record.marker, appearance: { ...appearance } };
+    record.appearanceSaveChain = (record.appearanceSaveChain || Promise.resolve())
+        .catch(() => {})
+        .then(async () => {
+            const updated = await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, markerSnapshot);
+            if (record.appearanceRevision !== revision) return;
+            record.marker = { ...updated, appearance: { ...appearance } };
+            renderSessionMarkers();
+            updateContextToolbar();
+            setPlacementStatus(`${record.marker.name} ${property} saved. Pointer mode remains on.`);
+        })
+        .catch(error => {
+            if (record.appearanceRevision === revision) {
+                setPlacementStatus(`Could not save ${property}: ${error.message}`);
+            }
+        });
+}
+
+function openMarkerContextToolbar(record, force = false) {
+    if (!record || (!force && interactionMode !== 'select')) return;
+    contextToolbarRecord = record;
+    closeAreaChooser();
+    closePlacePicker();
+    closeUnplacedBag();
+    updateContextToolbar();
+    setPlacementStatus(`${record.marker.name} selected. Use the compact tools or continue in Web Mode.`);
+}
+
+function closeMarkerContextToolbar() {
+    contextToolbarRecord = null;
+    updateContextToolbar();
+}
+
+async function openContextInWebMode() {
+    if (contextToolbarRecord) {
+        const record = contextToolbarRecord;
+        arReturnContext = record.marker.type === 'area_checkpoint'
+            ? `web-totem:${record.areaId}`
+            : `web-marker:${record.marker.id}`;
+        setPlacementStatus(`Opening ${record.marker.name} in Web Mode.`);
+        exitArMode();
+        return;
+    }
+    const type = readyPlacementType;
+    if (!['plant', 'note'].includes(type)) return;
+    const loadingOperation = captureArOperationContext();
+    setPlacementStatus(`Preparing ${readyPlacementLabel(type)} for Web Mode...`);
+    try {
+        if (!await ensurePlacementArea(loadingOperation)) return;
+        if (!isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
+        const operation = captureArOperationContext();
+        if (!isArOperationCurrent(operation)) return;
+        const appearance = appearancePayload(currentPlacementAppearance(type));
+        let marker;
+        if (pendingBagRecord) {
+            const bagRecord = pendingBagRecord;
+            marker = await updatePlaceMarker(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, {
+                ...bagRecord.marker,
+                appearance: { ...(bagRecord.marker.appearance || {}), ...appearance }
+            });
+        } else {
+            const draft = createMinimalMarkerDraft(type, {
+                name: type === 'plant' ? 'New plant' : 'New note'
+            });
+            draft.appearance = appearance;
+            const response = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, draft);
+            marker = response.marker || response;
+        }
+        if (!isArOperationCurrent(operation, { matchLocation: false }) || !marker?.id) return;
+        arReturnContext = `web-marker:${marker.id}`;
+        exitArMode();
+    } catch (error) {
+        if (isArOperationCurrent(loadingOperation, { matchLocation: false })) {
+            setPlacementStatus(`Could not open Web Mode: ${error.message}`);
+        }
+    }
+}
+
 function updateReadyPlacementControl() {
     overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
+    overlayRoot?.querySelector('[data-ar-add-plant]')?.classList.toggle('is-active', readyPlacementType === 'plant');
+    overlayRoot?.querySelector('[data-ar-add-note]')?.classList.toggle('is-active', readyPlacementType === 'note');
     if (!readyPlacementType && !interactionMode) {
         interactionMode = suspendedInteractionMode || 'neutral';
         suspendedInteractionMode = '';
@@ -194,6 +497,7 @@ function updateReadyPlacementControl() {
     }
     const guideLabel = overlayRoot?.querySelector('[data-ar-placement-guide-label]');
     if (guideLabel && readyPlacementType) guideLabel.textContent = `Place ${readyPlacementLabel(readyPlacementType)}`;
+    updateContextToolbar();
 }
 
 function placementPoint() {
@@ -304,15 +608,23 @@ function setInteractionMode(mode) {
         cleanupDrag();
         positionSessionMarkers();
     }
+    if (readyPlacementType) {
+        placementArmGeneration += 1;
+        readyPlacementType = '';
+        readySpecialMarker = null;
+        pendingBagRecord = null;
+        pendingPlacementAppearance = null;
+        updateReadyPlacementControl();
+    }
     interactionMode = interactionMode === mode && ['grab', 'select'].includes(mode) ? 'neutral' : mode;
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
-    if (interactionMode !== 'select') closeInlineEditor();
+    if (interactionMode !== 'select') closeMarkerContextToolbar();
     updateInteractionControls();
     if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
     else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.');
-    else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed marker to edit it here.');
+    else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed object to open its compact edit tools.');
     else setPlacementStatus('Aim dot ready. Hover over Markers to reveal their names.');
 }
 
@@ -346,7 +658,7 @@ function closeUnplacedBag() {
 async function openUnplacedBag() {
     const bag = overlayRoot?.querySelector('[data-ar-unplaced-bag]');
     if (!bag) return;
-    closeInlineEditor();
+    closeMarkerContextToolbar();
     closePlacePicker();
     readyPlacementType = '';
     pendingBagRecord = null;
@@ -372,6 +684,7 @@ async function openUnplacedBag() {
             if (!item) return;
             pendingBagRecord = { ...item, siteId: activeSiteId };
             readyPlacementType = item.marker.type;
+            preparePlacementAppearance(item.marker.type, item.marker);
             placementArmedAt = performance.now();
             closeUnplacedBag();
             updateReadyPlacementControl();
@@ -383,21 +696,53 @@ async function openUnplacedBag() {
     }
 }
 
-function showPlacedMarkerActions(record) {
-    const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
-    if (!picker) return;
-    pendingPlacedRecord = record;
-    picker.hidden = false;
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>${readyPlacementLabel(record.marker.type)} placed</p><button type="button" data-ar-close-placed aria-label="Close">&times;</button></div><p class="creator-ar-picker-status">Edit this ${markerLabel(record.marker.type)} now, or continue placing content.</p><div class="creator-ar-after-place-actions"><button type="button" data-ar-edit-placed>Edit details</button><button type="button" data-ar-finish-placed>Done</button></div>`;
-    picker.querySelector('[data-ar-edit-placed]')?.addEventListener('click', () => {
+function activeTotemRecord() {
+    return activeAreaMarkers().find(record => record.marker.type === 'area_checkpoint') || null;
+}
+
+function pointToActiveTotem() {
+    const totem = activeTotemRecord();
+    if (!totem) {
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Create to add one.`);
+        return;
+    }
+    hiddenStructuralMarkerIds.delete(totem.marker.id);
+    locatedTotemRecord = totem;
+    renderSessionMarkers();
+    closePlacePicker();
+    setPlacementStatus(`A ground pointer now leads to the ${totem.marker.name} Totem.`);
+}
+
+function toggleActiveTotemVisibility() {
+    const totem = activeTotemRecord();
+    if (!totem) {
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Create to add one.`);
+        return;
+    }
+    if (hiddenStructuralMarkerIds.has(totem.marker.id)) {
+        hiddenStructuralMarkerIds.delete(totem.marker.id);
+        setPlacementStatus(`${totem.marker.name} Totem shown.`);
+    } else {
+        hiddenStructuralMarkerIds.add(totem.marker.id);
+        locatedTotemRecord = null;
+        setPlacementStatus(`${totem.marker.name} Totem hidden for this AR session.`);
+    }
+    renderSessionMarkers();
+    closePlacePicker();
+}
+
+function createTotemFromSpecial() {
+    if (activeAreaId && !activeTotemRecord()) {
         closePlacePicker();
-        openInlineEditor(record, true);
-    });
-    picker.querySelector('[data-ar-finish-placed]')?.addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-close-placed]').addEventListener('click', closePlacePicker);
+        void armPlacement('area_checkpoint');
+        return;
+    }
+    void openArAreaCreationForm();
 }
 
 function renderSpecialMarkerChoices(picker) {
+    const totem = activeTotemRecord();
+    const totemHidden = Boolean(totem && hiddenStructuralMarkerIds.has(totem.marker.id));
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
         ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
@@ -406,8 +751,17 @@ function renderSpecialMarkerChoices(picker) {
     const alerts = [
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
-    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Symbols</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div><section class="creator-ar-special-section creator-ar-indicator-section"><strong>ARROWS</strong><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div></section><section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><div class="creator-ar-special-grid">${alerts}</div></section>`;
+    picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>
+        <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-point-to-totem><b aria-hidden="true">&#8982;</b><span><strong>Point to Totem</strong></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem><b aria-hidden="true">${totemHidden ? '&#9673;' : '&#9675;'}</b><span><strong>${totemHidden ? 'Show Totem' : 'Hide Totem'}</strong></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create</strong><small>Totem / Area</small></span></button>
+        </div></section>
+        <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div><small>MARKS</small><div class="creator-ar-special-grid">${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
+    picker.querySelector('[data-ar-point-to-totem]').addEventListener('click', pointToActiveTotem);
+    picker.querySelector('[data-ar-toggle-totem]').addEventListener('click', toggleActiveTotemVisibility);
+    picker.querySelector('[data-ar-create-area]').addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         readySpecialMarker = {
             name: button.dataset.arSpecialLabel,
@@ -461,9 +815,10 @@ async function openSpecialMarkerPicker() {
     const requestId = ++specialPickerRequest;
     const panelId = `special:${requestId}`;
     placementArmGeneration += 1;
-    closeInlineEditor();
+    closeMarkerContextToolbar();
     closeUnplacedBag();
     readyPlacementType = '';
+    pendingPlacementAppearance = null;
     updateReadyPlacementControl();
     picker.hidden = false;
     picker.dataset.panel = panelId;
@@ -475,12 +830,13 @@ function resetArControls() {
     cleanupDrag();
     interactionMode = 'neutral';
     suspendedInteractionMode = '';
-    closeInlineEditor();
+    closeMarkerContextToolbar();
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
     readyPlacementType = '';
     pendingBagRecord = null;
+    pendingPlacementAppearance = null;
     updateReadyPlacementControl();
     updateInteractionControls();
     setPlacementStatus('AR controls reset. The aim dot is ready; press plus when you want to place a Marker.');
@@ -488,6 +844,69 @@ function resetArControls() {
 
 function multiplyMatrixVector(matrix, vector) {
     return [0, 1, 2, 3].map(row => matrix[row] * vector[0] + matrix[row + 4] * vector[1] + matrix[row + 8] * vector[2] + matrix[row + 12] * vector[3]);
+}
+
+function projectWorldPoint(view, point) {
+    const inverse = view?.transform?.inverse?.matrix;
+    if (!inverse || !view.projectionMatrix) return null;
+    const eye = multiplyMatrixVector(inverse, [point.x, point.y, point.z, 1]);
+    const clip = multiplyMatrixVector(view.projectionMatrix, eye);
+    if (!Number.isFinite(clip[3]) || clip[3] <= 0) return null;
+    return {
+        x: (clip[0] / clip[3] * .5 + .5) * window.innerWidth,
+        y: (-clip[1] / clip[3] * .5 + .5) * window.innerHeight
+    };
+}
+
+function ensureLocationNoteAnchor() {
+    if (locationNoteAnchor || !latestViewerMatrix) return locationNoteAnchor;
+    const cameraX = latestViewerMatrix[12];
+    const cameraY = latestViewerMatrix[13];
+    const cameraZ = latestViewerMatrix[14];
+    const forwardX = -latestViewerMatrix[8];
+    const forwardZ = -latestViewerMatrix[10];
+    const forwardLength = Math.hypot(forwardX, forwardZ) || 1;
+    const groundY = referenceSpaceHasFloor ? .02 : cameraY - 1.55;
+    locationNoteAnchor = {
+        x: cameraX + forwardX / forwardLength * 4,
+        y: groundY + 2.8,
+        z: cameraZ + forwardZ / forwardLength * 4,
+        groundY
+    };
+    return locationNoteAnchor;
+}
+
+function positionLocationNote(view = latestView) {
+    const note = overlayRoot?.querySelector('[data-ar-location-note]');
+    if (!note || note.dataset.locationNoteEnabled === 'false') return;
+    const anchor = ensureLocationNoteAnchor();
+    if (!anchor) return;
+    const boardPoint = projectWorldPoint(view, anchor);
+    const groundPoint = projectWorldPoint(view, { x: anchor.x, y: anchor.groundY, z: anchor.z });
+    if (!boardPoint || !groundPoint) {
+        note.hidden = true;
+        return;
+    }
+    const marginX = Math.min(window.innerWidth * .45, 390);
+    const marginY = Math.min(window.innerHeight * .25, 180);
+    const visible = boardPoint.x > -marginX
+        && boardPoint.x < window.innerWidth + marginX
+        && boardPoint.y > -marginY
+        && boardPoint.y < window.innerHeight + marginY;
+    note.hidden = !visible;
+    if (!visible) return;
+    const boardHalfHeight = Math.min(104, Math.max(76, window.innerHeight * .105));
+    const stickStart = { x: boardPoint.x, y: boardPoint.y + boardHalfHeight };
+    const dx = groundPoint.x - stickStart.x;
+    const dy = groundPoint.y - stickStart.y;
+    note.style.setProperty('--location-note-x', `${boardPoint.x.toFixed(1)}px`);
+    note.style.setProperty('--location-note-y', `${boardPoint.y.toFixed(1)}px`);
+    note.style.setProperty('--location-stick-x', `${stickStart.x.toFixed(1)}px`);
+    note.style.setProperty('--location-stick-y', `${stickStart.y.toFixed(1)}px`);
+    note.style.setProperty('--location-stick-length', `${Math.max(24, Math.hypot(dx, dy)).toFixed(1)}px`);
+    note.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
+    note.style.setProperty('--location-ground-x', `${groundPoint.x.toFixed(1)}px`);
+    note.style.setProperty('--location-ground-y', `${groundPoint.y.toFixed(1)}px`);
 }
 
 function multiplyMatrices(a, b) {
@@ -535,6 +954,7 @@ function setupSpatialMarkerRenderer() {
         varying vec2 uv;
         uniform vec3 color;
         uniform float shape;
+        uniform float opacity;
         float box(vec2 p,vec2 s){return 1.-smoothstep(.0,.018,max(abs(p.x)-s.x,abs(p.y)-s.y));}
         float roundBox(vec2 p,vec2 s,float r){vec2 d=abs(p)-s+r;return 1.-smoothstep(.0,.018,length(max(d,0.))+min(max(d.x,d.y),0.)-r);}
         void main(){
@@ -577,7 +997,7 @@ function setupSpatialMarkerRenderer() {
             float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.04);
             float alpha=body*(shape<.5?.58:(shape<1.5?.9:(shape<2.5?.56:(shape>4.5?.42:.82))))+glow;
             if(body<.01&&glow<.01)discard;
-            gl_FragColor=vec4(shaded,alpha);
+            gl_FragColor=vec4(shaded,alpha*opacity);
         }
     `);
     gl.compileShader(fragment);
@@ -625,16 +1045,19 @@ function drawSpatialMarkers(view) {
         drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor),
-            opacity: arrivalEase
+            opacity: arrivalEase * markerAppearanceOpacity(record.marker)
         });
     });
 
     if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestViewerMatrix && !readySpecialMarker) {
         const target = placementPoint();
         if (!target) return;
-        drawSpatialOrb(gl, sphereRenderer, view, target, .07, {
+        const previewMarker = placementPreviewMarker(readyPlacementType);
+        const [previewWidth, previewHeight] = markerDimensions(previewMarker);
+        drawSpatialOrb(gl, sphereRenderer, view, target, Math.max(previewWidth, previewHeight), {
             type: readyPlacementType === 'plant' ? 'plant' : 'marker',
-            color: readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]
+            color: markerRgb(previewMarker, readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]),
+            opacity: markerAppearanceOpacity(previewMarker)
         });
     }
 
@@ -653,16 +1076,32 @@ function drawSpatialMarkers(view) {
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
         gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), shape);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), markerAppearanceOpacity(record.marker));
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
+    if (readyPlacementType === 'note' && latestViewerMatrix) {
+        const target = placementPoint();
+        if (target) {
+            const previewMarker = placementPreviewMarker('note');
+            const [scaleX, scaleY] = markerDimensions(previewMarker);
+            const model = markerBillboardMatrix(target, scaleX, scaleY);
+            const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+            gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+            gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), markerShape('note'));
+            gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), 1);
+            gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(previewMarker, colors.note));
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+    }
     if (locatedTotemRecord?.areaId === activeAreaId) {
         const guideModel = groundGuideMatrix(locatedTotemRecord.position);
         if (guideModel) {
             const guideMvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, guideModel));
             gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, guideMvp);
             gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 5);
+            gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), 1);
             gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), [.55, .92, .78]);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
@@ -671,6 +1110,7 @@ function drawSpatialMarkers(view) {
 
 function positionSessionMarkers(view = latestView) {
     if (!view || !overlayRoot) return;
+    positionLocationNote(view);
     const inverse = view.transform?.inverse?.matrix;
     if (!inverse || !view.projectionMatrix) return;
     activeAreaMarkers().forEach(record => {
@@ -743,7 +1183,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="--marker-accent:${markerAppearanceColor(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
     }).join('');
     visibleMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -936,7 +1376,7 @@ function beginMarkerInteraction(record, event) {
     event.preventDefault();
     event.stopPropagation();
     if (interactionMode === 'select') {
-        openInlineEditor(record);
+        openMarkerContextToolbar(record);
         return;
     }
     if (dragState) {
@@ -1084,7 +1524,10 @@ function cancelMarkerDrag(event) {
 
 async function loadPlacementAreas(operation = captureArOperationContext(), guardOptions = {}) {
     if (!isArOperationCurrent(operation, guardOptions)) return [];
-    const sites = await loadProjectSites(operation.projectId);
+    const [sites, project] = await Promise.all([
+        loadProjectSites(operation.projectId),
+        loadProject(operation.projectId).catch(() => null)
+    ]);
     if (!isArOperationCurrent(operation, guardOptions)) return [];
     let site = sites.find(item => item.id === operation.siteId) || sites.find(item => item.id === 'main_food_forest') || sites[0];
     if (!site) {
@@ -1094,12 +1537,15 @@ async function loadPlacementAreas(operation = captureArOperationContext(), guard
     const areas = await loadSitePlaces(operation.projectId, site.id);
     if (!isArOperationCurrent(operation, guardOptions)) return [];
     activeSiteId = site.id;
+    activeProjectName = project?.name || activeProjectName || operation.projectId;
+    locationNoteConfig = normalizedLocationNote(project, site);
     const selected = areas.find(area => area.id === operation.areaId);
     if (selected) {
         activateArea(selected);
     } else {
         activateArea(null);
     }
+    updateLocationNote();
     return areas;
 }
 
@@ -1172,6 +1618,7 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         areaName: operation.areaName
     };
     readyPlacementType = marker.type;
+    preparePlacementAppearance(marker.type, marker);
     suspendedInteractionMode = interactionMode || suspendedInteractionMode || 'neutral';
     interactionMode = '';
     placementArmedAt = performance.now();
@@ -1205,10 +1652,12 @@ async function ensurePlacementArea(operation = captureArOperationContext()) {
 
 async function armPlacement(type) {
     const generation = ++placementArmGeneration;
-    closeInlineEditor();
+    closeMarkerContextToolbar();
     closePlacePicker();
     closeUnplacedBag();
+    pendingBagRecord = null;
     readyPlacementType = type;
+    preparePlacementAppearance(type);
     suspendedInteractionMode = interactionMode || suspendedInteractionMode || 'neutral';
     interactionMode = '';
     placementArmedAt = performance.now();
@@ -1221,6 +1670,7 @@ async function armPlacement(type) {
         return;
     }
     readyPlacementType = '';
+    pendingPlacementAppearance = null;
     updateReadyPlacementControl();
     updateInteractionControls();
     if (!activeAreaId) setPlacementStatus('This item could not be prepared for placement.');
@@ -1366,13 +1816,14 @@ async function quickPlace(type) {
     activePlacementOperation = placementToken;
     placementInProgress = true;
     const loadingOperation = captureArOperationContext();
+    let placementAppearance = null;
     const releasePlacement = () => {
         if (activePlacementOperation !== placementToken) return;
         activePlacementOperation = null;
         placementInProgress = false;
     };
     try {
-        closeInlineEditor();
+        closeMarkerContextToolbar();
         if (!await ensurePlacementArea(loadingOperation)) return;
         if (!isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
 
@@ -1384,13 +1835,23 @@ async function quickPlace(type) {
             setPlacementStatus('Move your phone briefly, then use Place again.');
             return;
         }
+        placementAppearance = ['plant', 'note'].includes(type)
+            ? appearancePayload(currentPlacementAppearance(type))
+            : null;
         if (pendingBagRecord) {
             const bagRecord = pendingBagRecord;
             readyPlacementType = '';
             pendingBagRecord = null;
+            pendingPlacementAppearance = null;
             updateReadyPlacementControl();
             setPlacementStatus(`Updating ${bagRecord.marker.name}…`);
             try {
+                const updatedBagMarker = placementAppearance
+                    ? await updatePlaceMarker(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, {
+                        ...bagRecord.marker,
+                        appearance: { ...(bagRecord.marker.appearance || {}), ...placementAppearance }
+                    })
+                    : bagRecord.marker;
                 const bagAnchor = spatialAnchor(position, operation);
                 if (bagRecord.areaId !== operation.areaId) {
                     bagAnchor.coordinate_space = 'session-local';
@@ -1398,15 +1859,15 @@ async function quickPlace(type) {
                 }
                 await saveMarkerAnchor(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, bagAnchor);
                 if (!operationIsCurrent()) return;
-                const record = { ...bagRecord, position, spawnedAt: performance.now() };
+                const record = { ...bagRecord, marker: updatedBagMarker, position, spawnedAt: performance.now() };
                 sessionMarkers.push(record);
                 renderSessionMarkers();
                 setPlacementStatus(`${record.marker.name} placed. Your previous interaction mode is still active.`);
-                showPlacedMarkerActions(record);
             } catch (error) {
                 if (!operationIsCurrent()) return;
                 pendingBagRecord = bagRecord;
                 readyPlacementType = bagRecord.marker.type;
+                preparePlacementAppearance(bagRecord.marker.type, { ...bagRecord.marker, appearance: placementAppearance });
                 updateReadyPlacementControl();
                 setPlacementStatus(`Could not place ${bagRecord.marker.name}: ${error.message}`);
             }
@@ -1422,6 +1883,7 @@ async function quickPlace(type) {
         };
         const label = markerLabel(type);
         readyPlacementType = '';
+        pendingPlacementAppearance = null;
         updateReadyPlacementControl();
         setPlacementStatus(`Placing ${label}...`);
         const existingMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, operation.areaId).catch(() => []);
@@ -1443,6 +1905,7 @@ async function quickPlace(type) {
             name: specialMarker?.name || draftName,
             description: type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : ''
         });
+        if (placementAppearance) draft.appearance = { ...(draft.appearance || {}), ...placementAppearance };
         if (specialMarker) Object.assign(draft, specialMarker);
         if (type === 'area_checkpoint') {
             draft.area_information_board = {
@@ -1467,11 +1930,11 @@ async function quickPlace(type) {
             setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. Your previous interaction mode is still active.`);
         } else {
             setPlacementStatus(`${marker.name} placed. Select it whenever you want to edit or move it.`);
-            if (!['plant', 'note'].includes(type) && !marker.special_symbol) showPlacedMarkerActions(record);
         }
     } catch (error) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
         readyPlacementType = type;
+        if (placementAppearance) pendingPlacementAppearance = { type, ...placementAppearance };
         updateReadyPlacementControl();
         setPlacementStatus(`Could not place ${markerLabel(type)}: ${error.message}`);
     } finally {
@@ -1499,11 +1962,21 @@ function createOverlay() {
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
         ${spatialMoveControlMarkup('ar')}
+        <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
+          <span class="creator-ar-location-stick" aria-hidden="true"></span>
+          <span class="creator-ar-location-ground" aria-hidden="true"></span>
+          <section class="creator-ar-location-note-board nourishland-spatial-note-surface">
+            <span data-ar-location-prompt>${escapeHtml(locationNoteConfig?.prompt || DEFAULT_LOCATION_NOTE.prompt)}</span>
+            <small>YOU ARE IN</small>
+            <strong data-ar-location-title>${escapeHtml(locationNoteConfig?.title || activeProjectName || activeProjectId || 'This location')}</strong>
+            <span data-ar-location-area>AREA · ${escapeHtml(activeAreaName || 'Unassigned')}</span>
+          </section>
+        </aside>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
-        <div class="creator-ar-control-dock">
-          <section class="creator-ar-inline-editor" data-ar-inline-editor hidden></section>
+        <div class="creator-ar-control-dock" data-ar-taskbar-version="2">
           <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
+          <nav class="creator-ar-context-toolbar" data-ar-context-toolbar hidden></nav>
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
             <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
@@ -1516,15 +1989,17 @@ function createOverlay() {
         </div>`;
 
     const armDirectPlacement = type => {
-        if (readyPlacementType) {
+        if (readyPlacementType === type) {
             placementArmGeneration += 1;
             readyPlacementType = '';
             readySpecialMarker = null;
+            pendingBagRecord = null;
+            pendingPlacementAppearance = null;
             updateReadyPlacementControl();
             setPlacementStatus('Placement cancelled.');
             return;
         }
-        closeInlineEditor();
+        closeMarkerContextToolbar();
         closePlacePicker();
         void armPlacement(type);
     };
@@ -1558,6 +2033,7 @@ function createOverlay() {
     updateReadyPlacementControl();
     updateInteractionControls();
     document.body.append(overlayRoot);
+    updateLocationNote();
 }
 
 function cleanup() {
@@ -1569,6 +2045,7 @@ function cleanup() {
     overlayRoot = null;
     document.body.classList.remove('creator-ar-session-active');
     activeProjectId = '';
+    activeProjectName = '';
     activeSiteId = '';
     activeAreaId = '';
     activeAreaName = '';
@@ -1583,6 +2060,9 @@ function cleanup() {
     suspendedInteractionMode = '';
     sessionMarkers = [];
     readyPlacementType = '';
+    readySpecialMarker = null;
+    pendingPlacementAppearance = null;
+    contextToolbarRecord = null;
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
@@ -1597,6 +2077,9 @@ function cleanup() {
     locatedTotemRecord = null;
     pendingExistingMarkerId = '';
     arReturnContext = '';
+    locationNoteAnchor = null;
+    referenceSpaceHasFloor = false;
+    locationNoteConfig = null;
     placementArmGeneration += 1;
     specialPickerRequest += 1;
     hiddenStructuralMarkerIds.clear();
@@ -1686,12 +2169,16 @@ export async function startArMode(projectId, areaId = '', checkpointId = '', ini
 async function launchArMode(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId) {
     if (!projectId || !navigator.xr || !window.isSecureContext) return false;
     activeProjectId = projectId;
+    activeProjectName = String(projectId).replace(/[-_]+/g, ' ').trim();
     activeSiteId = preferredSiteId || '';
     activeAreaId = areaId;
     activeAreaName = '';
     activeCheckpointId = checkpointId;
     sessionMarkers = [];
     locatedTotemRecord = null;
+    locationNoteAnchor = null;
+    referenceSpaceHasFloor = false;
+    locationNoteConfig = normalizedLocationNote();
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';
@@ -1738,8 +2225,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         session.updateRenderState({ baseLayer: layer, depthNear: 0.01, depthFar: 50 });
         try {
             refSpace = await session.requestReferenceSpace('local-floor');
+            referenceSpaceHasFloor = true;
         } catch {
             refSpace = await session.requestReferenceSpace('local');
+            referenceSpaceHasFloor = false;
         }
         const viewerSpace = await session.requestReferenceSpace('viewer');
         hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
