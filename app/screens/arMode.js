@@ -719,11 +719,12 @@ async function openUnplacedBag() {
     pendingBagRecord = null;
     updateReadyPlacementControl();
     bag.hidden = false;
-    bag.innerHTML = '<p>Loading your Organizer Folder…</p>';
+    bag.innerHTML = '<p>Loading Home…</p>';
     try {
         await loadPlacementAreas();
         const areas = await loadSitePlaces(activeProjectId, activeSiteId);
-        const groups = await Promise.all(areas.map(async area => {
+        const homeAreas = areas.filter(isDefaultHomeArea);
+        const groups = await Promise.all(homeAreas.map(async area => {
             const markers = await loadPlaceMarkers(activeProjectId, activeSiteId, area.id).catch(() => []);
             const entries = await Promise.all(markers.map(normalizeSpatialMarker).filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type)).map(async marker => {
                 const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, area.id, marker.id).catch(() => null);
@@ -732,7 +733,7 @@ async function openUnplacedBag() {
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(isDefaultHomeArea(item.areaName) ? DEFAULT_HOME_AREA_NAME : item.areaName || DEFAULT_HOME_AREA_NAME)}</small></span></button>`).join('')}</div>` : '<p>Home is empty. Save information here when you want to organise or place it later.</p>'}`;
+        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${DEFAULT_HOME_AREA_NAME}</small></span></button>`).join('')}</div>` : '<p>Home is empty. Save information here when you want to organise or place it later.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];

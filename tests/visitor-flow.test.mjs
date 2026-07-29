@@ -301,6 +301,7 @@ test('Organizer Folder excludes compatibility Area Totems by semantic type', () 
         dashboardSource.indexOf('export async function renderStoriesAndFocus')
     );
     assert.match(unplacedSource, /\['plant', 'note', 'sub_checkpoint'\]\.includes\(effectiveMarkerType\(entry\.marker\)\)/);
+    assert.match(unplacedSource, /isDefaultHomeArea\(entry\.place\)/);
     assert.match(unplacedSource, /const markerType = effectiveMarkerType\(marker\)/);
     assert.doesNotMatch(unplacedSource, /\.includes\(entry\.marker\.type\)/);
 });

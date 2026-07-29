@@ -1567,7 +1567,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
     try {
         const { project, site, entries } = await projectContent(projectId);
         const placementEntries = await entriesWithPlacement(project, site, entries);
-        const unplaced = placementEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && !entry.isPlaced);
+        const unplaced = placementEntries.filter(entry => isDefaultHomeArea(entry.place) && ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && !entry.isPlaced);
         const rows = unplaced.map(({ marker, place }) => {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(displayAreaName(place))}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;

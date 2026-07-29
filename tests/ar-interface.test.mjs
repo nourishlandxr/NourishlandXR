@@ -862,6 +862,8 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(dashboardSource, /addUnplacedAction: `window\.renderAddToLocation/);
     assert.doesNotMatch(dashboardSource, /quickActions:/);
     assert.match(arSource, /openUnplacedBag/);
+    assert.match(arSource, /const homeAreas = areas\.filter\(isDefaultHomeArea\)/);
+    assert.match(arSource, /Promise\.all\(homeAreas\.map/);
     assert.match(arSource, /pendingBagRecord/);
     assert.match(arSource, /selected from your Bag/);
     assert.match(arSource, /convertRecordToAreaCheckpoint/);
