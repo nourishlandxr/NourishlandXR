@@ -486,7 +486,7 @@ function guidePlantConversion(record) {
     };
     showIntroBoard(
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
-        `Plant Markers can be updated to Plant Profiles in Creator Mode. A profile provides in-depth information about ${plantName} while keeping that knowledge connected to where it grows. Next, press the orb to reveal its information diagram.`,
+        'Plant Markers can be updated to Plant Profiles in Creator Mode. A profile provides information about a Plant while keeping that knowledge connected to where it grows. Next, press the orb to reveal its information diagram.',
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -1406,7 +1406,7 @@ function createIntroNoteTexture(texture = null) {
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
     const visibleParagraphs = typedBody.split(/\n\n/);
-    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 470);
+    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 530);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
     let paragraphY = 500;
     bodyLayout.paragraphLines.forEach((completeLines, paragraphIndex) => {

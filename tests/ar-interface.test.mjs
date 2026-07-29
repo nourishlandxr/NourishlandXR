@@ -656,6 +656,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
     assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
     assert.match(source, /Plant Markers can be updated to Plant Profiles in Creator Mode/);
+    assert.match(source, /A profile provides information about a Plant while keeping that knowledge connected to where it grows/);
+    assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /press the orb to reveal its information diagram/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
@@ -695,7 +697,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardPosition: \[0, 0\.28, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /label\.height = 1080/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 470\)/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 530\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', 1100\)/);
     assert.match(source, /visibleLines\.forEach/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
@@ -728,7 +730,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*grid-template-rows:auto auto minmax\(0,1fr\);[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow:hidden;/);
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
-    assert.match(styles, /font-size:clamp\(\.82rem,min\(2\.7vw,2\.05vh\),1\.35rem\)/);
+    assert.match(styles, /font-size:clamp\(1rem,min\(3vw,2\.35vh\),1\.45rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
