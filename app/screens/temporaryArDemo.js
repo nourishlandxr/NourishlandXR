@@ -62,7 +62,7 @@ const AR_PHONE_COMFORT = Object.freeze({
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Augmented reality lets information appear where it belongs — in the living landscape around you.',
     'In this short demo, you’ll place a Plant, open its story, leave a Note, and gather discoveries around an Area Totem.',
-    'There is nothing to memorise. Follow your curiosity, move gently, and see how a familiar place can begin to reveal what it knows.'
+    'Use the centre aim to find virtual information, select Plants, and interact with the space around you.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_ORB_MATERIALS = Object.freeze({
@@ -431,18 +431,8 @@ function runArWelcomeTutorial() {
             const place = appRoot?.querySelector('[data-tryit-place]');
             place?.removeAttribute('hidden');
             requestAnimationFrame(() => place?.classList.add('is-revealing'));
-            showIntroBoard(
-                'INTRODUCING AIM',
-                'The glowing circle is your pointer. Press it to place a Plant orb one metre ahead.',
-                '',
-                null,
-                {
-                    onTextComplete: () => {
-                        clearTimeout(aimRevealTimer);
-                        aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 900);
-                    }
-                }
-            );
+            clearTimeout(aimRevealTimer);
+            aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 900);
         }
     );
 }
