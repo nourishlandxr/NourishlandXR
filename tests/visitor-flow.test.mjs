@@ -379,7 +379,7 @@ test('Try It Now guides two Plants, a Note and a Totem without saving', () => {
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /Finish demo/);
-    assert.match(source, /spatialPosition\(null, viewerMatrix, 0\)/);
+    assert.match(source, /spatialPosition\(null, matrix, 0\)/);
     assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
 });
 

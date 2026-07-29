@@ -5,9 +5,16 @@ import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
+import { demoPlacementPosition } from '../app/screens/temporaryArDemo.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('Try It Now immersive placement resolves the shared AR distance without stalling', () => {
+    const viewer = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 1.5, 4, 1]);
+    const position = demoPlacementPosition(viewer, { x: 0, y: -0.25, z: -1 });
+    assert.deepEqual(position, { x: 2, y: 1.25, z: 3 });
+});
 
 test('legacy AR diagnostics stay out of the camera interface', () => {
     const html = read('app/index.html');
@@ -556,7 +563,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const source = read('app/screens/temporaryArDemo.js');
     const styles = read('app/style.css');
     assert.match(source, /function demoPointerWorldRay\(\)/);
-    assert.match(source, /const ray = demoPointerWorldRay\(\)/);
+    assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\)\)/);
+    assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
     assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /domOverlay: \{ root: appRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);

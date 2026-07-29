@@ -9,6 +9,7 @@ import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 
 let appRoot = null;
 let session = null;
@@ -989,16 +990,19 @@ function demoPointerWorldRay() {
     return { x: worldX / worldLength, y: worldY / worldLength, z: worldZ / worldLength };
 }
 
-function placementPosition() {
-    if (!viewerMatrix) return null;
-    const ray = demoPointerWorldRay();
-    if (!ray) return spatialPosition(null, viewerMatrix, 0);
+export function demoPlacementPosition(matrix, ray) {
+    if (!matrix) return null;
+    if (!ray) return spatialPosition(null, matrix, 0);
     const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
     return {
-        x: viewerMatrix[12] + ray.x * distance,
-        y: viewerMatrix[13] + ray.y * distance,
-        z: viewerMatrix[14] + ray.z * distance
+        x: matrix[12] + ray.x * distance,
+        y: matrix[13] + ray.y * distance,
+        z: matrix[14] + ray.z * distance
     };
+}
+
+function placementPosition() {
+    return demoPlacementPosition(viewerMatrix, demoPointerWorldRay());
 }
 
 function plantInformationPosition(record) {
