@@ -218,6 +218,24 @@ test('Creator AR opens with an editable spatial Location Note and one global Not
     assert.match(mainSource, /window\.saveArLocationNoteSettings/);
 });
 
+test('Note placement preview uses the shared Note surface instead of the shader rectangle', () => {
+    const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
+    const drawStart = arSource.indexOf('function drawSpatialMarkers(view)');
+    const drawEnd = arSource.indexOf('function positionSessionMarkers', drawStart);
+    const drawSource = arSource.slice(drawStart, drawEnd);
+    assert.match(arSource, /data-ar-note-placement-preview/);
+    assert.match(arSource, /creator-ar-note-placement-surface nourishland-spatial-note-surface/);
+    assert.match(arSource, /function updateNotePlacementPreview\(\)/);
+    assert.match(arSource, /function positionNotePlacementPreview\(view = latestView\)/);
+    assert.match(arSource, /surface\.style\.setProperty\('--spatial-note-color', markerAppearanceColor\(marker\)\)/);
+    assert.match(arSource, /--note-preview-width/);
+    assert.doesNotMatch(drawSource, /readyPlacementType === 'note'/);
+    assert.doesNotMatch(drawSource, /markerShape\('note'\)/);
+    assert.match(styles, /\.creator-ar-note-placement-preview/);
+    assert.match(styles, /\.creator-ar-note-placement-surface/);
+});
+
 test('Special opens immediately with Totem tools above symbols', () => {
     const arSource = read('app/screens/arMode.js');
     const start = arSource.indexOf('async function openSpecialMarkerPicker()');

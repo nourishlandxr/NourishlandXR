@@ -388,6 +388,7 @@ function cycleContextAppearance(property) {
     }
     if (readyPlacementType) {
         pendingPlacementAppearance = { type, ...appearance };
+        updateNotePlacementPreview();
         updateContextToolbar();
         setPlacementStatus(`${readyPlacementLabel(type)} ${property} updated. Tap the centre circle when it looks right.`);
         return;
@@ -497,7 +498,35 @@ function updateReadyPlacementControl() {
     }
     const guideLabel = overlayRoot?.querySelector('[data-ar-placement-guide-label]');
     if (guideLabel && readyPlacementType) guideLabel.textContent = `Place ${readyPlacementLabel(readyPlacementType)}`;
+    updateNotePlacementPreview();
     updateContextToolbar();
+}
+
+function updateNotePlacementPreview() {
+    const preview = overlayRoot?.querySelector('[data-ar-note-placement-preview]');
+    const surface = preview?.querySelector('[data-ar-note-placement-surface]');
+    if (!preview || !surface) return;
+    const armed = readyPlacementType === 'note';
+    preview.hidden = !armed;
+    if (!armed) return;
+    const marker = placementPreviewMarker('note');
+    const factor = markerSizeFactor(marker);
+    const label = preview.querySelector('[data-ar-note-placement-label]');
+    preview.style.setProperty('--note-preview-width', `${Math.round(280 * factor)}px`);
+    preview.style.setProperty('--note-preview-height', `${Math.round(116 * factor)}px`);
+    surface.style.setProperty('--spatial-note-color', markerAppearanceColor(marker));
+    surface.style.setProperty('--note-preview-opacity', markerAppearanceOpacity(marker));
+    if (label) label.textContent = marker.name || 'New note';
+}
+
+function positionNotePlacementPreview(view = latestView) {
+    const preview = overlayRoot?.querySelector('[data-ar-note-placement-preview]');
+    if (!preview || readyPlacementType !== 'note') return;
+    const target = placementPoint();
+    const point = target ? projectWorldPoint(view, target) : null;
+    preview.hidden = !point;
+    if (!point) return;
+    preview.style.transform = `translate(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px) translate(-50%, -50%)`;
 }
 
 function placementPoint() {
@@ -1081,20 +1110,6 @@ function drawSpatialMarkers(view) {
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
-    if (readyPlacementType === 'note' && latestViewerMatrix) {
-        const target = placementPoint();
-        if (target) {
-            const previewMarker = placementPreviewMarker('note');
-            const [scaleX, scaleY] = markerDimensions(previewMarker);
-            const model = markerBillboardMatrix(target, scaleX, scaleY);
-            const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
-            gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
-            gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), markerShape('note'));
-            gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), 1);
-            gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(previewMarker, colors.note));
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-        }
-    }
     if (locatedTotemRecord?.areaId === activeAreaId) {
         const guideModel = groundGuideMatrix(locatedTotemRecord.position);
         if (guideModel) {
@@ -1111,6 +1126,7 @@ function drawSpatialMarkers(view) {
 function positionSessionMarkers(view = latestView) {
     if (!view || !overlayRoot) return;
     positionLocationNote(view);
+    positionNotePlacementPreview(view);
     const inverse = view.transform?.inverse?.matrix;
     if (!inverse || !view.projectionMatrix) return;
     activeAreaMarkers().forEach(record => {
@@ -1959,6 +1975,11 @@ function createOverlay() {
         <span class="creator-ar-placement-capture" data-ar-placement-capture aria-hidden="true"></span>
         <div class="creator-ar-placement-guide" aria-hidden="true">
             ${placementPointerMarkup('Place Marker', true)}
+        </div>
+        <div class="creator-ar-note-placement-preview" data-ar-note-placement-preview aria-hidden="true" hidden>
+          <span class="creator-ar-note-placement-surface nourishland-spatial-note-surface" data-ar-note-placement-surface>
+            <strong data-ar-note-placement-label>New note</strong>
+          </span>
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
         ${spatialMoveControlMarkup('ar')}
