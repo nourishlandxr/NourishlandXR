@@ -7,6 +7,7 @@ import { createTetherRibbonGeometry } from '../app/services/spatialTetherRendere
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
+import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -36,6 +37,42 @@ test('Creator AR keeps the Plant orb directly above its profile diagram', () => 
 
     const edge = creatorPlantProfileLayout(390, 844, 12, 300);
     assert.ok(edge.panelX - edge.panelWidth / 2 >= 8);
+});
+
+test('Creator AR recenters a saved Area around its Totem without losing relative positions', () => {
+    const records = [
+        {
+            marker: { id: 'kitchen-totem', type: 'area_checkpoint' },
+            position: { x: 2, y: 0, z: -3 },
+            coordinateSpace: 'session-local'
+        },
+        {
+            marker: { id: 'kitchen-plant', type: 'plant' },
+            position: { x: 2.6, y: 0.8, z: -4.2 },
+            coordinateSpace: 'session-local'
+        }
+    ];
+    const aligned = alignAreaToCheckpoint(records, 'kitchen-totem', { x: 8, y: 0, z: 5 });
+    assert.deepEqual(aligned.checkpoint.position, { x: 8, y: 0, z: 5 });
+    assert.deepEqual(aligned.records[1].position, { x: 8.6, y: 0.8, z: 3.8 });
+    assert.deepEqual(aligned.records[1].anchorPosition, { x: .6000000000000001, y: .8, z: -1.2000000000000002 });
+    assert.equal(aligned.records[1].coordinateSpace, 'checkpoint-local');
+    assert.equal(aligned.records[1].checkpointId, 'kitchen-totem');
+
+    const restoredAgain = alignAreaToCheckpoint(aligned.records, 'kitchen-totem', { x: -1, y: 0, z: -1 });
+    assert.deepEqual(restoredAgain.records[1].position, { x: -.3999999999999999, y: .8, z: -2.2 });
+
+    const mixedMigration = alignAreaToCheckpoint([
+        records[0],
+        aligned.records[1],
+        {
+            marker: { id: 'kitchen-note', type: 'note' },
+            position: { x: 1.5, y: 1, z: -2.5 },
+            coordinateSpace: 'session-local'
+        }
+    ], 'kitchen-totem', { x: 4, y: 0, z: 4 });
+    assert.deepEqual(mixedMigration.records[1].position, { x: 4.6, y: .8, z: 2.8 });
+    assert.deepEqual(mixedMigration.records[2].position, { x: 3.5, y: 1, z: 4.5 });
 });
 
 test('legacy AR diagnostics stay out of the camera interface', () => {
@@ -1070,6 +1107,13 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /Main welcome text/);
     assert.match(dashboardSource, /areaCheckpointColor/);
     assert.match(dashboardSource, /isPlaced \? 'VIEW IN AR' : 'PLACE IN AR'/);
+    assert.match(dashboardSource, /encoded\(isPlaced \? existing\?\.marker\.id \|\| '' : ''\)/);
+    assert.match(dashboardSource, /encoded\(existing && !isPlaced \? existing\.marker\.id : ''\)/);
+    assert.match(dashboardSource, /encoded\(isPlaced \? marker\.id : ''\)/);
+    assert.match(arSource, /data-ar-recenter-prompt/);
+    assert.match(arSource, /RECENTER AREA/);
+    assert.match(arSource, /alignAreaToCheckpoint\(areaRecords, totem\.marker\.id, origin\)/);
+    assert.doesNotMatch(arSource, /Checkpoint linked/);
     assert.match(dashboardSource, /Back to Area/);
     assert.match(dashboardSource, /Back to Dashboard/);
     assert.match(dashboardSource, /Precise location/);

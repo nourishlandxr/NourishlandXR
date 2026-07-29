@@ -10,9 +10,10 @@
 import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProject, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
-import { matrixFromPose } from '../services/spatialPlacement.js';
+import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
+import { alignAreaToCheckpoint } from '../services/areaSpatialAlignment.js';
 import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
@@ -625,6 +626,89 @@ function spatialAnchor(position, context = null, rotationDegrees = 0) {
         rotation_degrees: roundCoordinate(rotationDegrees),
         captured_at: new Date().toISOString()
     };
+}
+
+function checkpointOriginMatrix(position) {
+    const matrix = new Float32Array(16);
+    matrix[0] = 1;
+    matrix[5] = 1;
+    matrix[10] = 1;
+    matrix[15] = 1;
+    matrix[12] = Number(position.x);
+    matrix[13] = Number(position.y);
+    matrix[14] = Number(position.z);
+    return matrix;
+}
+
+function updateAreaRecenterPrompt({ ready = false, hidden = false, busy = false } = {}) {
+    const prompt = overlayRoot?.querySelector('[data-ar-recenter-prompt]');
+    const button = prompt?.querySelector('[data-ar-recenter-area]');
+    if (!prompt || !button) return;
+    prompt.hidden = hidden;
+    button.disabled = !ready || busy;
+    button.textContent = busy ? 'RECENTERING…' : 'RECENTER AREA';
+}
+
+async function recenterActiveArea() {
+    const totem = activeTotemRecord();
+    if (!totem) {
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no saved Totem to recenter around.`);
+        updateAreaRecenterPrompt({ hidden: true });
+        return false;
+    }
+    const target = spatialPosition(latestHitMatrix, latestViewerMatrix);
+    if (!target) {
+        setPlacementStatus('Move your phone briefly, aim at the Totem position, then tap Recenter Area.');
+        return false;
+    }
+    const origin = groundedTotemPosition(target);
+    const areaRecords = activeAreaMarkers();
+    const alignment = alignAreaToCheckpoint(areaRecords, totem.marker.id, origin);
+    if (!alignment.checkpoint) {
+        setPlacementStatus('The saved Totem position could not be used to restore this Area.');
+        return false;
+    }
+
+    updateAreaRecenterPrompt({ ready: true, busy: true });
+    activeCheckpointId = alignment.checkpoint.marker.id;
+    checkpointSessionOrigin = checkpointOriginMatrix(alignment.origin);
+    const alignedById = new Map(alignment.records.map(record => [record.marker.id, record]));
+    sessionMarkers = sessionMarkers.map(record => record.areaId === activeAreaId
+        ? alignedById.get(record.marker.id) || record
+        : record);
+    locatedTotemRecord = sessionMarkers.find(record => record.marker.id === alignment.checkpoint.marker.id) || null;
+    renderSessionMarkers();
+
+    const operation = captureArOperationContext();
+    try {
+        const checkpointRecord = alignment.records.find(record => record.marker.id === activeCheckpointId);
+        const relatedRecords = alignment.records.filter(record => record.marker.id !== activeCheckpointId);
+        await Promise.all(relatedRecords.map(record => saveMarkerAnchor(
+            operation.projectId,
+            record.siteId,
+            record.areaId,
+            record.marker.id,
+            spatialAnchor(record.position, operation, record.rotationDegrees)
+        )));
+        if (checkpointRecord) {
+            await saveMarkerAnchor(
+                operation.projectId,
+                checkpointRecord.siteId,
+                checkpointRecord.areaId,
+                checkpointRecord.marker.id,
+                spatialAnchor(checkpointRecord.position, operation, checkpointRecord.rotationDegrees)
+            );
+        }
+        if (!isArOperationCurrent(operation)) return false;
+        updateAreaRecenterPrompt({ hidden: true });
+        setPlacementStatus(`${activeAreaName || 'Area'} restored around its Totem. Saved Plants, Notes and Markers keep their positions relative to it.`);
+        return true;
+    } catch (error) {
+        if (!isArOperationCurrent(operation)) return false;
+        updateAreaRecenterPrompt({ hidden: true });
+        setPlacementStatus(`Area recentered for this visit, but the alignment could not be saved: ${error.message}`);
+        return false;
+    }
 }
 
 function cleanupDrag() {
@@ -1663,11 +1747,13 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             plantProfile,
             profileExpanded: false,
             position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
-                siteId: operation.siteId,
-                areaId: area.id,
-                areaName: area.name,
-                coordinateSpace: anchor.coordinate_space || 'session-local',
-                rotationDegrees: Number(anchor.rotation_degrees) || 0
+            anchorPosition: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
+            siteId: operation.siteId,
+            areaId: area.id,
+            areaName: area.name,
+            coordinateSpace: anchor.coordinate_space || 'session-local',
+            checkpointId: anchor.checkpoint_id || '',
+            rotationDegrees: Number(anchor.rotation_degrees) || 0
         };
     }));
     if (!isArOperationCurrent(operation, guardOptions)) return;
@@ -1675,6 +1761,14 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();
+    const totem = activeTotemRecord();
+    if (activeCheckpointId && totem) {
+        updateAreaRecenterPrompt({ ready: true });
+        setPlacementStatus(`Aim at the real position of ${totem.marker.name}, then tap Recenter Area to restore this Area.`);
+    } else if (activeCheckpointId) {
+        updateAreaRecenterPrompt({ hidden: true });
+        setPlacementStatus(`${area.name} loaded, but its saved Totem could not be found.`);
+    }
 }
 
 async function prepareExistingMarkerPlacement(markerId, operation = captureArOperationContext()) {
@@ -2043,7 +2137,7 @@ function createOverlay() {
     const initialStatus = readyPlacementType
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
         : hasCheckpoint
-        ? 'Checkpoint linked. Stand at the marker, then recenter before placing.'
+        ? 'Loading the saved Area Totem…'
         : activeAreaId
         ? 'Aim dot ready. Hover over Markers to reveal their names.'
         : '';
@@ -2052,6 +2146,10 @@ function createOverlay() {
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
+        <section class="creator-ar-recenter-prompt" data-ar-recenter-prompt ${hasCheckpoint ? '' : 'hidden'}>
+          <span><strong>RESTORE THIS AREA</strong><small>Aim at the Totem’s real position</small></span>
+          <button type="button" data-ar-recenter-area disabled>RECENTER AREA</button>
+        </section>
         <span class="creator-ar-placement-capture" data-ar-placement-capture aria-hidden="true"></span>
         <div class="creator-ar-placement-guide" aria-hidden="true">
             ${placementPointerMarkup('Place Marker', true)}
@@ -2120,6 +2218,7 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-exit]', exitArMode);
+    overlayRoot.querySelector('[data-ar-recenter-area]')?.addEventListener('click', () => void recenterActiveArea());
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });
     overlayRoot.querySelector('[data-ar-move-nearer]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset - .2); });

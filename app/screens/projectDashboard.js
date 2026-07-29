@@ -636,7 +636,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                 <div class="totem-essential-controls">
                     <div class="field totem-name-editor" hidden><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(totemName)}" required /></div>
                     <div class="field totem-color-control"><label for="areaCheckpointColor">Totem color</label><input id="areaCheckpointColor" type="color" value="${totemColor}" /></div>
-                    <button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(existing?.marker.id || '')}', '${existing ? '' : 'area_checkpoint'}', '', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'VIEW IN AR' : 'PLACE IN AR'}</button>
+                    <button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'VIEW IN AR' : 'PLACE IN AR'}</button>
                 </div>
             </section>
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Main welcome text</label><p>The main information bubble is usually the first thing visitors need.</p><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
@@ -1343,7 +1343,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">View / edit in AR</button>`
                 : '';
             const totemArAction = markerType === 'area_checkpoint'
-                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '${isPlaced ? '' : 'area_checkpoint'}', '${encoded(marker.id)}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'View in AR' : 'Place in AR'}</button>`
+                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? marker.id : '')}', '', '${encoded(isPlaced ? '' : marker.id)}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'View in AR' : 'Place in AR'}</button>`
                 : '';
             return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}" role="button" tabindex="0" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
