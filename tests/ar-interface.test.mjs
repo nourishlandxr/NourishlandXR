@@ -615,7 +615,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to the Nourishland XR demo interface/);
     assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
-    assert.match(source, /gentle introduction to using the centre aim to discover information, select Plants, and interact with space/);
+    assert.doesNotMatch(source, /gentle introduction/);
+    assert.match(source, /both a mapping tool and a portal for plant-related information/);
+    assert.match(source, /few examples of how plant information can be mapped to real places and brought to life/);
+    assert.match(source, /In Mobile Mode, the aim helps you interact with the space/);
+    assert.match(source, /create an orb—a Plant Marker/);
+    assert.match(source, /Choose a place, then press the aim once to place it/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
     assert.match(source, /A LIVING INTRODUCTION/);
@@ -672,7 +677,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /if \(placementReady && !marker\) pressPlacementPointer\(\)/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
-    assert.match(source, /Press the glowing centre pointer to place the Plant orb/);
+    assert.match(source, /press the aim once to place the Plant Marker orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);

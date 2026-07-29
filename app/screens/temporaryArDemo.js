@@ -63,7 +63,9 @@ const AR_PHONE_COMFORT = Object.freeze({
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the Nourishland XR demo interface.',
     'Augmented reality (AR) is a technology that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'This is a gentle introduction to using the centre aim to discover information, select Plants, and interact with space.'
+    'Nourishland XR is both a mapping tool and a portal for plant-related information. This demo shows a few examples of how plant information can be mapped to real places and brought to life.',
+    'In Mobile Mode, the aim helps you interact with the space. Here, you will use it to create an orb—a Plant Marker. Orbs are one kind of Marker; you will discover others as you continue.',
+    'Choose a place, then press the aim once to place it.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'zone'];
 const DEMO_ORB_MATERIALS = Object.freeze({
@@ -586,7 +588,7 @@ function armDemoPlacement(type, { direct = false } = {}) {
     }
     clearTimeout(aimRevealTimer);
     if (direct) {
-        setGuide('Press the glowing centre pointer to place the Plant orb.');
+        setGuide('Choose a place, then press the aim once to place the Plant Marker orb.');
         placementReady = true;
         place?.removeAttribute('hidden');
         place?.classList.add('is-revealing', 'is-ready');
