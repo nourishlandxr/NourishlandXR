@@ -31,7 +31,6 @@ let prismRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
-let boardControlTimer = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
 let knowledgeTourTimer = null;
@@ -146,14 +145,12 @@ function clearSessionState() {
     demoHeldIndex = -1;
     suppressSessionSelectUntil = 0;
     clearTimeout(boardTypingTimer);
-    clearTimeout(boardControlTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
     clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
     clearTimeout(totemRevealTimer);
     boardTypingTimer = null;
-    boardControlTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
     knowledgeTourTimer = null;
@@ -259,7 +256,6 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     clearTimeout(boardTypingTimer);
-    clearTimeout(boardControlTimer);
     const fullText = paragraph?.textContent || '';
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
     const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
@@ -289,7 +285,6 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
-        clearTimeout(boardControlTimer);
         if (paragraph) paragraph.textContent = fullText;
         introBoardVisibleBody = fullText;
         introBoardTextureDirty = true;
@@ -317,7 +312,6 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
         boardTypingTimer = setTimeout(typeNextCharacter, 180);
-        if (choiceButtons.length) boardControlTimer = setTimeout(revealControls, 3600);
     } else {
         finishTyping();
     }
@@ -338,7 +332,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
     clearTimeout(boardTypingTimer);
-    clearTimeout(boardControlTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
@@ -360,7 +353,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
-        clearTimeout(boardControlTimer);
         introBoardVisibleBody = bodyText;
         introBoardTextureDirty = true;
         paintBoardParagraphs(bodyText);
@@ -382,7 +374,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         paintBoardParagraphs(introBoardVisibleBody);
         if (typedLength >= bodyText.length) return finishTyping();
         const typedCharacter = bodyText[typedLength - 1] || '';
-        const typingDelay = /[.!?]/.test(typedCharacter) ? 220 : /[,;]/.test(typedCharacter) ? 110 : 58;
+        const typingDelay = /[.!?]/.test(typedCharacter) ? 160 : /[,;]/.test(typedCharacter) ? 80 : 34;
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
@@ -408,15 +400,11 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
-    if (continueButton && buttonLabel) boardControlTimer = setTimeout(() => {
-        continueButton.hidden = false;
-    }, 5000);
     setGuide(`${title}. ${bodyText}`);
 }
 
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
-    clearTimeout(boardControlTimer);
     appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
@@ -1208,6 +1196,19 @@ function unusedLegacyMarkerTexture() {
 }
 
 function drawWrappedTextureText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+    const lines = wrappedTextureLines(ctx, text, maxWidth);
+    lines.slice(0, maxLines).forEach((value, index) => {
+        const lastVisibleLine = index === maxLines - 1 && lines.length > maxLines;
+        let visible = value;
+        if (lastVisibleLine) {
+            while (visible && ctx.measureText(`${visible}…`).width > maxWidth) visible = visible.slice(0, -1);
+            visible += '…';
+        }
+        ctx.fillText(visible, x, y + index * lineHeight);
+    });
+}
+
+function wrappedTextureLines(ctx, text, maxWidth) {
     const words = String(text || '').split(/\s+/);
     const lines = [];
     let line = '';
@@ -1221,15 +1222,23 @@ function drawWrappedTextureText(ctx, text, x, y, maxWidth, lineHeight, maxLines 
         }
     });
     if (line) lines.push(line);
-    lines.slice(0, maxLines).forEach((value, index) => {
-        const lastVisibleLine = index === maxLines - 1 && lines.length > maxLines;
-        let visible = value;
-        if (lastVisibleLine) {
-            while (visible && ctx.measureText(`${visible}…`).width > maxWidth) visible = visible.slice(0, -1);
-            visible += '…';
+    return lines;
+}
+
+function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
+    const paragraphs = String(text || '').split(/\n\n/);
+    for (let fontSize = 46; fontSize >= 24; fontSize -= 2) {
+        const lineHeight = Math.round(fontSize * 1.22);
+        const paragraphGap = Math.round(fontSize * .5);
+        ctx.font = `650 ${fontSize}px system-ui, sans-serif`;
+        const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
+        const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
+            + Math.max(0, paragraphLines.length - 1) * paragraphGap;
+        if (totalHeight <= maxHeight || fontSize === 24) {
+            return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
-        ctx.fillText(visible, x, y + index * lineHeight);
-    });
+    }
+    return { fontSize: 24, lineHeight: 30, paragraphGap: 12, paragraphLines: [] };
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -1386,18 +1395,20 @@ function createIntroNoteTexture(texture = null) {
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
-    ctx.font = '650 48px system-ui, sans-serif';
     const typedBody = introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
-    const bodyParagraphs = typedBody.split(/\n\n/);
-    if (bodyParagraphs.length > 1) {
-        bodyParagraphs.slice(0, 3).forEach((paragraph, index) => {
-            drawWrappedTextureText(ctx, paragraph, 150, 500 + index * 165, 1100, 52, 3);
+    const visibleParagraphs = typedBody.split(/\n\n/);
+    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 470);
+    ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
+    let paragraphY = 500;
+    bodyLayout.paragraphLines.forEach((completeLines, paragraphIndex) => {
+        const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', 1100);
+        visibleLines.forEach((line, lineIndex) => {
+            ctx.fillText(line, 150, paragraphY + lineIndex * bodyLayout.lineHeight);
         });
-    } else {
-        drawWrappedTextureText(ctx, typedBody, 150, 510, 1100, 62, 7);
-    }
+        paragraphY += completeLines.length * bodyLayout.lineHeight + bodyLayout.paragraphGap;
+    });
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;

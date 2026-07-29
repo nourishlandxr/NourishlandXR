@@ -617,7 +617,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /finishIntroBoard\(\);[\s\S]*setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
     assert.match(source, /typingStartDelay = 1800/);
-    assert.match(source, /\? 220 : \/\[,;\]\//);
+    assert.match(source, /\? 160 : \/\[,;\]\//);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
     assert.match(styles, /tryit-board-identity 1\.15s \.25s/);
     assert.doesNotMatch(styles, /tryit-board-leave/);
@@ -681,8 +681,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardPosition: \[0, 0\.28, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /label\.height = 1080/);
-    assert.match(source, /500 \+ index \* 165/);
-    assert.match(styles, /min-height:min\(56dvh,540px\)/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 470\)/);
+    assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', 1100\)/);
+    assert.match(source, /visibleLines\.forEach/);
+    assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
+    assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /place\.dataset\.aimX = '50'/);
@@ -691,9 +694,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = Math\.min\(bodyText\.length, typedLength \+ 1\)/);
     assert.match(source, /const typingDelay = \/\[\.!\?\]\//);
-    assert.match(source, /: 58;/);
+    assert.match(source, /: 34;/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
-    assert.match(source, /boardControlTimer = setTimeout/);
+    assert.doesNotMatch(source, /boardControlTimer/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
     assert.match(styles, /width:min\(94vw,820px\)/);
     assert.match(styles, /top:max\(4px,env\(safe-area-inset-top\)\)/);
@@ -706,10 +709,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:grid; align-content:start;/);
-    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow-y:auto;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*grid-template-rows:auto auto minmax\(0,1fr\);[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow:hidden;/);
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
-    assert.match(styles, /font-size:clamp\(\.94rem,2\.7vw,1\.35rem\)/);
+    assert.match(styles, /font-size:clamp\(\.82rem,min\(2\.7vw,2\.05vh\),1\.35rem\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
