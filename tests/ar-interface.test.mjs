@@ -6,6 +6,7 @@ import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spati
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
+import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -24,6 +25,17 @@ test('immersive demo selection opens the guided Plant Profile', () => {
     assert.equal(selected, waiting);
     waiting.awaitingProfileReveal = false;
     assert.equal(selectGuidedDemoOrb([waiting, unrelated], () => {}), false);
+});
+
+test('Creator AR keeps the Plant orb directly above its profile diagram', () => {
+    const phone = creatorPlantProfileLayout(390, 844, 195, 300);
+    assert.equal(phone.panelX, 195);
+    assert.ok(phone.panelTop > 300);
+    assert.equal(phone.panelY, phone.panelTop + phone.panelHeight / 2);
+    assert.ok(phone.panelTop + phone.panelHeight <= 844 - 108);
+
+    const edge = creatorPlantProfileLayout(390, 844, 12, 300);
+    assert.ok(edge.panelX - edge.panelWidth / 2 >= 8);
 });
 
 test('legacy AR diagnostics stay out of the camera interface', () => {
@@ -977,14 +989,16 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /function hasPlantProfile\(record\)/);
     assert.match(arSource, /const opening = !record\.profileExpanded/);
     assert.match(arSource, /sessionMarkers\.forEach\(candidate => \{[\s\S]*candidate\.profileExpanded = false/);
-    assert.match(arSource, /information opened\. Tap the orb again to hide the honeycomb/);
+    assert.match(arSource, /setPlacementStatus\(''\)/);
     assert.match(arSource, /creator-ar-plant-profile/);
     assert.match(arSource, /function positionCreatorPlantProfile\(record, markerX, markerY\)/);
-    assert.match(arSource, /const panelWidth = Math\.min\(window\.innerWidth \* \.96, 620\)/);
-    assert.match(arSource, /const panelY = markerY - gap - halfHeight/);
-    assert.match(arSource, /const diagramAnchorY = panelY \+ panelHeight \* \.41/);
-    assert.doesNotMatch(arSource, /const below = markerY \+ gap \+ halfHeight/);
-    assert.match(arSource, /creator-ar-plant-profile is-overhead-diagram/);
+    assert.match(arSource, /creatorPlantProfileLayout\(window\.innerWidth, window\.innerHeight, markerX, markerY\)/);
+    assert.match(arSource, /creatorPlantProfileLayout/);
+    assert.match(arSource, /const diagramAnchorY = panelTop \+ 4/);
+    assert.match(arSource, /creator-ar-plant-profile is-below-orb/);
+    assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
+    assert.match(arSource, /RELATIONSHIPS: 'LINKS'/);
+    assert.match(arSource, /SCIENTIFIC: 'BOTANY'/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
     assert.match(arSource, /const open = candidate === cell/);
@@ -998,7 +1012,9 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(styles, /-webkit-mask-composite:xor; mask-composite:exclude/);
     assert.match(styles, /background:rgba\(7,28,18,.18\)/);
     assert.match(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)[\s\S]*background:transparent !important/);
-    assert.match(styles, /\.creator-ar-open-web-profile \{[^}]*left:82%;[^}]*width:min\(38vw,190px\)/);
+    assert.match(styles, /--honey-x-half:var\(--honey-x-step\)/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-plant\.is-info-open \.creator-ar-spatial-name \{[^}]*max-width:min\(36vw,132px\)/);
+    assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
     assert.match(dashboardSource, /plant-info-drawer/);
@@ -1012,14 +1028,14 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
 });
 
-test('an open AR Plant profile hands off to Web Mode and returns to the same orb', () => {
+test('an open AR Plant profile has no attached Web Mode card', () => {
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
-    assert.match(arSource, /data-ar-open-web-profile/);
-    assert.match(arSource, /OPEN IN WEB MODE/);
-    assert.match(arSource, /arReturnContext = `web-marker:\$\{record\.marker\.id\}`/);
-    assert.match(arSource, /Back to AR will return to this orb/);
+    assert.doesNotMatch(arSource, /data-ar-open-web-profile/);
+    assert.doesNotMatch(arSource, /OPEN IN WEB MODE/);
+    assert.match(arSource, /data-ar-context-web/);
+    assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
     assert.match(dashboardSource, /BACK TO AR · SAME PLANT/);
     assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
     assert.match(dashboardSource, /is-ar-web-handoff/);
@@ -1029,7 +1045,7 @@ test('an open AR Plant profile hands off to Web Mode and returns to the same orb
     assert.match(dashboardSource, /Plant QR code/);
     assert.match(dashboardSource, /syncMarkerQrAnchor/);
     assert.match(styles, /\.plant-qr-anchor-card/);
-    assert.match(styles, /\.creator-ar-open-web-profile/);
+    assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.match(styles, /\.ar-web-handoff/);
 });
 

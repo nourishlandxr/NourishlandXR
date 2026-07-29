@@ -13,6 +13,7 @@ import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose } from '../services/spatialPlacement.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
+import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -300,7 +301,12 @@ function creatorPlantKnowledge(record) {
 
 function creatorPlantKnowledgeMarkup(record) {
     const knowledge = creatorPlantKnowledge(record);
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-expanded="false"><b>${escapeHtml(label)}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
+    const compactLabel = label => ({
+        RELATIONSHIPS: 'LINKS',
+        SCIENTIFIC: 'BOTANY',
+        'FOREST LAYER': 'LAYER'
+    })[String(label).toUpperCase()] || label;
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-label="${escapeHtml(label)}" aria-expanded="false"><b>${escapeHtml(compactLabel(label))}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
     return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="plant-knowledge-lattice" d="M50 50 L38 28 L27 50 L38 72 L50 50 L62 28 L73 50 L62 72 Z"/><path class="plant-knowledge-terminals" d="M34 20 L28 9 M66 20 L72 9 M34 80 L28 91 M66 80 L72 91"/><circle cx="28" cy="9" r="1.7"/><circle cx="72" cy="9" r="1.7"/><circle cx="28" cy="91" r="1.7"/><circle cx="72" cy="91" r="1.7"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
 }
 
@@ -1247,26 +1253,18 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
-    const panelWidth = Math.min(window.innerWidth * .96, 620);
-    const panelHeight = Math.min(320, Math.max(270, window.innerWidth * .52));
-    const halfWidth = panelWidth / 2;
-    const halfHeight = panelHeight / 2;
-    const edge = 10;
-    const gap = 28;
-    const minX = halfWidth + edge;
-    const maxX = window.innerWidth - halfWidth - edge;
-    const panelX = Math.max(minX, Math.min(maxX, markerX));
-    const panelY = markerY - gap - halfHeight;
+    const layout = creatorPlantProfileLayout(window.innerWidth, window.innerHeight, markerX, markerY);
+    const { panelWidth, panelHeight, panelX, panelY, panelTop, tetherStartY } = layout;
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
     profile.style.width = `${panelWidth}px`;
     profile.style.height = `${panelHeight}px`;
     const diagramAnchorX = panelX;
-    const diagramAnchorY = panelY + panelHeight * .41;
+    const diagramAnchorY = panelTop + 4;
     const dx = diagramAnchorX - markerX;
-    const dy = diagramAnchorY - markerY;
+    const dy = diagramAnchorY - tetherStartY;
     tether.style.left = `${markerX}px`;
-    tether.style.top = `${markerY - 9}px`;
+    tether.style.top = `${tetherStartY - 9}px`;
     tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
     tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
@@ -1283,11 +1281,12 @@ function renderSessionMarkers() {
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-overhead-diagram" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}<button class="creator-ar-open-web-profile" type="button" data-ar-open-web-profile="${escapeHtml(record.marker.id)}"><strong>OPEN IN WEB MODE</strong><small>Read slowly · discuss · return to this orb</small></button></aside>`
+            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-below-orb" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        return `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>${profileLayer}</span>`;
+        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>`;
+        return `${markerLayer}${profileLayer}`;
     }).join('');
     visibleMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -1320,18 +1319,6 @@ function renderSessionMarkers() {
             cell.addEventListener('mouseenter', () => {
                 activate();
             });
-        });
-        const webProfileButton = layer.querySelector(`[data-ar-open-web-profile="${CSS.escape(record.marker.id)}"]`);
-        webProfileButton?.addEventListener('pointerdown', event => {
-            event.preventDefault();
-            event.stopPropagation();
-        });
-        webProfileButton?.addEventListener('click', event => {
-            event.preventDefault();
-            event.stopPropagation();
-            arReturnContext = `web-marker:${record.marker.id}`;
-            setPlacementStatus(`Opening ${record.marker.name} in Web Mode. Back to AR will return to this orb.`);
-            exitArMode();
         });
     });
     updateInteractionControls();
@@ -1471,9 +1458,7 @@ function beginMarkerInteraction(record, event) {
         }
         renderSessionMarkers();
         const visible = hasPlantProfile(record) ? record.profileExpanded : record.infoVisible;
-        setPlacementStatus(visible
-            ? `${record.marker.name} information opened. Tap the orb again to hide the honeycomb.`
-            : `${record.marker.name} information hidden.`);
+        setPlacementStatus('');
         return;
     }
     if (interactionMode === 'neutral') return;
@@ -1713,7 +1698,7 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         readyPlacementType = '';
         updateReadyPlacementControl();
         renderSessionMarkers();
-        setPlacementStatus(`${marker.name} Plant Profile is open. Use the honeycomb to explore it, or choose Move to adjust its position.`);
+        setPlacementStatus('');
         return true;
     }
     sessionMarkers = sessionMarkers.filter(record => record.marker.id !== marker.id);

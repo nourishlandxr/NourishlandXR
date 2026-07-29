@@ -999,6 +999,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-hit-target.has-plant-profile .creator-ar-spatial-name small { display: block; margin-top: 2px; color: rgba(220,239,149,.76); font-size: .52rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
 .creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name { width: min(72vw, 300px); max-width: min(72vw, 300px); padding: 9px 11px; border-radius: 14px; text-align: left; text-overflow: clip; white-space: normal; }
 .creator-ar-marker-hit-target.is-info-open .creator-ar-spatial-name > small { display: block; margin-top: 4px; color: rgba(255,255,255,.78); font-size: .62rem; font-weight: 550; line-height: 1.35; letter-spacing: normal; text-transform: none; white-space: normal; }
+.creator-ar-marker-hit-target-plant.is-info-open .creator-ar-spatial-name { width:auto; max-width:min(36vw,132px); padding:4px 8px; border-radius:999px; font-size:.62rem; line-height:1.1; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
+.creator-ar-marker-hit-target-plant.is-info-open .creator-ar-spatial-name > small { display:none; }
 .creator-ar-marker-hit-target-note.is-info-open .creator-ar-spatial-name { width:100%; max-width:none; height:100%; padding:18px 22px; }
 .creator-ar-marker-hit-target-note.is-info-open .creator-ar-spatial-name > small { display:-webkit-box; max-height:4.1em; overflow:hidden; font-size:.72rem; line-height:1.36; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
 .creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after,
@@ -1006,8 +1008,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 @keyframes creator-ar-profile-ready { from { transform: translateX(-1px) scale(.96); } to { transform: translateX(1px) translateY(-1px) scale(1.03); } }
 .creator-ar-plant-tether { position:fixed; z-index:1; display:block; height:18px; transform-origin:0 9px; overflow:visible; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--marker-accent,#b7e895) 55%,transparent)); opacity:0; pointer-events:none; animation:creator-ar-profile-fade .65s .08s ease forwards; }
 .creator-ar-plant-tether path { fill:none; stroke:color-mix(in srgb,var(--marker-accent,#b7e895) 72%,#edf8e7); stroke-width:1.5; stroke-linecap:round; vector-effect:non-scaling-stroke; }
-.creator-ar-plant-profile { position:fixed; z-index:2; width:min(96vw,620px); height:clamp(270px,52vw,320px); transform:translate(-50%,-50%) scale(.965); overflow:visible; border:0; background:transparent; color:rgba(255,255,255,.92); filter:drop-shadow(0 8px 18px rgba(0,0,0,.08)); opacity:0; pointer-events:none; animation:creator-ar-profile-arrive .72s cubic-bezier(.18,.78,.28,1) forwards; }
-.creator-ar-plant-profile .plant-knowledge-map { --honey-cell-size:clamp(78px,21vw,108px); --honey-cell-height:clamp(68px,18.2vw,94px); --honey-x-step:clamp(58.5px,15.75vw,81px); --honey-x-half:clamp(29.25px,7.875vw,40.5px); --honey-y-step:clamp(51px,13.65vw,70.5px); }
+.creator-ar-plant-profile { position:fixed; z-index:2; width:min(92vw,520px); height:clamp(238px,50vw,286px); transform:translate(-50%,-50%) scale(.965); overflow:visible; border:0; background:transparent; color:rgba(255,255,255,.92); filter:drop-shadow(0 8px 18px rgba(0,0,0,.08)); opacity:0; pointer-events:none; animation:creator-ar-profile-arrive .72s cubic-bezier(.18,.78,.28,1) forwards; }
+.creator-ar-plant-profile .plant-knowledge-map { --honey-cell-size:clamp(72px,19vw,96px); --honey-cell-height:clamp(62px,16.45vw,83px); --honey-x-step:clamp(54px,14.25vw,72px); --honey-x-half:var(--honey-x-step); --honey-y-step:clamp(47px,12.35vw,62px); }
 .creator-ar-plant-profile .plant-knowledge-connectors path { stroke:color-mix(in srgb,var(--profile-accent,#b7e895) 62%,#edf8e7); stroke-width:1.5; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--profile-accent,#b7e895) 42%,transparent)); }
 .creator-ar-plant-profile .plant-knowledge-connectors .plant-knowledge-lattice { stroke-width:2.25; }
 .creator-ar-plant-profile .plant-knowledge-connectors circle { fill:color-mix(in srgb,var(--profile-accent,#b7e895) 72%,#edf8e7); stroke:rgba(7,28,18,.72); }
@@ -1019,11 +1021,12 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-plant-profile .plant-knowledge-core::after { background:color-mix(in srgb,var(--profile-accent,#b7e895) 16%,rgba(7,28,18,.32)); }
 .creator-ar-plant-profile :is(.plant-knowledge-core,.plant-knowledge-cell) > * { position:relative; z-index:1; }
 .creator-ar-plant-profile .plant-knowledge-core { cursor:default; }
+.creator-ar-plant-profile .plant-knowledge-core small { font-size:clamp(.48rem,1.35vw,.58rem); letter-spacing:.055em; }
+.creator-ar-plant-profile .plant-knowledge-core strong { max-width:74%; font-size:clamp(.72rem,2.1vw,.86rem); overflow-wrap:anywhere; }
+.creator-ar-plant-profile .plant-knowledge-cell b { max-width:76%; font-size:clamp(.52rem,1.5vw,.62rem); line-height:1.04; overflow-wrap:anywhere; }
+.creator-ar-plant-profile .plant-knowledge-cell small { max-width:82%; font-size:clamp(.5rem,1.45vw,.6rem); line-height:1.1; overflow-wrap:anywhere; }
 .creator-ar-plant-profile .plant-knowledge-cell:is(:hover,:focus-visible,.is-open) { background:transparent !important; filter:drop-shadow(0 0 8px color-mix(in srgb,var(--profile-accent,#b7e895) 62%,transparent)); }
 .creator-ar-plant-profile .plant-knowledge-cell:is(:hover,:focus-visible,.is-open)::after { background:color-mix(in srgb,var(--profile-accent,#b7e895) 22%,rgba(7,28,18,.56)); }
-.creator-ar-open-web-profile { position:absolute; left:82%; top:calc(100% + 5px); z-index:5; display:grid; gap:2px; width:min(38vw,190px); min-height:46px; padding:7px 12px; transform:translateX(-50%); border:1px solid color-mix(in srgb,var(--profile-accent,#b7e895) 66%,#edf8e7); border-radius:14px; background:rgba(7,28,18,.34) !important; color:#fff !important; box-shadow:0 7px 22px rgba(0,0,0,.18); backdrop-filter:blur(7px); pointer-events:auto; }
-.creator-ar-open-web-profile strong { color:#fff; font-size:.72rem; letter-spacing:.05em; }
-.creator-ar-open-web-profile small { color:rgba(255,255,255,.76); font-size:.58rem; font-weight:650; }
 @keyframes creator-ar-profile-arrive { from { opacity: 0; transform: translate(-50%, -46%) scale(.93); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes creator-ar-profile-fade { to { opacity: .82; } }
 .creator-ar-marker-hit-target-intro_checkpoint .creator-ar-spatial-name,
