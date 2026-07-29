@@ -56,8 +56,8 @@ let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '2cm',
-    boardPosition: [0, 0.42, -2.8],
-    boardScale: [5.6, 8.75]
+    boardPosition: [0, 0.28, -2.8],
+    boardScale: [5.6, 10.8]
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the Nourishland XR demo interface.',
@@ -1035,12 +1035,12 @@ function plantInformationPosition(record) {
 
 function placeMarker() {
     if (!placementReady || marker || markers.length >= 4 || markers.some(record => record.tutorialStage === demoStage)) return;
-    placementReady = false;
     const position = placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
         return;
     }
+    placementReady = false;
     const type = demoStage;
     const directType = type === 'note' ? 'note' : 'sub_checkpoint';
     const sample = createMinimalMarkerDraft(directType, {
@@ -1132,6 +1132,7 @@ function renderInterface(simulated) {
         event.stopPropagation();
         suppressSessionSelectUntil = performance.now() + 1000;
     });
+    placementPointer.addEventListener('pointerup', pressPlacementPointer);
     placementPointer.addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
         if (demoHeldIndex < 0) return;
@@ -1342,10 +1343,10 @@ function canvasTexture(label, texture = null) {
 function createIntroNoteTexture(texture = null) {
     const label = introNoteCanvas ||= document.createElement('canvas');
     label.width = 1400;
-    label.height = 900;
+    label.height = 1080;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    const noteGradient = ctx.createLinearGradient(70, 100, 1330, 800);
+    const noteGradient = ctx.createLinearGradient(70, 90, 1330, 1000);
     noteGradient.addColorStop(0, 'rgba(74,122,91,.64)');
     noteGradient.addColorStop(.48, 'rgba(24,70,48,.54)');
     noteGradient.addColorStop(1, 'rgba(8,32,21,.42)');
@@ -1353,7 +1354,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.strokeStyle = 'rgba(239,255,229,.82)';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.roundRect(48, 62, 1304, 776, [62, 48, 68, 52]);
+    ctx.roundRect(48, 50, 1304, 980, [62, 48, 68, 52]);
     ctx.fill();
     ctx.stroke();
     const glassLight = ctx.createRadialGradient(280, 130, 20, 350, 190, 520);
@@ -1361,27 +1362,27 @@ function createIntroNoteTexture(texture = null) {
     glassLight.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = glassLight;
     ctx.beginPath();
-    ctx.roundRect(54, 68, 1292, 764, [58, 44, 64, 48]);
+    ctx.roundRect(54, 56, 1292, 968, [58, 44, 64, 48]);
     ctx.fill();
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText('A LIVING INTRODUCTION', 700, 190);
+    ctx.fillText('A LIVING INTRODUCTION', 700, 165);
     ctx.fillStyle = '#fff';
     let titleSize = 94;
     do {
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
         titleSize -= 4;
     } while (titleSize > 58 && ctx.measureText(introBoardTitle).width > 1120);
-    drawWrappedTextureText(ctx, introBoardTitle, 700, 330, 1120, titleSize + 14, 2);
+    drawWrappedTextureText(ctx, introBoardTitle, 700, 300, 1120, titleSize + 14, 2);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(150, 470);
-    ctx.lineTo(1250, 470);
+    ctx.moveTo(150, 430);
+    ctx.lineTo(1250, 430);
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
@@ -1392,10 +1393,10 @@ function createIntroNoteTexture(texture = null) {
     const bodyParagraphs = typedBody.split(/\n\n/);
     if (bodyParagraphs.length > 1) {
         bodyParagraphs.slice(0, 3).forEach((paragraph, index) => {
-            drawWrappedTextureText(ctx, paragraph, 150, 535 + index * 102, 1100, 46, 2);
+            drawWrappedTextureText(ctx, paragraph, 150, 500 + index * 165, 1100, 52, 3);
         });
     } else {
-        drawWrappedTextureText(ctx, typedBody, 150, 555, 1100, 62, 4);
+        drawWrappedTextureText(ctx, typedBody, 150, 510, 1100, 62, 7);
     }
     }
     ctx.shadowColor = 'transparent';
@@ -1765,9 +1766,7 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', () => {
             if (performance.now() < suppressSessionSelectUntil) return;
-            if (placementReady && !marker) {
-                setGuide('Press the glowing centre pointer to place the Plant orb.');
-            }
+            if (placementReady && !marker) pressPlacementPointer();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {

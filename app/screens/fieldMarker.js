@@ -1,6 +1,7 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
+import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 
 let app;
 let sites = [];
@@ -21,7 +22,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 function draw() {
     const plant = markerType === 'plant';
     const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
-    const areaOptions = places.filter(place => place.name !== 'Unassigned').map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
+    const areaOptions = places.filter(place => !isDefaultHomeArea(place)).map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
     app.innerHTML = `
         <div class="screen">
             <div class="page-header">
@@ -35,7 +36,7 @@ function draw() {
                     <div class="compact-inline-control"><select id="fieldArea" onchange="window.selectFieldPlace(this.value)">
                         <option value="">Select an Area</option>
                         ${areaOptions}
-                        <option value="__unassigned__" ${selected.place === '__unassigned__' ? 'selected' : ''}>Unassigned — decide later</option>
+                        <option value="__unassigned__" ${selected.place === '__unassigned__' ? 'selected' : ''}>Home — assign later</option>
                     </select><button class="inline-form-action" type="button" onclick="window.createFieldArea()">Create new Area</button></div>
                 </div>
                 <div class="compact-identity-row"><div class="field"><label for="fieldName">${plant ? 'Name (optional)' : 'Name'}</label><input id="fieldName" placeholder="Untitled is okay" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
@@ -161,12 +162,12 @@ export async function saveFieldMarker(event) {
     const saveIntent = event?.submitter?.value || (placementMode === 'ar' ? 'ar' : 'later');
 
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
-    if (!selected.place) { error.textContent = 'Select an Area or choose Unassigned.'; return; }
+    if (!selected.place) { error.textContent = 'Select an Area or choose Home.'; return; }
     try {
         error.textContent = 'Saving…';
         let place = places.find(item => item.id === selected.place);
         if (selected.place === '__unassigned__') {
-            place = places.find(item => item.name === 'Unassigned') || await createSitePlace(selected.project, selected.site, { name: 'Unassigned', type: 'Other', description: 'Content awaiting Area assignment.', visibility: 'draft' });
+            place = places.find(isDefaultHomeArea) || await createSitePlace(selected.project, selected.site, { ...AR_EXPERIENCE_CONFIG.fallbackArea, name: DEFAULT_HOME_AREA_NAME });
         }
         if (!place) throw new Error('The selected Area could not be found.');
         const profile = plantProfiles.find(item => item.id === plantId);

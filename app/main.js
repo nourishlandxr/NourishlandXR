@@ -22,11 +22,12 @@ import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, ren
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, openProjectAreaAr, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, clearProjectHomeBase, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderHomeBaseForm, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectHomeBase, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
+import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from './services/tutorialProgress.js';
 import { projectTemplates } from './templates/projectTemplates.js';
+import { isDefaultHomeArea } from './services/arExperienceConfig.js';
 
 const app = document.getElementById('app');
 const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
@@ -412,9 +413,6 @@ window.captureProjectAreaLocation = captureProjectAreaLocation;
 window.saveProjectAreaLocation = (event, projectId, areaId) => saveProjectAreaLocation(event, projectId, areaId);
 window.deleteProjectArea = (projectId, areaId) => deleteProjectArea(projectId, areaId);
 window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
-window.renderHomeBaseForm = projectId => renderHomeBaseForm(app, projectId);
-window.saveProjectHomeBase = (event, projectId) => saveProjectHomeBase(event, projectId);
-window.clearProjectHomeBase = projectId => clearProjectHomeBase(projectId);
 window.resumeAreaCreationFlow = (projectId, areaId, intent) => resumeAreaCreationFlow(app, projectId, areaId, intent);
 window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
 window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
@@ -468,7 +466,7 @@ window.renderLocationFieldMarker = async (projectId, type, placementMode = 'with
     let sites = await loadProjectSites(decodedProjectId);
     let site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
     const areas = site ? await loadSitePlaces(decodedProjectId, site.id) : [];
-    if (!allowUnassigned && !areas.some(area => area.name !== 'Unassigned')) return renderAreaRequired(app, projectId, type, placementMode, 'content');
+    if (!allowUnassigned && !areas.some(area => !isDefaultHomeArea(area))) return renderAreaRequired(app, projectId, type, placementMode, 'content');
     if (!site) {
         site = await ensureProjectLocation(decodedProjectId);
         sites = [site];

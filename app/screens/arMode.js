@@ -8,7 +8,7 @@
  */
 
 import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProject, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
-import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
+import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose } from '../services/spatialPlacement.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
@@ -62,6 +62,7 @@ let locationNoteAnchor = null;
 let referenceSpaceHasFloor = false;
 let sessionGroundY = null;
 let locationNoteConfig = null;
+let locationNoteVisible = false;
 const hiddenStructuralMarkerIds = new Set();
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'area totem' })[type] || 'item';
@@ -232,9 +233,10 @@ function updateLocationNote() {
     const note = overlayRoot?.querySelector('[data-ar-location-note]');
     if (!note) return;
     const config = locationNoteConfig || normalizedLocationNote();
-    const areaName = activeAreaName || 'Unassigned';
+    const areaName = activeAreaName || DEFAULT_HOME_AREA_NAME;
     note.dataset.locationNoteEnabled = String(config.enabled);
-    note.hidden = !config.enabled;
+    note.dataset.locationNoteVisible = String(locationNoteVisible);
+    note.hidden = !config.enabled || !locationNoteVisible;
     note.setAttribute('aria-label', `${config.prompt} ${config.title}. Area: ${areaName}.`);
     const prompt = note.querySelector('[data-ar-location-prompt]');
     const title = note.querySelector('[data-ar-location-title]');
@@ -253,10 +255,12 @@ function activateArea(area) {
     if (activeAreaId !== nextAreaId) {
         sessionMarkers = [];
         locatedTotemRecord = null;
+        locationNoteVisible = false;
+        locationNoteAnchor = null;
         renderSessionMarkers();
     }
     activeAreaId = nextAreaId;
-    activeAreaName = area?.name || '';
+    activeAreaName = isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : area?.name || '';
     updateLocationNote();
 }
 
@@ -354,15 +358,20 @@ function updateContextToolbar() {
             opacity: markerAppearanceOpacity(selectedRecord.marker)
         };
     const stateLabel = placementType ? `Create ${readyPlacementLabel(type)}` : `Edit ${selectedRecord.marker.name}`;
+    const locationNoteControl = !placementType && type === 'area_checkpoint'
+        ? `<button type="button" data-ar-context-location-note aria-pressed="${locationNoteVisible}"><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span>${locationNoteVisible ? 'HIDE NOTE' : 'VIEW NOTE'}</span></button>`
+        : '';
     toolbar.hidden = false;
     toolbar.setAttribute('aria-label', `${stateLabel} tools`);
     toolbar.innerHTML = `<span class="creator-ar-context-label">${placementType ? 'CREATE' : 'EDIT'}</span>
         ${contextAppearanceButtons(type, appearance)}
+        ${locationNoteControl}
         <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>WEB MODE</span></button>
         <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
     bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
+    bindContextToolbarAction(toolbar, '[data-ar-context-location-note]', () => toggleLocationNoteVisibility(selectedRecord));
     bindContextToolbarAction(toolbar, '[data-ar-context-web]', () => void openContextInWebMode());
     bindContextToolbarAction(toolbar, '[data-ar-context-close]', () => {
         if (placementType) {
@@ -723,7 +732,7 @@ async function openUnplacedBag() {
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Unassigned Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.areaName || 'Unassigned')}</small></span></button>`).join('')}</div>` : '<p>This folder is empty. Save information here only when you want to organise or place it later.</p>'}`;
+        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(isDefaultHomeArea(item.areaName) ? DEFAULT_HOME_AREA_NAME : item.areaName || DEFAULT_HOME_AREA_NAME)}</small></span></button>`).join('')}</div>` : '<p>Home is empty. Save information here when you want to organise or place it later.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];
@@ -737,7 +746,7 @@ async function openUnplacedBag() {
             setPlacementStatus(`${item.marker.name} selected from your Bag. Aim the breathing circle, then tap to place it.`);
         }));
     } catch (error) {
-        bag.innerHTML = `<div><strong>Unassigned Folder</strong><button type="button" data-ar-close-bag aria-label="Close Folder">&times;</button></div><p>Could not load the folder: ${escapeHtml(error.message)}</p>`;
+        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div><p>Could not load Home: ${escapeHtml(error.message)}</p>`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
     }
 }
@@ -771,10 +780,36 @@ function toggleActiveTotemVisibility() {
     } else {
         hiddenStructuralMarkerIds.add(totem.marker.id);
         locatedTotemRecord = null;
+        locationNoteVisible = false;
+        locationNoteAnchor = null;
+        updateLocationNote();
         setPlacementStatus(`${totem.marker.name} Totem hidden for this AR session.`);
     }
     renderSessionMarkers();
     closePlacePicker();
+}
+
+function toggleLocationNoteVisibility(record = activeTotemRecord()) {
+    const config = locationNoteConfig || normalizedLocationNote();
+    if (!config.enabled) {
+        setPlacementStatus('The Location Note is unavailable. Enable it in Project Settings first.');
+        return;
+    }
+    const totem = record?.marker?.type === 'area_checkpoint' ? record : activeTotemRecord();
+    if (!totem) {
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem for the Location Note yet.`);
+        return;
+    }
+    locationNoteVisible = !locationNoteVisible;
+    locationNoteAnchor = null;
+    if (locationNoteVisible) hiddenStructuralMarkerIds.delete(totem.marker.id);
+    updateLocationNote();
+    positionLocationNote();
+    renderSessionMarkers();
+    updateContextToolbar();
+    setPlacementStatus(locationNoteVisible
+        ? `Location Note shown above the ${totem.marker.name} Totem.`
+        : 'Location Note hidden.');
 }
 
 function createTotemFromSpecial() {
@@ -801,12 +836,17 @@ function renderSpecialMarkerChoices(picker) {
         <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-point-to-totem><b aria-hidden="true">&#8982;</b><span><strong>Point to Totem</strong></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem><b aria-hidden="true">${totemHidden ? '&#9673;' : '&#9675;'}</b><span><strong>${totemHidden ? 'Show Totem' : 'Hide Totem'}</strong></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-location-note><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span><strong>${locationNoteVisible ? 'Hide Location Note' : 'View Location Note'}</strong></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create</strong><small>Totem / Area</small></span></button>
         </div></section>
         <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div><small>MARKS</small><div class="creator-ar-special-grid">${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-point-to-totem]').addEventListener('click', pointToActiveTotem);
     picker.querySelector('[data-ar-toggle-totem]').addEventListener('click', toggleActiveTotemVisibility);
+    picker.querySelector('[data-ar-toggle-location-note]').addEventListener('click', () => {
+        toggleLocationNoteVisibility(totem);
+        closePlacePicker();
+    });
     picker.querySelector('[data-ar-create-area]').addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         readySpecialMarker = {
@@ -825,7 +865,7 @@ async function openArAreaCreationForm() {
     const loadingOperation = captureArOperationContext();
     const areas = await loadPlacementAreas(loadingOperation).catch(() => []);
     if (!isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
-    const nextNumber = areas.filter(area => area.name !== 'Unassigned').length + 1;
+    const nextNumber = areas.filter(area => !isDefaultHomeArea(area)).length + 1;
     picker.hidden = false;
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Create New Area</p><button type="button" data-ar-close-area-create aria-label="Close">&times;</button></div><form data-ar-create-area-form><label>Area name<input name="areaName" value="Area ${nextNumber}" required /></label><p class="creator-ar-picker-status">Examples: Orchard, Vegetable Garden, Creek Bank.</p><button class="creator-ar-special-totem" type="submit"><b aria-hidden="true">${markerIcon('area_checkpoint')}</b><span><strong>Create &amp; Place Totem</strong><small>The new Area is saved before placement begins.</small></span></button><p data-ar-create-area-status class="creator-ar-picker-status"></p></form>`;
     picker.querySelector('[data-ar-close-area-create]').addEventListener('click', closePlacePicker);
@@ -905,30 +945,38 @@ function projectWorldPoint(view, point) {
 }
 
 function ensureLocationNoteAnchor() {
-    if (locationNoteAnchor || !latestViewerMatrix) return locationNoteAnchor;
-    const cameraX = latestViewerMatrix[12];
-    const cameraZ = latestViewerMatrix[14];
-    const forwardX = -latestViewerMatrix[8];
-    const forwardZ = -latestViewerMatrix[10];
-    const forwardLength = Math.hypot(forwardX, forwardZ) || 1;
-    const groundY = currentGroundY();
+    if (!locationNoteVisible) return null;
+    const totem = activeTotemRecord();
+    if (!totem) {
+        locationNoteAnchor = null;
+        return null;
+    }
+    const grounded = groundedTotemPosition(totem.position);
+    const [, halfHeight] = markerDimensions(totem.marker);
+    const attachmentY = grounded.y + halfHeight * 2;
     locationNoteAnchor = {
-        x: cameraX + forwardX / forwardLength * 4.5,
-        y: groundY + 3.2,
-        z: cameraZ + forwardZ / forwardLength * 4.5,
-        groundY
+        x: grounded.x,
+        y: attachmentY + 1.15,
+        z: grounded.z,
+        attachmentY
     };
     return locationNoteAnchor;
 }
 
 function positionLocationNote(view = latestView) {
     const note = overlayRoot?.querySelector('[data-ar-location-note]');
-    if (!note || note.dataset.locationNoteEnabled === 'false') return;
+    if (!note || note.dataset.locationNoteEnabled === 'false' || !locationNoteVisible) {
+        if (note) note.hidden = true;
+        return;
+    }
     const anchor = ensureLocationNoteAnchor();
-    if (!anchor) return;
+    if (!anchor) {
+        note.hidden = true;
+        return;
+    }
     const boardPoint = projectWorldPoint(view, anchor);
-    const groundPoint = projectWorldPoint(view, { x: anchor.x, y: anchor.groundY, z: anchor.z });
-    if (!boardPoint || !groundPoint) {
+    const attachmentPoint = projectWorldPoint(view, { x: anchor.x, y: anchor.attachmentY, z: anchor.z });
+    if (!boardPoint || !attachmentPoint) {
         note.hidden = true;
         return;
     }
@@ -942,16 +990,16 @@ function positionLocationNote(view = latestView) {
     if (!visible) return;
     const boardHalfHeight = Math.min(78, Math.max(58, window.innerHeight * .075));
     const stickStart = { x: boardPoint.x, y: boardPoint.y + boardHalfHeight };
-    const dx = groundPoint.x - stickStart.x;
-    const dy = groundPoint.y - stickStart.y;
+    const dx = attachmentPoint.x - stickStart.x;
+    const dy = attachmentPoint.y - stickStart.y;
     note.style.setProperty('--location-note-x', `${boardPoint.x.toFixed(1)}px`);
     note.style.setProperty('--location-note-y', `${boardPoint.y.toFixed(1)}px`);
     note.style.setProperty('--location-stick-x', `${stickStart.x.toFixed(1)}px`);
     note.style.setProperty('--location-stick-y', `${stickStart.y.toFixed(1)}px`);
     note.style.setProperty('--location-stick-length', `${Math.max(24, Math.hypot(dx, dy)).toFixed(1)}px`);
     note.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
-    note.style.setProperty('--location-ground-x', `${groundPoint.x.toFixed(1)}px`);
-    note.style.setProperty('--location-ground-y', `${groundPoint.y.toFixed(1)}px`);
+    note.style.setProperty('--location-ground-x', `${attachmentPoint.x.toFixed(1)}px`);
+    note.style.setProperty('--location-ground-y', `${attachmentPoint.y.toFixed(1)}px`);
 }
 
 function multiplyMatrices(a, b) {
@@ -1691,7 +1739,7 @@ async function ensurePlacementArea(operation = captureArOperationContext()) {
         const areas = await loadPlacementAreas(operation);
         if (!isArOperationCurrent(operation, { matchLocation: false })) return false;
         if (areas.some(area => area.id === activeAreaId)) return true;
-        const existingFallback = areas.find(area => area.name === AR_EXPERIENCE_CONFIG.fallbackArea.name);
+        const existingFallback = areas.find(isDefaultHomeArea);
         const fallback = existingFallback || await createSitePlace(
             operation.projectId,
             activeSiteId || operation.siteId,
@@ -2036,7 +2084,7 @@ function createOverlay() {
             <span data-ar-location-prompt>${escapeHtml(locationNoteConfig?.prompt || DEFAULT_LOCATION_NOTE.prompt)}</span>
             <small>YOU ARE IN</small>
             <strong data-ar-location-title>${escapeHtml(locationNoteConfig?.title || activeProjectName || activeProjectId || 'This location')}</strong>
-            <span data-ar-location-area>AREA · ${escapeHtml(activeAreaName || 'Unassigned')}</span>
+            <span data-ar-location-area>AREA · ${escapeHtml(activeAreaName || DEFAULT_HOME_AREA_NAME)}</span>
           </section>
         </aside>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
@@ -2148,6 +2196,7 @@ function cleanup() {
     referenceSpaceHasFloor = false;
     sessionGroundY = null;
     locationNoteConfig = null;
+    locationNoteVisible = false;
     placementArmGeneration += 1;
     specialPickerRequest += 1;
     hiddenStructuralMarkerIds.clear();
@@ -2248,6 +2297,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     referenceSpaceHasFloor = false;
     sessionGroundY = null;
     locationNoteConfig = normalizedLocationNote();
+    locationNoteVisible = false;
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';

@@ -87,7 +87,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
-    assert.match(entrySource, /Home Base/);
+    assert.doesNotMatch(entrySource, /Home Base/);
     assert.match(entrySource, /Trail Entrance/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /growth\.starterActions\.map/);
@@ -124,7 +124,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /Add without AR/);
     assert.match(source, /Stories &amp; Checkpoints/);
     assert.match(source, /Project Settings/);
-    assert.match(source, /Home &amp; Entrances/);
+    assert.match(source, /Visitor Entrances/);
     assert.match(source, /Organizer Folder/);
     assert.match(source, /createAreaAction: `window\.renderProjectAreaForm/);
     assert.match(source, /growthJourney/);
@@ -217,7 +217,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
 test('Home owns no-Area experiments while named Areas remain isolated', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const arSource = fs.readFileSync(path.join(root, 'app/screens/arMode.js'), 'utf8');
-    assert.match(dashboardSource, /place\.name === 'Unassigned' \? 'Home'/);
+    assert.match(dashboardSource, /isDefaultHomeArea\(area\)/);
+    assert.match(dashboardSource, /displayAreaName\(place\)/);
     assert.match(arSource, /activeAreaMarkers\(\)/);
     assert.match(arSource, /activateArea\(selected\)/);
     assert.match(arSource, /activateArea\(null\)/);
@@ -254,7 +255,8 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     assert.match(dashboardSource, /Main Location/);
     assert.match(dashboardSource, />Create Area</);
     assert.doesNotMatch(dashboardSource, /Is this where your Starting Point will be/);
-    assert.match(dashboardSource, /A Home Base is simply a reference to your main Area/);
+    assert.match(dashboardSource, /Continue in Home/);
+    assert.doesNotMatch(dashboardSource, /A Home Base is simply a reference to your main Area/);
     assert.match(dashboardSource, /A Trail Entrance belongs to the Area where a guided journey begins/);
     assert.match(dashboardSource, /area_explained/);
     assert.match(dashboardSource, /first_area_created_or_selected/);
@@ -263,7 +265,7 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     assert.match(dashboardSource, /missingTotemArea/);
     assert.match(dashboardSource, /allAreasHavePlacedTotems/);
     assert.match(dashboardSource, /effectiveMarkerType/);
-    assert.match(dashboardSource, /const homeArea = areas\.find/);
+    assert.match(dashboardSource, /const areas = places\.filter\(place => !isDefaultHomeArea\(place\)\)/);
     assert.match(dashboardSource, /const startingPoints = entries\.filter\(entry => entry\.marker\.type === 'intro_checkpoint'\)/);
     assert.match(dashboardSource, /window\.startExistingMarkerPlacement/);
     assert.doesNotMatch(dashboardSource, /savedMarker = await updatePlaceMarker\(projectId, context\.site\.id, place\.id, savedMarker\.id, data\)/);
@@ -307,7 +309,7 @@ test('quick access creation is minimal and separates Area assignment from placem
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
     assert.match(source, /<label for="fieldArea">Area<\/label>/);
     assert.match(source, /Use existing/);
-    assert.match(source, /Unassigned — decide later/);
+    assert.match(source, /Home — assign later/);
     assert.match(source, /Create new Area/);
     assert.match(source, /Not yet placed · can be placed later/);
     assert.doesNotMatch(source, /<label>Project<\/label>/);

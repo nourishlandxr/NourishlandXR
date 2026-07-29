@@ -48,7 +48,7 @@ export function renderProjectEntry(config) {
         ? areas.map(area => `<button class="project-area-link database-record-card area-record-card" type="button" onclick="${area.action}">
             <span class="project-area-link-icon" aria-hidden="true">▧</span>
             <span class="project-area-link-copy"><small class="record-file-tab">AREA FILE</small><strong>${area.label}</strong><span>${area.type} · ${area.identifier} · ${area.contentCount} record${area.contentCount === 1 ? '' : 's'}</span></span>
-            <span class="project-area-link-meta">${area.hasHomeBase ? 'Home Base' : area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
+            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
