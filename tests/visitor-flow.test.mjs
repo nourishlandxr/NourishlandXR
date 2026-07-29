@@ -214,6 +214,25 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
 });
 
+test('creator Web Hub keeps Home, maps, projects and the plant database in one workspace', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    assert.match(dashboardSource, /<h1>Web Hub<\/h1>/);
+    assert.match(dashboardSource, /<strong>Home<\/strong>/);
+    assert.match(dashboardSource, /<strong>Global Map<\/strong>/);
+    assert.match(dashboardSource, /<strong>Projects &amp; Areas<\/strong>/);
+    assert.match(dashboardSource, /<strong>Plant Database<\/strong>/);
+    assert.match(dashboardSource, /export async function renderWebHubHome/);
+    assert.match(dashboardSource, /export async function renderWebHubMap/);
+    assert.match(dashboardSource, /export async function renderWebHubProjects/);
+    assert.match(dashboardSource, /export async function renderWebHubPlants/);
+    assert.match(dashboardSource, /isDefaultHomeArea\(entry\.place\)/);
+    assert.match(dashboardSource, /window\.renderLocationMap/);
+    assert.match(dashboardSource, /data-web-hub-plant/);
+    assert.match(mainSource, /window\.renderWebHubHome/);
+    assert.match(mainSource, /window\.filterWebHubPlants = filterWebHubPlants/);
+});
+
 test('Home owns no-Area experiments while named Areas remain isolated', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const arSource = fs.readFileSync(path.join(root, 'app/screens/arMode.js'), 'utf8');

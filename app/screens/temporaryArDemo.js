@@ -54,7 +54,8 @@ let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 const AR_PHONE_COMFORT = Object.freeze({
-    pointerOffsetCss: '2cm',
+    pointerOffsetCss: '3.5cm',
+    pointerOffsetPixels: 132.3,
     boardPosition: [0, 0.28, -2.8],
     boardScale: [5.6, 10.8]
 });
@@ -418,11 +419,8 @@ function runArWelcomeTutorial() {
         'Continue',
         () => {
             finishIntroBoard();
-            const place = appRoot?.querySelector('[data-tryit-place]');
-            place?.removeAttribute('hidden');
-            requestAnimationFrame(() => place?.classList.add('is-revealing'));
             clearTimeout(aimRevealTimer);
-            aimRevealTimer = setTimeout(() => armDemoPlacement('plant', { direct: true }), 900);
+            armDemoPlacement('plant', { direct: true });
         }
     );
 }
@@ -572,7 +570,7 @@ function armDemoPlacement(type, { direct = false } = {}) {
     shiftSimulatedSceneForStage(type);
     const place = appRoot?.querySelector('[data-tryit-place]');
     if (place && simulatedMode) {
-        const comfortOffsetPercent = 75.6 / Math.max(320, window.innerHeight || 640) * 100;
+        const comfortOffsetPercent = AR_PHONE_COMFORT.pointerOffsetPixels / Math.max(320, window.innerHeight || 640) * 100;
         const comfortableY = Math.min(86, 50 + comfortOffsetPercent);
         place.dataset.aimX = '50';
         place.dataset.aimY = String(comfortableY);

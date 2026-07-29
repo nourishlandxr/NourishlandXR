@@ -156,7 +156,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(styles, /\.creator-ar-overlay\.is-neutral-mode/);
     assert.match(styles, /\.creator-ar-overlay\.is-hold-mode \.creator-ar-mode-pointer/);
     assert.match(styles, /\.creator-ar-overlay\.is-select-mode \.creator-ar-mode-pointer/);
-    assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*top:\s*calc\(50% \+ 2cm\)/);
+    assert.match(styles, /\.creator-ar-mode-pointer \{[^}]*top:\s*calc\(50% \+ 3\.5cm\)/);
     assert.doesNotMatch(arSource, /data-ar-mode-pointer-label/);
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /launchedSession\.addEventListener\('select'/);
@@ -615,7 +615,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /finishIntroBoard\(\);[\s\S]*setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
+    assert.match(source, /finishIntroBoard\(\);[\s\S]*armDemoPlacement\('plant', \{ direct: true \}\)/);
+    assert.doesNotMatch(source, /setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
     assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /\? 160 : \/\[,;\]\//);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
@@ -703,8 +704,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/);
     assert.match(styles, /max-height:none/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*\+ 44px\)/);
-    assert.match(styles, /top:calc\(50% \+ 2cm\)/);
-    assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 2cm\)/);
+    assert.match(source, /pointerOffsetCss: '3\.5cm'/);
+    assert.match(source, /pointerOffsetPixels: 132\.3/);
+    assert.match(styles, /top:calc\(50% \+ 3\.5cm\)/);
+    assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 3\.5cm\)/);
     assert.match(styles, /\.tryit-intro-continue \{[\s\S]*border-radius:999px/);
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
