@@ -8,6 +8,14 @@ import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPr
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
+import {
+    arucoMarkerMatrix,
+    createPhysicalAnchorTrackingState,
+    normalizePhysicalAnchor,
+    physicalAnchorPointToDetectorCamera,
+    physicalMarkerLabel,
+    resolvePhysicalAnchorTotem
+} from '../app/services/physicalAnchor.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -73,6 +81,97 @@ test('Creator AR recenters a saved Area around its Totem without losing relative
     ], 'kitchen-totem', { x: 4, y: 0, z: 4 });
     assert.deepEqual(mixedMigration.records[1].position, { x: 4.6, y: .8, z: 2.8 });
     assert.deepEqual(mixedMigration.records[2].position, { x: 3.5, y: 1, z: 4.5 });
+});
+
+test('Physical Marker IDs use the exact original ArUco 5x5 encoding and NL labels', () => {
+    assert.equal(physicalMarkerLabel(1), 'NL-001');
+    assert.equal(physicalMarkerLabel(10), 'NL-010');
+    assert.deepEqual(arucoMarkerMatrix(1), [
+        [1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+        [1, 0, 1, 1, 1]
+    ]);
+});
+
+test('Physical Marker settings validate and keep numeric ID separate from its label', () => {
+    const anchor = normalizePhysicalAnchor({
+        enabled: true,
+        markerId: '3',
+        markerSizeMm: '140',
+        offsetMeters: { x: '.1', y: '0', z: '-.2' },
+        rotationDegrees: { yaw: '45', pitch: '0', roll: '-2' },
+        scale: '1.25'
+    });
+    assert.equal(anchor.markerId, 3);
+    assert.equal(anchor.markerLabel, 'NL-003');
+    assert.equal(anchor.markerFamily, 'aruco-original-5x5');
+    assert.equal(anchor.markerSizeMm, 140);
+    assert.equal(anchor.scale, 1.25);
+    assert.throws(() => normalizePhysicalAnchor({ ...anchor, markerSizeMm: 0 }), /greater than zero/);
+    assert.throws(() => normalizePhysicalAnchor({ ...anchor, scale: Number.NaN }), /finite number/);
+});
+
+test('Physical Marker transform applies scale, rotations, offsets and detector pose in one order', () => {
+    const cameraPoint = physicalAnchorPointToDetectorCamera(
+        { x: 1, y: 0, z: 0 },
+        {
+            bestRotation: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            bestTranslation: [0, 0, 0]
+        },
+        {
+            enabled: true,
+            markerId: 1,
+            markerSizeMm: 140,
+            offsetMeters: { x: 1, y: 2, z: 3 },
+            rotationDegrees: { yaw: 0, pitch: 0, roll: 90 },
+            scale: 2
+        }
+    );
+    assert.ok(Math.abs(cameraPoint.x - 1000) < 1e-9);
+    assert.ok(Math.abs(cameraPoint.y - 3000) < 1e-9);
+    assert.ok(Math.abs(cameraPoint.z - 4000) < 1e-9);
+});
+
+test('Physical Marker tracking loads one Totem, holds briefly and clears after marker loss', () => {
+    const association = {
+        marker: {
+            id: 'kitchen-totem',
+            name: 'Kitchen Totem',
+            physicalAnchor: { enabled: true, markerFamily: 'aruco-original-5x5', markerId: 1 }
+        }
+    };
+    assert.equal(resolvePhysicalAnchorTotem([association], 1), association);
+    const tracking = createPhysicalAnchorTrackingState(300);
+    const resolve = id => resolvePhysicalAnchorTotem([association], id);
+    const first = tracking.update([{ id: 1 }], 1000, resolve);
+    assert.equal(first.state, 'tracked');
+    assert.equal(first.loadModel, true);
+    assert.equal(tracking.update([{ id: 1 }], 1100, resolve).loadModel, false);
+    assert.equal(tracking.update([], 1399, resolve).state, 'holding');
+    assert.equal(tracking.update([], 1401, resolve).state, 'lost');
+    assert.equal(tracking.update([], 1402, resolve).state, 'searching');
+    assert.equal(tracking.update([{ id: 99 }], 1403, resolve).state, 'searching');
+    const reacquired = tracking.update([{ id: 1 }], 1500, resolve);
+    assert.equal(reacquired.state, 'tracked');
+    assert.equal(reacquired.loadModel, false);
+});
+
+test('Physical Marker prototype is feature-flagged and exposes saved and unsaved scan paths', () => {
+    const dashboard = read('app/screens/projectDashboard.js');
+    const scanner = read('app/screens/physicalAnchorScanner.js');
+    assert.match(dashboard, /physicalAnchors: false/);
+    assert.match(dashboard, /Physical Marker prototype/);
+    assert.match(dashboard, /Test in AR/);
+    assert.match(dashboard, /Scan Physical Marker/);
+    assert.match(dashboard, /Remove association/);
+    assert.match(scanner, /dictionaryName: 'ARUCO'/);
+    assert.match(scanner, /TRACKING_GRACE_MS = 300/);
+    assert.match(scanner, /getTracks\(\)\.forEach\(track => track\.stop\(\)\)/);
+    assert.match(scanner, /js-aruco2@2\.0\.0/);
+    assert.ok(scanner.indexOf('getUserMedia') < scanner.indexOf('new window.AR.Detector'));
+    assert.match(dashboard, /physicalAnchorControlPresent \? physicalAnchor : existing\?\.marker\.physicalAnchor/);
 });
 
 test('legacy AR diagnostics stay out of the camera interface', () => {

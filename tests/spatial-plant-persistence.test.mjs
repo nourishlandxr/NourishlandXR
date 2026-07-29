@@ -211,3 +211,84 @@ test('a newly created project can be deleted by its stable project id', async ()
     const missingProject = await fetch(`${baseUrl}/api/projects/${encodeURIComponent(createdProject.id)}`);
     assert.equal(missingProject.status, 404);
 });
+
+test('Physical Marker assignment persists, stays unique per project, reassigns explicitly and removes independently', async () => {
+    const markerPath = `/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers`;
+    const physicalAnchor = {
+        enabled: true,
+        markerFamily: 'aruco-original-5x5',
+        markerId: 1,
+        markerSizeMm: 140,
+        offsetMeters: { x: .1, y: 0, z: -.2 },
+        rotationDegrees: { yaw: 15, pitch: 0, roll: 0 },
+        scale: 1
+    };
+    const kitchen = await jsonRequest(markerPath, {
+        method: 'POST',
+        body: JSON.stringify({ id: 'kitchen-totem', name: 'Kitchen Totem', type: 'area_checkpoint', physicalAnchor })
+    });
+    assert.equal(kitchen.physicalAnchor.markerId, 1);
+    assert.equal(kitchen.physicalAnchor.markerLabel, 'NL-001');
+
+    await stopServer();
+    await startServer();
+    const reloaded = await jsonRequest(markerPath);
+    assert.equal(reloaded.find(marker => marker.id === kitchen.id).physicalAnchor.offsetMeters.x, .1);
+    const preservedWhileDisabled = await jsonRequest(`${markerPath}/${kitchen.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: kitchen.name, type: kitchen.type, description: 'Unrelated Totem edit.' })
+    });
+    assert.equal(preservedWhileDisabled.physicalAnchor.markerId, 1);
+
+    const boundaryProject = await jsonRequest('/api/projects', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Physical Anchor Boundary', visibility: 'draft' })
+    });
+    const boundarySite = await jsonRequest(`/api/projects/${boundaryProject.id}/sites`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Boundary Site', visibility: 'draft' })
+    });
+    const boundaryPlace = await jsonRequest(`/api/projects/${boundaryProject.id}/sites/${boundarySite.id}/places`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Boundary Area', type: 'Garden', visibility: 'draft' })
+    });
+    const crossProject = await jsonRequest(`/api/projects/${boundaryProject.id}/sites/${boundarySite.id}/places/${boundaryPlace.id}/markers`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Boundary Totem', type: 'area_checkpoint', physicalAnchor })
+    });
+    assert.equal(crossProject.physicalAnchor.markerId, 1);
+
+    const duplicate = await fetch(`${baseUrl}${markerPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'living-room-totem', name: 'Living Room Totem', type: 'area_checkpoint', physicalAnchor })
+    });
+    assert.equal(duplicate.status, 400);
+    assert.match((await duplicate.json()).error, /already assigned/);
+
+    const livingRoom = await jsonRequest(markerPath, {
+        method: 'POST',
+        body: JSON.stringify({
+            id: 'living-room-totem',
+            name: 'Living Room Totem',
+            type: 'area_checkpoint',
+            physicalAnchor,
+            reassignPhysicalMarker: true
+        })
+    });
+    assert.equal(livingRoom.physicalAnchor.markerLabel, 'NL-001');
+    const reassigned = await jsonRequest(markerPath);
+    assert.equal(reassigned.find(marker => marker.id === kitchen.id).physicalAnchor, null);
+    assert.equal(reassigned.find(marker => marker.id === livingRoom.id).physicalAnchor.markerId, 1);
+
+    const removed = await jsonRequest(`${markerPath}/${livingRoom.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...livingRoom, physicalAnchor: null })
+    });
+    assert.equal(removed.id, livingRoom.id);
+    assert.equal(removed.name, 'Living Room Totem');
+    assert.equal(removed.physicalAnchor, null);
+    const afterRemoval = await jsonRequest(markerPath);
+    assert.ok(afterRemoval.some(marker => marker.id === livingRoom.id));
+    await jsonRequest(`/api/projects/${boundaryProject.id}`, { method: 'DELETE' });
+});

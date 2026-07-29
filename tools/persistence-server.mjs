@@ -38,6 +38,8 @@ const PLACE_TYPES = new Set([
 const PROJECT_THEMES = new Set(['light', 'dark', 'forest-dark', 'forest-light', 'cyber']);
 const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoint', 'area_checkpoint']);
 const VISIBILITY_VALUES = new Set(['draft', 'public', 'hidden']);
+const PHYSICAL_ANCHOR_FAMILY = 'aruco-original-5x5';
+const PHYSICAL_ANCHOR_IDS = new Set(Array.from({ length: 10 }, (_, index) => index + 1));
 const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_forest', 'places', 'field_markers');
 const demoMarkersDir = path.join(demoPlaceDir, 'markers');
 fs.mkdirSync(workspaceDir, { recursive: true });
@@ -273,6 +275,81 @@ function getSitePath(siteId) {
 
 function getCanonicalSitePath(projectId, siteId) {
     return path.join(workspaceDir, assertSafeId(projectId, 'project id'), 'sites', assertSafeId(siteId, 'site id'));
+}
+
+function physicalMarkerLabel(markerId) {
+    return `NL-${String(markerId).padStart(3, '0')}`;
+}
+
+function finitePhysicalAnchorNumber(value, label) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) throw new Error(`${label} must be a finite number`);
+    return number;
+}
+
+function normalizePhysicalAnchor(value) {
+    if (!value?.enabled) return null;
+    const markerFamily = String(value.markerFamily || PHYSICAL_ANCHOR_FAMILY);
+    const markerId = Number(value.markerId);
+    const markerSizeMm = finitePhysicalAnchorNumber(value.markerSizeMm, 'Marker size');
+    const scale = finitePhysicalAnchorNumber(value.scale, 'Scale');
+    if (markerFamily !== PHYSICAL_ANCHOR_FAMILY) throw new Error('Unsupported physical marker family');
+    if (!Number.isInteger(markerId) || !PHYSICAL_ANCHOR_IDS.has(markerId)) throw new Error('Physical marker ID must be between 1 and 10');
+    if (markerSizeMm <= 0) throw new Error('Marker size must be greater than zero');
+    if (scale <= 0) throw new Error('Scale must be greater than zero');
+    return {
+        enabled: true,
+        markerFamily,
+        markerId,
+        markerLabel: physicalMarkerLabel(markerId),
+        markerSizeMm,
+        offsetMeters: {
+            x: finitePhysicalAnchorNumber(value.offsetMeters?.x ?? 0, 'Horizontal offset X'),
+            y: finitePhysicalAnchorNumber(value.offsetMeters?.y ?? 0, 'Vertical offset Y'),
+            z: finitePhysicalAnchorNumber(value.offsetMeters?.z ?? 0, 'Depth offset Z')
+        },
+        rotationDegrees: {
+            yaw: finitePhysicalAnchorNumber(value.rotationDegrees?.yaw ?? 0, 'Heading/yaw'),
+            pitch: finitePhysicalAnchorNumber(value.rotationDegrees?.pitch ?? 0, 'Tilt/pitch'),
+            roll: finitePhysicalAnchorNumber(value.rotationDegrees?.roll ?? 0, 'Roll')
+        },
+        scale
+    };
+}
+
+function findPhysicalAnchorAssignment(projectId, physicalAnchor, excludedMarkerFile = '') {
+    if (!physicalAnchor) return null;
+    const sitesDir = path.join(workspaceDir, assertSafeId(projectId, 'project id'), 'sites');
+    if (!fs.existsSync(sitesDir)) return null;
+    for (const siteEntry of fs.readdirSync(sitesDir, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
+        const placesDir = path.join(sitesDir, siteEntry.name, 'places');
+        if (!fs.existsSync(placesDir)) continue;
+        for (const placeEntry of fs.readdirSync(placesDir, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
+            const markersDir = path.join(placesDir, placeEntry.name, 'markers');
+            if (!fs.existsSync(markersDir)) continue;
+            for (const markerEntry of fs.readdirSync(markersDir, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
+                const markerFile = path.join(markersDir, markerEntry.name, 'marker.json');
+                if (markerFile === excludedMarkerFile) continue;
+                const marker = readJson(markerFile, null);
+                const assigned = marker?.physicalAnchor;
+                if (assigned?.enabled
+                    && assigned.markerFamily === physicalAnchor.markerFamily
+                    && Number(assigned.markerId) === physicalAnchor.markerId) {
+                    return { marker, markerFile };
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function removePhysicalAnchorAssignment(assignment) {
+    if (!assignment?.marker || !assignment.markerFile) return;
+    writeJson(assignment.markerFile, {
+        ...assignment.marker,
+        physicalAnchor: null,
+        modified: new Date().toISOString()
+    });
 }
 
 function migrateProject(projectId) {
@@ -1183,6 +1260,10 @@ function handleApi(req, res) {
                 const data = JSON.parse(body || '{}');
                 const type = String(data.type || '').toLowerCase();
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
+                const physicalAnchor = normalizePhysicalAnchor(data.physicalAnchor);
+                if (physicalAnchor && type !== 'area_checkpoint' && data.semantic_type !== 'area_checkpoint') {
+                    throw new Error('Physical markers can only be assigned to Area Totems');
+                }
                 const requestedName = String(data.name || '').trim();
                 const baseMarkerId = toProjectId(data.id || requestedName);
                 if (!baseMarkerId || !requestedName) throw new Error('Marker name is required');
@@ -1195,11 +1276,16 @@ function handleApi(req, res) {
                     markerName = `${requestedName} (${suffix})`;
                     suffix += 1;
                 }
+                const conflictingAssignment = findPhysicalAnchorAssignment(decodeURIComponent(projectId), physicalAnchor);
+                if (conflictingAssignment && data.reassignPhysicalMarker !== true) {
+                    throw new Error(`${physicalAnchor.markerLabel} is already assigned to ${conflictingAssignment.marker.name}. Confirm marker reassignment.`);
+                }
                 const markerDir = path.join(markersDir, markerId);
                 fs.mkdirSync(markerDir, { recursive: true });
                 const now = new Date().toISOString();
-                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, semantic_type: data.semantic_type || undefined, storage_type: data.storage_type || undefined, area_information_board: data.area_information_board || undefined, notice_board: data.notice_board || undefined, experience_role: data.experience_role || undefined, content_domain: data.content_domain || undefined, marker_kind: data.marker_kind || undefined, dynamic_marker: data.dynamic_marker === true || undefined, status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, semantic_type: data.semantic_type || undefined, storage_type: data.storage_type || undefined, area_information_board: data.area_information_board || undefined, notice_board: data.notice_board || undefined, experience_role: data.experience_role || undefined, content_domain: data.content_domain || undefined, marker_kind: data.marker_kind || undefined, dynamic_marker: data.dynamic_marker === true || undefined, physicalAnchor, status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
+                if (conflictingAssignment) removePhysicalAnchorAssignment(conflictingAssignment);
                 if (['gps', 'qr', 'spatial'].includes(String(data.anchor?.type || '').toLowerCase())) {
                     const anchor = { ...data.anchor, type: String(data.anchor.type).toLowerCase(), created: data.anchor.created || now, modified: now };
                     writeJson(path.join(markerDir, 'anchor.json'), anchor);
@@ -1315,6 +1401,12 @@ function handleApi(req, res) {
                 const data = JSON.parse(body || '{}');
                 const type = String(data.type || existing.type).toLowerCase();
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
+                const physicalAnchor = Object.hasOwn(data, 'physicalAnchor')
+                    ? normalizePhysicalAnchor(data.physicalAnchor)
+                    : existing.physicalAnchor || null;
+                if (physicalAnchor && type !== 'area_checkpoint' && data.semantic_type !== 'area_checkpoint' && existing.semantic_type !== 'area_checkpoint') {
+                    throw new Error('Physical markers can only be assigned to Area Totems');
+                }
                 const requestedName = String(data.name || existing.name).trim();
                 const baseId = toProjectId(requestedName) || decodeURIComponent(markerId);
                 let nextId = baseId;
@@ -1325,10 +1417,20 @@ function handleApi(req, res) {
                     nextName = `${requestedName} (${suffix})`;
                     suffix += 1;
                 }
+                const conflictingAssignment = findPhysicalAnchorAssignment(
+                    decodeURIComponent(projectId),
+                    physicalAnchor,
+                    path.join(currentDir, 'marker.json')
+                );
+                if (conflictingAssignment && data.reassignPhysicalMarker !== true) {
+                    throw new Error(`${physicalAnchor.markerLabel} is already assigned to ${conflictingAssignment.marker.name}. Confirm marker reassignment.`);
+                }
                 const nextDir = path.join(baseDir, nextId);
                 if (nextId !== markerId) fs.renameSync(currentDir, nextDir);
-                const marker = { ...existing, ...data, visibility: normalizeVisibility(data.visibility, existing.visibility || 'draft'), id: nextId, type, name: nextName, modified: new Date().toISOString() };
+                const { reassignPhysicalMarker: _reassignPhysicalMarker, ...storedData } = data;
+                const marker = { ...existing, ...storedData, physicalAnchor, visibility: normalizeVisibility(data.visibility, existing.visibility || 'draft'), id: nextId, type, name: nextName, modified: new Date().toISOString() };
                 writeJson(path.join(nextDir, 'marker.json'), marker);
+                if (conflictingAssignment) removePhysicalAnchorAssignment(conflictingAssignment);
                 if (type === 'plant' && !fs.existsSync(path.join(nextDir, 'plant_profile.json'))) {
                     writeJson(path.join(nextDir, 'plant_profile.json'), { common_name: nextName, scientific_name: '', overview: '', identification: '', edible_uses: '', propagation: '', growing_conditions: '', notes: '', references: '', ...(data.plant_profile || {}) });
                 }

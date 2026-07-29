@@ -11,6 +11,15 @@ import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataServi
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
 import { scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
+import {
+    PHYSICAL_ANCHOR_DEFAULTS,
+    PHYSICAL_ANCHOR_IDS,
+    normalizePhysicalAnchor,
+    physicalAnchorAssignments,
+    physicalMarkerLabel,
+    physicalMarkerSvg
+} from '../services/physicalAnchor.js';
+import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -114,7 +123,7 @@ const entryCreatorLabel = marker => marker.createdBy
     || marker.added_by
     || 'Local creator';
 const SETTINGS_KEY = 'nourishland-xr-settings';
-const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true, developerDiagnostics: false };
+const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true, developerDiagnostics: false, physicalAnchors: false };
 
 export function applyProjectTheme(theme = 'forest-light') {
     const selectedTheme = PROJECT_THEMES.has(theme) ? theme : 'forest-light';
@@ -630,6 +639,60 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const bubbles = Array.isArray(board.information_bubbles) ? board.information_bubbles : [];
         const startingBubbles = bubbles.length ? bubbles : [''];
         const bubbleFields = startingBubbles.map((text, index) => `<div class="field totem-text-box"><label for="areaCheckpointBubble${index}">Text box ${index + 1}</label><textarea id="areaCheckpointBubble${index}" data-totem-information-box rows="2" placeholder="${index === 0 ? 'What does this Totem help people understand?' : 'Add another useful idea, story or instruction.'}">${escapeHtml(text)}</textarea></div>`).join('');
+        const physicalAnchorEnabled = readPlatformSettings().physicalAnchors === true;
+        let savedPhysicalAnchor = null;
+        try {
+            savedPhysicalAnchor = normalizePhysicalAnchor(existing?.marker.physicalAnchor);
+        } catch {
+            savedPhysicalAnchor = null;
+        }
+        const physicalValues = savedPhysicalAnchor || PHYSICAL_ANCHOR_DEFAULTS;
+        const assignments = physicalAnchorAssignments(context.entries, existing?.marker.id || '');
+        const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.map(markerId => {
+            const assignment = assignments.get(markerId);
+            const status = assignment
+                ? assignment.isCurrent
+                    ? 'Assigned to this Totem'
+                    : `Assigned to another Totem · ${assignment.totemName}`
+                : 'Available';
+            return `<option value="${markerId}" ${markerId === Number(physicalValues.markerId) ? 'selected' : ''}>${physicalMarkerLabel(markerId)} — ${escapeHtml(status)}</option>`;
+        }).join('');
+        const selectedAssignment = assignments.get(Number(physicalValues.markerId));
+        const physicalMarkerCard = physicalAnchorEnabled ? `<details class="totem-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
+            <summary><span><strong>Physical Marker <small>(optional)</small></strong><small>Paper-anchored Totem prototype</small></span><b aria-hidden="true">⌗</b></summary>
+            <div class="totem-physical-anchor-body">
+                <p>Associate a printable physical marker with this totem location. In AR mode, scanning the marker anchors the totem to this real-world point.</p>
+                <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Use physical marker</strong><small>Off by default. Existing AR remains unchanged.</small></span><input id="areaPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
+                <div class="totem-physical-anchor-layout" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                    <div class="totem-physical-marker-preview" data-physical-marker-preview>${physicalMarkerSvg(physicalValues.markerId)}</div>
+                    <div class="totem-physical-marker-controls">
+                        <label for="areaPhysicalMarkerId">Marker<select id="areaPhysicalMarkerId">${physicalMarkerOptions}</select></label>
+                        <p class="physical-marker-assignment-status" data-physical-marker-assignment>${selectedAssignment ? (selectedAssignment.isCurrent ? 'Assigned to this Totem' : `Assigned to ${escapeHtml(selectedAssignment.totemName)}`) : 'Available'}</p>
+                        <label class="physical-marker-reassign" data-physical-marker-reassign ${selectedAssignment && !selectedAssignment.isCurrent ? '' : 'hidden'}><input id="areaPhysicalMarkerReassign" type="checkbox" /> Reassign marker from <span>${escapeHtml(selectedAssignment?.totemName || '')}</span></label>
+                        <label for="areaPhysicalMarkerSize">Marker size <small>Black square only, excluding white margin</small><span class="input-with-unit"><input id="areaPhysicalMarkerSize" type="number" min="1" step="1" value="${physicalValues.markerSizeMm}" /><b>mm</b></span></label>
+                    </div>
+                </div>
+                <div class="totem-physical-transform-grid" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                    <fieldset><legend>Totem position relative to marker</legend>
+                        <label>X · horizontal<input id="areaPhysicalOffsetX" type="number" step="0.01" value="${physicalValues.offsetMeters.x}" /></label>
+                        <label>Y · above plane<input id="areaPhysicalOffsetY" type="number" step="0.01" value="${physicalValues.offsetMeters.y}" /></label>
+                        <label>Z · marker-forward<input id="areaPhysicalOffsetZ" type="number" step="0.01" value="${physicalValues.offsetMeters.z}" /></label>
+                    </fieldset>
+                    <fieldset><legend>Rotation offset</legend>
+                        <label>Heading / yaw<input id="areaPhysicalYaw" type="number" step="1" value="${physicalValues.rotationDegrees.yaw}" /></label>
+                        <label>Tilt / pitch<input id="areaPhysicalPitch" type="number" step="1" value="${physicalValues.rotationDegrees.pitch}" /></label>
+                        <label>Roll<input id="areaPhysicalRoll" type="number" step="1" value="${physicalValues.rotationDegrees.roll}" /></label>
+                    </fieldset>
+                    <label class="physical-marker-scale">Scale<input id="areaPhysicalScale" type="number" min="0.01" step="0.05" value="${physicalValues.scale}" /></label>
+                </div>
+                <div class="button-row physical-marker-actions" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                    <button type="button" data-test-physical-marker>Test in AR</button>
+                    <button type="button" data-scan-physical-marker ${savedPhysicalAnchor ? '' : 'disabled'}>Scan Physical Marker</button>
+                    ${savedPhysicalAnchor ? '<button class="danger" type="button" data-remove-physical-marker>Remove association</button>' : ''}
+                </div>
+                <p class="meta" data-physical-anchor-status>${savedPhysicalAnchor ? '' : 'Test in AR uses these current values without saving them.'}</p>
+            </div>
+        </details>` : '';
         app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><div class="totem-title-row"><h1>${escapeHtml(totemName)}</h1><button type="button" data-edit-totem-name aria-label="Edit Totem name">✎</button></div></div><form id="totemFileForm" class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
             <section class="totem-profile-hero">
                 <div class="totem-profile-visual" style="--totem-color:${totemColor}" aria-hidden="true"><span></span></div>
@@ -641,6 +704,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             </section>
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Main welcome text</label><p>The main information bubble is usually the first thing visitors need.</p><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
             <section class="totem-information-editor" aria-labelledby="totemTextBoxesTitle"><div class="totem-editor-heading"><div><h2 id="totemTextBoxesTitle">Additional information balloons</h2><p>Attach more text boxes only when this Totem needs them.</p></div><button type="button" data-add-totem-text-box><span aria-hidden="true">+</span> Text box</button></div><div class="totem-text-box-grid" data-totem-text-boxes>${bubbleFields}</div></section>
+            ${physicalMarkerCard}
             <section class="totem-relationship-grid">
                 <div class="totem-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Totem to the QR label installed at its real-world position.</p><label for="areaCheckpointCode">Totem QR code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter the code on this Totem" /></div></div>
                 <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem to another Totem in the location.</p>${linkOptions ? `<label for="areaCheckpointLinkTarget">Link to Totem</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area Totem</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" /></div>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}</span>`).join('')}</div></div></div>
@@ -665,6 +729,83 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             grid.append(field);
             field.querySelector('textarea')?.focus();
         });
+        const physicalToggle = app.querySelector('#areaPhysicalAnchorEnabled');
+        const physicalSelect = app.querySelector('#areaPhysicalMarkerId');
+        const updatePhysicalAnchorFields = () => {
+            const enabled = Boolean(physicalToggle?.checked);
+            app.querySelectorAll('[data-physical-anchor-fields]').forEach(element => { element.hidden = !enabled; });
+        };
+        const updatePhysicalAssignment = () => {
+            if (!physicalSelect) return;
+            const markerId = Number(physicalSelect.value);
+            const assignment = assignments.get(markerId);
+            const assignmentStatus = app.querySelector('[data-physical-marker-assignment]');
+            const reassign = app.querySelector('[data-physical-marker-reassign]');
+            const reassignName = reassign?.querySelector('span');
+            const confirm = app.querySelector('#areaPhysicalMarkerReassign');
+            if (assignmentStatus) assignmentStatus.textContent = assignment
+                ? assignment.isCurrent ? 'Assigned to this Totem' : `Assigned to ${assignment.totemName}`
+                : 'Available';
+            if (reassign) reassign.hidden = !assignment || assignment.isCurrent;
+            if (reassignName) reassignName.textContent = assignment?.totemName || '';
+            if (confirm) confirm.checked = false;
+            const preview = app.querySelector('[data-physical-marker-preview]');
+            if (preview) preview.innerHTML = physicalMarkerSvg(markerId);
+        };
+        physicalToggle?.addEventListener('change', updatePhysicalAnchorFields);
+        physicalSelect?.addEventListener('change', updatePhysicalAssignment);
+        app.querySelector('[data-test-physical-marker]')?.addEventListener('click', async () => {
+            const physicalStatus = app.querySelector('[data-physical-anchor-status]');
+            try {
+                const physicalAnchor = physicalAnchorFromTotemForm();
+                if (!physicalAnchor) throw new Error('Enable the Physical Marker before testing.');
+                const assignment = assignments.get(physicalAnchor.markerId);
+                if (assignment && !assignment.isCurrent && !document.getElementById('areaPhysicalMarkerReassign')?.checked) {
+                    throw new Error(`${physicalAnchor.markerLabel} is assigned to ${assignment.totemName}. Confirm reassignment first.`);
+                }
+                const started = await startPhysicalAnchorScanner(context.project.id, {
+                    marker: {
+                        ...(existing?.marker || {}),
+                        id: existing?.marker.id || 'physical-marker-preview',
+                        name: document.getElementById('areaCheckpointName')?.value.trim() || 'Totem preview',
+                        appearance: {
+                            ...(existing?.marker.appearance || {}),
+                            color: document.getElementById('areaCheckpointColor')?.value || '#68c7b8'
+                        },
+                        physicalAnchor
+                    },
+                    place: context.area,
+                    site: context.site
+                });
+                if (!started && physicalStatus) physicalStatus.textContent = 'Camera scanning could not start. Check the on-screen scanner message.';
+            } catch (error) {
+                if (physicalStatus) physicalStatus.textContent = error.message;
+            }
+        });
+        app.querySelector('[data-scan-physical-marker]')?.addEventListener('click', async () => {
+            const physicalStatus = app.querySelector('[data-physical-anchor-status]');
+            try {
+                const started = await startPhysicalAnchorScanner(context.project.id);
+                if (!started && physicalStatus) physicalStatus.textContent = 'Camera scanning could not start. Check the on-screen scanner message.';
+            } catch (error) {
+                if (physicalStatus) physicalStatus.textContent = error.message;
+            }
+        });
+        app.querySelector('[data-remove-physical-marker]')?.addEventListener('click', async () => {
+            const physicalStatus = app.querySelector('[data-physical-anchor-status]');
+            try {
+                if (!existing) return;
+                if (!window.confirm(`Remove ${savedPhysicalAnchor?.markerLabel || 'this marker'} from ${existing.marker.name}? The Totem and Area will remain.`)) return;
+                if (physicalStatus) physicalStatus.textContent = 'Removing marker association…';
+                await updatePlaceMarker(context.project.id, context.site.id, context.area.id, existing.marker.id, {
+                    ...existing.marker,
+                    physicalAnchor: null
+                });
+                await renderAreaCheckpointForm(app, encoded(context.project.id), encoded(context.area.id), flow);
+            } catch (error) {
+                if (physicalStatus) physicalStatus.textContent = `Association could not be removed: ${error.message}`;
+            }
+        });
         if (flow === 'quick') {
             const returnButton = app.querySelectorAll('.bottom-navigation button')[1];
             if (returnButton) returnButton.onclick = () => openCheckpointQuickSetup(app, encoded(context.project.id));
@@ -672,6 +813,26 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>Checkpoint unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
+}
+
+function physicalAnchorFromTotemForm() {
+    if (!document.getElementById('areaPhysicalAnchorEnabled')?.checked) return null;
+    return normalizePhysicalAnchor({
+        enabled: true,
+        markerId: document.getElementById('areaPhysicalMarkerId')?.value,
+        markerSizeMm: document.getElementById('areaPhysicalMarkerSize')?.value,
+        offsetMeters: {
+            x: document.getElementById('areaPhysicalOffsetX')?.value,
+            y: document.getElementById('areaPhysicalOffsetY')?.value,
+            z: document.getElementById('areaPhysicalOffsetZ')?.value
+        },
+        rotationDegrees: {
+            yaw: document.getElementById('areaPhysicalYaw')?.value,
+            pitch: document.getElementById('areaPhysicalPitch')?.value,
+            roll: document.getElementById('areaPhysicalRoll')?.value
+        },
+        scale: document.getElementById('areaPhysicalScale')?.value
+    });
 }
 
 export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId, flow = '') {
@@ -691,6 +852,9 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const linkTarget = document.getElementById('areaCheckpointLinkTarget')?.value || '';
         const linkSteps = document.getElementById('areaCheckpointLinkSteps')?.value || '';
         const linkDistance = document.getElementById('areaCheckpointLinkDistance')?.value || '';
+        const physicalAnchorControlPresent = Boolean(document.getElementById('areaPhysicalAnchorEnabled'));
+        const physicalAnchor = physicalAnchorControlPresent ? physicalAnchorFromTotemForm() : undefined;
+        const reassignPhysicalMarker = Boolean(document.getElementById('areaPhysicalMarkerReassign')?.checked);
         if (!name) throw new Error('Checkpoint name is required.');
         const existing = context.areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
         if (status) status.textContent = 'Saving Area Marker…';
@@ -706,7 +870,9 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 information_bubbles: informationBubbles
             },
             visibility: existing?.marker.visibility || 'draft',
-            appearance: { ...(existing?.marker.appearance || {}), color }
+            appearance: { ...(existing?.marker.appearance || {}), color },
+            physicalAnchor: physicalAnchorControlPresent ? physicalAnchor : existing?.marker.physicalAnchor,
+            reassignPhysicalMarker
         };
         let savedMarker;
         try {
@@ -1683,6 +1849,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
         <section class="panel tutorial-settings" aria-labelledby="developerDiagnosticsTitle" ${expertMode ? '' : 'hidden'}>
             <div class="section-heading-row"><div><h2 id="developerDiagnosticsTitle">Developer Diagnostics</h2><p>Keep technical AR launch details hidden during normal use.</p></div><span class="tutorial-status">${settings.developerDiagnostics ? 'Debug on' : 'Debug off'}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
+            <label class="tutorial-mode-toggle"><span><strong>Physical Marker prototype</strong><small>Enable experimental printed ArUco anchors in Totem Alignment.</small></span><input type="checkbox" ${settings.physicalAnchors ? 'checked' : ''} onchange="window.savePlatformSetting('physicalAnchors', this.checked)" /></label>
             <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
             <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
         </section>
