@@ -5,7 +5,7 @@ import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
-import { demoPlacementPosition } from '../app/screens/temporaryArDemo.js';
+import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -14,6 +14,16 @@ test('Try It Now immersive placement resolves the shared AR distance without sta
     const viewer = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 1.5, 4, 1]);
     const position = demoPlacementPosition(viewer, { x: 0, y: -0.25, z: -1 });
     assert.deepEqual(position, { x: 2, y: 1.25, z: 3 });
+});
+
+test('immersive demo selection opens the guided Plant Profile', () => {
+    const waiting = { demoType: 'plant', demoInteractive: true, awaitingProfileReveal: true, demoExpanded: false };
+    const unrelated = { demoType: 'note', demoInteractive: true };
+    let selected = null;
+    assert.equal(selectGuidedDemoOrb([waiting, unrelated], record => { selected = record; }), true);
+    assert.equal(selected, waiting);
+    waiting.awaitingProfileReveal = false;
+    assert.equal(selectGuidedDemoOrb([waiting, unrelated], () => {}), false);
 });
 
 test('legacy AR diagnostics stay out of the camera interface', () => {
@@ -419,8 +429,8 @@ test('Creator AR setup guide starts with Areas and keeps visitor entrances optio
     assert.match(dashboardSource, /window\.renderStartingPoints/);
     assert.match(dashboardSource, /openCheckpointQuickSetup/);
     assert.match(dashboardSource, /Create New Area/);
-    assert.match(dashboardSource, /Place its Totem in AR/);
-    assert.match(dashboardSource, /Create now, place later/);
+    assert.match(dashboardSource, /Save the Area first\. You can add and place its Totem from the Area afterwards\./);
+    assert.match(dashboardSource, /Place in AR/);
     assert.doesNotMatch(dashboardSource, /Set Welcome Marker/);
 });
 

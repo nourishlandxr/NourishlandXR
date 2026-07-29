@@ -740,6 +740,17 @@ function toggleDemoPlantProfile(record) {
         : `${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
 }
 
+export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantProfile) {
+    const record = [...records].reverse().find(candidate =>
+        candidate?.demoType === 'plant'
+        && candidate.demoInteractive !== false
+        && candidate.awaitingProfileReveal
+    );
+    if (!record) return false;
+    reveal(record);
+    return true;
+}
+
 function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
@@ -1785,6 +1796,7 @@ async function startImmersive() {
         session.addEventListener('select', () => {
             if (performance.now() < suppressSessionSelectUntil) return;
             if (placementReady && !marker) pressPlacementPointer();
+            else selectGuidedDemoOrb();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {

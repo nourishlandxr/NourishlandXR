@@ -253,13 +253,10 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     assert.match(dashboardSource, /Name your Area/);
     assert.match(dashboardSource, /Area \$\{nextAreaNumber\}/);
     assert.match(dashboardSource, /Examples: Orchard · Vegetable Garden · Creek Bank · Front Bed/);
-    assert.match(dashboardSource, /data-area-next="later"/);
-    assert.match(dashboardSource, /Create now, place later/);
-    assert.match(dashboardSource, /data-area-next="place"/);
-    assert.match(dashboardSource, /Place its Totem in AR/);
-    assert.match(dashboardSource, /event\.submitter\?\.dataset\.areaNext === 'place'/);
-    assert.match(dashboardSource, /await window\.startArMode\(projectId, area\.id, '', 'area_checkpoint', '', intent\)/);
-    assert.match(dashboardSource, /if \(started\) return/);
+    assert.match(dashboardSource, /<strong>Create Area<\/strong>/);
+    assert.match(dashboardSource, /Save the Area first\. You can add and place its Totem from the Area afterwards\./);
+    assert.doesNotMatch(dashboardSource, /data-area-next="place"/);
+    assert.doesNotMatch(dashboardSource, /event\.submitter\?\.dataset\.areaNext === 'place'/);
     assert.match(dashboardSource, /resumeAreaCreationFlow/);
     assert.match(dashboardSource, /renderLocationFieldMarker\(encoded\(projectId\), type, placementMode, false, encoded\(areaId\)\)/);
     assert.match(dashboardSource, /createAreaRecord\(projectId, site\.id/);
