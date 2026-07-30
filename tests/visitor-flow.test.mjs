@@ -424,8 +424,11 @@ test('new projects separate guided tutorial choice from advanced controls', () =
     assert.match(dashboardSource, /setProjectTutorialMode\(projectId, !enabled\)/);
     assert.match(dashboardSource, /Show themes, technical guidance, diagnostics/);
     assert.match(dashboardSource, /if \(project\.expertMode === true\) return renderProjectDashboard/);
-    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true[\s\S]*\|\| !isProjectTutorialEnabled\(project\.id\)[\s\S]*\|\| growthCompleted === growthSteps\.length/);
-    assert.match(dashboardSource, /const guidance = project\.expertMode === true \? null/);
+    assert.match(dashboardSource, /const tutorialComplete = growthCompleted === growthSteps\.length/);
+    assert.match(dashboardSource, /if \(tutorialWasEnabled && tutorialComplete\) \{\s*setProjectTutorialMode\(project\.id, false\)/);
+    assert.match(dashboardSource, /const growthJourney = project\.expertMode === true\s*\|\| !tutorialEnabled/);
+    assert.match(dashboardSource, /const guidance = project\.expertMode === true \|\| !tutorialEnabled/);
+    assert.match(dashboardSource, /Add 1 Area complete/);
     assert.match(dashboardSource, /What should visitors call this entrance\?/);
     assert.match(dashboardSource, /What should they know or feel when they arrive\?/);
     assert.match(dashboardSource, /Advanced Trail Entrance options/);

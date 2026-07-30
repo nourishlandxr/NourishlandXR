@@ -1075,6 +1075,12 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             { label: 'Add 1 Note', complete: noteCount >= 1 }
         ];
         const growthCompleted = growthSteps.filter(step => step.complete).length;
+        const tutorialComplete = growthCompleted === growthSteps.length;
+        const tutorialWasEnabled = isProjectTutorialEnabled(project.id);
+        if (tutorialWasEnabled && tutorialComplete) {
+            setProjectTutorialMode(project.id, false);
+        }
+        const tutorialEnabled = tutorialWasEnabled && !tutorialComplete;
         const firstArea = areas[0];
         const growthNext = nonPlantMode
             ? !hasArea
@@ -1118,8 +1124,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                                 action: `window.startArMode('${encoded(project.id)}')`
                             };
         const growthJourney = project.expertMode === true
-            || !isProjectTutorialEnabled(project.id)
-            || growthCompleted === growthSteps.length
+            || !tutorialEnabled
             ? null
             : {
             steps: growthSteps,
@@ -1166,7 +1171,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             ],
             optionalFeature: null
         };
-        const guidance = project.expertMode === true ? null : dashboardGuidance(project.id, { hasArea, startingConfigured: Boolean(startingPoint), freshProject: !hasArea && projectEntries.length === 0, nonPlantMode });
+        const guidance = project.expertMode === true || !tutorialEnabled
+            ? null
+            : dashboardGuidance(project.id, { hasArea, startingConfigured: Boolean(startingPoint), freshProject: !hasArea && projectEntries.length === 0, nonPlantMode });
         const latestDate = [
             ...projectEntries.map(entry => entry.marker.modified || entry.marker.created),
             ...areas.map(area => area.modified || area.created)
@@ -1444,7 +1451,7 @@ export async function renderProjectAreaForm(app, encodedProjectId, intent = 'das
     }
 }
 
-async function continueAfterAreaCreation(app, projectId, areaId, intent = 'dashboard') {
+async function continueAfterAreaCreation(app, projectId, areaId, intent = 'dashboard', areaTutorialCompleted = false) {
     if (intent === 'checkpoint-quick') return renderAreaCheckpointForm(app, encoded(projectId), encoded(areaId), 'quick');
     if (intent === 'tutorial-totem') return renderAreaCheckpointForm(app, encoded(projectId), encoded(areaId), 'tutorial');
     if (['starting-point', 'trail-entrance'].includes(intent)) return renderStartingPointForm(app, encoded(projectId), encoded(areaId), 'trail-entrance');
@@ -1452,7 +1459,7 @@ async function continueAfterAreaCreation(app, projectId, areaId, intent = 'dashb
         const [, type = 'plant', placementMode = 'without-ar'] = intent.split(':');
         return window.renderLocationFieldMarker(encoded(projectId), type, placementMode, false, encoded(areaId));
     }
-    return renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId));
+    return renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId), { areaTutorialCompleted });
 }
 
 export function resumeAreaCreationFlow(app, encodedProjectId, encodedAreaId, encodedIntent = 'dashboard') {
@@ -1480,7 +1487,7 @@ export async function saveProjectArea(event, encodedProjectId, _encodedIntent = 
         });
         recordTutorialEvent(projectId, 'first_area_created_or_selected');
         const target = document.getElementById('app');
-        return continueAfterAreaCreation(target, projectId, area.id, intent);
+        return continueAfterAreaCreation(target, projectId, area.id, intent, true);
     } catch (failure) {
         if (error) error.textContent = `Area could not be saved: ${failure.message}`;
     }
@@ -1504,7 +1511,7 @@ export async function openProjectAreaAr(app, encodedProjectId, encodedAreaId, en
     return false;
 }
 
-export async function renderProjectAreaDashboard(app, encodedProjectId, encodedAreaId) {
+export async function renderProjectAreaDashboard(app, encodedProjectId, encodedAreaId, options = {}) {
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     try {
@@ -1554,6 +1561,9 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </div>` : '';
         const plantCount = canonicalAreaEntries.filter(entry => entry.marker.type === 'plant').length;
         const totemCount = checkpoint ? 1 : 0;
+        const areaTutorialConfirmation = options.areaTutorialCompleted && isProjectTutorialEnabled(context.project.id)
+            ? '<section class="tutorial-step-confirmation" role="status"><span aria-hidden="true">✓</span><div><strong>Add 1 Area complete</strong><p>Your Area is saved. Add a Totem now, or return whenever you are ready.</p></div></section>'
+            : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
             <header class="page-header area-dashboard-header">
@@ -1562,6 +1572,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <p class="subtitle">${escapeHtml(context.area.type || 'Area')} · ${escapeHtml(context.project.name)}</p>
                 <div class="area-top-actions"><button class="area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
             </header>
+            ${areaTutorialConfirmation}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
                     <div class="area-profile-visual" aria-hidden="true"><span>▧</span><small>AREA</small></div>

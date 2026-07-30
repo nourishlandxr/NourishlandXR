@@ -1289,6 +1289,8 @@ test('Totem height presets and earth tones remain simple and spatially consisten
     assert.match(scannerSource, /totemHeightScale\(association\.marker\)/);
     assert.match(styles, /\.totem-height-presets/);
     assert.match(styles, /\.totem-tone-presets/);
+    assert.match(styles, /\.totem-essential-controls \{ display:grid; grid-template-columns:minmax\(0,1fr\)/);
+    assert.match(styles, /\.tutorial-step-confirmation/);
 });
 
 test('Note placement waits for a valid one-metre projection and previews the saved board template', () => {
