@@ -34,6 +34,7 @@ let demoStage = 'plant';
 let boardTypingTimer = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
+let demoHoldTimer = null;
 let knowledgeTourTimer = null;
 let introNarrationTimer = null;
 let introSceneStartedAt = 0;
@@ -147,11 +148,13 @@ function clearSessionState() {
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
+    clearTimeout(demoHoldTimer);
     clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
+    demoHoldTimer = null;
     knowledgeTourTimer = null;
     introNarrationTimer = null;
     introSceneStartedAt = 0;
@@ -492,6 +495,26 @@ function guidePlantConversion(record) {
     );
 }
 
+function guideFirstOrbAdjustment(record) {
+    setGuide('Your first Plant orb is placed.');
+    showIntroBoard(
+        'ADJUST ITS POSITION',
+        'Now hold the Plant orb and adjust its position. Continue, aim the pointer at the orb, then press and hold. Move your phone and release when the orb feels right.',
+        'Continue',
+        () => {
+            suppressSessionSelectUntil = performance.now() + 700;
+            finishIntroBoard();
+            record.demoInteractive = true;
+            record.awaitingPositionAdjustment = true;
+            const pointer = appRoot?.querySelector('[data-tryit-place]');
+            pointer?.removeAttribute('hidden');
+            pointer?.classList.add('is-revealing', 'is-ready');
+            setGuide('Aim at the Plant orb. Hold the pointer, move your phone, then release.');
+            updateSimulatedMarkers();
+        }
+    );
+}
+
 function guideNoteConversion(record) {
     setGuide('Your Note is placed.');
     showGuidedChoice('<h2>Add a Note</h2><p>A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
@@ -787,7 +810,10 @@ function bindSimulatedInformationPanels(layer) {
             holdTimer = null;
             compactMarker.classList.remove('is-drag-ready');
         };
-        compactMarker.addEventListener('pointerup', cancelHoldTimer);
+        compactMarker.addEventListener('pointerup', () => {
+            cancelHoldTimer();
+            if (demoHeldIndex === index) releaseHeldDemoRecord();
+        });
         compactMarker.addEventListener('pointercancel', cancelHoldTimer);
         compactMarker.addEventListener('click', event => {
             if (suppressDemoMarkerClick) {
@@ -976,6 +1002,85 @@ function placementPosition() {
     return demoPlacementPosition(viewerMatrix, demoPointerWorldRay());
 }
 
+function pointerDistanceToRecord(record) {
+    const ray = demoPointerWorldRay();
+    if (!viewerMatrix || !ray || !record?.position) return Infinity;
+    const offset = {
+        x: record.position.x - viewerMatrix[12],
+        y: record.position.y - viewerMatrix[13],
+        z: record.position.z - viewerMatrix[14]
+    };
+    const alongRay = offset.x * ray.x + offset.y * ray.y + offset.z * ray.z;
+    if (alongRay <= 0) return Infinity;
+    const closest = {
+        x: viewerMatrix[12] + ray.x * alongRay,
+        y: viewerMatrix[13] + ray.y * alongRay,
+        z: viewerMatrix[14] + ray.z * alongRay
+    };
+    return Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z);
+}
+
+function demoRecordAtPointer() {
+    const adjustable = markers
+        .map((record, index) => ({ record, index, distance: pointerDistanceToRecord(record) }))
+        .filter(item => item.record.demoInteractive !== false && item.distance <= .24)
+        .sort((left, right) => left.distance - right.distance);
+    return adjustable[0] || null;
+}
+
+function updateHeldDemoRecordPosition() {
+    if (simulatedMode || demoHeldIndex < 0) return;
+    const record = markers[demoHeldIndex];
+    const ray = demoPointerWorldRay();
+    if (!record || !viewerMatrix || !ray) return;
+    const distance = Math.max(.4, Math.min(4, Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
+    record.position = {
+        x: viewerMatrix[12] + ray.x * distance,
+        y: viewerMatrix[13] + ray.y * distance,
+        z: viewerMatrix[14] + ray.z * distance
+    };
+    record.informationPosition = null;
+}
+
+function beginPointerDemoHold(event) {
+    if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
+    const target = demoRecordAtPointer();
+    if (!target) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+    suppressSessionSelectUntil = performance.now() + 1200;
+    demoHoldTimer = setTimeout(() => {
+        demoHoldTimer = null;
+        demoHeldIndex = target.index;
+        const offset = {
+            x: target.record.position.x - viewerMatrix[12],
+            y: target.record.position.y - viewerMatrix[13],
+            z: target.record.position.z - viewerMatrix[14]
+        };
+        target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
+        setGuide(`Holding ${target.record.name || 'the orb'}. Move your phone, then release.`);
+    }, 420);
+    return true;
+}
+
+function releaseHeldDemoRecord() {
+    clearTimeout(demoHoldTimer);
+    demoHoldTimer = null;
+    if (demoHeldIndex < 0) return false;
+    const record = markers[demoHeldIndex];
+    demoHeldIndex = -1;
+    appRoot?.querySelector('[data-demo-depth-joystick]')?.setAttribute('hidden', '');
+    updateSimulatedMarkers();
+    if (record?.awaitingPositionAdjustment) {
+        record.awaitingPositionAdjustment = false;
+        guidePlantConversion(record);
+    } else {
+        setGuide(`${record?.name || 'Element'} released in its adjusted position.`);
+    }
+    return true;
+}
+
 function plantInformationPosition(record) {
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
     const viewerY = Number(viewerMatrix?.[13]);
@@ -1035,10 +1140,13 @@ function placeMarker() {
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
     const placedRecord = marker;
-    appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
+    const pointer = appRoot?.querySelector('[data-tryit-place]');
+    pointer?.removeAttribute('hidden');
+    pointer?.classList.add('is-revealing', 'is-ready');
     updateSimulatedMarkers();
     marker = null;
-    if (type === 'plant' || type === 'plant2') guidePlantConversion(placedRecord);
+    if (type === 'plant') guideFirstOrbAdjustment(placedRecord);
+    else if (type === 'plant2') guidePlantConversion(placedRecord);
     else guideNoteConversion(placedRecord);
 }
 
@@ -1087,18 +1195,31 @@ function renderInterface(simulated) {
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
     placementPointer.addEventListener('beforexrselect', event => event.preventDefault());
     placementPointer.addEventListener('pointerdown', event => {
-        if (!placementReady) return;
+        if (!placementReady) {
+            beginPointerDemoHold(event);
+            return;
+        }
         event.stopPropagation();
         suppressSessionSelectUntil = performance.now() + 1000;
     });
-    placementPointer.addEventListener('pointerup', pressPlacementPointer);
+    placementPointer.addEventListener('pointerup', event => {
+        if (releaseHeldDemoRecord()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+        clearTimeout(demoHoldTimer);
+        demoHoldTimer = null;
+        pressPlacementPointer(event);
+    });
+    placementPointer.addEventListener('pointercancel', () => {
+        clearTimeout(demoHoldTimer);
+        demoHoldTimer = null;
+        releaseHeldDemoRecord();
+    });
     placementPointer.addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
-        if (demoHeldIndex < 0) return;
-        demoHeldIndex = -1;
-        appRoot.querySelector('[data-demo-depth-joystick]').hidden = true;
-        updateSimulatedMarkers();
-        setGuide('Released in its refined position.');
+        releaseHeldDemoRecord();
     });
     appRoot.querySelector('[data-tryit-action]').addEventListener('click', advanceDemo);
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
@@ -1763,6 +1884,7 @@ async function startImmersive() {
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
+            updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             for (const view of pose?.views || []) { const viewport = layer.getViewport(view); gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height); drawMarker(view); }
