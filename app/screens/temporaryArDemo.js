@@ -54,6 +54,7 @@ let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
+let demoWebModeOpen = false;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
@@ -125,6 +126,18 @@ const MORINGA_KNOWLEDGE = Object.freeze({
         ['STORY', 'Food cultures · medicine · resilience']
     ]
 });
+const LEMON_MYRTLE_VIRTUAL_TAG_PROFILE = Object.freeze({
+    commonName: 'Lemon Myrtle',
+    scientificName: 'Backhousia citriodora',
+    family: 'Myrtaceae',
+    origin: 'Subtropical rainforests of eastern Australia',
+    overview: 'An aromatic evergreen tree known for leaves rich in lemon-scented oils.',
+    uses: 'Tea, culinary flavouring, aromatic oils, habitat and garden shade.',
+    growth: 'Warm temperate to subtropical conditions, sheltered edges and moist, free-draining soil.',
+    flowers: 'Cream-white summer flowers support pollinators; small nutlets follow.',
+    relationships: 'Works as an understory or edge tree and contributes shelter, nectar and structure.',
+    story: 'A living plant with deep First Nations knowledge and continuing cultural importance.'
+});
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : LEMON_MYRTLE_KNOWLEDGE;
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
@@ -145,6 +158,7 @@ function clearSessionState() {
     placementReady = false;
     demoHeldIndex = -1;
     suppressSessionSelectUntil = 0;
+    demoWebModeOpen = false;
     clearTimeout(boardTypingTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
@@ -210,6 +224,83 @@ function showDemoAction(nextStage) {
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice === 'continue') armDemoPlacement(nextStage);
+    });
+}
+
+function virtualTagProfileMarkup(profile = LEMON_MYRTLE_VIRTUAL_TAG_PROFILE) {
+    const facts = [
+        ['Overview', profile.overview],
+        ['Uses', profile.uses],
+        ['Growing conditions', profile.growth],
+        ['Flowers & fruit', profile.flowers],
+        ['Relationships', profile.relationships],
+        ['Living story', profile.story]
+    ];
+    return `<div class="tryit-virtual-tag-shell">
+        <header class="tryit-virtual-tag-header">
+          <span>WEB MODE · VIRTUAL TAG</span>
+          <strong>FULL PLANT PROFILE</strong>
+        </header>
+        <main class="tryit-virtual-tag-profile" aria-labelledby="tryitVirtualTagTitle">
+          <section class="tryit-virtual-tag-identity">
+            <span class="tryit-virtual-tag-orb" aria-hidden="true"></span>
+            <div><small>PLANT FILE</small><h2 id="tryitVirtualTagTitle">${profile.commonName}</h2><p><i>${profile.scientificName}</i> · ${profile.family}</p><p>${profile.origin}</p></div>
+          </section>
+          <section class="tryit-virtual-tag-tutorial">
+            <small>TUTORIAL · WEB MODE</small>
+            <strong>The same Plant Profile can be read outside AR.</strong>
+            <p>A Virtual Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
+          </section>
+          <section class="tryit-virtual-tag-facts">${facts.map(([label, value]) => `<article><small>${label}</small><p>${value}</p></article>`).join('')}</section>
+        </main>
+        <button type="button" class="tryit-virtual-tag-close" data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR</button>
+      </div>`;
+}
+
+function closeDemoVirtualTag(record) {
+    const webMode = appRoot?.querySelector('[data-demo-virtual-tag]');
+    if (!webMode || !demoWebModeOpen) return;
+    webMode.classList.add('is-closing');
+    suppressSessionSelectUntil = performance.now() + 900;
+    setTimeout(() => {
+        webMode.hidden = true;
+        webMode.classList.remove('is-closing');
+        appRoot?.querySelector('.tryit-demo')?.classList.remove('is-web-mode');
+        const stage = appRoot?.querySelector('.tryit-stage');
+        if (stage) {
+            stage.inert = false;
+            stage.removeAttribute('aria-hidden');
+        }
+        demoWebModeOpen = false;
+        record.demoExpanded = false;
+        refreshDemoRecord(record);
+        armDemoPlacement('plant2');
+    }, 320);
+}
+
+function openDemoVirtualTag(record) {
+    const webMode = appRoot?.querySelector('[data-demo-virtual-tag]');
+    if (!webMode || demoWebModeOpen) return;
+    demoWebModeOpen = true;
+    placementReady = false;
+    suppressSessionSelectUntil = Number.POSITIVE_INFINITY;
+    hideGuidedChoice();
+    appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('.tryit-demo')?.classList.add('is-web-mode');
+    const stage = appRoot?.querySelector('.tryit-stage');
+    if (stage) {
+        stage.inert = true;
+        stage.setAttribute('aria-hidden', 'true');
+    }
+    webMode.innerHTML = virtualTagProfileMarkup();
+    webMode.hidden = false;
+    webMode.querySelector('[data-demo-close-web-mode]')?.addEventListener('click', () => closeDemoVirtualTag(record));
+    setGuide('Web Mode is showing the complete Lemon Myrtle Plant Profile.');
+}
+
+function inviteVirtualTag(record) {
+    showGuidedChoice('<h2>Open its Virtual Tag</h2><p>This Plant Profile also has a full, view-only page in Web Mode. Open the Virtual Tag to see how smoothly NourishlandXR moves between information in AR and the complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN VIRTUAL TAG</button>', choice => {
+        if (choice === 'virtual-tag') openDemoVirtualTag(record);
     });
 }
 
@@ -478,6 +569,9 @@ function guidePlantConversion(record) {
         record.revealTitle = true;
         record.revealLines = 3;
         record.awaitingProfileReveal = true;
+        const pointer = appRoot?.querySelector('[data-tryit-place]');
+        pointer?.setAttribute('hidden', '');
+        pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
@@ -585,7 +679,7 @@ function armDemoPlacement(type) {
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : 'Take in the space before choosing the next position.');
     const introductions = {
-        plant: ['Your pointer', 'You will see a round circle on your screen. This is your pointer. Press it to create a Plant orb. Press Continue to load your pointer.'],
+        plant: ['Your pointer', 'This may feel unfamiliar at first, but don’t worry—we’ll explore it together, one step at a time. First, you’ll see a pointer appear… You will see a round circle on your screen. This is your pointer. Press it to create a Plant orb. Press Continue to load your pointer.'],
         plant2: ['Let’s try Moringa', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
     };
@@ -710,7 +804,7 @@ function toggleDemoPlantProfile(record) {
     if (record.demoExpanded && record.awaitingProfileReveal) {
         record.awaitingProfileReveal = false;
         navigator.vibrate?.([45, 40, 75]);
-        runKnowledgeTour(record, () => showDemoAction(record.tutorialStage === 'plant2' ? 'note' : 'plant2'));
+        runKnowledgeTour(record, () => record.tutorialStage === 'plant2' ? showDemoAction('note') : inviteVirtualTag(record));
         return;
     }
     setGuide(record.demoExpanded
@@ -1044,6 +1138,21 @@ function updateHeldDemoRecordPosition() {
 
 function beginPointerDemoHold(event) {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
+    if (simulatedMode) {
+        const index = markers.findIndex(record => record.awaitingPositionAdjustment && record.demoInteractive !== false);
+        if (index < 0) return false;
+        event.preventDefault();
+        event.stopPropagation();
+        suppressSessionSelectUntil = performance.now() + 1200;
+        demoHoldTimer = setTimeout(() => {
+            demoHoldTimer = null;
+            demoHeldIndex = index;
+            markers[index].simulatedAnchor = capturedSimulatedAnchor();
+            setGuide(`Holding ${markers[index].name || 'the orb'}. Move the pointer, then release.`);
+            updateSimulatedMarkers();
+        }, 420);
+        return true;
+    }
     const target = demoRecordAtPointer();
     if (!target) return false;
     event.preventDefault();
@@ -1151,7 +1260,7 @@ function placeMarker() {
 }
 
 function pressPlacementPointer(event) {
-    if (!placementReady || marker || pointerPressTimer) return;
+    if (demoWebModeOpen || !placementReady || marker || pointerPressTimer) return;
     event?.preventDefault();
     event?.stopPropagation();
     suppressSessionSelectUntil = performance.now() + 1000;
@@ -1170,7 +1279,7 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     const introContinue = document.createElement('button');
     introContinue.className = 'tryit-intro-continue';
     introContinue.dataset.tryitIntroContinue = '';
@@ -1216,6 +1325,24 @@ function renderInterface(simulated) {
         clearTimeout(demoHoldTimer);
         demoHoldTimer = null;
         releaseHeldDemoRecord();
+    });
+    placementPointer.addEventListener('mousedown', event => {
+        if (!placementReady) beginPointerDemoHold(event);
+    });
+    placementPointer.addEventListener('mouseup', event => {
+        if (releaseHeldDemoRecord()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
+    placementPointer.addEventListener('keydown', event => {
+        if (!simulatedMode || placementReady || !['Enter', ' '].includes(event.key)) return;
+        const record = markers.find(candidate => candidate.awaitingPositionAdjustment);
+        if (!record) return;
+        event.preventDefault();
+        event.stopPropagation();
+        record.awaitingPositionAdjustment = false;
+        guidePlantConversion(record);
     });
     placementPointer.addEventListener('click', pressPlacementPointer);
     appRoot.querySelector('[data-demo-move-release]').addEventListener('click', () => {
@@ -1868,7 +1995,7 @@ async function startImmersive() {
         hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         setupRenderer();
         session.addEventListener('select', () => {
-            if (performance.now() < suppressSessionSelectUntil) return;
+            if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             // Placement belongs only to the visible DOM pointer. A WebXR
             // select can arrive late from Continue and must never place for
             // the visitor.

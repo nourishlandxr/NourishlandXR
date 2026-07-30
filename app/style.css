@@ -596,6 +596,35 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .tryit-exit { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 12003; pointer-events: auto; border-color: rgba(255,255,255,.55); background: rgba(12,27,18,.72); color: #fff; backdrop-filter: blur(8px); }
 .tryit-demo-footer { position:fixed; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom)); z-index:12008; pointer-events:none; }
 .tryit-demo-taskbar { position:static; z-index:12008; display:flex; padding:0; border:0; background:transparent; box-shadow:none; pointer-events:auto; }
+.tryit-virtual-tag-mode { position:fixed; inset:0; z-index:12100; overflow:auto; background:#f2f4ec; color:#203126; pointer-events:auto; animation:tryit-web-mode-open .42s cubic-bezier(.18,.78,.28,1) both; }
+.tryit-virtual-tag-mode[hidden] { display:none; }
+.tryit-virtual-tag-mode.is-closing { animation:tryit-web-mode-close .32s ease-in both; }
+.tryit-virtual-tag-shell { min-height:100%; box-sizing:border-box; padding:0 0 max(94px,calc(env(safe-area-inset-bottom) + 80px)); }
+.tryit-virtual-tag-header { position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; gap:14px; padding:max(16px,env(safe-area-inset-top)) clamp(18px,5vw,44px) 14px; border-bottom:1px solid rgba(49,91,61,.2); background:rgba(242,244,236,.94); backdrop-filter:blur(12px); }
+.tryit-virtual-tag-header span { color:#52705a; font-size:.62rem; font-weight:850; letter-spacing:.12em; }
+.tryit-virtual-tag-header strong { color:#244a30; font-size:.68rem; letter-spacing:.08em; }
+.tryit-virtual-tag-profile { display:grid; gap:18px; width:min(calc(100% - 28px),780px); margin:0 auto; padding:clamp(22px,5vw,46px) 0; }
+.tryit-virtual-tag-identity { display:grid; grid-template-columns:78px minmax(0,1fr); align-items:center; gap:18px; padding-bottom:20px; border-bottom:1px solid rgba(49,91,61,.18); }
+.tryit-virtual-tag-identity h2,.tryit-virtual-tag-identity p { margin:0; }
+.tryit-virtual-tag-identity h2 { margin:3px 0 5px; color:#173d25; font-size:clamp(2rem,8vw,4.3rem); line-height:.98; }
+.tryit-virtual-tag-identity p { color:#526358; font-size:.82rem; line-height:1.45; }
+.tryit-virtual-tag-identity small,.tryit-virtual-tag-facts small,.tryit-virtual-tag-tutorial small { color:#61806a; font-size:.58rem; font-weight:850; letter-spacing:.12em; text-transform:uppercase; }
+.tryit-virtual-tag-orb { width:74px; height:74px; border:2px solid rgba(239,255,226,.9); border-radius:50%; background:radial-gradient(circle at 31% 24%,#efffd8 0 7%,#79ad65 34%,#315d3c 78%,rgba(25,75,39,.48) 100%); box-shadow:inset -10px -12px 17px rgba(12,55,25,.42),inset 6px 6px 10px rgba(255,255,255,.2),0 0 24px rgba(121,173,101,.3); }
+.tryit-virtual-tag-tutorial { display:grid; gap:6px; padding:17px 19px; border:1px solid rgba(57,122,78,.28); border-radius:18px; background:linear-gradient(145deg,rgba(219,237,214,.76),rgba(235,243,229,.9)); }
+.tryit-virtual-tag-tutorial strong { color:#285738; font-size:1rem; }
+.tryit-virtual-tag-tutorial p { margin:0; color:#4f6255; font-size:.82rem; line-height:1.5; }
+.tryit-virtual-tag-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.tryit-virtual-tag-facts article { display:grid; align-content:start; gap:6px; min-height:96px; padding:15px; border:1px solid rgba(54,91,65,.18); border-radius:15px; background:rgba(255,255,255,.68); }
+.tryit-virtual-tag-facts p { margin:0; color:#3f5145; font-size:.78rem; line-height:1.45; }
+.tryit-virtual-tag-close,body[data-project-theme] .tryit-virtual-tag-close { position:fixed; left:50%; bottom:max(14px,env(safe-area-inset-bottom)); z-index:12101; width:min(calc(100vw - 28px),460px); min-height:52px; transform:translateX(-50%); border:1px solid #4f8c62; border-radius:15px; background:#2f6d42 !important; color:#fff; font-size:.72rem; font-weight:850; letter-spacing:.055em; box-shadow:0 10px 26px rgba(33,74,45,.24); }
+@keyframes tryit-web-mode-open { from { opacity:0; transform:translateY(3vh); } to { opacity:1; transform:translateY(0); } }
+@keyframes tryit-web-mode-close { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(3vh); } }
+@media (max-width:520px) {
+    .tryit-virtual-tag-header { display:grid; gap:4px; }
+    .tryit-virtual-tag-identity { grid-template-columns:58px minmax(0,1fr); gap:14px; }
+    .tryit-virtual-tag-orb { width:56px; height:56px; }
+    .tryit-virtual-tag-facts { grid-template-columns:1fr; }
+}
 .tryit-demo-taskbar button { display:inline-flex; align-items:center; min-height:32px; padding:6px 11px; border:1px solid rgba(255,255,255,.24); border-radius:999px; background:rgba(12,27,18,.34); color:rgba(255,255,255,.64); font-size:.7rem; font-weight:650; white-space:nowrap; box-shadow:0 5px 16px rgba(0,0,0,.12); backdrop-filter:blur(8px); transition:color .2s ease,background .2s ease,opacity .2s ease; }
 .tryit-demo-taskbar button:hover, .tryit-demo-taskbar button:focus-visible { background:rgba(12,27,18,.62); color:#fff; }
 .tryit-demo-taskbar button.is-active { border-color: rgba(220,239,149,.58); background: rgba(220,239,149,.16); color: #fff; box-shadow: 0 0 16px rgba(192,230,151,.18); }

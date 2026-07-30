@@ -776,7 +776,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
     assert.match(source, /both a mapping tool and a portal for plant-related information/);
     assert.match(source, /few examples of how plant information can be mapped to real places and brought to life/);
-    assert.match(source, /plant: \['Your pointer', 'You will see a round circle on your screen\. This is your pointer\./);
+    assert.match(source, /plant: \['Your pointer', 'This may feel unfamiliar at first, but don’t worry—we’ll explore it together, one step at a time\. First, you’ll see a pointer appear… You will see a round circle on your screen\./);
     assert.match(source, /You will see a round circle on your screen\. This is your pointer\./);
     assert.match(source, /Press it to create a Plant orb\. Press Continue to load your pointer\./);
     assert.doesNotMatch(source, /gentle introduction/);
@@ -836,6 +836,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*outline:0 !important;[^}]*border-radius:50% !important;[^}]*background:transparent !important;[^}]*backdrop-filter:none !important;/);
     assert.match(source, /placementPointer\.addEventListener\('pointerup', event => \{[\s\S]*releaseHeldDemoRecord\(\)[\s\S]*pressPlacementPointer\(event\)/);
+    assert.match(source, /placementPointer\.addEventListener\('mousedown'[\s\S]*beginPointerDemoHold\(event\)/);
+    assert.match(source, /placementPointer\.addEventListener\('keydown'[\s\S]*record\.awaitingPositionAdjustment = false;[\s\S]*guidePlantConversion\(record\)/);
+    assert.match(source, /if \(simulatedMode\) \{[\s\S]*record => record\.awaitingPositionAdjustment[\s\S]*demoHeldIndex = index;[\s\S]*updateSimulatedMarkers\(\)/);
     assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
@@ -845,6 +848,19 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(immersiveSelectHandler, /pressPlacementPointer/);
     assert.match(immersiveSelectHandler, /if \(!placementReady\) selectGuidedDemoOrb\(\)/);
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
+    assert.match(source, /function inviteVirtualTag\(record\)/);
+    assert.match(source, /data-demo-choice="virtual-tag">OPEN VIRTUAL TAG/);
+    assert.match(source, /WEB MODE · VIRTUAL TAG/);
+    assert.match(source, /FULL PLANT PROFILE/);
+    assert.match(source, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
+    assert.match(source, /A Virtual Tag can open this full, view-only plant file/);
+    assert.match(source, /record\.tutorialStage === 'plant2' \? showDemoAction\('note'\) : inviteVirtualTag\(record\)/);
+    assert.match(source, /demoWebModeOpen = true;[\s\S]*suppressSessionSelectUntil = Number\.POSITIVE_INFINITY/);
+    assert.match(source, /stage\.inert = true;[\s\S]*stage\.setAttribute\('aria-hidden', 'true'\)/);
+    assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);
+    assert.match(source, /demoWebModeOpen = false;[\s\S]*record\.demoExpanded = false;[\s\S]*armDemoPlacement\('plant2'\)/);
+    assert.match(styles, /\.tryit-virtual-tag-mode \{[^}]*position:fixed;[^}]*z-index:12100;[^}]*background:#f2f4ec;/);
+    assert.match(styles, /\.tryit-virtual-tag-close,body\[data-project-theme\] \.tryit-virtual-tag-close/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
@@ -855,6 +871,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 180\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
+    assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
     assert.match(source, /data-tryit-guided-choice/);
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
     assert.match(source, /runKnowledgeTour/);
