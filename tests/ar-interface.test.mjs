@@ -801,8 +801,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.match(source, /function guideFirstOrbAdjustment\(record\)/);
-    assert.match(source, /Now hold the Plant orb and adjust its position/);
+    assert.match(source, /panel\.classList\.add\('is-movement-tip'\)/);
+    assert.match(source, /<small>MOVE THE ORB<\/small><h2>ADJUST ITS POSITION<\/h2>/);
     assert.match(source, /Aim at the Plant orb\. Hold the pointer, move your phone, then release\./);
+    assert.doesNotMatch(source, /Now hold the Plant orb and adjust its position\. Continue/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
@@ -833,6 +835,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /green:[\s\S]*radius: 0\.074/);
     assert.match(source, /coreColor: material\?\.core/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-movement-tip \{[^}]*pointer-events:none;/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*outline:0 !important;[^}]*border-radius:50% !important;[^}]*background:transparent !important;[^}]*backdrop-filter:none !important;/);
     assert.match(source, /placementPointer\.addEventListener\('pointerup', event => \{[\s\S]*releaseHeldDemoRecord\(\)[\s\S]*pressPlacementPointer\(event\)/);

@@ -650,6 +650,10 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .tryit-guided-choice label { display: grid; gap: 5px; font-size: .72rem; font-weight: 750; }
 .tryit-guided-choice input { min-height: 42px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.3); border-radius: 11px; background: rgba(255,255,255,.1); color: #fff; font: inherit; }
 .tryit-guided-choice button { min-height: 44px; border-color: rgba(220,239,149,.55); background: rgba(220,239,149,.17); color: #fff; }
+.tryit-guided-choice.is-movement-tip { top:max(14px,env(safe-area-inset-top)); bottom:auto; gap:4px; width:min(calc(100vw - 28px),420px); padding:11px 14px; border-radius:16px; background:rgba(10,32,21,.76); text-align:center; pointer-events:none; }
+.tryit-guided-choice.is-movement-tip small { color:#dcef95; font-size:.52rem; font-weight:850; letter-spacing:.12em; }
+.tryit-guided-choice.is-movement-tip h2 { font-size:.88rem; }
+.tryit-guided-choice.is-movement-tip p { font-size:.7rem; line-height:1.35; }
 .tryit-guided-choice .is-awaiting-text { visibility: hidden; }
 .tryit-guided-choice.is-typing p.is-current::after,
 .tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after { content: "▋"; display: inline-block; margin-left: 2px; color: #dcef95; animation: tryit-cursor-blink 1.4s ease-in-out infinite; }
