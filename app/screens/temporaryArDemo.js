@@ -316,6 +316,7 @@ function hideGuidedChoice() {
 
 function prepareTutorialBoard(panel) {
     const firstArrival = !introBoardHasEntered;
+    panel.classList.remove('is-movement-tip');
     panel.classList.add('is-welcome-board');
     panel.classList.remove('is-leaving');
     panel.hidden = false;
