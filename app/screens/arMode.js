@@ -48,6 +48,11 @@ let hitTestSource = null;
 let latestHitMatrix = null;
 let markerProgram = null;
 let markerBuffer = null;
+let homeSignProgram = null;
+let homeSignBuffer = null;
+let homeSignTexture = null;
+let homeSignTextureTitle = '';
+let homeSignAnchor = null;
 let sphereRenderer = null;
 let prismRenderer = null;
 let placementArmedAt = 0;
@@ -251,8 +256,6 @@ function updateLocationNote() {
     if (prompt) prompt.textContent = config.prompt;
     if (title) title.textContent = config.title;
     if (area) area.textContent = `AREA · ${areaName}`;
-    const homeSign = overlayRoot?.querySelector('[data-ar-home-sign]');
-    if (homeSign) homeSign.hidden = Boolean(activeAreaId && areaName !== DEFAULT_HOME_AREA_NAME);
 }
 
 function activeAreaMarkers() {
@@ -266,6 +269,7 @@ function activateArea(area) {
         locatedTotemRecord = null;
         locationNoteVisible = false;
         locationNoteAnchor = null;
+        homeSignAnchor = null;
         renderSessionMarkers();
     }
     activeAreaId = nextAreaId;
@@ -1118,6 +1122,99 @@ function markerBillboardMatrix(position, scaleX = .045, scaleY = scaleX) {
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
+function createHomeSignTexture(title) {
+    const textureCanvas = document.createElement('canvas');
+    textureCanvas.width = 1024;
+    textureCanvas.height = 384;
+    const context = textureCanvas.getContext('2d');
+    if (!context) return null;
+    const projectTitle = String(title || 'NourishlandXR').trim().toLocaleUpperCase();
+    context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.lineJoin = 'round';
+    context.strokeStyle = 'rgba(3, 13, 8, .86)';
+    context.fillStyle = 'rgba(237, 249, 235, .96)';
+    context.font = '700 42px system-ui, sans-serif';
+    context.lineWidth = 12;
+    context.strokeText(projectTitle, 512, 96, 850);
+    context.fillText(projectTitle, 512, 96, 850);
+    context.font = '850 164px system-ui, sans-serif';
+    context.lineWidth = 20;
+    context.strokeText('HOME', 512, 242);
+    context.fillText('HOME', 512, 242);
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+    return texture;
+}
+
+function ensureHomeSignTexture() {
+    const title = String(activeProjectName || activeProjectId || 'NourishlandXR').trim();
+    if (homeSignTexture && homeSignTextureTitle === title) return homeSignTexture;
+    if (homeSignTexture) gl.deleteTexture(homeSignTexture);
+    homeSignTexture = createHomeSignTexture(title);
+    homeSignTextureTitle = title;
+    return homeSignTexture;
+}
+
+function homeSignAnchorFromViewer() {
+    if (!latestViewerMatrix) return null;
+    const forwardX = -latestViewerMatrix[8];
+    const forwardZ = -latestViewerMatrix[10];
+    const horizontalLength = Math.hypot(forwardX, forwardZ) || 1;
+    const distance = 2.8;
+    return {
+        x: latestViewerMatrix[12] + forwardX / horizontalLength * distance,
+        y: currentGroundY() + 2.45,
+        z: latestViewerMatrix[14] + forwardZ / horizontalLength * distance
+    };
+}
+
+function setupHomeSignRenderer() {
+    const vertex = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
+    gl.compileShader(vertex);
+    const fragment = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform sampler2D artwork;void main(){vec4 pixel=texture2D(artwork,uv);if(pixel.a<.04)discard;gl_FragColor=pixel;}');
+    gl.compileShader(fragment);
+    homeSignProgram = gl.createProgram();
+    gl.attachShader(homeSignProgram, vertex);
+    gl.attachShader(homeSignProgram, fragment);
+    gl.linkProgram(homeSignProgram);
+    homeSignBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+}
+
+function drawSpatialHomeSign(view) {
+    if (activeAreaId || !homeSignProgram || !homeSignBuffer || !ensureHomeSignTexture()) return;
+    homeSignAnchor ||= homeSignAnchorFromViewer();
+    if (!homeSignAnchor) return;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    const model = markerBillboardMatrix(homeSignAnchor, 1.15, .43);
+    const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+    gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, homeSignTexture);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
 function groundGuideMatrix(target) {
     if (!latestViewerMatrix || !target) return null;
     const start = { x: latestViewerMatrix[12], y: target.y + .006, z: latestViewerMatrix[14] };
@@ -1200,6 +1297,7 @@ function setupSpatialMarkerRenderer() {
     markerBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+    setupHomeSignRenderer();
     sphereRenderer = createSpatialSphereRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
 }
@@ -2168,10 +2266,6 @@ function createOverlay() {
           </span>
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
-        <div class="creator-ar-home-sign" data-ar-home-sign aria-label="Home, unassigned workspace">
-          <span>UNASSIGNED WORKSPACE</span>
-          <strong>HOME</strong>
-        </div>
         ${spatialMoveControlMarkup('ar')}
         <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
           <span class="creator-ar-location-stick" aria-hidden="true"></span>
@@ -2278,10 +2372,18 @@ function cleanup() {
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
+    if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
+    if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
+    if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
     prismRenderer = null;
     markerProgram = null;
     markerBuffer = null;
+    homeSignProgram = null;
+    homeSignBuffer = null;
+    homeSignTexture = null;
+    homeSignTextureTitle = '';
+    homeSignAnchor = null;
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
@@ -2471,6 +2573,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 if (!viewport) continue;
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                drawSpatialHomeSign(view);
                 drawSpatialMarkers(view);
             }
         };

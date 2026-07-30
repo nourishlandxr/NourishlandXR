@@ -6076,23 +6076,6 @@ button[onclick*="startArMode"]:is(:hover,:focus-visible),
 button[onclick*="renderArPreparation"]:is(:hover,:focus-visible) {
     filter:brightness(1.08);
 }
-.creator-ar-home-sign {
-    position:fixed;
-    left:50%;
-    top:max(7vh,calc(env(safe-area-inset-top) + 28px));
-    z-index:4;
-    display:grid;
-    justify-items:center;
-    transform:translateX(-50%);
-    color:rgba(238,249,235,.72);
-    text-align:center;
-    text-shadow:0 3px 14px rgba(0,0,0,.72);
-    pointer-events:none;
-}
-.creator-ar-home-sign[hidden] { display:none !important; }
-.creator-ar-home-sign span { font-size:.52rem; font-weight:800; letter-spacing:.18em; }
-.creator-ar-home-sign strong { font-size:clamp(2.7rem,13vw,6rem); font-weight:850; letter-spacing:.22em; line-height:.9; text-indent:.22em; }
-
 @media (max-width:620px) {
     .web-context-beacon { position:sticky; top:6px; z-index:12; box-shadow:0 5px 15px rgba(23,66,91,.1); }
     .web-context-beacon.is-overview > small { display:none; }
