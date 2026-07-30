@@ -341,7 +341,8 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /press the aim once to place the Plant Marker orb/i);
+    assert.match(source, /Press Continue to load your pointer/);
+    assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);

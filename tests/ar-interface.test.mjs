@@ -772,11 +772,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
+    assert.match(source, /Welcome to the Nourishland XR demo interface/);
+    assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
+    assert.match(source, /both a mapping tool and a portal for plant-related information/);
+    assert.match(source, /few examples of how plant information can be mapped to real places and brought to life/);
+    assert.match(source, /plant: \['Your pointer', 'You will see a round circle on your screen\. This is your pointer\./);
     assert.match(source, /You will see a round circle on your screen\. This is your pointer\./);
     assert.match(source, /Press it to create a Plant orb\. Press Continue to load your pointer\./);
     assert.doesNotMatch(source, /gentle introduction/);
-    assert.doesNotMatch(source, /Augmented reality \(AR\) is a technology/);
-    assert.doesNotMatch(source, /both a mapping tool and a portal for plant-related information/);
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
@@ -785,8 +788,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /finishIntroBoard\(\);[\s\S]*suppressSessionSelectUntil = performance\.now\(\) \+ 700;[\s\S]*armDemoPlacement\('plant', \{ direct: true \}\)/);
-    assert.doesNotMatch(source, /setTimeout\(\(\) => armDemoPlacement\('plant', \{ direct: true \}\), 900\)/);
+    assert.match(source, /finishIntroBoard\(\);[\s\S]*suppressSessionSelectUntil = performance\.now\(\) \+ 700;[\s\S]*armDemoPlacement\('plant'\)/);
     assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /\? 160 : \/\[,;\]\//);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
@@ -807,11 +809,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /\}, 360\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
-    const directPlacementBranch = source.slice(
-        source.indexOf('if (direct) {'),
-        source.indexOf('place?.setAttribute', source.indexOf('if (direct) {'))
-    );
-    assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
+    assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
     assert.match(source, /A simple Plant orb can become a hub of information, which we call a Plant Profile/);
     assert.match(source, /Place it at a real plant or tree so its knowledge stays connected to where it grows/);
@@ -839,7 +837,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
-    assert.match(source, /press the aim once to place the Plant Marker orb/);
+    assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
