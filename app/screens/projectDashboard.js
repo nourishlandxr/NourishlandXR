@@ -27,6 +27,7 @@ import {
     physicalMarkerSvg
 } from '../services/physicalAnchor.js';
 import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
+import { PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -1791,10 +1792,17 @@ export async function renderUnplacedContent(app, encodedProjectId) {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(displayAreaName(place))}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;
         }).join('');
-        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="web-context-beacon is-home"><span>UNASSIGNED WORKSPACE</span><strong>HOME</strong></div><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>Home is the default workspace for unassigned items, experiments and play that still need a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home is empty.</p>'}</div></div>`;
+        const example = `<section class="panel plant-example-card" data-example-marker-id="${PIGEON_PEA_EXAMPLE.id}" data-example-plant-slug="${PIGEON_PEA_EXAMPLE.slug}"><p class="welcome-label">OFFICIAL COMPLETE PLANT PROFILE</p><h2>${PIGEON_PEA_EXAMPLE.name}</h2><p><strong>${PIGEON_PEA_EXAMPLE.commonName}</strong> · <i>${PIGEON_PEA_EXAMPLE.scientificName}</i></p><p>${PIGEON_PEA_EXAMPLE.introduction}</p><button type="button" onclick="window.renderPigeonPeaExample('${encoded(project.id)}')">View complete example</button></section>`;
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="web-context-beacon is-home"><span>UNASSIGNED WORKSPACE</span><strong>HOME</strong></div><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div>${example}<div class="panel"><p>Home is the default workspace for unassigned items, experiments and play that still need a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home has no unassigned items.</p>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
+}
+
+export async function renderPigeonPeaExample(app, encodedProjectId) {
+    const project = await projectById(decodeURIComponent(encodedProjectId));
+    const sections = PIGEON_PEA_EXAMPLE.informationTree.map(section => `<details class="plant-info-drawer"><summary><strong>${escapeHtml(section.label)}</strong><small>Advanced Plant Profile information</small></summary><ul>${section.details.map(detail => `<li>${escapeHtml(detail)}</li>`).join('')}</ul></details>`).join('');
+    app.innerHTML = `<div class="screen plant-example-profile" data-example-marker-id="${PIGEON_PEA_EXAMPLE.id}" data-example-plant-slug="${PIGEON_PEA_EXAMPLE.slug}"><div class="page-header"><button class="ghost" onclick="window.renderUnplacedContent('${encoded(project.id)}')">Back to Home</button><p class="welcome-label">COMPLETE PLANT MARKER · TUTORIAL</p><h1>${PIGEON_PEA_EXAMPLE.name}</h1><p class="subtitle">${PIGEON_PEA_EXAMPLE.commonName}</p></div><section class="panel"><h2>${PIGEON_PEA_EXAMPLE.commonName}</h2><p><i>${PIGEON_PEA_EXAMPLE.scientificName}</i> · ${PIGEON_PEA_EXAMPLE.family}</p><p>Location: Home · ${escapeHtml(project.name)}</p><p>${PIGEON_PEA_EXAMPLE.shortProfile}</p></section><section aria-label="Advanced Pigeon Pea Plant Profile"><p class="welcome-label">ADVANCED PLANT PROFILE</p>${sections}</section></div>`;
 }
 
 export async function renderStoriesAndFocus(app, encodedProjectId) {
@@ -2372,6 +2380,8 @@ function plantProfileEditorMarkup(entry, profile) {
         <div class="plant-card-hero">
             <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
             <div class="plant-vital-grid">
+                <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
+                <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
                 <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
                 <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select></div>
                 <div class="field plant-color-field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(orbColor)}" /></div>
@@ -2379,9 +2389,7 @@ function plantProfileEditorMarkup(entry, profile) {
             </div>
         </div>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A short, useful introduction—add it whenever you are ready.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
-        <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Identity &amp; photo</strong><small>Name, scientific identity and image</small></summary><div class="plant-drawer-fields">
-            <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
-            <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
+        <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
             <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
         </div></details>

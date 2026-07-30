@@ -362,7 +362,7 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     assert.match(source, /markers\.length >= DEMO_SEQUENCE\.length/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
-    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
+    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : PIGEON_PEA_EXAMPLE\.commonName/);
     assert.doesNotMatch(source, /Inspirational plaque/);
     assert.match(source, /createBoundaryTexture/);
     assert.doesNotMatch(source, /function guideAreaConversion/);

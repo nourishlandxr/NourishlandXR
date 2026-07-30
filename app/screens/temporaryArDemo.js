@@ -10,6 +10,7 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
+import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 
 let appRoot = null;
 let session = null;
@@ -97,21 +98,8 @@ const BIOMAP_CATEGORIES = Object.freeze({
 });
 const INTRO_KNOWLEDGE_KEYWORDS = Object.keys(BIOMAP_CATEGORIES);
 const DEMO_CONTENT = Object.freeze({
-    plant: { title: 'Plant · Lemon Myrtle', accent: '#b7e895', lines: ['CLIMATE  Warm temperate · sheltered', 'USES  Tea · aroma · habitat', 'RELATIONSHIPS  Pollinators · understory'] },
+    plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] }
-});
-const LEMON_MYRTLE_KNOWLEDGE = Object.freeze({
-    title: 'Lemon Myrtle',
-    left: [
-        ['USES', 'Tea · spice · aromatic oils'],
-        ['GROWTH', 'Warm temperate · sheltered edge'],
-        ['FRUIT & FLOWER', 'Cream flowers · small nutlets']
-    ],
-    right: [
-        ['ORIGIN', 'Subtropical eastern Australia'],
-        ['SCIENTIFIC', 'Backhousia citriodora · Myrtaceae'],
-        ['STORY', 'First Nations knowledge · living culture']
-    ]
 });
 const MORINGA_KNOWLEDGE = Object.freeze({
     title: 'Moringa Tree',
@@ -126,19 +114,7 @@ const MORINGA_KNOWLEDGE = Object.freeze({
         ['STORY', 'Food cultures · medicine · resilience']
     ]
 });
-const LEMON_MYRTLE_VIRTUAL_TAG_PROFILE = Object.freeze({
-    commonName: 'Lemon Myrtle',
-    scientificName: 'Backhousia citriodora',
-    family: 'Myrtaceae',
-    origin: 'Subtropical rainforests of eastern Australia',
-    overview: 'An aromatic evergreen tree known for leaves rich in lemon-scented oils.',
-    uses: 'Tea, culinary flavouring, aromatic oils, habitat and garden shade.',
-    growth: 'Warm temperate to subtropical conditions, sheltered edges and moist, free-draining soil.',
-    flowers: 'Cream-white summer flowers support pollinators; small nutlets follow.',
-    relationships: 'Works as an understory or edge tree and contributes shelter, nectar and structure.',
-    story: 'A living plant with deep First Nations knowledge and continuing cultural importance.'
-});
-const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : LEMON_MYRTLE_KNOWLEDGE;
+const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
@@ -227,15 +203,8 @@ function showDemoAction(nextStage) {
     });
 }
 
-function virtualTagProfileMarkup(profile = LEMON_MYRTLE_VIRTUAL_TAG_PROFILE) {
-    const facts = [
-        ['Overview', profile.overview],
-        ['Uses', profile.uses],
-        ['Growing conditions', profile.growth],
-        ['Flowers & fruit', profile.flowers],
-        ['Relationships', profile.relationships],
-        ['Living story', profile.story]
-    ];
+function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
+    const facts = profile.informationTree.map(section => [section.label, section.details.join(' · ')]);
     return `<div class="tryit-virtual-tag-shell">
         <header class="tryit-virtual-tag-header">
           <span>WEB MODE · VIRTUAL TAG</span>
@@ -244,11 +213,12 @@ function virtualTagProfileMarkup(profile = LEMON_MYRTLE_VIRTUAL_TAG_PROFILE) {
         <main class="tryit-virtual-tag-profile" aria-labelledby="tryitVirtualTagTitle">
           <section class="tryit-virtual-tag-identity">
             <span class="tryit-virtual-tag-orb" aria-hidden="true"></span>
-            <div><small>PLANT FILE</small><h2 id="tryitVirtualTagTitle">${profile.commonName}</h2><p><i>${profile.scientificName}</i> · ${profile.family}</p><p>${profile.origin}</p></div>
+            <div><small>${profile.name} · COMPLETE PLANT FILE</small><h2 id="tryitVirtualTagTitle">${profile.commonName}</h2><p><i>${profile.scientificName}</i> · ${profile.family}</p><p>${profile.plantType}</p></div>
           </section>
           <section class="tryit-virtual-tag-tutorial">
             <small>TUTORIAL · WEB MODE</small>
             <strong>The same Plant Profile can be read outside AR.</strong>
+            <p>${profile.shortProfile}</p>
             <p>A Virtual Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
           </section>
           <section class="tryit-virtual-tag-facts">${facts.map(([label, value]) => `<article><small>${label}</small><p>${value}</p></article>`).join('')}</section>
@@ -295,7 +265,7 @@ function openDemoVirtualTag(record) {
     webMode.innerHTML = virtualTagProfileMarkup();
     webMode.hidden = false;
     webMode.querySelector('[data-demo-close-web-mode]')?.addEventListener('click', () => closeDemoVirtualTag(record));
-    setGuide('Web Mode is showing the complete Lemon Myrtle Plant Profile.');
+    setGuide('Web Mode is showing the complete Pigeon Pea Plant Profile.');
 }
 
 function inviteVirtualTag(record) {
@@ -521,13 +491,10 @@ function runArWelcomeTutorial() {
 }
 
 function runKnowledgeTour(record, onComplete) {
+    const knowledge = knowledgeFor(record);
     const topics = [
-        ['left-0', 'USES'],
-        ['left-1', 'GROWTH CONDITIONS'],
-        ['left-2', 'FRUIT & FLOWER'],
-        ['right-0', 'ORIGIN'],
-        ['right-1', 'SCIENTIFIC'],
-        ['right-2', 'STORY']
+        ...knowledge.left.map(([topic], index) => [`left-${index}`, topic]),
+        ...knowledge.right.map(([topic], index) => [`right-${index}`, topic])
     ];
     let index = 0;
     clearTimeout(knowledgeTourTimer);
@@ -556,13 +523,17 @@ function runKnowledgeTour(record, onComplete) {
 
 function guidePlantConversion(record) {
     const moringa = record.tutorialStage === 'plant2';
-    const plantName = moringa ? 'Moringa Tree' : 'Lemon Myrtle';
+    const plantName = moringa ? 'Moringa Tree' : PIGEON_PEA_EXAMPLE.commonName;
     setGuide(`${moringa ? 'Your second' : 'Your first'} Plant orb is placed.`);
     const completeConversion = () => {
         record.type = 'plant';
         record.demoType = 'plant';
         record.name = plantName;
-        record.demoPlantPreset = moringa ? 'moringa' : 'lemon-myrtle';
+        record.demoPlantPreset = moringa ? 'moringa' : PIGEON_PEA_EXAMPLE.slug;
+        if (!moringa) {
+            record.demoExampleId = PIGEON_PEA_EXAMPLE.id;
+            record.demoExampleName = PIGEON_PEA_EXAMPLE.name;
+        }
         record.demoExpanded = false;
         record.demoActiveBranch = '';
         record.informationPosition = plantInformationPosition(record);
@@ -580,7 +551,7 @@ function guidePlantConversion(record) {
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
         moringa
             ? 'This Moringa orb can carry its own Plant Profile in the place where the tree grows. Continue, then press the orb to explore its information tree.'
-            : 'A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. Continue, then press the orb to explore its information tree.',
+            : `${PIGEON_PEA_EXAMPLE.introduction} A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. Continue, then press the orb to explore its information tree.`,
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -1048,7 +1019,7 @@ function bindSimulatedInformationPanels(layer) {
     });
 }
 
-function plantKnowledgeMarkup(knowledge = LEMON_MYRTLE_KNOWLEDGE, activeBranch = 'left-0') {
+function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, activeBranch = 'left-0') {
     const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => {
         const key = `${side}-${index}`;
         const open = activeBranch === key;
@@ -1737,14 +1708,14 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0
         ...knowledge.left.map((item, index) => ({
             item,
             key: `left-${index}`,
-            x: [390, 270, 390][index],
-            y: [150, 360, 570][index]
+            x: [400, 275, 275, 400][index],
+            y: [105, 275, 445, 615][index]
         })),
         ...knowledge.right.map((item, index) => ({
             item,
             key: `right-${index}`,
-            x: [730, 850, 730][index],
-            y: [150, 360, 570][index]
+            x: [720, 845, 845, 720][index],
+            y: [105, 275, 445, 615][index]
         }))
     ];
     cells.forEach(cell => {

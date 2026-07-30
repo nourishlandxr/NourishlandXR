@@ -1,0 +1,33 @@
+export const PIGEON_PEA_EXAMPLE = Object.freeze({
+    id: 'example-1',
+    name: 'Example 1',
+    slug: 'pigeon-pea',
+    commonName: 'Pigeon Pea',
+    scientificName: 'Cajanus cajan',
+    family: 'Fabaceae',
+    plantType: 'Short-lived perennial legume shrub',
+    introduction: 'Meet the Pigeon Pea—a productive support plant connecting food, soil and biodiversity within the garden.',
+    shortProfile: 'Pigeon pea is a fast-growing perennial legume that combines food production with ecological support. Its edible peas provide a useful crop, while its nitrogen-fixing partnership, leaf litter and prunings contribute to the living soil. It can also function as a temporary hedge, shelter plant and source of chop-and-drop biomass.',
+    informationTree: Object.freeze([
+        { id: 'about', label: 'ABOUT', details: ['Scientific name: Cajanus cajan', 'Family: Fabaceae', 'Form: Upright, branching perennial shrub', 'Native range: Indian subcontinent', 'Climate: Tropical and subtropical'] },
+        { id: 'growth', label: 'GROWTH', details: ['Position: Full sun', 'Water: Drought-tolerant once established', 'Soil: Adaptable, including relatively poor soils', 'Habit: Fast-growing and suitable for intercropping', 'Sensitivity: Protect from severe frost and waterlogged soil'] },
+        { id: 'food', label: 'FOOD', details: ['Edible parts: Green peas and mature dried seeds', 'Harvest: Pick young pods for green peas or allow pods to dry', 'Preparation: Cook peas and mature seeds before eating', 'Value: Protein-rich food crop'] },
+        { id: 'soil', label: 'SOIL', details: ['Function: Nitrogen-fixing legume', 'Leaf litter: Returns organic matter to the soil', 'Roots: Helps cycle nutrients through the growing system', 'Use: Supports depleted soils and low-input growing systems'] },
+        { id: 'garden-role', label: 'GARDEN ROLE', details: ['Support species', 'Temporary shelter and light shade', 'Chop-and-drop biomass', 'Living hedge or productive boundary', 'Companion for intercropped food plants'] },
+        { id: 'biodiversity', label: 'BIODIVERSITY', details: ['Flowers provide resources for visiting insects', 'Dense branching provides temporary habitat and shelter', 'Adds a flowering legume layer to the garden', 'Contributes food, biomass and structural diversity'] },
+        { id: 'management', label: 'MANAGEMENT', details: ['Prune to control height and encourage branching', 'Use prunings as mulch where appropriate', 'Harvest pods regularly for food production', 'Replace ageing plants as part of garden succession'] },
+        { id: 'story', label: 'STORY', details: ['Summary: Pigeon pea connects food production with soil renewal.', 'Demonstration message: One plant can provide food, habitat, biomass and support for the wider garden system.'] }
+    ])
+});
+
+const treeSection = id => PIGEON_PEA_EXAMPLE.informationTree.find(section => section.id === id);
+const branch = id => {
+    const section = treeSection(id);
+    return [section.label, section.details.join(' · ')];
+};
+
+export const PIGEON_PEA_AR_KNOWLEDGE = Object.freeze({
+    title: PIGEON_PEA_EXAMPLE.commonName,
+    left: Object.freeze([branch('about'), branch('food'), branch('garden-role'), branch('management')]),
+    right: Object.freeze([branch('growth'), branch('soil'), branch('biodiversity'), branch('story')])
+});

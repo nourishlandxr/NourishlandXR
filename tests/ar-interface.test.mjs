@@ -876,7 +876,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
     assert.match(source, /data-tryit-guided-choice/);
-    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : 'Lemon Myrtle'/);
+    assert.match(source, /const plantName = moringa \? 'Moringa Tree' : PIGEON_PEA_EXAMPLE\.commonName/);
     assert.match(source, /runKnowledgeTour/);
     assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
@@ -924,7 +924,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
-    assert.match(source, /LEMON_MYRTLE_KNOWLEDGE/);
+    assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
     assert.match(source, /const open = cell\.key === activeBranch/);
