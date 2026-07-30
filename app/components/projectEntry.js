@@ -100,7 +100,7 @@ export function renderProjectEntry(config) {
         ${growthJourneyHtml}
 
         <section class="dashboard-ar-path${spotlightTarget === 'arPath' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
-            <button class="dashboard-open-ar" type="button" onclick="${config.openArAction}">
+            <button class="global-ar-action dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
                 <strong id="openArTitle">OPEN AR</strong>
                 <small>See your knowledge come alive in the place it belongs.</small>

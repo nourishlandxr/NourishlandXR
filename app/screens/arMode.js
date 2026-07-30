@@ -251,6 +251,8 @@ function updateLocationNote() {
     if (prompt) prompt.textContent = config.prompt;
     if (title) title.textContent = config.title;
     if (area) area.textContent = `AREA · ${areaName}`;
+    const homeSign = overlayRoot?.querySelector('[data-ar-home-sign]');
+    if (homeSign) homeSign.hidden = Boolean(activeAreaId && areaName !== DEFAULT_HOME_AREA_NAME);
 }
 
 function activeAreaMarkers() {
@@ -983,11 +985,7 @@ async function openArAreaCreationForm() {
             status.textContent = 'Creating Area…';
             const area = await createAreaRecord(projectId, siteId, { name });
             if (session !== activeSession || overlayRoot !== activeOverlay || !activeOverlay?.isConnected || activeProjectId !== projectId) return;
-            activeAreaId = area.id;
-            activeAreaName = area.name;
-            sessionMarkers = [];
-            locatedTotemRecord = null;
-            renderSessionMarkers();
+            activateArea(area);
             closePlacePicker();
             await armPlacement('area_checkpoint');
         } catch (error) {
@@ -2170,6 +2168,10 @@ function createOverlay() {
           </span>
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
+        <div class="creator-ar-home-sign" data-ar-home-sign aria-label="Home, unassigned workspace">
+          <span>UNASSIGNED WORKSPACE</span>
+          <strong>HOME</strong>
+        </div>
         ${spatialMoveControlMarkup('ar')}
         <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
           <span class="creator-ar-location-stick" aria-hidden="true"></span>
@@ -2307,6 +2309,8 @@ function navigateAfterAr(projectId, areaId, returnContext) {
             window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
+        } else if (areaId && window.renderProjectAreaDashboard) {
+            window.renderProjectAreaDashboard(encodeURIComponent(projectId), encodeURIComponent(areaId));
         } else {
             window.renderProjectDashboard?.(encodeURIComponent(projectId), '', false, 'returning');
         }

@@ -276,6 +276,49 @@ test('two Areas preserve independent Totems, Markers and checkpoint-local layout
     assert.equal(livingAnchor.checkpoint_id, livingTotem.id);
 });
 
+test('Area Totem profile, appearance and optional QR anchor save as one durable record', async () => {
+    const markersPath = `/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers`;
+    const created = await jsonRequest(markersPath, {
+        method: 'POST',
+        body: JSON.stringify({
+            id: 'totem-save-regression',
+            name: 'Current Place Totem',
+            type: 'area_checkpoint',
+            description: 'Physical anchor for Current Place.',
+            appearance: { color: '#7d715d', heightPreset: 'tall' },
+            area_information_board: {
+                title: 'Current Place',
+                introduction: 'Welcome to this Area.',
+                information_bubbles: ['First useful detail.']
+            },
+            visibility: 'draft'
+        })
+    });
+    assert.equal(created.type, 'area_checkpoint');
+    assert.equal(created.appearance.heightPreset, 'tall');
+    assert.equal(created.area_information_board.introduction, 'Welcome to this Area.');
+
+    const anchor = await jsonRequest(`${markersPath}/${created.id}/anchor`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            type: 'qr',
+            qr_code: 'NL-TOTEM-SAVE-001',
+            description: 'Physical Totem for Current Place.'
+        })
+    });
+    assert.equal(anchor.qr_code, 'NL-TOTEM-SAVE-001');
+
+    await stopServer();
+    await startServer();
+
+    const markers = await jsonRequest(markersPath);
+    const restored = markers.find(marker => marker.id === created.id);
+    const restoredAnchor = await jsonRequest(`${markersPath}/${created.id}/anchor`);
+    assert.equal(restored.area_information_board.information_bubbles[0], 'First useful detail.');
+    assert.equal(restored.appearance.color, '#7d715d');
+    assert.equal(restoredAnchor.qr_code, 'NL-TOTEM-SAVE-001');
+});
+
 test('Physical Marker assignment persists, stays unique per project, reassigns explicitly and removes independently', async () => {
     const markerPath = `/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers`;
     const physicalAnchor = {

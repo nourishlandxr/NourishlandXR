@@ -1026,7 +1026,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /Physical QR or location code/);
     assert.match(dashboardSource, /Additional information balloons/);
-    assert.match(dashboardSource, /GO TO AREA · AR/);
+    assert.match(dashboardSource, /OPEN AREA IN AR/);
     assert.match(dashboardSource, /data-add-totem-text-box/);
     assert.match(serverSource, /'area_checkpoint'/);
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
@@ -1208,7 +1208,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /site-map-totem-links/);
     assert.match(dashboardSource, /Main welcome text/);
     assert.match(dashboardSource, /areaCheckpointColor/);
-    assert.match(dashboardSource, /isPlaced \? 'VIEW IN AR' : 'PLACE IN AR'/);
+    assert.match(dashboardSource, /isPlaced \? 'OPEN IN AR' : 'PLACE IN AR'/);
     assert.match(dashboardSource, /encoded\(isPlaced \? existing\?\.marker\.id \|\| '' : ''\)/);
     assert.match(dashboardSource, /encoded\(existing && !isPlaced \? existing\.marker\.id : ''\)/);
     assert.match(dashboardSource, /encoded\(isPlaced \? marker\.id : ''\)/);
@@ -1225,6 +1225,14 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(fieldGuideSource, /field-guide-fireplace-symbol/);
     assert.match(arSource, /web-totem:/);
     assert.match(arSource, /window\.renderAreaCheckpointForm/);
+    assert.match(arSource, /else if \(areaId && window\.renderProjectAreaDashboard\)/);
+    assert.match(arSource, /data-ar-home-sign/);
+    assert.match(dashboardSource, /web-context-beacon is-area/);
+    assert.match(dashboardSource, /optionalWarnings/);
+    assert.match(dashboardSource, /Totem saved in this Area/);
+    assert.match(styles, /\.web-context-beacon/);
+    assert.match(styles, /button\.global-ar-action/);
+    assert.match(styles, /\.creator-ar-home-sign/);
     assert.match(styles, /\.totem-bottom-navigation/);
 });
 

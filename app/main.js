@@ -399,11 +399,11 @@ window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => {
 };
 window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
 window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
-window.renderProjectAreaDashboard = (projectId, areaId) => {
+window.renderProjectAreaDashboard = (projectId, areaId, options = {}) => {
     const args = [projectId, areaId];
     rememberCurrentView('area', args);
     pushViewHistory('area', args);
-    return renderProjectAreaDashboard(app, projectId, areaId);
+    return renderProjectAreaDashboard(app, projectId, areaId, options);
 };
 window.saveAreaInformation = (event, projectId, areaId) => saveAreaInformation(event, projectId, areaId);
 window.openProjectAreaAr = (projectId, areaId, checkpointId = '', initialPlacementType = '') => openProjectAreaAr(app, projectId, areaId, checkpointId, initialPlacementType);

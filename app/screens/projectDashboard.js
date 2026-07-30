@@ -704,14 +704,14 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                 <p class="meta" data-physical-anchor-status>${savedPhysicalAnchor ? '' : 'Test in AR uses these current values without saving them.'}</p>
             </div>
         </details>` : '';
-        app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><div class="totem-title-row"><h1>${escapeHtml(totemName)}</h1><button type="button" data-edit-totem-name aria-label="Edit Totem name">✎</button></div></div><form id="totemFileForm" class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
+        app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="web-context-beacon is-area"><span>WORKING IN AREA</span><strong>${escapeHtml(context.area.name)}</strong></div><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><div class="totem-title-row"><h1>${escapeHtml(totemName)}</h1><button type="button" data-edit-totem-name aria-label="Edit Totem name">✎</button></div></div><form id="totemFileForm" class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
             <section class="totem-profile-hero">
                 <div class="totem-profile-visual" style="--totem-color:${totemColor};--totem-preview-height:${totemHeightDetails.previewPixels}px" aria-hidden="true"><span></span></div>
                 <div class="totem-essential-controls">
                     <div class="field totem-name-editor" hidden><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(totemName)}" required /></div>
                     <div class="field totem-color-control"><label for="areaCheckpointColor">Earth tones</label><div class="totem-tone-presets" role="group" aria-label="Totem earth tones">${totemToneButtons}</div><span class="totem-custom-color"><small>Custom</small><input id="areaCheckpointColor" type="color" value="${totemColor}" /></span></div>
                     <div class="field totem-height-control"><span>Height preset</span><div class="totem-height-presets" role="group" aria-label="Totem height">${totemHeightButtons}</div><input id="areaCheckpointHeight" type="hidden" value="${totemHeight}" /></div>
-                    <button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'VIEW IN AR' : 'PLACE IN AR'}</button>
+                    <button class="global-ar-action spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'OPEN IN AR' : 'PLACE IN AR'}</button>
                 </div>
             </section>
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Main welcome text</label><p>The main information bubble is usually the first thing visitors need.</p><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
@@ -867,15 +867,17 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     const status = document.getElementById('areaCheckpointStatus');
+    const submitButton = event.submitter;
     try {
+        if (submitButton) submitButton.disabled = true;
         const context = await projectAreaContext(projectId, areaId);
         const flowKey = `${projectId}:${areaId}`;
         const nextFlow = flow || checkpointSetupFlows.get(flowKey) || '';
-        const name = document.getElementById('areaCheckpointName').value.trim();
-        const color = document.getElementById('areaCheckpointColor').value;
+        const name = document.getElementById('areaCheckpointName')?.value.trim() || `${context.area.name} Totem`;
+        const color = document.getElementById('areaCheckpointColor')?.value || DEFAULT_TOTEM_COLOR;
         const heightPreset = normalizeTotemHeightPreset(document.getElementById('areaCheckpointHeight')?.value);
-        const qrCode = document.getElementById('areaCheckpointCode').value.trim();
-        const introduction = document.getElementById('areaCheckpointIntroduction').value.trim();
+        const qrCode = document.getElementById('areaCheckpointCode')?.value.trim() || '';
+        const introduction = document.getElementById('areaCheckpointIntroduction')?.value.trim() || '';
         const informationBubbles = [...document.querySelectorAll('[data-totem-information-box]')].map(field => field.value.trim()).filter(Boolean);
         const linkTarget = document.getElementById('areaCheckpointLinkTarget')?.value || '';
         const linkSteps = document.getElementById('areaCheckpointLinkSteps')?.value || '';
@@ -883,9 +885,8 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const physicalAnchorControlPresent = Boolean(document.getElementById('areaPhysicalAnchorEnabled'));
         const physicalAnchor = physicalAnchorControlPresent ? physicalAnchorFromTotemForm() : undefined;
         const reassignPhysicalMarker = Boolean(document.getElementById('areaPhysicalMarkerReassign')?.checked);
-        if (!name) throw new Error('Checkpoint name is required.');
         const existing = context.areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
-        if (status) status.textContent = 'Saving Area Marker…';
+        if (status) status.textContent = 'Saving Totem…';
         const checkpointData = {
             id: existing?.marker.id || scopedMarkerStorageId(projectId, context.site.id, areaId, 'area-totem'),
             name,
@@ -915,17 +916,32 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 : await createPlaceMarker(projectId, context.site.id, areaId, compatibleData);
         }
         savedMarker = savedMarker?.marker || savedMarker;
-        await syncMarkerQrAnchor(projectId, context.site.id, areaId, savedMarker.id, qrCode, `Physical Totem for ${context.area.name}.`);
+        if (!savedMarker?.id) throw new Error('The Totem record was not returned after saving.');
+        const optionalWarnings = [];
+        try {
+            await syncMarkerQrAnchor(projectId, context.site.id, areaId, savedMarker.id, qrCode, `Physical Totem for ${context.area.name}.`);
+        } catch (error) {
+            optionalWarnings.push(`QR or physical link: ${error.message}`);
+        }
         if (linkTarget) {
-            const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
-            links.push({ target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) });
-            await updateSitePlace(projectId, context.site.id, areaId, { totem_links: links });
+            try {
+                const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
+                links.push({ target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) });
+                await updateSitePlace(projectId, context.site.id, areaId, { totem_links: links });
+            } catch (error) {
+                optionalWarnings.push(`Area link: ${error.message}`);
+            }
         }
         checkpointSetupFlows.delete(flowKey);
         if (nextFlow === 'quick') await renderCheckpointPlacementChoice(document.getElementById('app'), encoded(projectId), encoded(areaId), encoded(savedMarker.id));
-        else await window.renderProjectAreaDashboard(encoded(projectId), encoded(areaId));
+        else await window.renderProjectAreaDashboard(encoded(projectId), encoded(areaId), {
+            saveNotice: optionalWarnings.length
+                ? `Totem saved. Optional setup needs attention — ${optionalWarnings.join(' · ')}`
+                : 'Totem saved in this Area.'
+        });
     } catch (error) {
-        if (status) status.textContent = `Area Marker could not be saved: ${error.message}`;
+        if (status) status.textContent = `Totem could not be saved: ${error.message}`;
+        if (submitButton) submitButton.disabled = false;
     }
 }
 
@@ -1541,10 +1557,10 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                     ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                     : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', '${encoded(context.area.id)}')`;
             const profileArAction = markerType === 'plant' && isPlantProfileUpgraded(marker, plantProfile)
-                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">View / edit in AR</button>`
+                ? `<button class="global-ar-action spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">OPEN IN AR</button>`
                 : '';
             const totemArAction = markerType === 'area_checkpoint'
-                ? `<button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? marker.id : '')}', '', '${encoded(isPlaced ? '' : marker.id)}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'View in AR' : 'Place in AR'}</button>`
+                ? `<button class="global-ar-action spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? marker.id : '')}', '', '${encoded(isPlaced ? '' : marker.id)}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'OPEN IN AR' : 'PLACE IN AR'}</button>`
                 : '';
             return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}" role="button" tabindex="0" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
@@ -1553,7 +1569,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <span class="area-entry-actions">${totemArAction}${profileArAction}</span>
             </article>`;
         }).join('');
-        const unplacedTotemRow = checkpoint ? '' : `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Area Totem · Not yet placed</span></span><span class="area-entry-actions"><button class="spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">Place in AR</button></span></article>`;
+        const unplacedTotemRow = checkpoint ? '' : `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Area Totem · Not yet placed</span></span><span class="area-entry-actions"><button class="global-ar-action spatial-focus-button compact-ar-action" type="button" onclick="event.stopPropagation();window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">PLACE IN AR</button></span></article>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1566,12 +1582,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
+            <div class="web-context-beacon is-area"><span>WORKING IN AREA</span><strong>${escapeHtml(context.area.name)}</strong></div>
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
                 <h1>${escapeHtml(context.area.name)}</h1>
                 <p class="subtitle">${escapeHtml(context.area.type || 'Area')} · ${escapeHtml(context.project.name)}</p>
-                <div class="area-top-actions"><button class="area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">GO TO AREA · AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
+                <div class="area-top-actions"><button class="global-ar-action area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">OPEN AREA IN AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
             </header>
+            ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
             ${areaTutorialConfirmation}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
@@ -1773,7 +1791,7 @@ export async function renderUnplacedContent(app, encodedProjectId) {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(displayAreaName(place))}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;
         }).join('');
-        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>Home is the default workspace for unassigned items, experiments and play that still need a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home is empty.</p>'}</div></div>`;
+        app.innerHTML = `<div class="screen unplaced-content-screen"><div class="web-context-beacon is-home"><span>UNASSIGNED WORKSPACE</span><strong>HOME</strong></div><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Web Hub</button><h1>Home</h1><p class="subtitle">${unplaced.length} item${unplaced.length === 1 ? '' : 's'} awaiting organisation or placement.</p></div><div class="panel"><p>Home is the default workspace for unassigned items, experiments and play that still need a named Area or physical position.</p><button type="button" onclick="window.renderAddToLocation('${encoded(project.id)}')">Add item to Home</button></div><div class="latest-entry-list">${rows || '<p class="project-empty-state">Home is empty.</p>'}</div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encodedProjectId}')">Back</button><h1>Unplaced Content unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -2394,7 +2412,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const returnArCopy = plant
         ? 'Take your time with this Plant. Back to AR returns directly to the same Area with this orb open.'
         : 'Take your time with this information. Back to AR returns directly to the same Area and Marker.';
-    const returnArAction = returnToAr ? `<button class="ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
+    const returnArAction = returnToAr ? `<button class="global-ar-action ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
     const arHandoff = returnToAr ? `<aside class="ar-web-handoff" aria-label="Return to augmented reality"><div><strong>WEB MODE</strong><p>${returnArCopy}</p></div>${returnArAction}</aside>` : '';
     const specialMarkerEditor = entry.marker.type === 'sub_checkpoint' ? `<div class="field"><label for="projectEntrySpecialSymbol">Marker symbol</label><select id="projectEntrySpecialSymbol"><option value="" ${entry.marker.special_symbol ? '' : 'selected'}>Standard checkpoint</option>${[['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'], ['!', 'Exclamation point'], ['?', 'Question mark']].map(([symbol, label]) => `<option value="${symbol}" ${entry.marker.special_symbol === symbol ? 'selected' : ''}>${label}</option>`).join('')}</select></div>` : '';
     const noteColor = /^#[0-9a-f]{6}$/i.test(entry.marker.appearance?.color || '') ? entry.marker.appearance.color : '#d7834f';
@@ -2407,7 +2425,13 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         <div class="plant-ar-quick-fields"><label for="projectEntryCommonName">Common name<input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" required /></label><label for="projectEntryScientificName">Scientific name<input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></label><div class="plant-ar-quick-tone"><label for="projectEntryOrbColor">Plant tone</label><div class="plant-ar-quick-tones">${quickPlantTones}</div><label class="plant-ar-custom-tone" for="projectEntryOrbColor"><span>Custom</span><input id="projectEntryOrbColor" type="color" value="${escapeHtml(quickPlantColor)}" /></label></div></div></section>`
         : '';
     const standardEditorFields = quickArPlantEdit ? '' : `<div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}`;
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})">${quickPlantFields}${standardEditorFields}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${!quickArPlantEdit && !placement.isPlaced ? `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>` : ''}<button class="primary" type="submit">${quickArPlantEdit ? 'Save basics' : 'Save changes'}</button>${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">${returnToAr ? 'Stay in Web Mode · Project' : 'Return to Dashboard'}</button></nav></div>`;
+    const entryContextName = displayAreaName(entry.place);
+    const entryIsHome = isDefaultHomeArea(entry.place);
+    const webReturnAction = entryIsHome
+        ? `window.renderUnplacedContent('${encoded(project.id)}')`
+        : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
+    const webReturnLabel = entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}"><div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="global-ar-action spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">OPEN IN AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})">${quickPlantFields}${standardEditorFields}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${!quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">PLACE IN AR</button>` : ''}<button class="primary" type="submit">${quickArPlantEdit ? 'Save basics' : 'Save changes'}</button>${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav></div>`;
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
@@ -2550,5 +2574,9 @@ export async function deleteProjectEntry(encodedProjectId, encodedMarkerId) {
     if (!entry) throw new Error('Entry not found.');
     if (!window.confirm(`Delete “${entry.marker.name}”? This cannot be undone.`)) return;
     await deletePlaceMarker(project.id, site.id, entry.place.id, entry.marker.id);
-    await renderProjectDashboard(document.getElementById('app'), encoded(project.id));
+    if (isDefaultHomeArea(entry.place)) {
+        await renderUnplacedContent(document.getElementById('app'), encoded(project.id));
+    } else {
+        await renderProjectAreaDashboard(document.getElementById('app'), encoded(project.id), encoded(entry.place.id));
+    }
 }
