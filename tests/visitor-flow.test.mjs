@@ -228,7 +228,14 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(dashboardSource, /<strong>Web Hub<\/strong>/);
     assert.match(fieldGuideSource, /const guideTitle = creator \? 'Web Hub' : 'Field Guide'/);
     assert.match(fieldGuideSource, /loadSitePlaces\(project\.id, site\.id\)\.catch\(\(\) => \[\]\)/);
-    assert.match(fieldGuideSource, /<strong>\$\{DEFAULT_HOME_AREA_NAME\}<\/strong>/);
+    assert.match(fieldGuideSource, /web-context-beacon is-home/);
+    assert.match(fieldGuideSource, /<strong data-web-hub-location>HOME<\/strong>/);
+    assert.match(fieldGuideSource, /currentGuidePlaceId = creator \? String\(homePlace\?\.id \|\| ''\) : ''/);
+    assert.match(fieldGuideSource, /applyFieldGuideFilter\(currentGuidePlaceId\)/);
+    assert.match(fieldGuideSource, /field-guide-creation-board/);
+    assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
+    assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
+    assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /Spatial Plan/);
     assert.match(fieldGuideSource, /Area Totems/);
     assert.match(fieldGuideSource, /Plant records/);

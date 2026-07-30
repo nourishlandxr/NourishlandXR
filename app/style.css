@@ -5430,7 +5430,13 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-summary > span { padding: .4rem .6rem; border-radius: 12px; background: rgba(255,255,255,.7); color:#506256; font-size:.68rem; }
 .field-guide-summary > span strong { color:#31563c; font-size:.9rem; }
 .field-guide-summary .is-unassigned { background:var(--guide-peach); }
-.field-guide-add-plant { margin-left:auto; min-height:36px; padding:.4rem .7rem; }
+.field-guide-creation-board { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:.75rem; align-items:center; padding:.8rem; border:1px solid rgba(86,112,70,.2); border-radius:20px; background:linear-gradient(145deg,rgba(250,248,235,.97),rgba(231,241,221,.94)); }
+.field-guide-creation-board h2,.field-guide-creation-board p { margin:0; }
+.field-guide-creation-board > div:first-child > p:last-child { margin-top:.25rem; color:#657163; font-size:.7rem; line-height:1.4; }
+.field-guide-creation-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+.field-guide-creation-actions button { display:grid; gap:.2rem; min-height:70px; padding:.7rem; border:1px solid rgba(76,111,65,.2); border-radius:15px; background:rgba(255,255,249,.94); color:#36523a; text-align:left; }
+.field-guide-creation-actions button strong { font-size:.9rem; }
+.field-guide-creation-actions button span { color:#697467; font-size:.66rem; line-height:1.35; }
 .field-guide-search-deck { display:grid; grid-template-columns:minmax(0,1fr); gap:.55rem; padding:.75rem; border:1px solid rgba(70,111,73,.15); border-radius:18px; background:rgba(255,255,255,.72); }
 .field-guide-advanced-search { padding-top:.45rem; border-top:1px solid rgba(70,111,73,.12); }
 .field-guide-advanced-search > summary { width:fit-content; cursor:pointer; color:#587064; font-size:.7rem; font-weight:750; }
@@ -5536,6 +5542,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
     .totem-physical-marker-preview { min-height:148px; }
     .totem-physical-transform-grid fieldset { grid-template-columns:1fr; }
     .field-guide-preparation-grid { grid-template-columns: 1fr 1fr; }
+    .field-guide-creation-board { grid-template-columns:1fr; }
     .totem-editor-heading { align-items: stretch; flex-direction: column; }
     .totem-editor-heading button { align-self: start; }
     .totem-tone-presets { grid-template-columns:repeat(2,minmax(0,1fr)); }
