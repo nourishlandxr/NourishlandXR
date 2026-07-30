@@ -800,17 +800,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
-    assert.match(source, /function guideFirstOrbAdjustment\(record\)/);
-    assert.match(source, /panel\.classList\.add\('is-movement-tip'\)/);
-    assert.match(source, /<small>MOVE THE ORB<\/small><h2>ADJUST ITS POSITION<\/h2>/);
-    assert.match(source, /Aim at the Plant orb\. Hold the pointer, move your phone, then release\./);
-    assert.doesNotMatch(source, /Now hold the Plant orb and adjust its position\. Continue/);
+    assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
+    assert.match(source, /you can hold the orb and move it whenever you want—adjusting it is optional/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
     assert.match(source, /event\.currentTarget\?\.setPointerCapture\?\.\(event\.pointerId\)/);
     assert.match(source, /placementPointer\.addEventListener\('pointercancel'/);
-    assert.match(source, /if \(type === 'plant'\) guideFirstOrbAdjustment\(placedRecord\)/);
+    assert.match(source, /if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
     assert.match(source, /pointer\?\.removeAttribute\('hidden'\);[\s\S]*pointer\?\.classList\.add\('is-revealing', 'is-ready'\)/);
     assert.match(source, /function hideGuidedChoice\(\) \{[\s\S]*querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /addEventListener\('beforexrselect', event => event\.preventDefault\(\)\)/);
@@ -835,13 +832,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /green:[\s\S]*radius: 0\.074/);
     assert.match(source, /coreColor: material\?\.core/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
-    assert.match(styles, /\.tryit-guided-choice\.is-movement-tip \{[^}]*pointer-events:none;/);
+    assert.doesNotMatch(styles, /\.tryit-guided-choice\.is-movement-tip/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*outline:0 !important;[^}]*border-radius:50% !important;[^}]*background:transparent !important;[^}]*backdrop-filter:none !important;/);
     assert.match(source, /placementPointer\.addEventListener\('pointerup', event => \{[\s\S]*releaseHeldDemoRecord\(\)[\s\S]*pressPlacementPointer\(event\)/);
     assert.match(source, /placementPointer\.addEventListener\('mousedown'[\s\S]*beginPointerDemoHold\(event\)/);
-    assert.match(source, /placementPointer\.addEventListener\('keydown'[\s\S]*record\.awaitingPositionAdjustment = false;[\s\S]*guidePlantConversion\(record\)/);
-    assert.match(source, /if \(simulatedMode\) \{[\s\S]*record => record\.awaitingPositionAdjustment[\s\S]*demoHeldIndex = index;[\s\S]*updateSimulatedMarkers\(\)/);
+    assert.doesNotMatch(source, /awaitingPositionAdjustment/);
     assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
