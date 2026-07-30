@@ -18,6 +18,7 @@ import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
 let gl = null;
@@ -71,23 +72,27 @@ const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: '
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
 const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Area Totem' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const markerDefaultColor = type => ({ plant: '#6fb85a', note: '#d7834f', sub_checkpoint: '#647a3b', intro_checkpoint: '#43c99b', area_checkpoint: '#68c7b8' })[type] || '#647a3b';
+const markerDefaultColor = type => ({ plant: '#5e7956', note: '#9a6b50', sub_checkpoint: '#647a3b', intro_checkpoint: '#59766a', area_checkpoint: DEFAULT_TOTEM_COLOR })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const markerAppearanceOpacity = marker => [1, .8, .6, .4].includes(Number(marker?.appearance?.opacity)) ? Number(marker.appearance.opacity) : 1;
 const markerNoteSurface = marker => marker?.appearance?.surface === 'outline' ? 'outline' : 'filled';
 const TASKBAR_V2_COLORS = Object.freeze({
     plant: Object.freeze([
-        { name: 'Forest', value: '#6fb85a' },
-        { name: 'Lime', value: '#b7e895' },
-        { name: 'Coral', value: '#dd6b55' },
-        { name: 'Sky', value: '#5fa8d3' }
+        { name: 'Fern', value: '#5e7956' },
+        { name: 'Moss', value: '#74805d' },
+        { name: 'Sage', value: '#89977c' },
+        { name: 'Bark', value: '#6f5b47' },
+        { name: 'Clay', value: '#9a6b50' },
+        { name: 'Stone', value: '#74786f' }
     ]),
     note: Object.freeze([
-        { name: 'Amber', value: '#d7834f' },
-        { name: 'Leaf', value: '#78a96b' },
-        { name: 'Sky', value: '#5fa8d3' },
-        { name: 'Violet', value: '#8d74b8' }
+        { name: 'Clay', value: '#9a6b50' },
+        { name: 'Ochre', value: '#967f50' },
+        { name: 'Olive', value: '#747650' },
+        { name: 'Bark', value: '#6d5949' },
+        { name: 'Slate', value: '#68736f' },
+        { name: 'Heather', value: '#78656b' }
     ])
 });
 const TASKBAR_V2_SIZES = Object.freeze(['small', 'medium', 'large', 'huge']);
@@ -140,7 +145,7 @@ function markerDimensions(marker) {
     return ({
         // WebXR model scales are half-extents. The Totem body is a slender
         // 0.22m post; its separate base completes the grounded silhouette.
-        area_checkpoint: [.11 * factor, .68 * factor],
+        area_checkpoint: [.11 * factor, totemHeightPreset(marker).halfHeightMetres * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         // Notes are readable spatial signs rather than tiny object labels.
         note: [.94 * factor, .345 * factor],
@@ -373,7 +378,7 @@ function updateContextToolbar() {
     toolbar.innerHTML = `<span class="creator-ar-context-label">${placementType ? 'CREATE' : 'EDIT'}</span>
         ${contextAppearanceButtons(type, appearance)}
         ${locationNoteControl}
-        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>WEB MODE</span></button>
+        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>${!placementType && type === 'plant' ? 'EDIT BASICS' : 'WEB MODE'}</span></button>
         <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
     bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
@@ -540,31 +545,36 @@ function updateNotePlacementPreview() {
     const surface = preview?.querySelector('[data-ar-note-placement-surface]');
     if (!preview || !surface) return;
     const armed = readyPlacementType === 'note';
-    preview.hidden = !armed;
-    if (!armed) return;
+    if (!armed) {
+        preview.hidden = true;
+        return;
+    }
     const marker = placementPreviewMarker('note');
-    const factor = markerSizeFactor(marker);
     const label = preview.querySelector('[data-ar-note-placement-label]');
-    preview.style.setProperty('--note-preview-width', `${Math.round(280 * factor)}px`);
-    preview.style.setProperty('--note-preview-height', `${Math.round(116 * factor)}px`);
-    surface.style.setProperty('--spatial-note-color', markerAppearanceColor(marker));
-    surface.style.setProperty('--note-preview-opacity', markerAppearanceOpacity(marker));
+    preview.hidden = true;
+    preview.classList.toggle('is-note-outline', markerNoteSurface(marker) === 'outline');
+    for (const declaration of markerDomAppearanceStyle(marker).split(';').filter(Boolean)) {
+        const separator = declaration.indexOf(':');
+        preview.style.setProperty(declaration.slice(0, separator), declaration.slice(separator + 1));
+    }
     if (label) label.textContent = marker.name || 'New note';
 }
 
 function positionNotePlacementPreview(view = latestView) {
     const preview = overlayRoot?.querySelector('[data-ar-note-placement-preview]');
     if (!preview || readyPlacementType !== 'note') return;
-    const target = placementPoint();
+    const target = placementPoint('note');
     const point = target ? projectWorldPoint(view, target) : null;
     preview.hidden = !point;
     if (!point) return;
     preview.style.transform = `translate(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px) translate(-50%, -50%)`;
 }
 
-function placementPoint() {
+function placementPoint(type = readyPlacementType) {
     if (!latestViewerMatrix) return null;
-    const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
+    const distance = type === 'note'
+        ? AR_EXPERIENCE_CONFIG.notePlacementDistanceMetres
+        : AR_EXPERIENCE_CONFIG.placementDistanceMetres;
     const ray = pointerWorldRay() || {
         x: -latestViewerMatrix[8],
         y: -latestViewerMatrix[9],
@@ -2017,7 +2027,7 @@ async function quickPlace(type) {
         const operation = captureArOperationContext();
         const operationIsCurrent = () => activePlacementOperation === placementToken && isArOperationCurrent(operation);
         if (!operationIsCurrent()) return;
-        const placementPosition = placementPoint();
+        const placementPosition = placementPoint(type);
         if (!placementPosition) {
             setPlacementStatus('Move your phone briefly, then use Place again.');
             return;
@@ -2154,9 +2164,9 @@ function createOverlay() {
         <div class="creator-ar-placement-guide" aria-hidden="true">
             ${placementPointerMarkup('Place Marker', true)}
         </div>
-        <div class="creator-ar-note-placement-preview" data-ar-note-placement-preview aria-hidden="true" hidden>
-          <span class="creator-ar-note-placement-surface nourishland-spatial-note-surface" data-ar-note-placement-surface>
-            <strong data-ar-note-placement-label>New note</strong>
+        <div class="creator-ar-note-placement-preview creator-ar-marker-hit-target-note" data-ar-note-placement-preview aria-hidden="true" hidden>
+          <span class="creator-ar-note-placement-surface creator-ar-spatial-name nourishland-spatial-note-surface" data-ar-note-placement-surface data-ar-note-placement-label>
+            New note
           </span>
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>

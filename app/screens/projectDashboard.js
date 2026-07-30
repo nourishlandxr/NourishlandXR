@@ -12,6 +12,13 @@ import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProj
 import { scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import {
+    DEFAULT_TOTEM_COLOR,
+    TOTEM_HEIGHT_PRESETS,
+    TOTEM_TONES,
+    normalizeTotemHeightPreset,
+    totemHeightPreset
+} from '../services/totemAppearance.js';
+import {
     PHYSICAL_ANCHOR_DEFAULTS,
     PHYSICAL_ANCHOR_IDS,
     normalizePhysicalAnchor,
@@ -631,7 +638,11 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         }
         const submitLabel = existing ? 'Save Totem changes' : 'Save Totem';
         const totemName = existing?.marker.name || `${context.area.name} Totem`;
-        const totemColor = /^#[0-9a-f]{6}$/i.test(existing?.marker.appearance?.color || '') ? existing.marker.appearance.color : '#68c7b8';
+        const totemColor = /^#[0-9a-f]{6}$/i.test(existing?.marker.appearance?.color || '') ? existing.marker.appearance.color : DEFAULT_TOTEM_COLOR;
+        const totemHeight = normalizeTotemHeightPreset(existing?.marker);
+        const totemHeightDetails = totemHeightPreset(totemHeight);
+        const totemToneButtons = TOTEM_TONES.map(tone => `<button type="button" data-totem-tone="${tone.color}" aria-label="${tone.label} Totem tone" aria-pressed="${tone.color.toLowerCase() === totemColor.toLowerCase()}" style="--totem-tone:${tone.color}"><span aria-hidden="true"></span><small>${tone.label}</small></button>`).join('');
+        const totemHeightButtons = TOTEM_HEIGHT_PRESETS.map(preset => `<button type="button" data-totem-height="${preset.id}" aria-pressed="${preset.id === totemHeight}"><strong>${preset.label}</strong><small>${preset.metres.toFixed(2)} m</small></button>`).join('');
         const board = existing?.marker.area_information_board || {};
         const linkableAreas = context.places.filter(place => !isDefaultHomeArea(place) && place.id !== context.area.id);
         const existingLinks = Array.isArray(context.area.totem_links) ? context.area.totem_links : [];
@@ -695,10 +706,11 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         </details>` : '';
         app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><div class="totem-title-row"><h1>${escapeHtml(totemName)}</h1><button type="button" data-edit-totem-name aria-label="Edit Totem name">✎</button></div></div><form id="totemFileForm" class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
             <section class="totem-profile-hero">
-                <div class="totem-profile-visual" style="--totem-color:${totemColor}" aria-hidden="true"><span></span></div>
+                <div class="totem-profile-visual" style="--totem-color:${totemColor};--totem-preview-height:${totemHeightDetails.previewPixels}px" aria-hidden="true"><span></span></div>
                 <div class="totem-essential-controls">
                     <div class="field totem-name-editor" hidden><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(totemName)}" required /></div>
-                    <div class="field totem-color-control"><label for="areaCheckpointColor">Totem color</label><input id="areaCheckpointColor" type="color" value="${totemColor}" /></div>
+                    <div class="field totem-color-control"><label for="areaCheckpointColor">Earth tones</label><div class="totem-tone-presets" role="group" aria-label="Totem earth tones">${totemToneButtons}</div><span class="totem-custom-color"><small>Custom</small><input id="areaCheckpointColor" type="color" value="${totemColor}" /></span></div>
+                    <div class="field totem-height-control"><span>Height preset</span><div class="totem-height-presets" role="group" aria-label="Totem height">${totemHeightButtons}</div><input id="areaCheckpointHeight" type="hidden" value="${totemHeight}" /></div>
                     <button class="spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'VIEW IN AR' : 'PLACE IN AR'}</button>
                 </div>
             </section>
@@ -718,7 +730,21 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         });
         app.querySelector('#areaCheckpointColor')?.addEventListener('input', event => {
             app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-color', event.currentTarget.value);
+            app.querySelectorAll('[data-totem-tone]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.totemTone.toLowerCase() === event.currentTarget.value.toLowerCase())));
         });
+        app.querySelectorAll('[data-totem-tone]').forEach(button => button.addEventListener('click', () => {
+            const colorInput = app.querySelector('#areaCheckpointColor');
+            if (!colorInput) return;
+            colorInput.value = button.dataset.totemTone;
+            colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }));
+        app.querySelectorAll('[data-totem-height]').forEach(button => button.addEventListener('click', () => {
+            const heightInput = app.querySelector('#areaCheckpointHeight');
+            if (!heightInput) return;
+            heightInput.value = button.dataset.totemHeight;
+            app.querySelectorAll('[data-totem-height]').forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
+            app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-preview-height', `${totemHeightPreset(button.dataset.totemHeight).previewPixels}px`);
+        }));
         app.querySelector('[data-add-totem-text-box]')?.addEventListener('click', () => {
             const grid = app.querySelector('[data-totem-text-boxes]');
             const index = grid?.querySelectorAll('[data-totem-information-box]').length || 0;
@@ -770,7 +796,8 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                         name: document.getElementById('areaCheckpointName')?.value.trim() || 'Totem preview',
                         appearance: {
                             ...(existing?.marker.appearance || {}),
-                            color: document.getElementById('areaCheckpointColor')?.value || '#68c7b8'
+                            color: document.getElementById('areaCheckpointColor')?.value || DEFAULT_TOTEM_COLOR,
+                            heightPreset: document.getElementById('areaCheckpointHeight')?.value || 'standard'
                         },
                         physicalAnchor
                     },
@@ -846,6 +873,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const nextFlow = flow || checkpointSetupFlows.get(flowKey) || '';
         const name = document.getElementById('areaCheckpointName').value.trim();
         const color = document.getElementById('areaCheckpointColor').value;
+        const heightPreset = normalizeTotemHeightPreset(document.getElementById('areaCheckpointHeight')?.value);
         const qrCode = document.getElementById('areaCheckpointCode').value.trim();
         const introduction = document.getElementById('areaCheckpointIntroduction').value.trim();
         const informationBubbles = [...document.querySelectorAll('[data-totem-information-box]')].map(field => field.value.trim()).filter(Boolean);
@@ -870,7 +898,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 information_bubbles: informationBubbles
             },
             visibility: existing?.marker.visibility || 'draft',
-            appearance: { ...(existing?.marker.appearance || {}), color },
+            appearance: { ...(existing?.marker.appearance || {}), color, heightPreset },
             physicalAnchor: physicalAnchorControlPresent ? physicalAnchor : existing?.marker.physicalAnchor,
             reassignPhysicalMarker
         };
@@ -2345,6 +2373,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     if (!entry) throw new Error('Entry not found.');
     const [placement] = await entriesWithPlacement(project, site, [entry]);
     const plant = entry.marker.type === 'plant';
+    const quickArPlantEdit = returnToAr && plant;
     const markerAnchor = plant ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
     const plantQrCode = plant ? visibleQrCode(entry.marker.qr_reference || markerAnchor?.qr_code) : '';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
@@ -2360,7 +2389,14 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const noteColor = /^#[0-9a-f]{6}$/i.test(entry.marker.appearance?.color || '') ? entry.marker.appearance.color : '#d7834f';
     const noteSurface = entry.marker.appearance?.surface === 'outline' ? 'outline' : 'filled';
     const noteAppearanceEditor = entry.marker.type === 'note' ? `<div class="field note-color-field"><label for="projectEntryNoteColor">Note board colour</label><input id="projectEntryNoteColor" type="color" value="${noteColor}" /><label for="projectEntryNoteSurface">Board style</label><select id="projectEntryNoteSurface"><option value="filled" ${noteSurface === 'filled' ? 'selected' : ''}>Filled color</option><option value="outline" ${noteSurface === 'outline' ? 'selected' : ''}>Transparent with color outline</option></select><small>Use a filled board for emphasis or a transparent board when the landscape should remain visible.</small></div>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})"><div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placement.isPlaced ? '' : `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>`}<button class="primary" type="submit">Save changes</button><button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button></div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">${returnToAr ? 'Stay in Web Mode · Project' : 'Return to Dashboard'}</button></nav></div>`;
+    const quickPlantColor = profile.orb_color || entry.marker.appearance?.color || '#5e7956';
+    const quickPlantTones = TOTEM_TONES.map(tone => `<button type="button" data-plant-quick-tone="${tone.color}" aria-label="${tone.label} plant tone" aria-pressed="${tone.color.toLowerCase() === quickPlantColor.toLowerCase()}" style="--plant-quick-tone:${tone.color}"><span aria-hidden="true"></span><small>${tone.label}</small></button>`).join('');
+    const quickPlantFields = quickArPlantEdit ? `<input id="projectEntryArQuickEdit" type="hidden" value="true" /><input id="projectEntryProfileEnabled" type="hidden" value="true" /><input id="projectEntryName" type="hidden" value="${escapeHtml(profile.common_name || entry.marker.name)}" />
+        <section class="plant-ar-quick-editor" aria-labelledby="plantArQuickTitle"><div><p class="welcome-label">AR QUICK EDIT</p><h2 id="plantArQuickTitle">Plant basics</h2><p>Keep the field session moving. The full Plant Profile remains in the Web Hub.</p></div>
+        <div class="plant-ar-quick-fields"><label for="projectEntryCommonName">Common name<input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" required /></label><label for="projectEntryScientificName">Scientific name<input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></label><div class="plant-ar-quick-tone"><label for="projectEntryOrbColor">Plant tone</label><div class="plant-ar-quick-tones">${quickPlantTones}</div><label class="plant-ar-custom-tone" for="projectEntryOrbColor"><span>Custom</span><input id="projectEntryOrbColor" type="color" value="${escapeHtml(quickPlantColor)}" /></label></div></div></section>`
+        : '';
+    const standardEditorFields = quickArPlantEdit ? '' : `<div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}"><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entry.place.name)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">View / edit this Plant in AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})">${quickPlantFields}${standardEditorFields}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${!quickArPlantEdit && !placement.isPlaced ? `<button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">Place in AR</button>` : ''}<button class="primary" type="submit">${quickArPlantEdit ? 'Save basics' : 'Save changes'}</button>${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">${returnToAr ? 'Stay in Web Mode · Project' : 'Return to Dashboard'}</button></nav></div>`;
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
@@ -2370,9 +2406,23 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     }
     if (plant) {
         app.querySelector('form')?.classList.add('plant-file-form');
+        const quickColorInput = document.getElementById('projectEntryOrbColor');
+        const syncQuickPlantTones = color => {
+            app.querySelectorAll('[data-plant-quick-tone]').forEach(button => {
+                button.setAttribute('aria-pressed', button.dataset.plantQuickTone.toLowerCase() === color.toLowerCase() ? 'true' : 'false');
+            });
+        };
+        app.querySelectorAll('[data-plant-quick-tone]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (!quickColorInput) return;
+                quickColorInput.value = button.dataset.plantQuickTone;
+                syncQuickPlantTones(quickColorInput.value);
+            });
+        });
+        quickColorInput?.addEventListener('input', () => syncQuickPlantTones(quickColorInput.value));
         const headerLabel = app.querySelector('.page-header .welcome-label');
         const headerSubtitle = app.querySelector('.page-header .subtitle');
-        if (headerLabel) headerLabel.textContent = 'PLANT · WEB MODE';
+        if (headerLabel) headerLabel.textContent = quickArPlantEdit ? 'PLANT · AR QUICK EDIT' : 'PLANT · WEB MODE';
         if (headerSubtitle) headerSubtitle.textContent = `${entry.place.name} · ${placement.isPlaced ? 'PLACED' : 'NOT PLACED'} · ${entry.marker.plant_code || entry.marker.id}`;
         const spatialCopy = app.querySelector('.spatial-focus-panel p');
         const spatialButton = app.querySelector('.spatial-focus-panel button');
@@ -2396,16 +2446,28 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const { project, site, entries } = await projectContent(projectId);
         const entry = entries.find(item => item.marker.id === markerId);
         if (!entry) throw new Error('Entry not found.');
-        const name = document.getElementById('projectEntryName').value.trim();
-        const description = document.getElementById('projectEntryDescription').value.trim();
-        const targetAreaId = document.getElementById('projectEntryArea').value;
+        const fieldValue = (id, fallback = '') => {
+            const field = document.getElementById(id);
+            return field ? field.value.trim() : fallback;
+        };
+        const quickArPlantEdit = entry.marker.type === 'plant' && document.getElementById('projectEntryArQuickEdit')?.value === 'true';
+        const name = fieldValue('projectEntryName', entry.marker.name);
+        const description = fieldValue('projectEntryDescription', entry.marker.description || entry.marker.notes || '');
+        const targetAreaId = document.getElementById('projectEntryArea')?.value || entry.place.id;
         const specialSymbol = document.getElementById('projectEntrySpecialSymbol')?.value;
         const noteColor = document.getElementById('projectEntryNoteColor')?.value;
         const noteSurface = document.getElementById('projectEntryNoteSurface')?.value;
         const noteAppearance = noteColor ? { appearance: { ...(entry.marker.appearance || {}), color: noteColor, surface: noteSurface === 'outline' ? 'outline' : 'filled' } } : {};
         const profileEnabled = entry.marker.type === 'plant' && document.getElementById('projectEntryProfileEnabled')?.value === 'true';
-        const qrCode = profileEnabled ? document.getElementById('projectEntryQrCode')?.value.trim() || '' : '';
-        const sourceAnchor = profileEnabled ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
+        const plantColor = profileEnabled ? document.getElementById('projectEntryOrbColor')?.value : '';
+        const plantAppearance = plantColor ? { appearance: { ...(entry.marker.appearance || {}), color: plantColor } } : {};
+        const qrField = document.getElementById('projectEntryQrCode');
+        const manageQrAnchor = profileEnabled && Boolean(qrField);
+        const qrCode = manageQrAnchor ? qrField.value.trim() : entry.marker.qr_reference || '';
+        const sourceAnchor = manageQrAnchor ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
+        const existingPlantProfile = profileEnabled
+            ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {})
+            : {};
         let savedMarker = entry.marker;
         if (targetAreaId !== entry.place.id) {
             const { created, modified, plant_profile_path, spatial_anchor, ...portableMarker } = entry.marker;
@@ -2416,13 +2478,13 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...(profileEnabled ? { qr_reference: qrCode } : {}),
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 ...noteAppearance,
+                ...plantAppearance,
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
             savedMarker = response.marker || response;
             if (entry.marker.type === 'plant') {
-                const existingProfile = await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {});
-                if (isPlantProfileUpgraded(entry.marker, existingProfile)) {
-                    await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, existingProfile);
+                if (isPlantProfileUpgraded(entry.marker, existingPlantProfile)) {
+                    await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, existingPlantProfile);
                 }
             }
             await deletePlaceMarker(project.id, site.id, entry.place.id, entry.marker.id);
@@ -2434,11 +2496,12 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...(profileEnabled ? { qr_reference: qrCode } : {}),
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 ...noteAppearance,
+                ...plantAppearance,
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
         }
         savedMarker = savedMarker?.marker || savedMarker;
-        if (profileEnabled) {
+        if (manageQrAnchor) {
             const movableAnchor = targetAreaId !== entry.place.id && sourceAnchor
                 ? { ...sourceAnchor, position: null, spatial_position: null }
                 : undefined;
@@ -2446,20 +2509,20 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         }
         if (profileEnabled) {
             await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, {
-                ...(await loadPlantProfile(project.id, site.id, targetAreaId, savedMarker.id).catch(() => ({}))),
+                ...existingPlantProfile,
                 profile_enabled: true,
-                common_name: document.getElementById('projectEntryCommonName').value.trim() || name,
-                scientific_name: document.getElementById('projectEntryScientificName').value.trim(),
-                family: document.getElementById('projectEntryFamily').value.trim(),
-                origin: document.getElementById('projectEntryOrigin').value.trim(),
-                layer: document.getElementById('projectEntryLayer').value.trim(),
-                photo: document.getElementById('projectEntryPhoto').value.trim(),
-                orb_color: document.getElementById('projectEntryOrbColor').value,
-                orb_size: document.getElementById('projectEntryOrbSize').value,
-                uses: document.getElementById('projectEntryUses').value.trim(),
-                relationships: document.getElementById('projectEntryRelationships').value.trim(),
-                propagation: document.getElementById('projectEntryPropagation').value.trim(),
-                overview: document.getElementById('projectEntryOverview').value.trim()
+                common_name: fieldValue('projectEntryCommonName', existingPlantProfile.common_name || name) || name,
+                scientific_name: fieldValue('projectEntryScientificName', existingPlantProfile.scientific_name || ''),
+                family: fieldValue('projectEntryFamily', existingPlantProfile.family || ''),
+                origin: fieldValue('projectEntryOrigin', existingPlantProfile.origin || ''),
+                layer: fieldValue('projectEntryLayer', existingPlantProfile.layer || ''),
+                photo: fieldValue('projectEntryPhoto', existingPlantProfile.photo || ''),
+                orb_color: plantColor || existingPlantProfile.orb_color || entry.marker.appearance?.color || '#5e7956',
+                orb_size: fieldValue('projectEntryOrbSize', existingPlantProfile.orb_size || 'medium'),
+                uses: fieldValue('projectEntryUses', existingPlantProfile.uses || ''),
+                relationships: fieldValue('projectEntryRelationships', existingPlantProfile.relationships || existingPlantProfile.companions || ''),
+                propagation: fieldValue('projectEntryPropagation', existingPlantProfile.propagation || ''),
+                overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || '')
             });
         }
         await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id), returnToAr);

@@ -8,6 +8,7 @@ import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPr
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
+import { normalizeTotemHeightPreset, totemHeightPreset, totemHeightScale } from '../app/services/totemAppearance.js';
 import {
     arucoMarkerMatrix,
     createPhysicalAnchorTrackingState,
@@ -407,11 +408,11 @@ test('Note placement preview uses the shared Note surface instead of the shader 
     const drawEnd = arSource.indexOf('function positionSessionMarkers', drawStart);
     const drawSource = arSource.slice(drawStart, drawEnd);
     assert.match(arSource, /data-ar-note-placement-preview/);
-    assert.match(arSource, /creator-ar-note-placement-surface nourishland-spatial-note-surface/);
+    assert.match(arSource, /creator-ar-note-placement-surface[^"]*nourishland-spatial-note-surface/);
     assert.match(arSource, /function updateNotePlacementPreview\(\)/);
     assert.match(arSource, /function positionNotePlacementPreview\(view = latestView\)/);
-    assert.match(arSource, /surface\.style\.setProperty\('--spatial-note-color', markerAppearanceColor\(marker\)\)/);
-    assert.match(arSource, /--note-preview-width/);
+    assert.match(arSource, /markerDomAppearanceStyle\(marker\)\.split\(';'\)/);
+    assert.match(arSource, /--marker-note-width/);
     assert.match(arSource, /const marginX = noteFactor \? Math\.min\(window\.innerWidth \* \.48, 140 \* noteFactor \+ 48\) : 40/);
     assert.match(arSource, /const marginY = noteFactor \? 58 \* noteFactor \+ 56 : 40/);
     assert.doesNotMatch(drawSource, /readyPlacementType === 'note'/);
@@ -1092,7 +1093,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     const prismSource = read('app/services/spatialPrismRenderer.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.11 \* factor, \.68 \* factor\]/);
+    assert.match(arSource, /area_checkpoint: \[\.11 \* factor, totemHeightPreset\(marker\)\.halfHeightMetres \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /createSpatialPrismRenderer/);
@@ -1267,6 +1268,53 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     assert.match(styles, /\.tryit-sim-marker-note::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target-note\.is-note-outline \.creator-ar-spatial-name/);
     assert.match(styles, /\.note-record-editor #projectEntryDescription/);
+});
+
+test('Totem height presets and earth tones remain simple and spatially consistent', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const arSource = read('app/screens/arMode.js');
+    const scannerSource = read('app/screens/physicalAnchorScanner.js');
+    const styles = read('app/style.css');
+    assert.equal(normalizeTotemHeightPreset('low'), 'low');
+    assert.equal(normalizeTotemHeightPreset('unknown'), 'standard');
+    assert.equal(totemHeightPreset('tall').metres, 1.72);
+    assert.ok(totemHeightScale('low') < 1);
+    assert.ok(totemHeightScale('tall') > 1);
+    assert.match(dashboardSource, /data-totem-height/);
+    assert.match(dashboardSource, /heightPreset/);
+    assert.match(dashboardSource, /TOTEM_TONES/);
+    assert.match(arSource, /totemHeightPreset\(marker\)/);
+    assert.match(scannerSource, /totemHeightScale\(association\.marker\)/);
+    assert.match(styles, /\.totem-height-presets/);
+    assert.match(styles, /\.totem-tone-presets/);
+});
+
+test('Note placement waits for a valid one-metre projection and previews the saved board template', () => {
+    const arSource = read('app/screens/arMode.js');
+    const configSource = read('app/services/arExperienceConfig.js');
+    const styles = read('app/style.css');
+    assert.match(configSource, /notePlacementDistanceMetres: 1/);
+    assert.match(arSource, /placementPoint\('note'\)/);
+    assert.match(arSource, /const placementPosition = placementPoint\(type\)/);
+    assert.match(arSource, /preview\.hidden = true/);
+    assert.match(arSource, /creator-ar-note-placement-preview creator-ar-marker-hit-target-note/);
+    assert.match(arSource, /creator-ar-spatial-name nourishland-spatial-note-surface/);
+    assert.match(styles, /\.creator-ar-note-placement-preview \.creator-ar-note-placement-surface/);
+});
+
+test('editing a Plant from AR opens only the basic identity and earth-tone controls', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /EDIT BASICS/);
+    assert.match(dashboardSource, /const quickArPlantEdit = returnToAr && plant/);
+    assert.match(dashboardSource, /PLANT · AR QUICK EDIT/);
+    assert.match(dashboardSource, /The full Plant Profile remains in the Web Hub/);
+    assert.match(dashboardSource, /data-plant-quick-tone/);
+    assert.match(dashboardSource, /fieldValue\('projectEntryFamily', existingPlantProfile\.family/);
+    assert.match(dashboardSource, /manageQrAnchor/);
+    assert.match(styles, /\.plant-ar-quick-fields/);
+    assert.match(styles, /\.plant-ar-quick-tones/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

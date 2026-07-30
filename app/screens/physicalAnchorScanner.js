@@ -8,6 +8,7 @@ import {
     projectPhysicalTotemOverlay,
     resolvePhysicalAnchorTotem
 } from '../services/physicalAnchor.js';
+import { DEFAULT_TOTEM_COLOR, totemHeightScale } from '../services/totemAppearance.js';
 
 const DETECTOR_SCRIPTS = Object.freeze([
     'https://cdn.jsdelivr.net/npm/js-aruco2@2.0.0/src/cv.js',
@@ -127,9 +128,9 @@ function applyTotemOverlay(scanner, association, pose) {
     scanner.totem.style.setProperty('--physical-totem-x', `${visual.x * scaleX}px`);
     scanner.totem.style.setProperty('--physical-totem-y', `${visual.y * scaleY}px`);
     scanner.totem.style.setProperty('--physical-totem-width', `${visual.width * scaleX}px`);
-    scanner.totem.style.setProperty('--physical-totem-height', `${visual.height * scaleY}px`);
+    scanner.totem.style.setProperty('--physical-totem-height', `${visual.height * scaleY * totemHeightScale(association.marker)}px`);
     scanner.totem.style.setProperty('--physical-totem-rotation', `${visual.rotationDegrees}deg`);
-    scanner.totem.style.setProperty('--physical-totem-color', association.marker.appearance?.color || '#68c7b8');
+    scanner.totem.style.setProperty('--physical-totem-color', association.marker.appearance?.color || DEFAULT_TOTEM_COLOR);
     scanner.totem.hidden = false;
     return true;
 }

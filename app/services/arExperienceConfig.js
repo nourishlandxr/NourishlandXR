@@ -7,6 +7,9 @@ export const isDefaultHomeArea = area => ['home', 'unassigned'].includes(String(
 
 export const AR_EXPERIENCE_CONFIG = Object.freeze({
     placementDistanceMetres: 1,
+    // Notes use the same measured one-metre ray, but their DOM preview stays
+    // hidden until that point can be projected into the live AR view.
+    notePlacementDistanceMetres: 1,
     defaultSite: Object.freeze({
         name: 'Main Location',
         description: 'Primary Location for this project.',

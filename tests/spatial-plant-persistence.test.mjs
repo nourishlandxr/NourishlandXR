@@ -212,6 +212,70 @@ test('a newly created project can be deleted by its stable project id', async ()
     assert.equal(missingProject.status, 404);
 });
 
+test('two Areas preserve independent Totems, Markers and checkpoint-local layouts after restart', async () => {
+    const kitchen = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Kitchen', type: 'Indoor Area', visibility: 'draft' })
+    });
+    const livingRoom = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Living Room', type: 'Indoor Area', visibility: 'draft' })
+    });
+    const kitchenMarkersPath = `/api/projects/${projectId}/sites/${siteId}/places/${kitchen.id}/markers`;
+    const livingMarkersPath = `/api/projects/${projectId}/sites/${siteId}/places/${livingRoom.id}/markers`;
+    const kitchenTotem = await jsonRequest(kitchenMarkersPath, {
+        method: 'POST',
+        body: JSON.stringify({ id: 'kitchen-layout-totem', name: 'Kitchen Totem', type: 'area_checkpoint', appearance: { color: '#68765d', heightPreset: 'low' } })
+    });
+    const kitchenNote = await jsonRequest(kitchenMarkersPath, {
+        method: 'POST',
+        body: JSON.stringify({ id: 'kitchen-layout-note', name: 'Watering note', type: 'note', description: 'Check seedlings.' })
+    });
+    const livingTotem = await jsonRequest(livingMarkersPath, {
+        method: 'POST',
+        body: JSON.stringify({ id: 'living-layout-totem', name: 'Living Room Totem', type: 'area_checkpoint', appearance: { color: '#9a6b50', heightPreset: 'tall' } })
+    });
+    const livingPlant = await jsonRequest(livingMarkersPath, {
+        method: 'POST',
+        body: JSON.stringify({ id: 'living-layout-plant', name: 'Peace Lily', type: 'plant', appearance: { color: '#526c55' } })
+    });
+    const saveSpatial = (markersPath, marker, position, checkpointId) => jsonRequest(`${markersPath}/${marker.id}/anchor`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            type: 'spatial',
+            position,
+            coordinate_space: 'checkpoint-local',
+            checkpoint_id: checkpointId,
+            captured_at: '2026-07-30T00:00:00.000Z'
+        })
+    });
+    await saveSpatial(kitchenMarkersPath, kitchenTotem, { x: 0, y: 0, z: 0 }, kitchenTotem.id);
+    await saveSpatial(kitchenMarkersPath, kitchenNote, { x: .4, y: .8, z: -1.2 }, kitchenTotem.id);
+    await saveSpatial(livingMarkersPath, livingTotem, { x: 0, y: 0, z: 0 }, livingTotem.id);
+    await saveSpatial(livingMarkersPath, livingPlant, { x: -.7, y: 1.1, z: -2.4 }, livingTotem.id);
+
+    await stopServer();
+    await startServer();
+
+    const reloadedKitchen = await jsonRequest(kitchenMarkersPath);
+    const reloadedLiving = await jsonRequest(livingMarkersPath);
+    assert.deepEqual(reloadedKitchen.map(marker => marker.id).sort(), [kitchenNote.id, kitchenTotem.id].sort());
+    assert.deepEqual(reloadedLiving.map(marker => marker.id).sort(), [livingPlant.id, livingTotem.id].sort());
+    assert.equal(reloadedKitchen.some(marker => marker.id === livingPlant.id), false);
+    assert.equal(reloadedLiving.some(marker => marker.id === kitchenNote.id), false);
+    assert.equal(reloadedKitchen.find(marker => marker.id === kitchenTotem.id).appearance.heightPreset, 'low');
+    assert.equal(reloadedLiving.find(marker => marker.id === livingTotem.id).appearance.heightPreset, 'tall');
+
+    const kitchenAnchor = await jsonRequest(`${kitchenMarkersPath}/${kitchenNote.id}/anchor`);
+    const livingAnchor = await jsonRequest(`${livingMarkersPath}/${livingPlant.id}/anchor`);
+    assert.deepEqual(kitchenAnchor.position, { x: .4, y: .8, z: -1.2 });
+    assert.equal(kitchenAnchor.coordinate_space, 'checkpoint-local');
+    assert.equal(kitchenAnchor.checkpoint_id, kitchenTotem.id);
+    assert.deepEqual(livingAnchor.position, { x: -.7, y: 1.1, z: -2.4 });
+    assert.equal(livingAnchor.coordinate_space, 'checkpoint-local');
+    assert.equal(livingAnchor.checkpoint_id, livingTotem.id);
+});
+
 test('Physical Marker assignment persists, stays unique per project, reassigns explicitly and removes independently', async () => {
     const markerPath = `/api/projects/${projectId}/sites/${siteId}/places/${placeId}/markers`;
     const physicalAnchor = {
