@@ -772,14 +772,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
-    assert.match(source, /Welcome to the Nourishland XR demo interface/);
-    assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
+    assert.match(source, /You will see a round circle on your screen\. This is your pointer\./);
+    assert.match(source, /Press it to create a Plant orb\. Press Continue to load your pointer\./);
     assert.doesNotMatch(source, /gentle introduction/);
-    assert.match(source, /both a mapping tool and a portal for plant-related information/);
-    assert.match(source, /few examples of how plant information can be mapped to real places and brought to life/);
-    assert.match(source, /In Mobile Mode, the aim helps you interact with the space/);
-    assert.match(source, /create an orb—a Plant Marker/);
-    assert.match(source, /Choose a place, then press the aim once to place it/);
+    assert.doesNotMatch(source, /Augmented reality \(AR\) is a technology/);
+    assert.doesNotMatch(source, /both a mapping tool and a portal for plant-related information/);
+    assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
     assert.match(source, /A LIVING INTRODUCTION/);
@@ -800,6 +798,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
+    assert.match(source, /function hideGuidedChoice\(\) \{[\s\S]*querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /addEventListener\('beforexrselect', event => event\.preventDefault\(\)\)/);
     assert.match(source, /demoInteractive: !\['plant', 'plant2'\]\.includes\(type\)/);
     assert.match(source, /record\.demoInteractive = true/);
@@ -814,10 +813,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(directPlacementBranch, /finishIntroBoard/);
     assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB'/);
-    assert.match(source, /Plant Markers can be updated to Plant Profiles in Creator Mode/);
-    assert.match(source, /A profile provides information about a Plant while keeping that knowledge connected to where it grows/);
+    assert.match(source, /A simple Plant orb can become a hub of information, which we call a Plant Profile/);
+    assert.match(source, /Place it at a real plant or tree so its knowledge stays connected to where it grows/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(source, /press the orb to reveal its information diagram/);
+    assert.match(source, /press the orb to explore its information tree/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
@@ -827,7 +826,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /coreColor: material\?\.core/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
-    assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*border-radius:50% !important;[^}]*background:transparent !important;/);
+    assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*outline:0 !important;[^}]*border-radius:50% !important;[^}]*background:transparent !important;[^}]*backdrop-filter:none !important;/);
     assert.match(source, /placementPointer\.addEventListener\('pointerup', pressPlacementPointer\)/);
     assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
@@ -835,7 +834,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
         source.indexOf("session.addEventListener('end'")
     );
     assert.doesNotMatch(immersiveSelectHandler, /placeMarker\(\)/);
-    assert.match(immersiveSelectHandler, /if \(placementReady && !marker\) pressPlacementPointer\(\)/);
+    assert.doesNotMatch(immersiveSelectHandler, /pressPlacementPointer/);
+    assert.match(immersiveSelectHandler, /if \(!placementReady\) selectGuidedDemoOrb\(\)/);
+    assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue/);
     assert.match(source, /press the aim once to place the Plant Marker orb/);
@@ -853,7 +854,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /boardPosition: \[0, 0\.28, -2\.8\]/);
+    assert.match(source, /boardPosition: \[0, 0\.82, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /label\.height = 1080/);
     assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 530\)/);
@@ -889,7 +890,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*grid-template-rows:auto auto minmax\(0,1fr\);[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow:hidden;/);
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
-    assert.match(styles, /font-size:clamp\(1rem,min\(3vw,2\.35vh\),1\.45rem\)/);
+    assert.match(styles, /font-size:clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\)/);
+    assert.match(source, /for \(let fontSize = 52; fontSize >= 26; fontSize -= 2\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(runArWelcomeTutorial, 700\)/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);

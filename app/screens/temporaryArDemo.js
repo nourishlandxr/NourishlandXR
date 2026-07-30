@@ -56,15 +56,11 @@ let suppressSessionSelectUntil = 0;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
-    boardPosition: [0, 0.28, -2.8],
+    boardPosition: [0, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to the Nourishland XR demo interface.',
-    'Augmented reality (AR) is a technology that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'Nourishland XR is both a mapping tool and a portal for plant-related information. This demo shows a few examples of how plant information can be mapped to real places and brought to life.',
-    'In Mobile Mode, the aim helps you interact with the space. Here, you will use it to create an orb—a Plant Marker. Orbs are one kind of Marker; you will discover others as you continue.',
-    'Choose a place, then press the aim once to place it.'
+    'You will see a round circle on your screen. This is your pointer. Press it to create a Plant orb. Press Continue to load your pointer.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
@@ -203,7 +199,7 @@ function setGuide(message) {
 
 function showDemoAction(nextStage) {
     const messages = {
-        plant2: ['Add a second Plant', 'The first profile now lives in space. Let’s try Moringa in another nearby position.'],
+        plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
         note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge. Next, place a simple Note nearby.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
@@ -217,6 +213,7 @@ function demoContentFor(record) {
 }
 
 function hideGuidedChoice() {
+    appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
 }
@@ -481,7 +478,9 @@ function guidePlantConversion(record) {
     };
     showIntroBoard(
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
-        'Plant Markers can be updated to Plant Profiles in Creator Mode. A profile provides information about a Plant while keeping that knowledge connected to where it grows. Next, press the orb to reveal its information diagram.',
+        moringa
+            ? 'This Moringa orb can carry its own Plant Profile in the place where the tree grows. Continue, then press the orb to explore its information tree.'
+            : 'A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. Continue, then press the orb to explore its information tree.',
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -569,7 +568,7 @@ function armDemoPlacement(type, { direct = false } = {}) {
         : 'Take in the space before choosing the next position.');
     const introductions = {
         plant: ['Place an example Plant', 'Look around slowly and choose a calm, clear spot. Continue when you are ready, then press the aiming circle to place the orb.'],
-        plant2: ['Let’s try Moringa', 'Choose another nearby position. Continue when ready, then press the aiming circle to place its orb.'],
+        plant2: ['Let’s try Moringa', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
     };
     const [title, introduction] = introductions[type];
@@ -1204,18 +1203,18 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 46; fontSize >= 24; fontSize -= 2) {
+    for (let fontSize = 52; fontSize >= 26; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
         ctx.font = `650 ${fontSize}px system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
         const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, paragraphLines.length - 1) * paragraphGap;
-        if (totalHeight <= maxHeight || fontSize === 24) {
+        if (totalHeight <= maxHeight || fontSize === 26) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
-    return { fontSize: 24, lineHeight: 30, paragraphGap: 12, paragraphLines: [] };
+    return { fontSize: 26, lineHeight: 32, paragraphGap: 13, paragraphLines: [] };
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -1754,8 +1753,10 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', () => {
             if (performance.now() < suppressSessionSelectUntil) return;
-            if (placementReady && !marker) pressPlacementPointer();
-            else selectGuidedDemoOrb();
+            // Placement belongs only to the visible DOM pointer. A WebXR
+            // select can arrive late from Continue and must never place for
+            // the visitor.
+            if (!placementReady) selectGuidedDemoOrb();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
