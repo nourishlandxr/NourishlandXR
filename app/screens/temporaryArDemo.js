@@ -590,23 +590,25 @@ function guidePlantConversion(record) {
 }
 
 function guideFirstOrbAdjustment(record) {
-    setGuide('Your first Plant orb is placed.');
-    showIntroBoard(
-        'ADJUST ITS POSITION',
-        'Now hold the Plant orb and adjust its position. Continue, aim the pointer at the orb, then press and hold. Move your phone and release when the orb feels right.',
-        'Continue',
-        () => {
-            suppressSessionSelectUntil = performance.now() + 700;
-            finishIntroBoard();
-            record.demoInteractive = true;
-            record.awaitingPositionAdjustment = true;
-            const pointer = appRoot?.querySelector('[data-tryit-place]');
-            pointer?.removeAttribute('hidden');
-            pointer?.classList.add('is-revealing', 'is-ready');
-            setGuide('Aim at the Plant orb. Hold the pointer, move your phone, then release.');
-            updateSimulatedMarkers();
-        }
-    );
+    clearTimeout(boardTypingTimer);
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    if (panel) {
+        panel.classList.remove('is-welcome-board', 'is-entering', 'is-typing', 'is-copy-ready');
+        panel.classList.add('is-movement-tip');
+        panel.innerHTML = '<small>MOVE THE ORB</small><h2>ADJUST ITS POSITION</h2><p>Aim at the Plant orb. Hold the pointer, move your phone, then release when the orb feels right.</p>';
+        panel.onclick = null;
+        panel.hidden = false;
+    }
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
+    appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
+    suppressSessionSelectUntil = performance.now() + 700;
+    record.demoInteractive = true;
+    record.awaitingPositionAdjustment = true;
+    const pointer = appRoot?.querySelector('[data-tryit-place]');
+    pointer?.removeAttribute('hidden');
+    pointer?.classList.add('is-revealing', 'is-ready');
+    setGuide('Aim at the Plant orb. Hold the pointer, move your phone, then release.');
+    updateSimulatedMarkers();
 }
 
 function guideNoteConversion(record) {
@@ -1183,6 +1185,7 @@ function releaseHeldDemoRecord() {
     updateSimulatedMarkers();
     if (record?.awaitingPositionAdjustment) {
         record.awaitingPositionAdjustment = false;
+        hideGuidedChoice();
         guidePlantConversion(record);
     } else {
         setGuide(`${record?.name || 'Element'} released in its adjusted position.`);
@@ -1342,6 +1345,7 @@ function renderInterface(simulated) {
         event.preventDefault();
         event.stopPropagation();
         record.awaitingPositionAdjustment = false;
+        hideGuidedChoice();
         guidePlantConversion(record);
     });
     placementPointer.addEventListener('click', pressPlacementPointer);
