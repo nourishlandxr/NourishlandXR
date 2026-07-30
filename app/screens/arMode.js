@@ -324,9 +324,16 @@ function creatorPlantKnowledgeMarkup(record) {
 
 function creatorTotemInformationMarkup(record) {
     const board = areaBoard(record.marker);
-    const bubbles = board.informationBubbles.length ? board.informationBubbles : [board.introduction];
-    const cards = [board.title, ...bubbles].filter(Boolean).slice(0, 5);
-    return `<aside class="creator-ar-totem-information" aria-label="${escapeHtml(board.title)} information"><svg class="creator-ar-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M180 215 C130 180 110 100 64 72"/><path d="M180 205 C205 150 224 90 274 72"/><path d="M190 228 C245 220 264 178 310 170"/><path d="M170 248 C118 256 92 300 48 304"/><path d="M190 262 C236 278 248 330 286 338"/></svg>${cards.map((text, index) => `<span class="creator-ar-totem-bubble creator-ar-totem-bubble-${index + 1}">${escapeHtml(text)}</span>`).join('')}</aside>`;
+    const text = [board.introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
+        <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
+        <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
+        <section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
+          <small>AREA TOTEM</small>
+          <strong>${escapeHtml(board.title)}</strong>
+          <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
+        </section>
+      </aside>`;
 }
 
 function setPlacementStatus(message) {
@@ -1403,8 +1410,12 @@ function positionSessionMarkers(view = latestView) {
     activeAreaMarkers().forEach(record => {
         const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         if (!element) return;
+        const totemInformation = record.marker.type === 'area_checkpoint'
+            ? overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`)
+            : null;
         if (hiddenStructuralMarkerIds.has(record.marker.id)) {
             element.hidden = true;
+            if (totemInformation) totemInformation.hidden = true;
             return;
         }
         const projectedPosition = record.marker.type === 'area_checkpoint'
@@ -1418,6 +1429,7 @@ function positionSessionMarkers(view = latestView) {
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
         if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
             element.hidden = true;
+            if (totemInformation) totemInformation.hidden = true;
             return;
         }
         const x = (clip[0] / clip[3] * 0.5 + 0.5) * window.innerWidth;
@@ -1430,10 +1442,12 @@ function positionSessionMarkers(view = latestView) {
             && y > -marginY
             && y < window.innerHeight + marginY;
         element.hidden = !visible;
+        if (totemInformation) totemInformation.hidden = !visible;
         if (visible) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
             element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
             positionCreatorPlantProfile(record, x, y);
+            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y);
         }
     });
 }
@@ -1457,6 +1471,28 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     tether.style.top = `${tetherStartY - 9}px`;
     tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
     tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+}
+
+function positionCreatorTotemInformation(record, markerX, markerY) {
+    if (!record.infoVisible || !overlayRoot) return;
+    const information = overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
+    if (!information) return;
+    const boardWidth = Math.min(window.innerWidth * .72, 460);
+    const sideOffset = window.innerWidth < 520 ? 0 : markerX < window.innerWidth / 2 ? boardWidth * .28 : -boardWidth * .28;
+    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, markerX + sideOffset));
+    const boardY = Math.max(92, Math.min(window.innerHeight - 190, markerY - Math.min(210, window.innerHeight * .28)));
+    const boardHalfHeight = Math.min(118, Math.max(72, window.innerHeight * .1));
+    const stickStart = { x: boardX, y: boardY + boardHalfHeight };
+    const dx = markerX - stickStart.x;
+    const dy = markerY - stickStart.y;
+    information.style.setProperty('--location-note-x', `${boardX.toFixed(1)}px`);
+    information.style.setProperty('--location-note-y', `${boardY.toFixed(1)}px`);
+    information.style.setProperty('--location-stick-x', `${stickStart.x.toFixed(1)}px`);
+    information.style.setProperty('--location-stick-y', `${stickStart.y.toFixed(1)}px`);
+    information.style.setProperty('--location-stick-length', `${Math.max(24, Math.hypot(dx, dy)).toFixed(1)}px`);
+    information.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
+    information.style.setProperty('--location-ground-x', `${markerX.toFixed(1)}px`);
+    information.style.setProperty('--location-ground-y', `${markerY.toFixed(1)}px`);
 }
 
 function renderSessionMarkers() {

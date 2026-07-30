@@ -718,7 +718,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             <section class="totem-information-editor" aria-labelledby="totemTextBoxesTitle"><div class="totem-editor-heading"><div><h2 id="totemTextBoxesTitle">Additional information balloons</h2><p>Attach more text boxes only when this Totem needs them.</p></div><button type="button" data-add-totem-text-box><span aria-hidden="true">+</span> Text box</button></div><div class="totem-text-box-grid" data-totem-text-boxes>${bubbleFields}</div></section>
             ${physicalMarkerCard}
             <section class="totem-relationship-grid">
-                <div class="totem-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Totem to the QR label installed at its real-world position.</p><label for="areaCheckpointCode">Totem QR code</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter the code on this Totem" /></div></div>
+                <div class="totem-anchor-card"><span aria-hidden="true">⌖</span><div><strong>ANCHOR TOTEM</strong><p>Link this Totem to the physical marker installed at its real-world position.</p><label for="areaCheckpointCode">Link Totem</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter this Totem’s physical marker" /></div></div>
                 <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem to another Totem in the location.</p>${linkOptions ? `<label for="areaCheckpointLinkTarget">Link to Totem</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area Totem</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" /></div>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}</span>`).join('')}</div></div></div>
             </section>
             <p id="areaCheckpointStatus" class="meta"></p>
@@ -921,7 +921,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         try {
             await syncMarkerQrAnchor(projectId, context.site.id, areaId, savedMarker.id, qrCode, `Physical Totem for ${context.area.name}.`);
         } catch (error) {
-            optionalWarnings.push(`QR or physical link: ${error.message}`);
+            optionalWarnings.push(`Totem link: ${error.message}`);
         }
         if (linkTarget) {
             try {

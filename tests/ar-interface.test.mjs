@@ -957,7 +957,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
     assert.match(styles, /\.plant-knowledge-core strong \{ color: #fff;[\s\S]*font-weight: 850;/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
-    assert.match(styles, /\.creator-ar-totem-bubble \{[\s\S]*height:82px;[\s\S]*overflow:hidden;[\s\S]*color:#fff;[\s\S]*text-shadow:0 1px 2px rgba\(0,0,0,.98\)/);
+    assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(72vw,460px\)/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);
@@ -1210,8 +1210,10 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.doesNotMatch(dashboardSource, /id="areaInformationBoxNew"/);
     assert.match(styles, /\.area-content-grid/);
     assert.match(styles, /\.totem-text-box-grid/);
-    assert.match(dashboardSource, /Totem QR code/);
-    assert.match(dashboardSource, /QR label installed at its real-world position/);
+    assert.match(dashboardSource, /ANCHOR TOTEM/);
+    assert.match(dashboardSource, />Link Totem<\/label>/);
+    assert.match(dashboardSource, /physical marker installed at its real-world position/);
+    assert.doesNotMatch(dashboardSource, /Totem QR code|QR label installed at its real-world position|QR or physical link/);
     assert.match(dashboardSource, /target_area_id/);
     assert.match(dashboardSource, /site-map-totem-links/);
     assert.match(dashboardSource, /Main welcome text/);
@@ -1222,6 +1224,10 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /encoded\(isPlaced \? marker\.id : ''\)/);
     assert.match(arSource, /data-ar-recenter-prompt/);
     assert.match(arSource, /RECENTER AREA/);
+    assert.match(arSource, /data-ar-totem-information/);
+    assert.match(arSource, /creator-ar-location-stick creator-ar-totem-stick/);
+    assert.match(arSource, /creator-ar-location-note-board creator-ar-totem-balloon/);
+    assert.match(arSource, /function positionCreatorTotemInformation\(record, markerX, markerY\)/);
     assert.match(arSource, /alignAreaToCheckpoint\(areaRecords, totem\.marker\.id, origin\)/);
     assert.doesNotMatch(arSource, /Checkpoint linked/);
     assert.match(dashboardSource, /Back to Area/);
