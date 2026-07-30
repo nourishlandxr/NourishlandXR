@@ -236,7 +236,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
-    assert.match(fieldGuideSource, /Spatial Plan/);
+    assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /Area Totems/);
     assert.match(fieldGuideSource, /Plant records/);
 });

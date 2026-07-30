@@ -1239,7 +1239,7 @@ test('Field Guide owns spatial preparation and Special Markers include wayfindin
     const projectEntrySource = read('app/components/projectEntry.js');
     const arSource = read('app/screens/arMode.js');
     assert.match(fieldGuideSource, /Prepare this location/);
-    assert.match(fieldGuideSource, /Spatial Plan/);
+    assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
     assert.match(fieldGuideSource, /Visitor Entrances/);
     assert.match(fieldGuideSource, /records anchored/);
