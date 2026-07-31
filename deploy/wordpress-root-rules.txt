@@ -1,3 +1,15 @@
-# Place these rules immediately after RewriteEngine On and before # BEGIN WordPress.
+# NourishlandXR - WordPress root .htaccess rules
+#
+# Place these rules immediately after `RewriteEngine On` and BEFORE `# BEGIN WordPress`.
+# They stop WordPress and the SPA fallback from intercepting the XR app and its API.
+#
+# CRITICAL: /xr-api/* must reach the Node persistence server, NOT WordPress or
+# the SPA index.html fallback. Requests to /xr-api/* are passed through untouched.
+# The Node app must be reachable at that path (e.g. ProxyPass /xr-api
+# http://127.0.0.1:PORT or a subdomain rewrite that preserves the /xr-api prefix).
+
+# Let the XR frontend and its API through untouched.
 RewriteRule ^xr(?:/|$) - [L]
 RewriteRule ^xr-api(?:/|$) - [L]
+
+# Everything below this line belongs to WordPress.

@@ -17,6 +17,12 @@ async function requestJson(url, options = {}) {
     try {
         data = payload ? JSON.parse(payload) : null;
     } catch (error) {
+        if (response.ok && payload.trim()) {
+            // The server answered 2xx with a non-JSON body (for example an HTML
+            // fallback page from a rewrite). Keep data as null so list callers
+            // coerce it safely, but log the reason instead of hiding it.
+            console.warn(`[persistence] Non-JSON response from ${url} (${response.status})`);
+        }
         data = null;
     }
 
@@ -28,9 +34,10 @@ async function requestJson(url, options = {}) {
 }
 
 const visitorQuery = visitor => visitor ? '?view=visitor' : '';
+const asList = value => Array.isArray(value) ? value : [];
 
 export async function loadProjects(visitor = false) {
-    return requestJson(`${API_BASE}/projects${visitorQuery(visitor)}`);
+    return asList(await requestJson(`${API_BASE}/projects${visitorQuery(visitor)}`));
 }
 export async function loadProject(projectId, visitor = false) {
     return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}${visitorQuery(visitor)}`);
@@ -67,7 +74,7 @@ export async function importProject(file, asCopy = false) {
 }
 
 export async function loadProjectSites(projectId, visitor = false) {
-    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites${visitorQuery(visitor)}`);
+    return asList(await requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites${visitorQuery(visitor)}`));
 }
 
 export async function createProjectSite(projectId, siteData) {
@@ -83,7 +90,7 @@ export async function deleteProjectSite(projectId, siteId) {
 }
 
 export async function loadSitePlaces(projectId, siteId, visitor = false) {
-    return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places${visitorQuery(visitor)}`);
+    return asList(await requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places${visitorQuery(visitor)}`));
 }
 
 export async function createSitePlace(projectId, siteId, placeData) {
@@ -124,7 +131,7 @@ export async function createSpatialPlant(projectId, siteId, placeId, plant) {
 }
 
 const markerUrl = (projectId, siteId, placeId) => `${API_BASE}/projects/${encodeURIComponent(projectId)}/sites/${encodeURIComponent(siteId)}/places/${encodeURIComponent(placeId)}/markers`;
-export async function loadPlaceMarkers(projectId, siteId, placeId, visitor = false) { return requestJson(`${markerUrl(projectId, siteId, placeId)}${visitorQuery(visitor)}`); }
+export async function loadPlaceMarkers(projectId, siteId, placeId, visitor = false) { return asList(await requestJson(`${markerUrl(projectId, siteId, placeId)}${visitorQuery(visitor)}`)); }
 export async function createPlaceMarker(projectId, siteId, placeId, marker) { return requestJson(markerUrl(projectId, siteId, placeId), { method: 'POST', body: JSON.stringify(marker) }); }
 export async function updatePlaceMarker(projectId, siteId, placeId, markerId, marker) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}`, { method: 'PUT', body: JSON.stringify(marker) }); }
 export async function deletePlaceMarker(projectId, siteId, placeId, markerId) { return requestJson(`${markerUrl(projectId, siteId, placeId)}/${encodeURIComponent(markerId)}`, { method: 'DELETE' }); }
@@ -186,7 +193,7 @@ export async function deleteMarkerAnchor(projectId, siteId, placeId, markerId) {
 }
 
 const demoMarkerUrl = markerId => `${API_BASE}/demo-markers${markerId ? `/${encodeURIComponent(markerId)}` : ''}`;
-export async function loadDemoMarkers(visitor = false) { return requestJson(`${demoMarkerUrl()}${visitorQuery(visitor)}`); }
+export async function loadDemoMarkers(visitor = false) { return asList(await requestJson(`${demoMarkerUrl()}${visitorQuery(visitor)}`)); }
 export async function createDemoMarker(marker) { return requestJson(demoMarkerUrl(), { method: 'POST', body: JSON.stringify(marker) }); }
 export async function updateDemoMarker(markerId, marker) { return requestJson(demoMarkerUrl(markerId), { method: 'PUT', body: JSON.stringify(marker) }); }
 export async function deleteDemoMarker(markerId) { return requestJson(demoMarkerUrl(markerId), { method: 'DELETE' }); }

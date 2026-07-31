@@ -64,7 +64,7 @@ const AR_PHONE_COMFORT = Object.freeze({
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
-    'Augmented reality (AR) and mixed reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
+    'Augmented Reality (AR) and Mixed Reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
     'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience creator for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];

@@ -4,6 +4,9 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /xr/
+# Never rewrite API requests. The Node persistence server answers /xr-api/*.
+RewriteCond %{REQUEST_URI} ^/xr-api(?:/|$) [NC]
+RewriteRule ^ - [L]
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]

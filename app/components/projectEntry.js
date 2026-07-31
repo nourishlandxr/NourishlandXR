@@ -42,6 +42,9 @@ export function renderProjectEntry(config) {
     const latestEntries = config.latestEntries || [];
     const areas = config.areas || [];
     const searchItems = config.searchItems || [];
+    const quickActions = config.quickActions || [];
+    const tools = config.tools || [];
+    const status = config.status || { entries: '0', unplaced: '0', areas: '0', lastUpdated: 'No edits yet', notice: '' };
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
@@ -80,7 +83,7 @@ export function renderProjectEntry(config) {
             </button>
             <button class="content-mode-card" type="button" onclick="${config.unplacedAction}">
                 <span class="content-mode-icon" aria-hidden="true">📦</span>
-                <div><strong>Unplaced Content</strong><span>${config.status.unplaced} items can be positioned later.</span></div>
+                <div><strong>Unplaced Content</strong><span>${status.unplaced} items can be positioned later.</span></div>
             </button>
         </section>`;
 
@@ -95,7 +98,7 @@ export function renderProjectEntry(config) {
         <section class="location-create-section location-create-section-prominent${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="quickAccessTitle">
             <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
             <div class="quick-access-grid">
-                ${config.quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
+                ${quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
             </div>
         </section>
 
@@ -126,17 +129,17 @@ export function renderProjectEntry(config) {
         <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
             <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
             <div class="experience-status-grid">
-                ${statusItem('Entries', config.status.entries)}
-                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
-                ${statusItem('Areas', config.status.areas)}
-                ${statusItem('Updated', config.status.lastUpdated)}
+                ${statusItem('Entries', status.entries)}
+                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${status.unplaced}</button>`)}
+                ${statusItem('Areas', status.areas)}
+                ${statusItem('Updated', status.lastUpdated)}
             </div>
         </section>
 
-        ${config.status.notice ? `<aside class="setup-notice compact-setup-notice"><span>${config.status.notice}</span><button type="button" onclick="${config.status.setupAction}">Set Starting Point</button></aside>` : ''}
+        ${status.notice ? `<aside class="setup-notice compact-setup-notice"><span>${status.notice}</span><button type="button" onclick="${status.setupAction}">Set Starting Point</button></aside>` : ''}
 
         <nav class="location-tool-grid" aria-label="Location tools">
-            ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
+            ${tools.map(item => actionCard(item, 'location-tool-card')).join('')}
         </nav>
 
         <section class="latest-entries-section">
