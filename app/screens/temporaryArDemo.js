@@ -269,7 +269,7 @@ function openDemoVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-    showGuidedChoice('<h2>Open its Virtual Tag</h2><p>This Plant Profile also has a full, view-only page in Web Mode. Open the Virtual Tag to see how smoothly NourishlandXR moves between information in AR and the complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN VIRTUAL TAG</button>', choice => {
+    showGuidedChoice('<h2>Open its Virtual Tag</h2><p>This Plant Profile can be accessed as a full, web only page. A physical marker (similar to a QR code) can be placed in a partk, a virtual tag with endless possibilites for information deliverance. Open the Virtual Tag to see how a example of a complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN VIRTUAL TAG</button>', choice => {
         if (choice === 'virtual-tag') openDemoVirtualTag(record);
     });
 }
