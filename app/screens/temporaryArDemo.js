@@ -49,8 +49,8 @@ let introBoardTextureDirty = true;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
-let introBoardTitle = 'Nourishland XR';
-let introBoardBody = 'A short guided demo of Plant orbs and Notes.';
+let introBoardTitle = 'NourishlandXR';
+let introBoardBody = 'A short guided demo of Plant Markers and Notes.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -63,9 +63,9 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardScale: [5.6, 10.8]
 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to the Nourishland XR demo interface.',
-    'Augmented reality (AR) is a technology that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'Nourishland XR is both a mapping tool and a portal for plant-related information. This demo shows a few examples of how plant information can be mapped to real places and brought to life.'
+    'Welcome to the NourishlandXR demo interface.',
+    'Augmented reality (AR) and mixed reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
+    'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
