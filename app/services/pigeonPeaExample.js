@@ -6,8 +6,8 @@ export const PIGEON_PEA_EXAMPLE = Object.freeze({
     scientificName: 'Cajanus cajan',
     family: 'Fabaceae',
     plantType: 'Short-lived perennial legume shrub',
-    introduction: 'Meet the Pigeon Pea—a productive support plant connecting food, soil and biodiversity within the garden.',
-    shortProfile: 'Pigeon pea is a fast-growing perennial legume that combines food production with ecological support. Its edible peas provide a useful crop, while its nitrogen-fixing partnership, leaf litter and prunings contribute to the living soil. It can also function as a temporary hedge, shelter plant and source of chop-and-drop biomass.',
+    introduction: 'Lets pick a example plant for you. lets go for the Pigeon Pea - Why a pigeon pea? Because its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden.',
+    shortProfile: 'Pigeon pea is a fast-growing perennial edible legume that is ecological powerhouse. Its edible peas provide a useful crop, while its nitrogen-fixing contribute to the living soil. It can also function as a temporary hedge, shelter plant and source of chop-and-drop biomass.',
     informationTree: Object.freeze([
         { id: 'about', label: 'ABOUT', details: ['Scientific name: Cajanus cajan', 'Family: Fabaceae', 'Form: Upright, branching perennial shrub', 'Native range: Indian subcontinent', 'Climate: Tropical and subtropical'] },
         { id: 'growth', label: 'GROWTH', details: ['Position: Full sun', 'Water: Drought-tolerant once established', 'Soil: Adaptable, including relatively poor soils', 'Habit: Fast-growing and suitable for intercropping', 'Sensitivity: Protect from severe frost and waterlogged soil'] },

@@ -65,7 +65,7 @@ const AR_PHONE_COMFORT = Object.freeze({
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
     'Augmented reality (AR) and mixed reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
+    'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience creator for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
 ]);
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
@@ -550,7 +550,7 @@ function guidePlantConversion(record) {
         moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
         moringa
             ? 'This Moringa orb can carry its own Plant Profile in the place where the tree grows. Continue, then press the orb to explore its information tree.'
-            : `${PIGEON_PEA_EXAMPLE.introduction} A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. If its position is not quite right, you can hold the orb and move it whenever you want—adjusting it is optional. Continue, then press the orb to explore its information tree.`,
+            : `${PIGEON_PEA_EXAMPLE.introduction} A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. If its position is not quite right, you can hold the orb and move it whenever you want. Continue, then press the orb to explore its information tree.`,
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -630,7 +630,7 @@ function armDemoPlacement(type) {
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : 'Take in the space before choosing the next position.');
     const introductions = {
-        plant: ['Your pointer', 'This may feel unfamiliar at first, but don’t worry—we’ll explore it together, one step at a time. First, you’ll see a pointer appear… You will see a round circle on your screen. This is your pointer. Press it to create a Plant orb. Press Continue to load your pointer.'],
+        plant: ['Placing items in space', 'Lets explore placing a item together, one step at a time. First, you’ll see a pointer appear as a round circle on your screen. Press Continue to load your pointer, then press it to create a Plant orb. .'],
         plant2: ['Let’s try Moringa', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
         note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
     };
