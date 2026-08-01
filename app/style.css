@@ -7391,3 +7391,17 @@ body:has(.creator-project-menu) #app {
     .creator-project-menu .project-selection-list { grid-template-columns:1fr; }
     .creator-project-menu .project-selection-list .project-selection-row { min-height:88px; }
 }
+
+/* Welcome typography: keep the palette and layout, but give the brand and hero
+   statement a little more breathing room on phone and desktop. */
+.intro-launch .intro-heading h1 {
+    font-size:clamp(1.55rem,4.2vw,2.45rem);
+    letter-spacing:.015em;
+}
+.intro-launch .intro-heading h1 span {
+    margin-left:.12em;
+    font-size:.62em;
+}
+.intro-launch .intro-copy h2 {
+    font-size:clamp(1.8rem,4.6vw,4.1rem);
+}
