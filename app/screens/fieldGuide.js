@@ -121,6 +121,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
         const allPlaces = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, siteId: group.site.id, count: placeGroup.plants.length, markerCount: placeGroup.markerCount, placedCount: placeGroup.placedCount, placedItems: placeGroup.placedItems, anchoredCount: placeGroup.anchoredCount, anchoredItems: placeGroup.anchoredItems, totems: placeGroup.totems, hasTotem: placeGroup.hasTotem, hasStartingPoint: placeGroup.hasStartingPoint })));
         const homePlace = allPlaces.find(isDefaultHomeArea) || null;
         const places = allPlaces;
+        const orderedPlaces = [...places].sort((first, second) => Number(isDefaultHomeArea(second)) - Number(isDefaultHomeArea(first)));
         const homeCount = guide.plants.filter(plant => isDefaultHomeArea(allPlaces.find(place => place.id === plant.placeId))).length;
         const unassignedCount = homeCount; // Compatibility alias for the existing summary template.
         guide.plants.forEach(plant => {
@@ -165,7 +166,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             ? `window.filterFieldGuidePlace('${escapeHtml(homePlace.id)}')`
             : "window.filterFieldGuidePlace('')";
         if (creator) {
-            const creatorAreaCards = places.map(place => {
+            const creatorAreaCards = orderedPlaces.map(place => {
                 const totem = place.totems?.[0];
                 const totemColor = /^#[0-9a-f]{6}$/i.test(totem?.appearance?.color || '') ? totem.appearance.color : DEFAULT_TOTEM_COLOR;
                 const action = isDefaultHomeArea(place)

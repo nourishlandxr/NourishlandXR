@@ -6445,24 +6445,29 @@ body:has(.field-guide-tool) {
 }
 .field-guide-tool .field-guide-summary {
     grid-template-columns:repeat(5,minmax(0,1fr));
-    gap:8px;
+    gap:0;
+    padding:7px 0;
+    border-top:1px solid rgba(47,93,62,.18);
+    border-bottom:1px solid rgba(47,93,62,.18);
 }
 .field-guide-tool .field-guide-summary > span {
     position:relative;
-    min-height:76px;
-    padding:10px 7px 8px;
+    min-height:46px;
+    padding:6px 10px;
     overflow:hidden;
-    border:1px solid rgba(47,93,62,.16);
-    border-radius:16px 6px 16px 6px;
-    background:rgba(255,255,252,.74);
+    border:0;
+    border-right:1px solid rgba(47,93,62,.16);
+    border-radius:0;
+    background:transparent;
     color:#527060;
     font-size:.66rem;
     font-weight:800;
     text-transform:uppercase;
 }
+.field-guide-tool .field-guide-summary > span:last-child { border-right:0; }
 .field-guide-tool .field-guide-summary > span::before {
-    display:block;
-    margin-bottom:2px;
+    display:inline-block;
+    margin-right:4px;
     font-size:1.15rem;
     line-height:1;
 }
@@ -6472,7 +6477,7 @@ body:has(.field-guide-tool) {
 .field-guide-tool .field-guide-summary > span:nth-child(4)::before { content:"✨"; }
 .field-guide-tool .field-guide-summary > span:nth-child(5)::before { content:"🔗"; }
 .field-guide-tool .field-guide-summary > span strong { color:var(--quest-deep); font-size:1.3rem; line-height:1; }
-.field-guide-tool .field-guide-summary .is-unassigned { background:linear-gradient(145deg,#fff5df,#f7ddbd); }
+.field-guide-tool .field-guide-summary .is-unassigned { background:transparent; }
 .field-guide-tool .field-guide-creation-actions button {
     min-height:50px;
     border:1px solid rgba(51,107,69,.24);
@@ -6517,7 +6522,7 @@ body:has(.field-guide-tool) {
     letter-spacing:-.025em;
 }
 .field-guide-tool .field-guide-section-heading p { color:#5d7767; }
-.field-guide-tool .field-guide-area-grid { gap:11px; }
+.field-guide-tool .field-guide-area-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px; }
 .field-guide-tool .field-guide-area-grid .field-guide-area-card {
     position:relative;
     min-height:96px;
@@ -6648,7 +6653,13 @@ body:has(.field-guide-tool) {
 @media (max-width:700px) {
     .field-guide-tool .field-guide-header { padding:20px 18px 22px; }
     .field-guide-tool .field-guide-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .field-guide-tool .field-guide-area-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .field-guide-tool .field-guide-area-grid .field-guide-area-card { grid-template-columns:32px minmax(0,1fr) 22px; min-height:86px; gap:6px; padding:10px 8px; }
+    .field-guide-tool .field-guide-area-icon { width:35px; height:35px; font-size:1.1rem; }
+    .field-guide-tool .field-guide-area-totem { width:22px; height:30px; }
 }
 @media (max-width:420px) {
     .field-guide-tool .field-guide-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .field-guide-tool .field-guide-area-copy strong { font-size:.76rem; }
+    .field-guide-tool .field-guide-area-copy small { font-size:.62rem; }
 }

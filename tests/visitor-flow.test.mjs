@@ -259,6 +259,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.doesNotMatch(fieldGuideSource, /Your garden quest|Explore your garden|Bring the garden to life/);
     assert.doesNotMatch(fieldGuideSource, /CHOOSE YOUR NEXT PATCH|DISCOVER SOMETHING NEW/);
     assert.match(fieldGuideSource, /field-guide-area-grid/);
+    assert.match(fieldGuideSource, /orderedPlaces\.map/);
     assert.match(fieldGuideSource, /data-field-guide-area/);
     assert.match(fieldGuideSource, /is-home-area/);
     assert.match(fieldGuideSource, /field-guide-plant-search/);
