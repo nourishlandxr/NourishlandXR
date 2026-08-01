@@ -506,11 +506,11 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /element\?\.addEventListener\('pointermove', moveMarkerHoldGesture\)/);
     assert.match(arSource, /element\?\.addEventListener\('pointerup', event => finishMarkerHoldGesture\(record, event\)\)/);
     assert.match(arSource, /Hold any placed item to move it/);
-    assert.match(arSource, /latestViewerMatrix\[12\] \+ ray\.x \* distance/);
+    assert.match(arSource, /const origin = pointerWorldOrigin\(\) \|\|/);
     assert.match(arSource, /data-ar-depth-joystick/);
     assert.doesNotMatch(arSource, /window\.innerHeight - 104/);
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
-    assert.match(arSource, /latestViewerMatrix\[14\] \+ ray\.z \* distance/);
+    assert.match(arSource, /origin\.z \+ ray\.z \* distance/);
     assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /if \(!directHold && interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
@@ -593,11 +593,18 @@ test('Creator dashboard stays in web mode instead of being duplicated in AR', ()
 
 test('Creator AR keeps dashboard web-only while supporting controller controls', () => {
     const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
     const taskbar = arSource.slice(
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
     assert.match(arSource, /targetRayMode|selectstart|selectend/);
+    assert.match(arSource, /handedness === 'right'/);
+    assert.match(arSource, /source\.targetRaySpace, source\.gripSpace/);
+    assert.match(arSource, /function pointerWorldOrigin\(\)/);
+    assert.match(arSource, /const origin = pointerWorldOrigin\(\)/);
+    assert.match(arSource, /origin\.x \+ ray\.x \* distance/);
+    assert.match(styles, /creator-ar-controller-pointer[^}]*z-index:12005/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
     assert.match(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);

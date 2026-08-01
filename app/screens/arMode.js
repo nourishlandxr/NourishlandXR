@@ -674,10 +674,11 @@ function placementPoint(type = readyPlacementType) {
         y: -latestViewerMatrix[9],
         z: -latestViewerMatrix[10]
     };
+    const origin = pointerWorldOrigin() || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
     return {
-        x: latestViewerMatrix[12] + ray.x * distance,
-        y: latestViewerMatrix[13] + ray.y * distance,
-        z: latestViewerMatrix[14] + ray.z * distance
+        x: origin.x + ray.x * distance,
+        y: origin.y + ray.y * distance,
+        z: origin.z + ray.z * distance
     };
 }
 
@@ -931,9 +932,20 @@ function updateInteractionControls() {
 
 function controllerInputSource() {
     const sources = [...(session?.inputSources || [])];
-    return sources.find(source => source.targetRayMode === 'tracked-pointer' && source.gamepad)
-        || sources.find(source => source.targetRayMode === 'tracked-pointer' || source.hand)
+    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer');
+    return trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
+        || trackedControllers.find(source => source.handedness === 'right')
+        || trackedControllers.find(source => source.gamepad)
+        || trackedControllers[0]
+        || sources.find(source => source.hand)
         || null;
+}
+
+function isPrimaryControllerSource(source) {
+    if (!source) return creatorInputMode === 'controller';
+    const active = controllerInputSource();
+    if (!active) return false;
+    return source === active || (active.handedness === 'right' && source.handedness === 'right');
 }
 
 function controllerActionElements() {
@@ -983,7 +995,7 @@ function setCreatorInputMode(mode) {
     overlayRoot?.classList.toggle('is-controller-mode', creatorInputMode === 'controller');
     updateControllerHud();
     if (creatorInputMode === 'controller') {
-        setPlacementStatus('Quest controller controls active. Move the thumbstick to choose an AR action, then press the trigger.');
+        setPlacementStatus('Right Quest controller active. Aim with the controller, move the thumbstick to choose an AR action, then press the trigger.');
     } else if (!readyPlacementType) {
         setPlacementStatus('Touch controls active. Aim dot ready.');
     }
@@ -1008,10 +1020,18 @@ function dispatchControllerAction(button) {
     updateControllerHud();
 }
 
+function pointerWorldOrigin() {
+    return creatorInputMode === 'controller' && latestControllerRay?.origin
+        ? latestControllerRay.origin
+        : latestViewerMatrix
+            ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
+            : null;
+}
+
 function controllerMarkerAtAim() {
     const ray = pointerWorldRay();
-    if (!ray || !latestViewerMatrix) return null;
-    const origin = latestControllerRay?.origin || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
+    const origin = pointerWorldOrigin();
+    if (!ray || !origin) return null;
     return activeAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
         .map(record => {
@@ -1076,8 +1096,9 @@ function pollControllerInput() {
 function updateControllerRay(frame) {
     latestControllerRay = null;
     const source = controllerInputSource();
-    if (!source?.targetRaySpace || !refSpace) return;
-    const pose = frame.getPose(source.targetRaySpace, refSpace);
+    if (!source || !refSpace) return;
+    const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
+    const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
     const matrix = pose?.transform?.matrix;
     if (!matrix) return;
     const x = -matrix[8];
@@ -1086,7 +1107,8 @@ function updateControllerRay(frame) {
     const length = Math.hypot(x, y, z) || 1;
     latestControllerRay = {
         origin: { x: matrix[12], y: matrix[13], z: matrix[14] },
-        direction: { x: x / length, y: y / length, z: z / length }
+        direction: { x: x / length, y: y / length, z: z / length },
+        handedness: source.handedness || 'right'
     };
 }
 
@@ -1099,21 +1121,21 @@ function drawControllerPointer(view) {
         z: origin.z + direction.z * .04
     };
     const end = {
-        x: origin.x + direction.x * 4.5,
-        y: origin.y + direction.y * 4.5,
-        z: origin.z + direction.z * 4.5
+        x: origin.x + direction.x * 5,
+        y: origin.y + direction.y * 5,
+        z: origin.z + direction.z * 5
     };
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
-        segments: 4,
-        width: .008,
+        segments: 8,
+        width: .014,
         curve: .001,
         lift: .001,
-        color: [.78, .96, .43, .82]
+        color: [.82, 1, .26, .96]
     });
-    drawSpatialOrb(gl, sphereRenderer, view, end, .055, {
+    drawSpatialOrb(gl, sphereRenderer, view, end, .07, {
         type: 'marker',
-        color: [.72, .95, .36],
-        opacity: .98
+        color: [.82, 1, .26],
+        opacity: 1
     });
 }
 
@@ -2259,9 +2281,10 @@ function updateGrabbedMarkerFromCamera() {
     if (!latestViewerMatrix) return;
     const distance = Math.max(.3, Math.min(8, dragState.distance + dragState.depthOffset));
     const ray = heldPointerRay() || { x: -latestViewerMatrix[8], y: -latestViewerMatrix[9], z: -latestViewerMatrix[10] };
-    dragState.record.position.x = latestViewerMatrix[12] + ray.x * distance;
-    dragState.record.position.y = latestViewerMatrix[13] + ray.y * distance;
-    dragState.record.position.z = latestViewerMatrix[14] + ray.z * distance;
+    const origin = pointerWorldOrigin() || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
+    dragState.record.position.x = origin.x + ray.x * distance;
+    dragState.record.position.y = origin.y + ray.y * distance;
+    dragState.record.position.z = origin.z + ray.z * distance;
 }
 
 async function finishMarkerDrag(event) {
@@ -3231,17 +3254,17 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
         });
         launchedSession.addEventListener('selectstart', event => {
-            if (session !== launchedSession || creatorInputMode !== 'controller' || controllerMenuActive || readyPlacementType || interactionMode !== 'grab') return;
+            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || controllerMenuActive || readyPlacementType || interactionMode !== 'grab') return;
             const target = controllerMarkerAtAim();
             if (target) activateControllerTarget();
         });
-        launchedSession.addEventListener('selectend', () => {
-            if (session !== launchedSession || dragState?.pointerId !== 'xr-controller') return;
+        launchedSession.addEventListener('selectend', event => {
+            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || dragState?.pointerId !== 'xr-controller') return;
             void finishMarkerDrag();
         });
         launchedSession.addEventListener('select', event => {
             if (session !== launchedSession) return;
-            const controllerSelect = event.inputSource?.targetRayMode === 'tracked-pointer' || creatorInputMode === 'controller';
+            const controllerSelect = isPrimaryControllerSource(event.inputSource);
             if (controllerSelect) {
                 if (dragState?.pointerId === 'xr-controller') return;
                 if (activateControllerSelection()) return;
