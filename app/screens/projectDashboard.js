@@ -319,6 +319,17 @@ async function projectAreaContext(projectId, areaId) {
     };
 }
 
+async function projectCheckpointContext(projectId, areaId) {
+    const context = await projectContent(projectId);
+    const area = context.places.find(place => place.id === areaId);
+    if (!context.site || !area) throw new Error('Area data is unavailable.');
+    return {
+        ...context,
+        area,
+        areaEntries: context.entries.filter(entry => entry.place.id === area.id)
+    };
+}
+
 function searchableText(...values) {
     const textValues = value => {
         if (value === null || value === undefined) return [];
@@ -625,7 +636,7 @@ export async function renderCheckpointPlacementChoice(app, encodedProjectId, enc
     const areaId = decodeURIComponent(encodedAreaId);
     const markerId = decodeURIComponent(encodedMarkerId);
     try {
-        const context = await projectAreaContext(projectId, areaId);
+        const context = await projectCheckpointContext(projectId, areaId);
         const marker = context.areaEntries.find(entry => entry.marker.id === markerId)?.marker;
         if (!marker) throw new Error('Checkpoint marker is unavailable.');
         app.innerHTML = `<div class="screen checkpoint-placement-choice"><div class="page-header"><button class="ghost" type="button" onclick="window.openCheckpointQuickSetup('${encoded(context.project.id)}')">Back to Checkpoints</button><p class="welcome-label">Checkpoint saved</p><h1>${escapeHtml(marker.name)}</h1><p class="subtitle">${escapeHtml(context.area.name)} · Area checkpoint</p></div><section class="panel guide"><p>Your checkpoint is saved as a draft. Choose whether to place it with the camera now or return to the dashboard and do that later.</p></section><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(marker.id)}')"><strong>Add in AR now</strong><span>Open AR at this Area, recenter the checkpoint, then place related content.</span></button><button class="content-type-row" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')"><strong>Add location later</strong><span>Keep the checkpoint and complete spatial placement another time.</span></button></div></div>`;
@@ -657,7 +668,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     try {
-        const context = await projectAreaContext(projectId, areaId);
+        const context = await projectCheckpointContext(projectId, areaId);
         const flowKey = `${projectId}:${areaId}`;
         if (flow) checkpointSetupFlows.set(flowKey, flow);
         else checkpointSetupFlows.delete(flowKey);
@@ -908,7 +919,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
     const submitButton = event.submitter;
     try {
         if (submitButton) submitButton.disabled = true;
-        const context = await projectAreaContext(projectId, areaId);
+        const context = await projectCheckpointContext(projectId, areaId);
         const flowKey = `${projectId}:${areaId}`;
         const nextFlow = flow || checkpointSetupFlows.get(flowKey) || '';
         const name = document.getElementById('areaCheckpointName')?.value.trim() || `${context.area.name} Totem`;

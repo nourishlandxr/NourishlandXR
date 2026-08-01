@@ -1950,12 +1950,17 @@ async function loadPlacementAreas(operation = captureArOperationContext(), guard
         site = await createProjectSite(operation.projectId, { ...AR_EXPERIENCE_CONFIG.defaultSite });
         if (!isArOperationCurrent(operation, guardOptions)) return [];
     }
-    const areas = await loadSitePlaces(operation.projectId, site.id);
+    let areas = await loadSitePlaces(operation.projectId, site.id);
+    if (!isArOperationCurrent(operation, guardOptions)) return [];
+    if (!areas.some(isDefaultHomeArea)) {
+        const home = await createSitePlace(operation.projectId, site.id, { ...AR_EXPERIENCE_CONFIG.fallbackArea });
+        areas = [...areas, home];
+    }
     if (!isArOperationCurrent(operation, guardOptions)) return [];
     activeSiteId = site.id;
     activeProjectName = project?.name || activeProjectName || operation.projectId;
     locationNoteConfig = normalizedLocationNote(project, site);
-    const selected = areas.find(area => area.id === operation.areaId);
+    const selected = areas.find(area => area.id === operation.areaId) || areas.find(isDefaultHomeArea);
     if (selected) {
         activateArea(selected);
     } else {
@@ -2600,17 +2605,18 @@ function armArHistory() {
     window.addEventListener('popstate', handleArHistoryBack);
 }
 
-function finishNaturalArExit(projectId, areaId, returnContext) {
+function finishNaturalArExit(projectId, areaId, returnContext, areaName = '') {
+    const safeAreaId = isDefaultHomeArea(areaName || areaId) ? '' : areaId;
     const removeArHistoryEntry = arHistoryArmed && history.state?.nourishlandCreatorAr;
     arHistoryArmed = false;
     handlingArHistory = false;
     window.removeEventListener('popstate', handleArHistoryBack);
     if (removeArHistoryEntry) {
-        window.addEventListener('popstate', () => navigateAfterAr(projectId, areaId, returnContext), { once: true });
+        window.addEventListener('popstate', () => navigateAfterAr(projectId, safeAreaId, returnContext), { once: true });
         history.back();
         return;
     }
-    navigateAfterAr(projectId, areaId, returnContext);
+    navigateAfterAr(projectId, safeAreaId, returnContext);
 }
 
 export function exitArMode() {
@@ -2738,10 +2744,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (session !== launchedSession) return;
             const projectId = activeProjectId;
             const areaId = activeAreaId;
+            const areaName = activeAreaName;
             const returnContext = arReturnContext;
             session = null;
             cleanup();
-            finishNaturalArExit(projectId, areaId, returnContext);
+            finishNaturalArExit(projectId, areaId, returnContext, areaName);
         });
         launchedSession.addEventListener('select', () => {
             if (session !== launchedSession) return;

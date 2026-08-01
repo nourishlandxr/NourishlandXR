@@ -3,7 +3,8 @@
  * Projects store content and anchors; they do not redefine this interface.
  */
 export const DEFAULT_HOME_AREA_NAME = 'Home';
-export const isDefaultHomeArea = area => ['home', 'unassigned'].includes(String(area?.name || area || '').trim().toLocaleLowerCase());
+export const isDefaultHomeArea = area => area?.systemKey === 'home'
+    || ['home', 'unassigned'].includes(String(area?.name || area || '').trim().toLocaleLowerCase());
 export const AREA_ICON_OPTIONS = Object.freeze([
     { value: '🌿', label: 'Leaves' },
     { value: '🌳', label: 'Tree' },
@@ -29,6 +30,7 @@ export const AR_EXPERIENCE_CONFIG = Object.freeze({
     }),
     fallbackArea: Object.freeze({
         name: DEFAULT_HOME_AREA_NAME,
+        systemKey: 'home',
         // Home is the built-in holding Area for records not assigned elsewhere.
         // "Unassigned" remains a recognized legacy name.
         type: 'Other',

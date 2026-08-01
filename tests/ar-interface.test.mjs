@@ -423,6 +423,7 @@ test('Note placement preview uses the shared Note surface instead of the shader 
     assert.doesNotMatch(drawSource, /markerShape\('note'\)/);
     assert.match(styles, /\.creator-ar-note-placement-preview/);
     assert.match(styles, /\.creator-ar-note-placement-surface/);
+    assert.match(styles, /\.creator-ar-note-placement-preview\.creator-ar-marker-hit-target-note \.creator-ar-note-placement-surface \{ transform:none; \}/);
 });
 
 test('Special opens immediately with Totem tools above symbols', () => {
@@ -687,7 +688,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(restoration, /loadProjectSites\(operation\.projectId\)/);
     assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, operation\.siteId, area\.id\)/);
     assert.match(restoration, /isArOperationCurrent\(operation, guardOptions\)/);
-    assert.match(restoration, /if \(selected\) \{[\s\S]*activateArea\(selected\);[\s\S]*\} else \{[\s\S]*activateArea\(null\);/);
+    assert.match(restoration, /const selected = areas\.find\(area => area\.id === operation\.areaId\) \|\| areas\.find\(isDefaultHomeArea\)/);
+    assert.match(restoration, /if \(!areas\.some\(isDefaultHomeArea\)\)[\s\S]*createSitePlace\(operation\.projectId, site\.id,[\s\S]*AR_EXPERIENCE_CONFIG\.fallbackArea/);
     assert.doesNotMatch(restoration, /const firstArea = areas\[0\]/);
     const areaFallback = arSource.slice(arSource.indexOf('async function ensurePlacementArea('), arSource.indexOf('async function armPlacement('));
     assert.match(areaFallback, /areas\.find\(isDefaultHomeArea\)/);
@@ -716,7 +718,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Select another glowing element/);
     assert.match(arSource, /function finishNaturalArExit/);
     assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
-    assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, areaId, returnContext\), \{ once: true \}\)/);
+    assert.match(arSource, /const safeAreaId = isDefaultHomeArea\(areaName \|\| areaId\) \? '' : areaId/);
+    assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, safeAreaId, returnContext\), \{ once: true \}\)/);
     assert.match(arSource, /history\.back\(\)/);
 });
 
@@ -1061,6 +1064,9 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /Open Test AR/);
     assert.match(dashboardSource, /renderAreaCheckpointForm/);
     assert.match(dashboardSource, /saveAreaCheckpoint/);
+    assert.match(dashboardSource, /async function projectCheckpointContext\(projectId, areaId\)/);
+    assert.match(dashboardSource, /renderAreaCheckpointForm[\s\S]*projectCheckpointContext\(projectId, areaId\)/);
+    assert.match(dashboardSource, /saveAreaCheckpoint[\s\S]*projectCheckpointContext\(projectId, areaId\)/);
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /Physical QR or location code/);
     assert.match(dashboardSource, /Additional information balloons/);
@@ -1081,6 +1087,8 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.doesNotMatch(dashboardSource, /quickActions:/);
     assert.match(arSource, /openUnplacedBag/);
     assert.match(arSource, /const homeAreas = areas\.filter\(isDefaultHomeArea\)/);
+    assert.match(configSource, /area\?\.systemKey === 'home'/);
+    assert.match(configSource, /systemKey: 'home'/);
     assert.match(arSource, /Promise\.all\(homeAreas\.map/);
     assert.match(arSource, /pendingBagRecord/);
     assert.match(arSource, /selected from your Bag/);
