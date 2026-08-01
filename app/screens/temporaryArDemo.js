@@ -17,6 +17,7 @@ import { requestImmersiveArSession } from '../services/webxrSession.js';
 let appRoot = null;
 let session = null;
 let sessionMode = 'immersive-ar';
+let domOverlayEnabled = false;
 let canvas = null;
 let gl = null;
 let referenceSpace = null;
@@ -197,6 +198,7 @@ function clearSessionState() {
     canvas = null;
     gl = null;
     sessionMode = 'immersive-ar';
+    domOverlayEnabled = false;
 }
 
 function returnToWelcome() {
@@ -1264,10 +1266,12 @@ function pressPlacementPointer(event) {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
+    const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     const introContinue = document.createElement('button');
     introContinue.className = 'tryit-intro-continue';
     introContinue.dataset.tryitIntroContinue = '';
@@ -1748,7 +1752,7 @@ function drawIntroSpatial(view) {
         easedNote
     );
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlLabel = continueButton && !continueButton.hidden
+    const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
         ? (continueButton.textContent || 'Continue').trim()
         : '';
     if (controlLabel) {
@@ -2053,6 +2057,7 @@ async function startImmersive() {
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
+        domOverlayEnabled = Boolean(arSession.domOverlay);
         const transparentSession = arSession.passthrough !== false;
         canvas = document.createElement('canvas'); canvas.className = 'tryit-xr-canvas'; document.body.append(canvas);
         gl = canvas.getContext('webgl', { alpha: transparentSession, antialias: true });

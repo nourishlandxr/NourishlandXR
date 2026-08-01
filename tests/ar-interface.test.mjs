@@ -888,6 +888,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
         source.indexOf("session.addEventListener('end'")
     );
     assert.match(source, /function activateImmersiveDemoControl\(\)/);
+    assert.match(source, /domOverlayEnabled = Boolean\(arSession\.domOverlay\)/);
+    assert.match(source, /uses-webgl-controls/);
+    assert.match(source, /session && !domOverlayEnabled && continueButton/);
+    assert.match(styles, /\.tryit-demo\.uses-webgl-controls > \.tryit-intro-continue \{ display:none !important; \}/);
     assert.match(immersiveSelectHandler, /if \(activateImmersiveDemoControl\(\)\) return;/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
