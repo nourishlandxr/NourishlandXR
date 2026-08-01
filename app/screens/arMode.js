@@ -1129,13 +1129,14 @@ function markerBillboardMatrix(position, scaleX = .045, scaleY = scaleX) {
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
-function createHomeSignTexture(title) {
+function createHomeSignTexture(title, word) {
     const textureCanvas = document.createElement('canvas');
     textureCanvas.width = 1024;
     textureCanvas.height = 384;
     const context = textureCanvas.getContext('2d');
     if (!context) return null;
     const projectTitle = String(title || 'NourishlandXR').trim().toLocaleUpperCase();
+    const areaWord = String(word || 'HOME').trim().toLocaleUpperCase();
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -1146,10 +1147,16 @@ function createHomeSignTexture(title) {
     context.lineWidth = 12;
     context.strokeText(projectTitle, 512, 96, 850);
     context.fillText(projectTitle, 512, 96, 850);
-    context.font = '850 164px system-ui, sans-serif';
-    context.lineWidth = 20;
-    context.strokeText('HOME', 512, 242);
-    context.fillText('HOME', 512, 242);
+    // Giant area word, sized to fit long Area names.
+    let wordSize = 164;
+    context.font = `850 ${wordSize}px system-ui, sans-serif`;
+    while (context.measureText(areaWord).width > 940 && wordSize > 60) {
+        wordSize -= 8;
+        context.font = `850 ${wordSize}px system-ui, sans-serif`;
+    }
+    context.lineWidth = Math.max(10, Math.round(wordSize * 0.12));
+    context.strokeText(areaWord, 512, 242, 950);
+    context.fillText(areaWord, 512, 242, 950);
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1164,10 +1171,14 @@ function createHomeSignTexture(title) {
 
 function ensureHomeSignTexture() {
     const title = String(activeProjectName || activeProjectId || 'NourishlandXR').trim();
-    if (homeSignTexture && homeSignTextureTitle === title) return homeSignTexture;
+    const word = String(activeAreaName || DEFAULT_HOME_AREA_NAME).trim();
+    const cacheKey = word + '\u0000' + title;
+    if (homeSignTexture && homeSignTextureTitle === cacheKey) return homeSignTexture;
     if (homeSignTexture) gl.deleteTexture(homeSignTexture);
-    homeSignTexture = createHomeSignTexture(title);
-    homeSignTextureTitle = title;
+    homeSignTexture = createHomeSignTexture(title, word);
+    homeSignTextureTitle = cacheKey;
+    // Re-anchor the sign when switching area/home.
+    homeSignAnchor = null;
     return homeSignTexture;
 }
 
@@ -1201,7 +1212,7 @@ function setupHomeSignRenderer() {
 }
 
 function drawSpatialHomeSign(view) {
-    if (activeAreaId || !homeSignProgram || !homeSignBuffer || !ensureHomeSignTexture()) return;
+    if (!homeSignProgram || !homeSignBuffer || !ensureHomeSignTexture()) return;
     homeSignAnchor ||= homeSignAnchorFromViewer();
     if (!homeSignAnchor) return;
     gl.enable(gl.DEPTH_TEST);

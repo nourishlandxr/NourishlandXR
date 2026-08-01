@@ -1257,10 +1257,10 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(arSource, /window\.renderAreaCheckpointForm/);
     assert.match(arSource, /else if \(areaId && window\.renderProjectAreaDashboard\)/);
     assert.doesNotMatch(arSource, /data-ar-home-sign|creator-ar-home-sign/);
-    assert.match(arSource, /function createHomeSignTexture\(title\)/);
-    assert.match(arSource, /context\.fillText\('HOME', 512, 242\)/);
+    assert.match(arSource, /function createHomeSignTexture\(title, word\)/);
+    assert.match(arSource, /context\.fillText\(areaWord, 512, 242, 950\)/);
     assert.match(arSource, /y: currentGroundY\(\) \+ 2\.45/);
-    assert.match(arSource, /if \(activeAreaId \|\| !homeSignProgram/);
+    assert.match(arSource, /if \(!homeSignProgram/);
     assert.match(arSource, /homeSignAnchor \|\|= homeSignAnchorFromViewer\(\)/);
     assert.match(arSource, /drawSpatialHomeSign\(view\);/);
     assert.match(dashboardSource, /web-context-beacon is-area/);
