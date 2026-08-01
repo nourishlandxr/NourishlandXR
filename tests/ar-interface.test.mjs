@@ -885,9 +885,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
         source.indexOf("session.addEventListener('select'"),
         source.indexOf("session.addEventListener('end'")
     );
-    assert.doesNotMatch(immersiveSelectHandler, /placeMarker\(\)/);
-    assert.doesNotMatch(immersiveSelectHandler, /pressPlacementPointer/);
-    assert.match(immersiveSelectHandler, /if \(!placementReady\) selectGuidedDemoOrb\(\)/);
+    assert.match(source, /function activateImmersiveDemoControl\(\)/);
+    assert.match(immersiveSelectHandler, /if \(activateImmersiveDemoControl\(\)\) return;/);
+    assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
+    assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG/);
@@ -929,6 +930,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
+    assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
+    assert.match(source, /introTextureUploadedAt >= 120/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /place\.dataset\.aimX = '50'/);
     assert.match(source, /50 \+ comfortOffsetPercent/);

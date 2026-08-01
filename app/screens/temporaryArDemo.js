@@ -49,6 +49,7 @@ let introNoteTexture = null;
 let introNoteCanvas = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
+let introTextureUploadedAt = 0;
 let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
@@ -167,6 +168,7 @@ function clearSessionState() {
     introNoteCanvas = null;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
+    introTextureUploadedAt = 0;
     introKnowledgeTexture = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
@@ -295,6 +297,20 @@ function hideGuidedChoice() {
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
 }
 
+function activateImmersiveDemoControl() {
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (continueButton && !continueButton.hidden) {
+        continueButton.click();
+        return true;
+    }
+    const choiceButton = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden]) [data-demo-choice]:not([hidden])');
+    if (choiceButton) {
+        choiceButton.click();
+        return true;
+    }
+    return false;
+}
+
 function prepareTutorialBoard(panel) {
     const firstArrival = !introBoardHasEntered;
     panel.classList.add('is-welcome-board');
@@ -350,7 +366,10 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         if (choiceButtons.length === 1 && continueButton) {
             const choiceButton = choiceButtons[0];
             continueButton.textContent = choiceButton.textContent.trim();
-            continueButton.onclick = () => onClick(choiceButton.dataset.demoChoice);
+            continueButton.onclick = () => {
+                suppressSessionSelectUntil = performance.now() + 700;
+                onClick(choiceButton.dataset.demoChoice);
+            };
             continueButton.hidden = false;
         } else if (choiceButtons.length > 1 && finalActions) {
             finalActions.hidden = false;
@@ -467,7 +486,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if (continueButton && buttonLabel) {
         continueButton.textContent = buttonLabel;
         continueButton.hidden = true;
-        continueButton.onclick = onContinue;
+        continueButton.onclick = () => {
+            suppressSessionSelectUntil = performance.now() + 700;
+            onContinue();
+        };
     } else if (continueButton) {
         continueButton.hidden = true;
         continueButton.onclick = null;
@@ -648,6 +670,7 @@ function armDemoPlacement(type) {
     const [title, introduction] = introductions[type];
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice !== 'continue') return;
+        suppressSessionSelectUntil = performance.now() + 700;
         hideGuidedChoice();
         setGuide(type === 'plant'
             ? 'Press the aiming circle to place the example Plant orb.'
@@ -1311,8 +1334,8 @@ function multiply(a, b) {
     return out;
 }
 
-function billboardMatrix(position, scaleX = 1, scaleY = 1) {
-    const camera = viewerMatrix || new Float32Array(16);
+function billboardMatrix(position, scaleX = 1, scaleY = 1, cameraMatrix = viewerMatrix) {
+    const camera = cameraMatrix || new Float32Array(16);
     let x = camera[12] - position.x;
     let z = camera[14] - position.z;
     const length = Math.hypot(x, z) || 1;
@@ -1619,14 +1642,16 @@ function introLocalPosition(matrix, [x, y, z]) {
 function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
-    if (!introNoteTexture || introBoardTextureDirty) {
+    const now = performance.now();
+    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 120)) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
+        introTextureUploadedAt = now;
     }
     introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
     const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
-        const model = billboardMatrix(position, scaleX, scaleY);
+        const model = billboardMatrix(position, scaleX, scaleY, introWorldAnchor);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
@@ -1952,10 +1977,12 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
-            // Placement belongs only to the visible DOM pointer. A WebXR
-            // select can arrive late from Continue and must never place for
-            // the visitor.
-            if (!placementReady) selectGuidedDemoOrb();
+            // Quest controllers do not reliably generate DOM click events for
+            // the overlay. Map one deliberate select to the same tutorial
+            // control that a phone user sees, then to the live placement aim.
+            if (activateImmersiveDemoControl()) return;
+            if (placementReady) return pressPlacementPointer();
+            selectGuidedDemoOrb();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
