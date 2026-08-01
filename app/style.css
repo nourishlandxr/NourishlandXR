@@ -7407,3 +7407,18 @@ body:has(.creator-project-menu) #app {
 .intro-launch .intro-copy h2 {
     font-size:clamp(1.8rem,4.6vw,4.1rem);
 }
+
+/* Demo copy should arrive like a calm guide, not a flashing status message. */
+.tryit-guided-choice.is-welcome-board.is-entering {
+    animation-duration:1.9s;
+}
+.tryit-guided-choice.is-welcome-board.is-entering > small,
+.tryit-guided-choice.is-welcome-board.is-entering > h2 {
+    animation-duration:1.7s;
+}
+.tryit-guided-choice.is-typing p.is-current::after,
+.tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after {
+    content:"…";
+    color:rgba(220,239,149,.72);
+    animation-duration:2.2s;
+}

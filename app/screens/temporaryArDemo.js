@@ -219,6 +219,23 @@ function setGuide(message) {
     if (guide) guide.textContent = message;
 }
 
+function nextDemoTextLength(text, currentLength) {
+    if (currentLength >= text.length) return text.length;
+    let nextLength = currentLength;
+    while (nextLength < text.length && !/\s/.test(text[nextLength])) nextLength += 1;
+    while (nextLength < text.length && /\s/.test(text[nextLength])) nextLength += 1;
+    return nextLength;
+}
+
+function demoTextTypingDelay(text, visibleLength) {
+    const visible = text.slice(0, visibleLength);
+    if (/\n\s*$/.test(visible)) return 520;
+    const lastVisibleCharacter = visible.trimEnd().slice(-1);
+    if (/[.!?]/.test(lastVisibleCharacter)) return 360;
+    if (/[,;]/.test(lastVisibleCharacter)) return 210;
+    return 115;
+}
+
 function showDemoAction(nextStage) {
     const messages = {
         plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
@@ -405,13 +422,12 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
     const typeNextCharacter = () => {
         if (!typing || !paragraph) return;
-        typedLength += 1;
+        typedLength = nextDemoTextLength(fullText, typedLength);
         paragraph.textContent = fullText.slice(0, typedLength);
         introBoardVisibleBody = fullText.slice(0, typedLength);
         introBoardTextureDirty = true;
         if (typedLength >= fullText.length) return finishTyping();
-        const typedCharacter = fullText[typedLength - 1] || '';
-        const typingDelay = /[.!?]/.test(typedCharacter) ? 190 : /[,;]/.test(typedCharacter) ? 95 : 50;
+        const typingDelay = demoTextTypingDelay(fullText, typedLength);
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (typing) {
@@ -474,13 +490,12 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const typeNextCharacter = () => {
         if (!typing) return;
         board?.classList.add('is-copy-ready');
-        typedLength = Math.min(bodyText.length, typedLength + 1);
+        typedLength = nextDemoTextLength(bodyText, typedLength);
         introBoardVisibleBody = bodyText.slice(0, typedLength);
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
         if (typedLength >= bodyText.length) return finishTyping();
-        const typedCharacter = bodyText[typedLength - 1] || '';
-        const typingDelay = /[.!?]/.test(typedCharacter) ? 160 : /[,;]/.test(typedCharacter) ? 80 : 34;
+        const typingDelay = demoTextTypingDelay(bodyText, typedLength);
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
     if (board) {
@@ -1718,7 +1733,7 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     const now = performance.now();
-    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 120 && introTextureFrameToken !== introFrameToken)) {
+    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 180 && introTextureFrameToken !== introFrameToken)) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
