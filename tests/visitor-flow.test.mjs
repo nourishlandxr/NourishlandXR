@@ -201,8 +201,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /Open detailed log/);
     assert.match(source, /window\.renderPrintCenter/);
     assert.match(printCenterSource, /Print anchors/);
-    assert.match(printCenterSource, /Plant tags/);
-    assert.match(printCenterSource, /Totem Tags/);
+    assert.match(printCenterSource, /Plant Live Tags/);
+    assert.match(printCenterSource, /Totem Marker tags/);
     assert.match(printCenterSource, /Plant lists/);
     assert.match(printCenterSource, /Plant profiles/);
     assert.match(printCenterSource, /window\.renderLocationMap/);
@@ -283,12 +283,12 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /is-search-match/);
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
-    assert.match(fieldGuideSource, /Virtual Tags/);
+    assert.match(fieldGuideSource, /Plant Live Tags/);
     assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
     assert.match(fieldGuideSource, /physicalAnchor\?\.enabled/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
-    assert.match(dashboardSource, /ArUco Virtual Tag/);
-    assert.match(dashboardSource, /PRINT VIRTUAL TAG/);
+    assert.match(dashboardSource, /ArUco Plant Live Tag/);
+    assert.match(dashboardSource, /PRINT PLANT LIVE TAG/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
@@ -447,7 +447,7 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     assert.match(source, /createBoundaryTexture/);
     assert.doesNotMatch(source, /function guideAreaConversion/);
     assert.doesNotMatch(source, /showDemoAction\('zone'\)/);
-    assert.match(source, /Totems belong to Areas and are created separately in Creator Mode/);
+    assert.match(source, /Totem Markers belong to Areas and are created separately in Creator Mode/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.match(source, /runKnowledgeTour/);
     assert.match(source, /navigator\.vibrate/);

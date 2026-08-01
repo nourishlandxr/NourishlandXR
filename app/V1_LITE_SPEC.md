@@ -189,7 +189,7 @@ Required capabilities:
 
 - Create Project
 - Create Place
-- Create Plant Marker
+- Create Plant Live Tag
 - Create Spatial Note
 - Edit Marker
 - Edit Plant Profile
@@ -210,7 +210,7 @@ Required capabilities:
 
 - Open Project
 - View Places
-- View Plant Markers
+- View Plant Live Tags
 - View Spatial Notes
 - Open Plant Profile
 
@@ -378,7 +378,7 @@ Create Place
 
 ↓
 
-Create Plant Marker
+Create Plant Live Tag
 
 ↓
 

@@ -52,7 +52,7 @@ let introKnowledgeTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
 let introBoardTitle = 'NourishlandXR';
-let introBoardBody = 'A short guided demo of Plant Markers and Notes.';
+let introBoardBody = 'A short guided demo of Plant Live Tags and Notes.';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -216,7 +216,7 @@ function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
     const facts = profile.informationTree.map(section => [section.label, section.details.join(' · ')]);
     return `<div class="tryit-virtual-tag-shell">
         <header class="tryit-virtual-tag-header">
-          <span>WEB MODE · VIRTUAL TAG</span>
+          <span>WEB MODE · PLANT LIVE TAG</span>
           <strong>FULL PLANT PROFILE</strong>
         </header>
         <main class="tryit-virtual-tag-profile" aria-labelledby="tryitVirtualTagTitle">
@@ -228,7 +228,7 @@ function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
             <small>TUTORIAL · WEB MODE</small>
             <strong>The same Plant Profile can be read outside AR.</strong>
             <p>${profile.shortProfile}</p>
-            <p>A Virtual Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
+            <p>A Plant Live Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
           </section>
           <section class="tryit-virtual-tag-facts">${facts.map(([label, value]) => `<article><small>${label}</small><p>${value}</p></article>`).join('')}</section>
         </main>
@@ -278,7 +278,7 @@ function openDemoVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-    showGuidedChoice('<h2>Open its Virtual Tag</h2><p>This Plant Profile also has a full, view-only page in Web Mode. Open the Virtual Tag to see how smoothly NourishlandXR moves between information in AR and the complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN VIRTUAL TAG</button>', choice => {
+        showGuidedChoice('<h2>Open its Plant Live Tag</h2><p>This Plant Profile also has a full, view-only page in Web Mode. Open the Plant Live Tag to see how smoothly NourishlandXR moves between information in AR and the complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
         if (choice === 'virtual-tag') openDemoVirtualTag(record);
     });
 }
@@ -579,7 +579,7 @@ function guideNoteConversion(record) {
         refreshDemoRecord(record);
         hideGuidedChoice();
         setGuide('The new Note stays softly connected to this place and can be grabbed whenever you want to adjust it.');
-        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plant Markers, opened their Plant Profiles, and added a Note. Totems belong to Areas and are created separately in Creator Mode.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
+        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plant Live Tags, opened their Plant Profiles, and added a Note. Totem Markers belong to Areas and are created separately in Creator Mode.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
             if (action === 'finish') returnToWelcome();
             if (action === 'reset') {
                 markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
@@ -750,7 +750,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
     const bubbles = (content?.bubbles || content?.lines || []).filter(Boolean).slice(0, 5);
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem Marker information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {

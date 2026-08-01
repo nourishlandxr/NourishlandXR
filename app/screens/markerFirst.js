@@ -6,7 +6,7 @@ const SITE_ID = 'main_food_forest';
 const PLACE_ID = '2r1';
 
 const TYPES = {
-    plant: { title: 'Add Plant Marker', nameLabel: 'Marker Name', saveLabel: 'Save Marker', typeLabel: 'Plant Marker', addLabel: 'Add Information Now' },
+    plant: { title: 'Add Plant Live Tag', nameLabel: 'Tag Name', saveLabel: 'Save Plant Live Tag', typeLabel: 'Plant Live Tag', addLabel: 'Add Information Now' },
     note: { title: 'Add Custom Note', nameLabel: 'Marker Name', saveLabel: 'Save Marker', typeLabel: 'Custom Note', addLabel: 'Add Text Now' },
     intro_checkpoint: { title: 'Add Intro Checkpoint', nameLabel: 'Checkpoint Name', saveLabel: 'Save Checkpoint', typeLabel: 'Intro Checkpoint', addLabel: 'Add Information Now' },
     sub_checkpoint: { title: 'Add Sub Checkpoint', nameLabel: 'Checkpoint Name', saveLabel: 'Save Checkpoint', typeLabel: 'Sub Checkpoint', addLabel: 'Add Information Now' }

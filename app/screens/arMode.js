@@ -80,9 +80,9 @@ let locationNoteVisible = false;
 let latestNotePlacementPoint = null;
 const hiddenStructuralMarkerIds = new Set();
 
-const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'area totem' })[type] || 'item';
+const markerLabel = type => ({ plant: 'plant live tag', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'totem marker' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
-const readyPlacementLabel = type => ({ plant: 'Plant', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Area Totem' })[type] || 'Draft';
+const readyPlacementLabel = type => ({ plant: 'Plant Live Tag', sub_checkpoint: 'Marker', note: 'Note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'Totem Marker' })[type] || 'Draft';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const markerDefaultColor = type => ({ plant: '#5e7956', note: '#9a6b50', sub_checkpoint: '#647a3b', intro_checkpoint: '#59766a', area_checkpoint: DEFAULT_TOTEM_COLOR })[type] || '#647a3b';
 const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : markerDefaultColor(marker?.type);
@@ -376,7 +376,7 @@ function creatorTotemInformationMarkup(record) {
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
         <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
         <section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
-          <small>AREA TOTEM</small>
+          <small>TOTEM MARKER</small>
           <strong>${escapeHtml(board.title)}</strong>
           <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
         </section>
@@ -394,7 +394,7 @@ function contextAppearanceButtons(type, appearance) {
     const shape = markerAppearanceShape({ appearance }).toUpperCase();
     const size = String(appearance.size || 'medium').toUpperCase();
     const opacity = Math.round(Number(appearance.opacity ?? 1) * 100);
-    return `${type === 'plant' ? `<button type="button" data-ar-cycle-shape aria-label="Cycle Plant marker shape. Current ${escapeHtml(shape)}"><b aria-hidden="true">△</b><span>SHAPE</span><small>${escapeHtml(shape)}</small></button>` : ''}
+    return `${type === 'plant' ? `<button type="button" data-ar-cycle-shape aria-label="Cycle Plant Live Tag shape. Current ${escapeHtml(shape)}"><b aria-hidden="true">△</b><span>SHAPE</span><small>${escapeHtml(shape)}</small></button>` : ''}
         <button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
         <button type="button" data-ar-cycle-size aria-label="Cycle ${readyPlacementLabel(type)} size. Current ${escapeHtml(size)}"><b aria-hidden="true">&#9670;</b><span>SIZE</span><small>${escapeHtml(size)}</small></button>
         ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}`;
@@ -1079,7 +1079,7 @@ function createTotemFromSpecial() {
         return;
     }
     closePlacePicker();
-    setPlacementStatus('Open an Area before adding an Area Totem.');
+    setPlacementStatus('Open an Area before adding a Totem Marker.');
 }
 
 function renderSpecialMarkerChoices(picker) {
@@ -1789,7 +1789,7 @@ function openInlineEditor(record, force = false) {
     const noteSurfaceControl = record.marker.type === 'note' ? `<label>Board style<select name="noteSurface"><option value="filled" ${markerNoteSurface(record.marker) === 'filled' ? 'selected' : ''}>Filled color</option><option value="outline" ${markerNoteSurface(record.marker) === 'outline' ? 'selected' : ''}>Transparent · color outline</option></select></label>` : '';
     const markerControls = `<fieldset class="creator-ar-appearance"><legend>Quick appearance</legend>${typeControl}<label>Color<input name="markerColor" type="color" value="${markerAppearanceColor(record.marker)}" /></label><label>Size<select name="markerSize"><option value="tiny" ${markerAppearanceSize(record.marker) === 'tiny' ? 'selected' : ''}>Tiny</option><option value="small" ${markerAppearanceSize(record.marker) === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${markerAppearanceSize(record.marker) === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${markerAppearanceSize(record.marker) === 'large' ? 'selected' : ''}>Large</option><option value="huge" ${markerAppearanceSize(record.marker) === 'huge' ? 'selected' : ''}>Huge</option></select></label>${noteSurfaceControl}</fieldset>`;
     const board = areaBoard(record.marker);
-    const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Area Totem and can be refined later.</p></fieldset>` : '';
+    const areaBoardControls = areaCheckpoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Area welcome board</legend><label>Board title<input name="areaBoardTitle" value="${escapeHtml(board.title)}" required /></label><label>Welcome message<textarea name="areaBoardIntroduction" rows="3" placeholder="Explain what this Area is for and welcome people into it.">${escapeHtml(board.introduction)}</textarea></label><p>This spatial board gathers around the Totem Marker and can be refined later.</p></fieldset>` : '';
     const noticeBoard = record.marker.notice_board || {};
     const startingBoardControls = startingPoint ? `<fieldset class="creator-ar-area-board-editor"><legend>Trail Entrance notice board</legend><label>Board title<input name="noticeBoardTitle" value="${escapeHtml(noticeBoard.title || record.marker.name)}" /></label><label>Welcome notice<textarea name="noticeBoardMessage" rows="3" placeholder="Add a welcome, orientation or important notice.">${escapeHtml(noticeBoard.message || '')}</textarea></label><p>Leave the notice blank when this entrance needs no spatial text.</p></fieldset>` : '';
     const profileNote = plant
@@ -2358,7 +2358,7 @@ async function setPlacedMarkerType(record, type) {
         closePlacePicker();
         return;
     }
-    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'New Area Totem' };
+    const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'New Totem Marker' };
     try {
         setPlacementStatus(`Creating ${readyPlacementLabel(type)}…`);
         const update = {
@@ -2527,7 +2527,7 @@ function createOverlay() {
     const initialStatus = readyPlacementType
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
         : hasCheckpoint
-        ? 'Loading the saved Area Totem…'
+        ? 'Loading the saved Totem Marker…'
         : activeAreaId
         ? 'Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.'
         : '';

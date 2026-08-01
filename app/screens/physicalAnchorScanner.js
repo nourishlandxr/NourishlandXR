@@ -81,7 +81,7 @@ async function loadProjectAssignments(projectId) {
 }
 
 function scannerMarkup() {
-    return `<section class="physical-anchor-scanner" data-physical-anchor-scanner aria-label="Physical Marker scanner">
+    return `<section class="physical-anchor-scanner" data-physical-anchor-scanner aria-label="Totem Marker scanner">
         <video data-physical-anchor-video playsinline muted autoplay></video>
         <canvas data-physical-anchor-canvas hidden></canvas>
         <div class="physical-anchor-scan-guide" aria-hidden="true"><span></span></div>
@@ -89,7 +89,7 @@ function scannerMarkup() {
             <span class="physical-anchor-totem-pillar"></span>
             <strong data-physical-anchor-totem-name></strong>
         </div>
-        <header><p>PHYSICAL MARKER · PROTOTYPE</p><strong data-physical-anchor-status>No marker detected</strong></header>
+        <header><p>TOTEM MARKER · PROTOTYPE</p><strong data-physical-anchor-status>No marker detected</strong></header>
         <footer>
             <button type="button" data-copy-physical-anchor-diagnostics>Copy diagnostics</button>
             <button type="button" data-stop-physical-anchor>Exit scanner</button>
@@ -133,7 +133,7 @@ function applyTotemOverlay(scanner, association, pose) {
     scanner.totem.style.setProperty('--physical-totem-rotation', `${visual.rotationDegrees}deg`);
     scanner.totem.style.setProperty('--physical-totem-color', association.marker.appearance?.color || DEFAULT_TOTEM_COLOR);
     scanner.totem.classList.toggle('is-virtual-tag', isVirtualPlant);
-    scanner.totem.dataset.anchorRole = isVirtualPlant ? 'virtual-tag' : 'area-totem';
+    scanner.totem.dataset.anchorRole = isVirtualPlant ? 'plant-live-tag' : 'totem-marker';
     scanner.totem.hidden = false;
     return true;
 }
@@ -218,7 +218,7 @@ function detectionFrame(scanner, now) {
         }
         const pose = detectorPose(scanner, decision.detection, association);
         if (applyTotemOverlay(scanner, association, pose)) {
-            updateStatus(scanner, `${anchor.markerLabel} · ${association.marker.name}${association.marker.type === 'plant' ? ' · Virtual Tag' : ''}`, 'tracked');
+            updateStatus(scanner, `${anchor.markerLabel} · ${association.marker.name}${association.marker.type === 'plant' ? ' · Plant Live Tag' : ' · Totem Marker'}`, 'tracked');
         }
         return;
     }

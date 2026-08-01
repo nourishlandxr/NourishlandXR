@@ -60,21 +60,21 @@ function printCenterMarkup(data) {
             <div class="print-center-section-heading"><div><p class="welcome-label">Anchors</p><h2 id="printAnchorsTitle">Print anchors</h2></div><span class="print-center-count">${data.plants.length} Plants · ${data.totems.length} Totems</span></div>
             <div class="print-center-card-grid">
                 <article class="print-center-card">
-                    <div><h3>Plant tags</h3><p>Make simple labels for selected plants.</p></div>
+                    <div><h3>Plant Live Tags</h3><p>Make simple labels for selected plants.</p></div>
                     <div class="print-center-form-grid">
                         <label>Range<select id="printPlantTagRange" onchange="window.updatePrintRangeFields()"><option value="all">All plants (${data.plants.length})</option><option value="first-10">First 10</option><option value="first-25">First 25</option><option value="custom">Custom range</option></select></label>
                         <label>Size<select id="printPlantTagSize"><option value="small">Small · 50 × 30 mm</option><option value="medium" selected>Medium · 70 × 40 mm</option><option value="large">Large · 100 × 60 mm</option></select></label>
                     </div>
                     <div id="printPlantCustomRange" class="print-center-custom-range" hidden><label>From<input id="printPlantTagStart" type="number" min="1" value="1" /></label><label>To<input id="printPlantTagEnd" type="number" min="1" value="${Math.max(1, Math.min(data.plants.length || 1, 10))}" /></label></div>
-                    ${printCenterButton('Print plant tags', 'Print the selected range.', `window.printCenterOutput('plant-tags')`, 'primary')}
+                    ${printCenterButton('Print Plant Live Tags', 'Print the selected range.', `window.printCenterOutput('plant-tags')`, 'primary')}
                 </article>
                 <article class="print-center-card">
-                    <div><h3>Totem Tags</h3><p>Print numbered tags for Totems in this project.</p></div>
+                    <div><h3>Totem Marker tags</h3><p>Print numbered tags for Totem Markers in this project.</p></div>
                     <div class="print-center-form-grid">
                         <label>Number<input id="printTotemTagCount" type="number" min="1" max="24" value="${defaultCopies}" /></label>
                         <label>Size<select id="printTotemTagSize"><option value="small">Small · 70 × 45 mm</option><option value="medium" selected>Medium · A6</option><option value="large">Large · A5</option></select></label>
                     </div>
-                    ${printCenterButton('Print Totem Tags', 'Choose the number and size.', `window.printCenterOutput('totem-tags')`, 'primary')}
+                    ${printCenterButton('Print Totem Marker tags', 'Choose the number and size.', `window.printCenterOutput('totem-tags')`, 'primary')}
                 </article>
             </div>
         </section>
@@ -95,10 +95,10 @@ function plantTagMarkup(plant, index, size) {
     if (profile.virtual_tag_enabled === true && plant.marker?.physicalAnchor?.enabled) {
         try {
             const label = physicalMarkerLabel(plant.marker.physicalAnchor.markerId);
-            physicalTag = `<div class="print-plant-tag-anchor"><span>${physicalMarkerSvg(plant.marker.physicalAnchor.markerId)}</span><small>LIVE VIRTUAL TAG · ${label}</small></div>`;
+            physicalTag = `<div class="print-plant-tag-anchor"><span>${physicalMarkerSvg(plant.marker.physicalAnchor.markerId)}</span><small>LIVE PLANT LIVE TAG · ${label}</small></div>`;
         } catch {}
     }
-    return `<article class="print-tag plant-tag print-tag-${escapeHtml(size)}"><span class="print-tag-index">PLANT TAG ${String(index + 1).padStart(3, '0')}</span><h2>${escapeHtml(profile.common_name || plant.marker.name || 'Unnamed plant')}</h2><p><em>${escapeHtml(profileValue(profile, 'scientificName') || profileValue(profile, 'scientific_name') || 'Scientific name not entered')}</em></p><small>${escapeHtml(areaLabel(plant.place))}</small>${physicalTag}</article>`;
+    return `<article class="print-tag plant-tag print-tag-${escapeHtml(size)}"><span class="print-tag-index">PLANT LIVE TAG ${String(index + 1).padStart(3, '0')}</span><h2>${escapeHtml(profile.common_name || plant.marker.name || 'Unnamed plant')}</h2><p><em>${escapeHtml(profileValue(profile, 'scientificName') || profileValue(profile, 'scientific_name') || 'Scientific name not entered')}</em></p><small>${escapeHtml(areaLabel(plant.place))}</small>${physicalTag}</article>`;
 }
 
 function totemTagMarkup(data, index, size) {
@@ -107,7 +107,7 @@ function totemTagMarkup(data, index, size) {
     const marker = item?.marker;
     const label = place ? areaLabel(place) : `Totem ${String(index + 1).padStart(2, '0')}`;
     const color = /^#[0-9a-f]{6}$/i.test(marker?.appearance?.color || '') ? marker.appearance.color : '#5d8b62';
-    return `<article class="print-tag totem-tag print-tag-${escapeHtml(size)}" style="--print-totem-color:${color}"><span class="print-tag-index">TOTEM TAG ${String(index + 1).padStart(3, '0')}</span><span class="print-totem-mark" aria-hidden="true">⌖</span><h2>${escapeHtml(label)}</h2><p>Area anchor</p><small>Place this tag at the Totem location.</small></article>`;
+    return `<article class="print-tag totem-tag print-tag-${escapeHtml(size)}" style="--print-totem-color:${color}"><span class="print-tag-index">TOTEM MARKER ${String(index + 1).padStart(3, '0')}</span><span class="print-totem-mark" aria-hidden="true">⌖</span><h2>${escapeHtml(label)}</h2><p>Area anchor</p><small>Place this tag at the Totem Marker location.</small></article>`;
 }
 
 function printSheet(data, kind, options = {}) {
@@ -121,11 +121,11 @@ function printSheet(data, kind, options = {}) {
         start = Math.max(0, Math.min(start, data.plants.length));
         end = Math.max(start + 1, Math.min(Number(end), data.plants.length));
         const plants = data.plants.slice(start, end);
-        return { title: 'Plant tags', subtitle: `${plants.length} selected · ${data.project.name}`, className: `print-sheet-tags print-sheet-${options.size || 'medium'}`, body: plants.map((plant, index) => plantTagMarkup(plant, start + index, options.size || 'medium')).join('') || '<p>No Plants are available for this range.</p>', back };
+        return { title: 'Plant Live Tags', subtitle: `${plants.length} selected · ${data.project.name}`, className: `print-sheet-tags print-sheet-${options.size || 'medium'}`, body: plants.map((plant, index) => plantTagMarkup(plant, start + index, options.size || 'medium')).join('') || '<p>No Plants are available for this range.</p>', back };
     }
     if (kind === 'totem-tags') {
         const count = Math.max(1, Math.min(24, Number(options.count) || 1));
-        return { title: 'Totem Tags', subtitle: `${count} tag${count === 1 ? '' : 's'} · ${data.project.name}`, className: `print-sheet-tags print-sheet-${options.size || 'medium'}`, body: Array.from({ length: count }, (_, index) => totemTagMarkup(data, index, options.size || 'medium')).join(''), back };
+        return { title: 'Totem Marker tags', subtitle: `${count} tag${count === 1 ? '' : 's'} · ${data.project.name}`, className: `print-sheet-tags print-sheet-${options.size || 'medium'}`, body: Array.from({ length: count }, (_, index) => totemTagMarkup(data, index, options.size || 'medium')).join(''), back };
     }
     if (kind === 'plant-list') {
         return { title: 'Plant list', subtitle: `${data.plants.length} Plants · ${data.project.name}`, className: 'print-sheet-information', body: `<ol class="print-plant-list">${data.plants.map(item => `<li><strong>${escapeHtml(item.marker.name || 'Unnamed plant')}</strong><span><em>${escapeHtml(profileValue(item.profile, 'scientificName') || profileValue(item.profile, 'scientific_name') || 'Scientific name not entered')}</em> · ${escapeHtml(areaLabel(item.place))}</span></li>`).join('') || '<li>No Plants are available.</li>'}</ol>`, back };
@@ -160,13 +160,13 @@ export async function printPlantVirtualTag(app, encodedProjectId, encodedSiteId,
         const markers = await loadPlaceMarkers(projectId, site.id, place.id);
         const marker = markers.find(item => item.id === markerId);
         const profile = await loadPlantProfile(projectId, site.id, place.id, markerId).catch(() => marker?.plant_profile || {});
-        if (!project || !site || !place || !marker || !isPlant(marker)) throw new Error('Plant Virtual Tag is unavailable.');
-        if (profile.virtual_tag_enabled !== true || !marker.physicalAnchor?.enabled) throw new Error('Enable Virtual Tag and link an ArUco marker before printing.');
+        if (!project || !site || !place || !marker || !isPlant(marker)) throw new Error('Plant Live Tag is unavailable.');
+        if (profile.virtual_tag_enabled !== true || !marker.physicalAnchor?.enabled) throw new Error('Enable Plant Live Tag and link an ArUco marker before printing.');
         const body = plantTagMarkup({ marker, profile, place }, 0, 'medium');
-        app.innerHTML = `<div class="screen print-output-screen"><header class="page-header print-output-header"><button class="ghost" type="button" onclick="window.openProjectEntry('${encoded(projectId)}','${encoded(markerId)}',false,'field-guide')">Back to Plant profile</button><p class="welcome-label">Virtual Tag</p><h1>Print Plant Tag</h1><p class="subtitle">${escapeHtml(profile.common_name || marker.name)} · ${escapeHtml(physicalMarkerLabel(marker.physicalAnchor.markerId))}</p><button class="print-sheet-action" type="button" onclick="window.print()">Print</button></header><main class="print-sheet print-sheet-tags print-sheet-medium">${body}</main></div>`;
+        app.innerHTML = `<div class="screen print-output-screen"><header class="page-header print-output-header"><button class="ghost" type="button" onclick="window.openProjectEntry('${encoded(projectId)}','${encoded(markerId)}',false,'field-guide')">Back to Plant profile</button><p class="welcome-label">Plant Live Tag</p><h1>Print Plant Live Tag</h1><p class="subtitle">${escapeHtml(profile.common_name || marker.name)} · ${escapeHtml(physicalMarkerLabel(marker.physicalAnchor.markerId))}</p><button class="print-sheet-action" type="button" onclick="window.print()">Print</button></header><main class="print-sheet print-sheet-tags print-sheet-medium">${body}</main></div>`;
         window.setTimeout(() => window.print(), 80);
     } catch (error) {
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Virtual Tag unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Plant Live Tag unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
 }
 

@@ -33,6 +33,9 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(dashboard, /is-plan-linked/);
     assert.match(dashboard, /site-map-pin-\$\{escapeHtml\(entry\.marker\.type\)\}/);
     assert.match(dashboard, /GPS positions are shown relative to one another/);
+    assert.match(dashboard, /gis-export-preview/);
+    assert.match(dashboard, /GIS Export — Coming soon/);
+    assert.match(dashboard, /GeoPackage, GeoJSON, CSV with X\/Y\/Z, KML, GPX or DXF/);
     assert.match(styles, /\.site-map-canvas/);
     assert.match(styles, /\.site-map-generic-surface/);
     assert.match(styles, /\.site-map-canvas\.is-linking-area/);

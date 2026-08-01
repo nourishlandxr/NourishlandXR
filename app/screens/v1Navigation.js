@@ -6,7 +6,7 @@ const SITE_ID = 'main_food_forest';
 const PLACE_ID = '2r1';
 
 function markerTypeLabel(type) {
-    return ({ plant: 'Plant Marker', note: 'Custom Note', intro_checkpoint: 'Intro Checkpoint', sub_checkpoint: 'Sub Checkpoint' })[type] || 'Marker';
+    return ({ plant: 'Plant Live Tag', note: 'Custom Note', intro_checkpoint: 'Intro Checkpoint', sub_checkpoint: 'Sub Checkpoint' })[type] || 'Marker';
 }
 
 async function hillyardsContext(visitor = false) {
@@ -24,7 +24,7 @@ export async function renderDemoProjects(app) {
 }
 
 export function renderFirstSteps(app) {
-    app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a plant marker or custom note.</li><li>Add its position when ready.</li><li>Browse the experience.</li><li>Explore with AR.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
+            app.innerHTML = `<div class="screen"><div class="page-header"><h1>First Steps</h1></div><div class="panel guide"><ol><li>Select Hillyards.</li><li>Create an introduction checkpoint.</li><li>Add a Plant Live Tag or custom note.</li><li>Add its position when ready.</li><li>Browse the experience.</li><li>Explore with AR.</li></ol></div><div class="menu-stack"><button class="menu-card" onclick="window.renderHillyardsProject()"><strong>Open Hillyards Demo</strong></button><button class="menu-card" onclick="window.renderV1Explorer()"><strong>Open Explorer</strong></button><button class="menu-card" onclick="window.renderLaunchScreen()"><strong>Back</strong></button></div></div>`;
 }
 
 export function renderComingSoon(app, feature, purpose, how, example, backAction = 'window.renderLaunchScreen()') {
@@ -96,7 +96,7 @@ export async function deleteDraftMarker(markerId) {
 export async function openMarkerPlantProfile(markerId) {
     const { site, place } = await hillyardsContext();
     const marker = (await loadPlaceMarkers(PROJECT_ID, SITE_ID, place.id)).find(item => item.id === markerId);
-    if (!marker || marker.type !== 'plant') throw new Error('Plant marker not found.');
+    if (!marker || marker.type !== 'plant') throw new Error('Plant Live Tag not found.');
     window.renderV1PlantProfile(site, place, marker);
 }
 
@@ -108,7 +108,7 @@ export async function deleteHillyardsMarker(markerId) {
 }
 
 export function renderHillyardsGuidelines(app) {
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>Location Guidelines</h1><p class="subtitle">Hillyards Food Forest</p></div><div class="panel"><h2>Purpose</h2><p>Keep field knowledge concise, accurate and connected to a real marker.</p></div><div class="panel"><h2>Marker guidance</h2><p>Use Plant Markers for identified plants and Custom Notes for directions, introductions or observations.</p></div><div class="panel"><h2>Anchor guidance</h2><p>Confirm the physical location before saving a GPS anchor. Replace approximate demonstration coordinates with surveyed positions during field testing.</p></div></div>`;
+            app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>Location Guidelines</h1><p class="subtitle">Hillyards Food Forest</p></div><div class="panel"><h2>Purpose</h2><p>Keep field knowledge concise, accurate and connected to a real marker.</p></div><div class="panel"><h2>Marker guidance</h2><p>Use Plant Live Tags for identified plants and Custom Notes for directions, introductions or observations.</p></div><div class="panel"><h2>Anchor guidance</h2><p>Confirm the physical location before saving a GPS anchor. Treat phone placement as approximate and confirm it at the next Totem Marker.</p></div></div>`;
 }
 
 export async function renderGlobalPlantList() {
@@ -153,7 +153,7 @@ export async function saveCheckpoint(event, type) {
 export async function openHillyardsPlantProfileEditor() {
     const { site, place } = await hillyardsContext();
     const marker = (await loadPlaceMarkers(PROJECT_ID, SITE_ID, place.id)).find(item => item.id === 'lemon_drop_garcinia');
-    if (!marker) throw new Error('The requested plant marker is unavailable.');
+        if (!marker) throw new Error('The requested Plant Live Tag is unavailable.');
     window.renderV1PlantProfile(site, place, marker);
 }
 
@@ -167,5 +167,3 @@ export async function getHillyardsExplorerContext(visitor = false) {
     const context = await hillyardsContext(visitor);
     return { ...context, markers: await loadPlaceMarkers(PROJECT_ID, SITE_ID, context.place.id, visitor), profile: await loadPlantProfile(PROJECT_ID, SITE_ID, PLACE_ID, 'lemon_drop_garcinia', visitor) };
 }
-
-

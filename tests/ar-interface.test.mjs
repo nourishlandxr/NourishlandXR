@@ -176,7 +176,7 @@ test('Physical Marker prototype is feature-flagged and exposes saved and unsaved
     assert.match(scanner, /js-aruco2@2\.0\.0/);
     assert.ok(scanner.indexOf('getUserMedia') < scanner.indexOf('new window.AR.Detector'));
     assert.match(dashboard, /physicalAnchorControlPresent \? physicalAnchor : existing\?\.marker\.physicalAnchor/);
-    assert.match(dashboard, /ArUco Virtual Tag/);
+    assert.match(dashboard, /ArUco Plant Live Tag/);
     assert.match(dashboard, /physicalAnchorFromPlantProfileForm/);
     assert.match(scanner, /resolvePhysicalAnchorEntry/);
     assert.match(server, /type !== 'area_checkpoint' && type !== 'plant'/);
@@ -407,7 +407,7 @@ test('Creator AR keeps the editable Location Note hidden until it is opened from
     assert.match(arSource, /record\.marker\.type === 'note' \? ' nourishland-spatial-note-surface'/);
     assert.match(dashboardSource, /<h2 id="projectLocationNoteTitle">AR Location Note<\/h2>/);
     assert.match(dashboardSource, /It stays hidden when AR opens/);
-    assert.match(dashboardSource, /Available from Area Totem/);
+    assert.match(dashboardSource, /Available from Totem Marker/);
     assert.doesNotMatch(dashboardSource, /Show on AR entry/);
     assert.match(dashboardSource, /export async function saveArLocationNoteSettings/);
     assert.match(dashboardSource, /arLocationNote: \{ enabled, prompt, title \}/);
@@ -595,7 +595,7 @@ test('Creator AR has no dashboard grab or controller-ray controls', () => {
 
 test('Creator AR setup guide starts with Areas and keeps visitor entrances optional', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
-    assert.match(dashboardSource, /Area Totem/);
+    assert.match(dashboardSource, /Totem Marker/);
     assert.match(dashboardSource, /Plants, Markers and Notes/);
     assert.match(dashboardSource, /Optional Trail Entrance/);
     assert.match(dashboardSource, /Visitor Entrances/);
@@ -669,14 +669,14 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /placeId,/);
     assert.match(source, /return \[\.\.\.resolvedPlants, \.\.\.markerPlants\]/);
     assert.match(source, /virtualTagEnabled/);
-    assert.match(source, /Virtual Tags/);
+    assert.match(source, /Plant Live Tags/);
     assert.match(source, /hasTotem/);
     assert.match(source, /hasStartingPoint/);
     assert.match(source, /field-guide-totem-symbol/);
     assert.match(source, /field-guide-starting-symbol/);
     assert.match(source, /totems: markers\.filter/);
-    assert.match(source, /Area Totems/);
-    assert.match(source, /Area checkpoints and their information boards/);
+    assert.match(source, /Totem Markers/);
+    assert.match(source, /Area markers and their information boards/);
     assert.match(source, /data-field-guide-totem/);
     assert.match(source, /field-guide-advanced-search/);
     assert.match(source, /Advanced search options/);
@@ -888,11 +888,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /if \(!placementReady\) selectGuidedDemoOrb\(\)/);
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
-    assert.match(source, /data-demo-choice="virtual-tag">OPEN VIRTUAL TAG/);
-    assert.match(source, /WEB MODE · VIRTUAL TAG/);
+    assert.match(source, /data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG/);
+    assert.match(source, /WEB MODE · PLANT LIVE TAG/);
     assert.match(source, /FULL PLANT PROFILE/);
     assert.match(source, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
-    assert.match(source, /A Virtual Tag can open this full, view-only plant file/);
+    assert.match(source, /A Plant Live Tag can open this full, view-only plant file/);
     assert.match(source, /record\.tutorialStage === 'plant2' \? showDemoAction\('note'\) : inviteVirtualTag\(record\)/);
     assert.match(source, /demoWebModeOpen = true;[\s\S]*suppressSessionSelectUntil = Number\.POSITIVE_INFINITY/);
     assert.match(source, /stage\.inert = true;[\s\S]*stage\.setAttribute\('aria-hidden', 'true'\)/);
@@ -1033,7 +1033,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Point of Interest/);
     assert.match(source, /Garden plaque/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
-    assert.match(source, /Totems belong to Areas and are created separately in Creator Mode/);
+    assert.match(source, /Totem Markers belong to Areas and are created separately in Creator Mode/);
     assert.match(styles, /\.tryit-guided-choice/);
 });
 
@@ -1195,7 +1195,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /function plantTagDimensions\(marker\)/);
     assert.match(arSource, /drawPlantTagStem\(view, record\.position, record\.marker/);
     assert.match(arSource, /plantTagPlatePosition\(record\.position, record\.marker\)/);
-    assert.match(arSource, /Area Totem/);
+    assert.match(arSource, /Totem Marker/);
     assert.match(arSource, /trail entrance gateway/);
     assert.match(read('app/services/spatialTriangleRenderer.js'), /correctly wound rectangular sides/);
     assert.equal(createTrianglePrismGeometry().length, 144);
@@ -1245,7 +1245,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /Growing knowledge/);
     assert.match(dashboardSource, /Origin &amp; story/);
     assert.match(dashboardSource, /projectEntryVirtualTag/);
-    assert.match(dashboardSource, /Make this Plant a Virtual Tag/);
+    assert.match(dashboardSource, /Make this Plant a Plant Live Tag/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
     assert.match(dashboardSource, /plant-card-hero/);
     assert.match(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
@@ -1287,7 +1287,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(styles, /\.area-content-grid/);
     assert.match(styles, /\.totem-text-box-grid/);
     assert.match(dashboardSource, /ANCHOR TOTEM/);
-    assert.match(dashboardSource, />Link Totem<\/label>/);
+    assert.match(dashboardSource, />Link Totem Marker<\/label>/);
     assert.match(dashboardSource, /physical marker installed at its real-world position/);
     assert.doesNotMatch(dashboardSource, /Totem QR code|QR label installed at its real-world position|QR or physical link/);
     assert.match(dashboardSource, /target_area_id/);
@@ -1313,7 +1313,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /id="areaType"/);
     assert.match(dashboardSource, /context\.project\.name/);
     assert.match(dashboardSource, /<details class="latest-entries-section area-content-section">/);
-    assert.doesNotMatch(dashboardSource, /Precise location|Coming soon/);
+    assert.doesNotMatch(dashboardSource, /Precise location/);
     assert.doesNotMatch(dashboardSource, />Open profile</);
     assert.doesNotMatch(fieldGuideSource, /Open &amp; manage/);
     assert.match(fieldGuideSource, /field-guide-fireplace-symbol/);

@@ -6,6 +6,7 @@ import os from 'os';
 import crypto from 'crypto';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { createProjectSpatialData } from '../app/services/spatialDataModel.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -414,6 +415,8 @@ function migrateProject(projectId) {
 
     if (fs.existsSync(projectFile)) {
         ensureProjectFolders(projectId);
+        const existingProject = readJson(projectFile, { id: projectId, name: projectId });
+        if (!existingProject.spatialData) writeJson(projectFile, { ...existingProject, spatialData: createProjectSpatialData() });
         ensureDefaultHomeAreas(projectId);
         return;
     }
@@ -427,7 +430,8 @@ function migrateProject(projectId) {
         id: projectId,
         name: legacy.name || projectId,
         description: legacy.description || '',
-        template: legacy.template || ''
+        template: legacy.template || '',
+        spatialData: createProjectSpatialData()
     });
     writeJson(path.join(siteDir, 'site.json'), { ...legacy, id: siteId, name: legacy.name || siteId });
 
@@ -493,7 +497,8 @@ function createProject(projectData) {
         address: projectData.address || '',
         creatorUsername: projectData.creatorUsername || 'Nourishland creator',
         dateStarted: projectData.dateStarted || new Date().toISOString(),
-        visibility: normalizeVisibility(projectData.visibility)
+        visibility: normalizeVisibility(projectData.visibility),
+        spatialData: createProjectSpatialData(projectData.spatialData || {})
     };
     writeJson(path.join(projectDir, 'project.json'), project);
     const siteSuggestions = Array.isArray(projectData.siteSuggestions) && projectData.siteSuggestions.length
@@ -1041,7 +1046,7 @@ function handleApi(req, res) {
                 const markerId = decodeURIComponent(demoProfileMatch[1]);
                 const markerDir = path.join(demoMarkersDir, assertSafeId(markerId, 'marker id'));
                 const marker = readJson(path.join(markerDir, 'marker.json'), null);
-                if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant marker not found' });
+                if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant Live Tag not found' });
                 const profile = { ...readJson(path.join(markerDir, 'plant_profile.json'), {}), ...JSON.parse(body || '{}'), modified: new Date().toISOString() };
                 writeJson(path.join(markerDir, 'plant_profile.json'), profile);
                 sendJson(res, 200, profile);
@@ -1370,7 +1375,7 @@ function handleApi(req, res) {
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
                 const physicalAnchor = normalizePhysicalAnchor(data.physicalAnchor);
                 if (physicalAnchor && type !== 'area_checkpoint' && type !== 'plant' && data.semantic_type !== 'area_checkpoint') {
-                    throw new Error('Physical markers can only be assigned to Area Totems or Virtual Tag Plants');
+                    throw new Error('Physical markers can only be assigned to Totem Markers or Plant Live Tags');
                 }
                 const requestedName = String(data.name || '').trim();
                 const baseMarkerId = toProjectId(data.id || requestedName);
@@ -1410,7 +1415,7 @@ function handleApi(req, res) {
         const [ , projectId, siteId, placeId, markerId ] = plantProfileMatch;
         const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
         const marker = readJson(path.join(markerDir, 'marker.json'), null);
-        if (!marker || marker.type !== 'plant' || (visitor && !isPublic(marker))) return sendJson(res, 404, { error: 'Plant marker not found' });
+        if (!marker || marker.type !== 'plant' || (visitor && !isPublic(marker))) return sendJson(res, 404, { error: 'Plant Live Tag not found' });
         sendJson(res, 200, readJson(path.join(markerDir, 'plant_profile.json'), {}));
         return true;
     }
@@ -1422,7 +1427,7 @@ function handleApi(req, res) {
             const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
             const marker = readJson(path.join(markerDir, 'marker.json'), null);
             const data = JSON.parse(body || '{}');
-            if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant marker not found' });
+            if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant Live Tag not found' });
             const existing = readJson(path.join(markerDir, 'plant_profile.json'), {});
             const profile = { ...existing, ...data, common_name: String(data.common_name || '').trim(), scientific_name: String(data.scientific_name || '').trim(), modified: new Date().toISOString() };
             writeJson(path.join(markerDir, 'plant_profile.json'), profile);
@@ -1513,7 +1518,7 @@ function handleApi(req, res) {
                     ? normalizePhysicalAnchor(data.physicalAnchor)
                     : existing.physicalAnchor || null;
                 if (physicalAnchor && type !== 'area_checkpoint' && type !== 'plant' && data.semantic_type !== 'area_checkpoint' && existing.semantic_type !== 'area_checkpoint') {
-                    throw new Error('Physical markers can only be assigned to Area Totems or Virtual Tag Plants');
+                    throw new Error('Physical markers can only be assigned to Totem Markers or Plant Live Tags');
                 }
                 const requestedName = String(data.name || existing.name).trim();
                 const baseId = toProjectId(requestedName) || decodeURIComponent(markerId);
