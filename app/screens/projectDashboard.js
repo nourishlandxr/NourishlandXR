@@ -1557,7 +1557,8 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 ? await loadPlantProfile(context.project.id, context.site.id, context.area.id, entry.marker.id).catch(() => entry.marker.plant_profile || {})
                 : {}
         })));
-        const checkpoint = context.areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
+        const checkpoint = areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
+        const areaMarkerLocated = Boolean(checkpoint?.isPlaced);
         const canonicalAreaEntries = areaEntries.filter(entry => !isAreaTotemMarker(entry.marker, context.area.name) || entry.marker.id === checkpoint?.marker.id);
         const orderedEntries = [...canonicalAreaEntries].sort((left, right) => {
             const leftTotem = isAreaTotemMarker(left.marker, context.area.name) ? 0 : 1;
@@ -1607,7 +1608,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
-                    <div class="area-profile-visual" aria-label="Area icon"><span data-area-icon-reading>${areaIcon(context.area)}</span><small>AREA</small></div>
+                    <div class="area-profile-visual" aria-label="Area icon"><span data-area-icon-reading>${areaIcon(context.area)}</span><small>AREA</small>${areaMarkerLocated ? '<button type="button" class="area-icon-edit-button" data-edit-area-icon aria-label="Edit Area icon" title="Edit Area icon">✎</button>' : ''}</div>
                     <div class="area-vital-grid">
                         <div><small>TYPE</small><strong data-area-type-reading>${escapeHtml(context.area.type || 'Other')}</strong></div>
                         <div><small>PLANTS</small><strong>${plantCount}</strong></div>
@@ -1618,7 +1619,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
                     <div class="area-overview-card area-type-editor"><div class="area-overview-heading"><strong>Area type</strong><button type="button" data-edit-area-type>Edit</button></div><p data-area-type-form-reading>${escapeHtml(context.area.type || 'Other')}</p><label for="areaType" hidden>Area type</label><select id="areaType" hidden><option value="Outdoor Area" ${context.area.type === 'Outdoor Area' ? 'selected' : ''}>Outdoor Area</option><option value="Indoor Area" ${context.area.type === 'Indoor Area' ? 'selected' : ''}>Indoor Area</option><option value="Bed or Plot" ${context.area.type === 'Bed or Plot' ? 'selected' : ''}>Bed or Plot</option><option value="Room" ${context.area.type === 'Room' ? 'selected' : ''}>Room</option><option value="Enclosure" ${context.area.type === 'Enclosure' ? 'selected' : ''}>Enclosure</option><option value="Path or Route" ${context.area.type === 'Path or Route' ? 'selected' : ''}>Path or Route</option><option value="Other" ${!context.area.type || context.area.type === 'Other' ? 'selected' : ''}>Other</option></select></div>
                     <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong><button type="button" data-edit-area-description>${context.area.description ? 'Edit' : 'Add description'}</button></div><p data-area-description-reading>${escapeHtml(context.area.description || 'No description has been added yet.')}</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(context.area.description || '')}</textarea></div>
-                    <div class="area-overview-card area-icon-editor"><div class="area-overview-heading"><strong>Area icon</strong><button type="button" data-edit-area-icon>Edit</button></div><p data-area-icon-form-reading>${areaIcon(context.area)} ${AREA_ICON_OPTIONS.find(option => option.value === areaIcon(context.area))?.label || 'Leaves'}</p><label for="areaIcon" hidden>Area icon</label><select id="areaIcon" hidden>${AREA_ICON_OPTIONS.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === areaIcon(context.area) ? 'selected' : ''}>${option.value} ${escapeHtml(option.label)}</option>`).join('')}</select></div>
+                    <p data-area-icon-form-reading hidden>${areaIcon(context.area)} ${AREA_ICON_OPTIONS.find(option => option.value === areaIcon(context.area))?.label || 'Leaves'}</p><label for="areaIcon" hidden>Area icon</label><select id="areaIcon" hidden>${AREA_ICON_OPTIONS.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === areaIcon(context.area) ? 'selected' : ''}>${option.value} ${escapeHtml(option.label)}</option>`).join('')}</select>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit" data-save-area-description hidden>Save Area information</button>
                 </form>

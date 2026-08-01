@@ -11,6 +11,7 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialT
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
+import { currentNxrLanguage } from '../services/i18n.js';
 
 let appRoot = null;
 let session = null;
@@ -67,6 +68,13 @@ const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Augmented reality (AR) and mixed reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
     'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
 ]);
+const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
+    'Bem-vindo à interface de demonstração do NourishlandXR.',
+    'A realidade aumentada (RA) e a realidade mista (XR) são tecnologias que nos ajudam a compreender e interagir melhor com o mundo à nossa volta, ligando informação virtual a lugares reais.',
+    'O Nourishland XR é um portal de informação sobre plantas, uma ferramenta de mapeamento vegetal e um editor de experiências para visitantes e estudantes. Esta demonstração mostra algumas formas de ligar informação sobre plantas a lugares reais.'
+]);
+const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT' ? WELCOME_BOARD_PARAGRAPHS_PT : WELCOME_BOARD_PARAGRAPHS;
+const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
@@ -307,7 +315,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const controls = [...panel.children].filter(child => child !== title && child !== paragraph);
     const boardLabel = document.createElement('small');
     const textWindow = document.createElement('div');
-    boardLabel.textContent = 'A LIVING INTRODUCTION';
+    boardLabel.textContent = demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION';
     textWindow.className = 'tryit-board-text-window';
     panel.replaceChildren(boardLabel);
     if (title) panel.append(title);
@@ -442,7 +450,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if (board) {
         board.classList.add('is-typing');
         board.classList.remove('is-copy-ready');
-        board.innerHTML = `<small>A LIVING INTRODUCTION</small><h2>${title}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
+        board.innerHTML = `<small>${currentNxrLanguage() === 'pt-PT' ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION'}</small><h2>${title}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
         if (firstArrival) {
             introSceneStartedAt = performance.now();
@@ -476,8 +484,8 @@ function finishIntroBoard() {
 function runArWelcomeTutorial() {
     showIntroBoard(
         'Nourishland XR',
-        WELCOME_BOARD_PARAGRAPHS,
-        'Continue',
+        welcomeBoardParagraphs(),
+        currentNxrLanguage() === 'pt-PT' ? 'Continuar' : 'Continue',
         () => {
             finishIntroBoard();
             clearTimeout(aimRevealTimer);
@@ -1534,7 +1542,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText('A LIVING INTRODUCTION', 700, 165);
+    ctx.fillText(demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION', 700, 165);
     ctx.fillStyle = '#fff';
     let titleSize = 94;
     do {

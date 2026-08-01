@@ -443,7 +443,7 @@ test('Special opens immediately with Totem tools above symbols', () => {
     assert.match(specialChoices, /'Hide Totem'/);
     assert.match(specialChoices, /'View Location Note'/);
     assert.doesNotMatch(specialChoices, /Totem \/ Area|data-ar-create-area/);
-    assert.match(specialChoices, />ARROWS</);
+    assert.match(specialChoices, /ARROWS, EXCLAMATION AND QUESTION MARKS/);
     assert.match(specialChoices, />SYMBOLS</);
     assert.match(specialChoices, /\['!', 'Important'\]/);
     assert.match(specialChoices, /\['\?', 'Question'\]/);
@@ -1283,8 +1283,12 @@ test('Field Guide separates visual guidance, optional creative tools and physica
     const fieldGuideSource = read('app/screens/fieldGuide.js');
     const projectEntrySource = read('app/components/projectEntry.js');
     const arSource = read('app/screens/arMode.js');
+    const serverSource = read('tools/persistence-server.mjs');
     assert.match(fieldGuideSource, /Visual Guide/);
-    assert.match(fieldGuideSource, /Optional Creative Features/);
+    assert.match(fieldGuideSource, /Creative Features/);
+    assert.doesNotMatch(fieldGuideSource, /Optional Creative Features/);
+    assert.match(fieldGuideSource, /field-guide-special-elements/);
+    assert.match(fieldGuideSource, /3D models and spatial objects/);
     assert.match(fieldGuideSource, /Physical Anchors/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
@@ -1299,8 +1303,10 @@ test('Field Guide separates visual guidance, optional creative tools and physica
     assert.match(arSource, /\['!', 'Important'\]/);
     assert.match(arSource, /special_symbol/);
     assert.match(arSource, /data-ar-arrow-style="\$\{index \+ 1\}"/);
-    assert.match(arSource, />ARROWS</);
+    assert.match(arSource, /ARROWS, EXCLAMATION AND QUESTION MARKS/);
     assert.match(arSource, />SYMBOLS</);
+    assert.match(serverSource, /special_symbol: data\.special_symbol/);
+    assert.match(serverSource, /arrow_style: Number\.isFinite/);
     assert.match(arSource, /function rotateHeldArrow/);
     assert.match(arSource, /rotation_degrees: roundCoordinate\(rotationDegrees\)/);
     assert.match(arSource, /data-ar-rotate-left/);

@@ -580,7 +580,11 @@ function positionNotePlacementPreview(view = latestView) {
     if (!preview || readyPlacementType !== 'note') return;
     const target = placementPoint('note');
     latestNotePlacementPoint = target;
-    const point = target ? projectWorldPoint(view, target) : null;
+    const pointer = overlayRoot?.querySelector('.creator-ar-placement-guide');
+    const pointerRect = pointer?.getBoundingClientRect();
+    const point = target && pointerRect
+        ? { x: pointerRect.left + pointerRect.width / 2, y: pointerRect.top + pointerRect.height / 2 }
+        : target ? projectWorldPoint(view, target) : null;
     preview.hidden = !point;
     if (!point) return;
     preview.style.transform = `translate(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px) translate(-50%, -50%)`;
@@ -972,7 +976,7 @@ function renderSpecialMarkerChoices(picker) {
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-location-note><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span><strong>${locationNoteVisible ? 'Hide Location Note' : 'View Location Note'}</strong></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>${totem ? 'Place Totem' : 'Add Totem'}</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
         </div></section>
-        <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div><small>MARKS</small><div class="creator-ar-special-grid">${alerts}</div></section>`;
+        <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS, EXCLAMATION AND QUESTION MARKS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-point-to-totem]')?.addEventListener('click', pointToActiveTotem);
     picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemVisibility);
