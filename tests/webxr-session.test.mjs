@@ -16,5 +16,6 @@ test('shared WebXR session service retains both Quest and phone modes', async ()
     assert.match(source, /isSessionSupported\('immersive-vr'\)/);
     assert.match(source, /requestSession\('immersive-ar'/);
     assert.match(source, /requestSession\('immersive-vr'/);
-    assert.match(source, /passthrough: mode === 'immersive-ar'/);
+    assert.match(source, /requiredFeatures: \[\], optionalFeatures: \['dom-overlay', 'hit-test', 'local-floor'\]/);
+    assert.match(source, /passthrough: mode === 'immersive-ar' && blendMode !== 'opaque'/);
 });

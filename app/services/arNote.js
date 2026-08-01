@@ -62,7 +62,7 @@ export async function startArNote(marker, profile) {
     try {
         const arSession = await requestImmersiveArSession(document.body);
         session = arSession.session;
-        const transparentSession = (arSession.mode || 'immersive-ar') === 'immersive-ar';
+        const transparentSession = arSession.passthrough !== false;
 
         const canvas = document.createElement('canvas');
         canvas.id = 'arCanvas';

@@ -1935,7 +1935,7 @@ async function startImmersive() {
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
-        const transparentSession = sessionMode === 'immersive-ar';
+        const transparentSession = arSession.passthrough !== false;
         canvas = document.createElement('canvas'); canvas.className = 'tryit-xr-canvas'; document.body.append(canvas);
         gl = canvas.getContext('webgl', { alpha: transparentSession, antialias: true });
         if (!gl) throw new Error('WebGL unavailable');
@@ -1947,7 +1947,7 @@ async function startImmersive() {
             hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         } catch (error) {
             hitTestSource = null;
-            setGuide(`Surface detection unavailable; placement uses your view direction. (${error.message})`);
+            setGuide(`${sessionMode === 'immersive-vr' ? 'Quest immersive mode' : 'Passthrough AR'} is active. Surface detection unavailable; placement uses your view direction. (${error.message})`);
         }
         setupRenderer();
         session.addEventListener('select', () => {

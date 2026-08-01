@@ -21,7 +21,11 @@ export async function detectWebXRSessionSupport() {
 const SESSION_ATTEMPTS = Object.freeze({
     'immersive-ar': [
         { requiredFeatures: ['dom-overlay', 'hit-test'], optionalFeatures: ['local-floor'] },
-        { requiredFeatures: ['dom-overlay'], optionalFeatures: ['hit-test', 'local-floor'] }
+        { requiredFeatures: ['dom-overlay'], optionalFeatures: ['hit-test', 'local-floor'] },
+        // Passthrough is more important than optional controls. Some Quest
+        // runtimes expose immersive-ar but reject DOM overlay or hit-test;
+        // allow the session to start and let placement use view direction.
+        { requiredFeatures: [], optionalFeatures: ['dom-overlay', 'hit-test', 'local-floor'] }
     ],
     // Quest Browser can expose native 6DoF WebXR without advertising
     // immersive-ar. DOM overlay keeps Nourishland's controls available in
@@ -61,7 +65,13 @@ export async function requestImmersiveArSession(domOverlayRoot) {
         for (const options of SESSION_ATTEMPTS[mode]) {
             try {
                 const session = await requestSessionForMode(mode, options, domOverlayRoot);
-                return { session, mode, passthrough: mode === 'immersive-ar' };
+                const blendMode = session.environmentBlendMode || '';
+                return {
+                    session,
+                    mode,
+                    blendMode,
+                    passthrough: mode === 'immersive-ar' && blendMode !== 'opaque'
+                };
             } catch (error) {
                 lastError = error;
             }

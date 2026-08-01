@@ -2837,6 +2837,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         document.body.classList.toggle('creator-ar-immersive-vr', sessionMode === 'immersive-vr');
         if (sessionMode === 'immersive-vr') {
             setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
+        } else if (!arSession.passthrough) {
+            setPlacementStatus(`WebXR opened AR mode but reports an opaque blend (${arSession.blendMode || 'unknown'}). Camera passthrough is unavailable in this runtime.`);
         }
         const restoringOverlay = overlayRoot;
         const requestedExistingMarkerId = pendingExistingMarkerId;
