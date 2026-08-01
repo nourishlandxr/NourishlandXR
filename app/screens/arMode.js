@@ -67,6 +67,7 @@ let locatedTotemRecord = null;
 let specialPickerRequest = 0;
 let placementArmGeneration = 0;
 let activePlacementOperation = null;
+let pendingPlacementPromise = null;
 let pendingExistingMarkerId = '';
 let arReturnContext = '';
 let locationNoteAnchor = null;
@@ -2257,6 +2258,9 @@ async function setPlacedMarkerType(record, type) {
 async function quickPlace(type) {
     if (placementInProgress) return;
     const placementToken = {};
+    let resolvePlacementCompletion;
+    const placementCompletion = new Promise(resolve => { resolvePlacementCompletion = resolve; });
+    pendingPlacementPromise = placementCompletion;
     activePlacementOperation = placementToken;
     placementInProgress = true;
     const loadingOperation = captureArOperationContext();
@@ -2388,6 +2392,10 @@ async function quickPlace(type) {
         setPlacementStatus(`Could not place ${markerLabel(type)}: ${error.message}`);
     } finally {
         releasePlacement();
+        if (pendingPlacementPromise === placementCompletion) {
+            pendingPlacementPromise = null;
+            resolvePlacementCompletion();
+        }
     }
 }
 
@@ -2558,6 +2566,27 @@ function cleanup() {
     gl = null;
 }
 
+async function waitForPendingPlacement() {
+    const pending = pendingPlacementPromise;
+    if (pending) await pending;
+}
+
+async function resolveAreaIdForExit(projectId, siteId, areaId, areaName) {
+    if (!projectId || !areaId || isDefaultHomeArea(areaName || areaId)) return '';
+    try {
+        const sites = await loadProjectSites(projectId);
+        const site = sites.find(item => item.id === siteId) || sites.find(item => item.id === 'main_food_forest') || sites[0];
+        if (!site) return '';
+        const places = await loadSitePlaces(projectId, site.id);
+        const normalizedName = String(areaName || '').trim().toLocaleLowerCase();
+        const area = places.find(item => item.id === areaId)
+            || places.find(item => String(item.name || '').trim().toLocaleLowerCase() === normalizedName);
+        return area && !isDefaultHomeArea(area) ? area.id : '';
+    } catch {
+        return '';
+    }
+}
+
 function navigateAfterAr(projectId, areaId, returnContext) {
     if (!projectId) return;
     queueMicrotask(() => {
@@ -2575,18 +2604,22 @@ function navigateAfterAr(projectId, areaId, returnContext) {
     });
 }
 
-function finishArExitToDashboard() {
+async function finishArExitToDashboard() {
     const projectId = activeProjectId;
     // Home is a protected holding Area, not a named Area dashboard. Returning
     // with its id would send the dashboard router into the named-Area loader,
     // which correctly rejects Home and displayed "Area data is unavailable".
     const areaId = isDefaultHomeArea(activeAreaName || activeAreaId) ? '' : activeAreaId;
+    const areaName = activeAreaName;
+    const siteId = activeSiteId;
     const returnContext = arReturnContext;
+    await waitForPendingPlacement();
+    const resolvedAreaId = await resolveAreaIdForExit(projectId, siteId, areaId, areaName);
     const activeSession = session;
     session = null;
     cleanup();
     activeSession?.end().catch(() => {});
-    navigateAfterAr(projectId, areaId, returnContext);
+    navigateAfterAr(projectId, resolvedAreaId, returnContext);
 }
 
 function handleArHistoryBack() {
@@ -2605,18 +2638,19 @@ function armArHistory() {
     window.addEventListener('popstate', handleArHistoryBack);
 }
 
-function finishNaturalArExit(projectId, areaId, returnContext, areaName = '') {
+async function finishNaturalArExit(projectId, areaId, returnContext, areaName = '', siteId = '') {
     const safeAreaId = isDefaultHomeArea(areaName || areaId) ? '' : areaId;
+    const resolvedAreaId = await resolveAreaIdForExit(projectId, siteId, safeAreaId, areaName);
     const removeArHistoryEntry = arHistoryArmed && history.state?.nourishlandCreatorAr;
     arHistoryArmed = false;
     handlingArHistory = false;
     window.removeEventListener('popstate', handleArHistoryBack);
     if (removeArHistoryEntry) {
-        window.addEventListener('popstate', () => navigateAfterAr(projectId, safeAreaId, returnContext), { once: true });
+        window.addEventListener('popstate', () => navigateAfterAr(projectId, resolvedAreaId, returnContext), { once: true });
         history.back();
         return;
     }
-    navigateAfterAr(projectId, safeAreaId, returnContext);
+    navigateAfterAr(projectId, resolvedAreaId, returnContext);
 }
 
 export function exitArMode() {
@@ -2740,15 +2774,18 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             }
         };
 
-        launchedSession.addEventListener('end', () => {
+        launchedSession.addEventListener('end', async () => {
             if (session !== launchedSession) return;
             const projectId = activeProjectId;
             const areaId = activeAreaId;
             const areaName = activeAreaName;
+            const siteId = activeSiteId;
             const returnContext = arReturnContext;
+            await waitForPendingPlacement();
+            if (session !== launchedSession) return;
             session = null;
             cleanup();
-            finishNaturalArExit(projectId, areaId, returnContext, areaName);
+            await finishNaturalArExit(projectId, areaId, returnContext, areaName, siteId);
         });
         launchedSession.addEventListener('select', () => {
             if (session !== launchedSession) return;

@@ -709,6 +709,9 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(quickPlace, /createPlaceMarker\(operation\.projectId, operation\.siteId, operation\.areaId/);
     assert.match(quickPlace, /saveMarkerAnchor\(operation\.projectId, operation\.siteId, operation\.areaId/);
     assert.match(quickPlace, /if \(!operationIsCurrent\(\)\) return;[\s\S]*sessionMarkers\.push\(record\)/);
+    assert.match(quickPlace, /const placementCompletion = new Promise/);
+    assert.match(quickPlace, /pendingPlacementPromise = placementCompletion/);
+    assert.match(quickPlace, /resolvePlacementCompletion\(\)/);
     assert.match(launch, /const launchedSession = session/);
     assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*locatedTotemRecord = null;/);
     assert.doesNotMatch(arSource, /selectedMarker/);
@@ -718,10 +721,13 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
     assert.match(arSource, /saveMarkerAnchor\(operation\.projectId, state\.record\.siteId, state\.record\.areaId/);
     assert.match(arSource, /await saveMarkerAnchor\(operation\.projectId[\s\S]*if \(!isArOperationCurrent\(operation\)\) return;[\s\S]*moved\. Select another glowing element/);
+    assert.match(arSource, /async function waitForPendingPlacement\(\)/);
+    assert.match(arSource, /async function finishArExitToDashboard\(\)[\s\S]*await waitForPendingPlacement\(\)/);
     assert.match(arSource, /function finishNaturalArExit/);
     assert.match(arSource, /window\.removeEventListener\('popstate', handleArHistoryBack\)/);
     assert.match(arSource, /const safeAreaId = isDefaultHomeArea\(areaName \|\| areaId\) \? '' : areaId/);
-    assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, safeAreaId, returnContext\), \{ once: true \}\)/);
+    assert.match(arSource, /launchedSession\.addEventListener\('end', async \(\) => \{[\s\S]*const siteId = activeSiteId[\s\S]*await waitForPendingPlacement\(\)/);
+    assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, resolvedAreaId, returnContext\), \{ once: true \}\)/);
     assert.match(arSource, /history\.back\(\)/);
 });
 
