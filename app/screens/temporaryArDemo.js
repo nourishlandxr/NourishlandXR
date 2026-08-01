@@ -49,7 +49,11 @@ let introNoteTexture = null;
 let introNoteCanvas = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
+let introTextureUploadedAt = 0;
 let introKnowledgeTexture = null;
+let introControlTexture = null;
+let introControlTextureLabel = '';
+let introPointerTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
 let introBoardTitle = 'NourishlandXR';
@@ -163,11 +167,17 @@ function clearSessionState() {
     introWorldAnchor = null;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
+    if (introControlTexture) gl?.deleteTexture(introControlTexture);
+    if (introPointerTexture) gl?.deleteTexture(introPointerTexture);
     introNoteTexture = null;
     introNoteCanvas = null;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
+    introTextureUploadedAt = 0;
     introKnowledgeTexture = null;
+    introControlTexture = null;
+    introControlTextureLabel = '';
+    introPointerTexture = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
     markers.forEach(record => {
@@ -295,6 +305,20 @@ function hideGuidedChoice() {
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
 }
 
+function activateImmersiveDemoControl() {
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (continueButton && !continueButton.hidden) {
+        continueButton.click();
+        return true;
+    }
+    const choiceButton = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden]) [data-demo-choice]:not([hidden])');
+    if (choiceButton) {
+        choiceButton.click();
+        return true;
+    }
+    return false;
+}
+
 function prepareTutorialBoard(panel) {
     const firstArrival = !introBoardHasEntered;
     panel.classList.add('is-welcome-board');
@@ -350,7 +374,10 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         if (choiceButtons.length === 1 && continueButton) {
             const choiceButton = choiceButtons[0];
             continueButton.textContent = choiceButton.textContent.trim();
-            continueButton.onclick = () => onClick(choiceButton.dataset.demoChoice);
+            continueButton.onclick = () => {
+                suppressSessionSelectUntil = performance.now() + 700;
+                onClick(choiceButton.dataset.demoChoice);
+            };
             continueButton.hidden = false;
         } else if (choiceButtons.length > 1 && finalActions) {
             finalActions.hidden = false;
@@ -467,7 +494,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if (continueButton && buttonLabel) {
         continueButton.textContent = buttonLabel;
         continueButton.hidden = true;
-        continueButton.onclick = onContinue;
+        continueButton.onclick = () => {
+            suppressSessionSelectUntil = performance.now() + 700;
+            onContinue();
+        };
     } else if (continueButton) {
         continueButton.hidden = true;
         continueButton.onclick = null;
@@ -648,6 +678,7 @@ function armDemoPlacement(type) {
     const [title, introduction] = introductions[type];
     showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice !== 'continue') return;
+        suppressSessionSelectUntil = performance.now() + 700;
         hideGuidedChoice();
         setGuide(type === 'plant'
             ? 'Press the aiming circle to place the example Plant orb.'
@@ -1242,7 +1273,7 @@ function renderInterface(simulated) {
     introContinue.dataset.tryitIntroContinue = '';
     introContinue.type = 'button';
     introContinue.hidden = true;
-    appRoot.querySelector('.tryit-stage')?.append(introContinue);
+    appRoot.querySelector('.tryit-demo')?.append(introContinue);
     appRoot.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
     appRoot.querySelector('.tryit-drag-hint')?.remove();
     const exitButton = appRoot.querySelector('[data-tryit-exit]');
@@ -1259,6 +1290,8 @@ function renderInterface(simulated) {
     });
     exitButton.addEventListener('click', returnToWelcome);
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
+    appRoot.querySelector('.tryit-demo')?.append(placementPointer);
+    introContinue.addEventListener('beforexrselect', event => event.preventDefault());
     placementPointer.addEventListener('beforexrselect', event => event.preventDefault());
     placementPointer.addEventListener('pointerdown', event => {
         if (!placementReady) {
@@ -1311,8 +1344,8 @@ function multiply(a, b) {
     return out;
 }
 
-function billboardMatrix(position, scaleX = 1, scaleY = 1) {
-    const camera = viewerMatrix || new Float32Array(16);
+function billboardMatrix(position, scaleX = 1, scaleY = 1, cameraMatrix = viewerMatrix) {
+    const camera = cameraMatrix || new Float32Array(16);
     let x = camera[12] - position.x;
     let z = camera[14] - position.z;
     const length = Math.hypot(x, z) || 1;
@@ -1582,6 +1615,63 @@ function createIntroNoteTexture(texture = null) {
     return canvasTexture(label, texture);
 }
 
+function createIntroControlTexture(labelText, texture = null) {
+    const label = document.createElement('canvas');
+    label.width = 720;
+    label.height = 180;
+    const ctx = label.getContext('2d');
+    const panel = ctx.createLinearGradient(40, 20, 680, 160);
+    panel.addColorStop(0, 'rgba(113,157,91,.96)');
+    panel.addColorStop(1, 'rgba(32,77,49,.96)');
+    ctx.fillStyle = panel;
+    ctx.strokeStyle = 'rgba(240,255,224,.94)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 700, 160, 72);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,.7)';
+    ctx.shadowBlur = 7;
+    ctx.font = '800 42px system-ui, sans-serif';
+    ctx.fillText(String(labelText || 'CONTINUE').toUpperCase(), 360, 78);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(239,255,218,.9)';
+    ctx.font = '650 21px system-ui, sans-serif';
+    ctx.fillText('PRESS CONTROLLER TRIGGER', 360, 128);
+    return canvasTexture(label, texture);
+}
+
+function createIntroPointerTexture(texture = null) {
+    const label = document.createElement('canvas');
+    label.width = 256;
+    label.height = 256;
+    const ctx = label.getContext('2d');
+    const glow = ctx.createRadialGradient(128, 128, 32, 128, 128, 120);
+    glow.addColorStop(0, 'rgba(226,244,181,.42)');
+    glow.addColorStop(.58, 'rgba(154,211,122,.16)');
+    glow.addColorStop(1, 'rgba(154,211,122,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = 'rgba(246,255,231,.98)';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.arc(128, 128, 72, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(220,239,149,.88)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(128, 128, 96, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#dcef95';
+    ctx.beginPath();
+    ctx.arc(128, 128, 8, 0, Math.PI * 2);
+    ctx.fill();
+    return canvasTexture(label, texture);
+}
+
 function createIntroKnowledgeTexture() {
     const label = document.createElement('canvas');
     label.width = 1400;
@@ -1619,14 +1709,16 @@ function introLocalPosition(matrix, [x, y, z]) {
 function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
-    if (!introNoteTexture || introBoardTextureDirty) {
+    const now = performance.now();
+    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 120)) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
+        introTextureUploadedAt = now;
     }
     introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
     const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
-        const model = billboardMatrix(position, scaleX, scaleY);
+        const model = billboardMatrix(position, scaleX, scaleY, introWorldAnchor);
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);
@@ -1655,6 +1747,32 @@ function drawIntroSpatial(view) {
         AR_PHONE_COMFORT.boardScale[1],
         easedNote
     );
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    const controlLabel = continueButton && !continueButton.hidden
+        ? (continueButton.textContent || 'Continue').trim()
+        : '';
+    if (controlLabel) {
+        if (!introControlTexture || introControlTextureLabel !== controlLabel) {
+            introControlTexture = createIntroControlTexture(controlLabel, introControlTexture);
+            introControlTextureLabel = controlLabel;
+        }
+        drawTexture(
+            introControlTexture,
+            introLocalPosition(introWorldAnchor, [0, -0.16, -2.8]),
+            1.35,
+            .72,
+            1
+        );
+    } else if (introControlTexture) {
+        gl.deleteTexture(introControlTexture);
+        introControlTexture = null;
+        introControlTextureLabel = '';
+    }
+    if (placementReady) {
+        introPointerTexture ||= createIntroPointerTexture();
+        const pointerPosition = placementPosition();
+        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, .32, .8, 1);
+    }
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -1952,10 +2070,12 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
-            // Placement belongs only to the visible DOM pointer. A WebXR
-            // select can arrive late from Continue and must never place for
-            // the visitor.
-            if (!placementReady) selectGuidedDemoOrb();
+            // Quest controllers do not reliably generate DOM click events for
+            // the optional overlay. Map one deliberate select to the same
+            // tutorial control a phone user sees, then to the live aim.
+            if (activateImmersiveDemoControl()) return;
+            if (placementReady) return pressPlacementPointer();
+            selectGuidedDemoOrb();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
