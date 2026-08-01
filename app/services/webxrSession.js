@@ -20,12 +20,15 @@ export async function detectWebXRSessionSupport() {
 
 const SESSION_ATTEMPTS = Object.freeze({
     'immersive-ar': [
-        { requiredFeatures: ['dom-overlay', 'hit-test'], optionalFeatures: ['local-floor'] },
-        { requiredFeatures: ['dom-overlay'], optionalFeatures: ['hit-test', 'local-floor'] },
+        // Match the WebXR AR sample pattern: hit-test is useful for placing
+        // content, while DOM overlay is optional and must not block camera
+        // passthrough on runtimes that omit that feature.
+        { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay', 'local-floor'] },
         // Passthrough is more important than optional controls. Some Quest
         // runtimes expose immersive-ar but reject DOM overlay or hit-test;
         // allow the session to start and let placement use view direction.
-        { requiredFeatures: [], optionalFeatures: ['dom-overlay', 'hit-test', 'local-floor'] }
+        { requiredFeatures: [], optionalFeatures: ['dom-overlay', 'hit-test', 'local-floor'] },
+        { requiredFeatures: [], optionalFeatures: [] }
     ],
     // Quest Browser can expose native 6DoF WebXR without advertising
     // immersive-ar. DOM overlay keeps Nourishland's controls available in

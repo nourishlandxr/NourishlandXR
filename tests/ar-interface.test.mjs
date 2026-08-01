@@ -690,7 +690,7 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-vr'/);
-    assert.match(webxrSource, /requiredFeatures: \['dom-overlay'\], optionalFeatures: \['hit-test', 'local-floor'\]/);
+    assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(arSource, /launchedSession\.addEventListener\('end'/);
     assert.match(arSource, /creator-ar-session-active/);
     assert.match(arSource, /activeSession\?\.end/);
@@ -765,7 +765,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function demoPointerWorldRay\(\)/);
     assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\)\)/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
-    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /immersive-vr/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
@@ -1046,7 +1046,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
-    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /const ray = pointerWorldRay\(\)/);
     assert.match(source, /id = 'creatorArOverlay'/);

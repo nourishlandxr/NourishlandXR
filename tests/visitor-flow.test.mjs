@@ -460,7 +460,7 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     assert.match(source, /makeXRCompatible/);
     assert.match(source, /new XRWebGLLayer/);
     assert.match(source, /requestAnimationFrame\(draw\)/);
-    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
