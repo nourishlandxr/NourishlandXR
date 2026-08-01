@@ -230,17 +230,24 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /loadSitePlaces\(project\.id, site\.id\)\.catch\(\(\) => \[\]\)/);
     assert.doesNotMatch(fieldGuideSource, /WEB HUB LOCATION/);
     assert.doesNotMatch(fieldGuideSource, /ADD TO WEB HUB/);
-    assert.match(fieldGuideSource, /currentGuidePlaceId = creator \? String\(homePlace\?\.id \|\| ''\) : ''/);
-    assert.match(fieldGuideSource, /applyFieldGuideFilter\(currentGuidePlaceId\)/);
-    assert.match(fieldGuideSource, /field-guide-creation-board/);
+    assert.match(fieldGuideSource, /currentGuidePlaceId = '';/);
+    assert.match(fieldGuideSource, /applyFieldGuideFilter\(''\)/);
+    assert.match(fieldGuideSource, /field-guide-essentials/);
+    assert.match(fieldGuideSource, /field-guide-area-grid/);
+    assert.match(fieldGuideSource, /data-field-guide-area/);
+    assert.match(fieldGuideSource, /is-home-area/);
+    assert.match(fieldGuideSource, /field-guide-plant-search/);
+    assert.match(fieldGuideSource, /field-guide-area-help/);
+    assert.match(fieldGuideSource, /is-search-match/);
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
-    assert.match(fieldGuideSource, /Area Totems/);
-    assert.match(fieldGuideSource, /Plant records/);
+    assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
+    assert.match(fieldGuideSource, /<strong>\$\{places\.length\}<\/strong> Areas/);
+    assert.match(fieldGuideSource, /<strong>\$\{guide\.totems\.length\}<\/strong> Totems/);
 });
 
 test('Home owns no-Area experiments while named Areas remain isolated', () => {
