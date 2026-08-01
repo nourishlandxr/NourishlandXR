@@ -51,6 +51,8 @@ let introNoteCanvas = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
 let introTextureUploadedAt = 0;
+let introFrameToken = 0;
+let introTextureFrameToken = -1;
 let introKnowledgeTexture = null;
 let introControlTexture = null;
 let introControlTextureLabel = '';
@@ -175,6 +177,8 @@ function clearSessionState() {
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
     introTextureUploadedAt = 0;
+    introFrameToken = 0;
+    introTextureFrameToken = -1;
     introKnowledgeTexture = null;
     introControlTexture = null;
     introControlTextureLabel = '';
@@ -1714,10 +1718,11 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     const now = performance.now();
-    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 120)) {
+    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 120 && introTextureFrameToken !== introFrameToken)) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
+        introTextureFrameToken = introFrameToken;
     }
     introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
@@ -2086,6 +2091,7 @@ async function startImmersive() {
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
+            introFrameToken = _time;
             const pose = frame.getViewerPose(referenceSpace);
             viewerMatrix = pose ? Float32Array.from(pose.transform.matrix) : null;
             latestDemoView = pose?.views?.[0] || null;

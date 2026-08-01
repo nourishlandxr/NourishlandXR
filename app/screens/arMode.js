@@ -24,6 +24,11 @@ import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppeara
 
 let session = null;
 let sessionMode = 'immersive-ar';
+let creatorInputMode = 'touch';
+let controllerActionIndex = 0;
+let controllerMenuActive = true;
+let controllerAxisCooldownUntil = 0;
+let latestControllerRay = null;
 let gl = null;
 let refSpace = null;
 let canvas = null;
@@ -904,6 +909,168 @@ function updateInteractionControls() {
     overlayRoot?.classList.toggle('is-neutral-mode', interactionMode === 'neutral');
     overlayRoot?.classList.toggle('is-hold-mode', interactionMode === 'grab');
     overlayRoot?.classList.toggle('is-select-mode', interactionMode === 'select');
+    updateControllerHud();
+}
+
+function controllerInputSource() {
+    const sources = [...(session?.inputSources || [])];
+    return sources.find(source => source.targetRayMode === 'tracked-pointer' && source.gamepad)
+        || sources.find(source => source.targetRayMode === 'tracked-pointer' || source.hand)
+        || null;
+}
+
+function controllerActionElements() {
+    const panels = [
+        overlayRoot?.querySelector('[data-ar-place-picker]'),
+        overlayRoot?.querySelector('[data-ar-area-chooser]'),
+        overlayRoot?.querySelector('[data-ar-context-toolbar]'),
+        overlayRoot?.querySelector('.creator-ar-taskbar')
+    ];
+    const panel = panels.find(candidate => candidate && !candidate.hidden && candidate.querySelector('button:not([disabled])'));
+    return [...(panel?.querySelectorAll('button:not([disabled])') || [])].filter(button => !button.hidden);
+}
+
+function controllerActionLabel(button) {
+    return String(button?.getAttribute('aria-label') || button?.textContent || 'Action')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
+}
+
+function updateControllerHud() {
+    const hud = overlayRoot?.querySelector('[data-ar-controller-hud]');
+    if (!hud) return;
+    hud.hidden = creatorInputMode !== 'controller';
+    if (hud.hidden) return;
+    const actions = controllerActionElements();
+    controllerActionIndex = actions.length ? Math.min(controllerActionIndex, actions.length - 1) : 0;
+    const action = hud.querySelector('[data-ar-controller-action]');
+    const instruction = hud.querySelector('[data-ar-controller-instruction]');
+    action.textContent = controllerMenuActive
+        ? actions.length ? controllerActionLabel(actions[controllerActionIndex]) : 'WAITING FOR CONTROLS'
+        : interactionMode === 'neutral' ? 'AIM DOT READY' : `AIM AT A MARKER / ${interactionMode.toUpperCase()} MODE`;
+    instruction.textContent = controllerMenuActive
+        ? 'Thumbstick choose / Trigger confirm'
+        : 'Thumbstick opens controls · Trigger selects the aimed element';
+}
+
+function setCreatorInputMode(mode) {
+    const nextMode = mode === 'controller' ? 'controller' : 'touch';
+    if (creatorInputMode === nextMode) {
+        updateControllerHud();
+        return;
+    }
+    creatorInputMode = nextMode;
+    controllerActionIndex = 0;
+    controllerMenuActive = true;
+    overlayRoot?.classList.toggle('is-controller-mode', creatorInputMode === 'controller');
+    updateControllerHud();
+    if (creatorInputMode === 'controller') {
+        setPlacementStatus('Quest controller controls active. Move the thumbstick to choose an AR action, then press the trigger.');
+    } else if (!readyPlacementType) {
+        setPlacementStatus('Touch controls active. Aim dot ready.');
+    }
+}
+
+function cycleControllerAction(direction) {
+    const actions = controllerActionElements();
+    if (!actions.length) return;
+    controllerActionIndex = (controllerActionIndex + direction + actions.length) % actions.length;
+    controllerMenuActive = true;
+    updateControllerHud();
+}
+
+function dispatchControllerAction(button) {
+    if (!button) return;
+    button.click();
+    const event = new Event('pointerup', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'button', { value: 0 });
+    button.dispatchEvent(event);
+    controllerActionIndex = 0;
+    controllerMenuActive = Boolean(overlayRoot?.querySelector('[data-ar-place-picker]:not([hidden]), [data-ar-area-chooser]:not([hidden]), [data-ar-context-toolbar]:not([hidden])'));
+    updateControllerHud();
+}
+
+function controllerMarkerAtAim() {
+    const ray = pointerWorldRay();
+    if (!ray || !latestViewerMatrix) return null;
+    const origin = latestControllerRay?.origin || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
+    return activeAreaMarkers()
+        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
+        .map(record => {
+            const offset = {
+                x: record.position.x - origin.x,
+                y: record.position.y - origin.y,
+                z: record.position.z - origin.z
+            };
+            const along = offset.x * ray.x + offset.y * ray.y + offset.z * ray.z;
+            if (along <= 0) return { record, distance: Infinity };
+            const closest = {
+                x: origin.x + ray.x * along,
+                y: origin.y + ray.y * along,
+                z: origin.z + ray.z * along
+            };
+            return { record, distance: Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z) };
+        })
+        .filter(item => item.distance <= (item.record.marker.type === 'note' ? .55 : .28))
+        .sort((left, right) => left.distance - right.distance)[0]?.record || null;
+}
+
+function activateControllerTarget() {
+    const record = controllerMarkerAtAim();
+    const element = record && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
+    if (!record || !element) {
+        setPlacementStatus('Aim at a placed element, then press the controller trigger.');
+        return false;
+    }
+    beginMarkerInteraction(record, {
+        preventDefault() {},
+        stopPropagation() {},
+        pointerId: 'xr-controller',
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2,
+        currentTarget: element
+    }, { directHold: interactionMode === 'grab', element });
+    return true;
+}
+
+function activateControllerSelection() {
+    if (readyPlacementType) {
+        void quickPlace(readyPlacementType);
+        return true;
+    }
+    if (!controllerMenuActive && interactionMode !== 'neutral') return activateControllerTarget();
+    const action = controllerActionElements()[controllerActionIndex];
+    if (!action) return false;
+    dispatchControllerAction(action);
+    return true;
+}
+
+function pollControllerInput() {
+    const source = controllerInputSource();
+    setCreatorInputMode(source ? 'controller' : 'touch');
+    if (!source?.gamepad || creatorInputMode !== 'controller') return;
+    const horizontal = Number(source.gamepad.axes?.[0]) || 0;
+    if (Math.abs(horizontal) < .55 || performance.now() < controllerAxisCooldownUntil) return;
+    controllerAxisCooldownUntil = performance.now() + 260;
+    cycleControllerAction(horizontal > 0 ? 1 : -1);
+}
+
+function updateControllerRay(frame) {
+    latestControllerRay = null;
+    const source = controllerInputSource();
+    if (!source?.targetRaySpace || !refSpace) return;
+    const pose = frame.getPose(source.targetRaySpace, refSpace);
+    const matrix = pose?.transform?.matrix;
+    if (!matrix) return;
+    const x = -matrix[8];
+    const y = -matrix[9];
+    const z = -matrix[10];
+    const length = Math.hypot(x, y, z) || 1;
+    latestControllerRay = {
+        origin: { x: matrix[12], y: matrix[13], z: matrix[14] },
+        direction: { x: x / length, y: y / length, z: z / length }
+    };
 }
 
 function setInteractionMode(mode) {
@@ -1975,7 +2142,9 @@ function moveMarkerDrag(event) {
 }
 
 function pointerWorldRay() {
-    if (!latestViewerMatrix || !latestView?.projectionMatrix) return null;
+    if (!latestViewerMatrix) return null;
+    if (creatorInputMode === 'controller' && latestControllerRay) return latestControllerRay.direction;
+    if (!latestView?.projectionMatrix) return null;
     const pointer = overlayRoot?.querySelector(readyPlacementType ? '.creator-ar-placement-guide' : '.creator-ar-mode-pointer');
     const rect = pointer?.getBoundingClientRect();
     const screenX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
@@ -2537,6 +2706,11 @@ function createOverlay() {
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
+        <section class="creator-ar-controller-hud" data-ar-controller-hud hidden aria-live="polite">
+          <strong>QUEST CONTROLS</strong>
+          <span data-ar-controller-action>ADD PLANT</span>
+          <small data-ar-controller-instruction>Thumbstick choose / Trigger confirm</small>
+        </section>
         <section class="creator-ar-recenter-prompt" data-ar-recenter-prompt ${hasCheckpoint ? '' : 'hidden'}>
           <span><strong>RESTORE THIS AREA</strong><small>Aim at the Totem’s real position</small></span>
           <button type="button" data-ar-recenter-area disabled>RECENTER AREA</button>
@@ -2677,6 +2851,11 @@ function cleanup() {
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
+    creatorInputMode = 'touch';
+    controllerActionIndex = 0;
+    controllerMenuActive = true;
+    controllerAxisCooldownUntil = 0;
+    latestControllerRay = null;
     pendingBagRecord = null;
     locatedTotemRecord = null;
     totemGuideVisible = false;
@@ -2894,6 +3073,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
             latestView = pose.views[0] || null;
+            pollControllerInput();
+            updateControllerRay(frame);
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             latestHitMatrix = matrixFromPose(hit?.getPose(refSpace));
@@ -2931,10 +3112,28 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             cleanup();
             await finishNaturalArExit(projectId, areaId, returnContext, areaName, siteId);
         });
-        launchedSession.addEventListener('select', () => {
+        launchedSession.addEventListener('inputsourceschange', () => {
+            setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
+        });
+        launchedSession.addEventListener('selectstart', event => {
+            if (session !== launchedSession || creatorInputMode !== 'controller' || controllerMenuActive || readyPlacementType || interactionMode !== 'grab') return;
+            const target = controllerMarkerAtAim();
+            if (target) activateControllerTarget();
+        });
+        launchedSession.addEventListener('selectend', () => {
+            if (session !== launchedSession || dragState?.pointerId !== 'xr-controller') return;
+            void finishMarkerDrag();
+        });
+        launchedSession.addEventListener('select', event => {
             if (session !== launchedSession) return;
+            const controllerSelect = event.inputSource?.targetRayMode === 'tracked-pointer' || creatorInputMode === 'controller';
+            if (controllerSelect) {
+                if (dragState?.pointerId === 'xr-controller') return;
+                if (activateControllerSelection()) return;
+            }
             if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);
         });
+        setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
         armArHistory();
         launchedSession.requestAnimationFrame(draw);
         return true;

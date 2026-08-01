@@ -348,6 +348,13 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /event\.stopImmediatePropagation\(\)/);
     assert.doesNotMatch(arSource, /querySelector\('\.creator-ar-taskbar'\)\.addEventListener\('click'/);
     assert.match(arSource, /event\.stopPropagation\(\)/);
+    assert.match(arSource, /function controllerInputSource\(\)/);
+    assert.match(arSource, /function activateControllerSelection\(\)/);
+    assert.match(arSource, /function updateControllerRay\(frame\)/);
+    assert.match(arSource, /targetRaySpace/);
+    assert.match(arSource, /selectstart/);
+    assert.match(arSource, /selectend/);
+    assert.match(styles, /creator-ar-controller-hud/);
     assert.match(arSource, /placementPointerMarkup/);
     assert.match(pointerSource, /creator-ar-breathing-target/);
     assert.match(pointerSource, /creator-ar-placement-pointer/);
@@ -579,13 +586,13 @@ test('Creator dashboard stays in web mode instead of being duplicated in AR', ()
     assert.doesNotMatch(arSource, /returnToWeb|data-ar-web-mode/);
 });
 
-test('Creator AR has no dashboard grab or controller-ray controls', () => {
+test('Creator AR keeps dashboard web-only while supporting controller controls', () => {
     const arSource = read('app/screens/arMode.js');
     const taskbar = arSource.slice(
         arSource.indexOf('<nav class="creator-ar-taskbar"'),
         arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
     );
-    assert.doesNotMatch(arSource, /targetRaySpace|selectstart|selectend|squeezestart|squeezeend/);
+    assert.match(arSource, /targetRayMode|selectstart|selectend/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
     assert.match(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
@@ -891,6 +898,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /domOverlayEnabled = Boolean\(arSession\.domOverlay\)/);
     assert.match(source, /uses-webgl-controls/);
     assert.match(source, /session && !domOverlayEnabled && continueButton/);
+    assert.match(source, /introTextureFrameToken !== introFrameToken/);
+    assert.match(source, /introFrameToken = _time/);
     assert.match(styles, /\.tryit-demo\.uses-webgl-controls > \.tryit-intro-continue \{ display:none !important; \}/);
     assert.match(immersiveSelectHandler, /if \(activateImmersiveDemoControl\(\)\) return;/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
