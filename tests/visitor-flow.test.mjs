@@ -98,7 +98,9 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.doesNotMatch(entrySource, /Home Base/);
     assert.match(entrySource, /BIRD'S-EYE OVERVIEW/);
-    assert.match(entrySource, /<article class="project-area-overview-card">/);
+    assert.match(entrySource, /<article class="project-area-overview-card" data-home-area=/);
+    assert.match(entrySource, /area\.isHome/);
+    assert.match(entrySource, /DEFAULT · LOCKED/);
     assert.doesNotMatch(entrySource, /project-area-overview-card[^>]*onclick/);
     assert.match(entrySource, /Totem placed|No Totem/);
     assert.match(entrySource, /living-map-progress/);

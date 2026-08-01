@@ -1121,6 +1121,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const { project, site, places, entries, startingPoint } = await projectContent(projectId);
         const nonPlantMode = project.template === 'inventory_exhibition';
         const areas = places.filter(place => !isDefaultHomeArea(place));
+        const homeArea = places.find(isDefaultHomeArea) || null;
+        const layoutAreas = [homeArea, ...areas].filter(Boolean);
         const hasArea = areas.length > 0;
         const placedEntries = await entriesWithPlacement(project, site, entries);
         const unplacedEntries = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && !entry.isPlaced);
@@ -1275,7 +1277,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                         : `window.openProjectEntry('${encoded(project.id)}','${encoded(marker.id)}')`
             };
         });
-        const areaLinks = areas.map(area => {
+        const areaLinks = layoutAreas.map(area => {
             const areaEntries = entries.filter(entry => entry.place.id === area.id);
             const areaPlants = areaEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant');
             const areaTotem = areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
@@ -1283,12 +1285,13 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 ? areaTotem.marker.appearance.color
                 : '';
             return {
-                label: escapeHtml(area.name),
+                label: escapeHtml(displayAreaName(area)),
                 icon: areaIcon(area),
                 contentCount: areaEntries.filter(entry => effectiveMarkerType(entry.marker) !== 'area_checkpoint').length,
                 plantCount: areaPlants.length,
                 totemPlaced: placedTotemAreaIds.has(area.id),
                 totemColor,
+                isHome: isDefaultHomeArea(area)
             };
         });
         const searchItems = await buildProjectSearchItems(project, site, areas, entries);
@@ -1303,7 +1306,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             status: {
                 entries: String(projectEntries.length),
                 unplaced: String(unplacedEntries.length),
-                areas: String(areas.length),
+                areas: String(layoutAreas.length),
                 lastUpdated: latestDate ? editedLabel(latestDate).replace(/^Edited /, '') : 'No edits yet',
                 notice: ''
             },

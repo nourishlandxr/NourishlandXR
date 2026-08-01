@@ -45,9 +45,9 @@ export function renderProjectEntry(config) {
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
-        ? areas.map(area => `<article class="project-area-overview-card">
+        ? areas.map(area => `<article class="project-area-overview-card" data-home-area="${area.isHome ? 'true' : 'false'}">
             <span class="project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
-            <span class="project-area-overview-copy"><strong>${area.label}</strong><span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
+            <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">DEFAULT · LOCKED</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
             <span class="project-area-overview-totem"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true">⌖</i><small>${area.totemPlaced ? 'Totem' : 'No Totem'}</small></span>
         </article>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';

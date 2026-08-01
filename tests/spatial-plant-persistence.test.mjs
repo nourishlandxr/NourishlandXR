@@ -212,6 +212,17 @@ test('a newly created project can be deleted by its stable project id', async ()
     });
     assert.equal(createdProject.id, 'home_test_delete');
 
+    const createdSites = await jsonRequest(`/api/projects/${encodeURIComponent(createdProject.id)}/sites`);
+    assert.equal(createdSites.length, 1);
+    const createdPlaces = await jsonRequest(`/api/projects/${encodeURIComponent(createdProject.id)}/sites/${encodeURIComponent(createdSites[0].id)}/places`);
+    const home = createdPlaces.find(place => place.systemKey === 'home');
+    assert.ok(home, 'new projects receive the protected Home Area automatically');
+    assert.equal(home.id, 'home');
+    assert.equal(home.name, 'Home');
+    assert.equal(home.type, 'Other');
+    const deleteHome = await fetch(`${baseUrl}/api/projects/${encodeURIComponent(createdProject.id)}/sites/${encodeURIComponent(createdSites[0].id)}/places/${encodeURIComponent(home.id)}`, { method: 'DELETE' });
+    assert.equal(deleteHome.status, 400);
+
     await jsonRequest(`/api/projects/${encodeURIComponent(createdProject.id)}`, { method: 'DELETE' });
 
     const missingProject = await fetch(`${baseUrl}/api/projects/${encodeURIComponent(createdProject.id)}`);
