@@ -13,7 +13,7 @@ import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
-import { controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 
 let appRoot = null;
 let session = null;
@@ -1079,6 +1079,7 @@ function refreshDemoRecord(record) {
 }
 
 function demoPointerWorldRay() {
+    if (latestControllerRay) return latestControllerRay.direction;
     if (!viewerMatrix || !latestDemoView?.projectionMatrix) return null;
     const pointer = appRoot?.querySelector('[data-tryit-place]');
     const rect = pointer?.getBoundingClientRect();
@@ -1099,35 +1100,44 @@ function demoPointerWorldRay() {
     return { x: worldX / worldLength, y: worldY / worldLength, z: worldZ / worldLength };
 }
 
-export function demoPlacementPosition(matrix, ray) {
-    if (!matrix) return null;
+function demoPointerWorldOrigin() {
+    if (latestControllerRay?.origin) return latestControllerRay.origin;
+    return viewerMatrix
+        ? { x: viewerMatrix[12], y: viewerMatrix[13], z: viewerMatrix[14] }
+        : null;
+}
+
+export function demoPlacementPosition(matrix, ray, origin = null) {
+    const base = origin || (matrix ? { x: matrix[12], y: matrix[13], z: matrix[14] } : null);
+    if (!base) return null;
     if (!ray) return spatialPosition(null, matrix, 0);
     const distance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
     return {
-        x: matrix[12] + ray.x * distance,
-        y: matrix[13] + ray.y * distance,
-        z: matrix[14] + ray.z * distance
+        x: base.x + ray.x * distance,
+        y: base.y + ray.y * distance,
+        z: base.z + ray.z * distance
     };
 }
 
 function placementPosition() {
-    return demoPlacementPosition(viewerMatrix, demoPointerWorldRay());
+    return demoPlacementPosition(viewerMatrix, demoPointerWorldRay(), demoPointerWorldOrigin());
 }
 
 function pointerDistanceToRecord(record) {
     const ray = demoPointerWorldRay();
-    if (!viewerMatrix || !ray || !record?.position) return Infinity;
+    const origin = demoPointerWorldOrigin();
+    if (!origin || !ray || !record?.position) return Infinity;
     const offset = {
-        x: record.position.x - viewerMatrix[12],
-        y: record.position.y - viewerMatrix[13],
-        z: record.position.z - viewerMatrix[14]
+        x: record.position.x - origin.x,
+        y: record.position.y - origin.y,
+        z: record.position.z - origin.z
     };
     const alongRay = offset.x * ray.x + offset.y * ray.y + offset.z * ray.z;
     if (alongRay <= 0) return Infinity;
     const closest = {
-        x: viewerMatrix[12] + ray.x * alongRay,
-        y: viewerMatrix[13] + ray.y * alongRay,
-        z: viewerMatrix[14] + ray.z * alongRay
+        x: origin.x + ray.x * alongRay,
+        y: origin.y + ray.y * alongRay,
+        z: origin.z + ray.z * alongRay
     };
     return Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z);
 }
@@ -1144,12 +1154,13 @@ function updateHeldDemoRecordPosition() {
     if (simulatedMode || demoHeldIndex < 0) return;
     const record = markers[demoHeldIndex];
     const ray = demoPointerWorldRay();
-    if (!record || !viewerMatrix || !ray) return;
+    const origin = demoPointerWorldOrigin();
+    if (!record || !origin || !ray) return;
     const distance = Math.max(.4, Math.min(4, Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
     record.position = {
-        x: viewerMatrix[12] + ray.x * distance,
-        y: viewerMatrix[13] + ray.y * distance,
-        z: viewerMatrix[14] + ray.z * distance
+        x: origin.x + ray.x * distance,
+        y: origin.y + ray.y * distance,
+        z: origin.z + ray.z * distance
     };
     record.informationPosition = null;
 }
@@ -1180,10 +1191,12 @@ function beginPointerDemoHold(event) {
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
         demoHeldIndex = target.index;
+        const origin = demoPointerWorldOrigin();
+        if (!origin) return;
         const offset = {
-            x: target.record.position.x - viewerMatrix[12],
-            y: target.record.position.y - viewerMatrix[13],
-            z: target.record.position.z - viewerMatrix[14]
+            x: target.record.position.x - origin.x,
+            y: target.record.position.y - origin.y,
+            z: target.record.position.z - origin.z
         };
         target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
         setGuide(`Holding ${target.record.name || 'the orb'}. Move your phone, then release.`);
@@ -2107,29 +2120,26 @@ function drawMarker(view) {
 }
 
 function drawDemoControllerPointer(view) {
-    if (!latestControllerRay || !sphereRenderer || !tetherRenderer) return;
+    if (!latestControllerRay || !tetherRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = {
-        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
-        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
-        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
-    };
+    const end = controllerRayEnd(latestControllerRay, markers.flatMap(record => [
+        { position: record.position, radius: record.demoType === 'note' ? .55 : .22 },
+        ...(record.demoExpanded && record.informationPosition
+            ? [{ position: record.informationPosition, radius: .62 }]
+            : [])
+    ]), XR_LASER_POINTER_CONFIG.length);
+    if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
         width: XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
         color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
-    });
-    drawSpatialOrb(gl, sphereRenderer, view, end, XR_LASER_POINTER_CONFIG.dotRadius, {
-        type: 'marker',
-        color: XR_LASER_POINTER_CONFIG.color,
-        opacity: 1
     });
 }
 

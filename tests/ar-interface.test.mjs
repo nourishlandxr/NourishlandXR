@@ -791,7 +791,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const webxrSource = read('app/services/webxrSession.js');
     const styles = read('app/style.css');
     assert.match(source, /function demoPointerWorldRay\(\)/);
-    assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\)\)/);
+    assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\), demoPointerWorldOrigin\(\)\)/);
+    assert.match(source, /if \(latestControllerRay\) return latestControllerRay\.direction/);
+    assert.match(source, /function demoPointerWorldOrigin\(\)/);
+    assert.match(source, /function drawDemoControllerPointer\(view\)/);
+    assert.match(source, /controllerRayEnd\(latestControllerRay/);
+    assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialOrb/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
@@ -939,7 +944,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-virtual-tag-mode \{[^}]*position:fixed;[^}]*z-index:12100;[^}]*background:#f2f4ec;/);
     assert.match(styles, /\.tryit-virtual-tag-close,body\[data-project-theme\] \.tryit-virtual-tag-close/);
     assert.match(source, /data-tryit-intro-continue/);
-    assert.match(styles, /\.tryit-intro-continue/);
+    assert.match(styles, /\.tryit-intro-continue \{[^}]*min-width:184px;[^}]*min-height:62px;[^}]*font-size:clamp\(1\.05rem,3\.8vw,1\.25rem\)/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);

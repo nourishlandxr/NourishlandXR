@@ -21,7 +21,7 @@ import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPri
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
-import { controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -1103,29 +1103,26 @@ function updateControllerRay(frame) {
 }
 
 function drawControllerPointer(view) {
-    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !controllerPointerRenderer || !sphereRenderer) return;
+    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !controllerPointerRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = {
-        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
-        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
-        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
-    };
+    const end = controllerRayEnd(latestControllerRay, activeAreaMarkers()
+        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
+        .map(record => ({
+            position: record.position,
+            radius: record.marker.type === 'note' ? .55 : record.marker.type === 'area_checkpoint' ? .36 : .22
+        })), XR_LASER_POINTER_CONFIG.length);
+    if (!end) return;
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
         width: XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
         color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
-    });
-    drawSpatialOrb(gl, sphereRenderer, view, end, XR_LASER_POINTER_CONFIG.dotRadius, {
-        type: 'marker',
-        color: XR_LASER_POINTER_CONFIG.color,
-        opacity: 1
     });
 }
 
@@ -1137,12 +1134,16 @@ function positionControllerPointer(view = latestView) {
         pointer.classList.remove('is-edge');
         return;
     }
-    const { origin, direction } = latestControllerRay;
-    const point = {
-        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
-        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
-        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
-    };
+    const point = controllerRayEnd(latestControllerRay, activeAreaMarkers()
+        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
+        .map(record => ({
+            position: record.position,
+            radius: record.marker.type === 'note' ? .55 : record.marker.type === 'area_checkpoint' ? .36 : .22
+        })), XR_LASER_POINTER_CONFIG.length);
+    if (!point) {
+        pointer.hidden = true;
+        return;
+    }
     const projected = projectWorldPoint(view, point);
     const margin = 24;
     const x = projected?.x ?? window.innerWidth / 2;

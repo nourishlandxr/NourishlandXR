@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { selectWebXRSessionMode } from '../app/services/webxrSession.js';
-import { controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
 
 test('WebXR prefers passthrough AR and falls back to native 6DoF immersive mode', () => {
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': true, 'immersive-vr': true }), 'immersive-ar');
@@ -39,5 +39,8 @@ test('Quest laser pointer configuration is shared by immersive modes', () => {
     assert.deepEqual(ray.direction, { x: -0, y: -0, z: -1 });
     assert.equal(ray.handedness, 'right');
     assert.equal(XR_LASER_POINTER_CONFIG.length, 5);
-    assert.equal(XR_LASER_POINTER_CONFIG.dotRadius, 0.07);
+    const subjectEnd = controllerRayEnd(ray, [{ position: { x: 1, y: 2, z: 1 }, radius: .25 }]);
+    assert.equal(subjectEnd.distance, 1.75);
+    assert.equal(subjectEnd.z, 1.25);
+    assert.equal(controllerRayEnd(ray, []).distance, 5);
 });
