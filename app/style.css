@@ -6649,7 +6649,40 @@ body:has(.field-guide-tool) {
 .project-entry .latest-entries-section > summary h2 { margin:0; }
 .project-entry .latest-entries-chevron { color:var(--leaf-deep); font-size:1.1rem; line-height:1; }
 .project-entry .latest-entries-section[open] .latest-entries-chevron { transform:rotate(180deg); }
-.project-entry .latest-entries-content { display:grid; gap:10px; margin-top:12px; }
+.project-entry .latest-entries-content { display:grid; gap:10px; min-width:0; max-width:100%; margin-top:12px; }
+.project-entry .latest-entries-content .latest-entry-list { min-width:0; max-width:100%; gap:0; border-top:1px solid rgba(43,78,52,.13); }
+.project-entry .latest-entries-content .latest-entry-row.change-entry-row {
+    display:block;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    min-height:0;
+    padding:9px 0;
+    overflow:hidden;
+    border:0;
+    border-bottom:1px solid rgba(43,78,52,.12);
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    color:var(--leaf-ink);
+}
+.project-entry .latest-entries-content .latest-entry-row.change-entry-row:hover,
+.project-entry .latest-entries-content .latest-entry-row.change-entry-row:focus-visible { background:rgba(231,240,225,.34); box-shadow:none; transform:none; }
+.project-entry .latest-entries-content .recent-record-line {
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    gap:2px 8px;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    white-space:normal;
+    overflow-wrap:anywhere;
+}
+.project-entry .latest-entries-content .recent-record-line strong,
+.project-entry .latest-entries-content .recent-record-line span,
+.project-entry .latest-entries-content .recent-record-line small { min-width:0; overflow-wrap:anywhere; }
+.project-entry .latest-entries-content .recent-record-line small { grid-column:1 / -1; display:block; }
+.project-entry .latest-entries-content .view-all-entries { justify-self:start; min-height:32px; padding-inline:0; }
 @media (max-width:700px) {
     .field-guide-tool .field-guide-header { padding:20px 18px 22px; }
     .field-guide-tool .field-guide-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }

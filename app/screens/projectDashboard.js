@@ -65,7 +65,11 @@ function collapseRecentlyAdded(app) {
     const content = document.createElement('div');
     content.className = 'latest-entries-content';
     content.append(list);
-    if (viewAll) content.append(viewAll);
+    if (viewAll) {
+        viewAll.textContent = 'Open detailed log';
+        viewAll.setAttribute('aria-label', 'Open detailed log');
+        content.append(viewAll);
+    }
     details.append(summary, content);
     section.replaceWith(details);
 }
@@ -1232,7 +1236,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             ...projectEntries.map(entry => entry.marker.modified || entry.marker.created),
             ...areas.map(area => area.modified || area.created)
         ].filter(Boolean).sort().at(-1);
-        const latestEntries = placedEntries.slice(0, 8).map(({ marker, place }) => {
+        const latestEntries = placedEntries.slice(0, 10).map(({ marker, place }) => {
             const markerType = effectiveMarkerType(marker);
             return {
                 label: escapeHtml(marker.name),

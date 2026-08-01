@@ -184,6 +184,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /dashboard-frame-title.*Dashboard/);
     assert.match(source, /label: 'Printing options'/);
     assert.match(source, /collapseRecentlyAdded/);
+    assert.match(source, /placedEntries\.slice\(0, 10\)/);
+    assert.match(source, /Open detailed log/);
     assert.match(source, /window\.renderPrintCenter/);
     assert.match(printCenterSource, /Print anchors/);
     assert.match(printCenterSource, /Plant tags/);
