@@ -24,6 +24,7 @@ test('matching Totem names remain independent across projects', () => {
 test('welcome keeps primary roles separate and pairs About with the existing AR demo', () => {
     const app = { innerHTML: '' };
     renderLaunchScreen(app);
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(app.innerHTML, /Create &amp; Manage/);
     assert.match(app.innerHTML, /Build and manage locations, content and visitor experiences/);
     assert.match(app.innerHTML, /Explore a Place/);
@@ -41,6 +42,8 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.doesNotMatch(app.innerHTML, /Using a suitable device/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
     assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
+    assert.match(styles, /\.intro-launch \.role-grid \{ grid-template-columns:repeat\(2/);
+    assert.match(styles, /\.welcome-complementary-grid \{[\s\S]*?grid-template-columns:\s*repeat\(2/);
 });
 
 test('About This Tool explains the concept without tutorial instructions', () => {
@@ -287,7 +290,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
 test('creator dashboard frame stays inside the viewport with a simple border', () => {
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(styles, /body:has\(\.project-entry\) #app \{[\s\S]*?overflow-x:hidden;/);
-    assert.match(styles, /\.project-entry \.dashboard-frame \{[\s\S]*?max-width:100%;[\s\S]*?overflow:hidden;[\s\S]*?border:1px solid rgba\(94,69,40/);
+    assert.match(styles, /\.project-entry \.dashboard-frame \{[\s\S]*?max-width:100%;[\s\S]*?overflow:hidden;[\s\S]*?border:1px solid rgba\(43,78,52/);
     assert.match(styles, /\.project-entry \.dashboard-frame::before,[\s\S]*?display:none;/);
 });
 
