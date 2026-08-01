@@ -362,6 +362,7 @@ test('quick access creation is minimal and separates Area assignment from placem
 
 test('Try It Now guides two Plants and a Note without turning an orb into a Totem', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
+    const webxrSource = fs.readFileSync(path.join(root, 'app/services/webxrSession.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
@@ -393,11 +394,11 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     assert.match(source, /function placeMarker/);
     assert.match(source, /function createMarkerTexture/);
     assert.doesNotMatch(source, /Loading Dashboard|Place Your Dashboard|draggable-window/);
-    assert.match(source, /isSessionSupported\('immersive-ar'\)/);
+    assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(source, /makeXRCompatible/);
     assert.match(source, /new XRWebGLLayer/);
     assert.match(source, /requestAnimationFrame\(draw\)/);
-    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);

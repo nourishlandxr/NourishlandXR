@@ -19,6 +19,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
+import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -2658,11 +2659,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['dom-overlay', 'hit-test'],
-            optionalFeatures: ['local-floor'],
-            domOverlay: { root: overlayRoot }
-        });
+        const arSession = await requestImmersiveArSession(overlayRoot);
+        session = arSession.session;
         const launchedSession = session;
         document.body.classList.add('creator-ar-session-active');
         const restoringOverlay = overlayRoot;
@@ -2703,8 +2701,13 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             refSpace = await session.requestReferenceSpace('local');
             referenceSpaceHasFloor = false;
         }
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+        try {
+            const viewerSpace = await session.requestReferenceSpace('viewer');
+            hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+        } catch (error) {
+            hitTestSource = null;
+            setPlacementStatus(`AR is active. Surface detection is unavailable, so placement will use your view direction. (${error.message})`);
+        }
 
         const draw = (_time, frame) => {
             if (frame.session !== session || !gl) return;

@@ -12,6 +12,7 @@ import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPri
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage } from '../services/i18n.js';
+import { requestImmersiveArSession } from '../services/webxrSession.js';
 
 let appRoot = null;
 let session = null;
@@ -1927,17 +1928,23 @@ function drawMarker(view) {
 }
 
 async function startImmersive() {
-    if (!navigator.xr || !window.isSecureContext || !await navigator.xr.isSessionSupported('immersive-ar')) return false;
+    if (!navigator.xr || !window.isSecureContext) return false;
     try {
-        session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['dom-overlay', 'hit-test'], optionalFeatures: ['local-floor'], domOverlay: { root: appRoot } });
+        const arSession = await requestImmersiveArSession(appRoot);
+        session = arSession.session;
         canvas = document.createElement('canvas'); canvas.className = 'tryit-xr-canvas'; document.body.append(canvas);
         gl = canvas.getContext('webgl', { alpha: true, antialias: true });
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, antialias: true }) });
         try { referenceSpace = await session.requestReferenceSpace('local-floor'); } catch { referenceSpace = await session.requestReferenceSpace('local'); }
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+        try {
+            const viewerSpace = await session.requestReferenceSpace('viewer');
+            hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+        } catch (error) {
+            hitTestSource = null;
+            setGuide(`Surface detection unavailable; placement uses your view direction. (${error.message})`);
+        }
         setupRenderer();
         session.addEventListener('select', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;

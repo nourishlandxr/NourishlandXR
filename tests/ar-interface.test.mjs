@@ -295,7 +295,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(styles, /\.creator-ar-context-toolbar\[hidden\] \{ display:none; \}/);
     assert.doesNotMatch(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-taskbar \[data-ar-view-mode\]/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
-    assert.match(arSource, /function armPlacement\(type\)/);
+    assert.match(arSource, /async function armPlacement\(type, specialMarker = null\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /EXIT AR/);
     assert.doesNotMatch(arSource, /Choose its purpose/);
@@ -663,8 +663,11 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
 
 test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
-    assert.match(arSource, /navigator\.xr\.requestSession\('immersive-ar'/);
-    assert.match(arSource, /domOverlay: \{ root: overlayRoot \}/);
+    const webxrSource = read('app/services/webxrSession.js');
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot\)/);
+    assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
+    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /requiredFeatures: \['dom-overlay'\], optionalFeatures: \['hit-test', 'local-floor'\]/);
     assert.match(arSource, /launchedSession\.addEventListener\('end'/);
     assert.match(arSource, /creator-ar-session-active/);
     assert.match(arSource, /activeSession\?\.end/);
@@ -726,12 +729,13 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
 
 test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
+    const webxrSource = read('app/services/webxrSession.js');
     const styles = read('app/style.css');
     assert.match(source, /function demoPointerWorldRay\(\)/);
     assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\)\)/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
-    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
-    assert.match(source, /domOverlay: \{ root: appRoot \}/);
+    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /placementReady/);
     assert.match(source, /placementPointerMarkup/);
@@ -778,10 +782,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
-    assert.match(source, /Welcome to the Nourishland XR demo interface/);
-    assert.match(source, /Augmented reality \(AR\) is a technology that can help us better understand and interact with the world around us/);
-    assert.match(source, /both a mapping tool and a portal for plant-related information/);
-    assert.match(source, /few examples of how plant information can be mapped to real places and brought to life/);
+    assert.match(source, /Welcome to the NourishlandXR demo interface/);
+    assert.match(source, /Augmented reality \(AR\) and mixed reality \(XR\) are technologies that can help us better understand and interact with the world around us/);
+    assert.match(source, /Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor/);
+    assert.match(source, /few examples of how plant information can be mapped to real places/);
     assert.match(source, /plant: \['Your pointer', 'This may feel unfamiliar at first, but don’t worry—we’ll explore it together, one step at a time\. First, you’ll see a pointer appear… You will see a round circle on your screen\./);
     assert.match(source, /You will see a round circle on your screen\. This is your pointer\./);
     assert.match(source, /Press it to create a Plant orb\. Press Continue to load your pointer\./);
@@ -1005,11 +1009,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
 
 test('Creator project AR is a no-code placement session without a dashboard overlay', () => {
     const source = read('app/screens/arMode.js');
+    const webxrSource = read('app/services/webxrSession.js');
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(source, /domOverlay: \{ root: overlayRoot \}/);
-    assert.match(source, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
+    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /const ray = pointerWorldRay\(\)/);
     assert.match(source, /id = 'creatorArOverlay'/);
@@ -1042,13 +1047,16 @@ test('Creator project AR is a no-code placement session without a dashboard over
 
 test('Creator AR supports temporary checkpoints and direct test sessions', () => {
     const arSource = read('app/screens/arMode.js');
+    const webxrSource = read('app/services/webxrSession.js');
     const persistenceSource = read('app/services/persistence.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const serverSource = read('tools/persistence-server.mjs');
     assert.match(arSource, /let startPromise = null/);
     assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
-    assert.match(arSource, /session = await navigator\.xr\.requestSession\('immersive-ar'/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot\)/);
+    assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
+    assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
     assert.match(dashboardSource, /Open Test AR/);
     assert.match(dashboardSource, /renderAreaCheckpointForm/);
