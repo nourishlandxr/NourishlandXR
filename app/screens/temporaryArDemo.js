@@ -13,6 +13,7 @@ import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
+import { controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 
 let appRoot = null;
 let session = null;
@@ -25,6 +26,7 @@ let hitTestSource = null;
 let viewerMatrix = null;
 let latestDemoView = null;
 let hitMatrix = null;
+let latestControllerRay = null;
 let marker = null;
 let markerType = 'marker';
 let markers = [];
@@ -152,6 +154,7 @@ function clearSessionState() {
     viewerMatrix = null;
     latestDemoView = null;
     hitMatrix = null;
+    latestControllerRay = null;
     marker = null;
     markerType = 'marker';
     demoStage = 'plant';
@@ -1412,6 +1415,25 @@ function setupRenderer() {
     prismRenderer = createSpatialPrismRenderer(gl);
 }
 
+function demoControllerInputSource() {
+    const sources = [...(session?.inputSources || [])];
+    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer');
+    return trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
+        || trackedControllers.find(source => source.handedness === 'right')
+        || trackedControllers.find(source => source.gamepad)
+        || trackedControllers[0]
+        || null;
+}
+
+function updateDemoControllerRay(frame) {
+    latestControllerRay = null;
+    const source = demoControllerInputSource();
+    if (!source || !referenceSpace) return;
+    const controllerSpace = source.targetRaySpace || source.gripSpace;
+    const pose = controllerSpace ? frame.getPose(controllerSpace, referenceSpace) : null;
+    latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
+}
+
 function unusedLegacyMarkerTexture() {
     if (!gl) return;
     const label = document.createElement('canvas');
@@ -2084,6 +2106,34 @@ function drawMarker(view) {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
     });
+    drawDemoControllerPointer(view);
+}
+
+function drawDemoControllerPointer(view) {
+    if (!latestControllerRay || !sphereRenderer || !tetherRenderer) return;
+    const { origin, direction } = latestControllerRay;
+    const start = {
+        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
+        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
+        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
+    };
+    const end = {
+        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
+        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
+        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
+    };
+    drawSpatialTether(gl, tetherRenderer, view, start, end, {
+        segments: XR_LASER_POINTER_CONFIG.segments,
+        width: XR_LASER_POINTER_CONFIG.width,
+        curve: .001,
+        lift: .001,
+        color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
+    });
+    drawSpatialOrb(gl, sphereRenderer, view, end, XR_LASER_POINTER_CONFIG.dotRadius, {
+        type: 'marker',
+        color: XR_LASER_POINTER_CONFIG.color,
+        opacity: 1
+    });
 }
 
 async function startImmersive() {
@@ -2128,6 +2178,7 @@ async function startImmersive() {
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
+            updateDemoControllerRay(frame);
             updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);

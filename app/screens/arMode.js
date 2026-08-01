@@ -21,6 +21,7 @@ import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPri
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
+import { controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -1099,42 +1100,32 @@ function updateControllerRay(frame) {
     if (!source || !refSpace) return;
     const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
     const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
-    const matrix = pose?.transform?.matrix;
-    if (!matrix) return;
-    const x = -matrix[8];
-    const y = -matrix[9];
-    const z = -matrix[10];
-    const length = Math.hypot(x, y, z) || 1;
-    latestControllerRay = {
-        origin: { x: matrix[12], y: matrix[13], z: matrix[14] },
-        direction: { x: x / length, y: y / length, z: z / length },
-        handedness: source.handedness || 'right'
-    };
+    latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
 }
 
 function drawControllerPointer(view) {
     if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !controllerPointerRenderer || !sphereRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
-        x: origin.x + direction.x * .04,
-        y: origin.y + direction.y * .04,
-        z: origin.z + direction.z * .04
+        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
+        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
+        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
     const end = {
-        x: origin.x + direction.x * 5,
-        y: origin.y + direction.y * 5,
-        z: origin.z + direction.z * 5
+        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
+        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
+        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
     };
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
-        segments: 8,
-        width: .014,
+        segments: XR_LASER_POINTER_CONFIG.segments,
+        width: XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
-        color: [.82, 1, .26, .96]
+        color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    drawSpatialOrb(gl, sphereRenderer, view, end, .07, {
+    drawSpatialOrb(gl, sphereRenderer, view, end, XR_LASER_POINTER_CONFIG.dotRadius, {
         type: 'marker',
-        color: [.82, 1, .26],
+        color: XR_LASER_POINTER_CONFIG.color,
         opacity: 1
     });
 }
@@ -1149,9 +1140,9 @@ function positionControllerPointer(view = latestView) {
     }
     const { origin, direction } = latestControllerRay;
     const point = {
-        x: origin.x + direction.x * 2.2,
-        y: origin.y + direction.y * 2.2,
-        z: origin.z + direction.z * 2.2
+        x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.length,
+        y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.length,
+        z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.length
     };
     const projected = projectWorldPoint(view, point);
     const margin = 24;
@@ -3144,7 +3135,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: true });
+        // Quest Browser can expose a valid immersive session while rejecting
+        // DOM overlay as a required feature. Keep the overlay optional: phones
+        // and supported Quest builds still receive it, while controller laser
+        // input and spatial controls keep Creator AR from failing at launch.
+        const arSession = await requestImmersiveArSession(overlayRoot);
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         const launchedSession = session;
