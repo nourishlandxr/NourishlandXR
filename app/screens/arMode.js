@@ -367,30 +367,29 @@ function hasPlantProfile(record) {
 function creatorPlantKnowledge(record) {
     const profile = record.plantProfile || record.marker.plant_profile || {};
     const summary = (...values) => values.find(value => String(value || '').trim()) || 'Add in Web Mode';
+    const scientific = summary(profile.scientific_name);
+    const layer = summary(profile.layer, profile.plant_type);
     return {
         title: profile.common_name || record.marker.name || 'Plant Profile',
+        core: { scientific, layer },
         left: [
             ['USES', summary(profile.uses, profile.overview)],
             ['RELATIONSHIPS', summary(profile.relationships, profile.companions)],
-            ['FOREST LAYER', summary(profile.layer, profile.plant_type)]
+            ['ORIGIN', summary(profile.origin, profile.propagation)]
         ],
         right: [
-            ['SCIENTIFIC', summary(profile.scientific_name)],
             ['BIOLOGY', summary(profile.family, profile.plant_type)],
-            ['ORIGIN', summary(profile.origin, profile.propagation)]
+            ['CARE', summary(profile.care, profile.management, profile.pruning)],
+            ['GARDEN ROLE', summary(profile.role, profile.function, profile.companions)]
         ]
     };
 }
 
 function creatorPlantKnowledgeMarkup(record) {
     const knowledge = creatorPlantKnowledge(record);
-    const compactLabel = label => ({
-        RELATIONSHIPS: 'LINKS',
-        SCIENTIFIC: 'BOTANY',
-        'FOREST LAYER': 'LAYER'
-    })[String(label).toUpperCase()] || label;
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-label="${escapeHtml(label)}" aria-expanded="false"><b>${escapeHtml(compactLabel(label))}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
-    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="plant-knowledge-lattice" d="M50 50 L38 28 L27 50 L38 72 L50 50 L62 28 L73 50 L62 72 Z"/><path class="plant-knowledge-terminals" d="M34 20 L28 9 M66 20 L72 9 M34 80 L28 91 M66 80 L72 91"/><circle cx="28" cy="9" r="1.7"/><circle cx="72" cy="9" r="1.7"/><circle cx="28" cy="91" r="1.7"/><circle cx="72" cy="91" r="1.7"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong></span>${branch('right', knowledge.right)}</span>`;
+    const compactLabel = label => ({ RELATIONSHIPS: 'LINKS' })[String(label).toUpperCase()] || label;
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.slice(0, 3).map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-label="${escapeHtml(label)}" aria-expanded="false"><b>${escapeHtml(compactLabel(label))}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
+    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PLANT PROFILE</small><strong>${escapeHtml(knowledge.title)}</strong><i>${escapeHtml(knowledge.core.scientific)}</i><em>${escapeHtml(knowledge.core.layer)}</em></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -1936,13 +1935,13 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
     const layout = creatorPlantProfileLayout(window.innerWidth, window.innerHeight, markerX, markerY);
-    const { panelWidth, panelHeight, panelX, panelY, panelTop, tetherStartY } = layout;
+    const { panelWidth, panelHeight, panelX, panelY, tetherStartY, tetherEndY } = layout;
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
     profile.style.width = `${panelWidth}px`;
     profile.style.height = `${panelHeight}px`;
     const diagramAnchorX = panelX;
-    const diagramAnchorY = panelTop + 4;
+    const diagramAnchorY = tetherEndY;
     const dx = diagramAnchorX - markerX;
     const dy = diagramAnchorY - tetherStartY;
     tether.style.left = `${markerX}px`;
@@ -1985,7 +1984,7 @@ function renderSessionMarkers() {
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-below-orb" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
@@ -2021,9 +2020,6 @@ function renderSessionMarkers() {
             });
             cell.addEventListener('click', event => {
                 event.stopPropagation();
-                activate();
-            });
-            cell.addEventListener('mouseenter', () => {
                 activate();
             });
         });

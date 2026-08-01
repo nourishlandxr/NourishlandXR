@@ -42,7 +42,6 @@ let boardTypingTimer = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
 let demoHoldTimer = null;
-let knowledgeTourTimer = null;
 let introNarrationTimer = null;
 let introSceneStartedAt = 0;
 let introSceneActive = true;
@@ -129,6 +128,7 @@ const DEMO_CONTENT = Object.freeze({
 });
 const MORINGA_KNOWLEDGE = Object.freeze({
     title: 'Moringa Tree',
+    core: Object.freeze({ scientific: 'Moringa oleifera · Moringaceae', layer: 'Canopy / low tree layer' }),
     left: [
         ['USES', 'Nutritious leaves · shade · mulch'],
         ['GROWTH', 'Warm climate · sun · free drainage'],
@@ -136,7 +136,7 @@ const MORINGA_KNOWLEDGE = Object.freeze({
     ],
     right: [
         ['ORIGIN', 'South Asia · tropical regions'],
-        ['SCIENTIFIC', 'Moringa oleifera · Moringaceae'],
+        ['SOIL & WATER', 'Free drainage · moderate water'],
         ['STORY', 'Food cultures · medicine · resilience']
     ]
 });
@@ -166,13 +166,11 @@ function clearSessionState() {
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
-    clearTimeout(knowledgeTourTimer);
     clearTimeout(introNarrationTimer);
     boardTypingTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
     demoHoldTimer = null;
-    knowledgeTourTimer = null;
     introNarrationTimer = null;
     introSceneStartedAt = 0;
     introSceneActive = true;
@@ -569,37 +567,6 @@ function runArWelcomeTutorial() {
     );
 }
 
-function runKnowledgeTour(record, onComplete) {
-    const knowledge = knowledgeFor(record);
-    const topics = [
-        ...knowledge.left.map(([topic], index) => [`left-${index}`, topic]),
-        ...knowledge.right.map(([topic], index) => [`right-${index}`, topic])
-    ];
-    let index = 0;
-    clearTimeout(knowledgeTourTimer);
-    const revealNext = () => {
-        const [branchKey, topic] = topics[index];
-        record.demoActiveBranch = branchKey;
-        if (!simulatedMode) {
-            if (record.texture) gl?.deleteTexture(record.texture);
-            record.texture = createMarkerTexture(record);
-        }
-        const profile = appRoot?.querySelector(`[data-demo-plant-profile="${markers.indexOf(record)}"]`);
-        profile?.querySelectorAll('[data-plant-branch]').forEach(cell => {
-            const open = cell.dataset.plantBranch === branchKey;
-            cell.classList.toggle('is-open', open);
-            cell.classList.toggle('is-guided-highlight', open);
-            cell.setAttribute('aria-expanded', String(open));
-            cell.querySelector('small')?.setAttribute('aria-hidden', String(!open));
-        });
-        setGuide(`${topic} is connected to this living Plant Profile.`);
-        index += 1;
-        if (index < topics.length) knowledgeTourTimer = setTimeout(revealNext, 900);
-        else knowledgeTourTimer = setTimeout(onComplete, 700);
-    };
-    revealNext();
-}
-
 function guidePlantConversion(record) {
     const moringa = record.tutorialStage === 'plant2';
     const plantName = moringa ? 'Moringa Tree' : PIGEON_PEA_EXAMPLE.commonName;
@@ -761,8 +728,8 @@ function tetherMetrics(offset) {
 function clampPlantPanelOffset(anchor, offset) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileWidth = Math.min(viewportWidth * 0.96, 640);
-    const profileHeight = Math.min(400, Math.max(300, viewportWidth * 0.6));
+    const profileWidth = Math.min(viewportWidth * 0.94, 560);
+    const profileHeight = Math.min(300, Math.max(228, viewportWidth * 0.52));
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
     const minimumX = 16 + profileWidth / 2 - anchorX;
@@ -778,19 +745,16 @@ function clampPlantPanelOffset(anchor, offset) {
 function defaultPlantPanelOffset(anchor) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileHeight = Math.min(400, Math.max(300, viewportWidth * 0.6));
+    const profileHeight = Math.min(300, Math.max(228, viewportWidth * 0.52));
     const anchorY = viewportHeight * anchor.y / 100;
-    const upwardRoom = anchorY - 72 - profileHeight / 2;
-    if (upwardRoom >= 48) return clampPlantPanelOffset(anchor, { x: 0, y: -Math.min(132, upwardRoom) });
-    const profileWidth = Math.min(viewportWidth * 0.96, 640);
-    const anchorX = viewportWidth * anchor.x / 100;
-    const rightRoom = viewportWidth - 16 - profileWidth / 2 - anchorX;
-    const leftRoom = 16 + profileWidth / 2 - anchorX;
+    const margin = 28;
+    const aboveOffset = -(profileHeight / 2 + margin);
+    const belowOffset = profileHeight / 2 + margin;
+    const aboveTop = anchorY + aboveOffset - profileHeight / 2;
+    const belowBottom = anchorY + belowOffset + profileHeight / 2;
     return clampPlantPanelOffset(anchor, {
-        x: Math.abs(rightRoom) >= Math.abs(leftRoom)
-            ? Math.max(64, Math.min(150, rightRoom))
-            : Math.min(-64, Math.max(-150, leftRoom)),
-        y: 0
+        x: 0,
+        y: aboveTop >= 16 || belowBottom > viewportHeight - 16 ? aboveOffset : belowOffset
     });
 }
 
@@ -830,17 +794,16 @@ function toggleDemoPlantProfile(record) {
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
         record.profileRevealStarted = performance.now();
-        if (!record.demoActiveBranch) record.demoActiveBranch = 'left-0';
+        record.demoActiveBranch = '';
+        record.demoProfileInteracted = false;
     }
     refreshDemoRecord(record);
     if (record.demoExpanded && record.awaitingProfileReveal) {
         record.awaitingProfileReveal = false;
         navigator.vibrate?.([45, 40, 75]);
-        runKnowledgeTour(record, () => record.tutorialStage === 'plant2' ? showDemoAction('note') : inviteVirtualTag(record));
-        return;
     }
     setGuide(record.demoExpanded
-        ? `${record.name || 'Plant'} profile opened gently. Press the living orb again to hide it.`
+        ? `${record.name || 'Plant'} profile opened. Press a cell to reveal its information.`
         : `${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
 }
 
@@ -852,6 +815,23 @@ export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantP
     );
     if (!record) return false;
     reveal(record);
+    return true;
+}
+
+function selectDemoProfileCell() {
+    const record = [...markers].reverse().find(candidate => candidate?.demoType === 'plant' && candidate.demoExpanded);
+    if (!record) return false;
+    const knowledge = knowledgeFor(record);
+    const keys = [
+        ...knowledge.left.slice(0, 3).map((_, index) => `left-${index}`),
+        ...knowledge.right.slice(0, 3).map((_, index) => `right-${index}`)
+    ];
+    if (!keys.length) return false;
+    const currentIndex = keys.indexOf(record.demoActiveBranch);
+    record.demoActiveBranch = keys[(currentIndex + 1) % keys.length];
+    if (record.texture) gl?.deleteTexture(record.texture);
+    record.texture = createMarkerTexture(record);
+    setGuide('Plant Profile cell opened. Select again to explore the next cell.');
     return true;
 }
 
@@ -1018,6 +998,11 @@ function bindSimulatedInformationPanels(layer) {
         const cells = [...profile.querySelectorAll('[data-plant-branch]')];
         const activateBranch = branchKey => {
             record.demoActiveBranch = branchKey;
+            if (!record.demoProfileInteracted) {
+                record.demoProfileInteracted = true;
+                if (record.tutorialStage === 'plant2') showDemoAction('note');
+                else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+            }
             cells.forEach(candidate => {
                 const open = candidate.dataset.plantBranch === branchKey;
                 candidate.classList.toggle('is-open', open);
@@ -1035,7 +1020,6 @@ function bindSimulatedInformationPanels(layer) {
                 const branchKey = cell.dataset.plantBranch;
                 activateBranch(branchKey);
             });
-            cell.addEventListener('mouseenter', () => activateBranch(cell.dataset.plantBranch));
         });
         let start = null;
         handle.addEventListener('pointerdown', event => {
@@ -1077,13 +1061,15 @@ function bindSimulatedInformationPanels(layer) {
     });
 }
 
-function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, activeBranch = 'left-0') {
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.map(([label, value], index) => {
+const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, activeBranch = '') {
+    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.slice(0, 3).map(([label, value], index) => {
         const key = `${side}-${index}`;
         const open = activeBranch === key;
-        return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${label}</b><small aria-hidden="${!open}">${value}</small></button>`;
+        return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${demoProfileEscape(label)}</b><small aria-hidden="${!open}">${demoProfileEscape(value)}</small></button>`;
     }).join('')}</span>`;
-    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="plant-knowledge-lattice" d="M50 50 L38 28 L27 50 L38 72 L50 50 L62 28 L73 50 L62 72 Z"/><path class="plant-knowledge-terminals" d="M34 20 L28 9 M66 20 L72 9 M34 80 L28 91 M66 80 L72 91"/><circle cx="28" cy="9" r="1.7"/><circle cx="72" cy="9" r="1.7"/><circle cx="28" cy="91" r="1.7"/><circle cx="72" cy="91" r="1.7"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${knowledge.title} information cluster"><small>PLANT PROFILE</small><strong>${knowledge.title}</strong></span>${branch('right', knowledge.right)}</span>`;
+    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} information cluster"><small>PLANT PROFILE</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -1219,10 +1205,6 @@ function releaseHeldDemoRecord() {
 
 function plantInformationPosition(record) {
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
-    const viewerY = Number(viewerMatrix?.[13]);
-    const minimumY = position.y + 0.45;
-    const maximumY = position.y + 1.05;
-    const preferredY = Number.isFinite(viewerY) ? viewerY - 0.12 : position.y + 0.72;
     const cameraX = Number(viewerMatrix?.[12]);
     const cameraZ = Number(viewerMatrix?.[14]);
     const towardViewerX = Number.isFinite(cameraX) ? cameraX - position.x : 0;
@@ -1230,7 +1212,7 @@ function plantInformationPosition(record) {
     const horizontalDistance = Math.hypot(towardViewerX, towardViewerZ) || 1;
     return {
         x: position.x + towardViewerX / horizontalDistance * 0.14,
-        y: Math.min(maximumY, Math.max(minimumY, preferredY)),
+        y: position.y + 0.92,
         z: position.z + towardViewerZ / horizontalDistance * 0.14
     };
 }
@@ -1509,7 +1491,7 @@ function createSpatialKnowledgeTexture(record) {
     label.height = record.demoType === 'zone' ? 1120 : 720;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
-        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoActiveBranch || 'left-0');
+        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoActiveBranch || '');
         return canvasTexture(label);
     }
     if (record.demoType === 'zone') {
@@ -1852,23 +1834,32 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
     ctx.stroke();
 }
 
-function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0') {
+function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = '') {
     ctx.clearRect(0, 0, label.width, label.height);
     const center = { x: label.width / 2, y: label.height / 2 };
     const cells = [
         ...knowledge.left.map((item, index) => ({
             item,
             key: `left-${index}`,
-            x: [400, 275, 275, 400][index],
-            y: [105, 275, 445, 615][index]
-        })),
+            x: [390, 275, 390][index],
+            y: [170, 360, 550][index]
+        })).filter(cell => cell.item),
         ...knowledge.right.map((item, index) => ({
             item,
             key: `right-${index}`,
-            x: [720, 845, 845, 720][index],
-            y: [105, 275, 445, 615][index]
-        }))
+            x: [730, 845, 730][index],
+            y: [170, 360, 550][index]
+        })).filter(cell => cell.item)
     ];
+    ctx.strokeStyle = 'rgba(222,239,207,.74)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    cells.forEach(cell => {
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(cell.x, cell.y);
+        ctx.stroke();
+    });
     cells.forEach(cell => {
         const open = cell.key === activeBranch;
         drawHexagon(ctx, cell.x, cell.y, 92, 'rgba(13,42,28,.84)', 'rgba(240,250,233,.76)', 2);
@@ -1902,6 +1893,12 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = 'left-0
     ctx.font = '850 28px system-ui, sans-serif';
     ctx.strokeText(knowledge.title, center.x, center.y + 20);
     ctx.fillText(knowledge.title, center.x, center.y + 20);
+    ctx.font = '650 16px system-ui, sans-serif';
+    ctx.strokeText(knowledge.core?.scientific || 'Scientific name pending', center.x, center.y + 46);
+    ctx.fillText(knowledge.core?.scientific || 'Scientific name pending', center.x, center.y + 46);
+    ctx.font = '650 15px system-ui, sans-serif';
+    ctx.strokeText(knowledge.core?.layer || 'Layer not set', center.x, center.y + 68);
+    ctx.fillText(knowledge.core?.layer || 'Layer not set', center.x, center.y + 68);
 }
 
 function createBoundaryTexture() {
@@ -2085,8 +2082,8 @@ function drawMarker(view) {
             : compact ? record.position : { ...record.position, y: record.position.y + 0.72 };
         const model = billboardMatrix(
             displayPosition,
-            plantProfile ? 1.85 : totem ? 1.9 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
-            plantProfile ? 2.55 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
+            plantProfile ? 1.55 : totem ? 1.9 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
+            plantProfile ? 1.02 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
         );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
@@ -2165,6 +2162,7 @@ async function startImmersive() {
             // tutorial control a phone user sees, then to the live aim.
             if (activateImmersiveDemoControl()) return;
             if (placementReady) return pressPlacementPointer();
+            if (selectDemoProfileCell()) return;
             selectGuidedDemoOrb();
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });

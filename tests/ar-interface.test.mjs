@@ -41,9 +41,10 @@ test('immersive demo selection opens the guided Plant Profile', () => {
 test('Creator AR keeps the Plant orb directly above its profile diagram', () => {
     const phone = creatorPlantProfileLayout(390, 844, 195, 300);
     assert.equal(phone.panelX, 195);
-    assert.ok(phone.panelTop > 300);
+    assert.ok(phone.panelTop < 300);
     assert.equal(phone.panelY, phone.panelTop + phone.panelHeight / 2);
-    assert.ok(phone.panelTop + phone.panelHeight <= 844 - 108);
+    assert.ok(phone.tetherEndY > phone.panelTop);
+    assert.equal(phone.profileAbove, true);
 
     const edge = creatorPlantProfileLayout(390, 844, 12, 300);
     assert.ok(edge.panelX - edge.panelWidth / 2 >= 8);
@@ -929,7 +930,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /FULL PLANT PROFILE/);
     assert.match(source, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
     assert.match(source, /A Plant Live Tag can open this full, view-only plant file/);
-    assert.match(source, /record\.tutorialStage === 'plant2' \? showDemoAction\('note'\) : inviteVirtualTag\(record\)/);
+    assert.match(source, /if \(record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
+    assert.match(source, /else if \(record\.tutorialStage === 'plant'\) inviteVirtualTag\(record\)/);
     assert.match(source, /demoWebModeOpen = true;[\s\S]*suppressSessionSelectUntil = Number\.POSITIVE_INFINITY/);
     assert.match(source, /stage\.inert = true;[\s\S]*stage\.setAttribute\('aria-hidden', 'true'\)/);
     assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);
@@ -949,7 +951,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
     assert.match(source, /data-tryit-guided-choice/);
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : PIGEON_PEA_EXAMPLE\.commonName/);
-    assert.match(source, /runKnowledgeTour/);
+    assert.doesNotMatch(source, /runKnowledgeTour/);
+    assert.match(source, /record\.demoActiveBranch = ''/);
     assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
     assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
@@ -1010,7 +1013,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /bindSimulatedInformationPanels/);
     assert.match(source, /demoPanelOffset/);
     assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
-    assert.match(source, /viewerMatrix\?\.\[13\]/);
+    assert.match(source, /y: position\.y \+ 0\.92/);
     assert.match(source, /drawSpatialTether/);
     assert.match(source, /simulatedAnchor/);
     assert.doesNotMatch(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
@@ -1041,10 +1044,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /plant-knowledge-connectors/);
     assert.match(styles, /\.plant-knowledge-connectors path/);
     assert.match(styles, /--honey-cell-size:clamp\(84px,23vw,112px\)/);
-    assert.match(styles, /--honey-cell-height:clamp\(73px,19\.92vw,97px\)/);
-    assert.match(styles, /\.plant-knowledge-connectors circle/);
+    assert.match(styles, /height: clamp\(228px, 52vw, 300px\)/);
     assert.match(styles, /\.plant-knowledge-left \.plant-knowledge-cell:nth-child\(1\) \{ left:calc\(50% - var\(--honey-x-half\)\); top:calc\(50% - var\(--honey-y-step\)\); \}/);
-    assert.match(styles, /\.plant-knowledge-right \.plant-knowledge-cell:nth-child\(6\)/);
+    assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(source, /activateBranch\(branchKey\)/);
     assert.doesNotMatch(source, /activateBranch\(record\.demoActiveBranch === branchKey \? '' : branchKey\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
@@ -1052,9 +1054,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(sessionSelect, /toggleDemoPlantProfile/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
-    assert.match(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
+    assert.match(styles, /\.plant-knowledge-cell:is\(:focus-visible, \.is-open\)/);
+    assert.doesNotMatch(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
     assert.match(styles, /\.plant-knowledge-core strong \{ color: #fff;[\s\S]*font-weight: 850;/);
+    assert.match(source, /knowledge\.core\?\.scientific/);
+    assert.match(source, /knowledge\.core\?\.layer/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
     assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(72vw,460px\)/);
     assert.match(source, /function renderSimulatedTotem/);
@@ -1257,11 +1262,11 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /function positionCreatorPlantProfile\(record, markerX, markerY\)/);
     assert.match(arSource, /creatorPlantProfileLayout\(window\.innerWidth, window\.innerHeight, markerX, markerY\)/);
     assert.match(arSource, /creatorPlantProfileLayout/);
-    assert.match(arSource, /const diagramAnchorY = panelTop \+ 4/);
-    assert.match(arSource, /creator-ar-plant-profile is-below-orb/);
+    assert.match(arSource, /const diagramAnchorY = tetherEndY/);
+    assert.match(arSource, /creator-ar-plant-profile is-anchored-profile/);
     assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
     assert.match(arSource, /RELATIONSHIPS: 'LINKS'/);
-    assert.match(arSource, /SCIENTIFIC: 'BOTANY'/);
+    assert.match(arSource, /core: \{ scientific, layer \}/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
     assert.match(arSource, /const open = candidate === cell/);
@@ -1276,7 +1281,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(styles, /-webkit-mask-composite:xor; mask-composite:exclude/);
     assert.match(styles, /background:rgba\(7,28,18,.18\)/);
     assert.match(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)[\s\S]*background:transparent !important/);
-    assert.match(styles, /--honey-x-half:var\(--honey-x-step\)/);
+    assert.match(styles, /--honey-x-half:clamp\(28px,7\.2vw,38px\)/);
     assert.match(styles, /\.creator-ar-marker-hit-target-plant\.is-info-open \.creator-ar-spatial-name \{[^}]*max-width:min\(36vw,132px\)/);
     assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);

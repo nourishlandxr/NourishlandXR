@@ -28,6 +28,7 @@ const branch = id => {
 
 export const PIGEON_PEA_AR_KNOWLEDGE = Object.freeze({
     title: PIGEON_PEA_EXAMPLE.commonName,
-    left: Object.freeze([branch('about'), branch('food'), branch('garden-role'), branch('management')]),
-    right: Object.freeze([branch('growth'), branch('soil'), branch('biodiversity'), branch('story')])
+    core: Object.freeze({ scientific: PIGEON_PEA_EXAMPLE.scientificName, layer: 'Shrub layer' }),
+    left: Object.freeze([branch('about'), branch('food'), branch('garden-role')]),
+    right: Object.freeze([branch('growth'), branch('soil'), branch('biodiversity')])
 });
