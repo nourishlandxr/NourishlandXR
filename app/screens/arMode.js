@@ -19,6 +19,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
@@ -65,6 +66,7 @@ let homeSignAnchor = null;
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
+let controllerPointerRenderer = null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
@@ -1088,6 +1090,33 @@ function updateControllerRay(frame) {
     };
 }
 
+function drawControllerPointer(view) {
+    if (creatorInputMode !== 'controller' || !latestControllerRay || !controllerPointerRenderer || !sphereRenderer) return;
+    const { origin, direction } = latestControllerRay;
+    const start = {
+        x: origin.x + direction.x * .04,
+        y: origin.y + direction.y * .04,
+        z: origin.z + direction.z * .04
+    };
+    const end = {
+        x: origin.x + direction.x * 4.5,
+        y: origin.y + direction.y * 4.5,
+        z: origin.z + direction.z * 4.5
+    };
+    drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
+        segments: 4,
+        width: .008,
+        curve: .001,
+        lift: .001,
+        color: [.78, .96, .43, .82]
+    });
+    drawSpatialOrb(gl, sphereRenderer, view, end, .055, {
+        type: 'marker',
+        color: [.72, .95, .36],
+        opacity: .98
+    });
+}
+
 function setInteractionMode(mode) {
     if (dragState) {
         dragState.record.position = dragState.position;
@@ -1662,6 +1691,7 @@ function setupSpatialMarkerRenderer() {
     sphereRenderer = createSpatialSphereRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
+    controllerPointerRenderer = createSpatialTetherRenderer(gl);
 }
 
 function drawSpatialMarkers(view) {
@@ -2885,12 +2915,14 @@ function cleanup() {
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
+    destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
     prismRenderer = null;
     triangleRenderer = null;
+    controllerPointerRenderer = null;
     markerProgram = null;
     markerBuffer = null;
     homeSignProgram = null;
@@ -3144,6 +3176,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialHomeSign(view);
+                drawControllerPointer(view);
                 drawSpatialMarkers(view);
             }
             gl.disable(gl.SCISSOR_TEST);

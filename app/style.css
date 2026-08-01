@@ -914,6 +914,8 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-overlay.is-placement-armed .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
 .creator-ar-overlay.is-neutral-mode .creator-ar-mode-pointer { opacity: 1; visibility: visible; }
 .creator-ar-overlay.is-view-mode .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
+.creator-ar-overlay.is-controller-mode .creator-ar-mode-pointer,
+.creator-ar-overlay.is-controller-mode .creator-ar-placement-guide { opacity: 0; visibility: hidden; }
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span { width: 28px; height: 28px; border-radius: 8px; border-color: #ffe3a0; background: rgba(255,227,160,.08); transform: scale(1.08); }
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::before,
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::after,
