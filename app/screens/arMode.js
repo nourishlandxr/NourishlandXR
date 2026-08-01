@@ -2828,7 +2828,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        const arSession = await requestImmersiveArSession(overlayRoot);
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: true });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         const launchedSession = session;
@@ -2902,14 +2902,20 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
             gl.clearDepth(1);
+            gl.enable(gl.SCISSOR_TEST);
             for (const view of pose.views) {
                 const viewport = layer.getViewport(view);
                 if (!viewport) continue;
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+                // XRWebGLLayer packs both eyes into one framebuffer. Clearing
+                // without a matching scissor clears the eye rendered just
+                // before this one, leaving only the last eye visible.
+                gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialHomeSign(view);
                 drawSpatialMarkers(view);
             }
+            gl.disable(gl.SCISSOR_TEST);
         };
 
         launchedSession.addEventListener('end', async () => {

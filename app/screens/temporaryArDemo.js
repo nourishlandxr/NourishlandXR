@@ -2089,8 +2089,18 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
-            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer); gl.clearColor(0, 0, 0, transparentSession ? 0 : 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            for (const view of pose?.views || []) { const viewport = layer.getViewport(view); gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height); drawMarker(view); }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+            gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
+            gl.enable(gl.SCISSOR_TEST);
+            for (const view of pose?.views || []) {
+                const viewport = layer.getViewport(view);
+                if (!viewport) continue;
+                gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+                gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                drawMarker(view);
+            }
+            gl.disable(gl.SCISSOR_TEST);
         };
         session.requestAnimationFrame(draw);
         return true;

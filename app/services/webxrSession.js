@@ -50,11 +50,21 @@ function requestSessionForMode(mode, options, domOverlayRoot) {
         : navigator.xr.requestSession('immersive-vr', requestOptions);
 }
 
+function sessionAttemptsForMode(mode, requireDomOverlay) {
+    if (!requireDomOverlay) return SESSION_ATTEMPTS[mode];
+    return SESSION_ATTEMPTS[mode].map(options => ({
+        ...options,
+        requiredFeatures: [...new Set([...options.requiredFeatures, 'dom-overlay'])],
+        optionalFeatures: options.optionalFeatures.filter(feature => feature !== 'dom-overlay')
+    }));
+}
+
 // Kept under the historical export name so existing creator, demo, and
 // explorer callers all gain Quest support without changing their APIs.
-export async function requestImmersiveArSession(domOverlayRoot) {
+export async function requestImmersiveArSession(domOverlayRoot, { requireDomOverlay = false } = {}) {
     if (!navigator.xr) throw new Error('WebXR is unavailable in this browser.');
     if (!window.isSecureContext) throw new Error('WebXR requires a secure HTTPS connection.');
+    if (requireDomOverlay && !domOverlayRoot) throw new Error('Creator AR requires a DOM overlay root.');
 
     const support = await detectWebXRSessionSupport();
     const modes = WEBXR_SESSION_MODES.filter(mode => support[mode]);
@@ -65,14 +75,19 @@ export async function requestImmersiveArSession(domOverlayRoot) {
 
     let lastError = null;
     for (const mode of modes) {
-        for (const options of SESSION_ATTEMPTS[mode]) {
+        for (const options of sessionAttemptsForMode(mode, requireDomOverlay)) {
             try {
                 const session = await requestSessionForMode(mode, options, domOverlayRoot);
+                if (requireDomOverlay && !session.domOverlayState) {
+                    await session.end().catch(() => {});
+                    throw new Error('This WebXR session did not enable the Creator AR control overlay.');
+                }
                 const blendMode = session.environmentBlendMode || '';
                 return {
                     session,
                     mode,
                     blendMode,
+                    domOverlay: Boolean(session.domOverlayState),
                     passthrough: mode === 'immersive-ar' && blendMode !== 'opaque'
                 };
             } catch (error) {
