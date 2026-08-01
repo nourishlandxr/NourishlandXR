@@ -6239,30 +6239,30 @@ button[onclick*="renderArPreparation"]:is(:hover,:focus-visible) {
 }
 
 /* Creator dashboard frame and the project print workspace. */
+.project-entry,
+body:has(.project-entry) #app {
+    min-width:0;
+    max-width:100%;
+    overflow-x:hidden;
+}
 .project-entry .dashboard-frame {
     position:relative;
     display:grid;
     gap:14px;
+    min-width:0;
+    max-width:100%;
     padding:clamp(12px,3vw,24px);
-    border:12px solid #78502f;
-    border-radius:18px;
-    background:
-        linear-gradient(135deg,rgba(255,255,255,.34),transparent 28%),
-        linear-gradient(315deg,rgba(63,35,17,.12),transparent 35%),
-        #efe0c4;
-    box-shadow:0 0 0 2px #c79a62,0 0 0 6px #5e3b23,0 18px 34px rgba(68,45,26,.2),inset 0 0 0 2px rgba(255,255,255,.28);
+    overflow:hidden;
+    border:1px solid rgba(94,69,40,.36);
+    border-radius:7px;
+    background:linear-gradient(145deg,#f7edd9,#efe0c4);
+    box-shadow:0 8px 22px rgba(68,45,26,.08);
 }
 .project-entry .dashboard-frame::before,
 .project-entry .dashboard-frame::after {
-    position:absolute;
-    inset:4px;
-    border:1px solid rgba(255,235,198,.52);
-    border-radius:8px;
-    content:"";
-    pointer-events:none;
+    display:none;
 }
-.project-entry .dashboard-frame::after { inset:9px; border-color:rgba(86,49,25,.34); }
-.project-entry .dashboard-frame > * { position:relative; z-index:1; }
+.project-entry .dashboard-frame > * { position:relative; z-index:1; min-width:0; max-width:100%; }
 .project-entry .location-dashboard-header {
     gap:4px;
     padding:clamp(16px,4vw,28px) clamp(14px,4vw,30px);

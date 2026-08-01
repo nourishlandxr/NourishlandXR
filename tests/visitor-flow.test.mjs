@@ -273,6 +273,13 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /<strong>\$\{guide\.totems\.length\}<\/strong> Totems/);
 });
 
+test('creator dashboard frame stays inside the viewport with a simple border', () => {
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
+    assert.match(styles, /body:has\(\.project-entry\) #app \{[\s\S]*?overflow-x:hidden;/);
+    assert.match(styles, /\.project-entry \.dashboard-frame \{[\s\S]*?max-width:100%;[\s\S]*?overflow:hidden;[\s\S]*?border:1px solid rgba\(94,69,40/);
+    assert.match(styles, /\.project-entry \.dashboard-frame::before,[\s\S]*?display:none;/);
+});
+
 test('Home owns no-Area experiments while named Areas remain isolated', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const arSource = fs.readFileSync(path.join(root, 'app/screens/arMode.js'), 'utf8');
