@@ -182,8 +182,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /dashboard-frame/);
     assert.match(entrySource, /dashboard-frame-kicker/);
     assert.match(entrySource, /dashboard-frame-title.*Dashboard/);
-    assert.match(source, /label: 'Anchors'/);
-    assert.match(source, /label: 'Prints'/);
+    assert.match(source, /label: 'Printing options'/);
+    assert.match(source, /collapseRecentlyAdded/);
     assert.match(source, /window\.renderPrintCenter/);
     assert.match(printCenterSource, /Print anchors/);
     assert.match(printCenterSource, /Plant tags/);
@@ -253,9 +253,11 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /applyFieldGuideFilter\(''\)/);
     assert.match(fieldGuideSource, /field-guide-essentials/);
     assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
-    assert.match(fieldGuideSource, /Your garden quest/);
-    assert.match(fieldGuideSource, /Explore your garden/);
-    assert.match(fieldGuideSource, /Bring the garden to life/);
+    assert.match(fieldGuideSource, /Project overview/);
+    assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
+    assert.match(fieldGuideSource, /All plants/);
+    assert.doesNotMatch(fieldGuideSource, /Your garden quest|Explore your garden|Bring the garden to life/);
+    assert.doesNotMatch(fieldGuideSource, /CHOOSE YOUR NEXT PATCH|DISCOVER SOMETHING NEW/);
     assert.match(fieldGuideSource, /field-guide-area-grid/);
     assert.match(fieldGuideSource, /data-field-guide-area/);
     assert.match(fieldGuideSource, /is-home-area/);

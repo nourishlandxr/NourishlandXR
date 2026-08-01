@@ -52,7 +52,7 @@ function printCenterMarkup(data) {
         <header class="page-header print-center-header">
             <button class="ghost" type="button" onclick="window.renderProjectDashboard('${projectId}')">Back to Dashboard</button>
             <p class="welcome-label">Project workspace</p>
-            <h1>Anchors &amp; Prints</h1>
+            <h1>Printing options</h1>
             <p class="subtitle">Prepare physical tags and printable project information in one place.</p>
         </header>
         <section class="print-center-section print-center-anchors" aria-labelledby="printAnchorsTitle">

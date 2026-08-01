@@ -51,6 +51,24 @@ const markerTypeLabel = type => ({ plant: 'Plant', note: 'Note', intro_checkpoin
 const markerIcon = type => ({ plant: '🌱', note: '✎', intro_checkpoint: '⚑', sub_checkpoint: '⚑', area_checkpoint: '⌖' })[type] || '◆';
 const displayAreaName = area => isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : String(area?.name || area || DEFAULT_HOME_AREA_NAME);
 const visibleQrCode = value => String(value || '').startsWith('nxr-spatial:') ? '' : String(value || '');
+function collapseRecentlyAdded(app) {
+    const section = app.querySelector('.latest-entries-section');
+    if (!section || section.tagName === 'DETAILS') return;
+    const list = section.querySelector('.latest-entry-list');
+    if (!list) return;
+    const viewAll = section.querySelector('.view-all-entries');
+    const details = document.createElement('details');
+    details.className = section.className;
+    const summary = document.createElement('summary');
+    summary.className = 'section-heading-row latest-entries-heading';
+    summary.innerHTML = '<h2>Recently added</h2><span class="latest-entries-chevron" aria-hidden="true">⌄</span>';
+    const content = document.createElement('div');
+    content.className = 'latest-entries-content';
+    content.append(list);
+    if (viewAll) content.append(viewAll);
+    details.append(summary, content);
+    section.replaceWith(details);
+}
 async function syncMarkerQrAnchor(projectId, siteId, placeId, markerId, qrCode, description = '', knownAnchor) {
     let anchor = knownAnchor;
     if (anchor === undefined) {
@@ -1275,12 +1293,12 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 { label: 'Project Settings', action: `window.renderProjectSettings('${encoded(project.id)}')` },
                 { label: 'NourishlandXR Settings', action: `window.renderPlatformComingSoon('Settings', 'creator')` },
                 { label: 'Help Guide', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` },
-                { label: 'Anchors', description: 'Plant and Totem print tags.', action: `window.renderPrintCenter('${encoded(project.id)}')` },
-                { label: 'Prints', description: 'Lists, profiles and Map.', action: `window.renderPrintCenter('${encoded(project.id)}')` }
+                { label: 'Printing options', description: 'Tags, lists, profiles and Map.', action: `window.renderPrintCenter('${encoded(project.id)}')` }
             ],
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`
         });
+        collapseRecentlyAdded(app);
         if (guidance?.stage === 'new' && guidance.introducedEvent) {
             recordTutorialEvent(project.id, guidance.introducedEvent);
         }

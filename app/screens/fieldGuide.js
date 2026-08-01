@@ -87,25 +87,29 @@ export async function renderFieldGuideProjects(app) {
 function applyCreatorWebHubCopy(app) {
     const header = app.querySelector('.field-guide-header');
     const title = header?.querySelector('h1');
-    if (title) title.textContent = 'Explore your garden';
-    if (header && !header.querySelector('.field-guide-header-subtitle')) {
-        const subtitle = document.createElement('p');
-        subtitle.className = 'subtitle field-guide-header-subtitle';
-        subtitle.textContent = 'Choose a patch, discover a plant and grow the story of this place.';
-        title?.after(subtitle);
-    }
+    if (title) title.textContent = 'Web Hub';
+    header?.querySelector('.field-guide-header-subtitle')?.remove();
     const snapshotTitle = app.querySelector('#fieldGuideEssentialsTitle');
-    if (snapshotTitle) snapshotTitle.textContent = 'Your garden quest';
+    if (snapshotTitle) snapshotTitle.textContent = 'Project overview';
     const areasTitle = app.querySelector('#fieldGuideAreasTitle');
-    if (areasTitle) areasTitle.textContent = 'Explore your patches';
+    if (areasTitle) areasTitle.textContent = 'Areas';
     const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
-    if (searchTitle) searchTitle.textContent = 'Find a plant';
+    if (searchTitle) searchTitle.textContent = 'Search plants';
     const searchLabel = app.querySelector('label[for="fieldGuideSearch"]');
-    if (searchLabel) searchLabel.textContent = 'What are you looking for?';
+    if (searchLabel) searchLabel.textContent = 'Search';
     const creativeTitle = app.querySelector('#fieldGuideCreativeToolsTitle');
-    if (creativeTitle) creativeTitle.textContent = 'Bring the garden to life';
+    if (creativeTitle) creativeTitle.textContent = 'Creative Features';
     const anchorsTitle = app.querySelector('#fieldGuideAnchorsTitle');
-    if (anchorsTitle) anchorsTitle.textContent = 'Connected to your place';
+    if (anchorsTitle) anchorsTitle.textContent = 'Anchored Elements';
+    const plantList = app.querySelector('.field-guide-plant-grid');
+    if (plantList && !plantList.closest('.field-guide-all-plants')) {
+        const details = document.createElement('details');
+        details.className = 'field-guide-all-plants';
+        const summary = document.createElement('summary');
+        summary.innerHTML = '<strong>All plants</strong><span class="field-guide-all-plants-count"></span><span class="field-guide-details-chevron" aria-hidden="true">⌄</span>';
+        plantList.parentNode.insertBefore(details, plantList);
+        details.append(summary, plantList);
+    }
 }
 
 export async function renderFieldGuide(app, encodedProjectId, creator = false) {
@@ -269,6 +273,10 @@ export function applyFieldGuideFilter(placeId = currentGuidePlaceId) {
     });
     const count = document.getElementById('fieldGuideCount');
     if (count) count.textContent = `${visible} plant${visible === 1 ? '' : 's'}`;
+    const allPlantsCount = document.querySelector('.field-guide-all-plants-count');
+    if (allPlantsCount) allPlantsCount.textContent = `${visible} plant${visible === 1 ? '' : 's'}`;
+    const allPlants = document.querySelector('.field-guide-all-plants');
+    if (allPlants && (query || layer || areaScope)) allPlants.open = true;
 }
 
 export function openFieldGuidePlant(app, encodedInstanceId) {
