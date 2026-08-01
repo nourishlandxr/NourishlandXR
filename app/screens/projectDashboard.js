@@ -1030,6 +1030,10 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                     <p>It helps you record plants, observations, stories and tasks as part of a location. That information can be viewed on a normal screen or experienced in AR through spatial computing and augmented reality.</p>
                 </section>
                 <section>
+                    <h2>Using the tool</h2>
+                    <p>Using a suitable device, such as your phone, you can map and explore plant-rich places including home gardens, food forests, community gardens, farms and native forests. Add plants, mark important locations, create relationships, record observations and create information that others can discover while visiting the landscape.</p>
+                </section>
+                <section>
                     <h2>How it works</h2>
                     <p>Every plant, note or checkpoint belongs to a Location and Area. The same content works in both content mode (on-screen) and AR mode (in the landscape), so you can enter data efficiently and explore it spatially when you're ready.</p>
                 </section>

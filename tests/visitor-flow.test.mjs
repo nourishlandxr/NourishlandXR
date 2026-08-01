@@ -38,6 +38,7 @@ test('welcome keeps primary roles separate and pairs About with the existing AR 
     assert.doesNotMatch(app.innerHTML, /welcome-label">DEMO/);
     assert.match(app.innerHTML, /A quick introduction to spatial stories, Markers and Areas/);
     assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
+    assert.doesNotMatch(app.innerHTML, /Using a suitable device/);
     assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
     assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
 });
@@ -50,6 +51,8 @@ test('About This Tool explains the concept without tutorial instructions', () =>
     assert.match(aboutSource, /What is NourishlandXR\?/);
     assert.match(aboutSource, /place-based tool that connects information directly to real environments/);
     assert.match(aboutSource, /How it works/);
+    assert.match(aboutSource, /Using the tool/);
+    assert.match(aboutSource, /Using a suitable device/);
     assert.match(aboutSource, /Built for food literacy/);
     assert.match(aboutSource, /turns knowledge about a place into something you can see, edit and share/);
     assert.doesNotMatch(aboutSource, /Choose your path|Select a location|Explore with AR|Demo note/);

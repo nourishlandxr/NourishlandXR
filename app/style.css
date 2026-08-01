@@ -6033,6 +6033,14 @@ body:has(.intro-launch)::after {
     background:linear-gradient(90deg,rgba(255,255,255,.38),transparent);
 }
 
+.intro-launch .intro-copy h2 {
+    max-width:680px;
+    margin-bottom:16px;
+    font-size:clamp(1.9rem,4.8vw,3.35rem);
+    letter-spacing:-.045em;
+    line-height:.98;
+}
+
 /* AR controls: organic colour, practical tool typography and sharper states. */
 .creator-ar-taskbar,
 .creator-ar-context-toolbar,
@@ -6153,7 +6161,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 @media (max-width:600px) {
     .intro-launch::before { right:-18px; opacity:.62; }
     .intro-launch .intro-copy { padding:26px 22px; border-radius:22px 6px 22px 6px; }
-    .intro-launch .intro-copy h2 { font-size:clamp(2.3rem,13vw,4.2rem); }
+    .intro-launch .intro-copy h2 { font-size:clamp(1.75rem,8.5vw,2.65rem); }
     .intro-launch .role-card,
     .intro-launch .role-card:nth-child(even) { border-radius:14px 4px 14px 4px; }
 }
