@@ -6493,6 +6493,12 @@ body:has(.field-guide-tool) {
 .field-guide-tool .field-guide-creation-actions button:last-child::before { content:"🗺️"; }
 .field-guide-tool .field-guide-creation-actions button:hover,
 .field-guide-tool .field-guide-creation-actions button:focus-visible { transform:translateY(-2px); background:#fff8dc; box-shadow:0 7px 0 rgba(54,104,65,.1); }
+.field-guide-tool .field-guide-primary-actions {
+    margin-top:-4px;
+    padding-top:11px;
+    border-top:1px solid rgba(47,93,62,.2);
+}
+.field-guide-tool .field-guide-primary-actions .field-guide-creation-actions { gap:10px; }
 .field-guide-tool .field-guide-map-action {
     min-height:42px;
     border:1px solid #9a4d31;

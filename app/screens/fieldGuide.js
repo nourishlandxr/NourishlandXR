@@ -101,6 +101,15 @@ function applyCreatorWebHubCopy(app) {
     if (creativeTitle) creativeTitle.textContent = 'Creative Features';
     const anchorsTitle = app.querySelector('#fieldGuideAnchorsTitle');
     if (anchorsTitle) anchorsTitle.textContent = 'Anchored Elements';
+    const overview = app.querySelector('.field-guide-essentials');
+    const creationActions = overview?.querySelector('.field-guide-creation-actions');
+    if (overview && creationActions) {
+        const actionSection = document.createElement('section');
+        actionSection.className = 'field-guide-primary-actions';
+        actionSection.setAttribute('aria-label', 'Add to project');
+        actionSection.append(creationActions);
+        overview.after(actionSection);
+    }
     const plantList = app.querySelector('.field-guide-plant-grid');
     if (plantList && !plantList.closest('.field-guide-all-plants')) {
         const details = document.createElement('details');

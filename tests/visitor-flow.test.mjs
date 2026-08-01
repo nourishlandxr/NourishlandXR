@@ -254,6 +254,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /currentGuidePlaceId = '';/);
     assert.match(fieldGuideSource, /applyFieldGuideFilter\(''\)/);
     assert.match(fieldGuideSource, /field-guide-essentials/);
+    assert.match(fieldGuideSource, /field-guide-primary-actions/);
     assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
     assert.match(fieldGuideSource, /Project overview/);
     assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
