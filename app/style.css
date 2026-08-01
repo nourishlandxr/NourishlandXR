@@ -6224,6 +6224,19 @@ body[data-project-theme] .creator-ar-taskbar [data-ar-select-mode] {
     border-color:#78a2a0;
     background:#3d6665 !important;
 }
+.creator-ar-taskbar [data-ar-web-return],
+body[data-project-theme] .creator-ar-taskbar [data-ar-web-return] {
+    min-width:58px;
+    border-color:#78b6d7;
+    background:#256f9c !important;
+}
+.creator-ar-taskbar [data-ar-web-return] b { font-size:1.08rem; }
+.ar-web-handoff .ar-portal {
+    border-color:#2378bd !important;
+    background:linear-gradient(145deg,#3b95dc,#176caf) !important;
+    color:#fff !important;
+    font-weight:850;
+}
 .creator-ar-taskbar button:is(:hover,:focus-visible) {
     filter:brightness(1.12);
     transform:translateY(-1px);

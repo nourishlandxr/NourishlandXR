@@ -306,7 +306,8 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
     assert.match(arSource, /async function armPlacement\(type, specialMarker = null\)/);
     assert.match(arSource, /Tap the centre circle to place it/);
-    assert.match(arSource, /EXIT AR/);
+    assert.match(arSource, /data-ar-web-return/);
+    assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
     assert.doesNotMatch(arSource, /Choose its purpose/);
     assert.doesNotMatch(arSource, /data-ar-placed-type=/);
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
@@ -558,7 +559,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(styles, /\.creator-ar-special-grid/);
     assert.match(arSource, /groundGuideMatrix/);
     assert.match(arSource, /locatedTotemRecord/);
-    assert.match(arSource, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
+    assert.match(arSource, /const requestedArea = operation\.areaId/);
     assert.match(arSource, /createSpatialPrismRenderer/);
     assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, groundPosition/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
@@ -583,7 +584,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
 test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {
     const arSource = read('app/screens/arMode.js');
     assert.doesNotMatch(arSource, /drawDashboard|captureDashboardSnapshot|Grab dashboard|summonArDashboard/);
-    assert.doesNotMatch(arSource, /returnToWeb|data-ar-web-mode/);
+    assert.doesNotMatch(arSource, /data-ar-web-mode/);
 });
 
 test('Creator AR keeps dashboard web-only while supporting controller controls', () => {
@@ -717,9 +718,11 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /session === context\.launchedSession/);
     assert.match(arSource, /placementArmGeneration === context\.generation/);
     assert.match(restoration, /loadProjectSites\(operation\.projectId\)/);
-    assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, operation\.siteId, area\.id\)/);
+    assert.match(restoration, /loadPlaceMarkers\(operation\.projectId, siteId, area\.id\)/);
     assert.match(restoration, /isArOperationCurrent\(operation, guardOptions\)/);
     assert.match(restoration, /const selected = areas\.find\(area => area\.id === operation\.areaId\) \|\| areas\.find\(isDefaultHomeArea\)/);
+    assert.match(arSource, /const siteId = operation\.siteId \|\| activeSiteId/);
+    assert.match(arSource, /areas\.find\(item => item\.id === activeAreaId\)[\s\S]*areas\.find\(item => isDefaultHomeArea\(item\)\)/);
     assert.match(restoration, /if \(!areas\.some\(isDefaultHomeArea\)\)[\s\S]*createSitePlace\(operation\.projectId, site\.id,[\s\S]*AR_EXPERIENCE_CONFIG\.fallbackArea/);
     assert.doesNotMatch(restoration, /const firstArea = areas\[0\]/);
     const areaFallback = arSource.slice(arSource.indexOf('async function ensurePlacementArea('), arSource.indexOf('async function armPlacement('));
@@ -736,6 +739,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(quickPlace, /const operation = captureArOperationContext\(\)/);
     assert.match(quickPlace, /operationIsCurrent/);
     assert.match(quickPlace, /createPlaceMarker\(operation\.projectId, operation\.siteId, operation\.areaId/);
+    assert.match(quickPlace, /existingMarkers\.some\(isAreaCheckpointMarker\)/);
+    assert.match(quickPlace, /await restoreRecordedMarkers\(operation\)/);
     assert.match(quickPlace, /saveMarkerAnchor\(operation\.projectId, operation\.siteId, operation\.areaId/);
     assert.match(quickPlace, /if \(!operationIsCurrent\(\)\) return;[\s\S]*sessionMarkers\.push\(record\)/);
     assert.match(quickPlace, /const placementCompletion = new Promise/);
@@ -758,6 +763,8 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /launchedSession\.addEventListener\('end', async \(\) => \{[\s\S]*const siteId = activeSiteId[\s\S]*await waitForPendingPlacement\(\)/);
     assert.match(arSource, /window\.addEventListener\('popstate', \(\) => navigateAfterAr\(projectId, resolvedAreaId, returnContext\), \{ once: true \}\)/);
     assert.match(arSource, /history\.back\(\)/);
+    assert.match(arSource, /function returnToWebMode\(\)/);
+    assert.match(arSource, /contextToolbarRecord\)[\s\S]*openContextInWebMode\(\)/);
 });
 
 test('Creator AR falls back to setup when WebXR cannot start', () => {
@@ -1090,8 +1097,8 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(styles, /\.creator-ar-marker-hit-target \{/);
     assert.match(styles, /\.creator-ar-spatial-name \{/);
     assert.match(source, /async function restoreRecordedMarkers/);
-    assert.match(source, /const area = areas\.find\(item => item\.id === operation\.areaId\)/);
-    assert.match(source, /sessionMarkers = sessionMarkers\.filter\(record => record\.areaId === operation\.areaId\)/);
+    assert.match(source, /const requestedArea = operation\.areaId/);
+    assert.match(source, /sessionMarkers = sessionMarkers\.filter\(record => record\.areaId === restoreOperation\.areaId\)/);
     assert.doesNotMatch(source.slice(source.indexOf('async function restoreRecordedMarkers'), source.indexOf('async function prepareExistingMarkerPlacement')), /areas\.map\(async area/);
     assert.match(source, /loadMarkerAnchor/);
     assert.match(source, /loadPlacementAreas\(loadingOperation, restorationGuard\)[\s\S]*restoreRecordedMarkers\(restoringOperation, restorationGuard\)/);
@@ -1284,7 +1291,7 @@ test('an open AR Plant profile has no attached Web Mode card', () => {
     assert.doesNotMatch(arSource, /OPEN IN WEB MODE/);
     assert.match(arSource, /data-ar-context-web/);
     assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
-    assert.match(dashboardSource, /BACK TO AR · SAME PLANT/);
+    assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
     assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
     assert.match(dashboardSource, /is-ar-web-handoff/);
     assert.match(dashboardSource, /\$\{arHandoff\}\$\{plantProfileReady && !returnToAr \?/);
@@ -1402,7 +1409,7 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     const styles = read('app/style.css');
     assert.match(arSource, /String\(returnContext\)\.slice\('web-marker:'\.length\)\), true\)/);
     assert.match(dashboardSource, /returnToAr = false/);
-    assert.match(dashboardSource, /BACK TO AR/);
+    assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
     assert.match(dashboardSource, /note-record-editor/);
     assert.match(dashboardSource, /id="projectEntryNoteSurface"/);
     assert.match(dashboardSource, /Transparent with color outline/);

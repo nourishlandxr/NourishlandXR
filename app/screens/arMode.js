@@ -123,8 +123,23 @@ const DEFAULT_LOCATION_NOTE = Object.freeze({
     enabled: true,
     prompt: 'WHERE AM I NOW?'
 });
-const normalizeAreaCheckpointMarker = marker => marker?.semantic_type === 'area_checkpoint'
-    ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || 'sub_checkpoint' }
+const isAreaCheckpointMarker = marker => {
+    const type = String(marker?.type || '').trim().toLocaleLowerCase();
+    const semanticType = String(marker?.semantic_type || '').trim().toLocaleLowerCase();
+    const storageType = String(marker?.storage_type || '').trim().toLocaleLowerCase();
+    const markerKind = String(marker?.marker_kind || '').trim().toLocaleLowerCase();
+    const experienceRole = String(marker?.experience_role || '').trim().toLocaleLowerCase();
+    const markerId = String(marker?.id || '').trim().toLocaleLowerCase();
+    return type === 'area_checkpoint'
+        || semanticType === 'area_checkpoint'
+        || storageType === 'area_checkpoint'
+        || markerKind === 'area_checkpoint'
+        || markerKind === 'area_totem'
+        || experienceRole === 'area-totem'
+        || /(?:^|_)area_totem(?:_|$)/.test(markerId);
+};
+const normalizeAreaCheckpointMarker = marker => isAreaCheckpointMarker(marker)
+    ? { ...marker, type: 'area_checkpoint', storage_type: marker.storage_type || (marker.type === 'sub_checkpoint' ? 'sub_checkpoint' : undefined) }
     : marker;
 const normalizeSpecialMarker = marker => {
     if (!marker || marker.type !== 'sub_checkpoint' || marker.special_symbol) return marker;
@@ -1250,6 +1265,14 @@ function createTotemFromSpecial() {
     setPlacementStatus('Open an Area before adding a Totem Marker.');
 }
 
+function returnToWebMode() {
+    if (contextToolbarRecord) {
+        void openContextInWebMode();
+        return;
+    }
+    exitArMode();
+}
+
 function renderSpecialMarkerChoices(picker) {
     const totem = activeTotemRecord();
     const arrows = [
@@ -2265,18 +2288,29 @@ async function loadPlacementAreas(operation = captureArOperationContext(), guard
 }
 
 async function restoreRecordedMarkers(operation = captureArOperationContext(), guardOptions = {}) {
-    if (!operation.projectId || !operation.siteId || !operation.areaId || !isArOperationCurrent(operation, guardOptions)) return;
-    const areas = await loadSitePlaces(operation.projectId, operation.siteId).catch(() => []);
-    if (!isArOperationCurrent(operation, guardOptions)) return;
-    const area = areas.find(item => item.id === operation.areaId);
+    const siteId = operation.siteId || activeSiteId;
+    if (!operation.projectId || !siteId) return;
+    const areas = await loadSitePlaces(operation.projectId, siteId).catch(() => []);
+    const requestedArea = operation.areaId
+        ? areas.find(item => item.id === operation.areaId)
+        : null;
+    const area = requestedArea
+        || areas.find(item => item.id === activeAreaId)
+        || areas.find(item => isDefaultHomeArea(item));
     if (!area) return;
-    const savedMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, area.id).catch(() => []);
+    const restoreOperation = {
+        ...operation,
+        siteId,
+        areaId: area.id
+    };
+    if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
+    const savedMarkers = await loadPlaceMarkers(operation.projectId, siteId, area.id).catch(() => []);
     const restored = await Promise.all(savedMarkers.map(async savedMarker => {
         const marker = normalizeSpatialMarker(savedMarker);
         const [anchor, plantProfile] = await Promise.all([
-            loadMarkerAnchor(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null),
+            loadMarkerAnchor(operation.projectId, siteId, area.id, marker.id).catch(() => null),
             marker.type === 'plant'
-                ? loadPlantProfile(operation.projectId, operation.siteId, area.id, marker.id).catch(() => null)
+                ? loadPlantProfile(operation.projectId, siteId, area.id, marker.id).catch(() => null)
                 : null
         ]);
         const position = anchor?.position;
@@ -2286,14 +2320,14 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
         // Keep an existing Totem visible to the placement controls even when
         // its anchor was lost or was never captured. Otherwise placement sees
         // the saved marker as a duplicate and offers no way to recover it.
-        if (!hasPosition && marker.type !== 'area_checkpoint') return null;
+        if (!hasPosition && !isAreaCheckpointMarker(marker)) return null;
         return {
             marker,
             plantProfile,
             profileExpanded: false,
             position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: 0 },
             anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
-            siteId: operation.siteId,
+            siteId,
             areaId: area.id,
             areaName: area.name,
             coordinateSpace: anchor?.coordinate_space || 'session-local',
@@ -2302,8 +2336,8 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             unplaced: !hasPosition
         };
     }));
-    if (!isArOperationCurrent(operation, guardOptions)) return;
-    sessionMarkers = sessionMarkers.filter(record => record.areaId === operation.areaId);
+    if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
+    sessionMarkers = sessionMarkers.filter(record => record.areaId === restoreOperation.areaId);
     const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();
@@ -2634,8 +2668,24 @@ async function quickPlace(type) {
         setPlacementStatus(`Placing ${label}...`);
         const existingMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, operation.areaId).catch(() => []);
         if (!operationIsCurrent()) return;
-        if (type === 'area_checkpoint' && existingMarkers.some(item => normalizeAreaCheckpointMarker(item).type === 'area_checkpoint')) {
-            setPlacementStatus(`${operation.areaName || 'This Area'} already has a Totem. Open Special Markers to locate it.`);
+        if (type === 'area_checkpoint' && existingMarkers.some(isAreaCheckpointMarker)) {
+            // A fast Home launch can reach placement before the asynchronous
+            // restore has finished. Rehydrate the saved Totem before reporting
+            // a duplicate, so it remains visible and recoverable after AR/Web
+            // transitions.
+            await restoreRecordedMarkers(operation);
+            if (!operationIsCurrent()) return;
+            const restoredTotem = activeTotemRecord();
+            if (restoredTotem && hasSavedSpatialPosition(restoredTotem)) {
+                locatedTotemRecord = restoredTotem;
+                totemGuideVisible = true;
+                renderSessionMarkers();
+                setPlacementStatus(`${restoredTotem.marker.name} is already saved in ${operation.areaName || 'this Area'}.`);
+            } else if (restoredTotem) {
+                await prepareExistingMarkerPlacement(restoredTotem.marker.id, operation);
+            } else {
+                setPlacementStatus(`${operation.areaName || 'This Area'} already has a Totem. Open Special Markers to locate it.`);
+            }
             return;
         }
         const existingNames = new Set(existingMarkers.map(marker => String(marker.name || '').trim().toLocaleLowerCase()));
@@ -2748,7 +2798,7 @@ function createOverlay() {
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button type="button" data-ar-exit><b aria-hidden="true">&times;</b><span>EXIT AR</span></button>
+            <button type="button" data-ar-web-return aria-label="Return to Web"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
           </nav>
         </div>`;
 
@@ -2782,7 +2832,7 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
     bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
-    bindTaskbarAction('[data-ar-exit]', exitArMode);
+    bindTaskbarAction('[data-ar-web-return]', returnToWebMode);
     overlayRoot.querySelector('[data-ar-recenter-area]')?.addEventListener('click', () => void recenterActiveArea());
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });

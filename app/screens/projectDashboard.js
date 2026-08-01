@@ -2627,11 +2627,11 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
-    const returnArLabel = plant ? 'BACK TO AR · SAME PLANT' : 'BACK TO AR · SAME MARKER';
+    const returnArLabel = '&#x23CE; AR';
     const returnArCopy = plant
         ? 'Take your time with this Plant. Back to AR returns directly to the same Area with this orb open.'
         : 'Take your time with this information. Back to AR returns directly to the same Area and Marker.';
-    const returnArAction = returnToAr ? `<button class="global-ar-action ar-portal" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
+    const returnArAction = returnToAr ? `<button class="global-ar-action ar-portal" type="button" aria-label="Return to AR with ${escapeHtml(entry.marker.name)}" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
     const arHandoff = returnToAr ? `<aside class="ar-web-handoff" aria-label="Return to augmented reality"><div><strong>WEB MODE</strong><p>${returnArCopy}</p></div>${returnArAction}</aside>` : '';
     const specialMarkerEditor = entry.marker.type === 'sub_checkpoint' ? `<div class="field"><label for="projectEntrySpecialSymbol">Marker symbol</label><select id="projectEntrySpecialSymbol"><option value="" ${entry.marker.special_symbol ? '' : 'selected'}>Standard checkpoint</option>${[['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'], ['!', 'Exclamation point'], ['?', 'Question mark']].map(([symbol, label]) => `<option value="${symbol}" ${entry.marker.special_symbol === symbol ? 'selected' : ''}>${label}</option>`).join('')}</select></div>` : '';
     const noteColor = /^#[0-9a-f]{6}$/i.test(entry.marker.appearance?.color || '') ? entry.marker.appearance.color : '#d7834f';
