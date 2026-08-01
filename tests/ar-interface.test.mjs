@@ -282,12 +282,16 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /data-ar-taskbar-version="2"/);
     assert.match(arSource, /data-ar-context-toolbar/);
     assert.match(arSource, /data-ar-cycle-color/);
+    assert.match(arSource, /data-ar-cycle-shape/);
     assert.match(arSource, /data-ar-cycle-size/);
     assert.match(arSource, /data-ar-cycle-opacity/);
     assert.match(arSource, /data-ar-context-web/);
     assert.match(arSource, /data-ar-context-location-note/);
     assert.match(arSource, /const TASKBAR_V2_SIZES = Object\.freeze\(\['tiny', 'small', 'medium', 'large', 'huge'\]\)/);
     assert.match(arSource, /const TASKBAR_V2_OPACITIES = Object\.freeze\(\[1, \.8, \.6, \.4\]\)/);
+    assert.match(arSource, /MARKER_APPEARANCE_SHAPES = Object\.freeze\(\['orb', 'plate', 'triangle'\]\)/);
+    assert.match(arSource, /drawSpatialTriangle\(gl, triangleRenderer/);
+    assert.match(arSource, /spatialTriangleRenderer\.js/);
     assert.match(styles, /\.creator-ar-context-toolbar\[hidden\] \{ display:none; \}/);
     assert.doesNotMatch(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-taskbar \[data-ar-view-mode\]/);
     assert.doesNotMatch(arSource, /creator-ar-toolbox/);
@@ -1289,7 +1293,8 @@ test('Field Guide separates visual guidance, optional creative tools and physica
     assert.doesNotMatch(fieldGuideSource, /Optional Creative Features/);
     assert.match(fieldGuideSource, /field-guide-special-elements/);
     assert.match(fieldGuideSource, /3D models and spatial objects/);
-    assert.match(fieldGuideSource, /Physical Anchors/);
+    assert.match(fieldGuideSource, /Anchored Elements/);
+    assert.match(fieldGuideSource, /Global summary of placed items/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
     assert.match(fieldGuideSource, /Visitor Entrances/);

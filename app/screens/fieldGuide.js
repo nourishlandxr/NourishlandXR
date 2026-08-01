@@ -46,12 +46,17 @@ async function loadAreaGuideGroup(projectId, siteId, place, visitor) {
         loadPlaceMarkers(projectId, siteId, place.id, visitor).catch(() => [])
     ]);
     const anchorStates = await Promise.all(markers.map(marker => loadMarkerAnchor(projectId, siteId, place.id, marker.id, visitor).catch(() => null)));
+    const markerAnchorItems = markers.map((marker, index) => ({ marker, anchor: anchorStates[index] }));
+    const placedItems = markerAnchorItems.filter(item => item.anchor?.type === 'spatial');
+    const anchoredItems = markerAnchorItems.filter(item => String(item.marker?.physicalAnchor?.markerId ?? '').trim() !== '');
     return {
         place,
         plants,
         markerCount: markers.length,
-        anchoredCount: anchorStates.filter(anchor => ['gps', 'qr', 'spatial'].includes(anchor?.type)).length,
-        anchoredItems: markers.map((marker, index) => ({ marker, anchor: anchorStates[index] })).filter(item => ['gps', 'qr', 'spatial'].includes(item.anchor?.type)),
+        placedCount: placedItems.length,
+        placedItems,
+        anchoredCount: anchoredItems.length,
+        anchoredItems,
         totems: markers.filter(marker => marker.type === 'area_checkpoint' || marker.semantic_type === 'area_checkpoint'),
         hasTotem: markers.some(marker => marker.type === 'area_checkpoint' || marker.semantic_type === 'area_checkpoint'),
         hasStartingPoint: markers.some(marker => marker.type === 'intro_checkpoint')
@@ -84,7 +89,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
         const guide = creator ? await loadCreatorGuide(projectId) : await loadGuide(projectId);
         const backAction = creator ? `window.renderProjectDashboard('${encoded(projectId)}')` : `window.renderVisitorLocationIntro('${encoded(projectId)}')`;
         const guideTitle = creator ? 'Web Hub' : 'Field Guide';
-        const allPlaces = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, siteId: group.site.id, count: placeGroup.plants.length, markerCount: placeGroup.markerCount, anchoredCount: placeGroup.anchoredCount, anchoredItems: placeGroup.anchoredItems, hasTotem: placeGroup.hasTotem, hasStartingPoint: placeGroup.hasStartingPoint })));
+        const allPlaces = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, siteId: group.site.id, count: placeGroup.plants.length, markerCount: placeGroup.markerCount, placedCount: placeGroup.placedCount, placedItems: placeGroup.placedItems, anchoredCount: placeGroup.anchoredCount, anchoredItems: placeGroup.anchoredItems, hasTotem: placeGroup.hasTotem, hasStartingPoint: placeGroup.hasStartingPoint })));
         const homePlace = allPlaces.find(isDefaultHomeArea) || null;
         const places = allPlaces.filter(place => !isDefaultHomeArea(place));
         const homeCount = guide.plants.filter(plant => isDefaultHomeArea(allPlaces.find(place => place.id === plant.placeId))).length;
@@ -113,8 +118,11 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
         const layers = [...new Set(guide.plants.map(plant => String(plant.layer || '').trim()).filter(Boolean))].sort();
         currentGuidePlaceId = creator ? String(homePlace?.id || '') : '';
         const creationBoard = creator ? `<section class="field-guide-creation-board" aria-label="Add information"><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section>` : '';
-        const anchoredCount = places.reduce((sum, place) => sum + place.anchoredCount, 0);
-        const anchoredItems = places.flatMap(place => place.anchoredItems.map(item => ({ ...item, place })));
+        const placedCount = allPlaces.reduce((sum, place) => sum + place.placedCount, 0);
+        const placedByArea = allPlaces.filter(place => place.placedCount > 0).map(place => `<span class="field-guide-element-chip"><strong>${place.placedCount}</strong> ${escapeHtml(place.name)}</span>`).join('');
+        const elementSummary = creator ? `<section class="field-guide-preparation field-guide-elements-summary" aria-labelledby="fieldGuideElementsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideElementsTitle">Elements</h2><p>Global summary of placed items, grouped by Area.</p></div></div><details class="field-guide-anchor-readiness" open><summary><span aria-hidden="true">⌖</span><div><strong>${placedCount} placed element${placedCount === 1 ? '' : 's'}</strong><p>Plant records remain in the list below.</p></div></summary><div class="field-guide-element-chips">${placedByArea || '<p>No placed elements yet.</p>'}</div></details></section>` : '';
+        const anchoredCount = allPlaces.reduce((sum, place) => sum + place.anchoredCount, 0);
+        const anchoredItems = allPlaces.flatMap(place => place.anchoredItems.map(item => ({ ...item, place })));
         const anchoredRows = anchoredItems.map(({ marker, anchor, place }) => {
             const action = marker.type === 'area_checkpoint' || marker.semantic_type === 'area_checkpoint'
                 ? `window.renderAreaCheckpointForm('${encoded(guide.project.id)}','${encoded(place.id)}')`
@@ -128,14 +136,34 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             ? `window.filterFieldGuidePlace('${escapeHtml(homePlace.id)}')`
             : "window.filterFieldGuidePlace('')";
         app.innerHTML = `<div class="screen field-guide field-guide-hub analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>${guideTitle}</h1><p class="subtitle">${creator ? 'Manage Home, Plants, Areas, Totems and their spatial information.' : 'Find, filter and open Plants, Areas and Totems.'}</p><div class="field-guide-summary"><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.totems.length}</strong> Totems</span>${unassignedCount ? `<span class="is-unassigned"><strong>${unassignedCount}</strong> In Unassigned Folder</span>` : ''}</div></div>${creationBoard}<section class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Deep search</label><input id="fieldGuideSearch" type="search" placeholder="Plants, Totems, Areas, layers, uses or notes…" oninput="window.applyFieldGuideFilter()" /></div><div class="field"><label for="fieldGuideLayer">Forest layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></section><section><div class="field-guide-section-heading"><div><h2>Areas</h2><p>${creator ? 'Home is the default. Open a named Area to work in its saved layout.' : 'Choose an Area to filter its records below.'}</p></div><button type="button" onclick="${locationResetAction}">${creator ? DEFAULT_HOME_AREA_NAME : 'Show all'}</button></div><div class="field-guide-place-cloud">${areaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>${totemCards ? `<section><div class="field-guide-section-heading"><div><h2>Area Totems</h2><p>Area checkpoints and their information boards.</p></div></div><div class="field-guide-totem-grid">${totemCards}</div></section>` : ''}${totemLinks.length || places.some(place => place.hasTotem) ? totemDiagram : ''}<section><div class="field-guide-section-heading"><div><h2>Plant records</h2><p id="fieldGuideCount">${creator ? homeCount : guide.plants.length} plant${(creator ? homeCount : guide.plants.length) === 1 ? '' : 's'}</p></div></div><div class="analog-plant-list field-guide-plant-grid">${guide.plants.map(plant => `<button class="analog-plant-row field-guide-plant-card" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-layer="${escapeHtml(String(plant.layer || '').toLowerCase())}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.origin, plant.plantType, plant.layer, Array.isArray(plant.uses) ? plant.uses.join(' ') : plant.uses, plant.propagation, plant.localNotes, plant.summary, plant.placeId, plant.placeName].join(' ').toLowerCase())}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-card-icon" aria-hidden="true">🌿</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em></small><small>${escapeHtml(plant.placeName === 'Unassigned' ? 'Unassigned Folder · Area not assigned' : plant.placeName || plant.placeId)}${plant.layer ? ` · ${escapeHtml(plant.layer)}` : ''}</small></span></button>`).join('') || '<div class="panel"><p>No plant records yet.</p></div>'}</div></section><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
+        app.querySelectorAll('.field-guide-area-card').forEach((card, index) => {
+            const place = places[index];
+            if (!place) return;
+            card.dataset.fieldGuideArea = '';
+            card.dataset.place = place.id;
+            card.dataset.search = [place.name, place.siteName, 'area'].join(' ').toLowerCase();
+        });
         const homeSummary = app.querySelector('.field-guide-summary .is-unassigned');
         if (homeSummary) homeSummary.lastChild.textContent = ` In ${DEFAULT_HOME_AREA_NAME}`;
+        const searchDeck = app.querySelector('.field-guide-search-deck');
+        if (searchDeck) app.querySelector('.field-guide-header')?.after(searchDeck);
         if (creator) {
-            app.querySelector('.field-guide-search-deck')?.insertAdjacentHTML('beforebegin', preparationTools);
-            app.querySelector('.field-guide-summary')?.insertAdjacentHTML('beforeend', `<span><strong>${anchoredCount}</strong> Anchored</span>`);
+            app.querySelector('.analog-print-footer')?.insertAdjacentHTML('beforebegin', elementSummary + preparationTools);
+            const physicalAnchorsHeading = app.querySelector('#fieldGuideAnchorsTitle');
+            if (physicalAnchorsHeading) {
+                physicalAnchorsHeading.textContent = 'Anchored Elements';
+                physicalAnchorsHeading.nextElementSibling.textContent = 'Only elements linked to physical markers in real space appear here.';
+                physicalAnchorsHeading.closest('details')?.removeAttribute('open');
+            }
+            const footer = app.querySelector('.analog-print-footer');
+            const summary = app.querySelector('.field-guide-summary');
+            if (summary && footer) footer.before(summary);
+            const creationBoard = app.querySelector('.field-guide-creation-board');
+            const elementsSummary = app.querySelector('.field-guide-elements-summary');
+            if (creationBoard && elementsSummary) elementsSummary.before(creationBoard);
+            summary?.insertAdjacentHTML('beforeend', `<span><strong>${placedCount}</strong> Elements</span><span><strong>${anchoredCount}</strong> Anchored Elements</span>`);
             applyFieldGuideFilter(currentGuidePlaceId);
         }
-        const searchDeck = app.querySelector('.field-guide-search-deck');
         const advancedField = document.getElementById('fieldGuideLayer')?.closest('.field');
         if (searchDeck && advancedField) {
             const searchLabel = document.querySelector('label[for="fieldGuideSearch"]');
@@ -170,13 +198,17 @@ export function applyFieldGuideFilter(placeId = currentGuidePlaceId) {
     currentGuidePlaceId = String(placeId || '');
     const query = document.getElementById('fieldGuideSearch')?.value.trim().toLowerCase() || '';
     const layer = document.getElementById('fieldGuideLayer')?.value || '';
+    const areaScope = query ? '' : currentGuidePlaceId;
     let visible = 0;
     document.querySelectorAll('[data-field-guide-plant]').forEach(row => {
-        row.hidden = Boolean((query && !row.dataset.search.includes(query)) || (layer && row.dataset.layer !== layer) || (placeId && String(row.dataset.place).toLowerCase() !== String(placeId).toLowerCase()));
+        row.hidden = Boolean((query && !(row.dataset.search || '').includes(query)) || (layer && row.dataset.layer !== layer) || (areaScope && String(row.dataset.place).toLowerCase() !== areaScope.toLowerCase()));
         if (!row.hidden) visible += 1;
     });
     document.querySelectorAll('[data-field-guide-totem]').forEach(row => {
-        row.hidden = Boolean((query && !row.dataset.search.includes(query)) || layer || (placeId && String(row.dataset.place).toLowerCase() !== String(placeId).toLowerCase()));
+        row.hidden = Boolean((query && !(row.dataset.search || '').includes(query)) || layer || (areaScope && String(row.dataset.place).toLowerCase() !== areaScope.toLowerCase()));
+    });
+    document.querySelectorAll('[data-field-guide-area]').forEach(row => {
+        row.hidden = Boolean(query && !(row.dataset.search || '').includes(query));
     });
     const count = document.getElementById('fieldGuideCount');
     if (count) count.textContent = `${visible} plant${visible === 1 ? '' : 's'}`;

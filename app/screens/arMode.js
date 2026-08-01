@@ -18,6 +18,7 @@ import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -55,6 +56,7 @@ let homeSignTextureTitle = '';
 let homeSignAnchor = null;
 let sphereRenderer = null;
 let prismRenderer = null;
+let triangleRenderer = null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
@@ -83,6 +85,8 @@ const markerAppearanceColor = marker => /^#[0-9a-f]{6}$/i.test(marker?.appearanc
 const markerAppearanceSize = marker => ['tiny', 'small', 'medium', 'large', 'huge'].includes(marker?.appearance?.size) ? marker.appearance.size : 'medium';
 const markerAppearanceOpacity = marker => [1, .8, .6, .4].includes(Number(marker?.appearance?.opacity)) ? Number(marker.appearance.opacity) : 1;
 const markerNoteSurface = marker => marker?.appearance?.surface === 'outline' ? 'outline' : 'filled';
+const MARKER_APPEARANCE_SHAPES = Object.freeze(['orb', 'plate', 'triangle']);
+const markerAppearanceShape = marker => MARKER_APPEARANCE_SHAPES.includes(marker?.appearance?.shape) ? marker.appearance.shape : 'orb';
 const TASKBAR_V2_COLORS = Object.freeze({
     plant: Object.freeze([
         { name: 'Fern', value: '#5e7956' },
@@ -180,7 +184,8 @@ function appearancePayload(appearance = {}) {
     return {
         color: appearance.color,
         size: appearance.size,
-        opacity: appearance.opacity
+        opacity: appearance.opacity,
+        ...(MARKER_APPEARANCE_SHAPES.includes(appearance.shape) ? { shape: appearance.shape } : {})
     };
 }
 
@@ -193,7 +198,8 @@ function preparePlacementAppearance(type, marker = null) {
         type,
         color: markerAppearanceColor(marker || { type }),
         size: TASKBAR_V2_SIZES.includes(markerAppearanceSize(marker)) ? markerAppearanceSize(marker) : 'medium',
-        opacity: type === 'plant' ? markerAppearanceOpacity(marker) : 1
+        opacity: type === 'plant' ? markerAppearanceOpacity(marker) : 1,
+        ...(type === 'plant' ? { shape: markerAppearanceShape(marker) } : {})
     };
     return pendingPlacementAppearance;
 }
@@ -346,9 +352,11 @@ function setPlacementStatus(message) {
 function contextAppearanceButtons(type, appearance) {
     if (!['plant', 'note'].includes(type)) return '';
     const color = colorOption(type, appearance.color);
+    const shape = markerAppearanceShape({ appearance }).toUpperCase();
     const size = String(appearance.size || 'medium').toUpperCase();
     const opacity = Math.round(Number(appearance.opacity ?? 1) * 100);
-    return `<button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
+    return `${type === 'plant' ? `<button type="button" data-ar-cycle-shape aria-label="Cycle Plant marker shape. Current ${escapeHtml(shape)}"><b aria-hidden="true">△</b><span>SHAPE</span><small>${escapeHtml(shape)}</small></button>` : ''}
+        <button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
         <button type="button" data-ar-cycle-size aria-label="Cycle ${readyPlacementLabel(type)} size. Current ${escapeHtml(size)}"><b aria-hidden="true">&#9670;</b><span>SIZE</span><small>${escapeHtml(size)}</small></button>
         ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}`;
 }
@@ -382,7 +390,8 @@ function updateContextToolbar() {
         : {
             color: markerAppearanceColor(selectedRecord.marker),
             size: markerAppearanceSize(selectedRecord.marker),
-            opacity: markerAppearanceOpacity(selectedRecord.marker)
+            opacity: markerAppearanceOpacity(selectedRecord.marker),
+            shape: selectedRecord.marker.type === 'plant' ? markerAppearanceShape(selectedRecord.marker) : undefined
         };
     const stateLabel = placementType ? `Create ${readyPlacementLabel(type)}` : `Edit ${selectedRecord.marker.name}`;
     const locationNoteControl = !placementType && type === 'area_checkpoint'
@@ -396,6 +405,7 @@ function updateContextToolbar() {
         <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>${!placementType && type === 'plant' ? 'EDIT BASICS' : 'WEB MODE'}</span></button>
         <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
     bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
+    bindContextToolbarAction(toolbar, '[data-ar-cycle-shape]', () => cycleContextAppearance('shape'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
     bindContextToolbarAction(toolbar, '[data-ar-context-location-note]', () => toggleLocationNoteVisibility(selectedRecord));
@@ -432,6 +442,8 @@ function cycleContextAppearance(property) {
     if (property === 'color') {
         const values = TASKBAR_V2_COLORS[type].map(option => option.value);
         appearance.color = nextCycleValue(colorOption(type, appearance.color).value, values);
+    } else if (property === 'shape' && type === 'plant') {
+        appearance.shape = nextCycleValue(markerAppearanceShape({ appearance }), MARKER_APPEARANCE_SHAPES);
     } else if (property === 'size') {
         appearance.size = nextCycleValue(appearance.size, TASKBAR_V2_SIZES);
     } else if (property === 'opacity' && type === 'plant') {
@@ -1346,10 +1358,11 @@ function setupSpatialMarkerRenderer() {
     setupHomeSignRenderer();
     sphereRenderer = createSpatialSphereRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
+    triangleRenderer = createSpatialTriangleRenderer(gl);
 }
 
 function drawSpatialMarkers(view) {
-    if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer) return;
+    if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer || !triangleRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -1382,12 +1395,26 @@ function drawSpatialMarkers(view) {
             return;
         }
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
+        const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         const arrivalProgress = Number.isFinite(record.spawnedAt)
             ? Math.min(1, Math.max(0, (performance.now() - record.spawnedAt) / 850))
             : 1;
         const arrivalEase = 1 - Math.pow(1 - arrivalProgress, 3);
+        if (markerForm === 'triangle') {
+            drawSpatialTriangle(gl, triangleRenderer, view, record.position, {
+                halfWidth: scaleX * 1.18,
+                halfHeight: scaleY * 1.18,
+                halfDepth: scaleX * .72,
+                color: markerRgb(record.marker, baseColor),
+                topColor: [.72, .95, .62],
+                alpha: arrivalEase * markerAppearanceOpacity(record.marker),
+                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
+            });
+            return;
+        }
+        if (markerForm === 'plate') return;
         drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor),
@@ -1395,16 +1422,31 @@ function drawSpatialMarkers(view) {
         });
     });
 
+    let platePreview = null;
     if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestViewerMatrix && !readySpecialMarker) {
         const target = placementPoint();
         if (!target) return;
         const previewMarker = placementPreviewMarker(readyPlacementType);
         const [previewWidth, previewHeight] = markerDimensions(previewMarker);
-        drawSpatialOrb(gl, sphereRenderer, view, target, Math.max(previewWidth, previewHeight), {
-            type: readyPlacementType === 'plant' ? 'plant' : 'marker',
-            color: markerRgb(previewMarker, readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]),
-            opacity: markerAppearanceOpacity(previewMarker)
-        });
+        const previewForm = readyPlacementType === 'plant' ? markerAppearanceShape(previewMarker) : 'orb';
+        if (previewForm === 'triangle') {
+            drawSpatialTriangle(gl, triangleRenderer, view, target, {
+                halfWidth: previewWidth * 1.18,
+                halfHeight: previewHeight * 1.18,
+                halfDepth: previewWidth * .72,
+                color: markerRgb(previewMarker, colors.plant),
+                topColor: [.72, .95, .62],
+                alpha: markerAppearanceOpacity(previewMarker)
+            });
+        } else if (previewForm === 'plate') {
+            platePreview = { target, previewMarker, previewWidth, previewHeight };
+        } else {
+            drawSpatialOrb(gl, sphereRenderer, view, target, Math.max(previewWidth, previewHeight), {
+                type: readyPlacementType === 'plant' ? 'plant' : 'marker',
+                color: markerRgb(previewMarker, readyPlacementType === 'plant' ? colors.plant : [.72, .9, .58]),
+                opacity: markerAppearanceOpacity(previewMarker)
+            });
+        }
     }
 
     gl.useProgram(markerProgram);
@@ -1415,18 +1457,28 @@ function drawSpatialMarkers(view) {
     activeAreaMarkers().forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
-        if (shape === 0 || shape === 1 || shape === 3 || shape === 4) return;
+        const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
+        if (!isPlantPlate && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
-        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), shape);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), isPlantPlate ? 6 : shape);
         gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), markerAppearanceOpacity(record.marker));
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
+    if (platePreview) {
+        const model = markerBillboardMatrix(platePreview.target, platePreview.previewWidth, platePreview.previewHeight);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 6);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), markerAppearanceOpacity(platePreview.previewMarker));
+        gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(platePreview.previewMarker, colors.plant));
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
     if (locatedTotemRecord?.areaId === activeAreaId) {
         const guideModel = groundGuideMatrix(locatedTotemRecord.position);
         if (guideModel) {
@@ -1619,6 +1671,11 @@ function openInlineEditor(record, force = false) {
         ? `<p class="creator-ar-profile-note">${hasPlantProfile(record) ? 'Plant Profile enabled. Use View mode to reveal it, or Web Mode to extend its knowledge.' : 'Upgrade this Plant in Web Mode to unlock its interactive AR information tree.'}</p>`
         : '';
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${profileNote}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    if (plant) {
+        const shapeField = document.createElement('label');
+        shapeField.innerHTML = `Marker form<select name="markerShape"><option value="orb" ${markerAppearanceShape(record.marker) === 'orb' ? 'selected' : ''}>Orb</option><option value="plate" ${markerAppearanceShape(record.marker) === 'plate' ? 'selected' : ''}>Square number plate</option><option value="triangle" ${markerAppearanceShape(record.marker) === 'triangle' ? 'selected' : ''}>3D triangle</option></select>`;
+        editor.querySelector('.creator-ar-appearance')?.append(shapeField);
+    }
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-edit-in-web]').addEventListener('click', () => {
         arReturnContext = areaCheckpoint ? `web-totem:${record.areaId}` : `web-marker:${record.marker.id}`;
@@ -1676,6 +1733,7 @@ function openInlineEditor(record, force = false) {
                 } : record.marker.plant_profile,
                 notes: type === 'note' ? description : record.marker.notes || ''
             };
+            if (type === 'plant' && form.elements.markerShape) update.appearance.shape = form.elements.markerShape.value;
             if (type === 'area_checkpoint') {
                 update.area_information_board = {
                     title: form.elements.areaBoardTitle?.value.trim() || name.replace(/\s+checkpoint$/i, ''),
@@ -2462,11 +2520,13 @@ function cleanup() {
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
+    destroySpatialTriangleRenderer(gl, triangleRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
     prismRenderer = null;
+    triangleRenderer = null;
     markerProgram = null;
     markerBuffer = null;
     homeSignProgram = null;
