@@ -125,6 +125,16 @@ export function renderProjectEntry(config) {
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a ${config.nonPlantMode ? 'Marker, Location, Totem or record description' : 'Plant name, Area, Note text or description'}.</p>
         </section>
 
+        <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
+            <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
+            <div class="experience-status-grid">
+                ${statusItem('Entries', config.status.entries)}
+                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
+                ${statusItem('Areas', config.status.areas)}
+                ${statusItem('Updated', config.status.lastUpdated)}
+            </div>
+        </section>
+
         <section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
             <div class="section-heading-row areas-heading-row">
                 <button class="areas-toggle" type="button" aria-expanded="true" onclick="window.toggleAreas(this)">
@@ -135,16 +145,6 @@ export function renderProjectEntry(config) {
             <p class="project-layout-intro">Each Area appears here as it is created. Open the Web Hub for detailed editing.</p>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
-        </section>
-
-        <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
-            <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
-            <div class="experience-status-grid">
-                ${statusItem('Entries', config.status.entries)}
-                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
-                ${statusItem('Areas', config.status.areas)}
-                ${statusItem('Updated', config.status.lastUpdated)}
-            </div>
         </section>
 
         <nav class="location-tool-grid${spotlightTarget === 'helpGuide' ? ' tutorial-spotlight-target' : ''}" aria-label="Location tools">

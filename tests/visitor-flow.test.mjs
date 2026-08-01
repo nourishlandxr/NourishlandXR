@@ -173,6 +173,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
     assert.match(entrySource, /project-areas-section/);
     assert.match(entrySource, /project-area-overview-copy/);
+    assert.ok(entrySource.indexOf('project-status') < entrySource.indexOf('project-areas-section'));
     assert.match(source, /areas: areaLinks/);
     assert.match(source, /renderProjectAreaDashboard/);
     assert.match(entrySource, />Search</);
