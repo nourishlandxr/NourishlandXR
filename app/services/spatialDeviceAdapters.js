@@ -6,7 +6,7 @@ import { SPATIAL_CAPTURE_METHODS, SPATIAL_DEVICE_TYPES } from './spatialDataMode
 export const SPATIAL_DEVICE_ADAPTERS = Object.freeze([
     { id: 'phone-webxr', label: 'Phone WebXR', deviceType: 'phone-webxr', captureMethod: 'webxr', status: 'operational' },
     { id: 'phone-native-ar', label: 'Native phone AR', deviceType: 'phone-native-ar', captureMethod: 'native-ar', status: 'adapter-boundary' },
-    { id: 'quest-6dof', label: 'Quest / 6DoF', deviceType: 'quest-6dof', captureMethod: '6dof', status: 'adapter-boundary' },
+    { id: 'quest-6dof', label: 'Quest 3 / 6DoF WebXR', deviceType: 'quest-6dof', captureMethod: '6dof', status: 'operational' },
     { id: 'android-xr', label: 'Android XR glasses', deviceType: 'android-xr', captureMethod: 'future-adapter', status: 'adapter-boundary' },
     { id: 'xreal-aura', label: 'XREAL AURA example', deviceType: 'xreal-aura', captureMethod: 'future-adapter', status: 'example-only' },
     { id: 'gis-export', label: 'GIS Export', deviceType: 'gis-export', captureMethod: 'future-adapter', status: 'preview-only' }

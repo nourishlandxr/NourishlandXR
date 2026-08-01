@@ -16,6 +16,7 @@ import { requestImmersiveArSession } from '../services/webxrSession.js';
 
 let appRoot = null;
 let session = null;
+let sessionMode = 'immersive-ar';
 let canvas = null;
 let gl = null;
 let referenceSpace = null;
@@ -185,6 +186,7 @@ function clearSessionState() {
     canvas?.remove();
     canvas = null;
     gl = null;
+    sessionMode = 'immersive-ar';
 }
 
 function returnToWelcome() {
@@ -1932,11 +1934,13 @@ async function startImmersive() {
     try {
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
+        sessionMode = arSession.mode || 'immersive-ar';
+        const transparentSession = sessionMode === 'immersive-ar';
         canvas = document.createElement('canvas'); canvas.className = 'tryit-xr-canvas'; document.body.append(canvas);
-        gl = canvas.getContext('webgl', { alpha: true, antialias: true });
+        gl = canvas.getContext('webgl', { alpha: transparentSession, antialias: true });
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
-        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: true, antialias: true }) });
+        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: transparentSession, antialias: true }) });
         try { referenceSpace = await session.requestReferenceSpace('local-floor'); } catch { referenceSpace = await session.requestReferenceSpace('local'); }
         try {
             const viewerSpace = await session.requestReferenceSpace('viewer');
@@ -1965,7 +1969,7 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
-            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer); gl.clearColor(0, 0, 0, transparentSession ? 0 : 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             for (const view of pose?.views || []) { const viewport = layer.getViewport(view); gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height); drawMarker(view); }
         };
         session.requestAnimationFrame(draw);

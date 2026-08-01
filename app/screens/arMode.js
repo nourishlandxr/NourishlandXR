@@ -23,6 +23,7 @@ import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
+let sessionMode = 'immersive-ar';
 let gl = null;
 let refSpace = null;
 let canvas = null;
@@ -2634,6 +2635,8 @@ function cleanup() {
     overlayRoot?.remove();
     overlayRoot = null;
     document.body.classList.remove('creator-ar-session-active');
+    document.body.classList.remove('creator-ar-immersive-vr');
+    delete document.body.dataset.webxrMode;
     activeProjectId = '';
     activeProjectName = '';
     activeSiteId = '';
@@ -2681,6 +2684,7 @@ function cleanup() {
     arReturnContext = '';
     locationNoteAnchor = null;
     referenceSpaceHasFloor = false;
+    sessionMode = 'immersive-ar';
     sessionGroundY = null;
     locationNoteConfig = null;
     locationNoteVisible = false;
@@ -2826,8 +2830,14 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     try {
         const arSession = await requestImmersiveArSession(overlayRoot);
         session = arSession.session;
+        sessionMode = arSession.mode || 'immersive-ar';
         const launchedSession = session;
         document.body.classList.add('creator-ar-session-active');
+        document.body.dataset.webxrMode = sessionMode;
+        document.body.classList.toggle('creator-ar-immersive-vr', sessionMode === 'immersive-vr');
+        if (sessionMode === 'immersive-vr') {
+            setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
+        }
         const restoringOverlay = overlayRoot;
         const requestedExistingMarkerId = pendingExistingMarkerId;
         const loadingOperation = captureArOperationContext();
@@ -2852,12 +2862,13 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         canvas = document.createElement('canvas');
         canvas.className = 'creator-ar-canvas';
         document.body.append(canvas);
-        gl = canvas.getContext('webgl', { alpha: true, antialias: true, depth: true });
+        const transparentSession = sessionMode === 'immersive-ar';
+        gl = canvas.getContext('webgl', { alpha: transparentSession, antialias: true, depth: true });
         if (!gl) throw new Error('WebGL unavailable.');
         await gl.makeXRCompatible();
         setupSpatialMarkerRenderer();
 
-        const layer = new XRWebGLLayer(session, gl, { alpha: true, antialias: true, depth: true });
+        const layer = new XRWebGLLayer(session, gl, { alpha: transparentSession, antialias: true, depth: true });
         session.updateRenderState({ baseLayer: layer, depthNear: 0.01, depthFar: 50 });
         try {
             refSpace = await session.requestReferenceSpace('local-floor');
@@ -2887,7 +2898,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             positionSessionMarkers(latestView);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-            gl.clearColor(0, 0, 0, 0);
+            gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
             gl.clearDepth(1);
             for (const view of pose.views) {
                 const viewport = layer.getViewport(view);

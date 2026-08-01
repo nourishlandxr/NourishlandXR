@@ -1,6 +1,7 @@
 ﻿import { initPanelRenderer, createPanelTexture, renderARPanel } from './arPanel.js';
 
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from './spatialSphereRenderer.js';
+import { requestImmersiveArSession } from './webxrSession.js';
 
 let session;
 let gl;
@@ -59,24 +60,21 @@ export async function startArNote(marker, profile) {
     if (!window.isSecureContext) { alert('AR requires HTTPS.'); return; }
     if (!navigator.xr) { alert('WebXR unavailable.'); return; }
     try {
-        if (!await navigator.xr.isSessionSupported('immersive-ar')) { alert('AR not supported.'); return; }
-
-        session = await navigator.xr.requestSession('immersive-ar', {
-            optionalFeatures: ['local-floor'],
-            domOverlay: { root: document.body }
-        });
+        const arSession = await requestImmersiveArSession(document.body);
+        session = arSession.session;
+        const transparentSession = (arSession.mode || 'immersive-ar') === 'immersive-ar';
 
         const canvas = document.createElement('canvas');
         canvas.id = 'arCanvas';
         canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9000;';
         document.body.append(canvas);
 
-        gl = canvas.getContext('webgl', { alpha: true, antialias: true, xrCompatible: true });
+        gl = canvas.getContext('webgl', { alpha: transparentSession, antialias: true, xrCompatible: true });
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
 
         session.updateRenderState({
-            baseLayer: new XRWebGLLayer(session, gl, { alpha: true, depth: true, antialias: true }),
+            baseLayer: new XRWebGLLayer(session, gl, { alpha: transparentSession, depth: true, antialias: true }),
             depthNear: 0.01, depthFar: 100
         });
         try { refSpace = await session.requestReferenceSpace('local-floor'); }

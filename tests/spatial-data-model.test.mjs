@@ -43,7 +43,7 @@ test('capture sessions and features keep raw and corrected spatial values separa
 
 test('device adapters expose an operational boundary and a future capture flow', () => {
     assert.ok(SPATIAL_DEVICE_ADAPTERS.some(adapter => adapter.id === 'phone-webxr' && adapter.status === 'operational'));
-    assert.ok(SPATIAL_DEVICE_ADAPTERS.some(adapter => adapter.id === 'quest-6dof' && adapter.status === 'adapter-boundary'));
+    assert.ok(SPATIAL_DEVICE_ADAPTERS.some(adapter => adapter.id === 'quest-6dof' && adapter.status === 'operational'));
     assert.ok(SPATIAL_DEVICE_ADAPTERS.some(adapter => adapter.id === 'gis-export' && adapter.status === 'preview-only'));
     assert.equal(isSupportedSpatialAdapter(SPATIAL_DEVICE_ADAPTERS[0]), true);
     assert.deepEqual(SPATIAL_CAPTURE_FLOW.slice(0, 3), ['scan-starting-totem-marker', 'set-local-origin-and-orientation', 'record-approximate-path']);

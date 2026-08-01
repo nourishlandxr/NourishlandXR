@@ -683,12 +683,13 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /searchLabel\.textContent = 'Search'/);
 });
 
-test('Creator AR opens a transparent WebXR session and cleans up on exit', () => {
+test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     const webxrSource = read('app/services/webxrSession.js');
     assert.match(arSource, /requestImmersiveArSession\(overlayRoot\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
-    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-vr'/);
     assert.match(webxrSource, /requiredFeatures: \['dom-overlay'\], optionalFeatures: \['hit-test', 'local-floor'\]/);
     assert.match(arSource, /launchedSession\.addEventListener\('end'/);
     assert.match(arSource, /creator-ar-session-active/);
@@ -765,7 +766,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\)\)/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
     assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
-    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /immersive-vr/);
     assert.match(source, /UNPACK_FLIP_Y_WEBGL, false/);
     assert.match(source, /placementReady/);
     assert.match(source, /placementPointerMarkup/);
@@ -1043,7 +1045,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(webxrSource, /domOverlay: \{ root: domOverlayRoot \}/);
+    assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['dom-overlay', 'hit-test'\]/);
     assert.match(source, /requestHitTestSource/);
     assert.match(source, /const ray = pointerWorldRay\(\)/);
