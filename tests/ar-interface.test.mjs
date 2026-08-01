@@ -1277,15 +1277,18 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(styles, /\.totem-bottom-navigation/);
 });
 
-test('Field Guide owns spatial preparation and Special Markers include wayfinding symbols', () => {
+test('Field Guide separates visual guidance, optional creative tools and physical anchors', () => {
     const fieldGuideSource = read('app/screens/fieldGuide.js');
     const projectEntrySource = read('app/components/projectEntry.js');
     const arSource = read('app/screens/arMode.js');
-    assert.match(fieldGuideSource, /Prepare this location/);
+    assert.match(fieldGuideSource, /Visual Guide/);
+    assert.match(fieldGuideSource, /Optional Creative Features/);
+    assert.match(fieldGuideSource, /Physical Anchors/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
     assert.match(fieldGuideSource, /Visitor Entrances/);
-    assert.match(fieldGuideSource, /records anchored/);
+    assert.match(fieldGuideSource, /anchored element/);
+    assert.doesNotMatch(fieldGuideSource, /of \$\{markerCount\} records anchored/);
     assert.match(fieldGuideSource, /renderProjectAreaForm/);
     assert.doesNotMatch(projectEntrySource, />\+ CREATE AREA</);
     assert.match(arSource, /data-ar-special-symbol/);
