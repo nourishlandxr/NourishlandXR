@@ -71,6 +71,7 @@ let referenceSpaceHasFloor = false;
 let sessionGroundY = null;
 let locationNoteConfig = null;
 let locationNoteVisible = false;
+let latestNotePlacementPoint = null;
 const hiddenStructuralMarkerIds = new Set();
 
 const markerLabel = type => ({ plant: 'plant', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'area totem' })[type] || 'item';
@@ -100,7 +101,7 @@ const TASKBAR_V2_COLORS = Object.freeze({
         { name: 'Heather', value: '#78656b' }
     ])
 });
-const TASKBAR_V2_SIZES = Object.freeze(['small', 'medium', 'large', 'huge']);
+const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
 const DEFAULT_LOCATION_NOTE = Object.freeze({
     enabled: true,
@@ -229,7 +230,8 @@ function markerDomAppearanceStyle(marker) {
     const opacity = markerAppearanceOpacity(marker);
     const noteWidth = Math.round(280 * factor);
     const noteHeight = Math.round(116 * factor);
-    return `--marker-accent:${markerAppearanceColor(marker)};--marker-rotation:0deg;--marker-hit-size:${Math.round(64 * factor)}px;--marker-note-width:min(86vw,${noteWidth}px);--marker-note-height:${noteHeight}px;--marker-opacity:${opacity}`;
+    const color = markerAppearanceColor(marker);
+    return `--marker-accent:${color};--spatial-note-color:${color};--marker-rotation:0deg;--marker-hit-size:${Math.round(64 * factor)}px;--marker-note-width:min(86vw,${noteWidth}px);--marker-note-height:${noteHeight}px;--marker-opacity:${opacity}`;
 }
 
 function normalizedLocationNote(project = null, site = null) {
@@ -577,6 +579,7 @@ function positionNotePlacementPreview(view = latestView) {
     const preview = overlayRoot?.querySelector('[data-ar-note-placement-preview]');
     if (!preview || readyPlacementType !== 'note') return;
     const target = placementPoint('note');
+    latestNotePlacementPoint = target;
     const point = target ? projectWorldPoint(view, target) : null;
     preview.hidden = !point;
     if (!point) return;
@@ -1025,6 +1028,10 @@ async function openArAreaCreationForm() {
 async function openSpecialMarkerPicker() {
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
     if (!picker) return;
+    if (!picker.hidden && picker.dataset.panel?.startsWith('special:')) {
+        closePlacePicker();
+        return;
+    }
     const requestId = ++specialPickerRequest;
     const panelId = `special:${requestId}`;
     placementArmGeneration += 1;
@@ -1961,12 +1968,11 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         return false;
     }
     const focusedRecord = sessionMarkers.find(record => record.marker.id === marker.id);
-    const focusedProfileView = marker.type === 'plant'
-        && hasPlantProfile(focusedRecord)
-        && String(arReturnContext).startsWith('web-marker:');
-    if (focusedRecord && focusedProfileView) {
+    const returningToWebMarker = String(arReturnContext).startsWith('web-marker:');
+    const focusedProfileView = marker.type === 'plant' && hasPlantProfile(focusedRecord) && returningToWebMarker;
+    if (focusedRecord && returningToWebMarker) {
         sessionMarkers = [focusedRecord];
-        focusedRecord.profileExpanded = true;
+        focusedRecord.profileExpanded = focusedProfileView;
         focusedRecord.infoVisible = true;
         interactionMode = 'view';
         readyPlacementType = '';
@@ -2023,6 +2029,7 @@ async function armPlacement(type, specialMarker = null) {
     closePlacePicker();
     closeUnplacedBag();
     pendingBagRecord = null;
+    if (type === 'note') latestNotePlacementPoint = null;
     if (type === 'sub_checkpoint' && specialMarker) readySpecialMarker = specialMarker;
     readyPlacementType = type;
     preparePlacementAppearance(type);
@@ -2199,7 +2206,9 @@ async function quickPlace(type) {
         const operation = captureArOperationContext();
         const operationIsCurrent = () => activePlacementOperation === placementToken && isArOperationCurrent(operation);
         if (!operationIsCurrent()) return;
-        const placementPosition = placementPoint(type);
+        const placementPosition = type === 'note'
+            ? (latestNotePlacementPoint || placementPoint(type))
+            : placementPoint(type);
         if (!placementPosition) {
             setPlacementStatus('Move your phone briefly, then use Place again.');
             return;
@@ -2437,6 +2446,7 @@ function cleanup() {
     hitTestSource?.cancel?.();
     hitTestSource = null;
     latestHitMatrix = null;
+    latestNotePlacementPoint = null;
     checkpointSessionOrigin = null;
     interactionMode = 'neutral';
     suspendedInteractionMode = '';

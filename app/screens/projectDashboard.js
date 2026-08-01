@@ -652,7 +652,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const totemColor = /^#[0-9a-f]{6}$/i.test(existing?.marker.appearance?.color || '') ? existing.marker.appearance.color : DEFAULT_TOTEM_COLOR;
         const totemHeight = normalizeTotemHeightPreset(existing?.marker);
         const totemHeightDetails = totemHeightPreset(totemHeight);
-        const totemToneButtons = TOTEM_TONES.map(tone => `<button type="button" data-totem-tone="${tone.color}" aria-label="${tone.label} Totem tone" aria-pressed="${tone.color.toLowerCase() === totemColor.toLowerCase()}" style="--totem-tone:${tone.color}"><span aria-hidden="true"></span><small>${tone.label}</small></button>`).join('');
+        const totemToneOptions = TOTEM_TONES.map(tone => `<option value="${tone.color}" ${tone.color.toLowerCase() === totemColor.toLowerCase() ? 'selected' : ''}>${tone.label}</option>`).join('');
         const totemHeightButtons = TOTEM_HEIGHT_PRESETS.map(preset => `<button type="button" data-totem-height="${preset.id}" aria-pressed="${preset.id === totemHeight}"><strong>${preset.label}</strong><small>${preset.metres.toFixed(2)} m</small></button>`).join('');
         const board = existing?.marker.area_information_board || {};
         const linkableAreas = context.places.filter(place => !isDefaultHomeArea(place) && place.id !== context.area.id);
@@ -720,7 +720,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                 <div class="totem-profile-visual" style="--totem-color:${totemColor};--totem-preview-height:${totemHeightDetails.previewPixels}px" aria-hidden="true"><span></span></div>
                 <div class="totem-essential-controls">
                     <div class="field totem-name-editor" hidden><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(totemName)}" required /></div>
-                    <div class="field totem-color-control"><label for="areaCheckpointColor">Earth tones</label><div class="totem-tone-presets" role="group" aria-label="Totem earth tones">${totemToneButtons}</div><span class="totem-custom-color"><small>Custom</small><input id="areaCheckpointColor" type="color" value="${totemColor}" /></span></div>
+                    <div class="field totem-color-control"><label for="areaCheckpointTone">Totem colour</label><select id="areaCheckpointTone" aria-label="Totem colour palette">${totemToneOptions}<option value="custom">Custom colour…</option></select><span class="totem-custom-color" hidden><small>Custom</small><input id="areaCheckpointColor" type="color" value="${totemColor}" /></span></div>
                     <div class="field totem-height-control"><span>Height preset</span><div class="totem-height-presets" role="group" aria-label="Totem height">${totemHeightButtons}</div><input id="areaCheckpointHeight" type="hidden" value="${totemHeight}" /></div>
                     <button class="global-ar-action spatial-focus-button compact-ar-action" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">${isPlaced ? 'OPEN IN AR' : 'PLACE IN AR'}</button>
                 </div>
@@ -739,16 +739,21 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             editor?.removeAttribute('hidden');
             editor?.querySelector('input')?.focus();
         });
-        app.querySelector('#areaCheckpointColor')?.addEventListener('input', event => {
-            app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-color', event.currentTarget.value);
-            app.querySelectorAll('[data-totem-tone]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.totemTone.toLowerCase() === event.currentTarget.value.toLowerCase())));
+        const colorInput = app.querySelector('#areaCheckpointColor');
+        const toneSelect = app.querySelector('#areaCheckpointTone');
+        const syncTotemColor = value => {
+            if (!value || value === 'custom') return;
+            if (colorInput) colorInput.value = value;
+            app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-color', value);
+        };
+        toneSelect?.addEventListener('change', event => {
+            const custom = event.currentTarget.value === 'custom';
+            app.querySelector('.totem-custom-color')?.toggleAttribute('hidden', !custom);
+            syncTotemColor(event.currentTarget.value);
         });
-        app.querySelectorAll('[data-totem-tone]').forEach(button => button.addEventListener('click', () => {
-            const colorInput = app.querySelector('#areaCheckpointColor');
-            if (!colorInput) return;
-            colorInput.value = button.dataset.totemTone;
-            colorInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }));
+        colorInput?.addEventListener('input', event => {
+            app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-color', event.currentTarget.value);
+        });
         app.querySelectorAll('[data-totem-height]').forEach(button => button.addEventListener('click', () => {
             const heightInput = app.querySelector('#areaCheckpointHeight');
             if (!heightInput) return;

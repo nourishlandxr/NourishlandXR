@@ -286,7 +286,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /data-ar-cycle-opacity/);
     assert.match(arSource, /data-ar-context-web/);
     assert.match(arSource, /data-ar-context-location-note/);
-    assert.match(arSource, /const TASKBAR_V2_SIZES = Object\.freeze\(\['small', 'medium', 'large', 'huge'\]\)/);
+    assert.match(arSource, /const TASKBAR_V2_SIZES = Object\.freeze\(\['tiny', 'small', 'medium', 'large', 'huge'\]\)/);
     assert.match(arSource, /const TASKBAR_V2_OPACITIES = Object\.freeze\(\[1, \.8, \.6, \.4\]\)/);
     assert.match(styles, /\.creator-ar-context-toolbar\[hidden\] \{ display:none; \}/);
     assert.doesNotMatch(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-taskbar \[data-ar-view-mode\]/);
@@ -483,6 +483,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /function updateContextToolbar\(\)/);
     assert.match(arSource, /function cycleContextAppearance\(property\)/);
     assert.match(arSource, /function queueContextAppearanceSave\(record, appearance, property\)/);
+    assert.match(arSource, /--spatial-note-color/);
     assert.match(arSource, /appearancePayload\(currentPlacementAppearance\(type\)\)/);
     assert.doesNotMatch(arSource.slice(arSource.indexOf('function createOverlay()'), arSource.indexOf('function cleanup()')), /data-ar-inline-editor/);
     assert.doesNotMatch(arSource, /showPlacedMarkerActions/);
@@ -498,6 +499,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(finishHold, /state\.record\.position = state\.position/);
     assert.match(arSource, /placementArmGeneration/);
     assert.match(arSource, /async function prepareExistingMarkerPlacement/);
+    assert.match(arSource, /const returningToWebMarker = String\(arReturnContext\)\.startsWith\('web-marker:'\)/);
     assert.match(arSource, /pendingExistingMarkerId/);
     assert.match(arSource, /navigateAfterAr/);
     assert.match(arSource, /window\.resumeAreaCreationFlow/);
@@ -1183,7 +1185,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /plant-info-drawer/);
     assert.match(dashboardSource, /projectEntryRelationships/);
     assert.match(dashboardSource, /if \(profileEnabled\)/);
-    assert.match(arSource, /focusedRecord\.profileExpanded = true/);
+    assert.match(arSource, /focusedRecord\.profileExpanded = focusedProfileView/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
     assert.match(dashboardSource, /Growing knowledge/);
     assert.match(dashboardSource, /Origin &amp; story/);
@@ -1346,7 +1348,7 @@ test('Note placement waits for a valid one-metre projection and previews the sav
     const styles = read('app/style.css');
     assert.match(configSource, /notePlacementDistanceMetres: 1/);
     assert.match(arSource, /placementPoint\('note'\)/);
-    assert.match(arSource, /const placementPosition = placementPoint\(type\)/);
+    assert.match(arSource, /const placementPosition = type === 'note'/);
     assert.match(arSource, /preview\.hidden = true/);
     assert.match(arSource, /creator-ar-note-placement-preview creator-ar-marker-hit-target-note/);
     assert.match(arSource, /creator-ar-spatial-name nourishland-spatial-note-surface/);
