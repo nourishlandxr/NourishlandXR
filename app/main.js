@@ -20,6 +20,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
+import { printCenterOutput, renderPrintCenter, updatePrintRangeFields } from './screens/printCenter.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, openProjectAreaAr, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
 import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
@@ -187,6 +188,12 @@ async function bootstrap() {
             await window.renderProjectDashboard(...rememberedView.args);
             return;
         }
+        if (rememberedView?.view === 'print-center' && rememberedView.args?.[0]) {
+            setExperienceRole('creator');
+            replaceViewHistory('print-center', rememberedView.args);
+            await renderPrintCenter(app, ...rememberedView.args);
+            return;
+        }
         if (rememberedView?.view === 'area' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
             setExperienceRole('creator');
             replaceViewHistory('area', rememberedView.args);
@@ -320,6 +327,12 @@ window.addEventListener('popstate', event => {
         void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
         return;
     }
+    if (event.state?.nourishlandView === 'print-center' && event.state.viewArgs?.[0]) {
+        rememberCurrentView('print-center', event.state.viewArgs);
+        setExperienceRole('creator');
+        void renderPrintCenter(app, ...event.state.viewArgs);
+        return;
+    }
     if (event.state?.nourishlandView === 'projects') {
         setExperienceRole('creator');
         void renderDemoProjects(app);
@@ -362,6 +375,15 @@ window.openCreatorContentMode = projectId => openCreatorContentMode(app, project
 window.openQuickAccessChoice = (projectId, type) => openQuickAccessChoice(app, projectId, type);
 window.openCreatorVisitorPreview = projectId => openCreatorVisitorPreview(projectId);
 window.renderContentMode = projectId => renderContentMode(app, projectId);
+window.renderPrintCenter = (projectId, section = 'prints', fromHistory = false) => {
+    const args = [projectId, section];
+    rememberCurrentView('print-center', args);
+    if (!fromHistory && history.state?.nourishlandView !== 'print-center') history.pushState({ nourishlandView: 'print-center', viewArgs: args }, '', window.location.href);
+    setExperienceRole('creator');
+    return renderPrintCenter(app, projectId, section);
+};
+window.printCenterOutput = kind => printCenterOutput(app, kind);
+window.updatePrintRangeFields = updatePrintRangeFields;
 window.beginSiteMapAreaLink = beginSiteMapAreaLink;
 window.placeLinkedAreaOnSiteMap = placeLinkedAreaOnSiteMap;
 window.uploadSiteMapPhoto = uploadSiteMapPhoto;

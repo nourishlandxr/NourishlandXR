@@ -92,9 +92,11 @@ export function renderProjectEntry(config) {
         </section>` : '';
 
     return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
+        <div class="dashboard-frame">
         <header class="location-dashboard-header">
+            <p class="dashboard-frame-kicker">PROJECT DASHBOARD</p>
             <h1>${config.locationName}</h1>
-            <p>Dashboard</p>
+            <p class="dashboard-frame-title">Dashboard</p>
         </header>
 
         ${growthJourneyHtml}
@@ -156,5 +158,6 @@ export function renderProjectEntry(config) {
             <button class="change-location-control exit-project-creator" type="button" onclick="${config.backAction}">← Exit Project Creator</button>
         </footer>
         ${tutorialSpotlight(config.guidance)}
+        </div>
     </div>`;
 }
