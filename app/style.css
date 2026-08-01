@@ -4906,11 +4906,14 @@ body.ar-dashboard-open .ar-tutorial-panel {
 }
 
 .bottom-navigation {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     justify-content: space-between;
+    align-items: stretch;
     gap: 0.75rem;
     margin-top: 1.25rem;
 }
+.bottom-navigation > button { width: 100%; min-width: 0; }
 
 .plant-profile-card-editor {
     display: grid;
@@ -5408,6 +5411,9 @@ body.ar-dashboard-open .ar-tutorial-panel {
     border-radius: 14px;
     background: rgba(255,255,255,.68);
 }
+.area-vital-setting { position: relative; padding-right: 2.2rem !important; }
+.area-inline-edit { position: absolute; top: .45rem; right: .45rem; display: grid; place-items: center; width: 22px; min-width: 22px; height: 22px; min-height: 22px; padding: 0; border: 1px solid rgba(78,111,78,.24); border-radius: 50%; background: rgba(255,255,255,.58); color: #58745b; font-size: .65rem; line-height: 1; }
+.area-inline-edit:hover { background: #fff; color: #2f5f3e; }
 
 .area-vital-grid small,
 .totem-vital-grid small {
