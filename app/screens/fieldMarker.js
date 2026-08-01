@@ -121,13 +121,23 @@ export function searchGlobalPlantOptions(value) {
     }
     if (status) status.textContent = 'Searching the global plant list…';
     globalSearchTimer = setTimeout(async () => {
-        globalPlantResults = await searchGlobalPlants(query);
-        selectedGlobalPlant = null;
-        draw();
-        const input = document.getElementById('globalPlantSearch');
-        if (input) { input.value = query; input.focus(); }
-        const nextStatus = document.getElementById('globalPlantSearchStatus');
-        if (nextStatus) nextStatus.textContent = globalPlantResults.length ? `${globalPlantResults.length} global result${globalPlantResults.length === 1 ? '' : 's'}.` : 'No global plants found.';
+        try {
+            globalPlantResults = await searchGlobalPlants(query);
+            selectedGlobalPlant = null;
+            draw();
+            const input = document.getElementById('globalPlantSearch');
+            if (input) { input.value = query; input.focus(); }
+            const nextStatus = document.getElementById('globalPlantSearchStatus');
+            if (nextStatus) nextStatus.textContent = globalPlantResults.length ? `${globalPlantResults.length} public API result${globalPlantResults.length === 1 ? '' : 's'}.` : 'No public plant matches found.';
+        } catch (error) {
+            globalPlantResults = [];
+            selectedGlobalPlant = null;
+            draw();
+            const input = document.getElementById('globalPlantSearch');
+            if (input) { input.value = query; input.focus(); }
+            const nextStatus = document.getElementById('globalPlantSearchStatus');
+            if (nextStatus) nextStatus.textContent = `Public plant search unavailable: ${error.message}`;
+        }
     }, 350);
 }
 

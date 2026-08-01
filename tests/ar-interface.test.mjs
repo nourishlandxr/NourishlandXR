@@ -1114,6 +1114,8 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldMarker, /sourceId: selectedGlobalPlant\?\.sourceId/);
     assert.match(plantService, /plant-search\/global/);
     assert.match(server, /api\.gbif\.org\/v1\/species\/suggest/);
+    assert.match(server, /api\.inaturalist\.org\/v2\/taxa\/autocomplete/);
+    assert.match(plantService, /throwOnError/);
     assert.match(server, /source: 'GBIF'/);
 });
 

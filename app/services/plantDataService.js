@@ -11,6 +11,7 @@ async function requestJson(url, fallback, options = {}) {
         if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
         return data;
     } catch (error) {
+        if (options.throwOnError) throw error;
         if (options.method && options.method !== 'GET') throw error;
         console.warn(`[PlantData] ${url}: ${error.message}`);
         return fallback;
@@ -76,7 +77,7 @@ export async function createPlantRecord(data) {
 export async function searchGlobalPlants(query) {
     const value = String(query || '').trim();
     if (value.length < 2) return [];
-    const payload = await requestJson(`${API_BASE}/plant-search/global?q=${encodeURIComponent(value)}`, { results: [] });
+    const payload = await requestJson(`${API_BASE}/plant-search/global?q=${encodeURIComponent(value)}`, { results: [] }, { throwOnError: true });
     return Array.isArray(payload?.results) ? payload.results : [];
 }
 

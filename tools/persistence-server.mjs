@@ -844,24 +844,65 @@ function handleApi(req, res) {
     if (pathname === '/api/plant-search/global' && req.method === 'GET') {
         const query = String(url.searchParams.get('q') || '').trim().slice(0, 120);
         if (query.length < 2) return sendJson(res, 200, { source: 'GBIF', readonly: true, results: [] });
-        const endpoint = `https://api.gbif.org/v1/species/suggest?q=${encodeURIComponent(query)}&rank=SPECIES&limit=12`;
-        fetchJson(endpoint).then(items => {
-            const results = (Array.isArray(items) ? items : [])
-                .filter(item => String(item.kingdom || '').toLowerCase() === 'plantae')
-                .map(item => ({
-                    source: 'GBIF',
-                    sourceId: String(item.key || item.usageKey || ''),
-                    commonName: String(item.vernacularName || ''),
-                    scientificName: String(item.scientificName || item.canonicalName || ''),
-                    canonicalName: String(item.canonicalName || ''),
-                    genus: String(item.genus || ''),
-                    family: String(item.family || ''),
-                    rank: String(item.rank || ''),
-                    status: String(item.status || ''),
-                    sourceUrl: item.key ? `https://www.gbif.org/species/${item.key}` : ''
-                }));
-            sendJson(res, 200, { source: 'GBIF', readonly: true, results });
-        }).catch(error => sendJson(res, 502, { error: `Global plant search is temporarily unavailable: ${error.message}` }));
+        const gbifEndpoint = `https://api.gbif.org/v1/species/suggest?q=${encodeURIComponent(query)}&rank=SPECIES&limit=12`;
+        const inaturalistEndpoint = `https://api.inaturalist.org/v2/taxa/autocomplete?q=${encodeURIComponent(query)}&rank=species&per_page=12`;
+        Promise.allSettled([fetchJson(gbifEndpoint), fetchJson(inaturalistEndpoint)]).then(results => {
+            const merged = new Map();
+            const warnings = [];
+            const addResult = (item, source, normalized) => {
+                const value = normalized(item);
+                if (!value?.scientificName) return;
+                const key = value.scientificName.toLocaleLowerCase();
+                const existing = merged.get(key);
+                if (!existing) {
+                    merged.set(key, { ...value, source, sources: [source] });
+                    return;
+                }
+                existing.sources = [...new Set([...existing.sources, source])];
+                existing.source = existing.sources.join(' + ');
+                existing.commonName ||= value.commonName;
+                existing.family ||= value.family;
+                existing.sourceUrl ||= value.sourceUrl;
+                existing.imageUrl ||= value.imageUrl;
+            };
+            const normalizeGbif = item => String(item.kingdom || '').toLowerCase() === 'plantae' ? {
+                sourceId: String(item.key || item.usageKey || ''),
+                commonName: String(item.vernacularName || ''),
+                scientificName: String(item.scientificName || item.canonicalName || ''),
+                canonicalName: String(item.canonicalName || ''),
+                genus: String(item.genus || ''),
+                family: String(item.family || ''),
+                rank: String(item.rank || ''),
+                status: String(item.status || ''),
+                sourceUrl: item.key ? `https://www.gbif.org/species/${item.key}` : ''
+            } : null;
+            const normalizeInaturalist = item => String(item.iconic_taxon_name || '').toLowerCase() === 'plantae' ? {
+                sourceId: String(item.id || ''),
+                commonName: String(item.preferred_common_name || ''),
+                scientificName: String(item.name || ''),
+                canonicalName: String(item.name || ''),
+                genus: String(item.genus || ''),
+                family: String(item.family || ''),
+                rank: String(item.rank || ''),
+                status: String(item.conservation_status?.status_name || ''),
+                sourceUrl: item.id ? `https://www.inaturalist.org/taxa/${item.id}` : '',
+                imageUrl: item.default_photo?.medium_url || item.default_photo?.square_url || ''
+            } : null;
+            results.forEach((result, index) => {
+                const source = index === 0 ? 'GBIF' : 'iNaturalist';
+                if (result.status !== 'fulfilled') {
+                    warnings.push(`${source} search unavailable: ${result.reason?.message || 'request failed'}`);
+                    return;
+                }
+                const items = index === 0 ? result.value : result.value?.results;
+                (Array.isArray(items) ? items : []).forEach(item => addResult(item, source, index === 0 ? normalizeGbif : normalizeInaturalist));
+            });
+            if (!merged.size && warnings.length === results.length) {
+                sendJson(res, 502, { error: `Public plant search is temporarily unavailable. ${warnings.join(' ')}` });
+                return;
+            }
+            sendJson(res, 200, { source: 'GBIF + iNaturalist', readonly: true, warnings, results: [...merged.values()].slice(0, 20) });
+        });
         return true;
     }
     if (pathname === '/api/plant-library' && req.method === 'POST') {
