@@ -6,7 +6,7 @@ function statusItem(label, value) {
     return `<div class="experience-status-item"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
-const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#39;' })[character]);
+const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function contextualGuidance(guidance, target) {
     if (!guidance || guidance.target !== target || ['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
@@ -17,24 +17,23 @@ function contextualGuidance(guidance, target) {
 }
 
 function tutorialSpotlight(guidance) {
-    if (!guidance || !['dashboardWelcome', 'quickAccess'].includes(guidance.feature)) return '';
+    if (!guidance || !['dashboardWelcome', 'projectTutorial', 'arMode', 'helpGuide', 'startingPoint', 'area', 'quickAccess'].includes(guidance.feature)) return '';
     return `<div class="tutorial-spotlight-shield" aria-hidden="true"></div>
-        <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" aria-label="${guidance.title}">
-            <span class="guidance-stage">Tutorial Mode</span>
-            <strong>${guidance.title}</strong>
+        <aside class="tutorial-spotlight-callout tutorial-spotlight-${guidance.target}" role="dialog" aria-modal="true">
+            <summary><span class="guidance-stage">First steps</span><strong>${guidance.title}</strong><i aria-hidden="true">⌄</i></summary>
+            <div class="tutorial-subtle-tip-body">
             <p>${guidance.body}</p>
             <div class="tutorial-spotlight-actions">
-                <button type="button" onclick="${guidance.dismissAction}">Skip Tutorial</button>
+                <button type="button" onclick="${guidance.closeAction || guidance.dismissAction}">Close tutorial</button>
                 <button class="primary" type="button" onclick="${guidance.nextAction}">Next</button>
+            </div>
             </div>
         </aside>`;
 }
 
 function latestEntryRow(item) {
-    return `<button class="latest-entry-row change-entry-row" type="button" onclick="${item.action}">
-        <span class="latest-entry-copy"><strong>${item.label}</strong><span>${item.type}</span></span>
-        <span class="latest-entry-detail"><span>Date</span><strong>${item.date}</strong></span>
-        <span class="latest-entry-detail latest-entry-author"><span>Added by</span><strong>${item.creator}</strong></span>
+    return `<button class="latest-entry-row change-entry-row database-record-card" type="button" onclick="${item.action}">
+        <span class="recent-record-line"><strong>${item.type}:</strong> <span>${item.label}</span> <small>— Location: ${item.location || 'N/A'}</small></span>
     </button>`;
 }
 
@@ -42,86 +41,95 @@ export function renderProjectEntry(config) {
     const latestEntries = config.latestEntries || [];
     const areas = config.areas || [];
     const searchItems = config.searchItems || [];
-    const quickActions = config.quickActions || [];
-    const tools = config.tools || [];
-    const status = config.status || { entries: '0', unplaced: '0', areas: '0', lastUpdated: 'No edits yet', notice: '' };
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
-        ? areas.map(area => `<button class="project-area-link" type="button" onclick="${area.action}">
+        ? areas.map(area => `<button class="project-area-link database-record-card area-record-card" type="button" onclick="${area.action}">
             <span class="project-area-link-icon" aria-hidden="true">▧</span>
-            <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.type} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
-            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Starting Point' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
+            <span class="project-area-link-copy"><small class="record-file-tab">AREA FILE</small><strong>${area.label}</strong><span>${area.type} · ${area.identifier} · ${area.contentCount} record${area.contentCount === 1 ? '' : 's'}</span></span>
+            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
-    const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" onclick="${item.action}" hidden>
+    const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
         <span class="project-search-result-icon" aria-hidden="true">${item.icon}</span>
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
         <span class="project-search-result-open">Open</span>
     </button>`).join('');
-    const spotlightTarget = config.guidance?.feature === 'dashboardWelcome'
-        ? 'header'
-        : config.guidance?.feature === 'quickAccess'
-            ? 'quickAccess'
-            : '';
+    const growth = config.growthJourney;
+    const growthJourneyHtml = growth ? `<details class="living-map-progress subtle-project-tutorial${config.guidance?.target === 'projectTutorial' ? ' tutorial-spotlight-target' : ''}"${config.guidance?.target === 'projectTutorial' ? ' open' : ''}>
+        <summary class="living-map-progress-heading">
+            <div><span class="growth-stage">${escapeAttribute(growth.stage)}</span><h2 id="livingMapProgressTitle">${escapeAttribute(growth.message)}</h2></div>
+            <span class="tutorial-summary-progress"><strong>${growth.completed} of ${growth.steps.length}</strong><i aria-hidden="true">⌄</i></span>
+        </summary>
+        <div class="project-tutorial-details">
+        <div class="tutorial-task-list" role="list" aria-label="Getting started tasks">
+            ${growth.steps.map(step => `<span class="${step.complete ? 'is-complete' : ''}" role="listitem"><i aria-hidden="true">${step.complete ? '✓' : '○'}</i><strong>${escapeAttribute(step.label)}</strong>${step.progress ? `<small>${escapeAttribute(step.progress)}</small>` : ''}</span>`).join('')}
+        </div>
+        <div class="tutorial-purpose"><strong>Why begin here?</strong><p>Spatial knowledge becomes useful when information is attached to a real object or place. These small actions show the complete idea—identify something, organise its place, give the place a Totem, then let its information grow. Plant records receive a unique ID automatically when they are created.</p></div>
+        <div class="tutorial-quick-starts${config.guidance?.target === 'quickStarts' ? ' tutorial-spotlight-target' : ''}" aria-label="Tutorial quick starts">
+            ${growth.starterActions.map(action => `<button type="button" onclick="${action.action}"><span aria-hidden="true">${action.icon}</span><strong>${escapeAttribute(action.label)}</strong><small>${escapeAttribute(action.description)}</small></button>`).join('')}
+        </div>
+        </div>
+    </details>` : '';
+    const spotlightTarget = config.guidance?.target || '';
 
-    // Content mode sections displayed below Quick Access
-    const contentSections = `
+    // Quiet management tools displayed below the primary AR path.
+    const contentSections = config.nonPlantMode ? `
         <section class="content-mode-section">
             <button class="content-mode-card" type="button" onclick="${config.fieldGuideAction}">
-                <span class="content-mode-icon" aria-hidden="true">🌿</span>
-                <div><strong>Field Guide</strong><span>Browse and edit Plants and their information.</span></div>
+                <span class="content-mode-icon" aria-hidden="true">▦</span>
+                <div><strong>Collection Library</strong><span>Browse Dynamic Markers, records and attached information.</span></div>
             </button>
             <button class="content-mode-card" type="button" onclick="${config.mapAction}">
                 <span class="content-mode-icon" aria-hidden="true">⌕</span>
-                <div><strong>Map</strong><span>Review Areas and spatial organisation without the camera.</span></div>
+                <div><strong>Location Map</strong><span>See rooms, zones, Totems and placed objects.</span></div>
             </button>
             <button class="content-mode-card" type="button" onclick="${config.storiesAction}">
                 <span class="content-mode-icon" aria-hidden="true">⚑</span>
-                <div><strong>Stories & Checkpoints</strong><span>Manage stories, guided moments and checkpoints.</span></div>
+                <div><strong>Stories &amp; Exhibitions</strong><span>Manage interpretation, provenance and guided experiences.</span></div>
             </button>
-            <button class="content-mode-card" type="button" onclick="${config.unplacedAction}">
-                <span class="content-mode-icon" aria-hidden="true">📦</span>
-                <div><strong>Unplaced Content</strong><span>${status.unplaced} items can be positioned later.</span></div>
-            </button>
-        </section>`;
+        </section>` : '';
 
-    return `<div class="screen project-entry location-selected${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
-        <header class="location-dashboard-header${spotlightTarget === 'header' ? ' tutorial-spotlight-target' : ''}">
-            <button class="change-location-control" type="button" onclick="${config.backAction}">← Change location</button>
+    return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
+        <header class="location-dashboard-header">
             <h1>${config.locationName}</h1>
-            <span class="dashboard-identity">Dashboard</span>
-            <p class="dashboard-location-name">${config.siteName}</p>
+            <p>Dashboard</p>
         </header>
 
-        <section class="location-create-section location-create-section-prominent${spotlightTarget === 'quickAccess' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="quickAccessTitle">
-            <div class="section-heading-row"><h2 id="quickAccessTitle">Quick Access</h2></div>
-            <div class="quick-access-grid">
-                ${quickActions.map(item => `<button class="quick-access-action" type="button" onclick="${item.action}"><span class="quick-access-icon" aria-hidden="true">${item.icon}</span><strong>${item.label}</strong></button>`).join('')}
-            </div>
+        ${growthJourneyHtml}
+
+        <section class="dashboard-ar-path${spotlightTarget === 'arPath' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
+            <button class="global-ar-action dashboard-open-ar" type="button" onclick="${config.openArAction}">
+                <span aria-hidden="true">◉</span>
+                <strong id="openArTitle">OPEN AR</strong>
+                <small>See your knowledge come alive in the place it belongs.</small>
+            </button>
+            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong><small>Home, Areas, Plants and project records.</small></button>
         </section>
 
-        ${contentSections}
+        <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>
 
         <section class="project-search-section" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">
-                <div><h2 id="projectSearchTitle">Search</h2><p>Find an Area, Plant, Note, checkpoint or saved information.</p></div>
+                <div><h2 id="projectSearchTitle">Search</h2><p>${config.nonPlantMode ? 'Find a Location, Dynamic Marker, Totem, Note or collection record.' : 'Find an Area, Plant, Note, checkpoint or saved information.'}</p></div>
             </div>
             <div class="project-search-box">
                 <span aria-hidden="true">⌕</span>
-                <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="Search Areas, Plants, Notes and information…" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
+                <input id="projectSearchInput" type="search" aria-label="Search this project" placeholder="${config.nonPlantMode ? 'Search Locations, Dynamic Markers, Totems and records…' : 'Search Areas, Plants, Notes and information…'}" autocomplete="off" oninput="window.filterProjectSearch(this.value)" />
             </div>
             <p id="projectSearchSummary" class="project-search-summary" aria-live="polite">Type to search ${searchItems.length} item${searchItems.length === 1 ? '' : 's'}.</p>
             <div id="projectSearchResults" class="project-search-results">${searchResultsHtml}</div>
-            <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a Plant name, Area, Note text or description.</p>
+            <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a ${config.nonPlantMode ? 'Marker, Location, Totem or record description' : 'Plant name, Area, Note text or description'}.</p>
         </section>
 
-        <section class="project-areas-section collapsed-areas" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
-            <button class="section-heading-row areas-toggle" type="button" onclick="window.toggleAreas(event)">
-                <h2 id="projectAreasTitle">Areas</h2>
-                <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
-            </button>
+        <section class="project-areas-section collapsed-areas${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
+            <div class="section-heading-row areas-heading-row">
+                <button class="areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
+                    <h2 id="projectAreasTitle">Areas</h2>
+                    <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
+                </button>
+            </div>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>
@@ -129,23 +137,24 @@ export function renderProjectEntry(config) {
         <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
             <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
             <div class="experience-status-grid">
-                ${statusItem('Entries', status.entries)}
-                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${status.unplaced}</button>`)}
-                ${statusItem('Areas', status.areas)}
-                ${statusItem('Updated', status.lastUpdated)}
+                ${statusItem('Entries', config.status.entries)}
+                ${statusItem('Unplaced', `<button class="status-count-link" type="button" onclick="${config.unplacedAction}">${config.status.unplaced}</button>`)}
+                ${statusItem('Areas', config.status.areas)}
+                ${statusItem('Updated', config.status.lastUpdated)}
             </div>
         </section>
 
-        ${status.notice ? `<aside class="setup-notice compact-setup-notice"><span>${status.notice}</span><button type="button" onclick="${status.setupAction}">Set Starting Point</button></aside>` : ''}
-
-        <nav class="location-tool-grid" aria-label="Location tools">
-            ${tools.map(item => actionCard(item, 'location-tool-card')).join('')}
+        <nav class="location-tool-grid${spotlightTarget === 'helpGuide' ? ' tutorial-spotlight-target' : ''}" aria-label="Location tools">
+            ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
         </nav>
 
         <section class="latest-entries-section">
-            <div class="section-heading-row"><h2>Changes</h2><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
+            <div class="section-heading-row"><div><h2>Recent record files</h2><p>Plants, Totems, Notes and other saved database records.</p></div><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>
+        <footer class="dashboard-location-footer">
+            <button class="change-location-control exit-project-creator" type="button" onclick="${config.backAction}">← Exit Project Creator</button>
+        </footer>
         ${tutorialSpotlight(config.guidance)}
     </div>`;
 }
