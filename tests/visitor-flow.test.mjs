@@ -95,7 +95,9 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.doesNotMatch(entrySource, /Home Base/);
     assert.match(entrySource, /BIRD'S-EYE OVERVIEW/);
-    assert.match(entrySource, /project-area-overview-card/);
+    assert.match(entrySource, /<article class="project-area-overview-card">/);
+    assert.doesNotMatch(entrySource, /project-area-overview-card[^>]*onclick/);
+    assert.match(entrySource, /Totem placed|No Totem/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /growth\.starterActions\.map/);
     assert.match(entrySource, /Why begin here\?/);
@@ -167,7 +169,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
     assert.match(entrySource, /project-areas-section/);
-    assert.match(entrySource, /project-area-link/);
+    assert.match(entrySource, /project-area-overview-copy/);
     assert.match(source, /areas: areaLinks/);
     assert.match(source, /renderProjectAreaDashboard/);
     assert.match(entrySource, />Search</);

@@ -1273,15 +1273,10 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             return {
                 label: escapeHtml(area.name),
                 icon: areaIcon(area),
-                type: escapeHtml(area.type || 'Area'),
-                identifier: escapeHtml(area.id),
                 contentCount: areaEntries.filter(entry => effectiveMarkerType(entry.marker) !== 'area_checkpoint').length,
                 plantCount: areaPlants.length,
                 totemPlaced: placedTotemAreaIds.has(area.id),
                 totemColor,
-                hasLocation: hasGpsCoordinates(area.anchor),
-                hasStartingPoint: areaEntries.some(entry => entry.marker.type === 'intro_checkpoint'),
-                action: `window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')`
             };
         });
         const searchItems = await buildProjectSearchItems(project, site, areas, entries);

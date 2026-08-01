@@ -4049,11 +4049,14 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
 .project-layout-intro { margin: -4px 0 12px; color: #66736a; font-size: .78rem; }
 .dashboard-section-kicker { display: block; margin-bottom: 2px; color: var(--leaf-deep); font-size: .62rem; letter-spacing: .1em; }
 .project-layout-section .project-area-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
-.project-area-overview-card { grid-template-columns: 42px minmax(0, 1fr) auto; min-height: 82px; padding: 12px !important; border: 1px solid rgba(43, 78, 52, .14); border-radius: 16px; background: rgba(255, 255, 255, .6); }
-.project-area-overview-card:hover { border-color: rgba(43, 78, 52, .3); background: rgba(231, 240, 225, .72); }
+.project-area-overview-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 82px; padding: 12px; border: 1px solid rgba(43, 78, 52, .14); border-radius: 16px; background: rgba(255, 255, 255, .6); }
 .project-area-overview-icon { width: 42px; height: 42px; }
-.project-area-overview-status { display: inline-flex; align-items: center; gap: 6px; }
-.project-area-overview-status i { display: inline-block; width: 9px; height: 9px; border: 1px solid rgba(43, 78, 52, .3); border-radius: 50%; background: var(--area-totem-color); }
+.project-area-overview-copy { display: grid; min-width: 0; gap: 3px; }
+.project-area-overview-copy span { color: #66736a; font-size: .75rem; }
+.project-area-overview-totem { display: grid; justify-items: center; gap: 3px; min-width: 48px; color: #66736a; }
+.project-area-overview-totem i { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid color-mix(in srgb, var(--area-totem-color) 72%, rgba(43, 78, 52, .25)); border-radius: 9px 9px 6px 6px; background: color-mix(in srgb, var(--area-totem-color) 78%, white); color: #fff; font-size: .9rem; font-style: normal; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.project-area-overview-totem i[style*="transparent"] { border-color: rgba(43, 78, 52, .2); background: rgba(43, 78, 52, .08); color: #748078; text-shadow: none; }
+.project-area-overview-totem small { font-size: .62rem; white-space: nowrap; }
 .status-count-link { padding: 0; border: 0; background: transparent; color: var(--leaf-deep); box-shadow: none; text-decoration: underline; }
 .status-count-link:hover { background: transparent; transform: none; }
 .placement-status { font-weight: 700; }
