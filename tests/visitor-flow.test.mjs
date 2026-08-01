@@ -252,6 +252,10 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /currentGuidePlaceId = '';/);
     assert.match(fieldGuideSource, /applyFieldGuideFilter\(''\)/);
     assert.match(fieldGuideSource, /field-guide-essentials/);
+    assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
+    assert.match(fieldGuideSource, /Your garden quest/);
+    assert.match(fieldGuideSource, /Explore your garden/);
+    assert.match(fieldGuideSource, /Bring the garden to life/);
     assert.match(fieldGuideSource, /field-guide-area-grid/);
     assert.match(fieldGuideSource, /data-field-guide-area/);
     assert.match(fieldGuideSource, /is-home-area/);

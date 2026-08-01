@@ -84,6 +84,30 @@ export async function renderFieldGuideProjects(app) {
     app.innerHTML = `<div class="screen field-guide"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">Back</button><p class="welcome-label">Field Guide</p><h1>Choose a location</h1><p class="subtitle">Browse plants, maps and information.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderFieldGuide('${encoded(project.id)}')"><strong>${escapeHtml(project.name)} Field Guide</strong><span>Location notebook and plant records</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
 }
 
+function applyCreatorWebHubCopy(app) {
+    const header = app.querySelector('.field-guide-header');
+    const title = header?.querySelector('h1');
+    if (title) title.textContent = 'Explore your garden';
+    if (header && !header.querySelector('.field-guide-header-subtitle')) {
+        const subtitle = document.createElement('p');
+        subtitle.className = 'subtitle field-guide-header-subtitle';
+        subtitle.textContent = 'Choose a patch, discover a plant and grow the story of this place.';
+        title?.after(subtitle);
+    }
+    const snapshotTitle = app.querySelector('#fieldGuideEssentialsTitle');
+    if (snapshotTitle) snapshotTitle.textContent = 'Your garden quest';
+    const areasTitle = app.querySelector('#fieldGuideAreasTitle');
+    if (areasTitle) areasTitle.textContent = 'Explore your patches';
+    const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
+    if (searchTitle) searchTitle.textContent = 'Find a plant';
+    const searchLabel = app.querySelector('label[for="fieldGuideSearch"]');
+    if (searchLabel) searchLabel.textContent = 'What are you looking for?';
+    const creativeTitle = app.querySelector('#fieldGuideCreativeToolsTitle');
+    if (creativeTitle) creativeTitle.textContent = 'Bring the garden to life';
+    const anchorsTitle = app.querySelector('#fieldGuideAnchorsTitle');
+    if (anchorsTitle) anchorsTitle.textContent = 'Connected to your place';
+}
+
 export async function renderFieldGuide(app, encodedProjectId, creator = false) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
@@ -157,6 +181,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             const creatorPreparationTools = `<section class="field-guide-preparation field-guide-creative-tools" aria-labelledby="fieldGuideCreativeToolsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideCreativeToolsTitle">Creative Features</h2></div></div><div class="field-guide-preparation-grid"><button type="button" onclick="window.renderStartingPoints('${encoded(guide.project.id)}')"><strong>Visitor Entrances</strong><span>Guided beginning.</span></button><details class="field-guide-special-elements"><summary><strong>Special Elements</strong><span>Future V2 features.</span></summary><div class="field-guide-special-copy"><p>Planned place-based tools.</p><ul><li>Videos and moving image</li><li>3D models and spatial objects</li><li>Voice guidance and sound</li><li>More interactive visitor features</li></ul></div></details></div></section><section class="field-guide-preparation" aria-labelledby="fieldGuideAnchorsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAnchorsTitle">Anchored Elements</h2></div></div><details class="field-guide-anchor-readiness"><summary><span aria-hidden="true">&#x2316;</span><div><strong>${anchoredCount} anchored element${anchoredCount === 1 ? '' : 's'}</strong><p>Physical marker links only.</p></div></summary><div class="field-guide-anchored-list">${anchoredRows || '<p>No elements are anchored yet.</p>'}</div></details></section>`;
             app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div><section class="field-guide-essentials" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading"><h2 id="fieldGuideEssentialsTitle">Essentials</h2><button class="field-guide-map-action" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">Map</button></div><div class="field-guide-summary"><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${guide.totems.length}</strong> Totems</span><span><strong>${placedCount}</strong> Elements</span><span><strong>${anchoredCount}</strong> Anchored</span></div><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section><section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div><button type="button" onclick="${locationResetAction}">All</button></div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section><section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuidePlantSearchTitle">Search</h2></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" oninput="window.applyFieldGuideFilter()" /></div><details class="field-guide-advanced-search"><summary>More filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>${creatorPreparationTools}<details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
             app.querySelectorAll('.analog-print-button').forEach(button => button.closest('.analog-print-footer')?.remove());
+            applyCreatorWebHubCopy(app);
             applyFieldGuideFilter('');
             return;
         }

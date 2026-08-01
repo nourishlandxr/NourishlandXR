@@ -6350,3 +6350,272 @@ button[onclick*="renderArPreparation"]:is(:hover,:focus-visible) {
     .print-sheet-profiles { grid-template-columns:1fr; }
     .print-center-section-heading { align-items:start; flex-direction:column; }
 }
+
+/* Web Hub quest styling: make the project feel like a living garden to explore. */
+body:has(.field-guide-tool) {
+    background:
+        radial-gradient(circle at 8% 8%,rgba(216,185,99,.23),transparent 25rem),
+        radial-gradient(circle at 96% 30%,rgba(111,173,126,.22),transparent 28rem),
+        linear-gradient(135deg,#f7f0d9,#e7f0df 48%,#e4eef0);
+}
+.field-guide-tool {
+    --quest-ink:#173b2c;
+    --quest-deep:#235c42;
+    --quest-green:#4f8b5e;
+    --quest-gold:#d59d43;
+    --quest-peach:#f5d5b1;
+    --quest-blue:#d9edf0;
+    gap:16px;
+    color:var(--quest-ink);
+}
+.field-guide-tool .field-guide-header {
+    position:relative;
+    overflow:hidden;
+    padding:24px 26px 26px;
+    border:1px solid rgba(38,91,62,.22);
+    border-radius:28px 10px 28px 10px;
+    background:
+        radial-gradient(circle at 88% 12%,rgba(255,255,255,.76),transparent 14rem),
+        linear-gradient(145deg,#f8f5d9 0%,#dcebd2 52%,#cde6e6 100%);
+    box-shadow:0 16px 34px rgba(44,79,52,.14),inset 0 1px rgba(255,255,255,.85);
+}
+.field-guide-tool .field-guide-header::before {
+    position:absolute;
+    right:-42px;
+    bottom:-72px;
+    width:220px;
+    height:220px;
+    border:1px solid rgba(47,108,73,.18);
+    border-radius:52% 48% 60% 40%;
+    background:repeating-radial-gradient(ellipse at 50% 50%,transparent 0 17px,rgba(54,112,73,.07) 18px 19px);
+    content:"";
+    transform:rotate(24deg);
+    pointer-events:none;
+}
+.field-guide-tool .field-guide-header > * { position:relative; z-index:1; }
+.field-guide-tool .field-guide-header .print-kicker {
+    color:#7c6333;
+    font-size:.64rem;
+    font-weight:900;
+    letter-spacing:.16em;
+}
+.field-guide-tool .field-guide-header h1 {
+    max-width:620px;
+    margin:7px 0 0;
+    color:var(--quest-ink);
+    font-size:clamp(2rem,6vw,3.65rem);
+    letter-spacing:-.045em;
+    line-height:.95;
+}
+.field-guide-tool .field-guide-header-subtitle {
+    max-width:520px;
+    margin:10px 0 0;
+    color:#426450;
+    font-size:.9rem;
+    line-height:1.45;
+}
+.field-guide-tool .field-guide-header > .ghost {
+    border-color:rgba(35,92,66,.2);
+    border-radius:999px;
+    background:rgba(255,255,255,.48);
+    color:var(--quest-deep);
+}
+.field-guide-tool .field-guide-essentials {
+    position:relative;
+    gap:13px;
+    padding:19px;
+    overflow:hidden;
+    border:1px solid rgba(38,91,62,.2);
+    border-radius:22px 9px 22px 9px;
+    background:linear-gradient(145deg,rgba(255,252,232,.96),rgba(219,239,215,.98));
+    box-shadow:0 12px 24px rgba(58,96,54,.1);
+}
+.field-guide-tool .field-guide-essentials::before {
+    margin-bottom:-4px;
+    color:#9b7434;
+    content:"YOUR GARDEN QUEST";
+    font-size:.62rem;
+    font-weight:900;
+    letter-spacing:.16em;
+}
+.field-guide-tool .field-guide-essentials-heading h2 {
+    color:var(--quest-ink);
+    font-size:clamp(1.35rem,3.6vw,1.8rem);
+    letter-spacing:-.025em;
+}
+.field-guide-tool .field-guide-summary {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:8px;
+}
+.field-guide-tool .field-guide-summary > span {
+    position:relative;
+    min-height:76px;
+    padding:10px 7px 8px;
+    overflow:hidden;
+    border:1px solid rgba(47,93,62,.16);
+    border-radius:16px 6px 16px 6px;
+    background:rgba(255,255,252,.74);
+    color:#527060;
+    font-size:.66rem;
+    font-weight:800;
+    text-transform:uppercase;
+}
+.field-guide-tool .field-guide-summary > span::before {
+    display:block;
+    margin-bottom:2px;
+    font-size:1.15rem;
+    line-height:1;
+}
+.field-guide-tool .field-guide-summary > span:nth-child(1)::before { content:"🌱"; }
+.field-guide-tool .field-guide-summary > span:nth-child(2)::before { content:"🌿"; }
+.field-guide-tool .field-guide-summary > span:nth-child(3)::before { content:"⌖"; }
+.field-guide-tool .field-guide-summary > span:nth-child(4)::before { content:"✨"; }
+.field-guide-tool .field-guide-summary > span:nth-child(5)::before { content:"🔗"; }
+.field-guide-tool .field-guide-summary > span strong { color:var(--quest-deep); font-size:1.3rem; line-height:1; }
+.field-guide-tool .field-guide-summary .is-unassigned { background:linear-gradient(145deg,#fff5df,#f7ddbd); }
+.field-guide-tool .field-guide-creation-actions button {
+    min-height:50px;
+    border:1px solid rgba(51,107,69,.24);
+    border-radius:14px 5px 14px 5px;
+    background:#fffdf3;
+    color:var(--quest-deep);
+    box-shadow:0 5px 0 rgba(54,104,65,.08);
+    font-size:.8rem;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.field-guide-tool .field-guide-creation-actions button::before { margin-right:5px; font-size:1.05rem; }
+.field-guide-tool .field-guide-creation-actions button:first-child::before { content:"🌱"; }
+.field-guide-tool .field-guide-creation-actions button:last-child::before { content:"🗺️"; }
+.field-guide-tool .field-guide-creation-actions button:hover,
+.field-guide-tool .field-guide-creation-actions button:focus-visible { transform:translateY(-2px); background:#fff8dc; box-shadow:0 7px 0 rgba(54,104,65,.1); }
+.field-guide-tool .field-guide-map-action {
+    min-height:42px;
+    border:1px solid #9a4d31;
+    border-radius:13px 5px 13px 5px;
+    background:linear-gradient(145deg,#d2683f,#a84430);
+    box-shadow:0 4px 0 rgba(128,53,35,.18);
+}
+.field-guide-tool .field-guide-map-action::before { margin-right:5px; content:"🗺️"; }
+.field-guide-tool .field-guide-areas-board,
+.field-guide-tool .field-guide-plant-search {
+    position:relative;
+    gap:12px;
+    padding:17px;
+    border:1px solid rgba(54,105,69,.17);
+    border-radius:23px 8px 23px 8px;
+    background:rgba(255,255,250,.72);
+    box-shadow:0 10px 24px rgba(46,87,55,.07);
+}
+.field-guide-tool .field-guide-areas-board::before,
+.field-guide-tool .field-guide-plant-search::before {
+    color:#8b6a35;
+    font-size:.6rem;
+    font-weight:900;
+    letter-spacing:.15em;
+}
+.field-guide-tool .field-guide-areas-board::before { content:"CHOOSE YOUR NEXT PATCH"; }
+.field-guide-tool .field-guide-plant-search::before { content:"DISCOVER SOMETHING NEW"; }
+.field-guide-tool .field-guide-section-heading h2 {
+    color:var(--quest-ink);
+    font-size:clamp(1.2rem,3.2vw,1.65rem);
+    letter-spacing:-.025em;
+}
+.field-guide-tool .field-guide-section-heading p { color:#5d7767; }
+.field-guide-tool .field-guide-area-grid { gap:11px; }
+.field-guide-tool .field-guide-area-grid .field-guide-area-card {
+    position:relative;
+    min-height:96px;
+    padding:12px;
+    border:1px solid rgba(48,99,64,.18);
+    border-radius:20px 7px 20px 7px;
+    background:linear-gradient(145deg,#fffdf2,#e2f0dd);
+    box-shadow:0 5px 0 rgba(49,100,62,.07),0 9px 17px rgba(49,100,62,.06);
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.field-guide-tool .field-guide-area-grid .field-guide-area-card:nth-child(3n+2) { border-radius:7px 20px 7px 20px; background:linear-gradient(145deg,#fffaf0,#e3eef0); }
+.field-guide-tool .field-guide-area-grid .field-guide-area-card:nth-child(3n) { background:linear-gradient(145deg,#fff8ea,#f3e6d1); }
+.field-guide-tool .field-guide-area-grid .field-guide-area-card:hover,
+.field-guide-tool .field-guide-area-grid .field-guide-area-card:focus-visible {
+    border-color:var(--quest-gold);
+    box-shadow:0 8px 0 rgba(197,143,52,.12),0 15px 24px rgba(49,100,62,.1);
+    transform:translateY(-4px) rotate(-.4deg);
+}
+.field-guide-tool .field-guide-area-grid .field-guide-area-card.is-home-area {
+    border-color:rgba(190,137,55,.38);
+    background:linear-gradient(145deg,#fff3cf,#f3d69f);
+}
+.field-guide-tool .field-guide-area-grid .field-guide-area-card.is-home-area::after {
+    position:absolute;
+    top:8px;
+    right:10px;
+    color:#a36c24;
+    content:"START HERE";
+    font-size:.46rem;
+    font-weight:900;
+    letter-spacing:.1em;
+}
+.field-guide-tool .field-guide-area-icon {
+    width:43px;
+    height:43px;
+    border:1px solid rgba(65,115,70,.15);
+    border-radius:15px 5px 15px 5px;
+    background:rgba(255,255,255,.62);
+    font-size:1.35rem;
+}
+.field-guide-tool .field-guide-area-copy strong { color:var(--quest-ink); font-size:.9rem; }
+.field-guide-tool .field-guide-area-copy small { color:#5d7767; }
+.field-guide-tool .field-guide-area-copy small b { color:#2f754b; font-size:.86rem; }
+.field-guide-tool .field-guide-area-totem { width:28px; height:35px; box-shadow:0 4px 8px color-mix(in srgb,var(--area-totem-color) 42%,transparent); }
+.field-guide-tool .field-guide-search-deck {
+    padding:12px;
+    border:1px solid rgba(47,103,67,.2);
+    border-radius:17px 6px 17px 6px;
+    background:linear-gradient(145deg,#eef7e9,#e4f0ee);
+    box-shadow:inset 0 1px rgba(255,255,255,.78);
+}
+.field-guide-tool .field-guide-search-deck label { color:var(--quest-deep); font-size:.72rem; }
+.field-guide-tool .field-guide-search-deck input { min-height:46px; border:2px solid rgba(62,119,77,.22); border-radius:13px; background:#fffef8; box-shadow:inset 0 2px 4px rgba(52,90,55,.05); }
+.field-guide-tool .field-guide-search-deck input:focus { border-color:var(--quest-gold); box-shadow:0 0 0 3px rgba(213,157,67,.18); }
+.field-guide-tool .field-guide-plant-grid { gap:10px; }
+.field-guide-tool .field-guide-plant-card {
+    min-height:88px;
+    border:1px solid rgba(54,105,69,.14);
+    border-radius:17px 6px 17px 6px;
+    background:linear-gradient(145deg,#fffef8,#e5f1e2);
+    box-shadow:0 4px 0 rgba(49,100,62,.06);
+    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+.field-guide-tool .field-guide-plant-card:hover,
+.field-guide-tool .field-guide-plant-card:focus-visible { border-color:#6da276; box-shadow:0 7px 0 rgba(62,126,79,.1),0 10px 18px rgba(49,100,62,.08); transform:translateY(-3px); }
+.field-guide-tool .field-guide-card-icon { width:39px; height:39px; border-radius:14px 5px 14px 5px; background:#d7ebc9; font-size:1.1rem; }
+.field-guide-tool .field-guide-preparation {
+    position:relative;
+    margin:0;
+    padding:17px;
+    border:1px solid rgba(149,106,55,.2);
+    border-radius:22px 8px 22px 8px;
+    background:linear-gradient(145deg,#fff3df,#e7f1dd);
+    box-shadow:0 10px 22px rgba(85,91,52,.08);
+}
+.field-guide-tool .field-guide-preparation::before {
+    display:block;
+    margin-bottom:9px;
+    color:#9a7136;
+    content:"BONUS PATH";
+    font-size:.6rem;
+    font-weight:900;
+    letter-spacing:.15em;
+}
+.field-guide-tool .field-guide-preparation-grid button,
+.field-guide-tool .field-guide-special-elements { min-height:78px; border:1px solid rgba(95,124,67,.2); border-radius:15px 5px 15px 5px; background:rgba(255,255,250,.84); box-shadow:0 4px 0 rgba(73,106,60,.06); }
+.field-guide-tool .field-guide-preparation-grid button:hover,
+.field-guide-tool .field-guide-special-elements:hover { border-color:#c28d42; background:#fff9e8; transform:translateY(-2px); }
+.field-guide-tool .field-guide-anchor-readiness { background:rgba(214,236,232,.76); }
+.field-guide-tool .field-guide-area-help summary { border-color:rgba(46,103,68,.32); background:#fff8df; color:#6b703e; }
+@media (max-width:700px) {
+    .field-guide-tool .field-guide-header { padding:20px 18px 22px; }
+    .field-guide-tool .field-guide-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:420px) {
+    .field-guide-tool .field-guide-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
