@@ -28,6 +28,7 @@ import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from 
 import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from './services/tutorialProgress.js';
 import { projectTemplates } from './templates/projectTemplates.js';
 import { isDefaultHomeArea } from './services/arExperienceConfig.js';
+import { applyNxrLanguage, translateApp } from './services/i18n.js';
 
 const app = document.getElementById('app');
 const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
@@ -72,6 +73,7 @@ function placeGlobalNavigationAtBottom() {
 new MutationObserver(() => {
     requestAnimationFrame(() => {
         placeGlobalNavigationAtBottom();
+        translateApp(app);
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     });
 }).observe(app, { childList: true });
@@ -82,6 +84,7 @@ const decodeMainValue = value => {
     catch { return String(value ?? ''); }
 };
 applyPlatformSettings();
+applyNxrLanguage();
 const setExperienceRole = role => {
     document.body.dataset.experienceRole = role;
     queueMicrotask(syncCreatorTestingWarning);

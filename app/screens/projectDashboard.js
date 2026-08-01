@@ -1,4 +1,5 @@
 ﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
+import { languageOptionsMarkup, setNxrLanguage } from '../services/i18n.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
@@ -160,6 +161,15 @@ export function applyPlatformSettings(settings = readPlatformSettings()) {
 }
 
 export function savePlatformSetting(name, value) {
+    if (name === 'language') {
+        setNxrLanguage(value);
+        if (document.getElementById('settingsLanguage')) {
+            const backButton = document.querySelector('.settings-screen .page-header .ghost');
+            const returnTo = backButton?.getAttribute('onclick')?.includes('renderDemoProjects') ? 'creator' : 'launch';
+            renderPlatformComingSoon(document.getElementById('app'), 'Settings', returnTo);
+        }
+        return;
+    }
     const settings = { ...readPlatformSettings(), [name]: value };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     applyPlatformSettings(settings);
@@ -995,7 +1005,7 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <div class="setting-row setting-range"><label for="settingsVolume"><strong>Volume</strong></label><div><input id="settingsVolume" type="range" min="0" max="100" step="5" value="${Number(settings.volume)}" oninput="document.getElementById('settingsVolumeValue').textContent = this.value + '%'; window.savePlatformSetting('volume', Number(this.value))"><output id="settingsVolumeValue" for="settingsVolume">${Number(settings.volume)}%</output></div></div>
                 <div class="setting-row"><label for="settingsTextSize"><strong>Text size</strong></label><select id="settingsTextSize" onchange="window.savePlatformSetting('textSize', this.value)"><option value="small" ${settings.textSize === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${settings.textSize === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${settings.textSize === 'large' ? 'selected' : ''}>Large</option></select></div>
                 <div class="setting-row"><div><strong>Visual quality</strong><p>Balanced automatically for this device.</p></div><span class="setting-value">Automatic</span></div>
-                <div class="setting-row"><label for="settingsLanguage"><strong>Language</strong></label><select id="settingsLanguage" onchange="window.savePlatformSetting('language', this.value)"><option value="en" selected>English</option></select></div>
+                <div class="setting-row"><label for="settingsLanguage"><strong>Language</strong></label><select id="settingsLanguage" onchange="window.savePlatformSetting('language', this.value)">${languageOptionsMarkup(settings.language)}</select></div>
                 <div class="setting-row"><div><strong>Hints and instructions</strong><p>Show guidance while creating and exploring.</p></div><label class="toggle-label"><input type="checkbox" ${settings.hints ? 'checked' : ''} onchange="window.savePlatformSetting('hints', this.checked)"><span>On</span></label></div>
             </div>
             <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div></div>`;
