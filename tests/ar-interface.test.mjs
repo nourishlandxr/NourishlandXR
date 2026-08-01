@@ -1248,8 +1248,12 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.doesNotMatch(arSource, /Checkpoint linked/);
     assert.match(dashboardSource, /Back to Area/);
     assert.match(dashboardSource, /Back to Dashboard/);
-    assert.match(dashboardSource, /Precise location/);
-    assert.match(dashboardSource, /Coming soon/);
+    assert.match(dashboardSource, /Area dashboard/);
+    assert.match(dashboardSource, /data-edit-area-type/);
+    assert.match(dashboardSource, /id="areaType"/);
+    assert.match(dashboardSource, /context\.project\.name/);
+    assert.match(dashboardSource, /<details class="latest-entries-section area-content-section">/);
+    assert.doesNotMatch(dashboardSource, /Precise location|Coming soon/);
     assert.doesNotMatch(dashboardSource, />Open profile</);
     assert.doesNotMatch(fieldGuideSource, /Open &amp; manage/);
     assert.match(fieldGuideSource, /field-guide-fireplace-symbol/);
@@ -1263,7 +1267,6 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(arSource, /if \(!homeSignProgram/);
     assert.match(arSource, /homeSignAnchor \|\|= homeSignAnchorFromViewer\(\)/);
     assert.match(arSource, /drawSpatialHomeSign\(view\);/);
-    assert.match(dashboardSource, /web-context-beacon is-area/);
     assert.match(dashboardSource, /optionalWarnings/);
     assert.match(dashboardSource, /Totem saved in this Area/);
     assert.match(styles, /\.web-context-beacon/);

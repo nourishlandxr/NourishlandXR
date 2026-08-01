@@ -1593,39 +1593,36 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
-            <div class="web-context-beacon is-area"><span>WORKING IN AREA</span><strong>${escapeHtml(context.area.name)}</strong></div>
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
                 <h1>${escapeHtml(context.area.name)}</h1>
-                <p class="subtitle">${escapeHtml(context.area.type || 'Area')} · ${escapeHtml(context.project.name)}</p>
                 <div class="area-top-actions"><button class="global-ar-action area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">OPEN AREA IN AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
             </header>
             ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
-            ${areaTutorialConfirmation}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
                     <div class="area-profile-visual" aria-hidden="true"><span>▧</span><small>AREA</small></div>
                     <div class="area-vital-grid">
-                        <div><small>TYPE</small><strong>${escapeHtml(context.area.type || 'Area')}</strong></div>
+                        <div><small>TYPE</small><strong data-area-type-reading>${escapeHtml(context.area.type || 'Other')}</strong></div>
                         <div><small>PLANTS</small><strong>${plantCount}</strong></div>
                         <div><small>TOTEMS</small><strong>${totemCount}</strong></div>
-                        <div><small>LOCATION</small><strong>${anchor ? 'GPS assigned' : 'Spatial Area'}</strong></div>
+                        <div><small>LOCATION</small><strong>${escapeHtml(context.project.name)}</strong></div>
                     </div>
                 </div>
                 <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
+                    <div class="area-overview-card area-type-editor"><div class="area-overview-heading"><strong>Area type</strong><button type="button" data-edit-area-type>Edit</button></div><p data-area-type-form-reading>${escapeHtml(context.area.type || 'Other')}</p><label for="areaType" hidden>Area type</label><select id="areaType" hidden><option value="Outdoor Area" ${context.area.type === 'Outdoor Area' ? 'selected' : ''}>Outdoor Area</option><option value="Indoor Area" ${context.area.type === 'Indoor Area' ? 'selected' : ''}>Indoor Area</option><option value="Bed or Plot" ${context.area.type === 'Bed or Plot' ? 'selected' : ''}>Bed or Plot</option><option value="Room" ${context.area.type === 'Room' ? 'selected' : ''}>Room</option><option value="Enclosure" ${context.area.type === 'Enclosure' ? 'selected' : ''}>Enclosure</option><option value="Path or Route" ${context.area.type === 'Path or Route' ? 'selected' : ''}>Path or Route</option><option value="Other" ${!context.area.type || context.area.type === 'Other' ? 'selected' : ''}>Other</option></select></div>
                     <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong><button type="button" data-edit-area-description>${context.area.description ? 'Edit' : 'Add description'}</button></div><p data-area-description-reading>${escapeHtml(context.area.description || 'No description has been added yet.')}</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(context.area.description || '')}</textarea></div>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
-                    <button type="submit" data-save-area-description hidden>Save description</button>
+                    <button type="submit" data-save-area-description hidden>Save Area information</button>
                 </form>
-                <section class="area-precise-location"><div><strong>Precise location</strong><small>Coming soon</small></div><p>GPS position, walked boundaries and real-world Area measurements will live here.</p></section>
                 ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
-            <section class="latest-entries-section area-content-section">
-                <div class="section-heading-row"><div><h2>Content in this Area</h2><p>${areaEntries.length} existing element${areaEntries.length === 1 ? '' : 's'}</p></div></div>
+            <details class="latest-entries-section area-content-section">
+                <summary class="section-heading-row"><div><h2>Content in this Area</h2><p>${areaEntries.length} existing element${areaEntries.length === 1 ? '' : 's'}</p></div><span aria-hidden="true">▾</span></summary>
                 <div class="area-content-grid">${unplacedTotemRow}${rows}</div>
-            </section>
+            </details>
             <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button></nav>
             <section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
                 <h2 id="deleteAreaTitle">Delete Area</h2>
@@ -1642,6 +1639,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             textarea?.focus();
         });
+        app.querySelector('[data-edit-area-type]')?.addEventListener('click', () => {
+            app.querySelector('[data-area-type-reading]')?.setAttribute('hidden', '');
+            app.querySelector('[data-area-type-form-reading]')?.setAttribute('hidden', '');
+            app.querySelector('#areaType')?.removeAttribute('hidden');
+            app.querySelector('label[for="areaType"]')?.removeAttribute('hidden');
+            app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
+            app.querySelector('#areaType')?.focus();
+        });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1655,9 +1660,11 @@ export async function saveAreaInformation(event, encodedProjectId, encodedAreaId
     try {
         const context = await projectAreaContext(projectId, areaId);
         const description = document.getElementById('areaDescription').value.trim();
+        const type = document.getElementById('areaType')?.value || context.area.type || 'Other';
         if (status) status.textContent = 'Saving Area information…';
         await updateSitePlace(projectId, context.site.id, areaId, {
-            description
+            description,
+            type
         });
         await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
     } catch (error) {

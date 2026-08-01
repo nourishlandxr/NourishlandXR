@@ -979,13 +979,14 @@ function renderSpecialMarkerChoices(picker) {
     });
     picker.querySelector('[data-ar-add-totem]').addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
-        readySpecialMarker = {
+        const specialMarker = {
             name: button.dataset.arSpecialLabel,
             special_symbol: button.dataset.arSpecialSymbol,
             arrow_style: button.dataset.arArrowStyle ? Number(button.dataset.arArrowStyle) : undefined,
             appearance: { color: ['!', '?'].includes(button.dataset.arSpecialSymbol) ? '#eaa45d' : '#75a9cc', size: 'large' }
         };
-        void armPlacement('sub_checkpoint');
+        readySpecialMarker = specialMarker;
+        void armPlacement('sub_checkpoint', specialMarker);
     }));
 }
 
@@ -2016,12 +2017,13 @@ async function ensurePlacementArea(operation = captureArOperationContext()) {
     return false;
 }
 
-async function armPlacement(type) {
+async function armPlacement(type, specialMarker = null) {
     const generation = ++placementArmGeneration;
     closeMarkerContextToolbar();
     closePlacePicker();
     closeUnplacedBag();
     pendingBagRecord = null;
+    if (type === 'sub_checkpoint' && specialMarker) readySpecialMarker = specialMarker;
     readyPlacementType = type;
     preparePlacementAppearance(type);
     suspendedInteractionMode = interactionMode || suspendedInteractionMode || 'neutral';

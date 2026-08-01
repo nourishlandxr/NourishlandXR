@@ -3740,6 +3740,19 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
     margin: 0;
 }
 
+.area-content-section > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+}
+
+.area-content-section > summary::-webkit-details-marker { display: none; }
+.area-content-section > summary > span { color: var(--muted, #66736a); transition: transform .18s ease; }
+.area-content-section[open] > summary > span { transform: rotate(180deg); }
+.area-type-editor select { margin-top: 8px; }
+
 .area-location-status {
     width: fit-content;
     padding: 6px 10px;
