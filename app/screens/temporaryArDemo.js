@@ -11,7 +11,7 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialT
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
-import { currentNxrLanguage } from '../services/i18n.js';
+import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 
 let appRoot = null;
@@ -82,8 +82,15 @@ const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'A realidade aumentada (RA) e a realidade mista (XR) são tecnologias que nos ajudam a compreender e interagir melhor com o mundo à nossa volta, ligando informação virtual a lugares reais.',
     'O Nourishland XR é um portal de informação sobre plantas, uma ferramenta de mapeamento de ecosistemas e um editor de experiências para visitantes e estudantes. Esta demonstração mostra algumas formas de ligar informação sobre plantas a lugares reais.'
 ]);
-const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT' ? WELCOME_BOARD_PARAGRAPHS_PT : WELCOME_BOARD_PARAGRAPHS;
+const demoLocalizedText = value => translateNxrText(value);
+const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
+    ? WELCOME_BOARD_PARAGRAPHS_PT
+    : currentNxrLanguage() === 'nl-NL'
+        ? WELCOME_BOARD_PARAGRAPHS.map(demoLocalizedText)
+        : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
+const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
+const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION';
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
@@ -362,10 +369,15 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     panel.innerHTML = html;
     const title = panel.querySelector('h2');
     const paragraph = panel.querySelector('p');
+    if (title) title.textContent = demoLocalizedText(title.textContent);
+    if (paragraph) paragraph.textContent = demoLocalizedText(paragraph.textContent);
+    panel.querySelectorAll('button').forEach(button => {
+        if (button.children.length === 0) button.textContent = demoLocalizedText(button.textContent);
+    });
     const controls = [...panel.children].filter(child => child !== title && child !== paragraph);
     const boardLabel = document.createElement('small');
     const textWindow = document.createElement('div');
-    boardLabel.textContent = demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION';
+    boardLabel.textContent = demoIntroLabel();
     textWindow.className = 'tryit-board-text-window';
     panel.replaceChildren(boardLabel);
     if (title) panel.append(title);
@@ -446,10 +458,13 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
-    const paragraphs = (Array.isArray(body) ? body : [body]).map(value => String(value || '').trim()).filter(Boolean);
+    const localizedTitle = demoLocalizedText(title);
+    const paragraphs = (Array.isArray(body) ? body : [body])
+        .map(value => demoLocalizedText(String(value || '').trim()))
+        .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
     introSceneActive = true;
-    introBoardTitle = title;
+    introBoardTitle = localizedTitle;
     introBoardBody = bodyText;
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
@@ -501,7 +516,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if (board) {
         board.classList.add('is-typing');
         board.classList.remove('is-copy-ready');
-        board.innerHTML = `<small>${currentNxrLanguage() === 'pt-PT' ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION'}</small><h2>${title}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
+        board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
         if (firstArrival) {
             introSceneStartedAt = performance.now();
@@ -513,7 +528,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     }
     finalActions?.setAttribute('hidden', '');
     if (continueButton && buttonLabel) {
-        continueButton.textContent = buttonLabel;
+        continueButton.textContent = demoLocalizedText(buttonLabel);
         continueButton.hidden = true;
         continueButton.onclick = () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -524,7 +539,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
-    setGuide(`${title}. ${bodyText}`);
+    setGuide(`${localizedTitle}. ${bodyText}`);
 }
 
 function finishIntroBoard() {
@@ -539,7 +554,7 @@ function runArWelcomeTutorial() {
     showIntroBoard(
         'Nourishland XR',
         welcomeBoardParagraphs(),
-        currentNxrLanguage() === 'pt-PT' ? 'Continuar' : 'Continue',
+        demoLocalizedText('Continue'),
         () => {
             finishIntroBoard();
             clearTimeout(aimRevealTimer);
@@ -1601,7 +1616,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText(demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : 'A LIVING INTRODUCTION', 700, 165);
+    ctx.fillText(demoIntroLabel(), 700, 165);
     ctx.fillStyle = '#fff';
     let titleSize = 94;
     do {
