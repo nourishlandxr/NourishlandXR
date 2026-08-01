@@ -45,11 +45,11 @@ export function renderProjectEntry(config) {
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
-        ? areas.map(area => `<article class="project-area-overview-card" data-home-area="${area.isHome ? 'true' : 'false'}">
+        ? areas.map(area => `<button class="project-area-overview-card" type="button" data-home-area="${area.isHome ? 'true' : 'false'}" data-current-area="${area.isCurrent ? 'true' : 'false'}"${area.isCurrent ? ' aria-current="location"' : ''}" aria-label="Open ${area.label}" onclick="${area.action}">
             <span class="project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
-            <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">DEFAULT · LOCKED</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
+            <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">DEFAULT</small>' : ''}${area.isCurrent ? '<small class="project-area-overview-current-badge">YOU ARE HERE</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
             <span class="project-area-overview-totem"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true">⌖</i><small>${area.totemPlaced ? 'Totem' : 'No Totem'}</small></span>
-        </article>`).join('')
+        </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
         <span class="project-search-result-icon" aria-hidden="true">${item.icon}</span>
@@ -105,9 +105,8 @@ export function renderProjectEntry(config) {
             <button class="global-ar-action dashboard-open-ar" type="button" onclick="${config.openArAction}">
                 <span aria-hidden="true">◉</span>
                 <strong id="openArTitle">OPEN AR</strong>
-                <small>See your knowledge come alive in the place it belongs.</small>
             </button>
-            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong><small>Home, Areas, Plants and project records.</small></button>
+            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Web Hub'}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong></button>
         </section>
 
         <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>
@@ -142,7 +141,7 @@ export function renderProjectEntry(config) {
                     <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▴</span></span>
                 </button>
             </div>
-            <p class="project-layout-intro">Each Area appears here as it is created. Open the Web Hub for detailed editing.</p>
+            <div class="project-layout-info-row"><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project layout</span></button><p id="projectLayoutInfo" class="project-layout-intro" hidden>Areas are shown here as a bird's-eye overview. Open the Web Hub for detailed editing.</p></div>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>

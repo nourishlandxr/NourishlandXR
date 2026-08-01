@@ -196,9 +196,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             const creatorAreaCards = orderedPlaces.map(place => {
                 const totem = place.totems?.[0];
                 const totemColor = /^#[0-9a-f]{6}$/i.test(totem?.appearance?.color || '') ? totem.appearance.color : DEFAULT_TOTEM_COLOR;
-                const action = isDefaultHomeArea(place)
-                    ? `window.filterFieldGuidePlace('${escapeHtml(place.id)}')`
-                    : `window.renderProjectAreaDashboard('${encoded(guide.project.id)}','${encoded(place.id)}')`;
+                const action = `window.renderProjectAreaDashboard('${encoded(guide.project.id)}','${encoded(place.id)}')`;
                 const searchText = [place.name, place.siteName, 'area'].join(' ').toLowerCase();
                 const totemMarkup = place.hasTotem
                     ? `<span class="field-guide-area-totem" style="--area-totem-color:${totemColor}" aria-label="Totem Marker" title="Totem Marker">&#x2316;</span>`

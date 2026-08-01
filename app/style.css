@@ -4080,15 +4080,20 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
 .project-area-link-copy span,
 .project-area-link-meta { color: #66736a; font-size: .75rem; }
 .project-area-link-meta { font-weight: 700; white-space: nowrap; }
-.project-layout-intro { margin: -4px 0 12px; color: #66736a; font-size: .78rem; }
+.project-layout-info-row { display: flex; justify-content: flex-end; min-height: 22px; margin: -2px 0 8px; }
+.project-layout-info { display: inline-grid; place-items: center; width: 21px; height: 21px; padding: 0; border: 1px solid rgba(43, 78, 52, .24); border-radius: 50%; background: rgba(255, 255, 255, .72); color: var(--leaf-deep); font-size: .72rem; font-weight: 850; line-height: 1; }
+.project-layout-info:hover, .project-layout-info:focus-visible, .project-layout-info[aria-expanded="true"] { border-color: var(--leaf-deep); background: rgba(236, 247, 239, .95); }
+.project-layout-intro { margin: 0; color: #66736a; font-size: .78rem; }
 .dashboard-section-kicker { display: block; margin-bottom: 2px; color: var(--leaf-deep); font-size: .62rem; letter-spacing: .1em; }
 .project-layout-section .project-area-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
-.project-area-overview-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 82px; padding: 12px; border: 1px solid rgba(43, 78, 52, .14); border-radius: 16px; background: rgba(255, 255, 255, .6); }
+.project-area-overview-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; width: 100%; gap: 12px; min-height: 82px; padding: 12px; border: 1px solid rgba(43, 78, 52, .14); border-radius: 16px; background: rgba(255, 255, 255, .6); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .project-area-overview-card[data-home-area="true"] { border-color: rgba(39, 118, 82, .38); background: rgba(236, 247, 239, .78); }
+.project-area-overview-card[data-current-area="true"] { border-color: var(--leaf-deep); box-shadow: 0 0 0 3px rgba(39, 118, 82, .12); }
 .project-area-overview-icon { width: 42px; height: 42px; }
 .project-area-overview-copy { display: grid; min-width: 0; gap: 3px; }
 .project-area-overview-copy span { color: #66736a; font-size: .75rem; }
 .project-area-overview-home-badge { color: #277652; font-size: .6rem; font-weight: 850; letter-spacing: .06em; }
+.project-area-overview-current-badge { color: #9b6b1f; font-size: .6rem; font-weight: 850; letter-spacing: .06em; }
 .project-area-overview-totem { display: grid; justify-items: center; gap: 3px; min-width: 48px; color: #66736a; }
 .project-area-overview-totem i { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid color-mix(in srgb, var(--area-totem-color) 72%, rgba(43, 78, 52, .25)); border-radius: 9px 9px 6px 6px; background: color-mix(in srgb, var(--area-totem-color) 78%, white); color: #fff; font-size: .9rem; font-style: normal; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .project-area-overview-totem i[style*="transparent"] { border-color: rgba(43, 78, 52, .2); background: rgba(43, 78, 52, .08); color: #748078; text-shadow: none; }
@@ -6612,14 +6617,6 @@ body:has(.field-guide-tool) {
     background:linear-gradient(145deg,rgba(255,252,232,.96),rgba(219,239,215,.98));
     box-shadow:0 12px 24px rgba(58,96,54,.1);
 }
-.field-guide-tool .field-guide-essentials::before {
-    margin-bottom:-4px;
-    color:#9b7434;
-    content:"YOUR GARDEN QUEST";
-    font-size:.62rem;
-    font-weight:900;
-    letter-spacing:.16em;
-}
 .field-guide-tool .field-guide-essentials-heading h2 {
     color:var(--quest-ink);
     font-size:clamp(1.35rem,3.6vw,1.8rem);
@@ -6732,16 +6729,6 @@ body:has(.field-guide-tool) {
 .field-guide-tool .field-guide-area-grid .field-guide-area-card.is-home-area {
     border-color:rgba(190,137,55,.38);
     background:linear-gradient(145deg,#fff3cf,#f3d69f);
-}
-.field-guide-tool .field-guide-area-grid .field-guide-area-card.is-home-area::after {
-    position:absolute;
-    top:8px;
-    right:10px;
-    color:#a36c24;
-    content:"START HERE";
-    font-size:.46rem;
-    font-weight:900;
-    letter-spacing:.1em;
 }
 .field-guide-tool .field-guide-area-icon {
     width:43px;
@@ -7321,16 +7308,6 @@ body:has(.creator-project-menu) #app {
 }
 .creator-project-menu .project-selection-list .project-selection-row:nth-child(3n) {
     background:linear-gradient(145deg,#fff8ea,#f3e6d1);
-}
-.creator-project-menu .project-selection-row::before {
-    position:absolute;
-    top:15px;
-    left:18px;
-    color:#7c6333;
-    content:"LOCATION";
-    font-size:.56rem;
-    font-weight:900;
-    letter-spacing:.14em;
 }
 .creator-project-menu .project-selection-row::after {
     position:absolute;

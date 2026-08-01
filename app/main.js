@@ -530,6 +530,14 @@ window.startCreatorLocationAr = async projectId => {
     }
 };
 window.toggleArTechnicalDetails = toggleArTechnicalDetails;
+window.toggleProjectLayoutInfo = button => {
+    const infoId = button?.getAttribute('aria-controls');
+    const info = infoId ? document.getElementById(infoId) : null;
+    if (!info) return;
+    const expanded = info.hidden;
+    info.hidden = !expanded;
+    button.setAttribute('aria-expanded', String(expanded));
+};
 window.copyArDiagnostics = () => copyArDiagnostics().catch(error => {
     const status = document.getElementById('developerDiagnosticsStatus') || document.getElementById('arTechnicalCopyStatus');
     if (status) status.textContent = `Copy failed: ${error.message}`;

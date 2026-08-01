@@ -1146,7 +1146,7 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     const dashboardSource = read('app/screens/projectDashboard.js');
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
-    assert.match(dashboardSource, /openArAction: `window\.startArMode\('\$\{encoded\(project\.id\)\}'\)`/);
+    assert.match(dashboardSource, /openArAction: `window\.startArMode\('\$\{encoded\(project\.id\)\}','\$\{encoded\(activeAreaId\)\}'\)`/);
     assert.match(dashboardSource, /addUnplacedAction: `window\.renderAddToLocation/);
     assert.doesNotMatch(dashboardSource, /quickActions:/);
     assert.match(arSource, /openUnplacedBag/);

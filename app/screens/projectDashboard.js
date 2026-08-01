@@ -154,7 +154,27 @@ const entryCreatorLabel = marker => marker.createdBy
     || marker.added_by
     || 'Local creator';
 const SETTINGS_KEY = 'nourishland-xr-settings';
+const LAST_PROJECT_AREA_KEY = 'nourishland-xr-last-area-v1';
 const DEFAULT_SETTINGS = { sound: true, volume: 80, textSize: 'medium', visualQuality: 'automatic', language: 'en', hints: true, developerDiagnostics: false, physicalAnchors: false };
+
+function readLastProjectArea(projectId) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(LAST_PROJECT_AREA_KEY) || '{}');
+        return typeof saved?.[projectId] === 'string' ? saved[projectId] : '';
+    } catch {
+        return '';
+    }
+}
+
+function rememberLastProjectArea(projectId, areaId) {
+    if (!projectId || !areaId) return;
+    try {
+        const saved = JSON.parse(localStorage.getItem(LAST_PROJECT_AREA_KEY) || '{}');
+        localStorage.setItem(LAST_PROJECT_AREA_KEY, JSON.stringify({ ...saved, [projectId]: areaId }));
+    } catch {
+        // Area memory is a convenience; navigation continues if storage is unavailable.
+    }
+}
 
 export function applyProjectTheme(theme = 'forest-light') {
     const selectedTheme = PROJECT_THEMES.has(theme) ? theme : 'forest-light';
@@ -310,7 +330,7 @@ function buildSiteMapLayout(areas, entries, useTerracePlan = false, savedAreaPoi
 
 async function projectAreaContext(projectId, areaId) {
     const context = await projectContent(projectId);
-    const area = context.places.find(place => place.id === areaId && !isDefaultHomeArea(place));
+    const area = context.places.find(place => place.id === areaId);
     if (!context.site || !area) throw new Error('Area data is unavailable.');
     return {
         ...context,
@@ -1036,7 +1056,6 @@ export async function renderPlatformHome(app) {
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
             <p class="welcome-label">Nourishland XR</p>
             <h1>Home</h1>
-            <p class="subtitle">Create once. Publish everywhere.</p>
         </div>
         <section class="project-section">
             <h2 class="project-section-title">Locations</h2>
@@ -1130,6 +1149,10 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const areas = places.filter(place => !isDefaultHomeArea(place));
         const homeArea = places.find(isDefaultHomeArea) || null;
         const layoutAreas = [homeArea, ...areas].filter(Boolean);
+        const rememberedAreaId = readLastProjectArea(project.id);
+        const activeArea = layoutAreas.find(area => area.id === rememberedAreaId) || homeArea || areas[0] || null;
+        const activeAreaId = activeArea?.id || '';
+        if (activeAreaId) rememberLastProjectArea(project.id, activeAreaId);
         const hasArea = areas.length > 0;
         const placedEntries = await entriesWithPlacement(project, site, entries);
         const unplacedEntries = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && !entry.isPlaced);
@@ -1298,7 +1321,9 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 plantCount: areaPlants.length,
                 totemPlaced: placedTotemAreaIds.has(area.id),
                 totemColor,
-                isHome: isDefaultHomeArea(area)
+                isHome: isDefaultHomeArea(area),
+                isCurrent: area.id === activeAreaId,
+                action: `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(area.id)}')`
             };
         });
         const searchItems = await buildProjectSearchItems(project, site, areas, entries);
@@ -1317,7 +1342,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 lastUpdated: latestDate ? editedLabel(latestDate).replace(/^Edited /, '') : 'No edits yet',
                 notice: ''
             },
-            openArAction: `window.startArMode('${encoded(project.id)}')`,
+            openArAction: `window.startArMode('${encoded(project.id)}','${encoded(activeAreaId)}')`,
             createAreaAction: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`,
             growthJourney,
             addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
@@ -1613,6 +1638,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
     const areaId = decodeURIComponent(encodedAreaId);
     try {
         const context = await projectAreaContext(projectId, areaId);
+        rememberLastProjectArea(projectId, context.area.id);
         recordTutorialEvent(projectId, 'first_area_created_or_selected');
         const placedAreaEntries = await entriesWithPlacement(context.project, context.site, context.areaEntries);
         const areaEntries = await Promise.all(placedAreaEntries.map(async entry => ({
@@ -1663,6 +1689,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ? '<section class="tutorial-step-confirmation" role="status"><span aria-hidden="true">✓</span><div><strong>Add 1 Area complete</strong><p>Your Area is saved. Add a Totem now, or return whenever you are ready.</p></div></section>'
             : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
+        const areaDangerZone = isDefaultHomeArea(context.area)
+            ? ''
+            : `<section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
+                <h2 id="deleteAreaTitle">Delete Area</h2>
+                <p>Deleting this Area also deletes its content, Totem and any Trail Entrance stored inside it.</p>
+                <button class="danger" type="button" onclick="window.deleteProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Delete Area</button>
+                <p id="deleteProjectAreaStatus" class="meta"></p>
+            </section>`;
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
@@ -1696,12 +1730,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <div class="area-content-grid">${unplacedTotemRow}${rows}</div>
             </details>
             <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button></nav>
-            <section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
-                <h2 id="deleteAreaTitle">Delete Area</h2>
-                <p>Deleting this Area also deletes its content, Totem and any Trail Entrance stored inside it.</p>
-                <button class="danger" type="button" onclick="window.deleteProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Delete Area</button>
-                <p id="deleteProjectAreaStatus" class="meta"></p>
-            </section>
+            ${areaDangerZone}
         </div>`;
         app.querySelector('[data-edit-area-description]')?.addEventListener('click', () => {
             app.querySelector('[data-area-description-reading]')?.setAttribute('hidden', '');
