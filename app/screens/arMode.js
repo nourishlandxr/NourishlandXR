@@ -2507,7 +2507,10 @@ function navigateAfterAr(projectId, areaId, returnContext) {
 
 function finishArExitToDashboard() {
     const projectId = activeProjectId;
-    const areaId = activeAreaId;
+    // Home is a protected holding Area, not a named Area dashboard. Returning
+    // with its id would send the dashboard router into the named-Area loader,
+    // which correctly rejects Home and displayed "Area data is unavailable".
+    const areaId = isDefaultHomeArea(activeAreaName || activeAreaId) ? '' : activeAreaId;
     const returnContext = arReturnContext;
     const activeSession = session;
     session = null;

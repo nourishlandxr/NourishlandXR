@@ -84,6 +84,12 @@ after(async () => {
 });
 
 test('create with or without position -> restart -> Field Guide -> later GPS positioning preserves linked plants', async () => {
+    const initialPlaces = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places`);
+    const home = initialPlaces.find(place => place.name === 'Home');
+    assert.ok(home, 'existing projects receive the protected Home Area during migration');
+    const deleteHome = await fetch(`${baseUrl}/api/projects/${projectId}/sites/${siteId}/places/${home.id}`, { method: 'DELETE' });
+    assert.equal(deleteHome.status, 400);
+
     const themedProject = await jsonRequest(`/api/projects/${projectId}`, {
         method: 'PUT',
         body: JSON.stringify({ name: 'Hillyards Food Forest', preserveId: true, theme: 'cyber' })

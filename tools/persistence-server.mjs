@@ -40,6 +40,8 @@ const MARKER_TYPES = new Set(['plant', 'note', 'intro_checkpoint', 'sub_checkpoi
 const VISIBILITY_VALUES = new Set(['draft', 'public', 'hidden']);
 const PHYSICAL_ANCHOR_FAMILY = 'aruco-original-5x5';
 const PHYSICAL_ANCHOR_IDS = new Set(Array.from({ length: 10 }, (_, index) => index + 1));
+const DEFAULT_HOME_AREA_NAME = 'Home';
+const DEFAULT_HOME_AREA_TYPE = 'Other';
 const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_forest', 'places', 'field_markers');
 const demoMarkersDir = path.join(demoPlaceDir, 'markers');
 fs.mkdirSync(workspaceDir, { recursive: true });
@@ -176,6 +178,59 @@ function ensureProjectFolders(projectId) {
     fs.mkdirSync(sitesDir, { recursive: true });
 
     return { projectDir, sitesDir };
+}
+
+function isDefaultHomePlace(place, directoryName = '') {
+    return place?.systemKey === 'home'
+        || ['home', 'unassigned'].includes(String(place?.name || directoryName).trim().toLocaleLowerCase());
+}
+
+function ensureDefaultHomeArea(projectId, siteId) {
+    const placesDir = path.join(getCanonicalSitePath(projectId, siteId), 'places');
+    fs.mkdirSync(placesDir, { recursive: true });
+    const existingEntry = fs.readdirSync(placesDir, { withFileTypes: true })
+        .find(entry => entry.isDirectory() && isDefaultHomePlace(readJson(path.join(placesDir, entry.name, 'place.json'), {}), entry.name));
+    const now = new Date().toISOString();
+    if (existingEntry) {
+        const placeFile = path.join(placesDir, existingEntry.name, 'place.json');
+        const existing = readJson(placeFile, {});
+        const home = {
+            ...existing,
+            id: existing.id || existingEntry.name,
+            name: DEFAULT_HOME_AREA_NAME,
+            type: DEFAULT_HOME_AREA_TYPE,
+            description: existing.description || 'Default Home for content ready to organise or place later.',
+            visibility: existing.visibility || 'draft',
+            systemKey: 'home',
+            modified: existing.modified || now,
+            created: existing.created || now
+        };
+        writeJson(placeFile, home);
+        fs.mkdirSync(path.join(placesDir, existingEntry.name, 'markers'), { recursive: true });
+        return home;
+    }
+    const placeDir = path.join(placesDir, 'home');
+    fs.mkdirSync(path.join(placeDir, 'markers'), { recursive: true });
+    const home = {
+        id: 'home',
+        name: DEFAULT_HOME_AREA_NAME,
+        type: DEFAULT_HOME_AREA_TYPE,
+        description: 'Default Home for content ready to organise or place later.',
+        visibility: 'draft',
+        systemKey: 'home',
+        created: now,
+        modified: now
+    };
+    writeJson(path.join(placeDir, 'place.json'), home);
+    return home;
+}
+
+function ensureDefaultHomeAreas(projectId) {
+    const sitesDir = path.join(getSitePath(projectId), 'sites');
+    if (!fs.existsSync(sitesDir)) return;
+    for (const site of fs.readdirSync(sitesDir, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
+        ensureDefaultHomeArea(projectId, site.name);
+    }
 }
 
 function runPowerShell(command) {
@@ -359,6 +414,7 @@ function migrateProject(projectId) {
 
     if (fs.existsSync(projectFile)) {
         ensureProjectFolders(projectId);
+        ensureDefaultHomeAreas(projectId);
         return;
     }
 
@@ -382,6 +438,7 @@ function migrateProject(projectId) {
         fs.renameSync(legacyPlaces, canonicalPlaces);
     }
     fs.rmSync(legacySiteFile, { force: true });
+    ensureDefaultHomeArea(projectId, siteId);
 }
 
 function listProjects(visitor = false) {
@@ -439,12 +496,16 @@ function createProject(projectData) {
         visibility: normalizeVisibility(projectData.visibility)
     };
     writeJson(path.join(projectDir, 'project.json'), project);
-    for (const siteName of Array.isArray(projectData.siteSuggestions) ? projectData.siteSuggestions : []) {
+    const siteSuggestions = Array.isArray(projectData.siteSuggestions) && projectData.siteSuggestions.length
+        ? projectData.siteSuggestions
+        : ['Main Location'];
+    for (const siteName of siteSuggestions) {
         const siteId = toProjectId(siteName);
         if (!siteId) continue;
         const siteDir = path.join(projectDir, 'sites', siteId);
         fs.mkdirSync(path.join(siteDir, 'places'), { recursive: true });
         writeJson(path.join(siteDir, 'site.json'), { id: siteId, name: siteName.trim(), description: '', visibility: 'draft' });
+        ensureDefaultHomeArea(projectId, siteId);
     }
     return project;
 }
@@ -1123,6 +1184,7 @@ function handleApi(req, res) {
                 fs.mkdirSync(path.join(siteDir, 'places'), { recursive: true });
                 const site = { id: siteId, projectId, name: data.name.trim(), description: data.description || '', template: data.template || '', visibility: normalizeVisibility(data.visibility) };
                 writeJson(path.join(siteDir, 'site.json'), site);
+                ensureDefaultHomeArea(projectId, siteId);
                 sendJson(res, 201, site);
             } catch (error) { sendJson(res, 400, { error: error.message }); }
         });
@@ -1158,7 +1220,10 @@ function handleApi(req, res) {
     if (placesMatch && req.method === 'GET') {
         const [ , projectId, siteId ] = placesMatch;
         if (visitor && !isPublicHierarchy(decodeURIComponent(projectId), decodeURIComponent(siteId))) return sendJson(res, 200, []);
-        const placesDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places');
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        ensureDefaultHomeArea(decodedProjectId, decodedSiteId);
+        const placesDir = path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'places');
         if (!fs.existsSync(placesDir)) return sendJson(res, 404, { error: 'Site not found' });
         const places = fs.readdirSync(placesDir, { withFileTypes: true })
             .filter(entry => entry.isDirectory())
@@ -1231,6 +1296,8 @@ function handleApi(req, res) {
         const decodedPlaceId = decodeURIComponent(placeId);
         const placeDir = path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'places', decodedPlaceId);
         if (!fs.existsSync(placeDir)) return sendJson(res, 404, { error: 'Place not found' });
+        const existingPlace = readJson(path.join(placeDir, 'place.json'), {});
+        if (isDefaultHomePlace(existingPlace, decodedPlaceId)) return sendJson(res, 400, { error: 'Home is a protected Area and cannot be deleted.' });
         const instanceData = loadPlantInstanceData(decodedProjectId, decodedSiteId).data;
         const remainingInstances = instanceData.instances.filter(instance => instance.placeId !== decodedPlaceId);
         if (remainingInstances.length !== instanceData.instances.length) {

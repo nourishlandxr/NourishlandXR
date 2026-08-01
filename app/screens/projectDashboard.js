@@ -11,7 +11,7 @@ import { BUILD_INFO } from '../services/buildInfo.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
 import { scopedMarkerStorageId } from '../services/markerWorkflow.js';
-import { DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
+import { AREA_ICON_OPTIONS, DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import {
     DEFAULT_TOTEM_COLOR,
     TOTEM_HEIGHT_PRESETS,
@@ -332,7 +332,7 @@ async function buildProjectSearchItems(project, site, areas, entries) {
     }
 
     const areaItems = areas.map(area => ({
-        icon: '▧',
+        icon: areaIcon(area),
         label: escapeHtml(area.name),
         type: 'Area',
         area: escapeHtml(area.type || 'Area'),
@@ -1230,6 +1230,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             const areaEntries = entries.filter(entry => entry.place.id === area.id);
             return {
                 label: escapeHtml(area.name),
+                icon: areaIcon(area),
                 type: escapeHtml(area.type || 'Area'),
                 identifier: escapeHtml(area.id),
                 contentCount: areaEntries.length,
@@ -1358,7 +1359,7 @@ export async function renderContentMode(app, encodedProjectId) {
         const areaRows = areas.map(area => {
             const count = entries.filter(entry => entry.place.id === area.id).length;
             return `<button class="project-area-link" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')">
-                <span class="project-area-link-icon" aria-hidden="true">▧</span>
+                <span class="project-area-link-icon" aria-hidden="true">${areaIcon(area)}</span>
                 <span class="project-area-link-copy"><strong>${escapeHtml(area.name)}</strong><span>${escapeHtml(area.type || 'Area')} · ${count} element${count === 1 ? '' : 's'}</span></span>
                 <span class="project-area-link-meta">Open Area</span>
             </button>`;
@@ -1601,12 +1602,12 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             <header class="page-header area-dashboard-header">
                 <p class="welcome-label">Area dashboard</p>
                 <h1>${escapeHtml(context.area.name)}</h1>
-                <div class="area-top-actions"><button class="global-ar-action area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">OPEN AREA IN AR</button><span>${plantCount} Plants · ${totemCount} Totem${totemCount === 1 ? '' : 's'}</span></div>
+                <div class="area-top-actions"><button class="global-ar-action area-go-ar-compact" type="button" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">OPEN AREA IN AR</button></div>
             </header>
             ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
-                    <div class="area-profile-visual" aria-hidden="true"><span>▧</span><small>AREA</small></div>
+                    <div class="area-profile-visual" aria-label="Area icon"><span data-area-icon-reading>${areaIcon(context.area)}</span><small>AREA</small></div>
                     <div class="area-vital-grid">
                         <div><small>TYPE</small><strong data-area-type-reading>${escapeHtml(context.area.type || 'Other')}</strong></div>
                         <div><small>PLANTS</small><strong>${plantCount}</strong></div>
@@ -1617,6 +1618,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
                     <div class="area-overview-card area-type-editor"><div class="area-overview-heading"><strong>Area type</strong><button type="button" data-edit-area-type>Edit</button></div><p data-area-type-form-reading>${escapeHtml(context.area.type || 'Other')}</p><label for="areaType" hidden>Area type</label><select id="areaType" hidden><option value="Outdoor Area" ${context.area.type === 'Outdoor Area' ? 'selected' : ''}>Outdoor Area</option><option value="Indoor Area" ${context.area.type === 'Indoor Area' ? 'selected' : ''}>Indoor Area</option><option value="Bed or Plot" ${context.area.type === 'Bed or Plot' ? 'selected' : ''}>Bed or Plot</option><option value="Room" ${context.area.type === 'Room' ? 'selected' : ''}>Room</option><option value="Enclosure" ${context.area.type === 'Enclosure' ? 'selected' : ''}>Enclosure</option><option value="Path or Route" ${context.area.type === 'Path or Route' ? 'selected' : ''}>Path or Route</option><option value="Other" ${!context.area.type || context.area.type === 'Other' ? 'selected' : ''}>Other</option></select></div>
                     <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong><button type="button" data-edit-area-description>${context.area.description ? 'Edit' : 'Add description'}</button></div><p data-area-description-reading>${escapeHtml(context.area.description || 'No description has been added yet.')}</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(context.area.description || '')}</textarea></div>
+                    <div class="area-overview-card area-icon-editor"><div class="area-overview-heading"><strong>Area icon</strong><button type="button" data-edit-area-icon>Edit</button></div><p data-area-icon-form-reading>${areaIcon(context.area)} ${AREA_ICON_OPTIONS.find(option => option.value === areaIcon(context.area))?.label || 'Leaves'}</p><label for="areaIcon" hidden>Area icon</label><select id="areaIcon" hidden>${AREA_ICON_OPTIONS.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === areaIcon(context.area) ? 'selected' : ''}>${option.value} ${escapeHtml(option.label)}</option>`).join('')}</select></div>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit" data-save-area-description hidden>Save Area information</button>
                 </form>
@@ -1652,6 +1654,13 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             app.querySelector('#areaType')?.focus();
         });
+        app.querySelector('[data-edit-area-icon]')?.addEventListener('click', () => {
+            app.querySelector('[data-area-icon-form-reading]')?.setAttribute('hidden', '');
+            app.querySelector('#areaIcon')?.removeAttribute('hidden');
+            app.querySelector('label[for="areaIcon"]')?.removeAttribute('hidden');
+            app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
+            app.querySelector('#areaIcon')?.focus();
+        });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1666,10 +1675,12 @@ export async function saveAreaInformation(event, encodedProjectId, encodedAreaId
         const context = await projectAreaContext(projectId, areaId);
         const description = document.getElementById('areaDescription').value.trim();
         const type = document.getElementById('areaType')?.value || context.area.type || 'Other';
+        const icon = areaIcon({ icon: document.getElementById('areaIcon')?.value || context.area.icon });
         if (status) status.textContent = 'Saving Area information…';
         await updateSitePlace(projectId, context.site.id, areaId, {
             description,
-            type
+            type,
+            icon
         });
         await renderProjectAreaDashboard(document.getElementById('app'), encoded(projectId), encoded(areaId));
     } catch (error) {
@@ -1784,7 +1795,15 @@ export async function deleteProjectArea(encodedProjectId, encodedAreaId) {
     const areaId = decodeURIComponent(encodedAreaId);
     const status = document.getElementById('deleteProjectAreaStatus');
     try {
+        if (isDefaultHomeArea(areaId)) {
+            if (status) status.textContent = 'Home is a protected Area and cannot be deleted.';
+            return;
+        }
         const context = await projectAreaContext(projectId, areaId);
+        if (isDefaultHomeArea(context.area)) {
+            if (status) status.textContent = 'Home is a protected Area and cannot be deleted.';
+            return;
+        }
         if (!window.confirm(`Delete ${context.area.name} and all content inside it? This cannot be undone.`)) return;
         if (status) status.textContent = 'Deleting Area…';
         await deleteSitePlace(projectId, context.site.id, areaId);

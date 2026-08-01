@@ -228,13 +228,15 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(dashboardSource, /<strong>Web Hub<\/strong>/);
     assert.match(fieldGuideSource, /const guideTitle = creator \? 'Web Hub' : 'Field Guide'/);
     assert.match(fieldGuideSource, /loadSitePlaces\(project\.id, site\.id\)\.catch\(\(\) => \[\]\)/);
-    assert.match(fieldGuideSource, /web-context-beacon is-home/);
-    assert.match(fieldGuideSource, /<strong data-web-hub-location>HOME<\/strong>/);
+    assert.doesNotMatch(fieldGuideSource, /WEB HUB LOCATION/);
+    assert.doesNotMatch(fieldGuideSource, /ADD TO WEB HUB/);
     assert.match(fieldGuideSource, /currentGuidePlaceId = creator \? String\(homePlace\?\.id \|\| ''\) : ''/);
     assert.match(fieldGuideSource, /applyFieldGuideFilter\(currentGuidePlaceId\)/);
     assert.match(fieldGuideSource, /field-guide-creation-board/);
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
+    assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
+    assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /Area Totems/);
@@ -316,6 +318,21 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">PLACE IN AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
+});
+
+test('Area dashboards use selectable icons and keep summary counts in the profile card', () => {
+    const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
+    const configSource = fs.readFileSync(path.join(root, 'app/services/arExperienceConfig.js'), 'utf8');
+    const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
+    assert.match(configSource, /AREA_ICON_OPTIONS/);
+    assert.match(configSource, /value: '🌿'/);
+    assert.match(configSource, /value: '🌳'/);
+    assert.match(configSource, /value: '💧'/);
+    assert.match(dashboardSource, /data-edit-area-icon/);
+    assert.match(dashboardSource, /id="areaIcon"/);
+    assert.match(dashboardSource, /icon\n?\s*\}/);
+    assert.doesNotMatch(dashboardSource, /OPEN AREA IN AR<\/button><span>\$\{plantCount\}/);
+    assert.match(fieldGuideSource, /areaIcon\(place\)/);
 });
 
 test('Organizer Folder excludes compatibility Area Totems by semantic type', () => {

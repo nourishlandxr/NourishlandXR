@@ -382,12 +382,28 @@ const PHRASES = {
     'Disabled': 'Desativado'
 };
 
+const DYNAMIC_PHRASES = [
+    [/^Opening (.+) in Web Mode\.$/, value => `A abrir ${value[1]} no Modo Web.`],
+    [/^Preparing (.+) for Web Mode\.\.\.$/, value => `A preparar ${value[1]} para o Modo Web...`],
+    [/^Could not open Web Mode: (.+)$/, value => `Não foi possível abrir o Modo Web: ${value[1]}`],
+    [/^(.+) selected\. Use the compact tools or continue in Web Mode\.$/, value => `${value[1]} selecionado. Use as ferramentas compactas ou continue no Modo Web.`],
+    [/^(.+) (color|size|opacity) updated\. Tap the centre circle when it looks right\.$/, value => `${value[1]} ${value[2] === 'color' ? 'cor' : value[2] === 'size' ? 'tamanho' : 'opacidade'} atualizada. Toque no círculo central quando estiver correto.`],
+    [/^(.+) (color|size|opacity) saved\. Pointer mode remains on\.$/, value => `${value[1]} ${value[2] === 'color' ? 'cor' : value[2] === 'size' ? 'tamanho' : 'opacidade'} guardada. O modo de apontador continua ativo.`],
+    [/^Could not save (color|size|opacity): (.+)$/, value => `Não foi possível guardar ${value[1] === 'color' ? 'a cor' : value[1] === 'size' ? 'o tamanho' : 'a opacidade'}: ${value[2]}`],
+    [/^Place (Plant|Note|Marker|Trail Entrance|Area Totem)$/, value => `Colocar ${{ Plant: 'Planta', Note: 'Nota', Marker: 'Marcador', 'Trail Entrance': 'Entrada de Trilho', 'Area Totem': 'Totem de Área' }[value[1]]}`]
+];
+
 const lookup = text => {
     if (!text) return null;
     const direct = PHRASES[text];
     if (direct) return direct;
-    const lower = PHRASES[text.toLocaleLowerCase()];
-    return lower || null;
+    const lower = Object.entries(PHRASES).find(([key]) => key.toLocaleLowerCase() === text.toLocaleLowerCase());
+    if (lower) return lower[1];
+    for (const [pattern, replacement] of DYNAMIC_PHRASES) {
+        const match = String(text).match(pattern);
+        if (match) return replacement(match);
+    }
+    return null;
 };
 
 export function translateApp(root = document.body) {
