@@ -818,7 +818,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Augmented reality \(AR\) and mixed reality \(XR\) are technologies that can help us better understand and interact with the world around us/);
     assert.match(source, /Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor/);
     assert.match(source, /few examples of how plant information can be mapped to real places/);
-    assert.match(source, /plant: \['Your pointer', 'This may feel unfamiliar at first, but don’t worry—we’ll explore it together, one step at a time\. First, you’ll see a pointer appear… You will see a round circle on your screen\./);
+    assert.match(source, /plant: \['Your pointer', 'Let’s first start with your first marker. Once you press Continue, a round pointer will appear on your screen. Position it where you’d like your plant to appear, then tap it to create a Plant Orb.\./);
     assert.match(source, /You will see a round circle on your screen\. This is your pointer\./);
     assert.match(source, /Press it to create a Plant orb\. Press Continue to load your pointer\./);
     assert.doesNotMatch(source, /gentle introduction/);
