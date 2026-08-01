@@ -1008,6 +1008,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:hover::after,
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:focus-visible::after { border-color: rgba(216,239,190,.72); transform: scale(.94); opacity: .78; box-shadow: 0 0 0 7px rgba(216,239,190,.08), 0 0 18px rgba(184,220,158,.25); }
+.creator-ar-marker-hit-target.is-hold-armed::after { border-color: rgba(226,244,181,.92); transform: scale(.96); opacity: .9; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); animation: creator-ar-marker-breathe 1.1s ease-in-out infinite; }
+.creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; touch-action: none; }
+.creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target:is(:hover,:focus-visible)::after { border-color: rgba(226,244,181,.82); transform: scale(.96); opacity: .86; box-shadow: 0 0 18px rgba(192,230,151,.28); }
 .creator-ar-marker-layer.is-view-mode .creator-ar-marker-hit-target:is(:hover,:focus-visible)::after { border-color: rgba(220,239,149,.55); opacity: .68; animation: creator-ar-marker-breathe 2.2s ease-in-out infinite; }

@@ -41,6 +41,7 @@ let interactionMode = 'neutral';
 let suspendedInteractionMode = '';
 let sessionMarkers = [];
 let dragState = null;
+let markerHoldGesture = null;
 let readyPlacementType = '';
 let readySpecialMarker = null;
 let pendingPlacementAppearance = null;
@@ -110,6 +111,8 @@ const TASKBAR_V2_COLORS = Object.freeze({
 });
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
+const CREATOR_AR_HOLD_DELAY_MS = 420;
+const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
 const DEFAULT_LOCATION_NOTE = Object.freeze({
     enabled: true,
     prompt: 'WHERE AM I NOW?'
@@ -790,11 +793,87 @@ async function recenterActiveArea() {
     }
 }
 
+function clearMarkerHoldGesture() {
+    if (!markerHoldGesture) return;
+    clearTimeout(markerHoldGesture.timer);
+    markerHoldGesture.element?.classList.remove('is-hold-armed');
+    markerHoldGesture = null;
+}
+
+function beginMarkerHoldGesture(record, event) {
+    if (!interactionMode || readyPlacementType || dragState || markerHoldGesture) return false;
+    if (event.button != null && event.button !== 0) return false;
+    const element = event.currentTarget;
+    if (!element) return false;
+    const gesture = {
+        record,
+        element,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        timer: null
+    };
+    markerHoldGesture = gesture;
+    event.preventDefault();
+    event.stopPropagation();
+    element.setPointerCapture?.(event.pointerId);
+    element.classList.add('is-hold-armed');
+    gesture.timer = setTimeout(() => {
+        if (markerHoldGesture !== gesture) return;
+        gesture.timer = null;
+        element.classList.remove('is-hold-armed');
+        beginMarkerInteraction(record, event, { directHold: true, element });
+    }, CREATOR_AR_HOLD_DELAY_MS);
+    return true;
+}
+
+function moveMarkerHoldGesture(event) {
+    const gesture = markerHoldGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId || dragState) return;
+    if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) <= CREATOR_AR_HOLD_MOVE_TOLERANCE_PX) return;
+    clearMarkerHoldGesture();
+}
+
+function finishMarkerHoldGesture(record, event) {
+    const gesture = markerHoldGesture;
+    if (!gesture || gesture.record !== record || gesture.pointerId !== event.pointerId) return false;
+    if (dragState?.record === record) {
+        event.preventDefault();
+        event.stopPropagation();
+        void finishMarkerDrag(event);
+        return true;
+    }
+    clearMarkerHoldGesture();
+    event.preventDefault();
+    event.stopPropagation();
+    beginMarkerInteraction(record, event);
+    return true;
+}
+
+function cancelMarkerHoldGesture(event) {
+    const gesture = markerHoldGesture;
+    if (!gesture || (event?.pointerId != null && event.pointerId !== gesture.pointerId)) return;
+    if (dragState?.record === gesture.record) {
+        cancelMarkerDrag(event);
+        return;
+    }
+    clearMarkerHoldGesture();
+}
+
+function handleMarkerPointerDown(record, event) {
+    if (interactionMode === 'grab') {
+        beginMarkerInteraction(record, event);
+        return;
+    }
+    beginMarkerHoldGesture(record, event);
+}
+
 function cleanupDrag() {
     window.removeEventListener('pointermove', moveMarkerDrag);
     window.removeEventListener('pointercancel', cancelMarkerDrag);
     dragState?.element?.classList.remove('is-adjusting');
     dragState = null;
+    clearMarkerHoldGesture();
     overlayRoot?.classList.remove('is-holding-item');
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
     if (joystick) {
@@ -832,6 +911,7 @@ function setInteractionMode(mode) {
         cleanupDrag();
         positionSessionMarkers();
     }
+    clearMarkerHoldGesture();
     if (readyPlacementType) {
         placementArmGeneration += 1;
         readyPlacementType = '';
@@ -849,7 +929,7 @@ function setInteractionMode(mode) {
     if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
     else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed object to open its compact edit tools.');
-    else setPlacementStatus('Aim dot ready. Hover over Markers to reveal their names.');
+    else setPlacementStatus('Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.');
 }
 
 function closeAreaChooser() {
@@ -1649,7 +1729,10 @@ function renderSessionMarkers() {
     }).join('');
     visibleMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
-        element?.addEventListener('pointerdown', event => beginMarkerInteraction(record, event));
+        element?.addEventListener('pointerdown', event => handleMarkerPointerDown(record, event));
+        element?.addEventListener('pointermove', moveMarkerHoldGesture);
+        element?.addEventListener('pointerup', event => finishMarkerHoldGesture(record, event));
+        element?.addEventListener('pointercancel', cancelMarkerHoldGesture);
         element?.addEventListener('keydown', event => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
@@ -1803,9 +1886,9 @@ function openInlineEditor(record, force = false) {
     });
 }
 
-function beginMarkerInteraction(record, event) {
+function beginMarkerInteraction(record, event, { directHold = false, element = event.currentTarget } = {}) {
     if (!interactionMode) return;
-    if (interactionMode === 'view') {
+    if (!directHold && interactionMode === 'view') {
         event.preventDefault();
         event.stopPropagation();
         if (hasPlantProfile(record)) {
@@ -1826,10 +1909,10 @@ function beginMarkerInteraction(record, event) {
         setPlacementStatus('');
         return;
     }
-    if (interactionMode === 'neutral') return;
+    if (!directHold && interactionMode === 'neutral') return;
     event.preventDefault();
     event.stopPropagation();
-    if (interactionMode === 'select') {
+    if (!directHold && interactionMode === 'select') {
         openMarkerContextToolbar(record);
         return;
     }
@@ -1845,7 +1928,7 @@ function beginMarkerInteraction(record, event) {
         : 1;
     dragState = {
         record,
-        element: event.currentTarget,
+        element,
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
@@ -1857,9 +1940,9 @@ function beginMarkerInteraction(record, event) {
         rotationDegrees: Number(record.rotationDegrees) || 0,
         pointerOffset: { x: 0, y: 0 }
     };
-    event.currentTarget.classList.add('is-adjusting');
+    element?.classList.add('is-adjusting');
     overlayRoot?.classList.add('is-holding-item');
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    element?.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
     const joystick = overlayRoot?.querySelector('[data-ar-depth-joystick]');
@@ -1878,7 +1961,7 @@ function beginMarkerInteraction(record, event) {
     }
     updateGrabbedMarkerFromCamera();
     positionSessionMarkers();
-    setPlacementStatus(`Moving ${record.marker.name}. Look around to guide it, slide up to push or down to pull, then press Release.`);
+    setPlacementStatus(`${directHold ? 'Holding' : 'Moving'} ${record.marker.name}. Look around to guide it, slide up to push or down to pull, then press Release.`);
 }
 
 function moveMarkerDrag(event) {
@@ -2422,7 +2505,7 @@ async function quickPlace(type) {
         if (type === 'area_checkpoint') {
             setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. Your previous interaction mode is still active.`);
         } else {
-            setPlacementStatus(`${marker.name} placed. Select it whenever you want to edit or move it.`);
+            setPlacementStatus(`${marker.name} placed. Hold it to move it, or use Pointer mode to edit it.`);
         }
     } catch (error) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
@@ -2446,7 +2529,7 @@ function createOverlay() {
         : hasCheckpoint
         ? 'Loading the saved Area Totem…'
         : activeAreaId
-        ? 'Aim dot ready. Hover over Markers to reveal their names.'
+        ? 'Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.'
         : '';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';

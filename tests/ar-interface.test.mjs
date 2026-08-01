@@ -484,6 +484,16 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
     assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
     assert.match(arSource, /function heldPointerRay\(\)/);
+    assert.match(arSource, /const CREATOR_AR_HOLD_DELAY_MS = 420/);
+    assert.match(arSource, /const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14/);
+    assert.match(arSource, /function beginMarkerHoldGesture\(record, event\)/);
+    assert.match(arSource, /function moveMarkerHoldGesture\(event\)/);
+    assert.match(arSource, /function finishMarkerHoldGesture\(record, event\)/);
+    assert.match(arSource, /beginMarkerInteraction\(record, event, \{ directHold: true, element \}\)/);
+    assert.match(arSource, /element\?\.setPointerCapture\?\.\(event\.pointerId\)/);
+    assert.match(arSource, /element\?\.addEventListener\('pointermove', moveMarkerHoldGesture\)/);
+    assert.match(arSource, /element\?\.addEventListener\('pointerup', event => finishMarkerHoldGesture\(record, event\)\)/);
+    assert.match(arSource, /Hold any placed item to move it/);
     assert.match(arSource, /latestViewerMatrix\[12\] \+ ray\.x \* distance/);
     assert.match(arSource, /data-ar-depth-joystick/);
     assert.doesNotMatch(arSource, /window\.innerHeight - 104/);
@@ -491,8 +501,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /latestViewerMatrix\[14\] \+ ray\.z \* distance/);
     assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
     assert.match(arSource, /Pointer mode is on/);
-    assert.match(arSource, /if \(interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
-    assert.match(arSource, /if \(interactionMode === 'neutral'\) return/);
+    assert.match(arSource, /if \(!directHold && interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
+    assert.match(arSource, /if \(!directHold && interactionMode === 'neutral'\) return/);
     assert.match(arSource, /openMarkerContextToolbar\(record\)/);
     assert.match(arSource, /function updateContextToolbar\(\)/);
     assert.match(arSource, /function cycleContextAppearance\(property\)/);
@@ -724,7 +734,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /const launchedSession = session/);
     assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*locatedTotemRecord = null;/);
     assert.doesNotMatch(arSource, /selectedMarker/);
-    assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hover over Markers to reveal their names\.'[\s\S]*: '';/);
+    assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hold any placed item to move it, or use Pointer mode for edit tools\.'[\s\S]*: '';/);
     assert.match(launch, /if \(session !== launchedSession\) return/);
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
