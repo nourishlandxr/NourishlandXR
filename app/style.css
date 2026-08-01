@@ -4478,6 +4478,49 @@ body[data-project-theme] .guided-setup-steps li span {
 .tutorial-mode-toggle input { width: 22px; height: 22px; }
 .tutorial-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Project Settings collapsible sections */
+.settings-collapsible {
+    overflow: hidden;
+    padding: 0;
+}
+.settings-collapsible > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 16px;
+}
+.settings-collapsible > summary::-webkit-details-marker { display: none; }
+.settings-collapsible > summary .section-heading-row { margin: 0; }
+.settings-collapsible > summary .section-heading-row p { margin: 4px 0 0; font-size: .82rem; }
+.settings-collapsible > summary:hover { background: rgba(231, 240, 225, .35); }
+.settings-collapsible[open] > summary { border-bottom: 1px solid rgba(50, 59, 25, .12); }
+.settings-collapsible-trailing {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+.settings-collapsible-chevron {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(50, 59, 25, .08);
+    color: var(--leaf-deep, #365218);
+    font-style: normal;
+    line-height: 1;
+    transition: transform .18s ease;
+}
+.settings-collapsible[open] > summary .settings-collapsible-chevron { transform: rotate(180deg); }
+.settings-collapsible-body {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+}
+.settings-collapsible-body .button-row { margin-top: 2px; }
+.settings-collapsible-body > p:last-child,
+.settings-collapsible-body .meta:last-child { margin-bottom: 0; }
+
 .theme-preview-strip {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

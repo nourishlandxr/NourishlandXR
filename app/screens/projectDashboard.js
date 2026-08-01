@@ -1834,95 +1834,151 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <h1>Project Settings</h1>
             <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
         </div>
-        <section class="panel project-name-setting" aria-labelledby="projectNameTitle">
-            <div class="section-heading-row"><div><h2 id="projectNameTitle">Project Details</h2><p>Update the project name, description and cover image without changing its saved ID, Areas or content.</p></div></div>
-            <form onsubmit="window.saveProjectName(event, '${encoded(project.id)}')">
-                <div class="field"><label for="projectSettingsName">Project name</label><input id="projectSettingsName" value="${escapeHtml(project.name)}" required /></div>
-                <div class="field"><label for="projectSettingsDescription">Description (optional)</label><textarea id="projectSettingsDescription" rows="4" placeholder="Describe this garden, landscape or learning location.">${escapeHtml(project.description || '')}</textarea></div>
-                <div class="field"><label for="projectSettingsCoverImage">Cover image (optional)</label><input id="projectSettingsCoverImage" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div>
-                <div class="button-row"><button class="primary" type="submit">Save Project Details</button></div>
-                <p id="projectNameStatus" class="meta"></p>
-            </form>
-        </section>
-        <section class="panel project-location-note-setting" aria-labelledby="projectLocationNoteTitle">
-            <div class="section-heading-row"><div><h2 id="projectLocationNoteTitle">AR Location Note</h2><p>A transparent Location Note can be opened from its Area Totem in AR. It stays hidden when AR opens.</p></div><span class="tutorial-status">${arLocationNote.enabled ? 'Available' : 'Unavailable'}</span></div>
-            <form onsubmit="window.saveArLocationNoteSettings(event, '${encoded(project.id)}')">
-                <label class="tutorial-mode-toggle"><span><strong>Available from Area Totem</strong><small>Let people view or hide it from the selected Totem toolbar.</small></span><input id="projectLocationNoteEnabled" type="checkbox" ${arLocationNote.enabled ? 'checked' : ''} /></label>
-                <div class="field"><label for="projectLocationNotePrompt">Opening question</label><input id="projectLocationNotePrompt" value="${escapeHtml(arLocationNote.prompt)}" placeholder="WHERE AM I NOW?" /></div>
-                <div class="field"><label for="projectLocationNoteName">Location name</label><input id="projectLocationNoteName" value="${escapeHtml(arLocationNote.title)}" placeholder="${escapeHtml(project.name)}" /></div>
-                <p class="meta">The Area name is added automatically from the Area used to enter AR. Sessions without a chosen Area display Home.</p>
-                <div class="button-row"><button class="primary" type="submit">Save Location Note</button></div>
-                <p id="projectLocationNoteStatus" class="meta"></p>
-            </form>
-        </section>
-        <section class="panel project-publishing-setting" aria-labelledby="projectPublishingTitle">
-            <div class="section-heading-row"><div><h2 id="projectPublishingTitle">Explorer status</h2><p>Choose how this project appears to visitors in Explorer.</p></div></div>
-            <form onsubmit="window.saveProjectPublishing(event, '${encoded(project.id)}')">
-                <div class="field"><label for="projectSettingsStatus">Status</label><select id="projectSettingsStatus">
-                    <option value="hidden" ${project.projectStatus === 'hidden' ? 'selected' : ''}>Hidden from Explorer</option>
-                    <option value="under_construction" ${(project.projectStatus || 'under_construction') === 'under_construction' ? 'selected' : ''}>Under construction</option>
-                    <option value="demo" ${project.projectStatus === 'demo' ? 'selected' : ''}>Demo</option>
-                    <option value="ready" ${project.projectStatus === 'ready' ? 'selected' : ''}>Ready</option>
-                </select></div>
-                <div class="field"><label for="projectSettingsAddress">Real location (address)</label><input id="projectSettingsAddress" value="${escapeHtml(project.address || '')}" placeholder="Town, region or full visitor address" /></div>
-                <div class="field"><label for="projectSettingsCreator">Creator username</label><input id="projectSettingsCreator" value="${escapeHtml(project.creatorUsername || 'Nourishland creator')}" /></div>
-                <p class="meta">Hidden projects stay private. Under Construction projects show welcome information but cannot be entered. Demo and Ready projects can be explored.</p>
-                <div class="button-row"><button class="primary" type="submit">Save Explorer Status</button></div>
-                <p id="projectPublishingStatus" class="meta"></p>
-            </form>
-        </section>
+        <details class="panel project-name-setting settings-collapsible" open aria-labelledby="projectNameTitle">
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="projectNameTitle">Project Details</h2><p>Update the project name, description and cover image without changing its saved ID, Areas or content.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body">
+                <form onsubmit="window.saveProjectName(event, '${encoded(project.id)}')">
+                    <div class="field"><label for="projectSettingsName">Project name</label><input id="projectSettingsName" value="${escapeHtml(project.name)}" required /></div>
+                    <div class="field"><label for="projectSettingsDescription">Description (optional)</label><textarea id="projectSettingsDescription" rows="4" placeholder="Describe this garden, landscape or learning location.">${escapeHtml(project.description || '')}</textarea></div>
+                    <div class="field"><label for="projectSettingsCoverImage">Cover image (optional)</label><input id="projectSettingsCoverImage" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div>
+                    <div class="button-row"><button class="primary" type="submit">Save Project Details</button></div>
+                    <p id="projectNameStatus" class="meta"></p>
+                </form>
+            </div>
+        </details>
+        <details class="panel project-location-note-setting settings-collapsible" aria-labelledby="projectLocationNoteTitle">
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="projectLocationNoteTitle">AR Location Note</h2><p>A transparent Location Note can be opened from its Area Totem in AR. It stays hidden when AR opens.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="tutorial-status">${arLocationNote.enabled ? 'Available' : 'Unavailable'}</span><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body">
+                <form onsubmit="window.saveArLocationNoteSettings(event, '${encoded(project.id)}')">
+                    <label class="tutorial-mode-toggle"><span><strong>Available from Area Totem</strong><small>Let people view or hide it from the selected Totem toolbar.</small></span><input id="projectLocationNoteEnabled" type="checkbox" ${arLocationNote.enabled ? 'checked' : ''} /></label>
+                    <div class="field"><label for="projectLocationNotePrompt">Opening question</label><input id="projectLocationNotePrompt" value="${escapeHtml(arLocationNote.prompt)}" placeholder="WHERE AM I NOW?" /></div>
+                    <div class="field"><label for="projectLocationNoteName">Location name</label><input id="projectLocationNoteName" value="${escapeHtml(arLocationNote.title)}" placeholder="${escapeHtml(project.name)}" /></div>
+                    <p class="meta">The Area name is added automatically from the Area used to enter AR. Sessions without a chosen Area display Home.</p>
+                    <div class="button-row"><button class="primary" type="submit">Save Location Note</button></div>
+                    <p id="projectLocationNoteStatus" class="meta"></p>
+                </form>
+            </div>
+        </details>
+        <details class="panel project-publishing-setting settings-collapsible" aria-labelledby="projectPublishingTitle">
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="projectPublishingTitle">Explorer status</h2><p>Choose how this project appears to visitors in Explorer.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body">
+                <form onsubmit="window.saveProjectPublishing(event, '${encoded(project.id)}')">
+                    <div class="field"><label for="projectSettingsStatus">Status</label><select id="projectSettingsStatus">
+                        <option value="hidden" ${project.projectStatus === 'hidden' ? 'selected' : ''}>Hidden from Explorer</option>
+                        <option value="under_construction" ${(project.projectStatus || 'under_construction') === 'under_construction' ? 'selected' : ''}>Under construction</option>
+                        <option value="demo" ${project.projectStatus === 'demo' ? 'selected' : ''}>Demo</option>
+                        <option value="ready" ${project.projectStatus === 'ready' ? 'selected' : ''}>Ready</option>
+                    </select></div>
+                    <div class="field"><label for="projectSettingsAddress">Real location (address)</label><input id="projectSettingsAddress" value="${escapeHtml(project.address || '')}" placeholder="Town, region or full visitor address" /></div>
+                    <div class="field"><label for="projectSettingsCreator">Creator username</label><input id="projectSettingsCreator" value="${escapeHtml(project.creatorUsername || 'Nourishland creator')}" /></div>
+                    <p class="meta">Hidden projects stay private. Under Construction projects show welcome information but cannot be entered. Demo and Ready projects can be explored.</p>
+                    <div class="button-row"><button class="primary" type="submit">Save Explorer Status</button></div>
+                    <p id="projectPublishingStatus" class="meta"></p>
+                </form>
+            </div>
+        </details>
         <section class="panel expert-mode-setting" aria-labelledby="expertModeTitle">
             <div class="section-heading-row"><div><h2 id="expertModeTitle">Experience level</h2><p>Keep the everyday experience calm, or reveal advanced controls when you need them.</p></div><span class="tutorial-status">${expertMode ? 'Expert' : 'Friendly'}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>Show advanced controls</strong><small>Show themes, technical guidance, diagnostics and other precision tools.</small></span><input type="checkbox" ${expertMode ? 'checked' : ''} onchange="window.updateProjectExpertMode('${encoded(project.id)}', this.checked)" /></label>
         </section>
-        <section class="panel project-theme-setting" aria-labelledby="projectThemeTitle" ${expertMode ? '' : 'hidden'}>
-            <div class="section-heading-row"><div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div></div>
-            <div class="field">
-                <label for="projectTheme">Project theme</label>
-                <select id="projectTheme" onchange="window.saveProjectTheme('${encoded(project.id)}', this.value)">
-                    <option value="light" ${theme === 'light' ? 'selected' : ''}>LIGHT (White)</option>
-                    <option value="dark" ${theme === 'dark' ? 'selected' : ''}>DARK (Black)</option>
-                    <option value="forest-dark" ${theme === 'forest-dark' ? 'selected' : ''}>FOREST DARK (Green)</option>
-                    <option value="forest-light" ${theme === 'forest-light' ? 'selected' : ''}>FOREST LIGHT</option>
-                    <option value="cyber" ${theme === 'cyber' ? 'selected' : ''}>CYBER (Gray / Purple)</option>
-                </select>
+        <details class="panel project-theme-setting settings-collapsible" aria-labelledby="projectThemeTitle" ${expertMode ? '' : 'hidden'}>
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="projectThemeTitle">Change Theme</h2><p>Choose the visual style used while working inside this project.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body">
+                <div class="field">
+                    <label for="projectTheme">Project theme</label>
+                    <select id="projectTheme" onchange="window.saveProjectTheme('${encoded(project.id)}', this.value)">
+                        <option value="light" ${theme === 'light' ? 'selected' : ''}>LIGHT (White)</option>
+                        <option value="dark" ${theme === 'dark' ? 'selected' : ''}>DARK (Black)</option>
+                        <option value="forest-dark" ${theme === 'forest-dark' ? 'selected' : ''}>FOREST DARK (Green)</option>
+                        <option value="forest-light" ${theme === 'forest-light' ? 'selected' : ''}>FOREST LIGHT</option>
+                        <option value="cyber" ${theme === 'cyber' ? 'selected' : ''}>CYBER (Gray / Purple)</option>
+                    </select>
+                </div>
+                <div class="theme-preview-strip" data-theme-preview="${theme}" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                <p id="projectThemeStatus" class="meta">Current theme: ${escapeHtml(theme.replace('-', ' '))}.</p>
             </div>
-            <div class="theme-preview-strip" data-theme-preview="${theme}" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-            <p id="projectThemeStatus" class="meta">Current theme: ${escapeHtml(theme.replace('-', ' '))}.</p>
-        </section>
+        </details>
         <div class="content-type-list">
             <button class="content-type-row" type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Manage Visitor Entrances</strong><span>Create an optional Trail Entrance for guided visitors.</span></button>
         </div>
-        <section class="panel tutorial-settings" aria-labelledby="tutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
-            <div class="section-heading-row"><div><h2 id="tutorialSettingsTitle">Tutorial &amp; Guidance</h2><p>First-use explanations become shorter after successful actions.</p></div><span class="tutorial-status">${tutorialEnabled ? 'On' : 'Off'}</span></div>
-            <label class="tutorial-mode-toggle"><span><strong>Tutorial Mode</strong><small>Show contextual guidance beside the feature being learned.</small></span><input type="checkbox" ${tutorialEnabled ? 'checked' : ''} onchange="window.setProjectTutorialMode('${encoded(project.id)}', this.checked)" /></label>
-            <div class="tutorial-settings-actions">
-                <button type="button" onclick="window.restartProjectTutorial('${encoded(project.id)}')">Restart Tutorial for This Project</button>
-                <button type="button" onclick="window.resetLearningTips('${encoded(project.id)}')">Reset Learning Tips</button>
+        <details class="panel settings-collapsible" aria-labelledby="tutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="tutorialSettingsTitle">Tutorial & Guidance</h2><p>First-use explanations become shorter after successful actions.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="tutorial-status">${tutorialEnabled ? 'On' : 'Off'}</span><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body tutorial-settings">
+                <label class="tutorial-mode-toggle"><span><strong>Tutorial Mode</strong><small>Show contextual guidance beside the feature being learned.</small></span><input type="checkbox" ${tutorialEnabled ? 'checked' : ''} onchange="window.setProjectTutorialMode('${encoded(project.id)}', this.checked)" /></label>
+                <div class="tutorial-settings-actions">
+                    <button type="button" onclick="window.restartProjectTutorial('${encoded(project.id)}')">Restart Tutorial for This Project</button>
+                    <button type="button" onclick="window.resetLearningTips('${encoded(project.id)}')">Reset Learning Tips</button>
+                </div>
+                <p class="meta">These actions reset guidance only. Plants, Areas, Notes, checkpoints and AR positions are never changed.</p>
             </div>
-            <p class="meta">These actions reset guidance only. Plants, Areas, Notes, checkpoints and AR positions are never changed.</p>
-        </section>
-        <section class="panel tutorial-settings" aria-labelledby="arTutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
-            <div class="section-heading-row"><div><h2 id="arTutorialSettingsTitle">AR Tutorial &amp; Hints</h2><p>Control the compact guidance shown inside Creator AR Mode.</p></div><span class="tutorial-status">${arTutorialLabel}</span></div>
-            <label class="tutorial-mode-toggle"><span><strong>Show AR Hints</strong><small>Show short surface-detection and placement reminders when they are useful.</small></span><input type="checkbox" ${arTutorial.showHints === false ? '' : 'checked'} onchange="window.setArHints('${encoded(project.id)}', this.checked)" /></label>
-            <div class="tutorial-settings-actions">
-                <button type="button" onclick="window.replayArTutorial('${encoded(project.id)}')">Replay AR Tutorial</button>
-                <button type="button" onclick="window.resetArLearningTips('${encoded(project.id)}')">Reset AR Learning Tips</button>
+        </details>
+        <details class="panel settings-collapsible" aria-labelledby="arTutorialSettingsTitle" ${expertMode ? '' : 'hidden'}>
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="arTutorialSettingsTitle">AR Tutorial & Hints</h2><p>Control the compact guidance shown inside Creator AR Mode.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="tutorial-status">${arTutorialLabel}</span><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body tutorial-settings">
+                <label class="tutorial-mode-toggle"><span><strong>Show AR Hints</strong><small>Show short surface-detection and placement reminders when they are useful.</small></span><input type="checkbox" ${arTutorial.showHints === false ? '' : 'checked'} onchange="window.setArHints('${encoded(project.id)}', this.checked)" /></label>
+                <div class="tutorial-settings-actions">
+                    <button type="button" onclick="window.replayArTutorial('${encoded(project.id)}')">Replay AR Tutorial</button>
+                    <button type="button" onclick="window.resetArLearningTips('${encoded(project.id)}')">Reset AR Learning Tips</button>
+                </div>
+                <p class="meta">The tutorial appears once for an experienced creator, can be skipped, and can always be replayed here. Resetting it never changes project content or AR positions.</p>
             </div>
-            <p class="meta">The tutorial appears once for an experienced creator, can be skipped, and can always be replayed here. Resetting it never changes project content or AR positions.</p>
-        </section>
-        <section class="panel tutorial-settings" aria-labelledby="developerDiagnosticsTitle" ${expertMode ? '' : 'hidden'}>
-            <div class="section-heading-row"><div><h2 id="developerDiagnosticsTitle">Developer Diagnostics</h2><p>Keep technical AR launch details hidden during normal use.</p></div><span class="tutorial-status">${settings.developerDiagnostics ? 'Debug on' : 'Debug off'}</span></div>
-            <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
-            <label class="tutorial-mode-toggle"><span><strong>Physical Marker prototype</strong><small>Enable experimental printed ArUco anchors in Totem Alignment.</small></span><input type="checkbox" ${settings.physicalAnchors ? 'checked' : ''} onchange="window.savePlatformSetting('physicalAnchors', this.checked)" /></label>
-            <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
-            <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
-        </section>
-        <section class="panel project-backup-setting" aria-labelledby="backupProjectTitle" ${expertMode ? '' : 'hidden'}>
-            <div class="section-heading-row"><h2 id="backupProjectTitle">Backup Project to File</h2><span class="coming-soon-badge">Coming Soon</span></div>
-            <p>Exports a configuration file containing all project data, Areas, content and settings.</p>
-            <button type="button" disabled aria-disabled="true">Backup Project</button>
-        </section>
+        </details>
+        <details class="panel settings-collapsible" aria-labelledby="developerDiagnosticsTitle" ${expertMode ? '' : 'hidden'}>
+            <summary>
+                <div class="section-heading-row">
+                    <div><h2 id="developerDiagnosticsTitle">Developer Diagnostics</h2><p>Keep technical AR launch details hidden during normal use.</p></div>
+                    <span class="settings-collapsible-trailing"><span class="tutorial-status">${settings.developerDiagnostics ? 'Debug on' : 'Debug off'}</span><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body tutorial-settings">
+                <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
+                <label class="tutorial-mode-toggle"><span><strong>Physical Marker prototype</strong><small>Enable experimental printed ArUco anchors in Totem Alignment.</small></span><input type="checkbox" ${settings.physicalAnchors ? 'checked' : ''} onchange="window.savePlatformSetting('physicalAnchors', this.checked)" /></label>
+                <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
+                <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
+            </div>
+        </details>
+        <details class="panel project-backup-setting settings-collapsible" aria-labelledby="backupProjectTitle" ${expertMode ? '' : 'hidden'}>
+            <summary>
+                <div class="section-heading-row">
+                    <h2 id="backupProjectTitle">Backup Project to File</h2>
+                    <span class="settings-collapsible-trailing"><span class="coming-soon-badge">Coming Soon</span><span class="settings-collapsible-chevron" aria-hidden="true">▾</span></span>
+                </div>
+            </summary>
+            <div class="settings-collapsible-body">
+                <p>Exports a configuration file containing all project data, Areas, content and settings.</p>
+                <button type="button" disabled aria-disabled="true">Backup Project</button>
+            </div>
+        </details>
         <section class="project-delete-zone" aria-labelledby="deleteProjectTitle">
             <h2 id="deleteProjectTitle">Delete Project</h2>
             <p>Permanently deletes this project, all Areas and all content. This cannot be undone.</p>
