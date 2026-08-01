@@ -1091,7 +1091,7 @@ function updateControllerRay(frame) {
 }
 
 function drawControllerPointer(view) {
-    if (creatorInputMode !== 'controller' || !latestControllerRay || !controllerPointerRenderer || !sphereRenderer) return;
+    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !controllerPointerRenderer || !sphereRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * .04,
@@ -1115,6 +1115,36 @@ function drawControllerPointer(view) {
         color: [.72, .95, .36],
         opacity: .98
     });
+}
+
+function positionControllerPointer(view = latestView) {
+    const pointer = overlayRoot?.querySelector('[data-ar-controller-pointer]');
+    if (!pointer) return;
+    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay) {
+        pointer.hidden = true;
+        pointer.classList.remove('is-edge');
+        return;
+    }
+    const { origin, direction } = latestControllerRay;
+    const point = {
+        x: origin.x + direction.x * 2.2,
+        y: origin.y + direction.y * 2.2,
+        z: origin.z + direction.z * 2.2
+    };
+    const projected = projectWorldPoint(view, point);
+    const margin = 24;
+    const x = projected?.x ?? window.innerWidth / 2;
+    const y = projected?.y ?? window.innerHeight / 2;
+    const offscreen = !projected
+        || x < margin
+        || x > window.innerWidth - margin
+        || y < margin
+        || y > window.innerHeight - margin;
+    const clampedX = Math.max(margin, Math.min(window.innerWidth - margin, x));
+    const clampedY = Math.max(margin, Math.min(window.innerHeight - margin, y));
+    pointer.hidden = false;
+    pointer.classList.toggle('is-edge', offscreen);
+    pointer.style.transform = `translate(${Math.round(clampedX)}px, ${Math.round(clampedY)}px) translate(-50%, -50%)`;
 }
 
 function setInteractionMode(mode) {
@@ -1837,6 +1867,7 @@ function positionSessionMarkers(view = latestView) {
     if (!view || !overlayRoot) return;
     positionLocationNote(view);
     positionNotePlacementPreview(view);
+    positionControllerPointer(view);
     const inverse = view.transform?.inverse?.matrix;
     if (!inverse || !view.projectionMatrix) return;
     activeAreaMarkers().forEach(record => {
@@ -2805,6 +2836,7 @@ function createOverlay() {
           </span>
         </div>
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
+        <div class="creator-ar-controller-pointer" data-ar-controller-pointer aria-hidden="true" hidden><span></span></div>
         ${spatialMoveControlMarkup('ar')}
         <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
           <span class="creator-ar-location-stick" aria-hidden="true"></span>

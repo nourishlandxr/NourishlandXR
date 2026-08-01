@@ -352,10 +352,14 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /function controllerInputSource\(\)/);
     assert.match(arSource, /function activateControllerSelection\(\)/);
     assert.match(arSource, /function updateControllerRay\(frame\)/);
+    assert.match(arSource, /function positionControllerPointer\(view = latestView\)/);
+    assert.match(arSource, /data-ar-controller-pointer/);
+    assert.match(arSource, /projectWorldPoint\(view, point\)/);
     assert.match(arSource, /targetRaySpace/);
     assert.match(arSource, /selectstart/);
     assert.match(arSource, /selectend/);
     assert.match(styles, /creator-ar-controller-hud/);
+    assert.match(styles, /creator-ar-controller-pointer/);
     assert.match(arSource, /placementPointerMarkup/);
     assert.match(pointerSource, /creator-ar-breathing-target/);
     assert.match(pointerSource, /creator-ar-placement-pointer/);

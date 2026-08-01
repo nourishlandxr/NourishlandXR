@@ -916,6 +916,14 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-overlay.is-view-mode .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
 .creator-ar-overlay.is-controller-mode .creator-ar-mode-pointer,
 .creator-ar-overlay.is-controller-mode .creator-ar-placement-guide { opacity: 0; visibility: hidden; }
+.creator-ar-controller-pointer { position:fixed; left:0; top:0; z-index:4; display:grid; place-items:center; width:46px; height:46px; transform:translate(-50%,-50%); pointer-events:none; filter:drop-shadow(0 0 8px rgba(220,239,149,.55)); }
+.creator-ar-controller-pointer[hidden] { display:none; }
+.creator-ar-controller-pointer span { position:relative; display:block; width:22px; height:22px; border:2px solid rgba(220,239,149,.96); border-radius:50%; background:rgba(220,239,149,.08); box-shadow:0 0 0 5px rgba(220,239,149,.12),inset 0 0 10px rgba(220,239,149,.16); }
+.creator-ar-controller-pointer span::before,
+.creator-ar-controller-pointer span::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#efffc9; border-radius:999px; }
+.creator-ar-controller-pointer span::before { width:34px; height:2px; }
+.creator-ar-controller-pointer span::after { width:2px; height:34px; }
+.creator-ar-controller-pointer.is-edge span { border-color:#fff; background:rgba(255,255,255,.16); }
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span { width: 28px; height: 28px; border-radius: 8px; border-color: #ffe3a0; background: rgba(255,227,160,.08); transform: scale(1.08); }
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::before,
 .creator-ar-overlay.is-hold-mode .creator-ar-mode-pointer span::after,
