@@ -278,7 +278,11 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
     assert.match(fieldGuideSource, /Virtual Tags/);
+    assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
+    assert.match(fieldGuideSource, /physicalAnchor\?\.enabled/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
+    assert.match(dashboardSource, /ArUco Virtual Tag/);
+    assert.match(dashboardSource, /PRINT VIRTUAL TAG/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);

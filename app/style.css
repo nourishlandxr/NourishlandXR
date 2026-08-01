@@ -5147,6 +5147,17 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-virtual-tag-card > span { background: rgba(83, 103, 143, .12); color: #52688e; }
 .plant-virtual-tag-card strong { color: #52688e; }
 .plant-virtual-tag-card .ar-inline-checkbox { margin-top: .55rem; color: #33496e; font-weight: 800; }
+.plant-physical-anchor-card { margin-top:10px; border:1px solid rgba(83,103,143,.2); border-radius:16px; background:rgba(244,248,255,.72); }
+.plant-physical-anchor-card > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; cursor:pointer; list-style:none; }
+.plant-physical-anchor-card > summary::-webkit-details-marker { display:none; }
+.plant-physical-anchor-card > summary > span { display:grid; gap:3px; }
+.plant-physical-anchor-card > summary small { color:#66718a; font-size:.68rem; font-weight:600; }
+.plant-physical-anchor-body { display:grid; gap:10px; padding:0 14px 14px; }
+.plant-physical-anchor-body > p { margin:0; color:#53627c; font-size:.75rem; line-height:1.4; }
+.plant-physical-anchor-body [data-plant-physical-anchor-fields][hidden] { display:none; }
+.plant-physical-marker-layout { display:grid; grid-template-columns:minmax(92px,120px) minmax(0,1fr); align-items:start; gap:12px; }
+.plant-physical-marker-layout .totem-physical-marker-preview { min-height:108px; }
+.plant-physical-anchor-unavailable { margin-top:8px; }
 
 .plant-card-hero {
     display: grid;
@@ -5644,6 +5655,8 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-virtual-tag-row > span:nth-child(2) { display:grid; min-width:0; gap:.12rem; }
 .field-guide-virtual-tag-row small { overflow:hidden; color:#66718a; font-size:.64rem; text-overflow:ellipsis; white-space:nowrap; }
 .field-guide-virtual-tag-row b { margin-left:auto; color:#52688e; font-size:.68rem; }
+.field-guide-virtual-tag-row.is-live { border-color:rgba(59,126,82,.32); background:linear-gradient(145deg,rgba(247,255,244,.94),rgba(226,243,226,.88)); }
+.field-guide-virtual-tag-row.is-live b { color:#39764a; letter-spacing:.06em; }
 .field-guide-virtual-tag-symbol { display:grid; place-items:center; width:30px; height:30px; border-radius:10px; background:rgba(83,103,143,.12); font-size:1rem; }
 .creator-ar-special-symbol { display:grid; place-items:center; position:absolute; left:50%; top:50%; width:44px; height:44px; transform:translate(-50%,-50%) rotate(var(--marker-rotation,0deg)); border:2px solid rgba(255,255,255,.9); border-radius:50%; background:var(--marker-accent,#75a9cc); color:#fff; font-size:1.65rem; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.32); box-shadow:0 0 20px color-mix(in srgb,var(--marker-accent,#75a9cc) 72%,transparent); }
 .creator-ar-arrow-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -6368,6 +6381,9 @@ body:has(.project-entry) #app {
 .print-tag h2 { margin:8px 0 0; color:#3f3022; font-size:1.2rem; }
 .print-tag p { margin:0; color:#66736a; font-size:.78rem; }
 .print-tag small { color:#65736a; font-size:.67rem; }
+.print-plant-tag-anchor { display:grid; grid-template-columns:58px minmax(0,1fr); align-items:center; gap:8px; margin-top:auto; padding-top:8px; border-top:1px solid rgba(128,97,62,.2); }
+.print-plant-tag-anchor svg { display:block; width:58px; height:auto; }
+.print-plant-tag-anchor small { color:#42624a; font-size:.55rem; font-weight:850; letter-spacing:.06em; }
 .print-sheet-small .print-tag { min-height:110px; padding:11px; }
 .print-sheet-small .print-tag h2 { font-size:.95rem; }
 .print-sheet-large .print-tag { min-height:230px; padding:22px; }

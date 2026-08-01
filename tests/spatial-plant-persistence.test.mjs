@@ -403,5 +403,23 @@ test('Physical Marker assignment persists, stays unique per project, reassigns e
     assert.equal(removed.physicalAnchor, null);
     const afterRemoval = await jsonRequest(markerPath);
     assert.ok(afterRemoval.some(marker => marker.id === livingRoom.id));
+    const virtualPlant = await jsonRequest(markerPath, {
+        method: 'POST',
+        body: JSON.stringify({
+            id: 'virtual-plant',
+            name: 'Virtual Plant',
+            type: 'plant',
+            physicalAnchor,
+            plant_profile: { profile_enabled: true, virtual_tag_enabled: true, common_name: 'Virtual Plant' }
+        })
+    });
+    assert.equal(virtualPlant.physicalAnchor.markerLabel, 'NL-001');
+    const plantDuplicate = await fetch(`${baseUrl}${markerPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Duplicate Virtual Plant', type: 'plant', physicalAnchor })
+    });
+    assert.equal(plantDuplicate.status, 400);
+    assert.match((await plantDuplicate.json()).error, /already assigned/);
     await jsonRequest(`/api/projects/${boundaryProject.id}`, { method: 'DELETE' });
 });

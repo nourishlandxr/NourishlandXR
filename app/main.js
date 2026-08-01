@@ -20,7 +20,7 @@ import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, save
 import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from './screens/hostedExplorer.js';
 import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from './screens/analogExplorer.js';
 import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from './screens/fieldGuide.js';
-import { printCenterOutput, renderPrintCenter, updatePrintRangeFields } from './screens/printCenter.js';
+import { printCenterOutput, printPlantVirtualTag, renderPrintCenter, updatePrintRangeFields } from './screens/printCenter.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, openProjectAreaAr, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
 import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
@@ -383,6 +383,7 @@ window.renderPrintCenter = (projectId, section = 'prints', fromHistory = false) 
     return renderPrintCenter(app, projectId, section);
 };
 window.printCenterOutput = kind => printCenterOutput(app, kind);
+window.printPlantVirtualTag = (projectId, siteId, placeId, markerId) => printPlantVirtualTag(app, projectId, siteId, placeId, markerId);
 window.updatePrintRangeFields = updatePrintRangeFields;
 window.beginSiteMapAreaLink = beginSiteMapAreaLink;
 window.placeLinkedAreaOnSiteMap = placeLinkedAreaOnSiteMap;

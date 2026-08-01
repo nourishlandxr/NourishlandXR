@@ -5,6 +5,7 @@ import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
+import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRenderer.js';
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
@@ -162,6 +163,8 @@ test('Physical Marker tracking loads one Totem, holds briefly and clears after m
 test('Physical Marker prototype is feature-flagged and exposes saved and unsaved scan paths', () => {
     const dashboard = read('app/screens/projectDashboard.js');
     const scanner = read('app/screens/physicalAnchorScanner.js');
+    const server = read('tools/persistence-server.mjs');
+    const printCenter = read('app/screens/printCenter.js');
     assert.match(dashboard, /physicalAnchors: false/);
     assert.match(dashboard, /Physical Marker prototype/);
     assert.match(dashboard, /Test in AR/);
@@ -173,6 +176,12 @@ test('Physical Marker prototype is feature-flagged and exposes saved and unsaved
     assert.match(scanner, /js-aruco2@2\.0\.0/);
     assert.ok(scanner.indexOf('getUserMedia') < scanner.indexOf('new window.AR.Detector'));
     assert.match(dashboard, /physicalAnchorControlPresent \? physicalAnchor : existing\?\.marker\.physicalAnchor/);
+    assert.match(dashboard, /ArUco Virtual Tag/);
+    assert.match(dashboard, /physicalAnchorFromPlantProfileForm/);
+    assert.match(scanner, /resolvePhysicalAnchorEntry/);
+    assert.match(server, /type !== 'area_checkpoint' && type !== 'plant'/);
+    assert.match(printCenter, /print-plant-tag-anchor/);
+    assert.match(printCenter, /printPlantVirtualTag/);
 });
 
 test('legacy AR diagnostics stay out of the camera interface', () => {
@@ -440,12 +449,12 @@ test('Special opens immediately with Totem tools above symbols', () => {
     const specialChoices = arSource.slice(renderStart, renderEnd);
     assert.match(specialChoices, /<p>Special<\/p>/);
     assert.match(specialChoices, />TOTEM</);
-    assert.match(specialChoices, /data-ar-point-to-totem/);
     assert.match(specialChoices, /data-ar-toggle-totem/);
     assert.match(specialChoices, /data-ar-toggle-location-note/);
     assert.match(specialChoices, /data-ar-add-totem/);
     assert.match(specialChoices, /Add Totem/);
-    assert.match(specialChoices, /'Hide Totem'/);
+    assert.match(specialChoices, /'Hide Totem Guide'/);
+    assert.match(specialChoices, /'Show Totem Guide'/);
     assert.match(specialChoices, /'View Location Note'/);
     assert.doesNotMatch(specialChoices, /Totem \/ Area|data-ar-create-area/);
     assert.match(specialChoices, /ARROWS, EXCLAMATION AND QUESTION MARKS/);
@@ -1173,8 +1182,13 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.equal(prismMatrix[14], 3);
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
+    assert.match(arSource, /function plantTagDimensions\(marker\)/);
+    assert.match(arSource, /drawPlantTagStem\(view, record\.position, record\.marker/);
+    assert.match(arSource, /plantTagPlatePosition\(record\.position, record\.marker\)/);
     assert.match(arSource, /Area Totem/);
     assert.match(arSource, /trail entrance gateway/);
+    assert.match(read('app/services/spatialTriangleRenderer.js'), /correctly wound rectangular sides/);
+    assert.equal(createTrianglePrismGeometry().length, 144);
 });
 
 test('Creator Plants use a compact encyclopedia file and collapsible AR information', () => {

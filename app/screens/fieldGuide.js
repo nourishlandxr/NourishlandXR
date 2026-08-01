@@ -2,6 +2,7 @@ import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites,
 import { loadResolvedPlantsForPlace } from '../services/plantDataService.js';
 import { DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { DEFAULT_TOTEM_COLOR } from '../services/totemAppearance.js';
+import { physicalMarkerLabel } from '../services/physicalAnchor.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
@@ -13,6 +14,7 @@ async function loadAreaPlants(projectId, siteId, placeId, visitor) {
         loadResolvedPlantsForPlace(projectId, siteId, placeId, visitor),
         loadPlaceMarkers(projectId, siteId, placeId, visitor).catch(() => [])
     ]);
+    const markerById = new Map(markers.map(marker => [marker.id, marker]));
     const representedMarkers = new Set(resolved.map(plant => plant.markerId).filter(Boolean));
     const markerPlants = await Promise.all(markers.filter(marker => marker.type === 'plant' && !representedMarkers.has(marker.id)).map(async marker => {
         let profile = marker.plant_profile || {};
@@ -36,13 +38,14 @@ async function loadAreaPlants(projectId, siteId, placeId, visitor) {
             status: marker.status || '',
             localNotes: marker.notes || marker.description || profile.overview || '',
             summary: profile.overview || marker.description || '',
+            physicalAnchor: marker.physicalAnchor || null,
             virtualTagEnabled: profile.virtual_tag_enabled === true
         };
     }));
     const resolvedPlants = await Promise.all(resolved.map(async plant => {
         if (!plant.markerId) return { ...plant, virtualTagEnabled: false };
         const profile = await loadPlantProfile(projectId, siteId, placeId, plant.markerId, visitor).catch(() => ({}));
-        return { ...plant, virtualTagEnabled: profile.virtual_tag_enabled === true };
+        return { ...plant, physicalAnchor: markerById.get(plant.markerId)?.physicalAnchor || null, virtualTagEnabled: profile.virtual_tag_enabled === true };
     }));
     return [...resolvedPlants, ...markerPlants];
 }
@@ -162,8 +165,14 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
         }).join('');
         const layers = [...new Set(guide.plants.map(plant => String(plant.layer || '').trim()).filter(Boolean))].sort();
         const virtualTags = creator ? guide.plants.filter(plant => plant.virtualTagEnabled === true || plant.virtual_tag_enabled === true) : [];
-        const virtualTagRows = virtualTags.map(plant => `<button type="button" class="field-guide-virtual-tag-row" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-virtual-tag-symbol" aria-hidden="true">▦</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small>${escapeHtml(plant.placeName || plant.placeId)} · Plant profile</small></span><b>Open</b></button>`).join('');
-        const virtualTagsSection = creator ? `<details class="field-guide-preparation field-guide-virtual-tags"><summary><span><strong>Virtual Tags</strong><small>${virtualTags.length} selected</small></span><span aria-hidden="true">▾</span></summary><div class="field-guide-virtual-tags-body"><p>Choose Virtual Tag in a Plant profile to prepare a future scannable garden tag that opens the Plant’s Web Hub profile.</p>${virtualTagRows || '<p class="meta">No Plant profiles are selected yet.</p>'}</div></details>` : '';
+        const virtualTagRows = virtualTags.map(plant => {
+            let markerLabel = 'Profile selected · no ArUco linked';
+            try {
+                if (plant.physicalAnchor?.enabled) markerLabel = `Live · ${physicalMarkerLabel(plant.physicalAnchor.markerId)}`;
+            } catch {}
+            return `<button type="button" class="field-guide-virtual-tag-row${plant.physicalAnchor?.enabled ? ' is-live' : ''}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-virtual-tag-symbol" aria-hidden="true">▦</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small>${escapeHtml(plant.placeName || plant.placeId)} · ${escapeHtml(markerLabel)}</small></span><b>${plant.physicalAnchor?.enabled ? 'LIVE' : 'Open'}</b></button>`;
+        }).join('');
+        const virtualTagsSection = creator ? `<details class="field-guide-preparation field-guide-virtual-tags"><summary><span><strong>Virtual Tags</strong><small>${virtualTags.length} selected · ${virtualTags.filter(plant => plant.physicalAnchor?.enabled).length} live</small></span><span aria-hidden="true">▾</span></summary><div class="field-guide-virtual-tags-body"><p>Virtual Tags become live when an ArUco marker is linked from the Plant profile.</p>${virtualTagRows || '<p class="meta">No Plant profiles are selected yet.</p>'}</div></details>` : '';
         currentGuidePlaceId = '';
         const creationBoard = creator ? `<section class="field-guide-creation-board" aria-label="Add information"><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section>` : '';
         const placedCount = allPlaces.reduce((sum, place) => sum + place.placedCount, 0);

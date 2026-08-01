@@ -1,5 +1,6 @@
 import { loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces } from '../services/persistence.js';
 import { DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
+import { physicalMarkerLabel, physicalMarkerSvg } from '../services/physicalAnchor.js';
 
 let currentPrintCenter = null;
 
@@ -90,7 +91,14 @@ function printCenterMarkup(data) {
 
 function plantTagMarkup(plant, index, size) {
     const profile = plant.profile || {};
-    return `<article class="print-tag plant-tag print-tag-${escapeHtml(size)}"><span class="print-tag-index">PLANT TAG ${String(index + 1).padStart(3, '0')}</span><h2>${escapeHtml(plant.marker.name || 'Unnamed plant')}</h2><p><em>${escapeHtml(profileValue(profile, 'scientificName') || profileValue(profile, 'scientific_name') || 'Scientific name not entered')}</em></p><small>${escapeHtml(areaLabel(plant.place))}</small></article>`;
+    let physicalTag = '';
+    if (profile.virtual_tag_enabled === true && plant.marker?.physicalAnchor?.enabled) {
+        try {
+            const label = physicalMarkerLabel(plant.marker.physicalAnchor.markerId);
+            physicalTag = `<div class="print-plant-tag-anchor"><span>${physicalMarkerSvg(plant.marker.physicalAnchor.markerId)}</span><small>LIVE VIRTUAL TAG · ${label}</small></div>`;
+        } catch {}
+    }
+    return `<article class="print-tag plant-tag print-tag-${escapeHtml(size)}"><span class="print-tag-index">PLANT TAG ${String(index + 1).padStart(3, '0')}</span><h2>${escapeHtml(profile.common_name || plant.marker.name || 'Unnamed plant')}</h2><p><em>${escapeHtml(profileValue(profile, 'scientificName') || profileValue(profile, 'scientific_name') || 'Scientific name not entered')}</em></p><small>${escapeHtml(areaLabel(plant.place))}</small>${physicalTag}</article>`;
 }
 
 function totemTagMarkup(data, index, size) {
@@ -133,6 +141,32 @@ export async function renderPrintCenter(app, encodedProjectId) {
         updatePrintRangeFields();
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Prints unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
+}
+
+export async function printPlantVirtualTag(app, encodedProjectId, encodedSiteId, encodedPlaceId, encodedMarkerId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    const siteId = decodeURIComponent(encodedSiteId);
+    const placeId = decodeURIComponent(encodedPlaceId);
+    const markerId = decodeURIComponent(encodedMarkerId);
+    try {
+        const project = (await loadProjects()).find(item => String(item.id) === String(projectId));
+        const sites = await loadProjectSites(projectId);
+        const site = sites.find(item => item.id === siteId) || sites[0];
+        if (!project || !site) throw new Error('Project location is unavailable.');
+        const places = await loadSitePlaces(projectId, site.id);
+        const place = places.find(item => item.id === placeId);
+        if (!place) throw new Error('Plant Area is unavailable.');
+        const markers = await loadPlaceMarkers(projectId, site.id, place.id);
+        const marker = markers.find(item => item.id === markerId);
+        const profile = await loadPlantProfile(projectId, site.id, place.id, markerId).catch(() => marker?.plant_profile || {});
+        if (!project || !site || !place || !marker || !isPlant(marker)) throw new Error('Plant Virtual Tag is unavailable.');
+        if (profile.virtual_tag_enabled !== true || !marker.physicalAnchor?.enabled) throw new Error('Enable Virtual Tag and link an ArUco marker before printing.');
+        const body = plantTagMarkup({ marker, profile, place }, 0, 'medium');
+        app.innerHTML = `<div class="screen print-output-screen"><header class="page-header print-output-header"><button class="ghost" type="button" onclick="window.openProjectEntry('${encoded(projectId)}','${encoded(markerId)}',false,'field-guide')">Back to Plant profile</button><p class="welcome-label">Virtual Tag</p><h1>Print Plant Tag</h1><p class="subtitle">${escapeHtml(profile.common_name || marker.name)} · ${escapeHtml(physicalMarkerLabel(marker.physicalAnchor.markerId))}</p><button class="print-sheet-action" type="button" onclick="window.print()">Print</button></header><main class="print-sheet print-sheet-tags print-sheet-medium">${body}</main></div>`;
+        window.setTimeout(() => window.print(), 80);
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Virtual Tag unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
 }
 
