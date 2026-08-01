@@ -674,7 +674,7 @@ function updateAreaRecenterPrompt({ ready = false, hidden = false, busy = false 
 
 async function recenterActiveArea() {
     const totem = activeTotemRecord();
-    if (!totem) {
+    if (!totem || !hasSavedSpatialPosition(totem)) {
         setPlacementStatus(`${activeAreaName || 'This Area'} has no saved Totem to recenter around.`);
         updateAreaRecenterPrompt({ hidden: true });
         return false;
@@ -869,10 +869,16 @@ function activeTotemRecord() {
     return activeAreaMarkers().find(record => record.marker.type === 'area_checkpoint') || null;
 }
 
+function hasSavedSpatialPosition(record) {
+    return record?.unplaced !== true
+        && record?.position
+        && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(record.position[axis])));
+}
+
 function pointToActiveTotem() {
     const totem = activeTotemRecord();
     if (!totem) {
-        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Create to add one.`);
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Add Totem.`);
         return;
     }
     hiddenStructuralMarkerIds.delete(totem.marker.id);
@@ -885,7 +891,7 @@ function pointToActiveTotem() {
 function toggleActiveTotemVisibility() {
     const totem = activeTotemRecord();
     if (!totem) {
-        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Create to add one.`);
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Add Totem.`);
         return;
     }
     if (hiddenStructuralMarkerIds.has(totem.marker.id)) {
@@ -927,17 +933,27 @@ function toggleLocationNoteVisibility(record = activeTotemRecord()) {
 }
 
 function createTotemFromSpecial() {
-    if (activeAreaId && !activeTotemRecord()) {
+    const totem = activeTotemRecord();
+    if (activeAreaId && totem && !hasSavedSpatialPosition(totem)) {
+        void prepareExistingMarkerPlacement(totem.marker.id);
+        closePlacePicker();
+        return;
+    }
+    if (activeAreaId && !totem) {
         closePlacePicker();
         void armPlacement('area_checkpoint');
         return;
     }
-    void openArAreaCreationForm();
+    closePlacePicker();
+    setPlacementStatus('Open an Area before adding an Area Totem.');
 }
 
 function renderSpecialMarkerChoices(picker) {
     const totem = activeTotemRecord();
     const totemHidden = Boolean(totem && hiddenStructuralMarkerIds.has(totem.marker.id));
+    const totemActionLabel = totem
+        ? hasSavedSpatialPosition(totem) ? 'Hide Totem' : 'Place Totem'
+        : 'Add Totem';
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
         ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
@@ -948,20 +964,20 @@ function renderSpecialMarkerChoices(picker) {
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>
         <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-point-to-totem><b aria-hidden="true">&#8982;</b><span><strong>Point to Totem</strong></span></button>
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem><b aria-hidden="true">${totemHidden ? '&#9673;' : '&#9675;'}</b><span><strong>${totemHidden ? 'Show Totem' : 'Hide Totem'}</strong></span></button>
+            ${totem && hasSavedSpatialPosition(totem) ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-point-to-totem><b aria-hidden="true">&#8982;</b><span><strong>Point to Totem</strong></span></button>' : ''}
+            ${totem && hasSavedSpatialPosition(totem) ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem><b aria-hidden="true">${totemHidden ? '&#9673;' : '&#9675;'}</b><span><strong>${totemHidden ? 'Show Totem' : totemActionLabel}</strong></span></button>` : ''}
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-location-note><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span><strong>${locationNoteVisible ? 'Hide Location Note' : 'View Location Note'}</strong></span></button>
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-create-area><b aria-hidden="true">+</b><span><strong>Create</strong><small>Totem / Area</small></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>${totem ? 'Place Totem' : 'Add Totem'}</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
         </div></section>
         <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}</div><small>MARKS</small><div class="creator-ar-special-grid">${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-point-to-totem]').addEventListener('click', pointToActiveTotem);
-    picker.querySelector('[data-ar-toggle-totem]').addEventListener('click', toggleActiveTotemVisibility);
+    picker.querySelector('[data-ar-point-to-totem]')?.addEventListener('click', pointToActiveTotem);
+    picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemVisibility);
     picker.querySelector('[data-ar-toggle-location-note]').addEventListener('click', () => {
         toggleLocationNoteVisibility(totem);
         closePlacePicker();
     });
-    picker.querySelector('[data-ar-create-area]').addEventListener('click', createTotemFromSpecial);
+    picker.querySelector('[data-ar-add-totem]').addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         readySpecialMarker = {
             name: button.dataset.arSpecialLabel,
@@ -1894,19 +1910,26 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
                 : null
         ]);
         const position = anchor?.position;
-        if (anchor?.type !== 'spatial' || !position || !['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])))) return null;
+        const hasPosition = anchor?.type === 'spatial'
+            && position
+            && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])));
+        // Keep an existing Totem visible to the placement controls even when
+        // its anchor was lost or was never captured. Otherwise placement sees
+        // the saved marker as a duplicate and offers no way to recover it.
+        if (!hasPosition && marker.type !== 'area_checkpoint') return null;
         return {
             marker,
             plantProfile,
             profileExpanded: false,
-            position: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
-            anchorPosition: { x: Number(position.x), y: Number(position.y), z: Number(position.z) },
+            position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: 0 },
+            anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             siteId: operation.siteId,
             areaId: area.id,
             areaName: area.name,
-            coordinateSpace: anchor.coordinate_space || 'session-local',
-            checkpointId: anchor.checkpoint_id || '',
-            rotationDegrees: Number(anchor.rotation_degrees) || 0
+            coordinateSpace: anchor?.coordinate_space || 'session-local',
+            checkpointId: anchor?.checkpoint_id || '',
+            rotationDegrees: Number(anchor?.rotation_degrees) || 0,
+            unplaced: !hasPosition
         };
     }));
     if (!isArOperationCurrent(operation, guardOptions)) return;
@@ -1915,9 +1938,12 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();
     const totem = activeTotemRecord();
-    if (activeCheckpointId && totem) {
+    if (activeCheckpointId && totem && hasSavedSpatialPosition(totem)) {
         updateAreaRecenterPrompt({ ready: true });
         setPlacementStatus(`Aim at the real position of ${totem.marker.name}, then tap Recenter Area to restore this Area.`);
+    } else if (activeCheckpointId && totem) {
+        updateAreaRecenterPrompt({ hidden: true });
+        setPlacementStatus(`${area.name} loaded. Its saved Totem needs placement before this Area can be recentered.`);
     } else if (activeCheckpointId) {
         updateAreaRecenterPrompt({ hidden: true });
         setPlacementStatus(`${area.name} loaded, but its saved Totem could not be found.`);
@@ -1949,6 +1975,7 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         return true;
     }
     sessionMarkers = sessionMarkers.filter(record => record.marker.id !== marker.id);
+    hiddenStructuralMarkerIds.delete(marker.id);
     renderSessionMarkers();
     pendingBagRecord = {
         marker,

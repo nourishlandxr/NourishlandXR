@@ -438,11 +438,11 @@ test('Special opens immediately with Totem tools above symbols', () => {
     assert.match(specialChoices, /data-ar-point-to-totem/);
     assert.match(specialChoices, /data-ar-toggle-totem/);
     assert.match(specialChoices, /data-ar-toggle-location-note/);
-    assert.match(specialChoices, /data-ar-create-area/);
-    assert.match(specialChoices, />Point to Totem</);
+    assert.match(specialChoices, /data-ar-add-totem/);
+    assert.match(specialChoices, /Add Totem/);
     assert.match(specialChoices, /'Hide Totem'/);
     assert.match(specialChoices, /'View Location Note'/);
-    assert.match(specialChoices, />Create</);
+    assert.doesNotMatch(specialChoices, /Totem \/ Area|data-ar-create-area/);
     assert.match(specialChoices, />ARROWS</);
     assert.match(specialChoices, />SYMBOLS</);
     assert.match(specialChoices, /\['!', 'Important'\]/);
