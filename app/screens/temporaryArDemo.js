@@ -71,7 +71,7 @@ const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
     'A realidade aumentada (RA) e a realidade mista (XR) são tecnologias que nos ajudam a compreender e interagir melhor com o mundo à nossa volta, ligando informação virtual a lugares reais.',
-    'O Nourishland XR é um portal de informação sobre plantas, uma ferramenta de mapeamento vegetal e um editor de experiências para visitantes e estudantes. Esta demonstração mostra algumas formas de ligar informação sobre plantas a lugares reais.'
+    'O Nourishland XR é um portal de informação sobre plantas, uma ferramenta de mapeamento de ecosistemas e um editor de experiências para visitantes e estudantes. Esta demonstração mostra algumas formas de ligar informação sobre plantas a lugares reais.'
 ]);
 const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT' ? WELCOME_BOARD_PARAGRAPHS_PT : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
