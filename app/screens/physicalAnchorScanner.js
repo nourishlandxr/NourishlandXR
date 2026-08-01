@@ -6,7 +6,7 @@ import {
     normalizePhysicalAnchor,
     physicalMarkerLabel,
     projectPhysicalTotemOverlay,
-    resolvePhysicalAnchorTotem
+    resolvePhysicalAnchorEntry
 } from '../services/physicalAnchor.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightScale } from '../services/totemAppearance.js';
 
@@ -114,11 +114,12 @@ function smoothOverlay(previous, next, alpha = .34) {
 
 function applyTotemOverlay(scanner, association, pose) {
     const anchor = normalizePhysicalAnchor(association.marker.physicalAnchor);
+    const isVirtualPlant = association.marker.type === 'plant';
     const projected = projectPhysicalTotemOverlay(pose, anchor, {
         width: scanner.canvas.width,
         height: scanner.canvas.height,
         focalLength: scanner.canvas.width
-    });
+    }, isVirtualPlant ? { heightMetres: .24, widthMetres: .1 } : undefined);
     if (!projected) return false;
     scanner.smoothedOverlay = smoothOverlay(scanner.smoothedOverlay, projected);
     const videoRect = scanner.video.getBoundingClientRect();
@@ -131,6 +132,8 @@ function applyTotemOverlay(scanner, association, pose) {
     scanner.totem.style.setProperty('--physical-totem-height', `${visual.height * scaleY * totemHeightScale(association.marker)}px`);
     scanner.totem.style.setProperty('--physical-totem-rotation', `${visual.rotationDegrees}deg`);
     scanner.totem.style.setProperty('--physical-totem-color', association.marker.appearance?.color || DEFAULT_TOTEM_COLOR);
+    scanner.totem.classList.toggle('is-virtual-tag', isVirtualPlant);
+    scanner.totem.dataset.anchorRole = isVirtualPlant ? 'virtual-tag' : 'area-totem';
     scanner.totem.hidden = false;
     return true;
 }
@@ -193,7 +196,7 @@ function detectionFrame(scanner, now) {
         updateStatus(scanner, 'Marker detection failed.', 'error', error.message);
         return;
     }
-    const resolve = markerId => resolvePhysicalAnchorTotem(scanner.assignments, markerId);
+    const resolve = markerId => resolvePhysicalAnchorEntry(scanner.assignments, markerId);
     const decision = scanner.tracking.update(detections, now, resolve);
     if (decision.state === 'tracked') {
         const association = decision.association;
@@ -215,7 +218,7 @@ function detectionFrame(scanner, now) {
         }
         const pose = detectorPose(scanner, decision.detection, association);
         if (applyTotemOverlay(scanner, association, pose)) {
-            updateStatus(scanner, `${anchor.markerLabel} · ${association.marker.name}`, 'tracked');
+            updateStatus(scanner, `${anchor.markerLabel} · ${association.marker.name}${association.marker.type === 'plant' ? ' · Virtual Tag' : ''}`, 'tracked');
         }
         return;
     }

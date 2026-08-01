@@ -16,11 +16,14 @@ export function createTrianglePrismGeometry() {
         const indices = corners.length === 3 ? [0, 1, 2] : [0, 1, 2, 0, 2, 3];
         indices.forEach(index => vertices.push(...corners[index], ...normal));
     };
+    // A triangular prism: front and back triangular faces plus three
+    // correctly wound rectangular sides. The previous side winding caused
+    // back-face culling to remove most of the mesh on device GPUs.
     face([0, 0, 1], [[-1, -1, 1], [1, -1, 1], [0, 1, 1]]);
-    face([0, 0, -1], [[1, -1, -1], [-1, -1, -1], [0, 1, -1]]);
-    face([0, -0.707, 0.707], [[-1, -1, 1], [1, -1, 1], [1, -1, -1], [-1, -1, -1]]);
-    face([0.707, 0.707, 0], [[1, -1, 1], [0, 1, 1], [0, 1, -1], [1, -1, -1]]);
-    face([-0.707, 0.707, 0], [[0, 1, 1], [-1, -1, 1], [-1, -1, -1], [0, 1, -1]]);
+    face([0, 0, -1], [[-1, -1, -1], [0, 1, -1], [1, -1, -1]]);
+    face([0, -1, 0], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]]);
+    face([0.894, 0.447, 0], [[1, -1, 1], [1, -1, -1], [0, 1, -1], [0, 1, 1]]);
+    face([-0.894, 0.447, 0], [[0, 1, 1], [0, 1, -1], [-1, -1, -1], [-1, -1, 1]]);
     return new Float32Array(vertices);
 }
 

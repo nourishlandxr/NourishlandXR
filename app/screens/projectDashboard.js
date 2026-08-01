@@ -911,6 +911,18 @@ function physicalAnchorFromTotemForm() {
     });
 }
 
+function physicalAnchorFromPlantProfileForm() {
+    if (!document.getElementById('projectEntryPhysicalAnchorEnabled')?.checked) return null;
+    return normalizePhysicalAnchor({
+        enabled: true,
+        markerId: document.getElementById('projectEntryPhysicalMarkerId')?.value,
+        markerSizeMm: document.getElementById('projectEntryPhysicalMarkerSize')?.value,
+        offsetMeters: { x: 0, y: 0, z: 0 },
+        rotationDegrees: { yaw: 0, pitch: 0, roll: 0 },
+        scale: 1
+    });
+}
+
 export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId, flow = '') {
     event.preventDefault();
     const projectId = decodeURIComponent(encodedProjectId);
@@ -2514,7 +2526,49 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
     app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>${escapeHtml(marker.name)}</h1><p class="subtitle">${escapeHtml(project.name)} Trail Entrance</p></div><div class="panel"><p>${escapeHtml(marker.description || 'Welcome information has not been added yet.')}</p><p class="meta">Visibility: ${escapeHtml(marker.visibility || 'draft')}</p></div><button class="menu-card" onclick="window.editProjectStartingPoint('${encoded(project.id)}')"><strong>Edit Trail Entrance</strong></button></div>`;
 }
 
-function plantProfileEditorMarkup(entry, profile) {
+function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
+    if (readPlatformSettings().physicalAnchors !== true) {
+        return '<p class="meta plant-physical-anchor-unavailable">Enable Physical Marker prototype in Settings to connect an ArUco marker to this Virtual Tag.</p>';
+    }
+    let savedPhysicalAnchor = null;
+    try {
+        savedPhysicalAnchor = normalizePhysicalAnchor(entry.marker.physicalAnchor);
+    } catch {
+        savedPhysicalAnchor = null;
+    }
+    const physicalValues = savedPhysicalAnchor || PHYSICAL_ANCHOR_DEFAULTS;
+    const assignments = physicalAnchorAssignments(entries, entry.marker.id);
+    const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.map(markerId => {
+        const assignment = assignments.get(markerId);
+        const status = assignment
+            ? assignment.isCurrent
+                ? 'Assigned to this Plant'
+                : `Assigned to ${assignment.markerName}`
+            : 'Available';
+        return `<option value="${markerId}" ${markerId === Number(physicalValues.markerId) ? 'selected' : ''}>${physicalMarkerLabel(markerId)} — ${escapeHtml(status)}</option>`;
+    }).join('');
+    const selectedAssignment = assignments.get(Number(physicalValues.markerId));
+    return `<details class="plant-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
+        <summary><span><strong>ArUco Virtual Tag</strong><small>Connect this Plant profile to a printed marker</small></span><b aria-hidden="true">⌗</b></summary>
+        <div class="plant-physical-anchor-body">
+            <p>When the Virtual Tag is enabled above, assign an ArUco marker here. Scanning it will show this Plant profile as a live tag.</p>
+            <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Link ArUco marker</strong><small>Requires the Virtual Tag checkbox above.</small></span><input id="projectEntryPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
+            <div data-plant-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                <div class="plant-physical-marker-layout">
+                    <div class="totem-physical-marker-preview" data-plant-physical-marker-preview>${physicalMarkerSvg(physicalValues.markerId)}</div>
+                    <div class="totem-physical-marker-controls">
+                        <label for="projectEntryPhysicalMarkerId">Marker<select id="projectEntryPhysicalMarkerId">${physicalMarkerOptions}</select></label>
+                        <p class="physical-marker-assignment-status" data-plant-physical-assignment>${selectedAssignment ? (selectedAssignment.isCurrent ? 'Assigned to this Plant' : `Assigned to ${escapeHtml(selectedAssignment.markerName)}`) : 'Available'}</p>
+                        <label class="physical-marker-reassign" data-plant-physical-reassign ${selectedAssignment && !selectedAssignment.isCurrent ? '' : 'hidden'}><input id="projectEntryPhysicalMarkerReassign" type="checkbox" /> Reassign marker from <span>${escapeHtml(selectedAssignment?.markerName || '')}</span></label>
+                        <label for="projectEntryPhysicalMarkerSize">Marker size <span class="input-with-unit"><input id="projectEntryPhysicalMarkerSize" type="number" min="1" step="1" value="${physicalValues.markerSizeMm}" /><b>mm</b></span></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>`;
+}
+
+function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
     const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
     const photo = profile.photo || profile.image || '';
     const orbColor = profile.orb_color || entry.marker.appearance?.color || '#8fc9a3';
@@ -2533,6 +2587,7 @@ function plantProfileEditorMarkup(entry, profile) {
         </div>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A short, useful introduction—add it whenever you are ready.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>VIRTUAL TAG</strong><p>Prepare this Plant profile to become a future scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Virtual Tag</span></label></div></section>
+        ${physicalAnchorMarkup}
         <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
             <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
@@ -2559,6 +2614,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const plantQrCode = plant ? visibleQrCode(entry.marker.qr_reference || markerAnchor?.qr_code) : '';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
+    const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
     const returnArLabel = plant ? 'BACK TO AR · SAME PLANT' : 'BACK TO AR · SAME MARKER';
     const returnArCopy = plant
@@ -2576,14 +2632,17 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         <section class="plant-ar-quick-editor" aria-labelledby="plantArQuickTitle"><div><p class="welcome-label">AR QUICK EDIT</p><h2 id="plantArQuickTitle">Plant basics</h2><p>Keep the field session moving. The full Plant Profile remains in the Web Hub.</p></div>
         <div class="plant-ar-quick-fields"><label for="projectEntryCommonName">Common name<input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" required /></label><label for="projectEntryScientificName">Scientific name<input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></label><div class="plant-ar-quick-tone"><label for="projectEntryOrbColor">Plant tone</label><div class="plant-ar-quick-tones">${quickPlantTones}</div><label class="plant-ar-custom-tone" for="projectEntryOrbColor"><span>Custom</span><input id="projectEntryOrbColor" type="color" value="${escapeHtml(quickPlantColor)}" /></label></div></div></section>`
         : '';
-    const standardEditorFields = quickArPlantEdit ? '' : `<div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}`;
+    const standardEditorFields = quickArPlantEdit ? '' : `<div class="field"><label for="projectEntryName">Rename</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Note' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>${plant ? `${plantProfileEditorMarkup(entry, profile, plantPhysicalAnchorMarkup)}<section class="plant-qr-anchor-card"><span aria-hidden="true">▦</span><div><strong>PHYSICAL QR CODE</strong><p>Link this Plant to the QR label beside it. Its AR position remains attached.</p><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></section>` : ''}`;
     const entryContextName = displayAreaName(entry.place);
     const entryIsHome = isDefaultHomeArea(entry.place);
     const webReturnAction = entryIsHome
         ? `window.renderUnplacedContent('${encoded(project.id)}')`
         : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
     const webReturnLabel = entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}"><div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="global-ar-action spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">OPEN IN AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})">${quickPlantFields}${standardEditorFields}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${!quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">PLACE IN AR</button>` : ''}<button class="primary" type="submit">${quickArPlantEdit ? 'Save basics' : 'Save changes'}</button>${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav></div>`;
+    const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
+        ? `<button type="button" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT VIRTUAL TAG</button>`
+        : '';
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}"><div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p></div>${arHandoff}${plantProfileReady && !returnToAr ? `<section class="spatial-focus-panel"><p>Open this Plant alone for focused viewing or placement. Add or change profile content in Web Mode.</p><button class="global-ar-action spatial-focus-button" type="button" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">OPEN IN AR</button></section>` : ''}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr})">${quickPlantFields}${standardEditorFields}<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}${plantQrCode ? ' · QR linked' : ''}</p><p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${!quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action" type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">PLACE IN AR</button>` : ''}<button class="primary" type="submit">${quickArPlantEdit ? 'Save basics' : 'Save changes'}</button>${plantPrintAction}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav></div>`;
     if (returnContext === 'field-guide') {
         const backButton = app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
@@ -2593,6 +2652,34 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     }
     if (plant) {
         app.querySelector('form')?.classList.add('plant-file-form');
+        const virtualTagToggle = app.querySelector('#projectEntryVirtualTag');
+        const plantPhysicalToggle = app.querySelector('#projectEntryPhysicalAnchorEnabled');
+        const plantPhysicalSelect = app.querySelector('#projectEntryPhysicalMarkerId');
+        const plantAssignments = physicalAnchorAssignments(entries, entry.marker.id);
+        const updatePlantPhysicalFields = () => {
+            const visible = Boolean(virtualTagToggle?.checked && plantPhysicalToggle?.checked);
+            app.querySelector('[data-plant-physical-anchor-fields]')?.toggleAttribute('hidden', !visible);
+        };
+        const updatePlantPhysicalAssignment = () => {
+            if (!plantPhysicalSelect) return;
+            const assignment = plantAssignments.get(Number(plantPhysicalSelect.value));
+            const status = app.querySelector('[data-plant-physical-assignment]');
+            const reassign = app.querySelector('[data-plant-physical-reassign]');
+            if (status) status.textContent = assignment
+                ? assignment.isCurrent ? 'Assigned to this Plant' : `Assigned to ${assignment.markerName}`
+                : 'Available';
+            if (reassign) reassign.hidden = !assignment || assignment.isCurrent;
+            const name = reassign?.querySelector('span');
+            if (name) name.textContent = assignment?.markerName || '';
+            const confirm = app.querySelector('#projectEntryPhysicalMarkerReassign');
+            if (confirm) confirm.checked = false;
+            const preview = app.querySelector('[data-plant-physical-marker-preview]');
+            if (preview) preview.innerHTML = physicalMarkerSvg(Number(plantPhysicalSelect.value));
+        };
+        virtualTagToggle?.addEventListener('change', updatePlantPhysicalFields);
+        plantPhysicalToggle?.addEventListener('change', updatePlantPhysicalFields);
+        plantPhysicalSelect?.addEventListener('change', updatePlantPhysicalAssignment);
+        updatePlantPhysicalFields();
         const quickColorInput = document.getElementById('projectEntryOrbColor');
         const syncQuickPlantTones = color => {
             app.querySelectorAll('[data-plant-quick-tone]').forEach(button => {
@@ -2648,6 +2735,16 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const profileEnabled = entry.marker.type === 'plant' && document.getElementById('projectEntryProfileEnabled')?.value === 'true';
         const plantColor = profileEnabled ? document.getElementById('projectEntryOrbColor')?.value : '';
         const plantAppearance = plantColor ? { appearance: { ...(entry.marker.appearance || {}), color: plantColor } } : {};
+        const virtualTagEnabled = profileEnabled && (document.getElementById('projectEntryVirtualTag')?.checked ?? false);
+        const plantPhysicalAnchorControlPresent = entry.marker.type === 'plant' && Boolean(document.getElementById('projectEntryPhysicalAnchorEnabled'));
+        const plantPhysicalAnchor = plantPhysicalAnchorControlPresent && virtualTagEnabled ? physicalAnchorFromPlantProfileForm() : null;
+        const plantPhysicalReassign = Boolean(document.getElementById('projectEntryPhysicalMarkerReassign')?.checked);
+        if (plantPhysicalAnchor) {
+            const assignment = physicalAnchorAssignments(entries, entry.marker.id).get(plantPhysicalAnchor.markerId);
+            if (assignment && !assignment.isCurrent && !plantPhysicalReassign) {
+                throw new Error(`${plantPhysicalAnchor.markerLabel} is already assigned to ${assignment.markerName}. Confirm marker reassignment first.`);
+            }
+        }
         const qrField = document.getElementById('projectEntryQrCode');
         const manageQrAnchor = profileEnabled && Boolean(qrField);
         const qrCode = manageQrAnchor ? qrField.value.trim() : entry.marker.qr_reference || '';
@@ -2666,6 +2763,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 ...noteAppearance,
                 ...plantAppearance,
+                ...(plantPhysicalAnchorControlPresent ? { physicalAnchor: virtualTagEnabled ? plantPhysicalAnchor : null, reassignPhysicalMarker: plantPhysicalReassign } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
             savedMarker = response.marker || response;
@@ -2684,6 +2782,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 ...(specialSymbol !== undefined ? { special_symbol: specialSymbol } : {}),
                 ...noteAppearance,
                 ...plantAppearance,
+                ...(plantPhysicalAnchorControlPresent ? { physicalAnchor: virtualTagEnabled ? plantPhysicalAnchor : null, reassignPhysicalMarker: plantPhysicalReassign } : {}),
                 notes: entry.marker.type === 'note' ? description : entry.marker.notes || ''
             });
         }

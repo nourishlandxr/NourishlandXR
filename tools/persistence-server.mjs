@@ -1369,8 +1369,8 @@ function handleApi(req, res) {
                 const type = String(data.type || '').toLowerCase();
                 if (!MARKER_TYPES.has(type)) throw new Error('Unsupported marker type');
                 const physicalAnchor = normalizePhysicalAnchor(data.physicalAnchor);
-                if (physicalAnchor && type !== 'area_checkpoint' && data.semantic_type !== 'area_checkpoint') {
-                    throw new Error('Physical markers can only be assigned to Area Totems');
+                if (physicalAnchor && type !== 'area_checkpoint' && type !== 'plant' && data.semantic_type !== 'area_checkpoint') {
+                    throw new Error('Physical markers can only be assigned to Area Totems or Virtual Tag Plants');
                 }
                 const requestedName = String(data.name || '').trim();
                 const baseMarkerId = toProjectId(data.id || requestedName);
@@ -1512,8 +1512,8 @@ function handleApi(req, res) {
                 const physicalAnchor = Object.hasOwn(data, 'physicalAnchor')
                     ? normalizePhysicalAnchor(data.physicalAnchor)
                     : existing.physicalAnchor || null;
-                if (physicalAnchor && type !== 'area_checkpoint' && data.semantic_type !== 'area_checkpoint' && existing.semantic_type !== 'area_checkpoint') {
-                    throw new Error('Physical markers can only be assigned to Area Totems');
+                if (physicalAnchor && type !== 'area_checkpoint' && type !== 'plant' && data.semantic_type !== 'area_checkpoint' && existing.semantic_type !== 'area_checkpoint') {
+                    throw new Error('Physical markers can only be assigned to Area Totems or Virtual Tag Plants');
                 }
                 const requestedName = String(data.name || existing.name).trim();
                 const baseId = toProjectId(requestedName) || decodeURIComponent(markerId);

@@ -68,6 +68,7 @@ let specialPickerRequest = 0;
 let placementArmGeneration = 0;
 let activePlacementOperation = null;
 let pendingPlacementPromise = null;
+let totemGuideVisible = false;
 let pendingExistingMarkerId = '';
 let arReturnContext = '';
 let locationNoteAnchor = null;
@@ -164,6 +165,39 @@ function markerDimensions(marker) {
         plant: [.062 * factor, .062 * factor],
         sub_checkpoint: [markerScale(marker), markerScale(marker)]
     })[marker.type] || [markerScale(marker), markerScale(marker)];
+}
+
+function plantTagDimensions(marker) {
+    const factor = markerSizeFactor(marker);
+    const stemHeight = ({ tiny: .07, small: .11, medium: .17, large: .25, huge: .34 })[markerAppearanceSize(marker)] || .17;
+    return {
+        halfWidth: .064 * factor,
+        halfHeight: .046 * factor,
+        stemHeight
+    };
+}
+
+function plantTagPlatePosition(position, marker) {
+    const dimensions = plantTagDimensions(marker);
+    return {
+        x: Number(position?.x) || 0,
+        y: (Number(position?.y) || 0) + dimensions.stemHeight + dimensions.halfHeight,
+        z: Number(position?.z) || 0
+    };
+}
+
+function drawPlantTagStem(view, position, marker, opacity = 1) {
+    const dimensions = plantTagDimensions(marker);
+    const scale = markerSizeFactor(marker);
+    drawSpatialPrism(gl, prismRenderer, view, position, {
+        halfWidth: .009 * scale,
+        halfHeight: dimensions.stemHeight * .5,
+        halfDepth: .009 * scale,
+        color: markerRgb(marker, [.32, .48, .27]),
+        topColor: markerRgb(marker, [.64, .8, .52]),
+        alpha: opacity,
+        rotationY: 0
+    });
 }
 
 function currentGroundY() {
@@ -720,7 +754,8 @@ async function recenterActiveArea() {
     sessionMarkers = sessionMarkers.map(record => record.areaId === activeAreaId
         ? alignedById.get(record.marker.id) || record
         : record);
-    locatedTotemRecord = sessionMarkers.find(record => record.marker.id === alignment.checkpoint.marker.id) || null;
+    locatedTotemRecord = null;
+    totemGuideVisible = false;
     renderSessionMarkers();
 
     const operation = captureArOperationContext();
@@ -902,29 +937,27 @@ function pointToActiveTotem() {
         setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Add Totem.`);
         return;
     }
-    hiddenStructuralMarkerIds.delete(totem.marker.id);
     locatedTotemRecord = totem;
+    totemGuideVisible = true;
     renderSessionMarkers();
     closePlacePicker();
     setPlacementStatus(`A ground pointer now leads to the ${totem.marker.name} Totem.`);
 }
 
-function toggleActiveTotemVisibility() {
+function toggleActiveTotemGuide() {
     const totem = activeTotemRecord();
     if (!totem) {
         setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Add Totem.`);
         return;
     }
-    if (hiddenStructuralMarkerIds.has(totem.marker.id)) {
-        hiddenStructuralMarkerIds.delete(totem.marker.id);
-        setPlacementStatus(`${totem.marker.name} Totem shown.`);
-    } else {
-        hiddenStructuralMarkerIds.add(totem.marker.id);
+    if (totemGuideVisible) {
+        totemGuideVisible = false;
         locatedTotemRecord = null;
-        locationNoteVisible = false;
-        locationNoteAnchor = null;
-        updateLocationNote();
-        setPlacementStatus(`${totem.marker.name} Totem hidden for this AR session.`);
+        setPlacementStatus(`${totem.marker.name} Totem guide hidden.`);
+    } else {
+        locatedTotemRecord = totem;
+        totemGuideVisible = true;
+        setPlacementStatus(`A ground guide now leads to the ${totem.marker.name} Totem.`);
     }
     renderSessionMarkers();
     closePlacePicker();
@@ -971,10 +1004,6 @@ function createTotemFromSpecial() {
 
 function renderSpecialMarkerChoices(picker) {
     const totem = activeTotemRecord();
-    const totemHidden = Boolean(totem && hiddenStructuralMarkerIds.has(totem.marker.id));
-    const totemActionLabel = totem
-        ? hasSavedSpatialPosition(totem) ? 'Hide Totem' : 'Place Totem'
-        : 'Add Totem';
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
         ['➜', 'Rounded arrow right'], ['❯', 'Chevron arrow right'], ['➡', 'Block arrow right'],
@@ -985,15 +1014,13 @@ function renderSpecialMarkerChoices(picker) {
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>
         <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
-            ${totem && hasSavedSpatialPosition(totem) ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-point-to-totem><b aria-hidden="true">&#8982;</b><span><strong>Point to Totem</strong></span></button>' : ''}
-            ${totem && hasSavedSpatialPosition(totem) ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem><b aria-hidden="true">${totemHidden ? '&#9673;' : '&#9675;'}</b><span><strong>${totemHidden ? 'Show Totem' : totemActionLabel}</strong></span></button>` : ''}
+            ${totem && hasSavedSpatialPosition(totem) ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}"><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>${totemGuideVisible ? 'Hide Totem Guide' : 'Show Totem Guide'}</strong><small>Ground pointer</small></span></button>` : ''}
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-location-note><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span><strong>${locationNoteVisible ? 'Hide Location Note' : 'View Location Note'}</strong></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>${totem ? 'Place Totem' : 'Add Totem'}</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
         </div></section>
         <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS, EXCLAMATION AND QUESTION MARKS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}${alerts}</div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-point-to-totem]')?.addEventListener('click', pointToActiveTotem);
-    picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemVisibility);
+    picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemGuide);
     picker.querySelector('[data-ar-toggle-location-note]').addEventListener('click', () => {
         toggleLocationNoteVisibility(totem);
         closePlacePicker();
@@ -1323,6 +1350,9 @@ function setupSpatialMarkerRenderer() {
             float totemSide=max(0.,totemBack-totemFront);
             float totemTop=max(0.,roundBox(q-vec2(.016,.425),vec2(.225,.055),.03)-roundBox(q-vec2(.016,.395),vec2(.225,.035),.025));
             float edgeLight=max(0.,totemFront-roundBox(q+vec2(.002,.012),vec2(.228,.445),.025));
+            float tagFront=roundBox(q,vec2(.41,.46),.045);
+            float tagInner=roundBox(q,vec2(.375,.425),.032);
+            float tagBorder=max(0.,tagFront-tagInner);
 
             float front=shape<.5?sphere:(shape<1.5?totemFront:(shape<2.5?jade:(shape<3.5?rect:sphere)));
             float back=shape<.5?sphere:(shape<1.5?totemBack:(shape<2.5?backJade:(shape<3.5?backRect:sphere)));
@@ -1342,7 +1372,7 @@ function setupSpatialMarkerRenderer() {
                 shaded=mix(shaded,color*.22,side*.88);
             }
             if(shape>3.5)shaded=mix(shaded,vec3(.92,1.,.78),core*.62);
-            if(shape>4.5){body=box(q,vec2(.46,.42));shaded=mix(color*.45,color,.65);front=body;}
+            if(shape>4.5){body=tagFront;shaded=mix(color*.45,color,.65);shaded=mix(shaded,vec3(1.),tagBorder*.2);front=body;}
             float glow=(1.-smoothstep(.30,.55,d))*(shape<.5||shape>3.5&&shape<4.5?.16:.04);
             float alpha=body*(shape<.5?.58:(shape<1.5?.9:(shape<2.5?.56:(shape>4.5?.42:.82))))+glow;
             if(body<.01&&glow<.01)discard;
@@ -1416,7 +1446,10 @@ function drawSpatialMarkers(view) {
             });
             return;
         }
-        if (markerForm === 'plate') return;
+        if (markerForm === 'plate') {
+            drawPlantTagStem(view, record.position, record.marker, arrivalEase * markerAppearanceOpacity(record.marker));
+            return;
+        }
         drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor),
@@ -1450,6 +1483,7 @@ function drawSpatialMarkers(view) {
             });
         }
     }
+    if (platePreview) drawPlantTagStem(view, platePreview.target, platePreview.previewMarker, markerAppearanceOpacity(platePreview.previewMarker));
 
     gl.useProgram(markerProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, markerBuffer);
@@ -1461,8 +1495,11 @@ function drawSpatialMarkers(view) {
         const shape = markerShape(record.marker.type);
         const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
         if (!isPlantPlate && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
-        const [scaleX, scaleY] = markerDimensions(record.marker);
-        const groundedPosition = shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
+        const tagDimensions = isPlantPlate ? plantTagDimensions(record.marker) : null;
+        const [scaleX, scaleY] = tagDimensions ? [tagDimensions.halfWidth, tagDimensions.halfHeight] : markerDimensions(record.marker);
+        const groundedPosition = isPlantPlate
+            ? plantTagPlatePosition(record.position, record.marker)
+            : shape === 1 || shape === 2 ? { ...record.position, y: record.position.y + scaleY } : record.position;
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
@@ -1473,7 +1510,8 @@ function drawSpatialMarkers(view) {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     });
     if (platePreview) {
-        const model = markerBillboardMatrix(platePreview.target, platePreview.previewWidth, platePreview.previewHeight);
+        const tagDimensions = plantTagDimensions(platePreview.previewMarker);
+        const model = markerBillboardMatrix(plantTagPlatePosition(platePreview.target, platePreview.previewMarker), tagDimensions.halfWidth, tagDimensions.halfHeight);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
         gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), 6);
@@ -1481,7 +1519,7 @@ function drawSpatialMarkers(view) {
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(platePreview.previewMarker, colors.plant));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
-    if (locatedTotemRecord?.areaId === activeAreaId) {
+    if (totemGuideVisible && locatedTotemRecord?.areaId === activeAreaId) {
         const guideModel = groundGuideMatrix(locatedTotemRecord.position);
         if (guideModel) {
             const guideMvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, guideModel));
@@ -1517,6 +1555,8 @@ function positionSessionMarkers(view = latestView) {
                 const [, halfHeight] = markerDimensions(record.marker);
                 return { ...ground, y: ground.y + .08 * markerSizeFactor(record.marker) + halfHeight };
             })()
+            : record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate'
+                ? plantTagPlatePosition(record.position, record.marker)
             : record.position;
         const eye = multiplyMatrixVector(inverse, [projectedPosition.x, projectedPosition.y, projectedPosition.z, 1]);
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
@@ -2553,6 +2593,7 @@ function cleanup() {
     activePlacementOperation = null;
     pendingBagRecord = null;
     locatedTotemRecord = null;
+    totemGuideVisible = false;
     pendingExistingMarkerId = '';
     arReturnContext = '';
     locationNoteAnchor = null;
@@ -2688,6 +2729,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeCheckpointId = checkpointId;
     sessionMarkers = [];
     locatedTotemRecord = null;
+    totemGuideVisible = false;
     locationNoteAnchor = null;
     referenceSpaceHasFloor = false;
     sessionGroundY = null;

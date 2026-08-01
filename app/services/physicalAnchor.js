@@ -82,7 +82,7 @@ export function normalizePhysicalAnchor(value) {
     };
 }
 
-export function physicalAnchorAssignments(entries, currentTotemId = '') {
+export function physicalAnchorAssignments(entries, currentMarkerId = '') {
     const assignments = new Map();
     for (const entry of Array.isArray(entries) ? entries : []) {
         const anchor = entry?.marker?.physicalAnchor;
@@ -92,16 +92,20 @@ export function physicalAnchorAssignments(entries, currentTotemId = '') {
         assignments.set(markerId, {
             markerId,
             markerLabel: physicalMarkerLabel(markerId),
+            markerRecordId: entry.marker.id,
+            markerType: entry.marker.type,
+            markerName: entry.marker.name,
+            // Keep the old names for existing Totem settings and integrations.
             totemId: entry.marker.id,
             totemName: entry.marker.name,
             placeId: entry.place?.id || '',
-            isCurrent: entry.marker.id === currentTotemId
+            isCurrent: entry.marker.id === currentMarkerId
         });
     }
     return assignments;
 }
 
-export function resolvePhysicalAnchorTotem(entries, markerId) {
+export function resolvePhysicalAnchorEntry(entries, markerId) {
     const numericId = Number(markerId);
     return (Array.isArray(entries) ? entries : []).find(entry => {
         const anchor = entry?.marker?.physicalAnchor;
@@ -109,6 +113,10 @@ export function resolvePhysicalAnchorTotem(entries, markerId) {
             && anchor.markerFamily === PHYSICAL_ANCHOR_FAMILY
             && Number(anchor.markerId) === numericId;
     }) || null;
+}
+
+export function resolvePhysicalAnchorTotem(entries, markerId) {
+    return resolvePhysicalAnchorEntry(entries, markerId);
 }
 
 function rotateX(point, radians) {
@@ -175,13 +183,15 @@ function projectCameraPoint(point, width, height, focalLength) {
     };
 }
 
-export function projectPhysicalTotemOverlay(detectorPose, physicalAnchor, viewport) {
+export function projectPhysicalTotemOverlay(detectorPose, physicalAnchor, viewport, dimensions = {}) {
     const width = finiteNumber(viewport?.width, 'Viewport width');
     const height = finiteNumber(viewport?.height, 'Viewport height');
     const focalLength = finiteNumber(viewport?.focalLength || width, 'Focal length');
     const base = projectCameraPoint(physicalAnchorPointToDetectorCamera({ x: 0, y: 0, z: 0 }, detectorPose, physicalAnchor), width, height, focalLength);
-    const top = projectCameraPoint(physicalAnchorPointToDetectorCamera({ x: 0, y: .82, z: 0 }, detectorPose, physicalAnchor), width, height, focalLength);
-    const right = projectCameraPoint(physicalAnchorPointToDetectorCamera({ x: .14, y: 0, z: 0 }, detectorPose, physicalAnchor), width, height, focalLength);
+    const heightMetres = Number(dimensions.heightMetres) > 0 ? Number(dimensions.heightMetres) : .82;
+    const widthMetres = Number(dimensions.widthMetres) > 0 ? Number(dimensions.widthMetres) : .14;
+    const top = projectCameraPoint(physicalAnchorPointToDetectorCamera({ x: 0, y: heightMetres, z: 0 }, detectorPose, physicalAnchor), width, height, focalLength);
+    const right = projectCameraPoint(physicalAnchorPointToDetectorCamera({ x: widthMetres, y: 0, z: 0 }, detectorPose, physicalAnchor), width, height, focalLength);
     if (!base || !top || !right) return null;
     return {
         x: base.x,
