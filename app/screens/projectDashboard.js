@@ -1265,12 +1265,20 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         });
         const areaLinks = areas.map(area => {
             const areaEntries = entries.filter(entry => entry.place.id === area.id);
+            const areaPlants = areaEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant');
+            const areaTotem = areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
+            const totemColor = /^#[0-9a-f]{6}$/i.test(areaTotem?.marker.appearance?.color || '')
+                ? areaTotem.marker.appearance.color
+                : '';
             return {
                 label: escapeHtml(area.name),
                 icon: areaIcon(area),
                 type: escapeHtml(area.type || 'Area'),
                 identifier: escapeHtml(area.id),
-                contentCount: areaEntries.length,
+                contentCount: areaEntries.filter(entry => effectiveMarkerType(entry.marker) !== 'area_checkpoint').length,
+                plantCount: areaPlants.length,
+                totemPlaced: placedTotemAreaIds.has(area.id),
+                totemColor,
                 hasLocation: hasGpsCoordinates(area.anchor),
                 hasStartingPoint: areaEntries.some(entry => entry.marker.type === 'intro_checkpoint'),
                 action: `window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(area.id)}')`
@@ -2529,6 +2537,7 @@ function plantProfileEditorMarkup(entry, profile) {
             </div>
         </div>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A short, useful introduction—add it whenever you are ready.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>VIRTUAL TAG</strong><p>Prepare this Plant profile to become a future scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Virtual Tag</span></label></div></section>
         <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
             <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
@@ -2705,7 +2714,8 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 uses: fieldValue('projectEntryUses', existingPlantProfile.uses || ''),
                 relationships: fieldValue('projectEntryRelationships', existingPlantProfile.relationships || existingPlantProfile.companions || ''),
                 propagation: fieldValue('projectEntryPropagation', existingPlantProfile.propagation || ''),
-                overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || '')
+                overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || ''),
+                virtual_tag_enabled: document.getElementById('projectEntryVirtualTag')?.checked ?? existingPlantProfile.virtual_tag_enabled === true
             });
         }
         await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id), returnToAr);

@@ -94,7 +94,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.doesNotMatch(entrySource, /Home Base/);
-    assert.match(entrySource, /Trail Entrance/);
+    assert.match(entrySource, /BIRD'S-EYE OVERVIEW/);
+    assert.match(entrySource, /project-area-overview-card/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /growth\.starterActions\.map/);
     assert.match(entrySource, /Why begin here\?/);
@@ -270,6 +271,8 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /is-search-match/);
     assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
     assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
+    assert.match(fieldGuideSource, /Virtual Tags/);
+    assert.match(dashboardSource, /virtual_tag_enabled/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);

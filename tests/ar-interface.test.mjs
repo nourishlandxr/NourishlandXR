@@ -600,7 +600,7 @@ test('project settings can rename a project and Areas toggle from the dashboard'
     assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name, description, coverImage \}\)/);
     assert.match(dashboardSource, /const button = trigger\?\.currentTarget \|\| trigger/);
     assert.match(entrySource, /onclick="window\.toggleAreas\(this\)"/);
-    assert.match(entrySource, /aria-expanded="false"/);
+    assert.match(entrySource, /aria-expanded="true"/);
     assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
 });
 
@@ -648,7 +648,9 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /loadPlaceMarkers/);
     assert.match(source, /marker\.type === 'plant'/);
     assert.match(source, /placeId,/);
-    assert.match(source, /return \[\.\.\.resolved, \.\.\.markerPlants\]/);
+    assert.match(source, /return \[\.\.\.resolvedPlants, \.\.\.markerPlants\]/);
+    assert.match(source, /virtualTagEnabled/);
+    assert.match(source, /Virtual Tags/);
     assert.match(source, /hasTotem/);
     assert.match(source, /hasStartingPoint/);
     assert.match(source, /field-guide-totem-symbol/);
@@ -1193,6 +1195,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
+    assert.match(styles, /\.plant-virtual-tag-card/);
     assert.match(styles, /\.creator-ar-plant-tether path/);
     assert.match(styles, /\.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)::before/);
     assert.match(styles, /\.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)::after/);
@@ -1211,6 +1214,9 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
     assert.match(dashboardSource, /Growing knowledge/);
     assert.match(dashboardSource, /Origin &amp; story/);
+    assert.match(dashboardSource, /projectEntryVirtualTag/);
+    assert.match(dashboardSource, /Make this Plant a Virtual Tag/);
+    assert.match(dashboardSource, /virtual_tag_enabled/);
     assert.match(dashboardSource, /plant-card-hero/);
     assert.match(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
 });

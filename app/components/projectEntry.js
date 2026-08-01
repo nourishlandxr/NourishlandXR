@@ -45,10 +45,10 @@ export function renderProjectEntry(config) {
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
-        ? areas.map(area => `<button class="project-area-link database-record-card area-record-card" type="button" onclick="${area.action}">
-            <span class="project-area-link-icon" aria-hidden="true">▧</span>
-            <span class="project-area-link-copy"><small class="record-file-tab">AREA FILE</small><strong>${area.label}</strong><span>${area.type} · ${area.identifier} · ${area.contentCount} record${area.contentCount === 1 ? '' : 's'}</span></span>
-            <span class="project-area-link-meta">${area.hasStartingPoint ? 'Trail Entrance' : area.hasLocation ? 'GPS assigned' : 'Open Area'}</span>
+        ? areas.map(area => `<button class="project-area-link project-area-overview-card database-record-card area-record-card" type="button" onclick="${area.action}">
+            <span class="project-area-link-icon project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
+            <span class="project-area-link-copy"><strong>${area.label}</strong><span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} element${area.contentCount === 1 ? '' : 's'}</span></span>
+            <span class="project-area-link-meta project-area-overview-status"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true"></i>${area.totemPlaced ? 'Totem placed' : 'Totem needed'}</span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
@@ -125,13 +125,14 @@ export function renderProjectEntry(config) {
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a ${config.nonPlantMode ? 'Marker, Location, Totem or record description' : 'Plant name, Area, Note text or description'}.</p>
         </section>
 
-        <section class="project-areas-section collapsed-areas${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="false">
+        <section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
             <div class="section-heading-row areas-heading-row">
-                <button class="areas-toggle" type="button" aria-expanded="false" onclick="window.toggleAreas(this)">
-                    <h2 id="projectAreasTitle">Areas</h2>
-                    <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▾</span></span>
+                <button class="areas-toggle" type="button" aria-expanded="true" onclick="window.toggleAreas(this)">
+                    <span><small class="dashboard-section-kicker">BIRD'S-EYE OVERVIEW</small><h2 id="projectAreasTitle">Project layout</h2></span>
+                    <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▴</span></span>
                 </button>
             </div>
+            <p class="project-layout-intro">Each Area appears here as it is created. Open the Web Hub for detailed editing.</p>
             ${contextualGuidance(config.guidance, 'areas')}
             <div class="project-area-list">${areaListHtml}</div>
         </section>
