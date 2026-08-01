@@ -2364,7 +2364,7 @@ body:not(.ar-session-active).ar-location-selected #globalArToggle {
 }
 
 body:has(.intro-launch) .collaboration-credit {
-    margin-bottom: 8px;
+    display: none;
 }
 
 body[data-text-size="small"] { font-size: 14px; }
@@ -5914,6 +5914,7 @@ body[data-project-theme="forest-light"] .dashboard-field-guide {
 
 /* /xr welcome: a living, place-based surface without losing the Nourishland restraint. */
 body:has(.intro-launch) {
+    min-height:100svh;
     background-color:#f4f3e8;
     background-image:
         radial-gradient(circle at 8% 5%,rgba(147,164,91,.22),transparent 30rem),
@@ -6105,7 +6106,7 @@ body:has(.intro-launch)::after {
 }
 
 /* Keep the welcome choices in one compact first viewport. */
-.intro-launch { gap:clamp(10px,1.6vh,16px); }
+.intro-launch { min-height:calc(100svh - 32px); justify-content:space-between; gap:clamp(10px,1.6vh,16px); }
 .intro-launch .intro-heading { padding-top:10px; }
 .intro-launch .intro-copy { padding:clamp(18px,3.2vh,30px) clamp(16px,4vw,38px); }
 .intro-launch .intro-copy h2 { margin-bottom:10px; }
@@ -6270,10 +6271,46 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 
 @media (max-width:600px) {
     .intro-launch::before { right:-18px; opacity:.62; }
-    .intro-launch .intro-copy { padding:26px 22px; border-radius:22px 6px 22px 6px; }
-    .intro-launch .intro-copy h2 { font-size:clamp(1.75rem,8.5vw,2.65rem); }
+    .intro-launch {
+        min-height:calc(100svh - max(10px, env(safe-area-inset-top)) - max(6px, env(safe-area-inset-bottom)));
+        gap:5px;
+    }
+    .intro-launch .intro-heading { padding:2px 0 0; }
+    .intro-launch .intro-copy { padding:9px 8px; border-radius:18px 5px 18px 5px; }
+    .intro-launch .intro-copy h2 { margin-bottom:5px; font-size:clamp(1.45rem,7vw,2rem); line-height:.94; }
+    .intro-launch .intro-copy p { font-size:.68rem; line-height:1.22; }
+    .intro-launch .role-grid,
+    .intro-launch .welcome-complementary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+    .intro-launch .role-choice { gap:5px; }
+    .intro-launch .role-card,
+    .intro-launch .role-card:nth-child(even) { min-height:72px; padding:9px 8px; }
+    .intro-launch .role-card strong { font-size:.76rem; }
+    .intro-launch .role-card span { font-size:.57rem; line-height:1.15; }
+    .intro-launch .welcome-complementary-grid { margin-top:5px; padding-top:5px; }
+    .intro-launch .welcome-complementary-card { min-height:60px; padding:8px; }
+    .intro-launch .welcome-complementary-card strong { font-size:.76rem; }
+    .intro-launch .welcome-complementary-card > span { font-size:.57rem; line-height:1.15; }
+    .intro-launch .platform-landing-nav { margin-top:2px; }
     .intro-launch .role-card,
     .intro-launch .role-card:nth-child(even) { border-radius:14px 4px 14px 4px; }
+}
+
+@media (min-width:601px) and (max-height:780px) {
+    body:has(.intro-launch) #app { padding-bottom:8px; }
+    .intro-launch { gap:8px; }
+    .intro-launch .intro-heading { padding-top:3px; }
+    .intro-launch .intro-copy { padding:12px clamp(12px,3vw,24px); }
+    .intro-launch .intro-copy h2 { margin-bottom:6px; font-size:clamp(1.75rem,4.2vw,2.7rem); line-height:.94; }
+    .intro-launch .intro-copy p { font-size:.86rem; line-height:1.28; }
+    .intro-launch .role-choice { gap:5px; }
+    .intro-launch .role-grid,
+    .intro-launch .welcome-complementary-grid { gap:6px; }
+    .intro-launch .role-card,
+    .intro-launch .role-card:nth-child(even),
+    .intro-launch .welcome-complementary-card { min-height:70px; padding:11px 14px; }
+    .intro-launch .role-card span,
+    .intro-launch .welcome-complementary-card > span { font-size:.66rem; line-height:1.2; }
+    .intro-launch .platform-landing-nav button { min-height:32px; padding:4px 12px; }
 }
 
 /* One location language and one AR portal across Web Hub screens. */
