@@ -464,7 +464,9 @@ function setPlacementStatus(message) {
 }
 
 function contextAppearanceButtons(type, appearance) {
-    if (!['plant', 'note'].includes(type)) return '';
+    if (!['plant', 'note'].includes(type)) {
+        return '<button type="button" data-ar-context-edit aria-label="Open quick edit"><b aria-hidden="true">&#9998;</b><span>EDIT</span><small>QUICK EDIT</small></button>';
+    }
     const color = colorOption(type, appearance.color);
     const shape = markerAppearanceShape({ appearance }).toUpperCase();
     const size = String(appearance.size || 'medium').toUpperCase();
@@ -472,7 +474,8 @@ function contextAppearanceButtons(type, appearance) {
     return `${type === 'plant' ? `<button type="button" data-ar-cycle-shape aria-label="Cycle Plant Live Tag shape. Current ${escapeHtml(shape)}"><b aria-hidden="true">△</b><span>SHAPE</span><small>${escapeHtml(shape)}</small></button>` : ''}
         <button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
         <button type="button" data-ar-cycle-size aria-label="Cycle ${readyPlacementLabel(type)} size. Current ${escapeHtml(size)}"><b aria-hidden="true">&#9670;</b><span>SIZE</span><small>${escapeHtml(size)}</small></button>
-        ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}`;
+        ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}
+        <button type="button" data-ar-context-edit aria-label="Open quick edit"><b aria-hidden="true">&#9998;</b><span>EDIT</span><small>QUICK EDIT</small></button>`;
 }
 
 function bindContextToolbarAction(toolbar, selector, action) {
@@ -523,6 +526,7 @@ function updateContextToolbar() {
     bindContextToolbarAction(toolbar, '[data-ar-cycle-shape]', () => cycleContextAppearance('shape'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
+    bindContextToolbarAction(toolbar, '[data-ar-context-edit]', () => selectedRecord && openInlineEditor(selectedRecord, true));
     bindContextToolbarAction(toolbar, '[data-ar-context-location-note]', () => toggleLocationNoteVisibility(selectedRecord));
 }
 
@@ -1063,23 +1067,16 @@ function openSpatialWebWindow() {
         : selectedRecord
             ? `web-marker:${selectedRecord.marker.id}`
             : '';
-    // WEB is the full creator workspace, not a second icon-only AR menu.
-    // Keep the phone branch explicit for compatibility with the existing
-    // routing contract, then apply the same full-workspace exit to Quest.
+    // WEB is the full creator workspace, not an AR exit or an icon-only menu.
     if (!questHeadsetSession) {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
     }
-    if (selectedReturnContext) arReturnContext = selectedReturnContext;
-    exitArMode();
-    return;
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // This Quest session does not expose a spatial overlay: keep the valid
-        // session alive
-        // and use a WebGL route surface so WEB never snaps through the phone
-        // Web Hub or ends AR just because HTML cannot be composited.
-        openQuestSpatialWebPanel();
+        // A full dashboard needs DOM overlay. This Quest session does not expose a spatial overlay, so use the normal Web workspace rather than presenting dead icons.
+        if (selectedReturnContext) arReturnContext = selectedReturnContext;
+        exitArMode();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1135,7 +1132,9 @@ function openSpatialWebWindow() {
     spatialWebWindow.querySelectorAll('[data-spatial-web-route]').forEach(button => button.addEventListener('click', () => route(button.dataset.spatialWebRoute)));
     controllerMenuActive = true;
     updateControllerHud();
-    void route(selectedRecord ? 'selected' : 'area');
+    // The legacy fallback was: void route(selectedRecord ? 'selected' : 'area')
+    // The full dashboard is the useful default for an unselected Q3 session.
+    void route(selectedRecord ? 'selected' : 'dashboard');
 }
 
 function controllerActionLabel(button) {
@@ -1490,7 +1489,7 @@ function activateControllerSelection() {
     }
     const markerTarget = controllerMarkerAtAim();
     if (markerTarget) {
-        openMarkerContextToolbar(markerTarget);
+        openMarkerContextToolbar(markerTarget, true);
         return true;
     }
     if (!controllerMenuActive && interactionMode !== 'neutral') return activateControllerTarget();
@@ -1934,7 +1933,7 @@ async function openArAreaCreationForm() {
 }
 
 async function openSpecialMarkerPicker() {
-    if (questHeadsetSession) {
+    if (questHeadsetSession && document.body.dataset.arDomOverlay !== 'true') {
         if (questSpecialPaletteVisible) {
             closeQuestSpecialPalette();
             setPlacementStatus('Special palette closed.');
@@ -2840,7 +2839,7 @@ function renderSessionMarkers() {
             || `${readyPlacementLabel(record.marker.type)} information`;
         const markerCaption = record.marker.type === 'area_checkpoint'
             ? ''
-            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
+            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
