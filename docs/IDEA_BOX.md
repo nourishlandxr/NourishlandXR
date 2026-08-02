@@ -5,8 +5,8 @@
 Status: interactive demo prototype; standalone explorer is a future idea
 
 - **BIOMAP** is a persistent spatial constellation for exploring and combining plant attributes without opening a conventional filter form.
-- Main honeycombs represent understandable facets such as Micro Climate, Uses, Propagation, Plant Literacy and Forest Layers.
-- Hover, focus or tap permanently unfolds a facet into more specific honeycombs. Several facets can remain open together so a person can build a visual search such as `warm temperate + culinary + shrub layer`.
+- Main PIM nodes represent understandable facets such as Micro Climate, Uses, Propagation, Plant Literacy and Forest Layers.
+- Hover, focus or tap permanently unfolds a facet into more specific PIM nodes. Several facets can remain open together so a person can build a visual search such as `warm temperate + culinary + shrub layer`.
 - The first demo vocabulary includes:
   - Micro Climate: tropical, subtropical, warm temperate, cool temperate, Mediterranean and arid.
   - Uses: culinary, medicinal and industrial.
@@ -21,8 +21,8 @@ Status: interactive demo prototype; standalone explorer is a future idea
 - Every Area dashboard has an editable description and several Area information text boxes directly below About this Area.
 - Blue consistently means an AR action; every Area keeps a prominent blue Go to Area action.
 - The Area Totem is the first content entry, with compact Web Mode and AR editing actions instead of a separate oversized Totem panel.
-- Plants with Profiles expose a blue focused AR action; the Plant loads alone with its full honeycomb already open.
-- Plant Profile content remains a Web Mode task and is organised to match the left, right and centre honeycomb structure.
+- Plants with Profiles expose a blue focused AR action; the Plant loads alone with its full PIM already open.
+- Plant Profile content remains a Web Mode task and is organised to match the left, right and centre PIM structure.
 
 ## V0.8514 — calm grab-anytime spatial editing
 
@@ -33,7 +33,7 @@ Status: interactive demo prototype; standalone explorer is a future idea
 - Area Totems are framed translucent rectangles with soft attached information balloons edited in Web Mode.
 - Notes use an organic translucent plaque/balloon form rather than an opaque flat panel.
 - Try It Now begins its restrained spatial identity panel with `NOURISHLANDXR` and “A web of living knowledge…”. The tagline disappears after the first introduction while `NOURISHLANDXR` remains throughout the experience.
-- The introductory decorative honeycomb web is removed. Honeycombs appear only when the programmed Plant Profile experience needs them.
+- The introductory decorative PIM web is removed. PIM nodes appear only when the programmed Plant Profile experience needs them.
 
 ## V0.8513 — Persistent spatial tools
 
@@ -53,7 +53,7 @@ Status: interactive demo prototype; standalone explorer is a future idea
 ## V0.8511 — Living Plant Profile interaction
 
 - Keep ordinary Plants simple; let creators deliberately upgrade important Plants into knowledge-rich Profiles.
-- Use the living orb as the permanent spatial anchor and the honeycomb tree as a collapsible reading layer.
+- Use the living orb as the permanent spatial anchor and the PIM mesh as a collapsible reading layer.
 - A subtle hover vibration communicates that more knowledge is available without adding another instruction panel.
 - Future: let community-reviewed profile branches inherit trusted global taxonomy while preserving local observations.
 
@@ -193,7 +193,7 @@ Status: implemented reference preset in V0.8502
 - A **Marker** remains the spatial anchor people place and locate. **Elements** are the individual information cells that unfold from it.
 - Opening a Plant keeps its living orb fixed at the exact place where it was created.
 - The information cluster is an independent layer at a comfortable reading height. A thin, gently curved tether keeps its relationship to the living orb unmistakable.
-- Information unfolds as a connected honeycomb or molecular constellation rather than replacing the orb with a conventional panel.
+- Information unfolds as a connected PIM mesh or molecular constellation rather than replacing the orb with a conventional panel.
 - The left branch synthesises practical and ecological knowledge: uses, relationships and forest layer.
 - The right branch synthesises scientific and cultural context: taxonomy, biology and history.
 - Category cells remain quiet until hovered, focused or tapped; only one concise detail opens at a time.
@@ -329,7 +329,7 @@ Before promoting an idea into the release plan, ask:
 - A virtual Push/Pull control appears while holding, adjusting distance along the viewing direction for precise depth placement.
 - The same hold and depth language is demonstrated in Try It Now.
 - Notes become large, readable spatial signs rather than small labels.
-- Plant Profile honeycomb cells remain genuinely transparent so other spatial information stays visible behind them.
+- PIM cells remain genuinely transparent so other spatial information stays visible behind them.
 - AR Quick Edit contains only rename, type, colour, five sizes and a direct route to the complete Web Mode editor.
 - Latest entries and creator Field Guide Plants open an editor that can rename, move to another Area, and create or update a Plant Profile.
 - Special Markers is a compact row: Add/Hide Totem, Import Marker/Plant, and Create Area only when no Area is active.

@@ -1069,7 +1069,7 @@ function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, activeBranch 
         const open = activeBranch === key;
         return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${demoProfileEscape(label)}</b><small aria-hidden="${!open}">${demoProfileEscape(value)}</small></button>`;
     }).join('')}</span>`;
-    return `<span class="plant-knowledge-map"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} information cluster"><small>PLANT PROFILE</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span>${branch('right', knowledge.right)}</span>`;
+    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>PIM</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span>${branch('right', knowledge.right)}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -1909,8 +1909,8 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = '') {
     ctx.strokeStyle = 'rgba(0,0,0,.94)';
     ctx.lineWidth = 4;
     ctx.font = '800 16px system-ui, sans-serif';
-    ctx.strokeText('PLANT PROFILE', center.x, center.y - 15);
-    ctx.fillText('PLANT PROFILE', center.x, center.y - 15);
+    ctx.strokeText('PIM', center.x, center.y - 15);
+    ctx.fillText('PIM', center.x, center.y - 15);
     ctx.fillStyle = '#fff';
     ctx.font = '850 28px system-ui, sans-serif';
     ctx.strokeText(knowledge.title, center.x, center.y + 20);

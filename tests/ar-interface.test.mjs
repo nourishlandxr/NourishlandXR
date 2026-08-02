@@ -818,7 +818,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText/);
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
-    assert.doesNotMatch(source, /tryit-spatial-honeycombs/);
+    assert.doesNotMatch(source, /tryit-spatial-pim-web/);
     assert.match(source, /NOURISHLANDXR/);
     assert.match(source, /A web of living knowledge…/);
     assert.match(source, /INTRO_KNOWLEDGE_KEYWORDS/);
@@ -1048,9 +1048,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(source, /plant-knowledge-connectors/);
     assert.match(styles, /\.plant-knowledge-connectors path/);
-    assert.match(styles, /--honey-cell-size:clamp\(84px,23vw,112px\)/);
+    assert.match(styles, /--pim-cell-size:clamp\(84px,23vw,112px\)/);
     assert.match(styles, /height: clamp\(228px, 52vw, 300px\)/);
-    assert.match(styles, /\.plant-knowledge-left \.plant-knowledge-cell:nth-child\(1\) \{ left:calc\(50% - var\(--honey-x-half\)\); top:calc\(50% - var\(--honey-y-step\)\); \}/);
+    assert.match(styles, /\.plant-knowledge-left \.plant-knowledge-cell:nth-child\(1\) \{ left:calc\(50% - var\(--pim-x-half\)\); top:calc\(50% - var\(--pim-y-step\)\); \}/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(source, /activateBranch\(branchKey\)/);
     assert.doesNotMatch(source, /activateBranch\(record\.demoActiveBranch === branchKey \? '' : branchKey\)/);
@@ -1081,7 +1081,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-totem-card::after/);
     assert.match(source, /ctx\.arc\(attachmentX, attachmentY, 6/);
     assert.match(source, /ctx\.strokeText\(cell\.item\[0\], cell\.x/);
-    assert.match(source, /ctx\.strokeText\('PLANT PROFILE', center\.x/);
+    assert.match(source, /ctx\.strokeText\('PIM', center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
     assert.match(source, /Garden plaque/);
@@ -1286,7 +1286,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(styles, /-webkit-mask-composite:xor; mask-composite:exclude/);
     assert.match(styles, /background:rgba\(7,28,18,.18\)/);
     assert.match(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)[\s\S]*background:transparent !important/);
-    assert.match(styles, /--honey-x-half:clamp\(28px,7\.2vw,38px\)/);
+    assert.match(styles, /--pim-x-half:clamp\(28px,7\.2vw,38px\)/);
     assert.match(styles, /\.creator-ar-marker-hit-target-plant\.is-info-open \.creator-ar-spatial-name \{[^}]*max-width:min\(36vw,132px\)/);
     assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
