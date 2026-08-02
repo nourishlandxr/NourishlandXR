@@ -20,6 +20,7 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -71,6 +72,9 @@ let homeSignBuffer = null;
 let homeSignTexture = null;
 let homeSignTextureTitle = '';
 let homeSignAnchor = null;
+let questBeltTexture = null;
+let questBeltTextureKey = '';
+let questBeltHoverIndex = -1;
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -911,15 +915,25 @@ function updateInteractionControls() {
     updateControllerHud();
 }
 
+function activateQuestHeadsetFromInput(source) {
+    if (!isTrackedHeadsetInputSource(source)) return false;
+    questHeadsetSession = true;
+    document.body.classList.add('creator-ar-quest-headset');
+    document.body.dataset.arDevice = 'quest';
+    return true;
+}
+
 function controllerInputSource() {
     const sources = [...(session?.inputSources || [])];
     const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer');
-    return trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
+    const selectedSource = trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
         || trackedControllers.find(source => source.handedness === 'right')
         || trackedControllers.find(source => source.gamepad)
         || trackedControllers[0]
         || sources.find(source => source.hand)
         || null;
+    activateQuestHeadsetFromInput(selectedSource);
+    return selectedSource;
 }
 
 function isPrimaryControllerSource(source) {
@@ -972,7 +986,7 @@ function openSpatialWebWindow() {
     // The floating spatial workspace is a Quest 3 affordance. Phone AR must
     // leave immersive mode and use the normal Web workspace instead of
     // inheriting the Quest menu/window treatment.
-    if (!questHeadsetSession) {
+    if (!questHeadsetSession || document.body.dataset.arDomOverlay !== 'true') {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
@@ -1110,6 +1124,29 @@ function controllerMarkerRadius(record) {
     return .3;
 }
 
+function questBeltUsesSpatialRenderer() {
+    return questHeadsetSession;
+}
+
+function questBeltActionElements() {
+    return [...(overlayRoot?.querySelectorAll('.creator-ar-taskbar > button:not([disabled])') || [])];
+}
+
+function currentQuestBeltLayout() {
+    return questBeltUsesSpatialRenderer() ? questSpatialBeltLayout(latestViewerMatrix) : [];
+}
+
+function controllerBeltActionAtAim() {
+    const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestBeltLayout());
+    questBeltHoverIndex = target?.index ?? -1;
+    if (target) {
+        controllerMenuActive = true;
+        controllerActionIndex = target.index;
+        updateControllerHud();
+    }
+    return target;
+}
+
 function controllerLaserSubjects() {
     const subjects = activeAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
@@ -1118,6 +1155,7 @@ function controllerLaserSubjects() {
         const point = placementPoint();
         if (point) subjects.push({ position: point, radius: .38 });
     }
+    currentQuestBeltLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     return subjects;
 }
 
@@ -1178,6 +1216,13 @@ function activateControllerSelection() {
         void quickPlace(readyPlacementType);
         return true;
     }
+    const beltTarget = controllerBeltActionAtAim();
+    if (beltTarget) {
+        const action = questBeltActionElements()[beltTarget.index];
+        if (!action) return false;
+        dispatchControllerAction(action);
+        return true;
+    }
     if (controllerMarkerAtAim() && activateControllerTarget(true)) return true;
     if (!controllerMenuActive && interactionMode !== 'neutral') return activateControllerTarget();
     const action = controllerActionElements()[controllerActionIndex];
@@ -1226,11 +1271,16 @@ function drawHandTrackingLines(view) {
 function pollHandPinch() {
     if (!latestHandState?.pointer) return;
     const pinching = Boolean(latestHandState.pinch);
-    if (pinching && !handPinchActive && interactionMode !== 'view') {
-        const target = controllerMarkerAtAim();
-        if (target) {
-            activateControllerTarget(true);
-            if (dragState) dragState.pointerId = 'xr-hand';
+    if (pinching && !handPinchActive) {
+        const beltTarget = controllerBeltActionAtAim();
+        const beltAction = beltTarget && questBeltActionElements()[beltTarget.index];
+        if (beltAction) dispatchControllerAction(beltAction);
+        else if (interactionMode !== 'view') {
+            const target = controllerMarkerAtAim();
+            if (target) {
+                activateControllerTarget(true);
+                if (dragState) dragState.pointerId = 'xr-hand';
+            }
         }
     }
     if (!pinching && handPinchActive && dragState?.pointerId === 'xr-hand') void finishMarkerDrag();
@@ -1768,6 +1818,113 @@ function drawSpatialHomeSign(view) {
     gl.bindTexture(gl.TEXTURE_2D, homeSignTexture);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function questBeltActiveIndex() {
+    if (questBeltHoverIndex >= 0) return questBeltHoverIndex;
+    if (controllerMenuActive) return Math.max(0, Math.min(QUEST_SPATIAL_BELT_ACTIONS.length - 1, controllerActionIndex));
+    return ({ view: 3, grab: 4, select: 5 })[interactionMode] ?? -1;
+}
+
+function roundedCanvasRectangle(context, x, y, width, height, radius) {
+    const corner = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + corner, y);
+    context.lineTo(x + width - corner, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + corner);
+    context.lineTo(x + width, y + height - corner);
+    context.quadraticCurveTo(x + width, y + height, x + width - corner, y + height);
+    context.lineTo(x + corner, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - corner);
+    context.lineTo(x, y + corner);
+    context.quadraticCurveTo(x, y, x + corner, y);
+    context.closePath();
+}
+
+function createQuestBeltTexture(activeIndex) {
+    const textureCanvas = document.createElement('canvas');
+    textureCanvas.width = 1792;
+    textureCanvas.height = 320;
+    const context = textureCanvas.getContext('2d');
+    if (!context) return null;
+    context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, .52)';
+    context.shadowBlur = 28;
+    roundedCanvasRectangle(context, 28, 24, 1736, 256, 72);
+    context.fillStyle = 'rgba(13, 19, 21, .94)';
+    context.fill();
+    context.shadowBlur = 0;
+    context.lineWidth = 5;
+    context.strokeStyle = 'rgba(235, 247, 235, .3)';
+    context.stroke();
+    context.restore();
+    const slotWidth = 236;
+    const startX = 70;
+    QUEST_SPATIAL_BELT_ACTIONS.forEach((action, index) => {
+        const edge = Math.pow(Math.abs(index - 3) / 3, 2);
+        const x = startX + index * slotWidth;
+        const y = 55 + edge * 22;
+        const selected = index === activeIndex;
+        roundedCanvasRectangle(context, x, y, 212, 176, 28);
+        context.fillStyle = selected ? action.color : 'rgba(255, 255, 255, .075)';
+        context.fill();
+        context.lineWidth = selected ? 7 : 3;
+        context.strokeStyle = selected ? 'rgba(230, 248, 184, .96)' : 'rgba(255, 255, 255, .2)';
+        context.stroke();
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
+        context.font = '800 72px system-ui, sans-serif';
+        context.fillText(action.symbol, x + 106, y + 68);
+        context.font = '800 28px system-ui, sans-serif';
+        context.letterSpacing = '2px';
+        context.fillText(action.label, x + 106, y + 137);
+    });
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+    return texture;
+}
+
+function ensureQuestBeltTexture() {
+    const key = `${questBeltActiveIndex()}:${interactionMode}`;
+    if (questBeltTexture && questBeltTextureKey === key) return questBeltTexture;
+    if (questBeltTexture) gl.deleteTexture(questBeltTexture);
+    questBeltTexture = createQuestBeltTexture(questBeltActiveIndex());
+    questBeltTextureKey = key;
+    return questBeltTexture;
+}
+
+function drawQuestSpatialBelt(view) {
+    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    const layout = currentQuestBeltLayout();
+    const anchor = layout[3]?.position;
+    const texture = anchor && ensureQuestBeltTexture();
+    if (!texture) return;
+    document.body.classList.add('creator-ar-spatial-belt-ready');
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    const model = markerBillboardMatrix(anchor, .62, .11);
+    const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+    gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.depthMask(true);
 }
 
 function groundGuideMatrix(target) {
@@ -3060,8 +3217,10 @@ function cleanup() {
     document.body.classList.remove('creator-ar-session-active');
     document.body.classList.remove('creator-ar-immersive-vr');
     document.body.classList.remove('creator-ar-quest-headset');
+    document.body.classList.remove('creator-ar-spatial-belt-ready');
     delete document.body.dataset.webxrMode;
     delete document.body.dataset.arDomOverlay;
+    delete document.body.dataset.arDevice;
     activeProjectId = '';
     activeProjectName = '';
     activeSiteId = '';
@@ -3088,6 +3247,7 @@ function cleanup() {
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
+    if (gl && questBeltTexture) gl.deleteTexture(questBeltTexture);
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -3101,6 +3261,9 @@ function cleanup() {
     homeSignTexture = null;
     homeSignTextureTitle = '';
     homeSignAnchor = null;
+    questBeltTexture = null;
+    questBeltTextureKey = '';
+    questBeltHoverIndex = -1;
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
@@ -3274,15 +3437,16 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
-        questHeadsetSession = questBrowser || sessionMode === 'immersive-vr';
+        questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
         const launchedSession = session;
         document.body.classList.add('creator-ar-session-active');
         document.body.dataset.webxrMode = sessionMode;
         document.body.dataset.arDomOverlay = arSession.domOverlay ? 'true' : 'false';
         document.body.classList.toggle('creator-ar-immersive-vr', sessionMode === 'immersive-vr');
         document.body.classList.toggle('creator-ar-quest-headset', questHeadsetSession);
+        if (questHeadsetSession) document.body.dataset.arDevice = 'quest';
         if (questHeadsetSession && !arSession.domOverlay) {
-            setPlacementStatus('Quest 3 AR is active. Use the controller pointer for spatial controls; this browser did not grant the belt overlay.');
+            setPlacementStatus('Quest 3 AR is active. The spatial belt uses the controller pointer, thumbstick and trigger.');
         } else if (sessionMode === 'immersive-vr') {
             setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
         } else if (!arSession.passthrough) {
@@ -3344,7 +3508,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             latestView = pose.views[0] || null;
             pollControllerInput();
             updateControllerRay(frame);
-            if (creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            const beltTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
+            if (!beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
             pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
@@ -3365,6 +3530,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialHomeSign(view);
+                drawQuestSpatialBelt(view);
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);
@@ -3390,6 +3556,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         });
         launchedSession.addEventListener('selectstart', event => {
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
+            if (controllerBeltActionAtAim()) return;
             const target = controllerMarkerAtAim();
             // A placed object owns the trigger while it is under the laser,
             // even when the taskbar is currently focused. This makes a
