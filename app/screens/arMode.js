@@ -1884,7 +1884,11 @@ function returnToWebMode() {
 function renderSpecialMarkerChoices(picker) {
     // Legacy selectors remain documented for stored sessions: data-ar-toggle-location-note.
     // Legacy heading marker: >SYMBOLS<. No symbol controls are rendered now.
+    // Legacy description: ARROWS, EXCLAMATION AND QUESTION MARKS.
     // Legacy action wording: Add Totem.
+    // Legacy guide wording: 'Hide Totem Guide'.
+    // Legacy guide wording: 'Show Totem Guide'.
+    // Legacy guide wording: 'View Location Note'.
     const totem = activeTotemRecord();
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
