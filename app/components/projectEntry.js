@@ -53,8 +53,8 @@ export function renderProjectEntry(config) {
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const areaOverviewHtml = `<section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
-        <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span></div>
-        <div class="project-layout-info-row"><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button><p id="projectLayoutInfo" class="project-layout-intro" hidden>Each Area is a focused part of the project. Open a card to see its dashboard and information.</p></div>
+        <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><div class="areas-heading-actions"><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button></div></div>
+        <p id="projectLayoutInfo" class="project-layout-intro" hidden>Each Area is a focused part of the project. Open a card to see its dashboard and information.</p>
         ${contextualGuidance(config.guidance, 'areas')}
         <div class="project-area-list">${areaListHtml}</div>
     </section>`;

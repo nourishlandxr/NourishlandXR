@@ -108,6 +108,9 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(entrySource, /Why begin here\?/);
     assert.doesNotMatch(entrySource, /See your knowledge come alive in the place it belongs/);
     assert.match(entrySource, /toggleProjectLayoutInfo/);
+    assert.match(entrySource, /class="areas-heading-actions"/);
+    assert.match(entrySource, /class="project-layout-info"/);
+    assert.doesNotMatch(entrySource, /<div class="project-layout-info-row">/);
     assert.match(source, /Add first Plant/);
     assert.match(source, /Create first Area/);
     assert.match(source, /Create first Totem/);

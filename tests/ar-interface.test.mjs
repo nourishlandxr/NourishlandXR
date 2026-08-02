@@ -979,7 +979,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
-    assert.match(source, /introTextureUploadedAt >= 180/);
+    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 24/);
+    assert.match(source, /introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /place\.dataset\.aimX = '50'/);
     assert.match(source, /50 \+ comfortOffsetPercent/);

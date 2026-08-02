@@ -92,6 +92,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION';
+const DEMO_TEXT_TEXTURE_INTERVAL_MS = 24;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
@@ -1761,7 +1762,7 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     const now = performance.now();
-    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= 180 && introTextureFrameToken !== introFrameToken)) {
+    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken)) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
