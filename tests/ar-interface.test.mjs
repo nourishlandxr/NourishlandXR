@@ -310,6 +310,8 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /data-ar-web-return/);
     assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
+    assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*sessionMode !== 'immersive-vr'[\s\S]*exitArMode\(\)/);
+    assert.match(arSource, /spatialWebWindow\.dataset\.arSpatialWebMode = 'quest'/);
     assert.doesNotMatch(arSource, /Choose its purpose/);
     assert.doesNotMatch(arSource, /data-ar-placed-type=/);
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
