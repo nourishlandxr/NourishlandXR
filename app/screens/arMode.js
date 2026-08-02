@@ -146,7 +146,7 @@ const TASKBAR_V2_COLORS = Object.freeze({
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
 const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
-    Object.freeze({ id: 'dashboard', label: 'PROJECT DASHBOARD', symbol: 'D', color: '#3973a2' }),
+    Object.freeze({ id: 'dashboard', label: 'PROJECT DASHBOARD', symbol: '', color: '#3973a2' }),
     // Retained as hidden migration entries so older controller state can be ignored safely.
     Object.freeze({ id: 'webhub', label: '', symbol: '', hidden: true, color: '#3973a2' }),
     Object.freeze({ id: 'area', label: '', symbol: '', hidden: true, color: '#527a4d' }),
@@ -2312,11 +2312,18 @@ function createQuestBeltPanelTexture(action, selected) {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-    context.font = '800 62px system-ui, sans-serif';
-    context.fillText(action.symbol, 128, 82);
+    if (action.id === 'dashboard') {
+        context.font = '800 22px system-ui, sans-serif';
+        context.fillText('PROJECT', 128, 76);
+        context.font = '800 22px system-ui, sans-serif';
+        context.fillText('DASHBOARD', 128, 108);
+    } else {
+        context.font = '800 62px system-ui, sans-serif';
+        context.fillText(action.symbol, 128, 82);
+    }
     context.font = '800 21px system-ui, sans-serif';
     context.letterSpacing = '1.5px';
-    context.fillText(action.label, 128, 164);
+    if (action.id !== 'dashboard') context.fillText(action.label, 128, 164);
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
