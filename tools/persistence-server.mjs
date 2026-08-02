@@ -329,6 +329,29 @@ function getSitePath(siteId) {
     return path.join(workspaceDir, assertSafeId(siteId, 'project id'));
 }
 
+function nextProjectPlantCode(projectId) {
+    const usedPlantCodes = new Set();
+    const projectSitesDir = path.join(getSitePath(projectId), 'sites');
+    if (fs.existsSync(projectSitesDir)) {
+        for (const siteEntry of fs.readdirSync(projectSitesDir, { withFileTypes: true })) {
+            const placesDir = path.join(projectSitesDir, siteEntry.name, 'places');
+            if (!siteEntry.isDirectory() || !fs.existsSync(placesDir)) continue;
+            for (const placeEntry of fs.readdirSync(placesDir, { withFileTypes: true })) {
+                const markersDir = path.join(placesDir, placeEntry.name, 'markers');
+                if (!placeEntry.isDirectory() || !fs.existsSync(markersDir)) continue;
+                for (const markerEntry of fs.readdirSync(markersDir, { withFileTypes: true })) {
+                    if (!markerEntry.isDirectory()) continue;
+                    const marker = readJson(path.join(markersDir, markerEntry.name, 'marker.json'), null);
+                    if (marker?.type === 'plant' && marker.plant_code) usedPlantCodes.add(String(marker.plant_code));
+                }
+            }
+        }
+    }
+    let number = 1;
+    while (usedPlantCodes.has(`A${String(number).padStart(4, '0')}`)) number += 1;
+    return `A${String(number).padStart(4, '0')}`;
+}
+
 function getCanonicalSitePath(projectId, siteId) {
     return path.join(workspaceDir, assertSafeId(projectId, 'project id'), 'sites', assertSafeId(siteId, 'site id'));
 }
@@ -717,26 +740,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     const instancesExisted = fs.existsSync(instancesFile);
     const library = loadPlantRegistryData().data;
     const instanceData = loadPlantInstanceData(projectId, siteId).data;
-    const usedPlantCodes = new Set();
-    const projectSitesDir = path.join(getSitePath(projectId), 'sites');
-    if (fs.existsSync(projectSitesDir)) {
-        for (const siteEntry of fs.readdirSync(projectSitesDir, { withFileTypes: true })) {
-            const placesDir = path.join(projectSitesDir, siteEntry.name, 'places');
-            if (!siteEntry.isDirectory() || !fs.existsSync(placesDir)) continue;
-            for (const placeEntry of fs.readdirSync(placesDir, { withFileTypes: true })) {
-                const existingMarkersDir = path.join(placesDir, placeEntry.name, 'markers');
-                if (!placeEntry.isDirectory() || !fs.existsSync(existingMarkersDir)) continue;
-                for (const markerEntry of fs.readdirSync(existingMarkersDir, { withFileTypes: true })) {
-                    if (!markerEntry.isDirectory()) continue;
-                    const existingMarker = readJson(path.join(existingMarkersDir, markerEntry.name, 'marker.json'), null);
-                    if (existingMarker?.plant_code) usedPlantCodes.add(existingMarker.plant_code);
-                }
-            }
-        }
-    }
-    let plantCodeNumber = 1;
-    while (usedPlantCodes.has(`A${String(plantCodeNumber).padStart(4, '0')}`)) plantCodeNumber += 1;
-    const plantCode = `A${String(plantCodeNumber).padStart(4, '0')}`;
+    const plantCode = nextProjectPlantCode(projectId);
     const plantBaseId = toPlantId(scientificName || commonName) || 'plant';
     let plantId = existingPlant?.id || plantBaseId, plantSuffix = 2;
     while (!existingPlant && library.plants.some(plant => plant.id === plantId)) plantId = `${plantBaseId}-${plantSuffix++}`;
@@ -1389,6 +1393,7 @@ function handleApi(req, res) {
                     markerName = `${requestedName} (${suffix})`;
                     suffix += 1;
                 }
+                const plantCode = type === 'plant' ? nextProjectPlantCode(decodeURIComponent(projectId)) : undefined;
                 const conflictingAssignment = findPhysicalAnchorAssignment(decodeURIComponent(projectId), physicalAnchor);
                 if (conflictingAssignment && data.reassignPhysicalMarker !== true) {
                     throw new Error(`${physicalAnchor.markerLabel} is already assigned to ${conflictingAssignment.marker.name}. Confirm marker reassignment.`);
@@ -1396,7 +1401,7 @@ function handleApi(req, res) {
                 const markerDir = path.join(markersDir, markerId);
                 fs.mkdirSync(markerDir, { recursive: true });
                 const now = new Date().toISOString();
-                const marker = { id: markerId, type, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, special_symbol: data.special_symbol || undefined, arrow_style: Number.isFinite(Number(data.arrow_style)) ? Number(data.arrow_style) : undefined, semantic_type: data.semantic_type || undefined, storage_type: data.storage_type || undefined, area_information_board: data.area_information_board || undefined, notice_board: data.notice_board || undefined, experience_role: data.experience_role || undefined, content_domain: data.content_domain || undefined, marker_kind: data.marker_kind || undefined, dynamic_marker: data.dynamic_marker === true || undefined, physicalAnchor, status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
+                const marker = { id: markerId, type, plant_code: plantCode, name: markerName, description: data.description || '', directions: data.directions || '', notes: data.notes || '', parent_checkpoint: data.parent_checkpoint || '', reference_photo: data.reference_photo || '', facing_direction: data.facing_direction || '', qr_reference: data.qr_reference || '', plantId: data.plantId || '', plantInstanceId: data.plantInstanceId || '', relationships: Array.isArray(data.relationships) ? data.relationships : [], appearance: data.appearance || undefined, special_symbol: data.special_symbol || undefined, arrow_style: Number.isFinite(Number(data.arrow_style)) ? Number(data.arrow_style) : undefined, semantic_type: data.semantic_type || undefined, storage_type: data.storage_type || undefined, area_information_board: data.area_information_board || undefined, notice_board: data.notice_board || undefined, experience_role: data.experience_role || undefined, content_domain: data.content_domain || undefined, marker_kind: data.marker_kind || undefined, dynamic_marker: data.dynamic_marker === true || undefined, physicalAnchor, status: data.status || 'draft', visibility: normalizeVisibility(data.visibility), created: now, modified: now };
                 writeJson(path.join(markerDir, 'marker.json'), marker);
                 if (conflictingAssignment) removePhysicalAnchorAssignment(conflictingAssignment);
                 if (['gps', 'qr', 'spatial'].includes(String(data.anchor?.type || '').toLowerCase())) {
