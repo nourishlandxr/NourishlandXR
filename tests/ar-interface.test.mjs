@@ -712,7 +712,8 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
 test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     const webxrSource = read('app/services/webxrSession.js');
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: true \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false \}\)/);
+    assert.match(arSource, /document\.body\.dataset\.arDomOverlay = arSession\.domOverlay \? 'true' : 'false'/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-vr'/);
@@ -1115,7 +1116,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: true \}\)/);
+    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false \}\)/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
@@ -1157,7 +1158,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(arSource, /let startPromise = null/);
     assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: true \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false \}\)/);
     assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
@@ -1331,7 +1332,10 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /Make this Plant a Plant Live Tag/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
     assert.match(dashboardSource, /plant-card-hero/);
-    assert.match(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
+    assert.match(dashboardSource, /function plantProfileStatsMarkup\(project, entry, profile\)/);
+    assert.match(dashboardSource, /plant-profile-header/);
+    assert.match(dashboardSource, /plant-profile-ar-button/);
+    assert.doesNotMatch(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);
 });
 
 test('an open AR Plant profile has no attached Web Mode card', () => {
@@ -1343,10 +1347,9 @@ test('an open AR Plant profile has no attached Web Mode card', () => {
     assert.doesNotMatch(arSource, /data-ar-context-web/);
     assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
     assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
-    assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
-    assert.match(dashboardSource, /is-ar-web-handoff/);
-    assert.match(dashboardSource, /\$\{arHandoff\}\$\{plantProfileReady && !returnToAr \?/);
-    assert.doesNotMatch(dashboardSource, /\$\{arHandoff\}\$\{plantProfileReady \?/);
+    assert.match(dashboardSource, /const returnArAction = !plant && returnToAr/);
+    assert.match(dashboardSource, /const entryHeader = plant/);
+    assert.doesNotMatch(dashboardSource, /plantProfileReady && !returnToAr \?/);
     assert.match(dashboardSource, /projectEntryQrCode/);
     assert.match(dashboardSource, /Plant QR code/);
     assert.match(dashboardSource, /syncMarkerQrAnchor/);
@@ -1377,7 +1380,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /site-map-totem-links/);
     assert.match(dashboardSource, /Main welcome text/);
     assert.match(dashboardSource, /areaCheckpointColor/);
-    assert.match(dashboardSource, /isPlaced \? 'OPEN IN AR' : 'PLACE IN AR'/);
+    assert.match(dashboardSource, /aria-label="\$\{isPlaced \? 'Open Totem in AR' : 'Place Totem in AR'\}"/);
     assert.match(dashboardSource, /encoded\(isPlaced \? existing\?\.marker\.id \|\| '' : ''\)/);
     assert.match(dashboardSource, /encoded\(existing && !isPlaced \? existing\.marker\.id : ''\)/);
     assert.match(dashboardSource, /encoded\(isPlaced \? marker\.id : ''\)/);
@@ -1520,8 +1523,8 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     assert.doesNotMatch(arSource, /data-ar-context-web/);
     assert.doesNotMatch(arSource, /data-ar-context-close/);
     assert.match(dashboardSource, /const quickArPlantEdit = returnToAr && plant/);
-    assert.match(dashboardSource, /PLANT · AR QUICK EDIT/);
-    assert.match(dashboardSource, /The full Plant Profile remains in the Web Hub/);
+    assert.match(dashboardSource, /class="plant-ar-quick-editor"/);
+    assert.doesNotMatch(dashboardSource, /The full Plant Profile remains in the Web Hub/);
     assert.match(dashboardSource, /data-plant-quick-tone/);
     assert.match(dashboardSource, /fieldValue\('projectEntryFamily', existingPlantProfile\.family/);
     assert.match(dashboardSource, /manageQrAnchor/);
@@ -1531,6 +1534,23 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     assert.match(dashboardSource, /Back to Project Home/);
     assert.match(styles, /\.plant-ar-quick-fields/);
     assert.match(styles, /\.plant-ar-quick-tones/);
+});
+
+test('Plant navigation stays on one profile and receives a project-linked ID', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const fieldGuideSource = read('app/screens/fieldGuide.js');
+    const serverSource = read('tools/persistence-server.mjs');
+    const styles = read('app/style.css');
+    assert.match(fieldGuideSource, /currentGuide\.creator && plant\.markerId/);
+    assert.match(fieldGuideSource, /window\.openProjectEntry\([\s\S]*'webhub'/);
+    assert.match(dashboardSource, /window\.openProjectEntry\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(marker\.id\)\}', false, 'area-dashboard'\)/);
+    assert.match(dashboardSource, /const entryHeader = plant/);
+    assert.match(dashboardSource, /plant-profile-location/);
+    assert.match(dashboardSource, /plantProfileId\(project, entry\.marker\)/);
+    assert.match(styles, /\.plant-profile-ar-button/);
+    assert.match(serverSource, /function nextProjectPlantCode\(projectId\)/);
+    assert.match(serverSource, /const plantCode = type === 'plant' \? nextProjectPlantCode/);
+    assert.match(serverSource, /plant_code: plantCode/);
 });
 
 test('web quick entry can save an untitled draft for later editing', () => {

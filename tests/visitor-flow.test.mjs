@@ -96,7 +96,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     const printCenterSource = fs.readFileSync(path.join(root, 'app/screens/printCenter.js'), 'utf8');
     const analogExplorerSource = fs.readFileSync(path.join(root, 'app/screens/analogExplorer.js'), 'utf8');
     const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
-    assert.match(entrySource, />OPEN AR</);
+    assert.match(entrySource, /class="global-ar-action dashboard-open-ar ar-square-action"/);
+    assert.match(entrySource, />AR</);
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
@@ -172,7 +173,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(source, /Tutorial Mode/);
     assert.match(source, /recordTutorialEvent/);
     assert.match(entrySource, /dashboard-open-ar/);
-    assert.match(entrySource, />OPEN AR</);
+    assert.match(entrySource, /class="global-ar-action dashboard-open-ar ar-square-action"/);
+    assert.match(entrySource, />AR</);
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
@@ -390,7 +392,7 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
     assert.doesNotMatch(styles, /BONUS PATH/);
     assert.match(areaDashboardSource, /is-totem-entry/);
-    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)[^>]*>PLACE IN AR/);
+    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)[^>]*>AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
 });

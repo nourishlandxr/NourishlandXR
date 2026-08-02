@@ -3059,6 +3059,7 @@ function cleanup() {
     document.body.classList.remove('creator-ar-session-active');
     document.body.classList.remove('creator-ar-immersive-vr');
     delete document.body.dataset.webxrMode;
+    delete document.body.dataset.arDomOverlay;
     activeProjectId = '';
     activeProjectName = '';
     activeSiteId = '';
@@ -3260,21 +3261,22 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        // Quest Browser can expose a valid immersive session while rejecting
-        // DOM overlay as a required feature. Keep the overlay optional: phones
-        // and supported Quest builds still receive it, while controller laser
-        // input and spatial controls keep Creator AR from failing at launch.
-        // The Quest 3 link bar is rendered in the WebXR DOM overlay. Do not
-        // accept the VR fallback without that overlay: it starts a session
-        // successfully but leaves the taskbar invisible in the headset.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: true });
+        // Request the belt overlay when the runtime supports it, but do not
+        // reject the actual Quest session when a browser build cannot grant
+        // DOM overlay. Direct dashboard AR must enter the spatial session;
+        // requiring the optional UI feature was silently sending users back
+        // to Web Mode with no useful error.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         const launchedSession = session;
         document.body.classList.add('creator-ar-session-active');
         document.body.dataset.webxrMode = sessionMode;
+        document.body.dataset.arDomOverlay = arSession.domOverlay ? 'true' : 'false';
         document.body.classList.toggle('creator-ar-immersive-vr', sessionMode === 'immersive-vr');
-        if (sessionMode === 'immersive-vr') {
+        if (sessionMode === 'immersive-vr' && !arSession.domOverlay) {
+            setPlacementStatus('Quest 3 AR is active. Use the controller pointer for spatial controls; this browser did not grant the belt overlay.');
+        } else if (sessionMode === 'immersive-vr') {
             setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
         } else if (!arSession.passthrough) {
             setPlacementStatus(`WebXR opened AR mode but reports an opaque blend (${arSession.blendMode || 'unknown'}). Camera passthrough is unavailable in this runtime.`);
