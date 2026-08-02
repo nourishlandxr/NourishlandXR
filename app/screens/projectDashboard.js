@@ -2734,7 +2734,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         : entryIsHome
             ? `window.renderProjectDashboard('${encoded(project.id)}')`
             : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
-    const webReturnLabel = quickArPlantEdit || entryIsHome ? 'Back to Project Home' : `Back to ${escapeHtml(entryContextName)}`;
+    const webReturnLabel = quickArPlantEdit || entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
     const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
         ? `<button type="button" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
         : '';
@@ -2751,7 +2751,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         const contextBeacon = app.querySelector('.project-entry-editor .web-context-beacon');
         if (quickSaveButton) quickSaveButton.textContent = 'Save Quick Edit';
         if (quickReturnButton) {
-            quickReturnButton.textContent = 'Back to Project Home';
+            quickReturnButton.textContent = 'Back to Home';
             quickReturnButton.onclick = () => window.renderProjectDashboard(encoded(project.id));
         }
         if (entryIsHome && contextBeacon) {
