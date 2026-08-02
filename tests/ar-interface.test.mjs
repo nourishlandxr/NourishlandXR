@@ -606,6 +606,7 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     const mirrorSource = read('app/services/spatialDashboardMirror.js');
     const html2canvasSource = read('app/vendor/html2canvas.esm.js');
     const html2canvasLicense = read('app/vendor/html2canvas.LICENSE.txt');
+    const hostedBuildSource = read('tools/build-hosted.mjs');
     assert.match(arSource, /renderProjectDashboard\(dashboardRoot, encodeURIComponent\(activeProjectId\)\)/);
     assert.match(mirrorSource, /import\('\.\.\/vendor\/html2canvas\.esm\.js'\)/);
     assert.match(mirrorSource, /foreignObjectRendering: false/);
@@ -614,6 +615,7 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     assert.match(mirrorSource, /data-spatial-key/);
     assert.match(html2canvasSource, /html2canvas 1\.4\.1/);
     assert.match(html2canvasLicense, /Permission is hereby granted, free of charge/);
+    assert.match(hostedBuildSource, /'vendor'/);
     assert.doesNotMatch(mirrorSource, /XMLSerializer|<foreignObject/);
     assert.doesNotMatch(arSource, /QUEST_SPATIAL_DASHBOARD_CONTROLS|dashboard-home|dashboard-area/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);

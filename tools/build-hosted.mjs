@@ -29,7 +29,8 @@ const frontendEntries = [
     'models',
     'screens',
     'services',
-    'templates'
+    'templates',
+    'vendor'
 ];
 
 function recreateDirectory(directory) {
