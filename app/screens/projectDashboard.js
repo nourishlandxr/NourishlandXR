@@ -2729,11 +2729,9 @@ function plantProfileStatsMarkup(project, entry, profile, editableColor = false)
 }
 
 function plantProfileHeaderMarkup(project, entry, placement, profile) {
+    // The legacy plant-profile-ar-button is intentionally not rendered: a profile has no reliable AR area context.
     const displayName = profile.common_name || entry.marker.name || 'Unnamed plant';
     const areaLabel = displayAreaName(entry.place);
-    const arAction = placement.isPlaced
-        ? `window.startArMode('${encoded(project.id)}','${encoded(entry.place.id)}','','','${encoded(entry.marker.id)}','web-marker:${encoded(entry.marker.id)}','${encoded(entry.site?.id || '')}')`
-        : `window.renderArPreparation('${encoded(project.id)}','existing-placement','${encoded(entry.marker.id)}','${encoded(entry.place.id)}','${encoded(entry.site?.id || '')}')`;
     const projectAction = `window.renderProjectDashboard('${encoded(project.id)}')`;
     const areaAction = `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
     const areaSegment = `<button type="button" onclick="${isDefaultHomeArea(entry.place) ? `window.renderProjectHome('${encoded(project.id)}')` : areaAction}">${escapeHtml(areaLabel)}</button>`;
@@ -2743,7 +2741,6 @@ function plantProfileHeaderMarkup(project, entry, placement, profile) {
             <h1>${escapeHtml(displayName)}</h1>
             <nav class="plant-profile-location" aria-label="Plant location"><button type="button" onclick="${projectAction}">${escapeHtml(project.name)}</button><span aria-hidden="true">/</span>${areaSegment}<span aria-hidden="true">/</span><strong>${escapeHtml(plantProfileId(project, entry.marker))}</strong></nav>
         </div>
-        <button class="global-ar-action plant-profile-ar-button" type="button" aria-label="Open ${escapeHtml(displayName)} in AR" onclick="${arAction}">AR</button>
     </header>`;
 }
 
