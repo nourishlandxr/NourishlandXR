@@ -989,7 +989,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
             id: existing?.marker.id || scopedMarkerStorageId(projectId, context.site.id, areaId, 'area-totem'),
             name,
             type: 'area_checkpoint',
-            description: `Physical anchor for ${context.area.name}.`,
+            description: '',
             qr_reference: qrCode,
             area_information_board: {
                 title: context.area.name,

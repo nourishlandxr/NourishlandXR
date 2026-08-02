@@ -390,7 +390,7 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(areaDashboardSource, /<section class="area-totem-section"/);
     assert.match(areaDashboardSource, /Markers in this Area/);
     assert.match(dashboardSource, /Home \$\{project\.name\}/);
-    assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*aspect-ratio:1[\s\S]*border-radius:50% !important/);
+    assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*width:min\(58vw,320px\)[\s\S]*border-radius:28px 28px 28px 12px !important/);
     assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
     assert.doesNotMatch(styles, /BONUS PATH/);
     assert.match(areaDashboardSource, /is-totem-entry/);

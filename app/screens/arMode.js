@@ -39,6 +39,7 @@ let latestControllerRay = null;
 let latestHandState = null;
 let hoveredMarkerId = '';
 let handPinchActive = false;
+let controllerPressState = null;
 let spatialWebWindow = null;
 let gl = null;
 let refSpace = null;
@@ -408,13 +409,14 @@ function creatorPlantKnowledgeMarkup(record) {
 
 function creatorTotemInformationMarkup(record) {
     const board = areaBoard(record.marker);
-    const text = [board.introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    const introduction = String(board.introduction || '').trim();
+    const isGeneratedWelcome = /^welcome to\s+[^.!?]+[.!?]?$/i.test(introduction);
+    const text = [isGeneratedWelcome ? '' : introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    if (!text.length) return '';
     return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
         <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
         <section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
-          <small>TOTEM MARKER</small>
-          <strong>${escapeHtml(board.title)}</strong>
           <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
         </section>
       </aside>`;
@@ -966,6 +968,7 @@ function controllerActionElements() {
         overlayRoot?.querySelector('.creator-ar-taskbar')
     ];
     const panel = panels.find(candidate => candidate && !candidate.hidden && candidate.querySelector('button:not([disabled])'));
+    if (panel?.classList.contains('creator-ar-taskbar') && questBeltUsesSpatialRenderer()) return questBeltActionElements();
     return [...(panel?.querySelectorAll('button:not([disabled])') || [])].filter(button => !button.hidden);
 }
 
@@ -1006,7 +1009,14 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        setPlacementStatus('Quest Web Hub needs the spatial overlay. Keep AR active and try WEB again.');
+        // Quest can start a valid AR/VR session without DOM overlay. In that
+        // case the HTML spatial window cannot be composited into the headset,
+        // so route the same request to the corresponding Web Hub destination
+        // instead of leaving the WEB control inert.
+        arReturnContext = selectedReturnContext
+            || (activeAreaId && !isDefaultHomeArea(activeAreaName || activeAreaId) ? `web-area:${activeAreaId}` : 'webhub');
+        setPlacementStatus('Opening Web Hub. This Quest session does not expose a spatial overlay.');
+        exitArMode();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1148,7 +1158,12 @@ function questBeltUsesSpatialRenderer() {
 }
 
 function questBeltActionElements() {
-    return [...(overlayRoot?.querySelectorAll('.creator-ar-taskbar > button:not([disabled])') || [])];
+    const buttons = new Map(
+        [...(overlayRoot?.querySelectorAll('.creator-ar-taskbar > button:not([disabled])') || [])]
+            .filter(button => !button.hidden)
+            .map(button => [button.dataset.questArAction, button])
+    );
+    return QUEST_SPATIAL_BELT_ACTIONS.map(action => buttons.get(action.id)).filter(Boolean);
 }
 
 function currentQuestBeltLayout() {
@@ -1226,6 +1241,37 @@ function controllerMarkerAtAim() {
     return record;
 }
 
+function clearControllerMarkerPress() {
+    if (controllerPressState?.timer) clearTimeout(controllerPressState.timer);
+    controllerPressState = null;
+}
+
+function armControllerMarkerPress(record) {
+    clearControllerMarkerPress();
+    if (!record) return;
+    const press = { record, timer: null };
+    controllerPressState = press;
+    press.timer = setTimeout(() => {
+        if (controllerPressState !== press) return;
+        controllerPressState = null;
+        const target = controllerMarkerAtAim();
+        if (target?.marker?.id === record.marker.id) activateControllerTarget(true);
+    }, CREATOR_AR_HOLD_DELAY_MS);
+}
+
+function finishControllerMarkerPress() {
+    const press = controllerPressState;
+    clearControllerMarkerPress();
+    if (dragState?.pointerId === 'xr-controller') {
+        void finishMarkerDrag();
+        return true;
+    }
+    if (!press?.record) return false;
+    const target = controllerMarkerAtAim() || press.record;
+    openMarkerContextToolbar(target);
+    return true;
+}
+
 function activateControllerTarget(directHold = interactionMode === 'grab') {
     const record = controllerMarkerAtAim();
     const element = record && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
@@ -1256,7 +1302,11 @@ function activateControllerSelection() {
         dispatchControllerAction(action);
         return true;
     }
-    if (controllerMarkerAtAim() && activateControllerTarget(true)) return true;
+    const markerTarget = controllerMarkerAtAim();
+    if (markerTarget) {
+        openMarkerContextToolbar(markerTarget);
+        return true;
+    }
     if (!controllerMenuActive && interactionMode !== 'neutral') return activateControllerTarget();
     const action = controllerActionElements()[controllerActionIndex];
     if (!action) return false;
@@ -1343,6 +1393,19 @@ function drawControllerPointer(view) {
         curve: .001,
         lift: .001,
         color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
+    });
+}
+
+function drawControllerPointerContact(view) {
+    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !sphereRenderer) return;
+    const point = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
+    // DOM overlay is optional on Quest. Keep the contact point in the XR
+    // layer so a shortened laser always ends in a visible, actionable hit.
+    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, .032, {
+        color: [0.84, 1, 0.26],
+        alpha: .98,
+        emissive: 1
     });
 }
 
@@ -1930,7 +1993,7 @@ function drawSpatialHomeSign(view) {
 function questBeltActiveIndex() {
     if (questBeltHoverIndex >= 0) return questBeltHoverIndex;
     if (controllerMenuActive) return Math.max(0, Math.min(QUEST_SPATIAL_BELT_ACTIONS.length - 1, controllerActionIndex));
-    return ({ view: 3, grab: 4, select: 5 })[interactionMode] ?? -1;
+    return -1;
 }
 
 function roundedCanvasRectangle(context, x, y, width, height, radius) {
@@ -1956,24 +2019,39 @@ function createQuestBeltPanelTexture(action, selected) {
     if (!context) return null;
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
     context.save();
-    context.shadowColor = 'rgba(0, 0, 0, .52)';
-    context.shadowBlur = 18;
-    roundedCanvasRectangle(context, 14, 14, 228, 192, 30);
-    context.fillStyle = selected ? action.color : 'rgba(13, 19, 21, .95)';
+    // Keep each tile flat and evenly aligned, like the Meta Link bar. The
+    // shallow offset below is the physical lower edge; the arc comes from
+    // world placement and panel yaw, never from crooked per-button transforms.
+    context.shadowColor = 'rgba(0, 0, 0, .58)';
+    context.shadowBlur = 12;
+    roundedCanvasRectangle(context, 14, 20, 228, 186, 12);
+    context.fillStyle = 'rgba(8, 13, 15, .98)';
     context.fill();
     context.shadowBlur = 0;
-    context.lineWidth = selected ? 6 : 3;
-    context.strokeStyle = selected ? 'rgba(230, 248, 184, .96)' : 'rgba(235, 247, 235, .3)';
+    roundedCanvasRectangle(context, 12, 12, 228, 186, 12);
+    const frontGradient = context.createLinearGradient(12, 12, 12, 198);
+    frontGradient.addColorStop(0, selected ? action.color : 'rgba(68, 76, 78, .98)');
+    frontGradient.addColorStop(1, selected ? 'rgba(33, 55, 40, .98)' : 'rgba(31, 38, 40, .98)');
+    context.fillStyle = frontGradient;
+    context.fill();
+    context.lineWidth = selected ? 5 : 3;
+    context.strokeStyle = selected ? 'rgba(232, 249, 190, .96)' : 'rgba(232, 240, 236, .42)';
+    context.stroke();
+    context.beginPath();
+    context.moveTo(27, 23);
+    context.lineTo(225, 23);
+    context.strokeStyle = 'rgba(255, 255, 255, .16)';
+    context.lineWidth = 2;
     context.stroke();
     context.restore();
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-    context.font = '800 72px system-ui, sans-serif';
+    context.font = '800 62px system-ui, sans-serif';
     context.fillText(action.symbol, 128, 82);
-    context.font = '800 24px system-ui, sans-serif';
+    context.font = '800 21px system-ui, sans-serif';
     context.letterSpacing = '1.5px';
-    context.fillText(action.label, 128, 165);
+    context.fillText(action.label, 128, 164);
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -2206,7 +2284,8 @@ function drawSpatialMarkers(view) {
         drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
             color: markerRgb(record.marker, baseColor),
-            opacity: arrivalEase * markerAppearanceOpacity(record.marker)
+            opacity: arrivalEase * markerAppearanceOpacity(record.marker),
+            highlighted: record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
         });
     });
 
@@ -2334,7 +2413,7 @@ function positionSessionMarkers(view = latestView) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
             element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
             positionCreatorPlantProfile(record, x, y);
-            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y);
+            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y, view);
         }
     });
 }
@@ -2360,26 +2439,32 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
 
-function positionCreatorTotemInformation(record, markerX, markerY) {
+function positionCreatorTotemInformation(record, markerX, markerY, view = latestView) {
     if (!record.infoVisible || !overlayRoot) return;
     const information = overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
     if (!information) return;
-    const boardWidth = Math.min(window.innerWidth * .72, 460);
-    const sideOffset = window.innerWidth < 520 ? 0 : markerX < window.innerWidth / 2 ? boardWidth * .28 : -boardWidth * .28;
-    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, markerX + sideOffset));
-    const boardY = Math.max(92, Math.min(window.innerHeight - 190, markerY - Math.min(210, window.innerHeight * .28)));
-    const boardHalfHeight = Math.min(118, Math.max(72, window.innerHeight * .1));
+    const balloon = information.querySelector('.creator-ar-totem-balloon');
+    const balloonRect = balloon?.getBoundingClientRect();
+    const boardWidth = Math.min(window.innerWidth * .58, 320);
+    const boardHalfHeight = balloonRect?.height ? balloonRect.height / 2 : Math.min(86, Math.max(48, window.innerHeight * .09));
+    const ground = groundedTotemPosition(record.position);
+    const [, halfHeight] = markerDimensions(record.marker);
+    const topWorld = { ...ground, y: ground.y + .08 * markerSizeFactor(record.marker) + halfHeight * 2 };
+    const projectedTop = view ? projectWorldPoint(view, topWorld) : null;
+    const attachmentPoint = projectedTop || { x: markerX, y: markerY - Math.max(48, window.innerHeight * .08) };
+    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, attachmentPoint.x));
+    const boardY = Math.max(72, attachmentPoint.y - boardHalfHeight - 28);
     const stickStart = { x: boardX, y: boardY + boardHalfHeight };
-    const dx = markerX - stickStart.x;
-    const dy = markerY - stickStart.y;
+    const dx = attachmentPoint.x - stickStart.x;
+    const dy = attachmentPoint.y - stickStart.y;
     information.style.setProperty('--location-note-x', `${boardX.toFixed(1)}px`);
     information.style.setProperty('--location-note-y', `${boardY.toFixed(1)}px`);
     information.style.setProperty('--location-stick-x', `${stickStart.x.toFixed(1)}px`);
     information.style.setProperty('--location-stick-y', `${stickStart.y.toFixed(1)}px`);
     information.style.setProperty('--location-stick-length', `${Math.max(24, Math.hypot(dx, dy)).toFixed(1)}px`);
     information.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
-    information.style.setProperty('--location-ground-x', `${markerX.toFixed(1)}px`);
-    information.style.setProperty('--location-ground-y', `${markerY.toFixed(1)}px`);
+    information.style.setProperty('--location-ground-x', `${attachmentPoint.x.toFixed(1)}px`);
+    information.style.setProperty('--location-ground-y', `${attachmentPoint.y.toFixed(1)}px`);
 }
 
 function renderSessionMarkers() {
@@ -2393,12 +2478,15 @@ function renderSessionMarkers() {
             || record.marker.notes
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
+        const markerCaption = record.marker.type === 'area_checkpoint'
+            ? ''
+            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>`;
+        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}${markerCaption}</span>`;
         return `${markerLayer}${profileLayer}`;
     }).join('');
     visibleMarkers.forEach(record => {
@@ -2577,7 +2665,12 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
         setPlacementStatus('');
         return;
     }
-    if (!directHold && interactionMode === 'neutral') return;
+    if (!directHold && interactionMode === 'neutral') {
+        event.preventDefault();
+        event.stopPropagation();
+        openMarkerContextToolbar(record);
+        return;
+    }
     event.preventDefault();
     event.stopPropagation();
     if (!directHold && interactionMode === 'select') {
@@ -3272,13 +3365,13 @@ function createOverlay() {
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
           <nav class="creator-ar-context-toolbar" data-ar-context-toolbar hidden></nav>
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
-            <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
-            <button class="creator-ar-special-marker" type="button" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
+            <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
+            <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
+            <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button type="button" data-ar-web-return aria-label="Open spatial Web Hub"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
+            <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open spatial Web Hub"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
           </nav>
         </div>`;
 
@@ -3332,6 +3425,7 @@ function createOverlay() {
 }
 
 function cleanup() {
+    clearControllerMarkerPress();
     cleanupDrag();
     closeSpatialWebWindow();
     refSpace = null;
@@ -3449,6 +3543,10 @@ function navigateAfterAr(projectId, areaId, returnContext) {
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)), true);
         } else if (String(returnContext || '').startsWith('web-totem:')) {
             window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
+        } else if (String(returnContext || '').startsWith('web-area:')) {
+            window.renderProjectAreaDashboard?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-area:'.length)));
+        } else if (returnContext === 'webhub') {
+            window.renderFieldGuide?.(encodeURIComponent(projectId), true);
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
         } else if (areaId && window.renderProjectAreaDashboard) {
@@ -3667,6 +3765,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);
+                drawControllerPointerContact(view);
             }
             gl.disable(gl.SCISSOR_TEST);
         };
@@ -3691,20 +3790,29 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
             if (controllerBeltActionAtAim()) return;
             const target = controllerMarkerAtAim();
-            // A placed object owns the trigger while it is under the laser,
-            // even when the taskbar is currently focused. This makes a
-            // press-and-hold orb gesture predictable in Quest neutral mode.
-            if (target) activateControllerTarget(true);
+            // A short press selects a placed object; the delayed arm keeps
+            // the same trigger useful for press-and-hold movement in neutral
+            // Quest mode without making every tap start a drag.
+            if (target) armControllerMarkerPress(target);
         });
         launchedSession.addEventListener('selectend', event => {
-            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || dragState?.pointerId !== 'xr-controller') return;
-            void finishMarkerDrag();
+            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource)) return;
+            if (dragState?.pointerId === 'xr-controller') {
+                clearControllerMarkerPress();
+                void finishMarkerDrag();
+                return;
+            }
+            if (controllerPressState) finishControllerMarkerPress();
         });
         launchedSession.addEventListener('select', event => {
             if (session !== launchedSession) return;
             const controllerSelect = isPrimaryControllerSource(event.inputSource);
             if (controllerSelect) {
                 if (dragState?.pointerId === 'xr-controller') return;
+                if (controllerPressState) {
+                    finishControllerMarkerPress();
+                    return;
+                }
                 if (activateControllerSelection()) return;
             }
             if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);
