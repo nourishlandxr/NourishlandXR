@@ -1063,14 +1063,17 @@ function openSpatialWebWindow() {
         : selectedRecord
             ? `web-marker:${selectedRecord.marker.id}`
             : '';
-    // The floating spatial workspace is a Quest 3 affordance. Phone AR must
-    // leave immersive mode and use the normal Web workspace instead of
-    // inheriting the Quest menu/window treatment.
+    // WEB is the full creator workspace, not a second icon-only AR menu.
+    // Keep the phone branch explicit for compatibility with the existing
+    // routing contract, then apply the same full-workspace exit to Quest.
     if (!questHeadsetSession) {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
     }
+    if (selectedReturnContext) arReturnContext = selectedReturnContext;
+    exitArMode();
+    return;
     if (document.body.dataset.arDomOverlay !== 'true') {
         // This Quest session does not expose a spatial overlay: keep the valid
         // session alive
@@ -1828,25 +1831,30 @@ function toggleLocationNoteVisibility(record = activeTotemRecord()) {
         : 'Location Note hidden.');
 }
 
-function createTotemFromSpecial() {
+async function createTotemFromSpecial() {
+    // The first Test AR launch may still be restoring its site and creating
+    // the protected Home Area when the user opens Special. Finish that work
+    // before deciding where the Totem belongs.
+    const operation = captureArOperationContext();
+    await loadPlacementAreas(operation);
+    if (!isArOperationCurrent(operation, { matchLocation: false })) return;
     const totem = activeTotemRecord();
     if (activeAreaId && totem && !hasSavedSpatialPosition(totem)) {
         void prepareExistingMarkerPlacement(totem.marker.id);
         closePlacePicker();
         return;
     }
-    if (activeAreaId && !totem && !isDefaultHomeArea(activeAreaName)) {
+    if (activeAreaId && !totem) {
+        // Home is the initial working Area. A Totem can be placed there just
+        // like Plants, Notes and ordinary Markers; named Areas are optional.
         closePlacePicker();
         void armPlacement('area_checkpoint');
         return;
     }
-    if (!activeAreaId || isDefaultHomeArea(activeAreaName)) {
+    if (!activeAreaId) {
         closePlacePicker();
-        void openArAreaChooser();
-        return;
+        setPlacementStatus('Home is not ready yet. Move briefly, then try Add Totem again.');
     }
-    closePlacePicker();
-    setPlacementStatus('Choose a named Area before adding a Totem Marker.');
 }
 
 function returnToWebMode() {
@@ -2514,6 +2522,7 @@ function drawSpatialMarkers(view) {
         if (!hasRenderableSpatialPosition(record)) return;
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
+        const isNoteMarker = record.marker.type === 'note';
         const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
         const highlighted = record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
         const needsShapeHalo = shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb';
@@ -2589,7 +2598,10 @@ function drawSpatialMarkers(view) {
             });
             return;
         }
-        if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
+        // Notes use the readable billboard pass below. Never send their large
+        // note dimensions through the spherical marker renderer: that makes
+        // them appear as giant transparent orbs in passthrough.
+        if (isNoteMarker || (shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         const arrivalProgress = Number.isFinite(record.spawnedAt)
@@ -2670,8 +2682,9 @@ function drawSpatialMarkers(view) {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
         const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
+        const isNoteMarker = record.marker.type === 'note';
         const isSpecialMarker = Boolean(record.marker.special_symbol);
-        if (!isPlantPlate && !isSpecialMarker && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
+        if (!isPlantPlate && !isNoteMarker && !isSpecialMarker && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
         const tagDimensions = isPlantPlate ? plantTagDimensions(record.marker) : null;
         const [scaleX, scaleY] = tagDimensions ? [tagDimensions.halfWidth, tagDimensions.halfHeight] : markerDimensions(record.marker);
         const groundedPosition = isPlantPlate
