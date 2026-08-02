@@ -2,7 +2,7 @@
 // Increment VERSION for every edit/commit so the welcome screen always
 // shows the latest deployed version.
 
-const VERSION = '0.8784';
+const VERSION = '0.8785';
 
 export const BUILD_INFO = Object.freeze({
     version: VERSION,

@@ -1791,6 +1791,44 @@ var rgb = function (_context, args) {
     }
     return 0;
 };
+var cssColorChannel = function (token) {
+    return token.type === 16 /* PERCENTAGE_TOKEN */ ? token.number / 100 : token.number;
+};
+var clampCssColorChannel = function (value) { return Math.max(0, Math.min(1, value)); };
+var linearToSrgb = function (value) {
+    return value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+};
+var srgbToLinear = function (value) {
+    return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+};
+var cssColor = function (_context, args) {
+    var tokens = args.filter(nonWhiteSpace);
+    var colorSpace = tokens[0];
+    var channels = tokens.slice(1).filter(function (token) {
+        return token.type === 17 /* NUMBER_TOKEN */ || token.type === 16 /* PERCENTAGE_TOKEN */;
+    });
+    if (!isIdentToken(colorSpace) || channels.length < 3) {
+        return 0;
+    }
+    var r = cssColorChannel(channels[0]);
+    var g = cssColorChannel(channels[1]);
+    var b = cssColorChannel(channels[2]);
+    var a = channels.length > 3 ? cssColorChannel(channels[3]) : 1;
+    if (colorSpace.value === 'srgb-linear') {
+        r = linearToSrgb(r);
+        g = linearToSrgb(g);
+        b = linearToSrgb(b);
+    }
+    else if (colorSpace.value === 'display-p3') {
+        var p3r = srgbToLinear(r);
+        var p3g = srgbToLinear(g);
+        var p3b = srgbToLinear(b);
+        r = linearToSrgb(1.22474527 * p3r - 0.22490437 * p3g);
+        g = linearToSrgb(-0.04205797 * p3r + 1.042081 * p3g);
+        b = linearToSrgb(-0.01964227 * p3r - 0.0786549 * p3g + 1.0985372 * p3b);
+    }
+    return pack(clampCssColorChannel(r) * 255, clampCssColorChannel(g) * 255, clampCssColorChannel(b) * 255, clampCssColorChannel(a));
+};
 function hue2rgb(t1, t2, hue) {
     if (hue < 0) {
         hue += 1;
@@ -1829,6 +1867,7 @@ var hsl = function (context, args) {
     return pack(r * 255, g * 255, b * 255, a);
 };
 var SUPPORTED_COLOR_FUNCTIONS = {
+    color: cssColor,
     hsl: hsl,
     hsla: hsl,
     rgb: rgb,

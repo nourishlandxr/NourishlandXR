@@ -619,6 +619,9 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     assert.match(mirrorSource, /scrollBy/);
     assert.match(mirrorSource, /data-spatial-key/);
     assert.match(html2canvasSource, /html2canvas 1\.4\.1/);
+    assert.match(html2canvasSource, /var cssColor = function/);
+    assert.match(html2canvasSource, /colorSpace\.value === 'display-p3'/);
+    assert.match(html2canvasSource, /color: cssColor/);
     assert.match(html2canvasLicense, /Permission is hereby granted, free of charge/);
     assert.match(hostedBuildSource, /'vendor'/);
     assert.match(hostedBuildSource, /style\\\.css\(\?:\\\?v=\[\^"\]\*\)\?/);
