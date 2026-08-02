@@ -20,7 +20,7 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
-import { requestImmersiveArSession } from '../services/webxrSession.js';
+import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
@@ -28,6 +28,7 @@ import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppeara
 
 let session = null;
 let sessionMode = 'immersive-ar';
+let questHeadsetSession = false;
 let creatorInputMode = 'touch';
 let controllerActionIndex = 0;
 let controllerMenuActive = true;
@@ -971,7 +972,7 @@ function openSpatialWebWindow() {
     // The floating spatial workspace is a Quest 3 affordance. Phone AR must
     // leave immersive mode and use the normal Web workspace instead of
     // inheriting the Quest menu/window treatment.
-    if (sessionMode !== 'immersive-vr') {
+    if (!questHeadsetSession) {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
@@ -3058,6 +3059,7 @@ function cleanup() {
     overlayRoot = null;
     document.body.classList.remove('creator-ar-session-active');
     document.body.classList.remove('creator-ar-immersive-vr');
+    document.body.classList.remove('creator-ar-quest-headset');
     delete document.body.dataset.webxrMode;
     delete document.body.dataset.arDomOverlay;
     activeProjectId = '';
@@ -3108,6 +3110,7 @@ function cleanup() {
     controllerAxisCooldownUntil = 0;
     latestControllerRay = null;
     latestHandState = null;
+    questHeadsetSession = false;
     hoveredMarkerId = '';
     handPinchActive = false;
     pendingBagRecord = null;
@@ -3257,6 +3260,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     locationNoteVisible = false;
     pendingExistingMarkerId = existingMarkerId || '';
     arReturnContext = returnContext || '';
+    const questBrowser = isQuestHeadsetBrowser();
+    questHeadsetSession = questBrowser;
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';
     createOverlay();
 
@@ -3266,15 +3271,17 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // DOM overlay. Direct dashboard AR must enter the spatial session;
         // requiring the optional UI feature was silently sending users back
         // to Web Mode with no useful error.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false });
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
+        questHeadsetSession = questBrowser || sessionMode === 'immersive-vr';
         const launchedSession = session;
         document.body.classList.add('creator-ar-session-active');
         document.body.dataset.webxrMode = sessionMode;
         document.body.dataset.arDomOverlay = arSession.domOverlay ? 'true' : 'false';
         document.body.classList.toggle('creator-ar-immersive-vr', sessionMode === 'immersive-vr');
-        if (sessionMode === 'immersive-vr' && !arSession.domOverlay) {
+        document.body.classList.toggle('creator-ar-quest-headset', questHeadsetSession);
+        if (questHeadsetSession && !arSession.domOverlay) {
             setPlacementStatus('Quest 3 AR is active. Use the controller pointer for spatial controls; this browser did not grant the belt overlay.');
         } else if (sessionMode === 'immersive-vr') {
             setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');

@@ -6405,12 +6405,12 @@ body[data-project-theme] .creator-ar-taskbar [data-ar-web-return] {
 
 /* Quest 3 spatial link bar: a compact, shallow arc anchored to the bottom
    of the view, closer to Meta's system-bar language than a waist-wide panel. */
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar {
+body.creator-ar-quest-headset .creator-ar-quest-link-bar {
     bottom: max(22px, env(safe-area-inset-bottom));
     width: min(88vw, 560px);
     perspective: 720px;
 }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar {
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar {
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -6426,7 +6426,7 @@ body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar {
     transform: rotateX(10deg);
     transform-origin: 50% 100%;
 }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button {
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button {
     width: 48px;
     min-width: 48px;
     height: 42px;
@@ -6439,21 +6439,21 @@ body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > bu
     transform-origin: 50% 100%;
     transition: transform .18s ease, filter .18s ease, background .18s ease;
 }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(1),
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(7) { transform: translateY(7px) rotateZ(10deg); }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(2),
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(6) { transform: translateY(3px) rotateZ(6deg); }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(3),
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(5) { transform: translateY(1px) rotateZ(3deg); }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(4) { transform: translateY(0); }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.08); filter: brightness(1.18); }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button b,
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
-body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(1),
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(7) { transform: translateY(7px) rotateZ(10deg); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(2),
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(6) { transform: translateY(3px) rotateZ(6deg); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(3),
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(5) { transform: translateY(1px) rotateZ(3deg); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(4) { transform: translateY(0); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.08); filter: brightness(1.18); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button b,
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }
 @media (max-width: 520px) {
-    body.creator-ar-immersive-vr .creator-ar-quest-link-bar { width: min(96vw, 560px); }
-    body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar { gap: 3px; padding-inline: 5px; }
-    body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button { width: 42px; min-width: 42px; }
+    body.creator-ar-quest-headset .creator-ar-quest-link-bar { width: min(96vw, 560px); }
+    body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar { gap: 3px; padding-inline: 5px; }
+    body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button { width: 42px; min-width: 42px; }
 }
 
 /* The WEB link opens a real app surface without ending the Quest session. */
