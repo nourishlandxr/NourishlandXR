@@ -1238,7 +1238,7 @@ function controllerMarkerRadius(record) {
     if (marker.type === 'note') return .62;
     if (marker.type === 'area_checkpoint') return .48;
     if (marker.special_symbol) return .5;
-    if (marker.type === 'plant') return markerAppearanceShape(marker) === 'plate' ? .12 : .075;
+    if (marker.type === 'plant') return markerAppearanceShape(marker) === 'plate' ? .12 : .064;
     return .12;
 }
 
@@ -1477,7 +1477,7 @@ function selectQuestSpecialPaletteAction(action) {
 function selectQuestSpatialWebAction(action) {
     if (!action) return false;
     closeQuestSpatialWebPanel();
-    setPlacementStatus(`${action.label} selected. The spatial Web Hub stays open through the current Quest session.`);
+    setPlacementStatus(`${action.label} ready. The Project Dashboard surface stays open through the current Quest session.`);
     // Keep this route in the AR session. The native dashboard remains the
     // destination for the phone Web Hub, while Quest without DOM overlay gets
     // a controller-safe spatial route surface instead of an AR exit.
@@ -2440,7 +2440,7 @@ function drawQuestSpatialWebPanel(view) {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     layout.forEach((button, index) => {
-        const model = questBeltPanelMatrix(button, .075, .064);
+        const model = questBeltPanelMatrix(button, .46, .3);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
         gl.bindTexture(gl.TEXTURE_2D, textures[index]);
@@ -3803,6 +3803,12 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
+    overlayRoot.querySelector('.creator-ar-placement-guide').addEventListener('pointerup', event => {
+        if (!readyPlacementType || performance.now() - placementArmedAt <= 180) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void quickPlace(readyPlacementType);
+    });
     overlayRoot.querySelector('[data-ar-recenter-area]')?.addEventListener('click', () => void recenterActiveArea());
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });

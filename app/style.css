@@ -919,6 +919,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-overlay.is-placement-armed .creator-ar-placement-capture { pointer-events: auto; }
 .creator-ar-overlay .creator-ar-placement-guide { position: fixed; left: 50%; top: calc(50% + 3.5cm); z-index: 3; width: 116px; height: 116px; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
 .creator-ar-overlay.is-placement-armed .creator-ar-placement-guide { opacity: 1; }
+.creator-ar-overlay.is-placement-armed .creator-ar-placement-guide { pointer-events: auto; }
 .creator-ar-note-placement-preview { position:fixed; left:0; top:0; z-index:2; width:var(--marker-note-width,min(86vw,280px)); height:var(--marker-note-height,116px); transform:translate(-200vw,-200vh); pointer-events:none; }
 .creator-ar-note-placement-preview[hidden] { display:none; }
 .creator-ar-note-placement-preview .creator-ar-note-placement-surface { left:0; bottom:auto; display:grid; place-content:center; width:100%; max-width:none; height:100%; padding:18px 22px; opacity:var(--marker-opacity,1); visibility:visible; transform:none; text-align:center; text-shadow:0 2px 5px rgba(0,0,0,.72); white-space:normal; animation:creator-ar-note-preview-arrive .42s ease-out both; }
