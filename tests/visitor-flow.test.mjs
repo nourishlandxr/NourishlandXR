@@ -98,6 +98,8 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
     assert.match(entrySource, /class="global-ar-action dashboard-open-ar ar-square-action"/);
     assert.match(entrySource, />AR</);
+    assert.match(styles, /\.dashboard-open-ar[\s\S]{0,500}width:104px !important/);
+    assert.match(styles, /\.project-entry \.project-areas-section \.section-heading-row h2,[\s\S]{0,260}\.project-entry \.project-status \.section-heading-row h2/);
     assert.doesNotMatch(entrySource, /Journey Bag|Unplaced Bag/);
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
@@ -194,7 +196,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /dashboard-identity/);
     assert.match(entrySource, /dashboard-frame/);
     assert.match(entrySource, /dashboard-frame-kicker/);
-    assert.match(entrySource, /dashboard-frame-title.*Project overview/);
+    assert.doesNotMatch(entrySource, /dashboard-frame-title.*Project overview/);
     assert.match(source, /label: 'Printing options'/);
     assert.match(source, /collapseRecentlyAdded/);
     assert.match(source, /placedEntries\.slice\(0, 10\)/);

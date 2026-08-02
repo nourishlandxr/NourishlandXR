@@ -1347,7 +1347,10 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /Make this Plant a Plant Live Tag/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
     assert.match(dashboardSource, /plant-card-hero/);
-    assert.match(dashboardSource, /function plantProfileStatsMarkup\(project, entry, profile\)/);
+    assert.doesNotMatch(dashboardSource, /PLANT PROFILE MODE/);
+    assert.match(dashboardSource, /function plantProfileStatsMarkup\(project, entry, profile, editableColor = false\)/);
+    assert.match(dashboardSource, /id="projectEntryOrbColor" type="color"/);
+    assert.match(dashboardSource, /Requires Plant Live Tag to be enabled/);
     assert.match(dashboardSource, /plant-profile-header/);
     assert.match(dashboardSource, /plant-profile-ar-button/);
     assert.doesNotMatch(dashboardSource, /plantProfileReady && !returnToAr \? `<section class="spatial-focus-panel"/);

@@ -101,7 +101,6 @@ export function renderProjectEntry(config) {
         <header class="location-dashboard-header">
             <p class="dashboard-frame-kicker">PROJECT DASHBOARD</p>
             <h1>${config.locationName}</h1>
-            <p class="dashboard-frame-title">Project overview</p>
         </header>
 
         ${growthJourneyHtml}

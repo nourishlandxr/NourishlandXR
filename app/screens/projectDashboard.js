@@ -2574,7 +2574,7 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 
 function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     if (readPlatformSettings().physicalAnchors !== true) {
-        return '<p class="meta plant-physical-anchor-unavailable">Enable Physical Marker prototype in Settings to connect an ArUco marker to this Plant Live Tag.</p>';
+        return '<p class="meta plant-physical-anchor-unavailable"><span class="plant-profile-info-bubble" role="img" aria-label="Enable Physical Marker prototype in Settings to connect an ArUco marker to this Plant Live Tag.">i</span> Enable Physical Marker prototype in Settings to connect an ArUco marker to this Plant Live Tag.</p>';
     }
     let savedPhysicalAnchor = null;
     try {
@@ -2597,8 +2597,8 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     return `<details class="plant-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
         <summary><span><strong>ArUco Plant Live Tag</strong><small>Connect this Plant profile to a printed marker</small></span><b aria-hidden="true">⌗</b></summary>
         <div class="plant-physical-anchor-body">
-            <p>When the Plant Live Tag is enabled above, assign an ArUco marker here. Scanning it will show this Plant profile as a live tag.</p>
-            <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Link ArUco marker</strong><small>Requires the Plant Live Tag checkbox above.</small></span><input id="projectEntryPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
+            <p>When the Plant Live Tag is enabled, assign an ArUco marker here. Scanning it will show this Plant profile as a live tag.</p>
+            <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Link ArUco marker</strong><small>Requires Plant Live Tag to be enabled.</small></span><input id="projectEntryPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
             <div data-plant-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
                 <div class="plant-physical-marker-layout">
                     <div class="totem-physical-marker-preview" data-plant-physical-marker-preview>${physicalMarkerSvg(physicalValues.markerId)}</div>
@@ -2617,7 +2617,6 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
 function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
     const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
     const photo = profile.photo || profile.image || '';
-    const orbColor = profile.orb_color || entry.marker.appearance?.color || '#8fc9a3';
     const spmEnabled = profile.spm_enabled === true || profile.profile_enabled === true;
     return `<section class="plant-encyclopedia-card">
         <input id="projectEntryProfileEnabled" type="hidden" value="${spmEnabled ? 'true' : 'false'}">
@@ -2632,17 +2631,14 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             </div>
         </div>
         <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div><p class="welcome-label">PLANT PROFILE MODE</p><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div>
+            <div class="plant-spm-heading"><div><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div><span class="plant-profile-info-bubble" role="img" aria-label="Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.">i</span></div>
             <label class="tutorial-mode-toggle"><span><strong>Enable SPM / PIM</strong><small>Show advanced editing and the spatial PIM in AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
         </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> PIM overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the PIM core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
         <div class="plant-vital-grid plant-profile-spm-vitals">
-            <div class="field plant-color-field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(orbColor)}" /></div>
             <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
         </div>
-        <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
-        ${physicalAnchorMarkup}
         <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
             <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
             <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
@@ -2654,6 +2650,8 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="2">${escapeHtml(profile.propagation || '')}</textarea></div>
         </div></details>
         <details class="plant-info-drawer"><summary><span aria-hidden="true">◌</span><strong>Origin &amp; story</strong><small>Optional history and context</small></summary><div class="plant-drawer-fields"><div class="field"><label for="projectEntryOrigin">Origin and history</label><textarea id="projectEntryOrigin" rows="2">${escapeHtml(profile.origin || '')}</textarea></div></div></details>
+        <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
+        ${physicalAnchorMarkup}
         </div>
     </section>`;
 }
@@ -2662,13 +2660,13 @@ function plantProfileId(project, marker) {
     return String(marker?.plant_code || marker?.id || `${project?.id || 'project'}-plant`).trim();
 }
 
-function plantProfileStatsMarkup(project, entry, profile) {
+function plantProfileStatsMarkup(project, entry, profile, editableColor = false) {
     const color = /^#[0-9a-f]{6}$/i.test(profile.orb_color || entry.marker.appearance?.color || '')
         ? profile.orb_color || entry.marker.appearance.color
         : '#5e7956';
     const spmEnabled = profile.spm_enabled === true || profile.profile_enabled === true;
     return `<section class="plant-profile-stats" aria-label="Plant vital stats">
-        <div><small>PLANT COLOR</small><strong><i style="--plant-profile-color:${color}" aria-hidden="true"></i>${color}</strong></div>
+        <div class="plant-profile-stat-color"><small>PLANT COLOR</small><strong>${editableColor ? `<input id="projectEntryOrbColor" type="color" value="${escapeHtml(color)}" aria-label="Plant color" /><span>${color}</span>` : `<i style="--plant-profile-color:${color}" aria-hidden="true"></i>${color}`}</strong></div>
         <div><small>MARKER TYPE</small><strong>PLANT</strong></div>
         <div><small>NUMBER</small><strong>${escapeHtml(plantProfileId(project, entry.marker))}</strong></div>
         <div><small>SPM</small><strong>${spmEnabled ? 'ENABLED' : 'OFF'}</strong></div>
@@ -2741,7 +2739,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         ? `<button type="button" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
         : '';
     const entryHeader = plant
-        ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile)}`
+        ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile, !quickArPlantEdit)}`
         : `<div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>${projectBreadcrumbMarkup(project, entry.place, entry.marker.name)}</div>`;
     const placementStatus = plant ? '' : `<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>`;
     const placeButton = !plant && !quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action ar-square-action" type="button" aria-label="Place ${escapeHtml(entry.marker.name)} in AR" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">AR</button>` : '';
@@ -2854,7 +2852,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const spmEnabled = entry.marker.type === 'plant' && (document.getElementById('projectEntryArQuickEdit')?.value === 'true' || document.getElementById('projectEntrySpmEnabled')?.checked === true);
         const plantProfileFormPresent = entry.marker.type === 'plant' && Boolean(document.getElementById('projectEntryCommonName'));
         const profileEnabled = entry.marker.type === 'plant' && (spmEnabled || document.getElementById('projectEntryProfileEnabled')?.value === 'true');
-        const plantColor = profileEnabled ? document.getElementById('projectEntryOrbColor')?.value : '';
+        const plantColor = entry.marker.type === 'plant' ? document.getElementById('projectEntryOrbColor')?.value : '';
         const plantAppearance = plantColor ? { appearance: { ...(entry.marker.appearance || {}), color: plantColor } } : {};
         const virtualTagEnabled = profileEnabled && (document.getElementById('projectEntryVirtualTag')?.checked ?? false);
         const plantPhysicalAnchorControlPresent = entry.marker.type === 'plant' && Boolean(document.getElementById('projectEntryPhysicalAnchorEnabled'));
