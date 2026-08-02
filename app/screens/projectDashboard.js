@@ -1699,14 +1699,10 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 : markerType === 'intro_checkpoint'
                     ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                     : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', false, 'area-dashboard')`;
-            const profileArAction = markerType === 'plant' && isPlantProfileUpgraded(marker, plantProfile)
-                ? `<button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="Open ${escapeHtml(marker.name)} in AR" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">AR</button>`
-                : '';
             return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}" role="button" tabindex="0" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
                 <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · ${editedLabel(marker.modified || marker.created)}</span><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel}</span></span>
                 <span class="entry-status entry-status-${status.tone}">${status.label}</span>
-                <span class="area-entry-actions">${profileArAction}</span>
             </article>`;
         }).join('');
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
