@@ -15,8 +15,10 @@ import { AREA_ICON_OPTIONS, DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea 
 import {
     DEFAULT_TOTEM_COLOR,
     TOTEM_HEIGHT_PRESETS,
+    TOTEM_STYLES,
     TOTEM_TONES,
     normalizeTotemHeightPreset,
+    normalizeTotemStyle,
     totemHeightPreset
 } from '../services/totemAppearance.js';
 import {
@@ -698,8 +700,6 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         if (flow) checkpointSetupFlows.set(flowKey, flow);
         else checkpointSetupFlows.delete(flowKey);
         const existing = context.areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
-        const [placedExisting] = existing ? await entriesWithPlacement(context.project, context.site, [existing]) : [];
-        const isPlaced = Boolean(placedExisting?.isPlaced);
         let savedCode = existing?.marker.qr_reference || '';
         if (existing && !savedCode) {
             try { savedCode = visibleQrCode((await loadMarkerAnchor(projectId, context.site.id, areaId, existing.marker.id)).qr_code); }
@@ -709,9 +709,11 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const totemName = existing?.marker.name || `${context.area.name} Totem`;
         const totemColor = /^#[0-9a-f]{6}$/i.test(existing?.marker.appearance?.color || '') ? existing.marker.appearance.color : DEFAULT_TOTEM_COLOR;
         const totemHeight = normalizeTotemHeightPreset(existing?.marker);
+        const totemStyle = normalizeTotemStyle(existing?.marker);
         const totemHeightDetails = totemHeightPreset(totemHeight);
         const totemToneOptions = TOTEM_TONES.map(tone => `<option value="${tone.color}" ${tone.color.toLowerCase() === totemColor.toLowerCase() ? 'selected' : ''}>${tone.label}</option>`).join('');
         const totemHeightButtons = TOTEM_HEIGHT_PRESETS.map(preset => `<button type="button" data-totem-height="${preset.id}" aria-pressed="${preset.id === totemHeight}"><strong>${preset.label}</strong><small>${preset.metres.toFixed(2)} m</small></button>`).join('');
+        const totemStyleButtons = TOTEM_STYLES.map(style => `<button type="button" data-totem-style="${style.id}" aria-pressed="${style.id === totemStyle}"><span class="totem-style-preview totem-style-preview-${style.id}" aria-hidden="true"></span><strong>${style.label}</strong><small>${style.description}</small></button>`).join('');
         const board = existing?.marker.area_information_board || {};
         const linkableAreas = context.places.filter(place => !isDefaultHomeArea(place) && place.id !== context.area.id);
         const existingLinks = Array.isArray(context.area.totem_links) ? context.area.totem_links : [];
@@ -775,12 +777,12 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         </details>` : '';
         app.innerHTML = `<div class="screen area-checkpoint-form totem-profile-page database-record-page"><div class="web-context-beacon is-area"><span>WORKING IN AREA</span><strong>${escapeHtml(context.area.name)}</strong></div><div class="page-header"><p class="welcome-label">TOTEM · WEB MODE</p><div class="totem-title-row"><h1>${escapeHtml(totemName)}</h1><button type="button" data-edit-totem-name aria-label="Edit Totem name">✎</button></div>${projectBreadcrumbMarkup(context.project, context.area, totemName)}</div><form id="totemFileForm" class="totem-file-form" onsubmit="window.saveAreaCheckpoint(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
             <section class="totem-profile-hero">
-                <div class="totem-profile-visual" style="--totem-color:${totemColor};--totem-preview-height:${totemHeightDetails.previewPixels}px" aria-hidden="true"><span></span></div>
+                <div class="totem-profile-visual is-style-${totemStyle}" style="--totem-color:${totemColor};--totem-preview-height:${totemHeightDetails.previewPixels}px" aria-hidden="true"><span></span></div>
                 <div class="totem-essential-controls">
                     <div class="field totem-name-editor" hidden><label for="areaCheckpointName">Totem name</label><input id="areaCheckpointName" value="${escapeHtml(totemName)}" required /></div>
                     <div class="field totem-color-control"><label for="areaCheckpointTone">Totem colour</label><select id="areaCheckpointTone" aria-label="Totem colour palette">${totemToneOptions}<option value="custom">Custom colour…</option></select><span class="totem-custom-color" hidden><small>Custom</small><input id="areaCheckpointColor" type="color" value="${totemColor}" /></span></div>
+                    <div class="field totem-style-control"><span>Totem style</span><div class="totem-style-presets" role="group" aria-label="Totem style">${totemStyleButtons}</div><input id="areaCheckpointStyle" type="hidden" value="${totemStyle}" /></div>
                     <div class="field totem-height-control"><span>Height preset</span><div class="totem-height-presets" role="group" aria-label="Totem height">${totemHeightButtons}</div><input id="areaCheckpointHeight" type="hidden" value="${totemHeight}" /></div>
-                    <button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="${isPlaced ? 'Open Totem in AR' : 'Place Totem in AR'}" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? existing?.marker.id || '' : '')}', '${existing ? '' : 'area_checkpoint'}', '${encoded(existing && !isPlaced ? existing.marker.id : '')}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">AR</button>
                 </div>
             </section>
             <section class="totem-welcome-card"><label for="areaCheckpointIntroduction"><span aria-hidden="true">✦</span> Main welcome text</label><p>The main information bubble is usually the first thing visitors need.</p><textarea id="areaCheckpointIntroduction" rows="3" placeholder="Welcome people into this Area.">${escapeHtml(board.introduction || '')}</textarea></section>
@@ -812,6 +814,15 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         colorInput?.addEventListener('input', event => {
             app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-color', event.currentTarget.value);
         });
+        app.querySelectorAll('[data-totem-style]').forEach(button => button.addEventListener('click', () => {
+            const styleInput = app.querySelector('#areaCheckpointStyle');
+            const style = normalizeTotemStyle(button.dataset.totemStyle);
+            if (!styleInput) return;
+            styleInput.value = style;
+            app.querySelectorAll('[data-totem-style]').forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
+            app.querySelector('.totem-profile-visual')?.classList.remove(...TOTEM_STYLES.map(candidate => `is-style-${candidate.id}`));
+            app.querySelector('.totem-profile-visual')?.classList.add(`is-style-${style}`);
+        }));
         app.querySelectorAll('[data-totem-height]').forEach(button => button.addEventListener('click', () => {
             const heightInput = app.querySelector('#areaCheckpointHeight');
             if (!heightInput) return;
@@ -961,6 +972,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const nextFlow = flow || checkpointSetupFlows.get(flowKey) || '';
         const name = document.getElementById('areaCheckpointName')?.value.trim() || `${context.area.name} Totem`;
         const color = document.getElementById('areaCheckpointColor')?.value || DEFAULT_TOTEM_COLOR;
+        const totemStyle = normalizeTotemStyle(document.getElementById('areaCheckpointStyle')?.value);
         const heightPreset = normalizeTotemHeightPreset(document.getElementById('areaCheckpointHeight')?.value);
         const qrCode = document.getElementById('areaCheckpointCode')?.value.trim() || '';
         const introduction = document.getElementById('areaCheckpointIntroduction')?.value.trim() || '';
@@ -985,7 +997,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 information_bubbles: informationBubbles
             },
             visibility: existing?.marker.visibility || 'draft',
-            appearance: { ...(existing?.marker.appearance || {}), color, heightPreset },
+            appearance: { ...(existing?.marker.appearance || {}), color, totemStyle, heightPreset },
             physicalAnchor: physicalAnchorControlPresent ? physicalAnchor : existing?.marker.physicalAnchor,
             reassignPhysicalMarker
         };
@@ -1687,19 +1699,16 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             const profileArAction = markerType === 'plant' && isPlantProfileUpgraded(marker, plantProfile)
                 ? `<button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="Open ${escapeHtml(marker.name)} in AR" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', '', '${encoded(marker.id)}', 'web-marker:${encoded(marker.id)}', '${encoded(context.site.id)}')">AR</button>`
                 : '';
-            const totemArAction = markerType === 'area_checkpoint'
-                ? `<button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="${isPlaced ? 'Open Totem in AR' : 'Place Totem in AR'}" onclick="event.stopPropagation();window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(isPlaced ? marker.id : '')}', '', '${encoded(isPlaced ? '' : marker.id)}', 'web-totem:${encoded(context.area.id)}', '${encoded(context.site.id)}')">AR</button>`
-                : '';
             return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}" role="button" tabindex="0" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
                 <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
                 <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · ${editedLabel(marker.modified || marker.created)}</span><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel}</span></span>
                 <span class="entry-status entry-status-${status.tone}">${status.label}</span>
-                <span class="area-entry-actions">${totemArAction}${profileArAction}</span>
+                <span class="area-entry-actions">${profileArAction}</span>
             </article>`;
         }).join('');
         const totemRow = checkpoint
-            ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(checkpoint.marker.name)}</strong><span>Totem Marker · ${checkpoint.isPlaced ? 'Placed' : 'Not yet placed'}</span></span><span class="area-entry-actions"><button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="${checkpoint.isPlaced ? 'Open Totem in AR' : 'Place Totem in AR'}" onclick="event.stopPropagation();window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint.isPlaced ? checkpoint.marker.id : '')}', 'area_checkpoint')">AR</button></span></article>`
-            : `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem Marker</strong><span>Totem Marker · Not yet placed</span></span><span class="area-entry-actions"><button class="global-ar-action spatial-focus-button compact-ar-action ar-square-action" type="button" aria-label="Place Totem in AR" onclick="event.stopPropagation();window.openProjectAreaAr('${encoded(context.project.id)}', '${encoded(context.area.id)}', '', 'area_checkpoint')">AR</button></span></article>`;
+            ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(checkpoint.marker.name)}</strong><span>Totem · ${checkpoint.isPlaced ? 'Anchored' : 'Not yet anchored'}</span></span></article>`
+            : `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Totem · Not yet anchored</span></span></article>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1711,6 +1720,15 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ? '<section class="tutorial-step-confirmation" role="status"><span aria-hidden="true">✓</span><div><strong>Add 1 Area complete</strong><p>Your Area is saved. Add a Totem now, or return whenever you are ready.</p></div></section>'
             : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
+        const areaDescription = String(context.area.description || '').trim();
+        const areaAboutInfo = isDefaultHomeArea(context.area)
+            ? '<span class="area-overview-actions"><button type="button" class="plant-profile-info-bubble" data-area-about-info aria-expanded="false" aria-label="About the default Home area">i</button><button type="button" data-edit-area-description>Edit</button></span>'
+            : '<button type="button" data-edit-area-description>Edit</button>';
+        const totemBoard = checkpoint?.marker?.area_information_board || {};
+        const totemTextBalloonCount = [totemBoard.introduction, ...(Array.isArray(totemBoard.information_bubbles) ? totemBoard.information_bubbles : [])]
+            .filter(text => String(text || '').trim()).length;
+        const totemColor = /^#[0-9a-f]{6}$/i.test(checkpoint?.marker?.appearance?.color || '') ? checkpoint.marker.appearance.color : DEFAULT_TOTEM_COLOR;
+        const linkedTotemCount = Array.isArray(context.area.totem_links) ? context.area.totem_links.length : 0;
         const areaDangerZone = isDefaultHomeArea(context.area)
             ? ''
             : `<section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
@@ -1737,7 +1755,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 </div>
                 <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
                     <p data-area-type-form-reading hidden>${escapeHtml(context.area.type || 'Other')}</p><label for="areaType" hidden>Area type</label><select id="areaType" hidden><option value="Outdoor Area" ${context.area.type === 'Outdoor Area' ? 'selected' : ''}>Outdoor Area</option><option value="Indoor Area" ${context.area.type === 'Indoor Area' ? 'selected' : ''}>Indoor Area</option><option value="Bed or Plot" ${context.area.type === 'Bed or Plot' ? 'selected' : ''}>Bed or Plot</option><option value="Room" ${context.area.type === 'Room' ? 'selected' : ''}>Room</option><option value="Enclosure" ${context.area.type === 'Enclosure' ? 'selected' : ''}>Enclosure</option><option value="Path or Route" ${context.area.type === 'Path or Route' ? 'selected' : ''}>Path or Route</option><option value="Other" ${!context.area.type || context.area.type === 'Other' ? 'selected' : ''}>Other</option></select>
-                    <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong><button type="button" data-edit-area-description>Edit</button></div><p data-area-description-reading>${escapeHtml(context.area.description || 'No description has been added yet.')}</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(context.area.description || '')}</textarea></div>
+                    <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong>${areaAboutInfo}</div>${areaDescription ? `<p data-area-description-reading>${escapeHtml(areaDescription)}</p>` : ''}<p class="area-about-help" data-area-about-help hidden>DEFAULT HOME FOR CONTENT — Home holds items that are not yet assigned to a named Area.</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(areaDescription)}</textarea></div>
                     <p data-area-icon-form-reading hidden>${areaIcon(context.area)} ${AREA_ICON_OPTIONS.find(option => option.value === areaIcon(context.area))?.label || 'Leaves'}</p><label for="areaIcon" hidden>Area icon</label><select id="areaIcon" hidden>${AREA_ICON_OPTIONS.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === areaIcon(context.area) ? 'selected' : ''}>${option.value} ${escapeHtml(option.label)}</option>`).join('')}</select>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit" data-save-area-description hidden>Save Area information</button>
@@ -1746,8 +1764,9 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </section>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             <section class="area-totem-section" aria-labelledby="areaTotemTitle">
-                <div class="section-heading-row"><div><h2 id="areaTotemTitle">Totem Marker</h2><p>Vital Area anchor and information centre.</p></div></div>
-                <div class="area-content-grid">${totemRow}</div>
+                <div class="section-heading-row"><div><p class="welcome-label">AREA ANCHOR</p><h2 id="areaTotemTitle">Totem</h2><p>One Totem gives this Area its identity.</p></div></div>
+                <div class="area-totem-card">${totemRow}</div>
+                <div class="totem-stat-grid" aria-label="Totem status"><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">▤</span><small>TEXT BALLOONS</small><strong>${totemTextBalloonCount}</strong></div><div class="totem-stat"><span class="totem-stat-icon totem-stat-color" style="--totem-stat-color:${totemColor}" aria-hidden="true">●</span><small>COLOR</small><strong>${escapeHtml(totemColor)}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">↗</span><small>LINKED</small><strong>${linkedTotemCount ? 'YES' : 'NO'}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">⌖</span><small>ANCHORED</small><strong>${checkpoint?.isPlaced ? 'YES' : 'NO'}</strong></div></div>
             </section>
             ${advancedAreaActions}
             <details class="latest-entries-section area-content-section">
@@ -1764,6 +1783,12 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('label[for="areaDescription"]')?.removeAttribute('hidden');
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             textarea?.focus();
+        });
+        app.querySelector('[data-area-about-info]')?.addEventListener('click', event => {
+            const help = app.querySelector('[data-area-about-help]');
+            const expanded = Boolean(help?.hidden);
+            if (help) help.hidden = !expanded;
+            event.currentTarget.setAttribute('aria-expanded', String(expanded));
         });
         app.querySelector('[data-edit-area-type]')?.addEventListener('click', () => {
             app.querySelector('[data-area-type-reading]')?.setAttribute('hidden', '');

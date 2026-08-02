@@ -16,7 +16,7 @@ import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/mar
 import { alignAreaToCheckpoint } from '../services/areaSpatialAlignment.js';
 import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
-import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
+import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
@@ -26,7 +26,7 @@ import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOI
 import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
-import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
+import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
 let sessionMode = 'immersive-ar';
@@ -2130,6 +2130,36 @@ function drawSpatialMarkers(view) {
         if (shape === 1) {
             const [halfWidth, halfHeight] = markerDimensions(record.marker);
             const groundPosition = groundedTotemPosition(record.position);
+            const totemStyle = normalizeTotemStyle(record.marker);
+            const totemColor = markerRgb(record.marker, colors.area_checkpoint);
+            if (totemStyle === 'organic') {
+                const radius = Math.max(.12, Math.min(.36, halfHeight * .56));
+                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + radius }, radius, {
+                    color: totemColor,
+                    alpha: .94,
+                    emissive: .14
+                });
+                return;
+            }
+            if (totemStyle === 'light-post') {
+                const poleHalfHeight = Math.max(.24, halfHeight * .72);
+                const poleHalfWidth = Math.max(.025, halfWidth * .32);
+                drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
+                    halfWidth: poleHalfWidth,
+                    halfHeight: poleHalfHeight,
+                    halfDepth: poleHalfWidth,
+                    color: [.17, .36, .3],
+                    topColor: [.56, .78, .64],
+                    rotationY: (Number(record.rotationDegrees) || 0) * Math.PI / 180
+                });
+                const domeRadius = Math.max(.07, halfWidth * .86);
+                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + poleHalfHeight * 2 + domeRadius * .72 }, domeRadius, {
+                    color: totemColor,
+                    alpha: .96,
+                    emissive: .28
+                });
+                return;
+            }
             const baseHalfHeight = .04 * markerSizeFactor(record.marker);
             drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
                 halfWidth: halfWidth * 1.62,

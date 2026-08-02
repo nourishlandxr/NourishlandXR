@@ -394,7 +394,13 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
     assert.doesNotMatch(styles, /BONUS PATH/);
     assert.match(areaDashboardSource, /is-totem-entry/);
-    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)[^>]*>AR/);
+    assert.doesNotMatch(areaDashboardSource, /window\.openProjectAreaAr\([\s\S]*area_checkpoint[\s\S]*>AR/);
+    assert.match(areaDashboardSource, /totem-stat-grid/);
+    assert.match(areaDashboardSource, /TEXT BALLOONS/);
+    assert.match(areaDashboardSource, /LINKED/);
+    assert.match(areaDashboardSource, /ANCHORED/);
+    assert.match(areaDashboardSource, /DEFAULT HOME FOR CONTENT/);
+    assert.match(areaDashboardSource, /data-area-about-info/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
 });

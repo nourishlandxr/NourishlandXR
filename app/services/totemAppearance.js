@@ -1,5 +1,11 @@
 export const DEFAULT_TOTEM_COLOR = '#68765d';
 
+export const TOTEM_STYLES = Object.freeze([
+    Object.freeze({ id: 'basic', label: 'Basic', description: 'Bright geometric colors' }),
+    Object.freeze({ id: 'organic', label: 'Organic', description: 'Round plain-colored form' }),
+    Object.freeze({ id: 'light-post', label: 'Light post', description: 'Post with a round dome' })
+]);
+
 export const TOTEM_TONES = Object.freeze([
     Object.freeze({ id: 'moss', label: 'Moss', color: '#68765d' }),
     Object.freeze({ id: 'fern', label: 'Fern', color: '#526c55' }),
@@ -29,4 +35,16 @@ export function totemHeightPreset(value) {
 
 export function totemHeightScale(value) {
     return totemHeightPreset(value).halfHeightMetres / TOTEM_HEIGHT_PRESETS[1].halfHeightMetres;
+}
+
+export function normalizeTotemStyle(value) {
+    const candidate = typeof value === 'string'
+        ? value
+        : value?.appearance?.totemStyle || value?.appearance?.style;
+    return TOTEM_STYLES.some(style => style.id === candidate) ? candidate : 'basic';
+}
+
+export function totemStylePreset(value) {
+    const id = normalizeTotemStyle(value);
+    return TOTEM_STYLES.find(style => style.id === id);
 }
