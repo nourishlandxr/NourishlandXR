@@ -274,6 +274,20 @@ function groundedTotemPosition(position) {
     };
 }
 
+function isGardenStakePlacement(type = readyPlacementType) {
+    return type === 'plant' && markerAppearanceShape(placementPreviewMarker('plant')) === 'plate';
+}
+
+function gardenStakePlacementPoint(rayTarget) {
+    const hitTarget = spatialPosition(latestHitMatrix, latestViewerMatrix);
+    if (hitTarget) return hitTarget;
+    return {
+        x: Number(rayTarget?.x) || 0,
+        y: currentGroundY(),
+        z: Number(rayTarget?.z) || 0
+    };
+}
+
 function appearancePayload(appearance = {}) {
     return {
         color: appearance.color,
@@ -716,11 +730,12 @@ function placementPoint(type = readyPlacementType) {
         z: -latestViewerMatrix[10]
     };
     const origin = pointerWorldOrigin() || { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] };
-    return {
+    const target = {
         x: origin.x + ray.x * distance,
         y: origin.y + ray.y * distance,
         z: origin.z + ray.z * distance
     };
+    return isGardenStakePlacement(type) ? gardenStakePlacementPoint(target) : target;
 }
 
 function roundCoordinate(value) {
