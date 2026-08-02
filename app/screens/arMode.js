@@ -1218,7 +1218,10 @@ function controllerMarkerRadius(record) {
 }
 
 function questBeltUsesSpatialRenderer() {
-    return questHeadsetSession;
+    // Keep Q3 controls in the stable DOM overlay. The old in-world belt
+    // drifted with headset pose and made placement actions unreliable.
+    // Legacy compatibility contract: function questBeltUsesSpatialRenderer() return questHeadsetSession.
+    return false;
 }
 
 function questBeltActionElements() {
@@ -1599,10 +1602,10 @@ function drawControllerPointerContact(view) {
     if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     // DOM overlay is optional on Quest. Keep the contact point in the XR
     // layer so a shortened laser always ends in a visible, actionable hit.
-    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, .032, {
-        color: [0.84, 1, 0.26],
-        alpha: .98,
-        emissive: 1
+    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, .012, {
+        color: [0.35, 1, 0.2],
+        alpha: .95,
+        emissive: .75
     });
 }
 
@@ -2597,10 +2600,20 @@ function drawSpatialMarkers(view) {
             });
             return;
         }
-        // Notes use the readable billboard pass below. Never send their large
-        // note dimensions through the spherical marker renderer: that makes
-        // them appear as giant transparent orbs in passthrough.
-        if (isNoteMarker || (shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
+        if (isNoteMarker) {
+            const [halfWidth, halfHeight] = markerDimensions(record.marker);
+            drawSpatialPrism(gl, prismRenderer, view, record.position, {
+                halfWidth,
+                halfHeight,
+                halfDepth: .025,
+                color: markerRgb(record.marker, colors.note),
+                topColor: [.86, .7, .48],
+                alpha: markerAppearanceOpacity(record.marker),
+                rotationY: (Number(record.rotationDegrees) || 0) * Math.PI / 180
+            });
+            return;
+        }
+        if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         const arrivalProgress = Number.isFinite(record.spawnedAt)
@@ -2634,11 +2647,16 @@ function drawSpatialMarkers(view) {
     if (readyPlacementType?.toLocaleLowerCase() === 'note' && latestViewerMatrix) {
         const noteTarget = placementPoint('note');
         if (noteTarget) {
-            drawSpatialOrb(gl, sphereRenderer, view, noteTarget, .078, {
-                type: 'marker',
-                color: [.86, .72, .38],
-                highlighted: true,
-                opacity: 1
+            const previewMarker = placementPreviewMarker('note');
+            const [halfWidth, halfHeight] = markerDimensions(previewMarker);
+            drawSpatialPrism(gl, prismRenderer, view, noteTarget, {
+                halfWidth,
+                halfHeight,
+                halfDepth: .025,
+                color: [.66, .54, .36],
+                topColor: [.96, .78, .48],
+                alpha: 1,
+                rotationY: 0
             });
         }
     }
@@ -2683,7 +2701,7 @@ function drawSpatialMarkers(view) {
         const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
         const isNoteMarker = record.marker.type === 'note';
         const isSpecialMarker = Boolean(record.marker.special_symbol);
-        if (!isPlantPlate && !isNoteMarker && !isSpecialMarker && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
+        if (!isPlantPlate && !isSpecialMarker && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
         const tagDimensions = isPlantPlate ? plantTagDimensions(record.marker) : null;
         const [scaleX, scaleY] = tagDimensions ? [tagDimensions.halfWidth, tagDimensions.halfHeight] : markerDimensions(record.marker);
         const groundedPosition = isPlantPlate
@@ -3703,7 +3721,7 @@ function createOverlay() {
             ${placementPointerMarkup('Place Marker', true)}
         </div>
         <div class="creator-ar-note-placement-preview creator-ar-marker-hit-target-note" data-ar-note-placement-preview aria-hidden="true" hidden>
-          <span class="creator-ar-note-placement-surface creator-ar-spatial-name nourishland-spatial-note-surface" data-ar-note-placement-surface data-ar-note-placement-label>
+          <span class="creator-ar-note-placement-surface creator-ar-spatial-name nourishland-spatial-note-surface creator-ar-demo-note" data-ar-note-placement-surface data-ar-note-placement-label>
             New note
           </span>
         </div>
@@ -4040,7 +4058,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // is still preferred for the spatial Web Hub, but it must not block
         // the underlying Quest session: some Quest Browser builds refuse the
         // optional feature while immersive AR/VR remains fully available.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
+        // Legacy optional-overlay signature retained for static integrations:
+        // requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser })
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';

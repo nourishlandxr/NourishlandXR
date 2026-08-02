@@ -4,10 +4,10 @@
 export const XR_LASER_POINTER_CONFIG = Object.freeze({
     startOffset: 0.04,
     length: 5,
-    width: 0.014,
+    width: 0.0045,
     segments: 8,
-    color: Object.freeze([0.82, 1, 0.26]),
-    alpha: 0.96
+    color: Object.freeze([0.35, 1, 0.2]),
+    alpha: 0.9
 });
 
 export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
