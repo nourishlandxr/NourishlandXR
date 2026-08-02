@@ -1218,10 +1218,11 @@ function controllerMarkerRadius(record) {
 }
 
 function questBeltUsesSpatialRenderer() {
-    // Keep Q3 controls in the stable DOM overlay. The old in-world belt
-    // drifted with headset pose and made placement actions unreliable.
+    // Use the stable DOM controls when Quest provides DOM overlay. If a
+    // browser build omits that feature, keep the headset usable with the
+    // controller belt instead of failing the entire AR launch.
     // Legacy compatibility contract: function questBeltUsesSpatialRenderer() return questHeadsetSession.
-    return false;
+    return questHeadsetSession && document.body.dataset.arDomOverlay !== 'true';
 }
 
 function questBeltActionElements() {
@@ -4042,7 +4043,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // optional feature while immersive AR/VR remains fully available.
         // Legacy optional-overlay signature retained for static integrations:
         // requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser })
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
+        // DOM overlay is preferred for the floating dashboard, but it is not
+        // supported by every Quest Browser build. Never make AR startup
+        // depend on that optional feature.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
