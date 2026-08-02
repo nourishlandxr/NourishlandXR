@@ -24,7 +24,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, questSpatialBe
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { renderProjectDashboard, renderProjectAreaDashboard, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
+import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
@@ -1053,6 +1053,7 @@ function openSpatialWebWindow() {
     };
     window.__nourishlandSpatialWindow = {
         renderProjectDashboard: projectId => renderIntoWindow(renderProjectDashboard, projectId),
+        renderProjectHome: projectId => renderIntoWindow(renderProjectHome, projectId),
         renderFieldGuide: (projectId, creator) => renderIntoWindow(renderFieldGuide, projectId, creator),
         renderProjectAreaDashboard: (projectId, areaId, options) => renderIntoWindow(renderProjectAreaDashboard, projectId, areaId, options),
         openProjectEntry: (projectId, markerId, returnToAr, returnContext) => renderIntoWindow(openProjectEntry, projectId, markerId, returnToAr, returnContext)
