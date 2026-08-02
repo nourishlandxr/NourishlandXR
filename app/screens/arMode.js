@@ -957,6 +957,13 @@ function closeSpatialWebWindow() {
 }
 
 function openSpatialWebWindow() {
+    // The floating spatial workspace is a Quest 3 affordance. Phone AR must
+    // leave immersive mode and use the normal Web workspace instead of
+    // inheriting the Quest menu/window treatment.
+    if (sessionMode !== 'immersive-vr') {
+        exitArMode();
+        return;
+    }
     if (!overlayRoot || spatialWebWindow) return;
     const content = document.createElement('div');
     content.className = 'creator-ar-spatial-web-content';
@@ -970,6 +977,7 @@ function openSpatialWebWindow() {
     spatialWebWindow = document.createElement('section');
     spatialWebWindow.className = 'creator-ar-spatial-web-window';
     spatialWebWindow.dataset.arSpatialWebWindow = '';
+    spatialWebWindow.dataset.arSpatialWebMode = 'quest';
     spatialWebWindow.setAttribute('aria-label', 'Spatial Web workspace');
     spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>SPATIAL WEB</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Close spatial Web window">×</button></header><nav class="creator-ar-spatial-web-nav" aria-label="Spatial Web destinations"><button type="button" data-spatial-web-route="dashboard">Dashboard</button><button type="button" data-spatial-web-route="webhub">Web Hub</button><button type="button" data-spatial-web-route="area">Area Dashboard</button><button type="button" data-spatial-web-route="plant">Plant Dashboard</button></nav>`;
     spatialWebWindow.append(content);
