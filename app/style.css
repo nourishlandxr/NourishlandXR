@@ -1087,6 +1087,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-plant-profile .plant-knowledge-core :is(i,em) { max-width:84%; color:rgba(236,250,228,.82); font-size:clamp(.44rem,1.25vw,.55rem); }
 .creator-ar-plant-profile .plant-knowledge-cell b { max-width:76%; font-size:clamp(.52rem,1.5vw,.62rem); line-height:1.04; overflow-wrap:anywhere; }
 .creator-ar-plant-profile .plant-knowledge-cell small { max-width:82%; font-size:clamp(.5rem,1.45vw,.6rem); line-height:1.1; overflow-wrap:anywhere; }
+.creator-ar-plant-profile .plant-knowledge-cell b { display:block; max-width:78%; overflow-wrap:anywhere; text-wrap:balance; }
+.creator-ar-plant-profile .plant-knowledge-cell small { display:-webkit-box; max-height:0; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-wrap:pretty; }
+.creator-ar-plant-profile .plant-knowledge-cell.is-open { min-width:clamp(78px,19vw,104px); min-height:clamp(66px,16.5vw,88px); }
 .creator-ar-plant-profile .plant-knowledge-cell:is(:focus-visible,.is-open) { background:transparent !important; filter:drop-shadow(0 0 8px color-mix(in srgb,var(--profile-accent,#b7e895) 62%,transparent)); }
 .creator-ar-plant-profile .plant-knowledge-cell:is(:focus-visible,.is-open)::after { background:color-mix(in srgb,var(--profile-accent,#b7e895) 22%,rgba(7,28,18,.56)); }
 @keyframes creator-ar-profile-arrive { from { opacity: 0; transform: translate(-50%, -46%) scale(.93); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }

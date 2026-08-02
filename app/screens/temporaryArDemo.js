@@ -1881,15 +1881,24 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = '') {
         ctx.strokeStyle = 'rgba(0,0,0,.94)';
         ctx.lineWidth = 4;
         ctx.lineJoin = 'round';
-        ctx.font = '850 20px system-ui, sans-serif';
-        ctx.strokeText(cell.item[0], cell.x, cell.y + (open ? -10 : 7));
-        ctx.fillText(cell.item[0], cell.x, cell.y + (open ? -10 : 7));
+        ctx.font = '850 18px system-ui, sans-serif';
+        const titleLines = wrappedTextureLines(ctx, cell.item[0], 138).slice(0, 2);
+        const titleStart = cell.y + (open ? -26 : 7) - (titleLines.length - 1) * 10;
+        if (titleLines.length === 1) {
+            ctx.strokeText(cell.item[0], cell.x, titleStart);
+            ctx.fillText(cell.item[0], cell.x, titleStart);
+        } else {
+            titleLines.forEach((line, lineIndex) => {
+                ctx.strokeText(line, cell.x, titleStart + lineIndex * 21);
+                ctx.fillText(line, cell.x, titleStart + lineIndex * 21);
+            });
+        }
         if (open) {
             ctx.fillStyle = '#fff';
             ctx.font = '700 18px system-ui, sans-serif';
             ctx.shadowColor = 'rgba(0,0,0,.98)';
             ctx.shadowBlur = 6;
-            drawWrappedTextureText(ctx, cell.item[1], cell.x, cell.y + 17, 150, 22, 3);
+            drawWrappedTextureText(ctx, cell.item[1], cell.x, titleStart + titleLines.length * 21 + 4, 142, 21, 3);
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
         }
@@ -2096,7 +2105,7 @@ function drawMarker(view) {
         const model = billboardMatrix(
             displayPosition,
             plantProfile ? 1.55 : totem ? 1.9 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
-            plantProfile ? 1.02 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
+            plantProfile ? 2.5 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
         );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
