@@ -364,6 +364,26 @@ function activeAreaMarkers() {
     return sessionMarkers.filter(record => record.areaId === activeAreaId);
 }
 
+function hasRenderableSpatialPosition(record) {
+    return record?.unplaced !== true
+        && record?.position
+        && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(record.position[axis])));
+}
+
+function renderableAreaMarkers() {
+    return activeAreaMarkers().filter(hasRenderableSpatialPosition);
+}
+
+function setMarkerAncillaryVisibility(record, hidden) {
+    if (!overlayRoot || !record?.marker?.id) return;
+    const selector = CSS.escape(record.marker.id);
+    [
+        overlayRoot.querySelector(`[data-ar-plant-profile="${selector}"]`),
+        overlayRoot.querySelector(`[data-ar-plant-tether="${selector}"]`),
+        overlayRoot.querySelector(`[data-ar-totem-information="${selector}"]`)
+    ].filter(Boolean).forEach(element => { element.hidden = hidden; });
+}
+
 function activateArea(area) {
     const nextAreaId = area?.id || '';
     if (activeAreaId !== nextAreaId) {
@@ -1312,7 +1332,7 @@ function controllerBeltActionAtAim() {
 }
 
 function controllerLaserSubjects() {
-    const subjects = activeAreaMarkers()
+    const subjects = renderableAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
         .map(record => ({ position: record.position, radius: controllerMarkerRadius(record) }));
     if (readyPlacementType) {
@@ -1329,7 +1349,7 @@ function controllerMarkerAtAim() {
     const ray = pointerWorldRay();
     const origin = pointerWorldOrigin();
     if (!ray || !origin) return null;
-    const record = activeAreaMarkers()
+    const record = renderableAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
         .map(record => {
             const offset = {
@@ -2300,10 +2320,16 @@ function ensureQuestSpatialWebTextures() {
 }
 
 function drawQuestSpatialBelt(view) {
-    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) {
+        document.body.classList.remove('creator-ar-spatial-belt-ready');
+        return;
+    }
     const layout = currentQuestBeltLayout();
     const textures = layout.length === QUEST_SPATIAL_BELT_ACTIONS.length && ensureQuestBeltTextures();
-    if (!textures?.length || textures.some(texture => !texture)) return;
+    if (!textures?.length || textures.some(texture => !texture)) {
+        document.body.classList.remove('creator-ar-spatial-belt-ready');
+        return;
+    }
     document.body.classList.add('creator-ar-spatial-belt-ready');
     document.body.classList.remove('creator-ar-quest-pending');
     gl.enable(gl.DEPTH_TEST);
@@ -2485,6 +2511,7 @@ function drawSpatialMarkers(view) {
     const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
 
     activeAreaMarkers().forEach(record => {
+        if (!hasRenderableSpatialPosition(record)) return;
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
         const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
@@ -2639,6 +2666,7 @@ function drawSpatialMarkers(view) {
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     activeAreaMarkers().forEach(record => {
+        if (!hasRenderableSpatialPosition(record)) return;
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
         const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
@@ -2690,13 +2718,13 @@ function positionSessionMarkers(view = latestView) {
     if (!inverse || !view.projectionMatrix) return;
     activeAreaMarkers().forEach(record => {
         const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
-        if (!element) return;
-        const totemInformation = record.marker.type === 'area_checkpoint'
-            ? overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`)
-            : null;
-        if (hiddenStructuralMarkerIds.has(record.marker.id)) {
+        if (!element) {
+            setMarkerAncillaryVisibility(record, true);
+            return;
+        }
+        if (!hasRenderableSpatialPosition(record) || hiddenStructuralMarkerIds.has(record.marker.id)) {
             element.hidden = true;
-            if (totemInformation) totemInformation.hidden = true;
+            setMarkerAncillaryVisibility(record, true);
             return;
         }
         const projectedPosition = record.marker.type === 'area_checkpoint'
@@ -2712,7 +2740,7 @@ function positionSessionMarkers(view = latestView) {
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
         if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
             element.hidden = true;
-            if (totemInformation) totemInformation.hidden = true;
+            setMarkerAncillaryVisibility(record, true);
             return;
         }
         const x = (clip[0] / clip[3] * 0.5 + 0.5) * window.innerWidth;
@@ -2725,7 +2753,7 @@ function positionSessionMarkers(view = latestView) {
             && y > -marginY
             && y < window.innerHeight + marginY;
         element.hidden = !visible;
-        if (totemInformation) totemInformation.hidden = !visible;
+        setMarkerAncillaryVisibility(record, !visible);
         if (visible) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
             element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
@@ -2788,7 +2816,9 @@ function renderSessionMarkers() {
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
     const visibleMarkers = activeAreaMarkers();
+    const renderableMarkers = visibleMarkers.filter(hasRenderableSpatialPosition);
     layer.innerHTML = visibleMarkers.map(record => {
+        if (!hasRenderableSpatialPosition(record)) return '';
         const profileAvailable = hasPlantProfile(record);
         const profileLabel = profileAvailable ? (record.profileExpanded ? ' Hide Plant Profile' : ' Open Plant Profile') : '';
         const informationSummary = record.marker.description
@@ -2806,7 +2836,7 @@ function renderSessionMarkers() {
         const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}${markerCaption}</span>`;
         return `${markerLayer}${profileLayer}`;
     }).join('');
-    visibleMarkers.forEach(record => {
+    renderableMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         element?.addEventListener('pointerdown', event => handleMarkerPointerDown(record, event));
         element?.addEventListener('pointermove', moveMarkerHoldGesture);
@@ -4070,6 +4100,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
             latestView = pose.views[0] || null;
+            // The DOM taskbar is the safe fallback until the world-locked
+            // WebGL belt has completed its first draw.
+            if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput();
             updateControllerRay(frame);
             const specialPaletteTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
