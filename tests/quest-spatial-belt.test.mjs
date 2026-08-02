@@ -21,7 +21,9 @@ test('Quest spatial belt stays in a shallow waist-level arc in front of the view
     const layout = questSpatialBeltLayout(viewer);
     assert.equal(layout.length, QUEST_SPATIAL_BELT_ACTIONS.length);
     assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.id), ['plant', 'note', 'special', 'web']);
+    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.label), ['PLANT', 'NOTE', 'TOTEM', 'HUB']);
     assert.equal(layout[1].id, 'note');
+    assert.equal(layout[1].faceUp, .72);
     assert.ok(Math.abs(layout[1].position.y - 1.02) < .002);
     assert.ok(layout[0].position.x < layout[1].position.x);
     assert.ok(layout[3].position.x > layout[1].position.x);

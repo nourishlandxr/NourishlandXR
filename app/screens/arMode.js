@@ -1273,11 +1273,12 @@ function currentQuestBeltLayout() {
     if (!questBeltLayout.length && latestViewerMatrix) {
         questBeltViewerMatrix = new Float32Array(latestViewerMatrix);
         questBeltLayout = questSpatialBeltLayout(latestViewerMatrix, {
-            distance: .78,
-            drop: .5,
-            spacing: .135,
-            curve: .035,
-            radius: .09
+            distance: .72,
+            drop: .54,
+            spacing: .158,
+            curve: .04,
+            faceUp: .72,
+            radius: .1
         });
     }
     return questBeltLayout;
@@ -1337,11 +1338,13 @@ function controllerSpatialDashboardAtAim() {
         : null;
     if (target) {
         const foregroundEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
-        const foregroundDistance = foregroundEnd ? Math.hypot(
+        const subjectDistance = foregroundEnd ? Math.hypot(
             foregroundEnd.x - latestControllerRay.origin.x,
             foregroundEnd.y - latestControllerRay.origin.y,
             foregroundEnd.z - latestControllerRay.origin.z
         ) : Infinity;
+        const beltDistance = controllerQuestBeltSurfaceHit()?.distance ?? Infinity;
+        const foregroundDistance = Math.min(subjectDistance, beltDistance);
         if (foregroundDistance + .01 < target.distance) target = null;
     }
     questSpatialDashboardHit = target;
@@ -1378,22 +1381,29 @@ function controllerLaserSubjects() {
         if (point) subjects.push({ position: point, radius: .38 });
     }
     currentQuestSpecialPaletteLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
-    currentQuestBeltLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     return subjects;
 }
 
 function controllerPointerEnd() {
     const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const beltHit = controllerQuestBeltSurfaceHit();
     const dashboardHit = questSpatialWebVisible && questSpatialDashboardPanel
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror || {})
         : null;
-    if (!dashboardHit || dashboardHit.distance > XR_LASER_POINTER_CONFIG.length) return spatialEnd;
-    const spatialDistance = spatialEnd ? Math.hypot(
-        spatialEnd.x - latestControllerRay.origin.x,
-        spatialEnd.y - latestControllerRay.origin.y,
-        spatialEnd.z - latestControllerRay.origin.z
-    ) : Infinity;
-    return dashboardHit.distance <= spatialDistance ? dashboardHit.position : spatialEnd;
+    const candidates = [
+        spatialEnd && {
+            position: spatialEnd,
+            distance: Math.hypot(
+                spatialEnd.x - latestControllerRay.origin.x,
+                spatialEnd.y - latestControllerRay.origin.y,
+                spatialEnd.z - latestControllerRay.origin.z
+            )
+        },
+        beltHit,
+        dashboardHit
+    ].filter(candidate => candidate && candidate.distance <= XR_LASER_POINTER_CONFIG.length)
+        .sort((left, right) => left.distance - right.distance);
+    return candidates[0]?.position || null;
 }
 
 function controllerMarkerAtAim() {
@@ -2159,12 +2169,71 @@ function questBeltPanelMatrix(button, scaleX = .078, scaleY = .068) {
         x: -right.x * sin + towardCamera.x * cos,
         z: -right.z * sin + towardCamera.z * cos
     };
+    const faceUp = Math.max(0, Math.min(.94, Number(button.faceUp) || 0));
+    if (faceUp > 0) {
+        const towardWeight = Math.sqrt(1 - faceUp * faceUp);
+        const normal = {
+            x: panelFront.x * towardWeight,
+            y: faceUp,
+            z: panelFront.z * towardWeight
+        };
+        // Cross(normal, right) gives the plane's texture-up direction. Its
+        // top edge rises and moves away from the user like the Quest Link tray.
+        const panelUp = {
+            x: normal.y * panelRight.z,
+            y: normal.z * panelRight.x - normal.x * panelRight.z,
+            z: -normal.y * panelRight.x
+        };
+        return new Float32Array([
+            panelRight.x * scaleX, 0, panelRight.z * scaleX, 0,
+            panelUp.x * scaleY, panelUp.y * scaleY, panelUp.z * scaleY, 0,
+            normal.x, normal.y, normal.z, 0,
+            button.position.x, button.position.y, button.position.z, 1
+        ]);
+    }
     return new Float32Array([
         panelRight.x * scaleX, 0, panelRight.z * scaleX, 0,
         0, scaleY, 0, 0,
         panelFront.x, 0, panelFront.z, 0,
         button.position.x, button.position.y, button.position.z, 1
     ]);
+}
+
+function controllerQuestBeltSurfaceHit() {
+    if (!latestControllerRay) return null;
+    return currentQuestBeltLayout().map(button => {
+        const matrix = questBeltPanelMatrix(button, .082, .058);
+        const rightLength = Math.hypot(matrix[0], matrix[1], matrix[2]) || 1;
+        const upLength = Math.hypot(matrix[4], matrix[5], matrix[6]) || 1;
+        const right = { x: matrix[0] / rightLength, y: matrix[1] / rightLength, z: matrix[2] / rightLength };
+        const up = { x: matrix[4] / upLength, y: matrix[5] / upLength, z: matrix[6] / upLength };
+        const normal = { x: matrix[8], y: matrix[9], z: matrix[10] };
+        const centerOffset = {
+            x: matrix[12] - latestControllerRay.origin.x,
+            y: matrix[13] - latestControllerRay.origin.y,
+            z: matrix[14] - latestControllerRay.origin.z
+        };
+        const denominator = latestControllerRay.direction.x * normal.x
+            + latestControllerRay.direction.y * normal.y
+            + latestControllerRay.direction.z * normal.z;
+        if (Math.abs(denominator) < .0001) return null;
+        const distance = (centerOffset.x * normal.x + centerOffset.y * normal.y + centerOffset.z * normal.z) / denominator;
+        if (distance <= 0) return null;
+        const position = {
+            x: latestControllerRay.origin.x + latestControllerRay.direction.x * distance,
+            y: latestControllerRay.origin.y + latestControllerRay.direction.y * distance,
+            z: latestControllerRay.origin.z + latestControllerRay.direction.z * distance
+        };
+        const local = {
+            x: position.x - matrix[12],
+            y: position.y - matrix[13],
+            z: position.z - matrix[14]
+        };
+        const horizontal = local.x * right.x + local.y * right.y + local.z * right.z;
+        const vertical = local.x * up.x + local.y * up.y + local.z * up.z;
+        if (Math.abs(horizontal) > rightLength || Math.abs(vertical) > upLength) return null;
+        return { button, position, distance };
+    }).filter(Boolean).sort((left, right) => left.distance - right.distance)[0] || null;
 }
 
 function createHomeSignTexture(title, word) {
@@ -2292,47 +2361,95 @@ function roundedCanvasRectangle(context, x, y, width, height, radius) {
     context.closePath();
 }
 
-function createQuestBeltPanelTexture(action, selected) {
+function connectedCanvasRectangle(context, x, y, width, height, index, total) {
+    const first = index === 0;
+    const last = index === total - 1;
+    const topLeft = first ? 20 : 2;
+    const bottomLeft = first ? 20 : 2;
+    const topRight = last ? 20 : 2;
+    const bottomRight = last ? 20 : 2;
+    context.beginPath();
+    context.moveTo(x + topLeft, y);
+    context.lineTo(x + width - topRight, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + topRight);
+    context.lineTo(x + width, y + height - bottomRight);
+    context.quadraticCurveTo(x + width, y + height, x + width - bottomRight, y + height);
+    context.lineTo(x + bottomLeft, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - bottomLeft);
+    context.lineTo(x, y + topLeft);
+    context.quadraticCurveTo(x, y, x + topLeft, y);
+    context.closePath();
+}
+
+function createQuestBeltPanelTexture(action, selected, options = {}) {
+    const joined = options.joined === true;
+    const index = Number(options.index) || 0;
+    const total = Number(options.total) || 1;
     const textureCanvas = document.createElement('canvas');
     textureCanvas.width = 256;
-    textureCanvas.height = 220;
+    textureCanvas.height = joined ? 184 : 220;
     const context = textureCanvas.getContext('2d');
     if (!context) return null;
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
-    context.save();
-    // Keep each tile flat and evenly aligned, like the Meta Link bar. The
-    // shallow offset below is the physical lower edge; the arc comes from
-    // world placement and panel yaw, never from crooked per-button transforms.
-    context.shadowColor = 'rgba(0, 0, 0, .58)';
-    context.shadowBlur = 12;
-    roundedCanvasRectangle(context, 14, 20, 228, 186, 12);
-    context.fillStyle = 'rgba(8, 13, 15, .98)';
-    context.fill();
-    context.shadowBlur = 0;
-    roundedCanvasRectangle(context, 12, 12, 228, 186, 12);
-    const frontGradient = context.createLinearGradient(12, 12, 12, 198);
-    frontGradient.addColorStop(0, selected ? action.color : 'rgba(68, 76, 78, .98)');
-    frontGradient.addColorStop(1, selected ? 'rgba(33, 55, 40, .98)' : 'rgba(31, 38, 40, .98)');
-    context.fillStyle = frontGradient;
-    context.fill();
-    context.lineWidth = selected ? 5 : 3;
-    context.strokeStyle = selected ? 'rgba(232, 249, 190, .96)' : 'rgba(232, 240, 236, .42)';
-    context.stroke();
-    context.beginPath();
-    context.moveTo(27, 23);
-    context.lineTo(225, 23);
-    context.strokeStyle = 'rgba(255, 255, 255, .16)';
-    context.lineWidth = 2;
-    context.stroke();
-    context.restore();
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-    context.font = '800 62px system-ui, sans-serif';
-    context.fillText(action.symbol, 128, 82);
-    context.font = '800 21px system-ui, sans-serif';
-    context.letterSpacing = '1.5px';
-    context.fillText(action.label, 128, 164);
+    if (joined) {
+        connectedCanvasRectangle(context, 0, 2, 256, 180, index, total);
+        const trayGradient = context.createLinearGradient(0, 2, 0, 182);
+        trayGradient.addColorStop(0, selected ? action.color : '#484d4d');
+        trayGradient.addColorStop(1, selected ? '#263c2f' : '#262b2c');
+        context.fillStyle = trayGradient;
+        context.fill();
+        context.lineWidth = selected ? 5 : 2;
+        context.strokeStyle = selected ? 'rgba(229, 255, 191, .96)' : 'rgba(255, 255, 255, .22)';
+        context.stroke();
+        if (index > 0) {
+            context.beginPath();
+            context.moveTo(1, 18);
+            context.lineTo(1, 166);
+            context.strokeStyle = 'rgba(255, 255, 255, .18)';
+            context.lineWidth = 3;
+            context.stroke();
+        }
+        context.beginPath();
+        context.moveTo(index === 0 ? 22 : 10, 13);
+        context.lineTo(index === total - 1 ? 234 : 246, 13);
+        context.strokeStyle = 'rgba(255, 255, 255, .13)';
+        context.lineWidth = 2;
+        context.stroke();
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = selected ? '#f1ffd0' : 'rgba(250, 252, 250, .92)';
+        context.font = '800 58px system-ui, sans-serif';
+        context.fillText(action.symbol, 128, 70);
+        context.font = '800 19px system-ui, sans-serif';
+        context.letterSpacing = '1.2px';
+        context.fillText(action.label, 128, 137);
+    } else {
+        context.save();
+        context.shadowColor = 'rgba(0, 0, 0, .58)';
+        context.shadowBlur = 12;
+        roundedCanvasRectangle(context, 14, 20, 228, 186, 12);
+        context.fillStyle = 'rgba(8, 13, 15, .98)';
+        context.fill();
+        context.shadowBlur = 0;
+        roundedCanvasRectangle(context, 12, 12, 228, 186, 12);
+        const frontGradient = context.createLinearGradient(12, 12, 12, 198);
+        frontGradient.addColorStop(0, selected ? action.color : 'rgba(68, 76, 78, .98)');
+        frontGradient.addColorStop(1, selected ? 'rgba(33, 55, 40, .98)' : 'rgba(31, 38, 40, .98)');
+        context.fillStyle = frontGradient;
+        context.fill();
+        context.lineWidth = selected ? 5 : 3;
+        context.strokeStyle = selected ? 'rgba(232, 249, 190, .96)' : 'rgba(232, 240, 236, .42)';
+        context.stroke();
+        context.restore();
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
+        context.font = '800 62px system-ui, sans-serif';
+        context.fillText(action.symbol, 128, 82);
+        context.font = '800 21px system-ui, sans-serif';
+        context.letterSpacing = '1.5px';
+        context.fillText(action.label, 128, 164);
+    }
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -2349,7 +2466,11 @@ function ensureQuestBeltTextures() {
     if (questBeltTextures.length === QUEST_SPATIAL_BELT_ACTIONS.length && questBeltTextureKey === key) return questBeltTextures;
     questBeltTextures.forEach(texture => texture && gl.deleteTexture(texture));
     const activeIndex = questBeltActiveIndex();
-    questBeltTextures = QUEST_SPATIAL_BELT_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === activeIndex));
+    questBeltTextures = QUEST_SPATIAL_BELT_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === activeIndex, {
+        joined: true,
+        index,
+        total: QUEST_SPATIAL_BELT_ACTIONS.length
+    }));
     questBeltTextureKey = key;
     return questBeltTextures;
 }
@@ -2390,7 +2511,7 @@ function drawQuestSpatialBelt(view) {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     layout.forEach((button, index) => {
-        const model = questBeltPanelMatrix(button);
+        const model = questBeltPanelMatrix(button, .082, .058);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
         gl.bindTexture(gl.TEXTURE_2D, textures[index]);

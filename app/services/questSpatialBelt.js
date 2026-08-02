@@ -1,9 +1,9 @@
 export const QUEST_SPATIAL_BELT_ACTIONS = Object.freeze([
     Object.freeze({ id: 'plant', label: 'PLANT', symbol: '+', color: '#527a4d' }),
-    Object.freeze({ id: 'note', label: 'NOTE', symbol: 'N', color: '#8a654d' }),
-    Object.freeze({ id: 'special', label: 'SPECIAL', symbol: '\u25C6', color: '#8c7544' }),
+    Object.freeze({ id: 'note', label: 'NOTE', symbol: '\u270E', color: '#8a654d' }),
+    Object.freeze({ id: 'special', label: 'TOTEM', symbol: '\u2316', color: '#8c7544' }),
     // WEB HUB opens one mirrored Project Dashboard surface in Q3.
-    Object.freeze({ id: 'web', label: 'WEB HUB', symbol: '\u21B5', color: '#3973a2' })
+    Object.freeze({ id: 'web', label: 'HUB', symbol: '\u25A6', color: '#3973a2' })
 ]);
 
 export const QUEST_SPECIAL_PALETTE_ACTIONS = Object.freeze([
@@ -37,7 +37,11 @@ export function questSpatialBeltLayout(viewerMatrix, options = {}) {
             // Each panel turns very slightly toward the centre of the belt.
             // Keeping this in the layout makes the same shallow 3D curve
             // available to rendering and laser-hit testing.
-            yaw: slot * .12,
+            yaw: slot * .09,
+            // Quest Link-style controls are a low tray: their front normal
+            // points mostly upward with enough tilt toward the headset to
+            // keep icons readable without turning them into upright cards.
+            faceUp: Number(options.faceUp) || .72,
             radius: Number(options.radius) || .105,
             position: {
                 x: camera.x + forward.x * (distance - edgeCurve) + right.x * slot * spacing,

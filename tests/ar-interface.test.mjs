@@ -750,6 +750,13 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     assert.match(arSource, /let questBeltLayout = \[\]/);
     assert.match(arSource, /questBeltViewerMatrix = new Float32Array\(latestViewerMatrix\)/);
     assert.match(arSource, /function questBeltPanelMatrix/);
+    assert.match(arSource, /const faceUp = Math\.max/);
+    assert.match(arSource, /Cross\(normal, right\)/);
+    assert.match(arSource, /function connectedCanvasRectangle/);
+    assert.match(arSource, /joined: true/);
+    assert.match(arSource, /questBeltPanelMatrix\(button, \.082, \.058\)/);
+    assert.match(arSource, /function controllerQuestBeltSurfaceHit\(\)/);
+    assert.match(arSource, /const beltHit = controllerQuestBeltSurfaceHit\(\)/);
     assert.match(arSource, /classList\.add\('creator-ar-spatial-belt-ready'\)/);
     assert.match(arSource, /classList\.remove\('creator-ar-spatial-belt-ready'\)/);
     assert.match(read('app/style.css'), /body\.creator-ar-quest-headset\.creator-ar-spatial-belt-ready \.creator-ar-quest-link-bar > \.creator-ar-taskbar[\s\S]*opacity: 0 !important/);
