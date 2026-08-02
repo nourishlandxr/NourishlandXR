@@ -356,18 +356,7 @@ function activateArea(area) {
 
 function hasPlantProfile(record) {
     const profile = record?.plantProfile || record?.marker?.plant_profile || {};
-    return record?.marker?.type === 'plant' && Boolean(
-        profile.profile_enabled === true
-        || profile.scientific_name
-        || profile.overview
-        || profile.family
-        || profile.origin
-        || profile.plant_type
-        || profile.layer
-        || profile.uses
-        || profile.propagation
-        || profile.relationships
-    );
+    return record?.marker?.type === 'plant' && (profile.spm_enabled === true || profile.profile_enabled === true);
 }
 
 function creatorPlantKnowledge(record) {
@@ -380,12 +369,12 @@ function creatorPlantKnowledge(record) {
         core: { scientific, layer },
         left: [
             ['USES', summary(profile.uses, profile.overview)],
-            ['RELATIONSHIPS', summary(profile.relationships, profile.companions)],
+            ['RELATIONSHIPS', summary(profile.relationships, profile.companions, profile.attribute_chain_count ? `${profile.attribute_chain_count} linked attributes` : '')],
             ['ORIGIN', summary(profile.origin, profile.propagation)]
         ],
         right: [
             ['BIOLOGY', summary(profile.family, profile.plant_type)],
-            ['CARE', summary(profile.care, profile.management, profile.pruning)],
+            ['CLIMATE', summary(profile.climate, profile.growing_conditions, profile.care)],
             ['GARDEN ROLE', summary(profile.role, profile.function, profile.companions)]
         ]
     };

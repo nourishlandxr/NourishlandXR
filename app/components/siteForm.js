@@ -22,20 +22,23 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
                 ${options}
             </select>
         </div>
-        ${project ? '' : `<label class="nonplant-template-choice">
-            <input type="checkbox" ${selectedTemplate === 'inventory_exhibition' ? 'checked' : ''} onchange="document.getElementById('projectTemplate').value = this.checked ? 'inventory_exhibition' : 'empty'" />
-            <span><strong>Non-plant project</strong><small>Neutral records for collections, libraries, offices or exhibitions.</small></span>
-        </label>`}
+        <details class="project-advanced-options">
+            <summary>Advanced options</summary>
+            ${project ? '' : `<label class="nonplant-template-choice">
+                <input type="checkbox" ${selectedTemplate === 'inventory_exhibition' ? 'checked' : ''} onchange="document.getElementById('projectTemplate').value = this.checked ? 'inventory_exhibition' : 'empty'" />
+                <span><strong>Non-plant project</strong><small>Neutral records for collections, libraries, offices or exhibitions.</small></span>
+            </label>`}
 
-        ${project ? '' : `<label class="tutorial-mode-toggle project-tutorial-toggle">
-            <span><strong>Include guided tutorial</strong><small>Turn this off if you already know how you want to begin.</small></span>
-            <input id="projectTutorialEnabled" type="checkbox" checked />
-        </label>`}
+            ${project ? '' : `<label class="tutorial-mode-toggle project-tutorial-toggle">
+                <span><strong>Include guided tutorial</strong><small>Turn this off if you already know how you want to begin.</small></span>
+                <input id="projectTutorialEnabled" type="checkbox" checked />
+            </label>`}
 
-        <label class="tutorial-mode-toggle project-expert-toggle">
-            <span><strong>Show advanced controls</strong><small>Reveal technical and precision tools when you need them.</small></span>
-            <input id="projectExpertMode" type="checkbox" ${project?.expertMode ? 'checked' : ''} />
-        </label>
+            <label class="tutorial-mode-toggle project-expert-toggle">
+                <span><strong>Show advanced controls</strong><small>Reveal technical and precision tools when you need them.</small></span>
+                <input id="projectExpertMode" type="checkbox" ${project?.expertMode ? 'checked' : ''} />
+            </label>
+        </details>
 
         <div class="button-row">
             <button onclick="${onCancel}">Cancel</button>

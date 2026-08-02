@@ -4911,6 +4911,9 @@ body.ar-dashboard-open .ar-tutorial-panel {
 }
 
 .plant-profile-upgrade { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(76,126,66,.24); border-radius: 16px; background: rgba(231,240,225,.34); }
+.plant-profile-spm-toggle { display:grid; gap:10px; padding:14px; border:1px solid rgba(48,111,69,.24); border-radius:16px; background:linear-gradient(145deg,rgba(235,247,228,.86),rgba(247,244,220,.62)); }
+.plant-profile-spm-toggle h2 { margin:0 0 4px; color:#234e31; }
+.plant-profile-spm-toggle p { margin:0; color:var(--muted,#536457); font-size:.84rem; line-height:1.45; }
 .plant-profile-invitation { display: grid; gap: 8px; justify-items: start; }
 .plant-profile-invitation p, .plant-profile-state { margin: 0; }
 .plant-profile-invitation p { color: var(--muted, #536457); font-size: .84rem; line-height: 1.45; }
@@ -4918,6 +4921,8 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-profile-state span { color: var(--muted, #536457); font-size: .78rem; }
 .plant-profile-fields { display: block; }
 .plant-profile-fields[hidden] { display: none; }
+.plant-profile-spm-fields[hidden] { display:none; }
+.plant-profile-spm-vitals { margin-top:12px; }
 .plant-profile-pim-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .plant-profile-branch, .plant-profile-core-editor { display: grid; align-content: start; gap: 10px; margin: 0; padding: 14px; border: 1px solid rgba(76,126,66,.24); border-radius: 20px; }
 .plant-profile-branch-left { background: linear-gradient(145deg, rgba(229,242,219,.7), rgba(239,246,234,.46)); }
@@ -4945,6 +4950,11 @@ body.ar-dashboard-open .ar-tutorial-panel {
     border-radius: 14px;
     padding: 0.7rem 0.9rem;
 }
+
+.project-advanced-options { display:grid; gap:10px; margin-top:12px; padding:10px 12px; border:1px solid rgba(76,126,66,.18); border-radius:14px; background:rgba(236,244,232,.42); }
+.project-advanced-options summary { cursor:pointer; color:#365f42; font-weight:800; }
+.project-advanced-options > .tutorial-mode-toggle,
+.project-advanced-options > .nonplant-template-choice { margin:0; }
 
 .compact-advanced summary {
     cursor: pointer;

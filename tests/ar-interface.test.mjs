@@ -1291,9 +1291,14 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
+    assert.match(dashboardSource, /Super Plant Mode \(SPM\)/);
+    assert.match(dashboardSource, /projectEntrySpmEnabled/);
+    assert.match(dashboardSource, /projectEntryClimate/);
+    assert.match(dashboardSource, /spm_enabled: spmEnabled/);
+    assert.match(arSource, /profile\.spm_enabled === true \|\| profile\.profile_enabled === true/);
     assert.match(dashboardSource, /plant-info-drawer/);
     assert.match(dashboardSource, /projectEntryRelationships/);
-    assert.match(dashboardSource, /if \(profileEnabled\)/);
+    assert.match(dashboardSource, /if \(plantProfileFormPresent\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = focusedProfileView/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
     assert.match(dashboardSource, /Growing knowledge/);

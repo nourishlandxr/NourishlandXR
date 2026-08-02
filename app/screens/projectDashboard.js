@@ -113,16 +113,8 @@ async function syncMarkerQrAnchor(projectId, siteId, placeId, markerId, qrCode, 
     return deleteMarkerAnchor(projectId, siteId, placeId, markerId);
 }
 const isPlantProfileUpgraded = (marker, profile = {}) => Boolean(
-    profile.profile_enabled === true
-    || profile.scientific_name
-    || profile.overview
-    || profile.family
-    || profile.origin
-    || profile.plant_type
-    || profile.layer
-    || profile.uses
-    || profile.propagation
-    || profile.relationships
+    marker?.type === 'plant'
+    && (profile.spm_enabled === true || profile.profile_enabled === true)
 );
 const entryStatus = marker => marker.visibility === 'public'
     ? { label: 'Published', tone: 'published' }
@@ -2612,20 +2604,29 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
     const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
     const photo = profile.photo || profile.image || '';
     const orbColor = profile.orb_color || entry.marker.appearance?.color || '#8fc9a3';
+    const spmEnabled = profile.spm_enabled === true || profile.profile_enabled === true;
     return `<section class="plant-encyclopedia-card">
-        <input id="projectEntryProfileEnabled" type="hidden" value="true">
+        <input id="projectEntryProfileEnabled" type="hidden" value="${spmEnabled ? 'true' : 'false'}">
+        <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
+            <div><p class="welcome-label">PLANT PROFILE MODE</p><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div>
+            <label class="tutorial-mode-toggle"><span><strong>Enable SPM / PIM</strong><small>Show advanced editing and the spatial PIM in AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+        </section>
         <div class="plant-card-hero">
             <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
             <div class="plant-vital-grid">
                 <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
                 <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
-                <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
                 <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select></div>
-                <div class="field plant-color-field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(orbColor)}" /></div>
-                <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
+                <div class="field"><label for="projectEntryClimate">Climate</label><input id="projectEntryClimate" value="${escapeHtml(profile.climate || '')}" placeholder="Warm temperate, tropical…" /></div>
+                <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
             </div>
         </div>
-        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A short, useful introduction—add it whenever you are ready.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
+        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> PIM overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the PIM core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        <div class="plant-vital-grid plant-profile-spm-vitals">
+            <div class="field plant-color-field"><label for="projectEntryOrbColor">Orb color</label><input id="projectEntryOrbColor" type="color" value="${escapeHtml(orbColor)}" /></div>
+            <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
+        </div>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
         ${physicalAnchorMarkup}
         <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
@@ -2635,9 +2636,11 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
         <details class="plant-info-drawer"><summary><span aria-hidden="true">☀</span><strong>Growing knowledge</strong><small>Uses, relationships and propagation</small></summary><div class="plant-drawer-fields">
             <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="2">${escapeHtml(profile.uses || '')}</textarea></div>
             <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="2">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
+            <div class="field"><label for="projectEntryAttributeChainCount">Attribute chain count</label><input id="projectEntryAttributeChainCount" type="number" min="0" step="1" value="${escapeHtml(profile.attribute_chain_count ?? '')}" placeholder="Optional relationship count" /></div>
             <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="2">${escapeHtml(profile.propagation || '')}</textarea></div>
         </div></details>
         <details class="plant-info-drawer"><summary><span aria-hidden="true">◌</span><strong>Origin &amp; story</strong><small>Optional history and context</small></summary><div class="plant-drawer-fields"><div class="field"><label for="projectEntryOrigin">Origin and history</label><textarea id="projectEntryOrigin" rows="2">${escapeHtml(profile.origin || '')}</textarea></div></div></details>
+        </div>
     </section>`;
 }
 
@@ -2695,6 +2698,14 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         const virtualTagToggle = app.querySelector('#projectEntryVirtualTag');
         const plantPhysicalToggle = app.querySelector('#projectEntryPhysicalAnchorEnabled');
         const plantPhysicalSelect = app.querySelector('#projectEntryPhysicalMarkerId');
+        const spmToggle = app.querySelector('#projectEntrySpmEnabled');
+        const spmFields = app.querySelector('#projectEntrySpmFields');
+        const profileEnabledField = app.querySelector('#projectEntryProfileEnabled');
+        const updateSpmFields = () => {
+            const enabled = Boolean(spmToggle?.checked);
+            spmFields?.toggleAttribute('hidden', !enabled);
+            if (profileEnabledField) profileEnabledField.value = enabled ? 'true' : 'false';
+        };
         const plantAssignments = physicalAnchorAssignments(entries, entry.marker.id);
         const updatePlantPhysicalFields = () => {
             const visible = Boolean(virtualTagToggle?.checked && plantPhysicalToggle?.checked);
@@ -2719,6 +2730,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         virtualTagToggle?.addEventListener('change', updatePlantPhysicalFields);
         plantPhysicalToggle?.addEventListener('change', updatePlantPhysicalFields);
         plantPhysicalSelect?.addEventListener('change', updatePlantPhysicalAssignment);
+        spmToggle?.addEventListener('change', updateSpmFields);
+        updateSpmFields();
         updatePlantPhysicalFields();
         const quickColorInput = document.getElementById('projectEntryOrbColor');
         const syncQuickPlantTones = color => {
@@ -2772,7 +2785,9 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const noteColor = document.getElementById('projectEntryNoteColor')?.value;
         const noteSurface = document.getElementById('projectEntryNoteSurface')?.value;
         const noteAppearance = noteColor ? { appearance: { ...(entry.marker.appearance || {}), color: noteColor, surface: noteSurface === 'outline' ? 'outline' : 'filled' } } : {};
-        const profileEnabled = entry.marker.type === 'plant' && document.getElementById('projectEntryProfileEnabled')?.value === 'true';
+        const spmEnabled = entry.marker.type === 'plant' && (document.getElementById('projectEntryArQuickEdit')?.value === 'true' || document.getElementById('projectEntrySpmEnabled')?.checked === true);
+        const plantProfileFormPresent = entry.marker.type === 'plant' && Boolean(document.getElementById('projectEntryCommonName'));
+        const profileEnabled = entry.marker.type === 'plant' && (spmEnabled || document.getElementById('projectEntryProfileEnabled')?.value === 'true');
         const plantColor = profileEnabled ? document.getElementById('projectEntryOrbColor')?.value : '';
         const plantAppearance = plantColor ? { appearance: { ...(entry.marker.appearance || {}), color: plantColor } } : {};
         const virtualTagEnabled = profileEnabled && (document.getElementById('projectEntryVirtualTag')?.checked ?? false);
@@ -2789,7 +2804,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
         const manageQrAnchor = profileEnabled && Boolean(qrField);
         const qrCode = manageQrAnchor ? qrField.value.trim() : entry.marker.qr_reference || '';
         const sourceAnchor = manageQrAnchor ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
-        const existingPlantProfile = profileEnabled
+        const existingPlantProfile = plantProfileFormPresent
             ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {})
             : {};
         let savedMarker = entry.marker;
@@ -2833,12 +2848,14 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 : undefined;
             await syncMarkerQrAnchor(project.id, site.id, targetAreaId, savedMarker.id, qrCode, `Physical QR label for ${name}.`, movableAnchor);
         }
-        if (profileEnabled) {
+        if (plantProfileFormPresent) {
             await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, {
                 ...existingPlantProfile,
-                profile_enabled: true,
+                profile_enabled: spmEnabled,
+                spm_enabled: spmEnabled,
                 common_name: fieldValue('projectEntryCommonName', existingPlantProfile.common_name || name) || name,
                 scientific_name: fieldValue('projectEntryScientificName', existingPlantProfile.scientific_name || ''),
+                climate: fieldValue('projectEntryClimate', existingPlantProfile.climate || ''),
                 family: fieldValue('projectEntryFamily', existingPlantProfile.family || ''),
                 origin: fieldValue('projectEntryOrigin', existingPlantProfile.origin || ''),
                 layer: fieldValue('projectEntryLayer', existingPlantProfile.layer || ''),
@@ -2847,6 +2864,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 orb_size: fieldValue('projectEntryOrbSize', existingPlantProfile.orb_size || 'medium'),
                 uses: fieldValue('projectEntryUses', existingPlantProfile.uses || ''),
                 relationships: fieldValue('projectEntryRelationships', existingPlantProfile.relationships || existingPlantProfile.companions || ''),
+                attribute_chain_count: fieldValue('projectEntryAttributeChainCount', existingPlantProfile.attribute_chain_count ?? ''),
                 propagation: fieldValue('projectEntryPropagation', existingPlantProfile.propagation || ''),
                 overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || ''),
                 virtual_tag_enabled: document.getElementById('projectEntryVirtualTag')?.checked ?? existingPlantProfile.virtual_tag_enabled === true

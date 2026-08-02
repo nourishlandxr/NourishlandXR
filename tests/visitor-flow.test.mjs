@@ -508,6 +508,8 @@ test('new projects separate guided tutorial choice from advanced controls', () =
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     assert.match(formSource, /<strong>Include guided tutorial<\/strong>/);
     assert.match(formSource, /<strong>Show advanced controls<\/strong>/);
+    assert.match(formSource, /<details class="project-advanced-options">/);
+    assert.match(formSource, /<summary>Advanced options<\/summary>/);
     assert.match(mainSource, /projectExpertMode'\)\?\.checked === true/);
     assert.match(mainSource, /restartProjectTutorial\(created\.id\)/);
     assert.match(mainSource, /setProjectTutorialMode\(created\.id, tutorialEnabled && !expertMode\)/);
