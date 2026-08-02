@@ -19,7 +19,12 @@ const TEXT_INPUT_TYPES = new Set(['', 'text', 'search', 'url', 'email', 'tel', '
 const COLOR_SEQUENCE = ['#5e7956', '#74805d', '#89977c', '#6f5b47', '#9a6b50', '#74786f'];
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-const escapeXmlText = value => String(value).replace(/[&<>]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[character]);
+let html2canvasPromise;
+
+function loadHtml2canvas() {
+    html2canvasPromise ||= import('../vendor/html2canvas.esm.js').then(module => module.default);
+    return html2canvasPromise;
+}
 
 function normalizeVector(vector, fallback) {
     const length = Math.hypot(vector.x, vector.y, vector.z);
@@ -104,75 +109,6 @@ export function spatialDashboardRayHit(ray, panel, viewport = {}) {
         pixelX: u * viewportWidth,
         pixelY: v * viewportHeight
     };
-}
-
-function stylesheetText() {
-    const rules = [];
-    for (const sheet of [...document.styleSheets]) {
-        try {
-            for (const rule of [...sheet.cssRules]) rules.push(rule.cssText);
-        } catch {
-            // Cross-origin stylesheets cannot be inspected. Nourishland's
-            // application stylesheet is same-origin and remains available.
-        }
-    }
-    return rules.join('\n');
-}
-
-function syncFormState(source, clone) {
-    const sourceControls = source.querySelectorAll('input, textarea, select, details');
-    const cloneControls = clone.querySelectorAll('input, textarea, select, details');
-    sourceControls.forEach((control, index) => {
-        const copy = cloneControls[index];
-        if (!copy) return;
-        if (control instanceof HTMLInputElement) {
-            copy.setAttribute('value', control.value);
-            if (control.checked) copy.setAttribute('checked', '');
-            else copy.removeAttribute('checked');
-        } else if (control instanceof HTMLTextAreaElement) {
-            copy.textContent = control.value;
-        } else if (control instanceof HTMLSelectElement) {
-            [...copy.options].forEach((option, optionIndex) => {
-                if (optionIndex === control.selectedIndex) option.setAttribute('selected', '');
-                else option.removeAttribute('selected');
-            });
-        } else if (control instanceof HTMLDetailsElement) {
-            if (control.open) copy.setAttribute('open', '');
-            else copy.removeAttribute('open');
-        }
-    });
-}
-
-function safeClone(source, scrollTop, width) {
-    const clone = source.cloneNode(true);
-    const sourceStyle = getComputedStyle(source);
-    for (const property of sourceStyle) {
-        if (property.startsWith('--')) clone.style.setProperty(property, sourceStyle.getPropertyValue(property));
-    }
-    clone.style.setProperty('font-family', sourceStyle.fontFamily);
-    clone.style.setProperty('font-size', sourceStyle.fontSize);
-    clone.style.setProperty('color', sourceStyle.color);
-    clone.style.setProperty('background-color', sourceStyle.backgroundColor);
-    clone.removeAttribute('id');
-    clone.querySelectorAll('script, canvas, video, iframe, [data-spatial-mirror-ignore]').forEach(element => element.remove());
-    clone.querySelectorAll('img').forEach(image => {
-        const sourceValue = image.getAttribute('src') || '';
-        if (!sourceValue.startsWith('data:') && !sourceValue.startsWith('/') && !sourceValue.startsWith(window.location.origin)) {
-            image.removeAttribute('src');
-            image.setAttribute('alt', image.getAttribute('alt') || 'Project image');
-        }
-    });
-    syncFormState(source, clone);
-    clone.style.setProperty('display', 'block', 'important');
-    clone.style.setProperty('visibility', 'visible', 'important');
-    clone.style.setProperty('pointer-events', 'none', 'important');
-    clone.style.setProperty('position', 'relative', 'important');
-    clone.style.setProperty('left', '0', 'important');
-    clone.style.setProperty('top', `${-scrollTop}px`, 'important');
-    clone.style.setProperty('width', `${width}px`, 'important');
-    clone.style.setProperty('max-width', 'none', 'important');
-    clone.style.setProperty('margin', '0', 'important');
-    return clone;
 }
 
 function dispatchValueEvents(element) {
@@ -266,8 +202,17 @@ export function createSpatialDashboardMirror(options = {}) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    context.fillStyle = '#f5f7ef';
-    context.fillRect(0, 0, width, height);
+    const paintStatus = (title, detail) => {
+        context.fillStyle = '#f5f7ef';
+        context.fillRect(0, 0, width, height);
+        context.fillStyle = '#243328';
+        context.font = '800 42px system-ui, sans-serif';
+        context.fillText(title, 64, 92);
+        context.fillStyle = '#56645b';
+        context.font = '500 25px system-ui, sans-serif';
+        context.fillText(detail, 64, 140);
+    };
+    paintStatus('PROJECT DASHBOARD', 'Loading dashboard...');
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
 
     const originalStyle = root.getAttribute('style');
@@ -284,7 +229,6 @@ export function createSpatialDashboardMirror(options = {}) {
     root.style.setProperty('min-height', `${height}px`, 'important');
     root.style.setProperty('overflow', 'visible', 'important');
 
-    const css = stylesheetText();
     let scrollTop = 0;
     let activeInput = null;
     let keyboard = null;
@@ -313,25 +257,42 @@ export function createSpatialDashboardMirror(options = {}) {
         if (destroyed || generation !== refreshGeneration) return;
         scrollTop = clamp(scrollTop, 0, maxScroll());
         positionKeyboard();
-        const clone = safeClone(root, scrollTop, width);
-        const serialized = new XMLSerializer().serializeToString(clone);
-        const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject x="0" y="0" width="${width}" height="${height}"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;background:#f5f7ef"><style>${escapeXmlText(css)}</style>${serialized}</div></foreignObject></svg>`;
-        const imageUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
-        try {
-            const image = new Image();
-            await new Promise((resolve, reject) => {
-                image.onload = resolve;
-                image.onerror = () => reject(new Error('The dashboard mirror could not be rasterized.'));
-                image.src = imageUrl;
-            });
-            if (destroyed || generation !== refreshGeneration) return;
-            context.clearRect(0, 0, width, height);
-            context.drawImage(image, 0, 0, width, height);
-            upload();
-            options.onUpdate?.();
-        } finally {
-            URL.revokeObjectURL(imageUrl);
-        }
+        const html2canvas = await loadHtml2canvas();
+        await html2canvas(root, {
+            canvas,
+            backgroundColor: '#f5f7ef',
+            width,
+            height,
+            x: 0,
+            y: scrollTop,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: width,
+            windowHeight: height,
+            scale: 1,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+            foreignObjectRendering: false,
+            imageTimeout: 2500,
+            ignoreElements: element => element.matches?.('video, iframe, [data-spatial-mirror-ignore]'),
+            onclone: clonedDocument => {
+                const cloneRoot = clonedDocument.querySelector('[data-spatial-dashboard-mirror-source]');
+                if (!cloneRoot) return;
+                cloneRoot.style.setProperty('display', 'block', 'important');
+                cloneRoot.style.setProperty('visibility', 'visible', 'important');
+                cloneRoot.style.setProperty('pointer-events', 'none', 'important');
+                cloneRoot.style.setProperty('position', 'absolute', 'important');
+                cloneRoot.style.setProperty('left', '0', 'important');
+                cloneRoot.style.setProperty('top', '0', 'important');
+                cloneRoot.style.setProperty('width', `${width}px`, 'important');
+                cloneRoot.style.setProperty('max-width', 'none', 'important');
+                cloneRoot.style.setProperty('margin', '0', 'important');
+            }
+        });
+        if (destroyed || generation !== refreshGeneration) return;
+        upload();
+        options.onUpdate?.();
     };
 
     const refresh = () => {
@@ -339,7 +300,12 @@ export function createSpatialDashboardMirror(options = {}) {
         clearTimeout(refreshTimer);
         refreshPromise = new Promise(resolve => {
             refreshTimer = window.setTimeout(() => {
-                capture().catch(error => options.onError?.(error)).finally(resolve);
+                capture().catch(error => {
+                    paintStatus('DASHBOARD UNAVAILABLE', String(error?.message || 'Dashboard rendering failed.').slice(0, 78));
+                    upload();
+                    options.onUpdate?.();
+                    options.onError?.(error);
+                }).finally(resolve);
             }, 35);
         });
         return refreshPromise;
