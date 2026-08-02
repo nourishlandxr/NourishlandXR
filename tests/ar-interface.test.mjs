@@ -311,7 +311,8 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /data-ar-web-return/);
     assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
     assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
-    assert.match(arSource, /This Quest session does not expose a spatial overlay/);
+    assert.match(arSource, /world-locked WebGL texture/);
+    assert.match(arSource, /createSpatialDashboardMirror/);
     assert.match(arSource, /arReturnContext = selectedReturnContext/);
     assert.match(arSource, /`web-area:\$\{activeAreaId\}` : 'webhub'/);
     assert.match(arSource, /returnContext === 'webhub'/);
@@ -600,13 +601,19 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(persistenceSource, /body: JSON\.stringify\(\{ spatial_anchor:/);
 });
 
-test('Creator dashboard stays in web mode instead of being duplicated in AR', () => {
+test('Creator dashboard has one DOM source shared by Web Mode and the Quest spatial mirror', () => {
     const arSource = read('app/screens/arMode.js');
-    assert.doesNotMatch(arSource, /drawDashboard|captureDashboardSnapshot|Grab dashboard|summonArDashboard/);
+    const mirrorSource = read('app/services/spatialDashboardMirror.js');
+    assert.match(arSource, /renderProjectDashboard\(dashboardRoot, encodeURIComponent\(activeProjectId\)\)/);
+    assert.match(mirrorSource, /const clone = source\.cloneNode\(true\)/);
+    assert.match(mirrorSource, /target\.click\(\)/);
+    assert.match(mirrorSource, /scrollBy/);
+    assert.match(mirrorSource, /data-spatial-key/);
+    assert.doesNotMatch(arSource, /QUEST_SPATIAL_DASHBOARD_CONTROLS|dashboard-home|dashboard-area/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
 });
 
-test('Creator AR keeps dashboard web-only while supporting controller controls', () => {
+test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard input', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
     const taskbar = arSource.slice(
@@ -620,7 +627,11 @@ test('Creator AR keeps dashboard web-only while supporting controller controls',
     assert.match(arSource, /const origin = pointerWorldOrigin\(\)/);
     assert.match(arSource, /origin\.x \+ ray\.x \* distance/);
     assert.match(styles, /creator-ar-controller-pointer[^}]*z-index:12005/);
-    assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
+    assert.match(arSource, /if \(document\.body\.dataset\.arDomOverlay !== 'true'\)[\s\S]*openQuestSpatialWebPanel/);
+    assert.match(arSource, /controllerSpatialDashboardAtAim/);
+    assert.match(arSource, /questSpatialDashboardMirror\.activateAt/);
+    assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
+    assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
     assert.match(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);

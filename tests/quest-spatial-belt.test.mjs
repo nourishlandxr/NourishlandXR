@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../app/services/questSpatialBelt.js';
+import { spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../app/services/spatialDashboardMirror.js';
 
 test('tracked headset input identifies Quest controls without classifying phone touch input', () => {
     assert.equal(isTrackedHeadsetInputSource({ targetRayMode: 'tracked-pointer' }), true);
@@ -75,4 +76,34 @@ test('Quest special palette is a compact side surface with controller hit target
         direction: { x: 0, y: 0, z: -1 }
     }, layout);
     assert.equal(target?.id, 'totem');
+});
+
+test('Quest dashboard mirror is world locked and maps controller rays to dashboard pixels', () => {
+    const viewer = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 1.6, 0, 1
+    ]);
+    const panel = spatialDashboardPanelFromViewer(viewer);
+    assert.equal(panel.center.x, 0);
+    assert.ok(Math.abs(panel.center.y - 1.57) < .0001);
+    assert.equal(panel.center.z, -1.18);
+    const hit = spatialDashboardRayHit({
+        origin: { x: 0, y: 1.57, z: 0 },
+        direction: { x: 0, y: 0, z: -1 }
+    }, panel, { width: 1280, height: 900 });
+    assert.ok(hit);
+    assert.ok(Math.abs(hit.distance - 1.18) < .0001);
+    assert.ok(Math.abs(hit.pixelX - 640) < .001);
+    assert.ok(Math.abs(hit.pixelY - 450) < .001);
+    const miss = spatialDashboardRayHit({
+        origin: { x: 2, y: 1.57, z: 0 },
+        direction: { x: 0, y: 0, z: -1 }
+    }, panel, { width: 1280, height: 900 });
+    assert.equal(miss, null);
+    const matrix = spatialDashboardPanelMatrix(panel);
+    assert.ok(Math.abs(matrix[12] - panel.center.x) < .0001);
+    assert.ok(Math.abs(matrix[13] - panel.center.y) < .0001);
+    assert.ok(Math.abs(matrix[14] - panel.center.z) < .0001);
 });

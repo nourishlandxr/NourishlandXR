@@ -23,6 +23,7 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialT
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
@@ -84,15 +85,11 @@ let questSpecialPaletteTextureKey = '';
 let questSpecialPaletteLayout = [];
 let questSpecialPaletteVisible = false;
 let questSpecialPaletteHoverIndex = -1;
-let questSpatialWebTextures = [];
-let questSpatialWebTextureKey = '';
-let questSpatialWebLayout = [];
 let questSpatialWebVisible = false;
-let questSpatialWebHoverIndex = -1;
-let questSpatialDashboardControlLayout = [];
-let questSpatialDashboardControlHoverIndex = -1;
-let questSpatialDashboardControlTextures = [];
-let questSpatialDashboardControlTextureKey = '';
+let questSpatialDashboardMirror = null;
+let questSpatialDashboardPanel = null;
+let questSpatialDashboardHit = null;
+let questSpatialDashboardScrollCooldownUntil = 0;
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -149,19 +146,6 @@ const TASKBAR_V2_COLORS = Object.freeze({
 });
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
-const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
-    Object.freeze({ id: 'dashboard', label: 'PROJECT DASHBOARD', symbol: '', color: '#3973a2' }),
-    // Retained as hidden migration entries so older controller state can be ignored safely.
-    Object.freeze({ id: 'webhub', label: '', symbol: '', hidden: true, color: '#3973a2' }),
-    Object.freeze({ id: 'area', label: '', symbol: '', hidden: true, color: '#527a4d' }),
-    Object.freeze({ id: 'plant', label: '', symbol: '', hidden: true, color: '#527a4d' })
-]);
-const visibleQuestSpatialWebActions = () => QUEST_SPATIAL_WEB_ACTIONS.filter(action => !action.hidden);
-const QUEST_SPATIAL_DASHBOARD_CONTROLS = Object.freeze([
-    Object.freeze({ id: 'dashboard-home', label: 'HOME', symbol: 'H', color: '#527a4d' }),
-    Object.freeze({ id: 'dashboard-area', label: 'AREA', symbol: 'A', color: '#527a4d' }),
-    Object.freeze({ id: 'dashboard-close', label: 'CLOSE', symbol: '×', color: '#6d5949' })
-]);
 const visibleQuestSpecialPaletteActions = () => QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => !action.hidden);
 const CREATOR_AR_HOLD_DELAY_MS = 420;
 const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
@@ -1065,28 +1049,39 @@ function closeSpatialWebWindow() {
     updateControllerHud();
 }
 
-function openQuestSpatialWebPanel() {
+async function openQuestSpatialWebPanel() {
     if (questSpatialWebVisible) {
         closeQuestSpatialWebPanel();
-        setPlacementStatus('Spatial Web Hub closed. AR remains active.');
+        setPlacementStatus('Project Dashboard closed. AR remains active.');
         updateControllerHud();
         return;
     }
     closeQuestSpecialPalette();
     questSpatialWebVisible = true;
-    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpatialWebActions(), {
-        distance: .78,
-        side: -1,
-        sideOffset: .42,
-        columnSpacing: .16,
-        rowSpacing: .145,
-        topOffset: .02,
-        radius: .078
-    });
-    questSpatialWebHoverIndex = -1;
+    // Summon the dashboard in front of the user's current view, then keep
+    // that transform unchanged so the surface remains world locked.
+    questSpatialDashboardPanel = spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
     controllerMenuActive = true;
-    setPlacementStatus('Project Dashboard open on your left. AR remains active.');
+    setPlacementStatus('Loading the full Project Dashboard into the spatial panel…');
     updateControllerHud();
+    try {
+        const dashboardRoot = document.getElementById('app');
+        if (!dashboardRoot || !gl || !questSpatialDashboardPanel) throw new Error('The dashboard surface is not ready.');
+        await renderProjectDashboard(dashboardRoot, encodeURIComponent(activeProjectId));
+        if (!questSpatialWebVisible || !gl) return;
+        questSpatialDashboardMirror?.destroy();
+        questSpatialDashboardMirror = createSpatialDashboardMirror({
+            gl,
+            root: dashboardRoot,
+            onStatus: setPlacementStatus,
+            onError: error => setPlacementStatus(`Spatial Dashboard refresh failed: ${error.message}`)
+        });
+        document.body.classList.add('creator-ar-spatial-web-ready');
+        setPlacementStatus('Project Dashboard ready. Aim and trigger to use it; move the thumbstick vertically to scroll. Press HUB again to close.');
+    } catch (error) {
+        closeQuestSpatialWebPanel();
+        setPlacementStatus(`Project Dashboard could not open: ${error.message}`);
+    }
 }
 
 // Keep the existing return context names for overlay-capable Quest sessions:
@@ -1108,13 +1103,11 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // A no-overlay runtime cannot host editable HTML inside immersive AR.
-        // Open the real Web Mode dashboard instead of presenting a misleading
-        // stats card with decorative spatial controls.
-        // Legacy capability wording: This Quest session does not expose a spatial overlay.
-        arReturnContext = '';
-        setPlacementStatus('Opening the full editable Project Dashboard in Web Mode.');
-        exitArMode();
+        // Quest browsers without DOM Overlay receive the same live dashboard
+        // as a world-locked WebGL texture. Controller hits are relayed back to
+        // its real DOM controls, so this is a functional mirror rather than a
+        // second stats-only dashboard implementation.
+        void openQuestSpatialWebPanel();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1313,44 +1306,12 @@ function closeQuestSpecialPalette() {
     document.body.classList.remove('creator-ar-spatial-special-palette');
 }
 
-function currentQuestSpatialWebLayout() {
-    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible) return [];
-    if (!questSpatialWebLayout.length) {
-        questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
-            distance: .78,
-            side: -1,
-            sideOffset: .42,
-            columnSpacing: .16,
-            rowSpacing: .145,
-            topOffset: .02,
-            radius: .078
-        });
-    }
-    return questSpatialWebLayout;
-}
-
-function currentQuestSpatialDashboardControlLayout() {
-    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible) return [];
-    if (!questSpatialDashboardControlLayout.length) {
-        questSpatialDashboardControlLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_DASHBOARD_CONTROLS, {
-            distance: .78,
-            side: -1,
-            sideOffset: .78,
-            columnSpacing: .16,
-            rowSpacing: .14,
-            topOffset: -.1,
-            radius: .075
-        });
-    }
-    return questSpatialDashboardControlLayout;
-}
-
 function closeQuestSpatialWebPanel() {
     questSpatialWebVisible = false;
-    questSpatialWebLayout = [];
-    questSpatialWebHoverIndex = -1;
-    questSpatialDashboardControlLayout = [];
-    questSpatialDashboardControlHoverIndex = -1;
+    questSpatialDashboardMirror?.destroy();
+    questSpatialDashboardMirror = null;
+    questSpatialDashboardPanel = null;
+    questSpatialDashboardHit = null;
     document.body.classList.remove('creator-ar-spatial-web-ready');
 }
 
@@ -1370,20 +1331,20 @@ function controllerSpecialPaletteActionAtAim() {
     return target;
 }
 
-function controllerSpatialWebActionAtAim() {
-    const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestSpatialWebLayout());
-    questSpatialWebHoverIndex = target?.index ?? -1;
+function controllerSpatialDashboardAtAim() {
+    let target = questSpatialWebVisible && questSpatialDashboardMirror
+        ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror)
+        : null;
     if (target) {
-        clearMarkerHover();
-        controllerMenuActive = true;
-        updateControllerHud();
+        const foregroundEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+        const foregroundDistance = foregroundEnd ? Math.hypot(
+            foregroundEnd.x - latestControllerRay.origin.x,
+            foregroundEnd.y - latestControllerRay.origin.y,
+            foregroundEnd.z - latestControllerRay.origin.z
+        ) : Infinity;
+        if (foregroundDistance + .01 < target.distance) target = null;
     }
-    return target;
-}
-
-function controllerSpatialDashboardControlAtAim() {
-    const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestSpatialDashboardControlLayout());
-    questSpatialDashboardControlHoverIndex = target?.index ?? -1;
+    questSpatialDashboardHit = target;
     if (target) {
         clearMarkerHover();
         controllerMenuActive = true;
@@ -1417,10 +1378,22 @@ function controllerLaserSubjects() {
         if (point) subjects.push({ position: point, radius: .38 });
     }
     currentQuestSpecialPaletteLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
-    currentQuestSpatialDashboardControlLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
-    currentQuestSpatialWebLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     currentQuestBeltLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     return subjects;
+}
+
+function controllerPointerEnd() {
+    const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const dashboardHit = questSpatialWebVisible && questSpatialDashboardPanel
+        ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror || {})
+        : null;
+    if (!dashboardHit || dashboardHit.distance > XR_LASER_POINTER_CONFIG.length) return spatialEnd;
+    const spatialDistance = spatialEnd ? Math.hypot(
+        spatialEnd.x - latestControllerRay.origin.x,
+        spatialEnd.y - latestControllerRay.origin.y,
+        spatialEnd.z - latestControllerRay.origin.z
+    ) : Infinity;
+    return dashboardHit.distance <= spatialDistance ? dashboardHit.position : spatialEnd;
 }
 
 function controllerMarkerAtAim() {
@@ -1521,37 +1494,10 @@ function selectQuestSpecialPaletteAction(action) {
     return false;
 }
 
-function selectQuestSpatialWebAction(action) {
-    if (!action) return false;
-    closeQuestSpatialWebPanel();
-    setPlacementStatus(`${action.label} ready. The Project Dashboard surface stays open through the current Quest session.`);
-    // Keep this route in the AR session. The native dashboard remains the
-    // destination for the phone Web Hub, while Quest without DOM overlay gets
-    // a controller-safe spatial route surface instead of an AR exit.
-    questSpatialWebVisible = true;
-    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpatialWebActions(), {
-        distance: .78,
-        side: -1,
-        sideOffset: .42,
-        columnSpacing: .16,
-        rowSpacing: .145,
-        topOffset: .02,
-        radius: .078
-    });
-    controllerMenuActive = true;
-    updateControllerHud();
-    return true;
-}
-
-function selectQuestSpatialDashboardControl(action) {
-    if (!action) return false;
-    if (action.id === 'dashboard-close') {
-        closeQuestSpatialWebPanel();
-        setPlacementStatus('Project Dashboard closed. AR remains active.');
-        updateControllerHud();
-        return true;
-    }
-    setPlacementStatus(`${action.label} selected in the spatial Project Dashboard.`);
+function activateQuestSpatialDashboard(hit = controllerSpatialDashboardAtAim()) {
+    if (!hit || !questSpatialDashboardMirror) return false;
+    const activated = questSpatialDashboardMirror.activateAt(hit.pixelX, hit.pixelY);
+    if (!activated) setPlacementStatus('Project Dashboard ready. Use the vertical thumbstick to scroll to more controls.');
     controllerMenuActive = true;
     updateControllerHud();
     return true;
@@ -1562,12 +1508,10 @@ function activateControllerSelection() {
         void quickPlace(readyPlacementType);
         return true;
     }
+    const dashboardTarget = controllerSpatialDashboardAtAim();
+    if (dashboardTarget) return activateQuestSpatialDashboard(dashboardTarget);
     const specialTarget = controllerSpecialPaletteActionAtAim();
     if (specialTarget) return selectQuestSpecialPaletteAction(specialTarget);
-    const dashboardControl = controllerSpatialDashboardControlAtAim();
-    if (dashboardControl) return selectQuestSpatialDashboardControl(dashboardControl);
-    const webTarget = controllerSpatialWebActionAtAim();
-    if (webTarget) return selectQuestSpatialWebAction(webTarget);
     const beltTarget = controllerBeltActionAtAim();
     if (beltTarget) {
         const action = questBeltActionElements()[beltTarget.index];
@@ -1591,6 +1535,15 @@ function pollControllerInput() {
     const source = controllerInputSource();
     setCreatorInputMode(source ? 'controller' : 'touch');
     if (!source?.gamepad || creatorInputMode !== 'controller') return;
+    const verticalCandidates = [Number(source.gamepad.axes?.[3]) || 0, Number(source.gamepad.axes?.[1]) || 0];
+    const vertical = verticalCandidates.sort((left, right) => Math.abs(right) - Math.abs(left))[0];
+    if (questSpatialWebVisible && questSpatialDashboardMirror && Math.abs(vertical) >= .28) {
+        if (performance.now() >= questSpatialDashboardScrollCooldownUntil) {
+            questSpatialDashboardScrollCooldownUntil = performance.now() + 72;
+            questSpatialDashboardMirror.scrollBy(vertical * 105);
+        }
+        return;
+    }
     const horizontal = Number(source.gamepad.axes?.[0]) || 0;
     if (Math.abs(horizontal) < .55 || performance.now() < controllerAxisCooldownUntil) return;
     controllerAxisCooldownUntil = performance.now() + 260;
@@ -1635,15 +1588,15 @@ function pollHandPinch() {
             handPinchActive = pinching;
             return;
         }
-        const specialTarget = controllerSpecialPaletteActionAtAim();
-        if (specialTarget) {
-            selectQuestSpecialPaletteAction(specialTarget);
+        const dashboardTarget = controllerSpatialDashboardAtAim();
+        if (dashboardTarget) {
+            activateQuestSpatialDashboard(dashboardTarget);
             handPinchActive = pinching;
             return;
         }
-        const webTarget = controllerSpatialWebActionAtAim();
-        if (webTarget) {
-            selectQuestSpatialWebAction(webTarget);
+        const specialTarget = controllerSpecialPaletteActionAtAim();
+        if (specialTarget) {
+            selectQuestSpecialPaletteAction(specialTarget);
             handPinchActive = pinching;
             return;
         }
@@ -1670,7 +1623,7 @@ function drawControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const end = controllerPointerEnd();
     if (!end) return;
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -1683,7 +1636,7 @@ function drawControllerPointer(view) {
 
 function drawControllerPointerContact(view) {
     if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !sphereRenderer) return;
-    const point = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const point = controllerPointerEnd();
     if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     // DOM overlay is optional on Quest. Keep the contact point in the XR
     // layer so a shortened laser always ends in a visible, actionable hit.
@@ -1702,7 +1655,7 @@ function positionControllerPointer(view = latestView) {
         pointer.classList.remove('is-edge');
         return;
     }
-    const point = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const point = controllerPointerEnd();
     if (!point) {
         pointer.hidden = true;
         return;
@@ -2375,29 +2328,11 @@ function createQuestBeltPanelTexture(action, selected) {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-    if (action.id === 'dashboard') {
-        context.font = '800 22px system-ui, sans-serif';
-        context.fillText('PROJECT DASHBOARD', 128, 58);
-        const markers = activeAreaMarkers();
-        const plantCount = markers.filter(record => record.marker.type === 'plant').length;
-        const noteCount = markers.filter(record => record.marker.type === 'note').length;
-        const totemCount = markers.filter(record => record.marker.type === 'area_checkpoint').length;
-        context.font = '600 15px system-ui, sans-serif';
-        context.fillStyle = 'rgba(245, 250, 245, .76)';
-        context.fillText(activeProjectName || activeProjectId || 'Current project', 128, 84);
-        context.font = '700 15px system-ui, sans-serif';
-        context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-        context.fillText(`${activeAreaName || 'Home'} · ${plantCount} plants · ${noteCount} notes · ${totemCount} totems`, 128, 124);
-        context.font = '600 13px system-ui, sans-serif';
-        context.fillStyle = 'rgba(245, 250, 245, .64)';
-        context.fillText('PROJECT OVERVIEW', 128, 164);
-    } else {
-        context.font = '800 62px system-ui, sans-serif';
-        context.fillText(action.symbol, 128, 82);
-    }
+    context.font = '800 62px system-ui, sans-serif';
+    context.fillText(action.symbol, 128, 82);
     context.font = '800 21px system-ui, sans-serif';
     context.letterSpacing = '1.5px';
-    if (action.id !== 'dashboard') context.fillText(action.label, 128, 164);
+    context.fillText(action.label, 128, 164);
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -2427,25 +2362,6 @@ function ensureQuestSpecialPaletteTextures() {
     questSpecialPaletteTextures = actions.map((action, index) => createQuestBeltPanelTexture(action, index === questSpecialPaletteHoverIndex));
     questSpecialPaletteTextureKey = key;
     return questSpecialPaletteTextures;
-}
-
-function ensureQuestSpatialWebTextures() {
-    const key = String(questSpatialWebHoverIndex);
-    const actions = visibleQuestSpatialWebActions();
-    if (questSpatialWebTextures.length === actions.length && questSpatialWebTextureKey === key) return questSpatialWebTextures;
-    questSpatialWebTextures.forEach(texture => texture && gl.deleteTexture(texture));
-    questSpatialWebTextures = actions.map((action, index) => createQuestBeltPanelTexture(action, index === questSpatialWebHoverIndex));
-    questSpatialWebTextureKey = key;
-    return questSpatialWebTextures;
-}
-
-function ensureQuestSpatialDashboardControlTextures() {
-    const key = String(questSpatialDashboardControlHoverIndex);
-    if (questSpatialDashboardControlTextures.length === QUEST_SPATIAL_DASHBOARD_CONTROLS.length && questSpatialDashboardControlTextureKey === key) return questSpatialDashboardControlTextures;
-    questSpatialDashboardControlTextures.forEach(texture => texture && gl.deleteTexture(texture));
-    questSpatialDashboardControlTextures = QUEST_SPATIAL_DASHBOARD_CONTROLS.map((action, index) => createQuestBeltPanelTexture(action, index === questSpatialDashboardControlHoverIndex));
-    questSpatialDashboardControlTextureKey = key;
-    return questSpatialDashboardControlTextures;
 }
 
 function drawQuestSpatialBelt(view) {
@@ -2512,43 +2428,13 @@ function drawQuestSpatialSpecialPalette(view) {
 }
 
 function drawQuestSpatialWebPanel(view) {
-    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible || !homeSignProgram || !homeSignBuffer) return;
-    const layout = currentQuestSpatialWebLayout();
-    const textures = layout.length === visibleQuestSpatialWebActions().length && ensureQuestSpatialWebTextures();
-    if (!textures?.length || textures.some(texture => !texture)) return;
+    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible || !questSpatialDashboardMirror?.texture || !questSpatialDashboardPanel || !homeSignProgram || !homeSignBuffer) return;
     document.body.classList.add('creator-ar-spatial-web-ready');
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(false);
-    gl.useProgram(homeSignProgram);
-    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
-    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
-    layout.forEach((button, index) => {
-        const model = questBeltPanelMatrix(button, .46, .3);
-        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
-        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
-        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-    });
     gl.depthMask(true);
-}
-
-function drawQuestSpatialDashboardControls(view) {
-    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible || !homeSignProgram || !homeSignBuffer) return;
-    const layout = currentQuestSpatialDashboardControlLayout();
-    const textures = layout.length === QUEST_SPATIAL_DASHBOARD_CONTROLS.length && ensureQuestSpatialDashboardControlTextures();
-    if (!textures?.length || textures.some(texture => !texture)) return;
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(false);
     gl.useProgram(homeSignProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
@@ -2556,13 +2442,11 @@ function drawQuestSpatialDashboardControls(view) {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
-    layout.forEach((button, index) => {
-        const model = questBeltPanelMatrix(button, .085, .06);
-        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
-        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
-        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-    });
+    const model = spatialDashboardPanelMatrix(questSpatialDashboardPanel);
+    const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+    gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+    gl.bindTexture(gl.TEXTURE_2D, questSpatialDashboardMirror.texture);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.depthMask(true);
 }
 
@@ -3991,8 +3875,6 @@ function cleanup() {
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     questSpecialPaletteTextures.forEach(texture => texture && gl?.deleteTexture(texture));
-    questSpatialWebTextures.forEach(texture => texture && gl?.deleteTexture(texture));
-    questSpatialDashboardControlTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -4016,15 +3898,11 @@ function cleanup() {
     questSpecialPaletteLayout = [];
     questSpecialPaletteVisible = false;
     questSpecialPaletteHoverIndex = -1;
-    questSpatialWebTextures = [];
-    questSpatialWebTextureKey = '';
-    questSpatialWebLayout = [];
     questSpatialWebVisible = false;
-    questSpatialWebHoverIndex = -1;
-    questSpatialDashboardControlTextures = [];
-    questSpatialDashboardControlTextureKey = '';
-    questSpatialDashboardControlLayout = [];
-    questSpatialDashboardControlHoverIndex = -1;
+    questSpatialDashboardMirror = null;
+    questSpatialDashboardPanel = null;
+    questSpatialDashboardHit = null;
+    questSpatialDashboardScrollCooldownUntil = 0;
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
@@ -4282,11 +4160,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput();
             updateControllerRay(frame);
-            const specialPaletteTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
-            const dashboardControlTarget = !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardControlAtAim() : null;
-            const webTarget = !specialPaletteTarget && !dashboardControlTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialWebActionAtAim() : null;
-            const beltTarget = !specialPaletteTarget && !dashboardControlTarget && !webTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
-            if (!specialPaletteTarget && !dashboardControlTarget && !webTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
+            const specialPaletteTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
+            const beltTarget = !dashboardTarget && !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
+            if (!dashboardTarget && !specialPaletteTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
             pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
@@ -4310,7 +4187,6 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialBelt(view);
                 drawQuestSpatialSpecialPalette(view);
                 drawQuestSpatialWebPanel(view);
-                drawQuestSpatialDashboardControls(view);
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);
@@ -4337,6 +4213,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         });
         launchedSession.addEventListener('selectstart', event => {
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
+            if (controllerSpatialDashboardAtAim()) return;
+            if (controllerSpecialPaletteActionAtAim()) return;
             if (controllerBeltActionAtAim()) return;
             const target = controllerMarkerAtAim();
             // A short press selects a placed object; the delayed arm keeps
