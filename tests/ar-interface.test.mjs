@@ -323,11 +323,14 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
-    assert.doesNotMatch(taskbar, /data-ar-view-mode|data-ar-hold-mode|data-ar-select-mode/);
+    assert.match(taskbar, /data-ar-view-mode/);
+    assert.match(taskbar, /data-ar-hold-mode/);
+    assert.match(taskbar, /data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 4);
+    assert.equal((taskbar.match(/<button/g) || []).length, 7);
     assert.doesNotMatch(styles, /creator-ar-quest-link-bar \.creator-ar-taskbar > button:nth-child/);
+    assert.match(styles, /body\.creator-ar-quest-headset[\s\S]*\.creator-ar-taskbar > \[data-ar-view-mode\][\s\S]*display: none !important/);
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
@@ -618,7 +621,7 @@ test('Creator AR keeps dashboard web-only while supporting controller controls',
     assert.match(arSource, /origin\.x \+ ray\.x \* distance/);
     assert.match(styles, /creator-ar-controller-pointer[^}]*z-index:12005/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
-    assert.doesNotMatch(taskbar, /data-ar-view-mode|data-ar-hold-mode|data-ar-select-mode/);
+    assert.match(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /function drawControllerPointerContact\(view\)/);

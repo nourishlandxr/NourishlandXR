@@ -3368,6 +3368,9 @@ function createOverlay() {
             <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
             <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
             <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open spatial Web Hub"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
           </nav>
         </div>`;
@@ -3399,6 +3402,9 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-add-plant]', () => armDirectPlacement('plant'));
     bindTaskbarAction('[data-ar-add-note]', () => armDirectPlacement('note'));
     bindTaskbarAction('[data-ar-add-special]', () => void openSpecialMarkerPicker());
+    bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
+    bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
+    bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
     overlayRoot.querySelector('[data-ar-recenter-area]')?.addEventListener('click', () => void recenterActiveArea());
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });

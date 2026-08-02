@@ -6523,6 +6523,9 @@ body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > b
     transition: transform .18s ease, filter .18s ease, background .18s ease;
 }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.04); filter: brightness(1.18); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-view-mode],
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-hold-mode],
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-select-mode] { display: none !important; }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button b,
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }
