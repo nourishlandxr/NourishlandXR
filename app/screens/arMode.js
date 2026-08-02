@@ -22,6 +22,8 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { renderProjectDashboard, renderProjectAreaDashboard, openProjectEntry } from './projectDashboard.js';
+import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -34,6 +36,7 @@ let latestControllerRay = null;
 let latestHandState = null;
 let hoveredMarkerId = '';
 let handPinchActive = false;
+let spatialWebWindow = null;
 let gl = null;
 let refSpace = null;
 let canvas = null;
@@ -953,6 +956,7 @@ function isPrimaryControllerSource(source) {
 
 function controllerActionElements() {
     const panels = [
+        overlayRoot?.querySelector('[data-ar-spatial-web-window]'),
         overlayRoot?.querySelector('[data-ar-place-picker]'),
         overlayRoot?.querySelector('[data-ar-area-chooser]'),
         overlayRoot?.querySelector('[data-ar-context-toolbar]'),
@@ -960,6 +964,71 @@ function controllerActionElements() {
     ];
     const panel = panels.find(candidate => candidate && !candidate.hidden && candidate.querySelector('button:not([disabled])'));
     return [...(panel?.querySelectorAll('button:not([disabled])') || [])].filter(button => !button.hidden);
+}
+
+function spatialWebPlantId() {
+    const hovered = activeAreaMarkers().find(record => record.marker.id === hoveredMarkerId && record.marker.type === 'plant');
+    return hovered?.marker.id || activeAreaMarkers().find(record => record.marker.type === 'plant')?.marker.id || '';
+}
+
+function spatialWebAreaId() {
+    const candidate = activeAreaId || activeAreaMarkers().find(record => record.areaId && !isDefaultHomeArea(record.areaName || record.areaId))?.areaId || '';
+    return candidate && !isDefaultHomeArea(activeAreaName || candidate) ? candidate : '';
+}
+
+function closeSpatialWebWindow() {
+    spatialWebWindow?.remove();
+    spatialWebWindow = null;
+    delete window.__nourishlandSpatialWindow;
+    overlayRoot?.classList.remove('has-spatial-web-window');
+    controllerMenuActive = true;
+    updateControllerHud();
+}
+
+function openSpatialWebWindow() {
+    if (!overlayRoot || spatialWebWindow) return;
+    const content = document.createElement('div');
+    content.className = 'creator-ar-spatial-web-content';
+    const encodedProjectId = encodeURIComponent(activeProjectId);
+    const renderIntoWindow = (renderer, ...args) => {
+        content.innerHTML = '<p class="creator-ar-spatial-web-loading">Opening spatial workspace…</p>';
+        return Promise.resolve(renderer(content, ...args)).catch(error => {
+            content.innerHTML = `<div class="screen"><div class="panel"><h2>Spatial workspace unavailable</h2><p>${escapeHtml(error.message)}</p></div></div>`;
+        });
+    };
+    spatialWebWindow = document.createElement('section');
+    spatialWebWindow.className = 'creator-ar-spatial-web-window';
+    spatialWebWindow.dataset.arSpatialWebWindow = '';
+    spatialWebWindow.setAttribute('aria-label', 'Spatial Web workspace');
+    spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>SPATIAL WEB</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Close spatial Web window">×</button></header><nav class="creator-ar-spatial-web-nav" aria-label="Spatial Web destinations"><button type="button" data-spatial-web-route="dashboard">Dashboard</button><button type="button" data-spatial-web-route="webhub">Web Hub</button><button type="button" data-spatial-web-route="area">Area Dashboard</button><button type="button" data-spatial-web-route="plant">Plant Dashboard</button></nav>`;
+    spatialWebWindow.append(content);
+    overlayRoot.append(spatialWebWindow);
+    overlayRoot.classList.add('has-spatial-web-window');
+    const route = name => {
+        if (name === 'dashboard') return renderIntoWindow(renderProjectDashboard, encodedProjectId);
+        if (name === 'webhub') return renderIntoWindow(renderFieldGuide, encodedProjectId, true);
+        if (name === 'area') {
+            const areaId = spatialWebAreaId();
+            return areaId
+                ? renderIntoWindow(renderProjectAreaDashboard, encodedProjectId, encodeURIComponent(areaId))
+                : renderIntoWindow(() => { content.innerHTML = '<div class="screen"><div class="panel"><h2>No named Area selected</h2><p>Select an Area in the Web Hub first, then reopen this spatial window.</p></div></div>'; });
+        }
+        const markerId = spatialWebPlantId();
+        return markerId
+            ? renderIntoWindow(openProjectEntry, encodedProjectId, encodeURIComponent(markerId), false, 'field-guide')
+            : renderIntoWindow(() => { content.innerHTML = '<div class="screen"><div class="panel"><h2>No Plant selected</h2><p>A Plant Dashboard will appear here when this project has a Plant.</p></div></div>'; });
+    };
+    window.__nourishlandSpatialWindow = {
+        renderProjectDashboard: projectId => renderIntoWindow(renderProjectDashboard, projectId),
+        renderFieldGuide: (projectId, creator) => renderIntoWindow(renderFieldGuide, projectId, creator),
+        renderProjectAreaDashboard: (projectId, areaId, options) => renderIntoWindow(renderProjectAreaDashboard, projectId, areaId, options),
+        openProjectEntry: (projectId, markerId, returnToAr, returnContext) => renderIntoWindow(openProjectEntry, projectId, markerId, returnToAr, returnContext)
+    };
+    spatialWebWindow.querySelector('[data-spatial-web-close]').addEventListener('click', closeSpatialWebWindow);
+    spatialWebWindow.querySelectorAll('[data-spatial-web-route]').forEach(button => button.addEventListener('click', () => route(button.dataset.spatialWebRoute)));
+    controllerMenuActive = true;
+    updateControllerHud();
+    void route('dashboard');
 }
 
 function controllerActionLabel(button) {
@@ -2945,7 +3014,7 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
     bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
-    bindTaskbarAction('[data-ar-web-return]', returnToWebMode);
+    bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
     overlayRoot.querySelector('[data-ar-recenter-area]')?.addEventListener('click', () => void recenterActiveArea());
     overlayRoot.querySelector('[data-ar-move-release]').addEventListener('click', () => { if (dragState) void finishMarkerDrag(); });
     overlayRoot.querySelector('[data-ar-move-farther]').addEventListener('click', () => { if (dragState) setHeldMarkerDepthOffset(dragState.depthOffset + .2); });
@@ -2966,6 +3035,7 @@ function createOverlay() {
 
 function cleanup() {
     cleanupDrag();
+    closeSpatialWebWindow();
     refSpace = null;
     canvas?.remove();
     canvas = null;

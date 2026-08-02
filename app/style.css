@@ -6318,6 +6318,54 @@ body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar butt
     body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar { gap: 3px; padding-inline: 5px; }
     body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button { width: 42px; min-width: 42px; }
 }
+
+/* The WEB link opens a real app surface without ending the Quest session. */
+.creator-ar-spatial-web-window {
+    position: fixed;
+    left: 50%;
+    top: 7vh;
+    z-index: 12020;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    width: min(82vw, 760px);
+    height: min(72vh, 680px);
+    overflow: hidden;
+    transform: translateX(-50%) perspective(1100px) rotateX(1.5deg);
+    border: 1px solid rgba(222,246,215,.48);
+    border-radius: 22px;
+    background: rgba(16,29,23,.94);
+    color: #f5faee;
+    box-shadow: 0 24px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08), inset 0 1px rgba(255,255,255,.16);
+    backdrop-filter: blur(18px) saturate(1.15);
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+.creator-ar-spatial-web-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:13px 17px 11px; border-bottom:1px solid rgba(222,246,215,.16); background:linear-gradient(135deg,rgba(52,93,64,.75),rgba(17,38,27,.64)); }
+.creator-ar-spatial-web-header div { display:grid; gap:3px; min-width:0; }
+.creator-ar-spatial-web-header span { color:#dcef95; font-size:.56rem; font-weight:850; letter-spacing:.16em; }
+.creator-ar-spatial-web-header strong { overflow:hidden; font-size:1rem; text-overflow:ellipsis; white-space:nowrap; }
+.creator-ar-spatial-web-header button { display:grid; place-items:center; width:34px; min-width:34px; height:34px; padding:0; border:1px solid rgba(255,255,255,.3); border-radius:50%; background:rgba(0,0,0,.2); color:#fff; font-size:1.45rem; line-height:1; }
+.creator-ar-spatial-web-nav { display:flex; gap:6px; padding:8px 10px; overflow-x:auto; border-bottom:1px solid rgba(222,246,215,.13); background:rgba(7,16,11,.42); }
+.creator-ar-spatial-web-nav button { flex:1 0 auto; min-height:36px; padding:7px 11px; border:1px solid rgba(255,255,255,.2); border-radius:999px; background:rgba(255,255,255,.08); color:#f5faee; font-size:.66rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.creator-ar-spatial-web-nav button:is(:hover,:focus-visible) { border-color:#dcef95; background:rgba(220,239,149,.18); }
+.creator-ar-spatial-web-content { min-height:0; overflow:auto; padding:12px; overscroll-behavior:contain; }
+.creator-ar-spatial-web-content .screen { min-height:0; padding:0; background:transparent; color:#f5faee; }
+.creator-ar-spatial-web-content .page-header { margin:0 0 12px; padding:0; }
+.creator-ar-spatial-web-content .page-header h1,
+.creator-ar-spatial-web-content .page-header h2,
+.creator-ar-spatial-web-content .page-header p,
+.creator-ar-spatial-web-content .panel,
+.creator-ar-spatial-web-content .latest-entries-section,
+.creator-ar-spatial-web-content .content-mode-tool-grid,
+.creator-ar-spatial-web-content .project-areas-section { color:#f5faee; }
+.creator-ar-spatial-web-content .panel,
+.creator-ar-spatial-web-content .latest-entries-section { background:rgba(255,255,255,.08); border-color:rgba(222,246,215,.2); }
+.creator-ar-spatial-web-content .project-loading-screen { min-height:200px; background:transparent; }
+.creator-ar-spatial-web-loading { padding:28px; color:rgba(245,250,238,.78); text-align:center; }
+@media (max-width: 620px) {
+    .creator-ar-spatial-web-window { top:4vh; width:94vw; height:78vh; border-radius:17px; }
+    .creator-ar-spatial-web-nav button { font-size:.58rem; padding-inline:8px; }
+}
 .creator-ar-context-toolbar {
     gap:5px;
     padding:6px;
