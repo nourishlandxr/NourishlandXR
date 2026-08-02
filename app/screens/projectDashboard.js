@@ -1708,7 +1708,10 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         }).join('');
         const totemRow = checkpoint
             ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(checkpoint.marker.name)}</strong><span>Totem · ${checkpoint.isPlaced ? 'Anchored' : 'Not yet anchored'}</span></span></article>`
-            : `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(context.area.name)} Totem</strong><span>Totem · Not yet anchored</span></span></article>`;
+            : isDefaultHomeArea(context.area)
+                ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>Home Totem</strong><span>Totem · Not yet anchored</span></span></article>`
+                : '';
+        const showTotemSection = isDefaultHomeArea(context.area) || Boolean(checkpoint?.isPlaced);
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1763,11 +1766,11 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
-            <section class="area-totem-section" aria-labelledby="areaTotemTitle">
+            ${showTotemSection ? `<section class="area-totem-section" aria-labelledby="areaTotemTitle">
                 <div class="section-heading-row"><div><p class="welcome-label">AREA ANCHOR</p><h2 id="areaTotemTitle">Totem</h2><p>One Totem gives this Area its identity.</p></div></div>
                 <div class="area-totem-card">${totemRow}</div>
                 <div class="totem-stat-grid" aria-label="Totem status"><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">▤</span><small>TEXT BALLOONS</small><strong>${totemTextBalloonCount}</strong></div><div class="totem-stat"><span class="totem-stat-icon totem-stat-color" style="--totem-stat-color:${totemColor}" aria-hidden="true">●</span><small>COLOR</small><strong>${escapeHtml(totemColor)}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">↗</span><small>LINKED</small><strong>${linkedTotemCount ? 'YES' : 'NO'}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">⌖</span><small>ANCHORED</small><strong>${checkpoint?.isPlaced ? 'YES' : 'NO'}</strong></div></div>
-            </section>
+            </section>` : ''}
             ${advancedAreaActions}
             <details class="latest-entries-section area-content-section">
                 <summary class="section-heading-row"><div><h2>Markers in this Area</h2><p>${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</p></div><span aria-hidden="true">▾</span></summary>
@@ -1973,6 +1976,12 @@ export async function renderUnplacedContent(app, encodedProjectId) {
         const { project, site, entries } = await projectContent(projectId);
         const placementEntries = await entriesWithPlacement(project, site, entries);
         const unplaced = placementEntries.filter(entry => isDefaultHomeArea(entry.place) && ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && !entry.isPlaced);
+        // An empty Home is not a destination. Return to the project dashboard
+        // after the last Home item is deleted instead of showing a dead page.
+        if (!unplaced.length) {
+            await renderProjectDashboard(app, encoded(project.id));
+            return;
+        }
         const rows = unplaced.map(({ marker, place }) => {
             const markerType = effectiveMarkerType(marker);
             return `<div class="latest-entry-row unplaced-content-row"><span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · Area: ${escapeHtml(displayAreaName(place))}</span><span class="placement-status is-unplaced">Not yet placed</span></span><button type="button" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(marker.id)}', '${encoded(place.id)}', '${encoded(site?.id || '')}')">Place in AR</button></div>`;

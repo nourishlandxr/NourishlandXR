@@ -2601,16 +2601,8 @@ function drawSpatialMarkers(view) {
             return;
         }
         if (isNoteMarker) {
-            const [halfWidth, halfHeight] = markerDimensions(record.marker);
-            drawSpatialPrism(gl, prismRenderer, view, record.position, {
-                halfWidth,
-                halfHeight,
-                halfDepth: .025,
-                color: markerRgb(record.marker, colors.note),
-                topColor: [.86, .7, .48],
-                alpha: markerAppearanceOpacity(record.marker),
-                rotationY: (Number(record.rotationDegrees) || 0) * Math.PI / 180
-            });
+            // Notes are DOM surfaces only. A second WebGL board underneath
+            // the readable note creates the fuzzy red artifact in passthrough.
             return;
         }
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
@@ -2647,17 +2639,7 @@ function drawSpatialMarkers(view) {
     if (readyPlacementType?.toLocaleLowerCase() === 'note' && latestViewerMatrix) {
         const noteTarget = placementPoint('note');
         if (noteTarget) {
-            const previewMarker = placementPreviewMarker('note');
-            const [halfWidth, halfHeight] = markerDimensions(previewMarker);
-            drawSpatialPrism(gl, prismRenderer, view, noteTarget, {
-                halfWidth,
-                halfHeight,
-                halfDepth: .025,
-                color: [.66, .54, .36],
-                topColor: [.96, .78, .48],
-                alpha: 1,
-                rotationY: 0
-            });
+            // The DOM placement surface is the only note preview.
         }
     }
 
