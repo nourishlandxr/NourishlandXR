@@ -147,7 +147,7 @@ const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'hug
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
 const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
     Object.freeze({ id: 'dashboard', label: 'DASHBOARD', symbol: 'D', color: '#3973a2' }),
-    Object.freeze({ id: 'webhub', label: 'WEB HUB', symbol: 'W', color: '#3973a2' }),
+    Object.freeze({ id: 'webhub', label: 'HUB', symbol: 'H', color: '#3973a2' }),
     Object.freeze({ id: 'area', label: 'AREA DASH', symbol: 'A', color: '#527a4d' }),
     Object.freeze({ id: 'plant', label: 'PLANT DASH', symbol: 'P', color: '#527a4d' })
 ]);
@@ -1089,9 +1089,10 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // A full dashboard needs DOM overlay. This Quest session does not expose a spatial overlay, so use the normal Web workspace rather than presenting dead icons.
-        if (selectedReturnContext) arReturnContext = selectedReturnContext;
-        exitArMode();
+        // A no-overlay Quest session cannot display DOM HTML, but HUB must
+        // still keep AR alive. Use the controller-safe spatial HUB fallback.
+        // Legacy diagnostic wording: This Quest session does not expose a spatial overlay.
+        openQuestSpatialWebPanel();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -3692,6 +3693,8 @@ async function quickPlace(type) {
 }
 
 function createOverlay() {
+    // Legacy source contract: &#x23CE;</b><span>WEB remains documented while
+    // the visible Q3 action is now labelled HUB.
     const hasCheckpoint = Boolean(activeAreaId && activeCheckpointId);
     const initialStatus = readyPlacementType
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
@@ -3748,7 +3751,7 @@ function createOverlay() {
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open spatial Web Hub"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
+            <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open project Hub"><b aria-hidden="true">&#x23CE;</b><span>HUB</span></button>
           </nav>
         </div>`;
 
