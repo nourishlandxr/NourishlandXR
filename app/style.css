@@ -1050,6 +1050,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:hover::after,
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:focus-visible::after { border-color: rgba(216,239,190,.72); transform: scale(.94); opacity: .78; box-shadow: 0 0 0 7px rgba(216,239,190,.08), 0 0 18px rgba(184,220,158,.25); }
 .creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover::after { border-color:#eaff9a; transform:scale(1); opacity:1; box-shadow:0 0 0 9px rgba(220,239,149,.16),0 0 28px rgba(220,239,149,.72); animation:creator-ar-marker-breathe 1s ease-in-out infinite alternate; }
+.creator-ar-marker-layer .creator-ar-marker-hit-target-area_checkpoint.is-xr-hover::after { display:none !important; }
 .creator-ar-marker-layer .creator-ar-marker-hit-target.is-selected::after { display:block; inset:-8px; border:3px solid #eaff9a; border-radius:inherit; transform:scale(1); opacity:1; box-shadow:0 0 0 5px rgba(220,239,149,.2),0 0 32px rgba(220,239,149,.82),inset 0 0 18px rgba(220,239,149,.18); animation:creator-ar-marker-selected-pulse 1.15s ease-in-out infinite alternate; }
 .creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover .creator-ar-spatial-name { opacity:1; visibility:visible; transform:translate(-50%,0); }
 .creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover .creator-ar-spatial-name::after { content:' · Press / hold'; color:#eaff9a; }

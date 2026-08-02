@@ -146,11 +146,13 @@ const TASKBAR_V2_COLORS = Object.freeze({
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
 const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
-    Object.freeze({ id: 'dashboard', label: 'DASHBOARD', symbol: 'D', color: '#3973a2' }),
-    Object.freeze({ id: 'webhub', label: 'HUB', symbol: 'H', color: '#3973a2' }),
-    Object.freeze({ id: 'area', label: 'AREA DASH', symbol: 'A', color: '#527a4d' }),
-    Object.freeze({ id: 'plant', label: 'PLANT DASH', symbol: 'P', color: '#527a4d' })
+    Object.freeze({ id: 'dashboard', label: 'PROJECT DASHBOARD', symbol: 'D', color: '#3973a2' }),
+    // Retained as hidden migration entries so older controller state can be ignored safely.
+    Object.freeze({ id: 'webhub', label: '', symbol: '', hidden: true, color: '#3973a2' }),
+    Object.freeze({ id: 'area', label: '', symbol: '', hidden: true, color: '#527a4d' }),
+    Object.freeze({ id: 'plant', label: '', symbol: '', hidden: true, color: '#527a4d' })
 ]);
+const visibleQuestSpatialWebActions = () => QUEST_SPATIAL_WEB_ACTIONS.filter(action => !action.hidden);
 const visibleQuestSpecialPaletteActions = () => QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => !action.hidden);
 const CREATOR_AR_HOLD_DELAY_MS = 420;
 const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
@@ -739,6 +741,13 @@ function placementPoint(type = readyPlacementType) {
     return isGardenStakePlacement(type) ? gardenStakePlacementPoint(target) : target;
 }
 
+function notePlacementTarget() {
+    // Notes must remain placeable while the DOM overlay is still waiting for
+    // its first projected frame. The viewer-forward target is stable enough
+    // for the saved anchor and is refined on subsequent frames.
+    return latestNotePlacementPoint || placementPoint('note');
+}
+
 function roundCoordinate(value) {
     return Math.round(Number(value) * 1000) / 1000;
 }
@@ -1056,7 +1065,7 @@ function openQuestSpatialWebPanel() {
     }
     closeQuestSpecialPalette();
     questSpatialWebVisible = true;
-    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
+    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpatialWebActions(), {
         distance: .78,
         side: -1,
         sideOffset: .42,
@@ -1067,7 +1076,7 @@ function openQuestSpatialWebPanel() {
     });
     questSpatialWebHoverIndex = -1;
     controllerMenuActive = true;
-    setPlacementStatus('Spatial Web Hub open on your left. Choose Dashboard, Web Hub, Area Dash or Plant Dash.');
+    setPlacementStatus('Project Dashboard open on your left. AR remains active.');
     updateControllerHud();
 }
 
@@ -1111,7 +1120,7 @@ function openSpatialWebWindow() {
     spatialWebWindow.dataset.arSpatialWebWindow = '';
     spatialWebWindow.dataset.arSpatialWebMode = 'quest';
     spatialWebWindow.setAttribute('aria-label', 'Spatial Web workspace');
-    spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>SPATIAL WEB</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Close spatial Web window">×</button></header><nav class="creator-ar-spatial-web-nav" aria-label="Spatial Web destinations"><button type="button" data-spatial-web-route="dashboard">Dashboard</button><button type="button" data-spatial-web-route="webhub">Web Hub</button><button type="button" data-spatial-web-route="area">Area Dashboard</button><button type="button" data-spatial-web-route="plant">Plant Dashboard</button></nav>`;
+    spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>PROJECT DASHBOARD</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Close project dashboard">×</button></header>`;
     spatialWebWindow.append(content);
     overlayRoot.append(spatialWebWindow);
     overlayRoot.classList.add('has-spatial-web-window');
@@ -1146,7 +1155,6 @@ function openSpatialWebWindow() {
         openProjectEntry: (projectId, markerId, returnToAr, returnContext) => renderIntoWindow(openProjectEntry, projectId, markerId, returnToAr, returnContext)
     };
     spatialWebWindow.querySelector('[data-spatial-web-close]').addEventListener('click', closeSpatialWebWindow);
-    spatialWebWindow.querySelectorAll('[data-spatial-web-route]').forEach(button => button.addEventListener('click', () => route(button.dataset.spatialWebRoute)));
     controllerMenuActive = true;
     updateControllerHud();
     // The legacy fallback was: void route(selectedRecord ? 'selected' : 'area')
@@ -1474,7 +1482,7 @@ function selectQuestSpatialWebAction(action) {
     // destination for the phone Web Hub, while Quest without DOM overlay gets
     // a controller-safe spatial route surface instead of an AR exit.
     questSpatialWebVisible = true;
-    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
+    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpatialWebActions(), {
         distance: .78,
         side: -1,
         sideOffset: .42,
@@ -2342,9 +2350,10 @@ function ensureQuestSpecialPaletteTextures() {
 
 function ensureQuestSpatialWebTextures() {
     const key = String(questSpatialWebHoverIndex);
-    if (questSpatialWebTextures.length === QUEST_SPATIAL_WEB_ACTIONS.length && questSpatialWebTextureKey === key) return questSpatialWebTextures;
+    const actions = visibleQuestSpatialWebActions();
+    if (questSpatialWebTextures.length === actions.length && questSpatialWebTextureKey === key) return questSpatialWebTextures;
     questSpatialWebTextures.forEach(texture => texture && gl.deleteTexture(texture));
-    questSpatialWebTextures = QUEST_SPATIAL_WEB_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === questSpatialWebHoverIndex));
+    questSpatialWebTextures = actions.map((action, index) => createQuestBeltPanelTexture(action, index === questSpatialWebHoverIndex));
     questSpatialWebTextureKey = key;
     return questSpatialWebTextures;
 }
@@ -2415,7 +2424,7 @@ function drawQuestSpatialSpecialPalette(view) {
 function drawQuestSpatialWebPanel(view) {
     if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible || !homeSignProgram || !homeSignBuffer) return;
     const layout = currentQuestSpatialWebLayout();
-    const textures = layout.length === QUEST_SPATIAL_WEB_ACTIONS.length && ensureQuestSpatialWebTextures();
+    const textures = layout.length === visibleQuestSpatialWebActions().length && ensureQuestSpatialWebTextures();
     if (!textures?.length || textures.some(texture => !texture)) return;
     document.body.classList.add('creator-ar-spatial-web-ready');
     gl.enable(gl.DEPTH_TEST);
@@ -2547,7 +2556,8 @@ function drawSpatialMarkers(view) {
         const isNoteMarker = record.marker.type === 'note';
         const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
         const highlighted = record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
-        const needsShapeHalo = !isNoteMarker && (shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb');
+        const needsShapeHalo = !isNoteMarker && record.marker.type !== 'area_checkpoint'
+            && (shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb');
         if (highlighted && needsShapeHalo) {
             const [scaleX, scaleY] = markerDimensions(record.marker);
             const haloPosition = shape === 1
@@ -3562,7 +3572,7 @@ async function quickPlace(type) {
         const operationIsCurrent = () => activePlacementOperation === placementToken && isArOperationCurrent(operation);
         if (!operationIsCurrent()) return;
         const placementPosition = type === 'note'
-            ? (latestNotePlacementPoint || placementPoint(type))
+            ? notePlacementTarget()
             : placementPoint(type);
         if (!placementPosition) {
             setPlacementStatus('Move your phone briefly, then use Place again.');
