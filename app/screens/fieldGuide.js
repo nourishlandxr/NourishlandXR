@@ -1,5 +1,5 @@
 import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor } from '../services/persistence.js';
-import { loadResolvedPlantsForPlace } from '../services/plantDataService.js';
+import { loadResolvedPlantsForPlace, searchGlobalPlants } from '../services/plantDataService.js';
 import { DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { DEFAULT_TOTEM_COLOR } from '../services/totemAppearance.js';
 import { physicalMarkerLabel } from '../services/physicalAnchor.js';
@@ -8,6 +8,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const encoded = value => encodeURIComponent(String(value));
 let currentGuide = null;
 let currentGuidePlaceId = '';
+let globalGuideSearchTimer = null;
 
 async function loadAreaPlants(projectId, siteId, placeId, visitor) {
     const [resolved, markers] = await Promise.all([
@@ -128,6 +129,77 @@ function applyCreatorWebHubCopy(app) {
         plantList.parentNode.insertBefore(details, plantList);
         details.append(summary, plantList);
     }
+    app.querySelector('#fieldGuideCount')?.remove();
+
+    const searchHeading = searchTitle?.closest('.field-guide-section-heading');
+    const searchDeck = app.querySelector('.field-guide-search-deck');
+    const localSearchField = app.querySelector('#fieldGuideSearch')?.closest('.field');
+    const localFilters = searchDeck?.querySelector('.field-guide-advanced-search');
+    const localPlants = app.querySelector('.field-guide-all-plants');
+    if (!searchHeading || !searchDeck || !localSearchField || !localPlants || searchHeading.querySelector('[data-field-guide-scope]')) return;
+
+    const scope = document.createElement('div');
+    scope.className = 'field-guide-plant-scope';
+    scope.dataset.fieldGuideScope = '';
+    scope.setAttribute('role', 'group');
+    scope.setAttribute('aria-label', 'Plant search scope');
+    scope.innerHTML = '<button type="button" data-field-guide-scope-button="global" aria-pressed="false">GLOBAL</button><button type="button" data-field-guide-scope-button="local" class="is-active" aria-pressed="true">LOCAL</button>';
+    searchHeading.append(scope);
+
+    const globalPanel = document.createElement('div');
+    globalPanel.className = 'field-guide-global-search';
+    globalPanel.hidden = true;
+    globalPanel.innerHTML = '<div class="field"><label for="fieldGuideGlobalSearch">Search global plants</label><input id="fieldGuideGlobalSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" /><p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p></div><div class="field-guide-global-results" data-field-guide-global-results></div>';
+    searchDeck.append(globalPanel);
+
+    const globalInput = globalPanel.querySelector('#fieldGuideGlobalSearch');
+    const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
+    const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
+    const renderGlobalResults = results => {
+        if (!globalResults) return;
+        globalResults.innerHTML = results.map(result => `<article class="field-guide-global-result"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}</article>`).join('') || '<p class="meta">No public plant matches found.</p>';
+    };
+    const searchGlobal = value => {
+        clearTimeout(globalGuideSearchTimer);
+        const query = String(value || '').trim();
+        if (globalResults) globalResults.innerHTML = '';
+        if (query.length < 2) {
+            if (globalStatus) globalStatus.textContent = 'Type at least 2 letters.';
+            return;
+        }
+        if (globalStatus) globalStatus.textContent = 'Searching the global plant list…';
+        globalGuideSearchTimer = setTimeout(async () => {
+            try {
+                const results = await searchGlobalPlants(query);
+                if (globalInput?.value.trim() !== query) return;
+                renderGlobalResults(results);
+                if (globalStatus) globalStatus.textContent = results.length ? `${results.length} public plant result${results.length === 1 ? '' : 's'}.` : 'No public plant matches found.';
+            } catch (error) {
+                if (globalStatus) globalStatus.textContent = `Global plant search unavailable: ${error.message}`;
+            }
+        }, 300);
+    };
+    globalInput?.addEventListener('input', event => searchGlobal(event.target.value));
+
+    const setScope = value => {
+        const global = value === 'global';
+        scope.querySelectorAll('[data-field-guide-scope-button]').forEach(button => {
+            const active = button.dataset.fieldGuideScopeButton === value;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+        localSearchField.hidden = global;
+        if (localFilters) localFilters.hidden = global;
+        localPlants.hidden = global;
+        globalPanel.hidden = !global;
+        if (global) {
+            globalInput?.focus();
+            searchGlobal(globalInput?.value);
+        } else {
+            applyFieldGuideFilter(currentGuidePlaceId);
+        }
+    };
+    scope.querySelectorAll('[data-field-guide-scope-button]').forEach(button => button.addEventListener('click', () => setScope(button.dataset.fieldGuideScopeButton)));
 }
 
 export async function renderFieldGuide(app, encodedProjectId, creator = false) {

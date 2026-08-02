@@ -34,7 +34,7 @@ export const AR_EXPERIENCE_CONFIG = Object.freeze({
         // Home is the built-in holding Area for records not assigned elsewhere.
         // "Unassigned" remains a recognized legacy name.
         type: 'Other',
-        description: 'Default Home for content ready to organise or place later.',
+        description: '',
         visibility: 'draft'
     }),
     markerTypes: Object.freeze(['plant', 'sub_checkpoint', 'note', 'intro_checkpoint', 'area_checkpoint'])

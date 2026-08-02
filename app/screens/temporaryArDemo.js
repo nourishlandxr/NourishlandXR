@@ -228,20 +228,16 @@ function setGuide(message) {
 }
 
 function nextDemoTextLength(text, currentLength) {
-    if (currentLength >= text.length) return text.length;
-    let nextLength = currentLength;
-    while (nextLength < text.length && !/\s/.test(text[nextLength])) nextLength += 1;
-    while (nextLength < text.length && /\s/.test(text[nextLength])) nextLength += 1;
-    return nextLength;
+    return Math.min(text.length, currentLength + 1);
 }
 
 function demoTextTypingDelay(text, visibleLength) {
-    const visible = text.slice(0, visibleLength);
-    if (/\n\s*$/.test(visible)) return 520;
-    const lastVisibleCharacter = visible.trimEnd().slice(-1);
-    if (/[.!?]/.test(lastVisibleCharacter)) return 360;
-    if (/[,;]/.test(lastVisibleCharacter)) return 210;
-    return 115;
+    const lastVisibleCharacter = text[visibleLength - 1] || '';
+    if (/\n/.test(lastVisibleCharacter)) return 260;
+    if (/[.!?]/.test(lastVisibleCharacter)) return 240;
+    if (/[,;]/.test(lastVisibleCharacter)) return 130;
+    if (/\s/.test(lastVisibleCharacter)) return 24;
+    return 34;
 }
 
 function showDemoAction(nextStage) {
