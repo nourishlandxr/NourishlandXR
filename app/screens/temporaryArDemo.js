@@ -92,7 +92,11 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION';
-const DEMO_TEXT_TEXTURE_INTERVAL_MS = 24;
+// The board is updated only when a new character is ready, so there is no
+// reason to wait for another frame before uploading that character to WebGL.
+// Keeping this at zero prevents Quest refresh rates from making the copy
+// appear in word-sized chunks.
+const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     red: {
@@ -1201,6 +1205,24 @@ function beginPointerDemoHold(event) {
     return true;
 }
 
+function beginControllerDemoHold() {
+    if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
+    const target = demoRecordAtPointer();
+    if (!target || target.record.demoInteractive === false) return false;
+    const origin = demoPointerWorldOrigin();
+    if (!origin) return false;
+    const offset = {
+        x: target.record.position.x - origin.x,
+        y: target.record.position.y - origin.y,
+        z: target.record.position.z - origin.z
+    };
+    target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
+    demoHeldIndex = target.index;
+    suppressSessionSelectUntil = performance.now() + 1200;
+    setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
+    return true;
+}
+
 function releaseHeldDemoRecord() {
     clearTimeout(demoHoldTimer);
     demoHoldTimer = null;
@@ -1216,13 +1238,15 @@ function releaseHeldDemoRecord() {
 function plantInformationPosition(record) {
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
     const cameraX = Number(viewerMatrix?.[12]);
+    const cameraY = Number(viewerMatrix?.[13]);
     const cameraZ = Number(viewerMatrix?.[14]);
     const towardViewerX = Number.isFinite(cameraX) ? cameraX - position.x : 0;
     const towardViewerZ = Number.isFinite(cameraZ) ? cameraZ - position.z : 1;
     const horizontalDistance = Math.hypot(towardViewerX, towardViewerZ) || 1;
+    const eyeLevelY = Number.isFinite(cameraY) ? cameraY - .12 : position.y + .45;
     return {
         x: position.x + towardViewerX / horizontalDistance * 0.14,
-        y: position.y + 0.92,
+        y: Math.max(position.y + .34, eyeLevelY),
         z: position.z + towardViewerZ / horizontalDistance * 0.14
     };
 }
@@ -1296,11 +1320,13 @@ function pressPlacementPointer(event) {
 function renderInterface(simulated) {
     simulatedMode = simulated;
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
+    const questImmersiveMode = Boolean(!simulated && session && sessionMode === 'immersive-vr');
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
+    appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = document.createElement('button');
     introContinue.className = 'tryit-intro-continue';
     introContinue.dataset.tryitIntroContinue = '';
@@ -1669,17 +1695,17 @@ function createIntroNoteTexture(texture = null) {
 
 function createIntroControlTexture(labelText, texture = null) {
     const label = document.createElement('canvas');
-    label.width = 720;
-    label.height = 180;
+    label.width = 900;
+    label.height = 220;
     const ctx = label.getContext('2d');
-    const panel = ctx.createLinearGradient(40, 20, 680, 160);
+    const panel = ctx.createLinearGradient(50, 24, 850, 196);
     panel.addColorStop(0, 'rgba(113,157,91,.96)');
     panel.addColorStop(1, 'rgba(32,77,49,.96)');
     ctx.fillStyle = panel;
     ctx.strokeStyle = 'rgba(240,255,224,.94)';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.roundRect(10, 10, 700, 160, 72);
+    ctx.roundRect(12, 12, 876, 196, 78);
     ctx.fill();
     ctx.stroke();
     ctx.textAlign = 'center';
@@ -1687,12 +1713,9 @@ function createIntroControlTexture(labelText, texture = null) {
     ctx.fillStyle = '#fff';
     ctx.shadowColor = 'rgba(0,0,0,.7)';
     ctx.shadowBlur = 7;
-    ctx.font = '800 42px system-ui, sans-serif';
-    ctx.fillText(String(labelText || 'CONTINUE').toUpperCase(), 360, 78);
+    ctx.font = '800 58px system-ui, sans-serif';
+    ctx.fillText(String(labelText || 'Continue'), 450, 110);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(239,255,218,.9)';
-    ctx.font = '650 21px system-ui, sans-serif';
-    ctx.fillText('PRESS CONTROLLER TRIGGER', 360, 128);
     return canvasTexture(label, texture);
 }
 
@@ -1812,8 +1835,8 @@ function drawIntroSpatial(view) {
         drawTexture(
             introControlTexture,
             introLocalPosition(introWorldAnchor, [0, -0.16, -2.8]),
-            1.35,
-            .72,
+            1.85,
+            .78,
             1
         );
     } else if (introControlTexture) {
@@ -2125,6 +2148,33 @@ function drawMarker(view) {
     drawDemoControllerPointer(view);
 }
 
+function demoLaserSubjects() {
+    const subjects = markers.flatMap(record => [
+        {
+            position: record.position,
+            radius: record.demoType === 'note' ? .62 : record.demoType === 'zone' ? .42 : .3
+        },
+        ...(record.demoExpanded && record.informationPosition
+            ? [{ position: record.informationPosition, radius: .96 }]
+            : [])
+    ]);
+    if (placementReady) {
+        const point = placementPosition();
+        if (point) subjects.push({ position: point, radius: .38 });
+    }
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
+        ? (continueButton.textContent || 'Continue').trim()
+        : '';
+    if (controlLabel && introWorldAnchor) {
+        subjects.push({
+            position: introLocalPosition(introWorldAnchor, [0, -.16, -2.8]),
+            radius: .64
+        });
+    }
+    return subjects;
+}
+
 function drawDemoControllerPointer(view) {
     if (!latestControllerRay || !tetherRenderer) return;
     const { origin, direction } = latestControllerRay;
@@ -2133,12 +2183,7 @@ function drawDemoControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = controllerRayEnd(latestControllerRay, markers.flatMap(record => [
-        { position: record.position, radius: record.demoType === 'note' ? .55 : .22 },
-        ...(record.demoExpanded && record.informationPosition
-            ? [{ position: record.informationPosition, radius: .62 }]
-            : [])
-    ]), XR_LASER_POINTER_CONFIG.length);
+    const end = controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -2173,6 +2218,7 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
+            if (demoHeldIndex >= 0) return;
             // Quest controllers do not reliably generate DOM click events for
             // the optional overlay. Map one deliberate select to the same
             // tutorial control a phone user sees, then to the live aim.
@@ -2180,6 +2226,16 @@ async function startImmersive() {
             if (placementReady) return pressPlacementPointer();
             if (selectDemoProfileCell()) return;
             selectGuidedDemoOrb();
+        });
+        session.addEventListener('selectstart', () => {
+            if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
+            if (placementReady || activateImmersiveDemoControl()) return;
+            beginControllerDemoHold();
+        });
+        session.addEventListener('selectend', () => {
+            if (demoHeldIndex < 0) return;
+            releaseHeldDemoRecord();
+            suppressSessionSelectUntil = performance.now() + 280;
         });
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {

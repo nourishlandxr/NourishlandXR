@@ -354,7 +354,10 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.doesNotMatch(arSource, /querySelector\('\.creator-ar-taskbar'\)\.addEventListener\('click'/);
     assert.match(arSource, /event\.stopPropagation\(\)/);
     assert.match(arSource, /function controllerInputSource\(\)/);
+    assert.match(arSource, /function controllerLaserSubjects\(\)/);
+    assert.match(arSource, /function controllerMarkerRadius\(record\)/);
     assert.match(arSource, /function activateControllerSelection\(\)/);
+    assert.match(arSource, /activateControllerTarget\(true\)/);
     assert.match(arSource, /function updateControllerRay\(frame\)/);
     assert.match(arSource, /function positionControllerPointer\(view = latestView\)/);
     assert.match(arSource, /data-ar-controller-pointer/);
@@ -798,6 +801,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /if \(latestControllerRay\) return latestControllerRay\.direction/);
     assert.match(source, /function demoPointerWorldOrigin\(\)/);
     assert.match(source, /function drawDemoControllerPointer\(view\)/);
+    assert.match(source, /function demoLaserSubjects\(\)/);
+    assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialOrb/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
@@ -924,6 +929,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function activateImmersiveDemoControl\(\)/);
     assert.match(source, /domOverlayEnabled = Boolean\(arSession\.domOverlay\)/);
     assert.match(source, /uses-webgl-controls/);
+    assert.match(source, /is-quest-vr/);
+    assert.match(source, /session\.addEventListener\('selectstart'/);
+    assert.match(source, /session\.addEventListener\('selectend'/);
     assert.match(source, /session && !domOverlayEnabled && continueButton/);
     assert.match(source, /introTextureFrameToken !== introFrameToken/);
     assert.match(source, /introFrameToken = _time/);
@@ -948,6 +956,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-virtual-tag-close,body\[data-project-theme\] \.tryit-virtual-tag-close/);
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-intro-continue \{[^}]*min-width:184px;[^}]*min-height:62px;[^}]*font-size:clamp\(1\.05rem,3\.8vw,1\.25rem\)/);
+    assert.match(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
@@ -979,7 +988,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
-    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 24/);
+    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0/);
+    assert.match(source, /label\.width = 900/);
+    assert.match(source, /label\.height = 220/);
+    assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
+    assert.match(source, /radius: \.96/);
     assert.match(source, /introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /place\.dataset\.aimX = '50'/);
@@ -1022,7 +1035,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /bindSimulatedInformationPanels/);
     assert.match(source, /demoPanelOffset/);
     assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
-    assert.match(source, /y: position\.y \+ 0\.92/);
+    assert.match(source, /const eyeLevelY = Number\.isFinite\(cameraY\) \? cameraY - \.12 : position\.y \+ \.45/);
     assert.match(source, /drawSpatialTether/);
     assert.match(source, /simulatedAnchor/);
     assert.doesNotMatch(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
@@ -1196,6 +1209,8 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = ''\)/);
     assert.match(mainSource, /const decodeArArgument = value =>/);
     assert.match(mainSource, /window\.openProjectArMode = async \(projectId, areaId = ''\)/);
+    const projectArEntry = mainSource.slice(mainSource.indexOf('window.openProjectArMode'), mainSource.indexOf('window.openCreatorArCheckpointSetup'));
+    assert.doesNotMatch(projectArEntry, /renderArAreaPicker/);
     assert.match(mainSource, /window\.startExistingMarkerPlacement/);
     assert.doesNotMatch(styles, /\.creator-ar-ready-placement|creator-ar-ready-pulse/);
 });
@@ -1294,7 +1309,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(styles, /-webkit-mask-composite:xor; mask-composite:exclude/);
     assert.match(styles, /background:rgba\(7,28,18,.18\)/);
     assert.match(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)[\s\S]*background:transparent !important/);
-    assert.match(styles, /--pim-x-half:clamp\(28px,7\.2vw,38px\)/);
+    assert.match(styles, /--pim-x-half:clamp\(31px,7\.8vw,44px\)/);
     assert.match(styles, /\.creator-ar-marker-hit-target-plant\.is-info-open \.creator-ar-spatial-name \{[^}]*max-width:min\(36vw,132px\)/);
     assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
