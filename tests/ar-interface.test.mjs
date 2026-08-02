@@ -629,7 +629,7 @@ test('Creator AR setup guide starts with Areas and keeps visitor entrances optio
     assert.doesNotMatch(dashboardSource, /Set Welcome Marker/);
 });
 
-test('project settings can rename a project and Areas toggle from the dashboard', () => {
+test('project settings can rename a project while the dashboard stays overview-only', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
     const entrySource = read('app/components/projectEntry.js');
     const mainSource = read('app/main.js');
@@ -638,8 +638,7 @@ test('project settings can rename a project and Areas toggle from the dashboard'
     assert.match(dashboardSource, /saveProjectName/);
     assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name, description, coverImage \}\)/);
     assert.match(dashboardSource, /const button = trigger\?\.currentTarget \|\| trigger/);
-    assert.match(entrySource, /onclick="window\.toggleAreas\(this\)"/);
-    assert.match(entrySource, /aria-expanded="true"/);
+    assert.doesNotMatch(entrySource, /toggleAreas|project-area-overview-card|BIRD'S-EYE OVERVIEW/);
     assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
 });
 
@@ -1066,7 +1065,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /knowledge\.core\?\.scientific/);
     assert.match(source, /knowledge\.core\?\.layer/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
-    assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(72vw,460px\)/);
+    assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(72vw,420px\)[\s\S]*aspect-ratio:1[\s\S]*border-radius:50% !important/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);
@@ -1151,7 +1150,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(dashboardSource, /type: 'area_checkpoint'/);
     assert.match(dashboardSource, /Physical QR or location code/);
     assert.match(dashboardSource, /Additional information balloons/);
-    assert.match(dashboardSource, /OPEN AREA IN AR/);
+    assert.match(dashboardSource, /projectBreadcrumbMarkup\(context\.project, context\.area, totemName\)/);
     assert.match(dashboardSource, /data-add-totem-text-box/);
     assert.match(serverSource, /'area_checkpoint'/);
     assert.match(persistenceSource, /unsupported\|placement\|spatial\|anchor type\|gps\|qr/);
