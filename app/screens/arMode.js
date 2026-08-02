@@ -20,7 +20,7 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
-import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget } from '../services/questSpatialBelt.js';
+import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
@@ -79,6 +79,16 @@ let questBeltTextureKey = '';
 let questBeltLayout = [];
 let questBeltViewerMatrix = null;
 let questBeltHoverIndex = -1;
+let questSpecialPaletteTextures = [];
+let questSpecialPaletteTextureKey = '';
+let questSpecialPaletteLayout = [];
+let questSpecialPaletteVisible = false;
+let questSpecialPaletteHoverIndex = -1;
+let questSpatialWebTextures = [];
+let questSpatialWebTextureKey = '';
+let questSpatialWebLayout = [];
+let questSpatialWebVisible = false;
+let questSpatialWebHoverIndex = -1;
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -135,6 +145,12 @@ const TASKBAR_V2_COLORS = Object.freeze({
 });
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
+const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
+    Object.freeze({ id: 'dashboard', label: 'DASHBOARD', symbol: 'D', color: '#3973a2' }),
+    Object.freeze({ id: 'webhub', label: 'WEB HUB', symbol: 'W', color: '#3973a2' }),
+    Object.freeze({ id: 'area', label: 'AREA DASH', symbol: 'A', color: '#527a4d' }),
+    Object.freeze({ id: 'plant', label: 'PLANT DASH', symbol: 'P', color: '#527a4d' })
+]);
 const CREATOR_AR_HOLD_DELAY_MS = 420;
 const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
 const DEFAULT_LOCATION_NOTE = Object.freeze({
@@ -991,6 +1007,33 @@ function closeSpatialWebWindow() {
     updateControllerHud();
 }
 
+function openQuestSpatialWebPanel() {
+    if (questSpatialWebVisible) {
+        closeQuestSpatialWebPanel();
+        setPlacementStatus('Spatial Web Hub closed. AR remains active.');
+        updateControllerHud();
+        return;
+    }
+    closeQuestSpecialPalette();
+    questSpatialWebVisible = true;
+    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
+        distance: .78,
+        side: -1,
+        sideOffset: .42,
+        columnSpacing: .16,
+        rowSpacing: .145,
+        topOffset: .02,
+        radius: .078
+    });
+    questSpatialWebHoverIndex = -1;
+    controllerMenuActive = true;
+    setPlacementStatus('Spatial Web Hub open on your left. Choose Dashboard, Web Hub, Area Dash or Plant Dash.');
+    updateControllerHud();
+}
+
+// Keep the existing return context names for overlay-capable Quest sessions:
+// `web-area:${activeAreaId}` : 'webhub'
+
 function openSpatialWebWindow() {
     const selectedRecord = contextToolbarRecord && sessionMarkers.includes(contextToolbarRecord)
         ? contextToolbarRecord
@@ -1009,14 +1052,11 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // Quest can start a valid AR/VR session without DOM overlay. In that
-        // case the HTML spatial window cannot be composited into the headset,
-        // so route the same request to the corresponding Web Hub destination
-        // instead of leaving the WEB control inert.
-        arReturnContext = selectedReturnContext
-            || (activeAreaId && !isDefaultHomeArea(activeAreaName || activeAreaId) ? `web-area:${activeAreaId}` : 'webhub');
-        setPlacementStatus('Opening Web Hub. This Quest session does not expose a spatial overlay.');
-        exitArMode();
+        // This Quest session does not expose a spatial overlay: keep the valid
+        // session alive
+        // and use a WebGL route surface so WEB never snaps through the phone
+        // Web Hub or ends AR just because HTML cannot be composited.
+        openQuestSpatialWebPanel();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1132,7 +1172,9 @@ function dispatchControllerAction(button) {
     Object.defineProperty(event, 'button', { value: 0 });
     button.dispatchEvent(event);
     controllerActionIndex = 0;
-    controllerMenuActive = Boolean(overlayRoot?.querySelector('[data-ar-place-picker]:not([hidden]), [data-ar-area-chooser]:not([hidden]), [data-ar-context-toolbar]:not([hidden])'));
+    controllerMenuActive = questSpecialPaletteVisible
+        || questSpatialWebVisible
+        || Boolean(overlayRoot?.querySelector('[data-ar-place-picker]:not([hidden]), [data-ar-area-chooser]:not([hidden]), [data-ar-context-toolbar]:not([hidden])'));
     updateControllerHud();
 }
 
@@ -1184,10 +1226,84 @@ function currentQuestBeltLayout() {
     return questBeltLayout;
 }
 
+function currentQuestSpecialPaletteLayout() {
+    if (!questBeltUsesSpatialRenderer() || !questSpecialPaletteVisible) return [];
+    if (!questSpecialPaletteLayout.length) {
+        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPECIAL_PALETTE_ACTIONS, {
+            distance: .82,
+            side: 1,
+            sideOffset: .43,
+            columnSpacing: .13,
+            rowSpacing: .115,
+            topOffset: .06,
+            radius: .064
+        });
+    }
+    return questSpecialPaletteLayout;
+}
+
+function closeQuestSpecialPalette() {
+    questSpecialPaletteVisible = false;
+    questSpecialPaletteLayout = [];
+    questSpecialPaletteHoverIndex = -1;
+    document.body.classList.remove('creator-ar-spatial-special-palette');
+}
+
+function currentQuestSpatialWebLayout() {
+    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible) return [];
+    if (!questSpatialWebLayout.length) {
+        questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
+            distance: .78,
+            side: -1,
+            sideOffset: .42,
+            columnSpacing: .16,
+            rowSpacing: .145,
+            topOffset: .02,
+            radius: .078
+        });
+    }
+    return questSpatialWebLayout;
+}
+
+function closeQuestSpatialWebPanel() {
+    questSpatialWebVisible = false;
+    questSpatialWebLayout = [];
+    questSpatialWebHoverIndex = -1;
+    document.body.classList.remove('creator-ar-spatial-web-ready');
+}
+
+function clearMarkerHover() {
+    hoveredMarkerId = '';
+    overlayRoot?.querySelectorAll('[data-ar-marker-id]').forEach(element => element.classList.remove('is-xr-hover'));
+}
+
+function controllerSpecialPaletteActionAtAim() {
+    const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestSpecialPaletteLayout());
+    questSpecialPaletteHoverIndex = target?.index ?? -1;
+    if (target) {
+        clearMarkerHover();
+        controllerMenuActive = true;
+        updateControllerHud();
+    }
+    return target;
+}
+
+function controllerSpatialWebActionAtAim() {
+    const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestSpatialWebLayout());
+    questSpatialWebHoverIndex = target?.index ?? -1;
+    if (target) {
+        clearMarkerHover();
+        controllerMenuActive = true;
+        updateControllerHud();
+    }
+    return target;
+}
+
 function controllerBeltActionAtAim() {
     const target = questSpatialBeltRayTarget(latestControllerRay, currentQuestBeltLayout());
     questBeltHoverIndex = target?.index ?? -1;
     if (target) {
+        clearMarkerHover();
         controllerMenuActive = true;
         controllerActionIndex = target.index;
         updateControllerHud();
@@ -1203,6 +1319,8 @@ function controllerLaserSubjects() {
         const point = placementPoint();
         if (point) subjects.push({ position: point, radius: .38 });
     }
+    currentQuestSpecialPaletteLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
+    currentQuestSpatialWebLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     currentQuestBeltLayout().forEach(button => subjects.push({ position: button.position, radius: button.radius }));
     return subjects;
 }
@@ -1290,11 +1408,56 @@ function activateControllerTarget(directHold = interactionMode === 'grab') {
     return true;
 }
 
+function selectQuestSpecialPaletteAction(action) {
+    if (!action) return false;
+    if (action.id === 'totem') {
+        closeQuestSpecialPalette();
+        createTotemFromSpecial();
+        return true;
+    }
+    const specialMarker = {
+        name: action.label,
+        special_symbol: action.symbol,
+        arrow_style: action.arrowStyle,
+        appearance: { color: action.color, size: 'large' }
+    };
+    closeQuestSpecialPalette();
+    readySpecialMarker = specialMarker;
+    void armPlacement('sub_checkpoint', specialMarker);
+    return true;
+}
+
+function selectQuestSpatialWebAction(action) {
+    if (!action) return false;
+    closeQuestSpatialWebPanel();
+    setPlacementStatus(`${action.label} selected. The spatial Web Hub stays open through the current Quest session.`);
+    // Keep this route in the AR session. The native dashboard remains the
+    // destination for the phone Web Hub, while Quest without DOM overlay gets
+    // a controller-safe spatial route surface instead of an AR exit.
+    questSpatialWebVisible = true;
+    questSpatialWebLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPATIAL_WEB_ACTIONS, {
+        distance: .78,
+        side: -1,
+        sideOffset: .42,
+        columnSpacing: .16,
+        rowSpacing: .145,
+        topOffset: .02,
+        radius: .078
+    });
+    controllerMenuActive = true;
+    updateControllerHud();
+    return true;
+}
+
 function activateControllerSelection() {
     if (readyPlacementType) {
         void quickPlace(readyPlacementType);
         return true;
     }
+    const specialTarget = controllerSpecialPaletteActionAtAim();
+    if (specialTarget) return selectQuestSpecialPaletteAction(specialTarget);
+    const webTarget = controllerSpatialWebActionAtAim();
+    if (webTarget) return selectQuestSpatialWebAction(webTarget);
     const beltTarget = controllerBeltActionAtAim();
     if (beltTarget) {
         const action = questBeltActionElements()[beltTarget.index];
@@ -1359,6 +1522,18 @@ function pollHandPinch() {
         // is armed, a pinch is the placement press at the current aim point.
         if (readyPlacementType) {
             void quickPlace(readyPlacementType);
+            handPinchActive = pinching;
+            return;
+        }
+        const specialTarget = controllerSpecialPaletteActionAtAim();
+        if (specialTarget) {
+            selectQuestSpecialPaletteAction(specialTarget);
+            handPinchActive = pinching;
+            return;
+        }
+        const webTarget = controllerSpatialWebActionAtAim();
+        if (webTarget) {
+            selectQuestSpatialWebAction(webTarget);
             handPinchActive = pinching;
             return;
         }
@@ -1731,6 +1906,37 @@ async function openArAreaCreationForm() {
 }
 
 async function openSpecialMarkerPicker() {
+    if (questHeadsetSession) {
+        if (questSpecialPaletteVisible) {
+            closeQuestSpecialPalette();
+            setPlacementStatus('Special palette closed.');
+            updateControllerHud();
+            return;
+        }
+        placementArmGeneration += 1;
+        closeMarkerContextToolbar();
+        closePlacePicker();
+        closeUnplacedBag();
+        readyPlacementType = '';
+        readySpecialMarker = null;
+        pendingPlacementAppearance = null;
+        questSpecialPaletteVisible = true;
+        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPECIAL_PALETTE_ACTIONS, {
+            distance: .82,
+            side: 1,
+            sideOffset: .43,
+            columnSpacing: .13,
+            rowSpacing: .115,
+            topOffset: .06,
+            radius: .064
+        });
+        questSpecialPaletteHoverIndex = -1;
+        updateReadyPlacementControl();
+        controllerMenuActive = true;
+        setPlacementStatus('Special palette open on your right. Aim at a symbol and press the trigger or pinch.');
+        updateControllerHud();
+        return;
+    }
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
     if (!picker) return;
     if (!picker.hidden && picker.dataset.panel?.startsWith('special:')) {
@@ -1758,6 +1964,8 @@ function resetArControls() {
     closeMarkerContextToolbar();
     closeAreaChooser();
     closePlacePicker();
+    closeQuestSpecialPalette();
+    closeQuestSpatialWebPanel();
     closeUnplacedBag();
     readyPlacementType = '';
     pendingBagRecord = null;
@@ -2073,6 +2281,24 @@ function ensureQuestBeltTextures() {
     return questBeltTextures;
 }
 
+function ensureQuestSpecialPaletteTextures() {
+    const key = String(questSpecialPaletteHoverIndex);
+    if (questSpecialPaletteTextures.length === QUEST_SPECIAL_PALETTE_ACTIONS.length && questSpecialPaletteTextureKey === key) return questSpecialPaletteTextures;
+    questSpecialPaletteTextures.forEach(texture => texture && gl.deleteTexture(texture));
+    questSpecialPaletteTextures = QUEST_SPECIAL_PALETTE_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === questSpecialPaletteHoverIndex));
+    questSpecialPaletteTextureKey = key;
+    return questSpecialPaletteTextures;
+}
+
+function ensureQuestSpatialWebTextures() {
+    const key = String(questSpatialWebHoverIndex);
+    if (questSpatialWebTextures.length === QUEST_SPATIAL_WEB_ACTIONS.length && questSpatialWebTextureKey === key) return questSpatialWebTextures;
+    questSpatialWebTextures.forEach(texture => texture && gl.deleteTexture(texture));
+    questSpatialWebTextures = QUEST_SPATIAL_WEB_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === questSpatialWebHoverIndex));
+    questSpatialWebTextureKey = key;
+    return questSpatialWebTextures;
+}
+
 function drawQuestSpatialBelt(view) {
     if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
     const layout = currentQuestBeltLayout();
@@ -2094,6 +2320,62 @@ function drawQuestSpatialBelt(view) {
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     layout.forEach((button, index) => {
         const model = questBeltPanelMatrix(button);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
+    gl.depthMask(true);
+}
+
+function drawQuestSpatialSpecialPalette(view) {
+    if (!questBeltUsesSpatialRenderer() || !questSpecialPaletteVisible || !homeSignProgram || !homeSignBuffer) return;
+    const layout = currentQuestSpecialPaletteLayout();
+    const textures = layout.length === QUEST_SPECIAL_PALETTE_ACTIONS.length && ensureQuestSpecialPaletteTextures();
+    if (!textures?.length || textures.some(texture => !texture)) return;
+    document.body.classList.add('creator-ar-spatial-special-palette');
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    layout.forEach((button, index) => {
+        const model = questBeltPanelMatrix(button, .064, .056);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
+    gl.depthMask(true);
+}
+
+function drawQuestSpatialWebPanel(view) {
+    if (!questBeltUsesSpatialRenderer() || !questSpatialWebVisible || !homeSignProgram || !homeSignBuffer) return;
+    const layout = currentQuestSpatialWebLayout();
+    const textures = layout.length === QUEST_SPATIAL_WEB_ACTIONS.length && ensureQuestSpatialWebTextures();
+    if (!textures?.length || textures.some(texture => !texture)) return;
+    document.body.classList.add('creator-ar-spatial-web-ready');
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    layout.forEach((button, index) => {
+        const model = questBeltPanelMatrix(button, .075, .064);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
         gl.bindTexture(gl.TEXTURE_2D, textures[index]);
@@ -2205,6 +2487,29 @@ function drawSpatialMarkers(view) {
     activeAreaMarkers().forEach(record => {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
+        const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
+        const highlighted = record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
+        const needsShapeHalo = shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb';
+        if (highlighted && needsShapeHalo) {
+            const [scaleX, scaleY] = markerDimensions(record.marker);
+            const haloPosition = shape === 1
+                ? { ...groundedTotemPosition(record.position), y: groundedTotemPosition(record.position).y + scaleY }
+                : shape === 3
+                    ? { ...record.position, y: record.position.y + scaleY }
+                    : record.position;
+            const haloRadius = shape === 1
+                ? Math.max(.16, Math.min(.3, scaleY * .42))
+                : shape === 3
+                    ? .2
+                    : Math.max(.09, Math.max(scaleX, scaleY) * 1.48);
+            gl.depthMask(false);
+            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, haloPosition, haloRadius, {
+                color: [.82, 1, .28],
+                alpha: .28,
+                emissive: 1
+            });
+            gl.depthMask(true);
+        }
         if (shape === 1) {
             const [halfWidth, halfHeight] = markerDimensions(record.marker);
             const groundPosition = groundedTotemPosition(record.position);
@@ -2258,7 +2563,6 @@ function drawSpatialMarkers(view) {
             return;
         }
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
-        const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
         const [scaleX, scaleY] = markerDimensions(record.marker);
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         const arrivalProgress = Number.isFinite(record.spawnedAt)
@@ -2288,6 +2592,18 @@ function drawSpatialMarkers(view) {
             highlighted: record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
         });
     });
+
+    if (readyPlacementType?.toLocaleLowerCase() === 'note' && latestViewerMatrix) {
+        const noteTarget = placementPoint('note');
+        if (noteTarget) {
+            drawSpatialOrb(gl, sphereRenderer, view, noteTarget, .078, {
+                type: 'marker',
+                color: [.86, .72, .38],
+                highlighted: true,
+                opacity: 1
+            });
+        }
+    }
 
     let platePreview = null;
     if (['plant', 'sub_checkpoint'].includes(readyPlacementType) && latestViewerMatrix && !readySpecialMarker) {
@@ -2326,7 +2642,8 @@ function drawSpatialMarkers(view) {
         if (hiddenStructuralMarkerIds.has(record.marker.id)) return;
         const shape = markerShape(record.marker.type);
         const isPlantPlate = record.marker.type === 'plant' && markerAppearanceShape(record.marker) === 'plate';
-        if (!isPlantPlate && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
+        const isSpecialMarker = Boolean(record.marker.special_symbol);
+        if (!isPlantPlate && !isSpecialMarker && (shape === 0 || shape === 1 || shape === 3 || shape === 4)) return;
         const tagDimensions = isPlantPlate ? plantTagDimensions(record.marker) : null;
         const [scaleX, scaleY] = tagDimensions ? [tagDimensions.halfWidth, tagDimensions.halfHeight] : markerDimensions(record.marker);
         const groundedPosition = isPlantPlate
@@ -2335,7 +2652,7 @@ function drawSpatialMarkers(view) {
         const model = markerBillboardMatrix(groundedPosition, scaleX, scaleY);
         const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(markerProgram, 'mvp'), false, mvp);
-        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), isPlantPlate ? 6 : shape);
+        gl.uniform1f(gl.getUniformLocation(markerProgram, 'shape'), isPlantPlate ? 6 : isSpecialMarker ? (['!', '?'].includes(record.marker.special_symbol) ? 3 : 2) : shape);
         gl.uniform1f(gl.getUniformLocation(markerProgram, 'opacity'), markerAppearanceOpacity(record.marker));
         const baseColor = colors[record.marker.type] || colors.sub_checkpoint;
         gl.uniform3fv(gl.getUniformLocation(markerProgram, 'color'), markerRgb(record.marker, baseColor));
@@ -2995,6 +3312,8 @@ async function armPlacement(type, specialMarker = null) {
     const generation = ++placementArmGeneration;
     closeMarkerContextToolbar();
     closePlacePicker();
+    closeQuestSpecialPalette();
+    closeQuestSpatialWebPanel();
     closeUnplacedBag();
     pendingBagRecord = null;
     if (type === 'note') latestNotePlacementPoint = null;
@@ -3428,6 +3747,8 @@ function cleanup() {
     clearControllerMarkerPress();
     cleanupDrag();
     closeSpatialWebWindow();
+    closeQuestSpecialPalette();
+    closeQuestSpatialWebPanel();
     refSpace = null;
     canvas?.remove();
     canvas = null;
@@ -3468,6 +3789,8 @@ function cleanup() {
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
+    questSpecialPaletteTextures.forEach(texture => texture && gl?.deleteTexture(texture));
+    questSpatialWebTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -3486,6 +3809,16 @@ function cleanup() {
     questBeltLayout = [];
     questBeltViewerMatrix = null;
     questBeltHoverIndex = -1;
+    questSpecialPaletteTextures = [];
+    questSpecialPaletteTextureKey = '';
+    questSpecialPaletteLayout = [];
+    questSpecialPaletteVisible = false;
+    questSpecialPaletteHoverIndex = -1;
+    questSpatialWebTextures = [];
+    questSpatialWebTextureKey = '';
+    questSpatialWebLayout = [];
+    questSpatialWebVisible = false;
+    questSpatialWebHoverIndex = -1;
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
@@ -3739,8 +4072,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             latestView = pose.views[0] || null;
             pollControllerInput();
             updateControllerRay(frame);
-            const beltTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
-            if (!beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            const specialPaletteTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
+            const webTarget = !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialWebActionAtAim() : null;
+            const beltTarget = !specialPaletteTarget && !webTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
+            if (!specialPaletteTarget && !webTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
             pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
@@ -3762,6 +4097,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialHomeSign(view);
                 drawQuestSpatialBelt(view);
+                drawQuestSpatialSpecialPalette(view);
+                drawQuestSpatialWebPanel(view);
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);

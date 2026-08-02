@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget } from '../app/services/questSpatialBelt.js';
+import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../app/services/questSpatialBelt.js';
 
 test('tracked headset input identifies Quest controls without classifying phone touch input', () => {
     assert.equal(isTrackedHeadsetInputSource({ targetRayMode: 'tracked-pointer' }), true);
@@ -55,4 +55,24 @@ test('Quest spatial belt resolves the first laser-hit action', () => {
     const target = questSpatialBeltRayTarget({ origin, direction: { x: 0, y: 0, z: -1 } }, layout);
     assert.equal(target?.id, 'note');
     assert.equal(target?.index, 1);
+});
+
+test('Quest special palette is a compact side surface with controller hit targets', () => {
+    const viewer = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 1.6, 0, 1
+    ]);
+    const layout = questSpatialPaletteLayout(viewer);
+    assert.equal(layout.length, QUEST_SPECIAL_PALETTE_ACTIONS.length);
+    assert.equal(layout[0].id, 'totem');
+    assert.equal(layout[0].position.x > 0, true);
+    assert.ok(layout[1].position.y > layout[3].position.y);
+    const button = layout[0];
+    const target = questSpatialBeltRayTarget({
+        origin: { x: button.position.x, y: button.position.y, z: 0 },
+        direction: { x: 0, y: 0, z: -1 }
+    }, layout);
+    assert.equal(target?.id, 'totem');
 });
