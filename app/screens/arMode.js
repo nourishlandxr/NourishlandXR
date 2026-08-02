@@ -1108,10 +1108,13 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // A no-overlay runtime uses the interactive spatial dashboard panel.
-        // DOM-overlay runtimes receive the full HTML dashboard below.
+        // A no-overlay runtime cannot host editable HTML inside immersive AR.
+        // Open the real Web Mode dashboard instead of presenting a misleading
+        // stats card with decorative spatial controls.
         // Legacy capability wording: This Quest session does not expose a spatial overlay.
-        openQuestSpatialWebPanel();
+        arReturnContext = '';
+        setPlacementStatus('Opening the full editable Project Dashboard in Web Mode.');
+        exitArMode();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
