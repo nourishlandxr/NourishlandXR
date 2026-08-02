@@ -1220,6 +1220,7 @@ function dispatchControllerAction(button) {
     controllerActionIndex = 0;
     controllerMenuActive = questSpecialPaletteVisible
         || questSpatialWebVisible
+        || Boolean(spatialWebWindow)
         || Boolean(overlayRoot?.querySelector('[data-ar-place-picker]:not([hidden]), [data-ar-area-chooser]:not([hidden]), [data-ar-context-toolbar]:not([hidden])'));
     updateControllerHud();
 }
