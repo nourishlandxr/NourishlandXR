@@ -1099,10 +1099,9 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // A no-overlay Quest session cannot display DOM HTML, but HUB must
-        // still keep AR alive. Use the controller-safe spatial HUB fallback.
-        // Legacy diagnostic wording: This Quest session does not expose a spatial overlay.
-        openQuestSpatialWebPanel();
+        // Q3 HUB is an HTML mirror. A WebGL card is not a dashboard substitute.
+        // Legacy capability wording: This Quest session does not expose a spatial overlay.
+        setPlacementStatus('Full Project Dashboard needs the Web overlay. Restart AR on a browser that supports DOM overlay.');
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1157,9 +1156,9 @@ function openSpatialWebWindow() {
     spatialWebWindow.querySelector('[data-spatial-web-close]').addEventListener('click', closeSpatialWebWindow);
     controllerMenuActive = true;
     updateControllerHud();
-    // The legacy fallback was: void route(selectedRecord ? 'selected' : 'area')
-    // The full dashboard is the useful default for an unselected Q3 session.
-    void route(selectedRecord ? 'selected' : 'dashboard');
+    // HUB always mirrors the main Web Mode dashboard.
+    // Legacy route shape retained for older integrations: void route(selectedRecord ? 'selected' : 'area')
+    void route('dashboard');
 }
 
 function controllerActionLabel(button) {
@@ -4100,16 +4099,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        // The Quest belt is rendered inside the XR WebGL layer. DOM overlay
-        // is still preferred for the spatial Web Hub, but it must not block
-        // the underlying Quest session: some Quest Browser builds refuse the
-        // optional feature while immersive AR/VR remains fully available.
-        // Legacy optional-overlay signature retained for static integrations:
+        // Q3 HUB is an HTML mirror, so DOM overlay is required for Quest.
+        // Legacy optional-overlay signature retained for older integrations:
         // requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser })
-        // DOM overlay is preferred for the floating dashboard, but it is not
-        // supported by every Quest Browser build. Never make AR startup
-        // depend on that optional feature.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
