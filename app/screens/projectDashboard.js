@@ -1666,6 +1666,9 @@ export async function openProjectAreaAr(app, encodedProjectId, encodedAreaId, en
 }
 
 export async function renderProjectAreaDashboard(app, encodedProjectId, encodedAreaId, options = {}) {
+    // The former <section class="area-totem-section"/> and totem-stat-grid identity summary
+    // (AREA ANCHOR, One Totem gives this Area its identity, TEXT BALLOONS, COLOR, LINKED, ANCHORED)
+    // are intentionally omitted from the Area dashboard.
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     try {
@@ -1706,12 +1709,6 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <span class="area-entry-actions">${profileArAction}</span>
             </article>`;
         }).join('');
-        const totemRow = checkpoint
-            ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>${escapeHtml(checkpoint.marker.name)}</strong><span>Totem · ${checkpoint.isPlaced ? 'Anchored' : 'Not yet anchored'}</span></span></article>`
-            : isDefaultHomeArea(context.area)
-                ? `<article class="area-content-entry area-content-card is-totem-entry" role="button" tabindex="0" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')}"><span class="latest-entry-icon" aria-hidden="true">${markerIcon('area_checkpoint')}</span><span class="latest-entry-copy"><strong>Home Totem</strong><span>Totem · Not yet anchored</span></span></article>`
-                : '';
-        const showTotemSection = isDefaultHomeArea(context.area) || Boolean(checkpoint?.isPlaced);
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1727,11 +1724,6 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         const areaAboutInfo = isDefaultHomeArea(context.area)
             ? '<span class="area-overview-actions"><button type="button" class="plant-profile-info-bubble" data-area-about-info aria-expanded="false" aria-label="About the default Home area">i</button><button type="button" data-edit-area-description>Edit</button></span>'
             : '<button type="button" data-edit-area-description>Edit</button>';
-        const totemBoard = checkpoint?.marker?.area_information_board || {};
-        const totemTextBalloonCount = [totemBoard.introduction, ...(Array.isArray(totemBoard.information_bubbles) ? totemBoard.information_bubbles : [])]
-            .filter(text => String(text || '').trim()).length;
-        const totemColor = /^#[0-9a-f]{6}$/i.test(checkpoint?.marker?.appearance?.color || '') ? checkpoint.marker.appearance.color : DEFAULT_TOTEM_COLOR;
-        const linkedTotemCount = Array.isArray(context.area.totem_links) ? context.area.totem_links.length : 0;
         const areaDangerZone = isDefaultHomeArea(context.area)
             ? ''
             : `<section class="area-danger-zone" aria-labelledby="deleteAreaTitle">
@@ -1766,11 +1758,6 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
-            ${showTotemSection ? `<section class="area-totem-section" aria-labelledby="areaTotemTitle">
-                <div class="section-heading-row"><div><p class="welcome-label">AREA ANCHOR</p><h2 id="areaTotemTitle">Totem</h2><p>One Totem gives this Area its identity.</p></div></div>
-                <div class="area-totem-card">${totemRow}</div>
-                <div class="totem-stat-grid" aria-label="Totem status"><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">▤</span><small>TEXT BALLOONS</small><strong>${totemTextBalloonCount}</strong></div><div class="totem-stat"><span class="totem-stat-icon totem-stat-color" style="--totem-stat-color:${totemColor}" aria-hidden="true">●</span><small>COLOR</small><strong>${escapeHtml(totemColor)}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">↗</span><small>LINKED</small><strong>${linkedTotemCount ? 'YES' : 'NO'}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">⌖</span><small>ANCHORED</small><strong>${checkpoint?.isPlaced ? 'YES' : 'NO'}</strong></div></div>
-            </section>` : ''}
             ${advancedAreaActions}
             <details class="latest-entries-section area-content-section">
                 <summary class="section-heading-row"><div><h2>Markers in this Area</h2><p>${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</p></div><span aria-hidden="true">▾</span></summary>
