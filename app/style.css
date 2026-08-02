@@ -4087,10 +4087,10 @@ button[onclick*="navigateToProjectArea"] span { color: rgba(255,255,255,.8) !imp
 .project-area-link-copy span,
 .project-area-link-meta { color: #66736a; font-size: .75rem; }
 .project-area-link-meta { font-weight: 700; white-space: nowrap; }
-.project-layout-info-row { display: flex; justify-content: flex-end; min-height: 22px; margin: -2px 0 8px; }
+.areas-heading-actions { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .project-layout-info { display: inline-grid; place-items: center; width: 21px; height: 21px; padding: 0; border: 1px solid rgba(43, 78, 52, .24); border-radius: 50%; background: rgba(255, 255, 255, .72); color: var(--leaf-deep); font-size: .72rem; font-weight: 850; line-height: 1; }
 .project-layout-info:hover, .project-layout-info:focus-visible, .project-layout-info[aria-expanded="true"] { border-color: var(--leaf-deep); background: rgba(236, 247, 239, .95); }
-.project-layout-intro { margin: 0; color: #66736a; font-size: .78rem; }
+.project-layout-intro { grid-column: 1 / -1; margin: -2px 0 8px; color: #66736a; font-size: .78rem; }
 .dashboard-section-kicker { display: block; margin-bottom: 2px; color: var(--leaf-deep); font-size: .62rem; letter-spacing: .1em; }
 .project-layout-section .project-area-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .project-area-overview-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; width: 100%; gap: 12px; min-height: 82px; padding: 12px; border: 1px solid rgba(43, 78, 52, .14); border-radius: 16px; background: rgba(255, 255, 255, .6); color: inherit; font: inherit; text-align: left; cursor: pointer; }
