@@ -103,6 +103,23 @@ p {
     gap: 8px;
     margin-top: 10px;
 }
+.project-entry-editor .plant-profile-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+.project-entry-editor .plant-profile-action-row .danger {
+    margin-left: auto;
+}
+.project-entry-editor .plant-profile-action-row .project-entry-back-button {
+    white-space: nowrap;
+}
+@media (max-width: 520px) {
+    .project-entry-editor .plant-profile-action-row { flex-wrap: nowrap; }
+    .project-entry-editor .plant-profile-action-row > button { min-width: 0; padding-inline: 8px; }
+    .project-entry-editor .plant-profile-action-row .primary { flex: 1 1 auto; }
+}
 
 button {
     background: #ffffff;
