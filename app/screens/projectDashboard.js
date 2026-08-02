@@ -2614,10 +2614,6 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
     const spmEnabled = profile.spm_enabled === true || profile.profile_enabled === true;
     return `<section class="plant-encyclopedia-card">
         <input id="projectEntryProfileEnabled" type="hidden" value="${spmEnabled ? 'true' : 'false'}">
-        <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div><p class="welcome-label">PLANT PROFILE MODE</p><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div>
-            <label class="tutorial-mode-toggle"><span><strong>Enable SPM / PIM</strong><small>Show advanced editing and the spatial PIM in AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
-        </section>
         <div class="plant-card-hero">
             <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
             <div class="plant-vital-grid">
@@ -2628,6 +2624,10 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
                 <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
             </div>
         </div>
+        <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
+            <div><p class="welcome-label">PLANT PROFILE MODE</p><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div>
+            <label class="tutorial-mode-toggle"><span><strong>Enable SPM / PIM</strong><small>Show advanced editing and the spatial PIM in AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+        </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> PIM overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the PIM core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
         <div class="plant-vital-grid plant-profile-spm-vitals">

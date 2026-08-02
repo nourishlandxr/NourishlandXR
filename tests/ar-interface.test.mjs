@@ -1294,6 +1294,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /projectEntrySpmEnabled/);
     assert.match(dashboardSource, /projectEntryClimate/);
     assert.match(dashboardSource, /spm_enabled: spmEnabled/);
+    assert.ok(dashboardSource.indexOf('plant-card-hero') < dashboardSource.indexOf('projectEntrySpmEnabled'));
     assert.match(arSource, /profile\.spm_enabled === true \|\| profile\.profile_enabled === true/);
     assert.match(dashboardSource, /plant-info-drawer/);
     assert.match(dashboardSource, /projectEntryRelationships/);
