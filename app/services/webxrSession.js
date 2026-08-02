@@ -1,5 +1,9 @@
 export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr']);
 
+export function isQuestHeadsetBrowser(userAgent = globalThis.navigator?.userAgent || '') {
+    return /(?:OculusBrowser|Meta Quest)/i.test(String(userAgent));
+}
+
 export function selectWebXRSessionMode(support = {}) {
     if (support['immersive-ar'] === true) return 'immersive-ar';
     if (support['immersive-vr'] === true) return 'immersive-vr';
@@ -50,8 +54,7 @@ function requestSessionForMode(mode, options, domOverlayRoot) {
         : navigator.xr.requestSession('immersive-vr', requestOptions);
 }
 
-function sessionAttemptsForMode(mode, requireDomOverlay) {
-    if (!requireDomOverlay) return SESSION_ATTEMPTS[mode];
+function requiredDomOverlayAttempts(mode) {
     return SESSION_ATTEMPTS[mode].map(options => ({
         ...options,
         requiredFeatures: [...new Set([...options.requiredFeatures, 'dom-overlay'])],
@@ -59,9 +62,15 @@ function sessionAttemptsForMode(mode, requireDomOverlay) {
     }));
 }
 
+function sessionAttemptsForMode(mode, requireDomOverlay, preferDomOverlay) {
+    if (requireDomOverlay) return requiredDomOverlayAttempts(mode);
+    if (preferDomOverlay) return [...requiredDomOverlayAttempts(mode), ...SESSION_ATTEMPTS[mode]];
+    return SESSION_ATTEMPTS[mode];
+}
+
 // Kept under the historical export name so existing creator, demo, and
 // explorer callers all gain Quest support without changing their APIs.
-export async function requestImmersiveArSession(domOverlayRoot, { requireDomOverlay = false } = {}) {
+export async function requestImmersiveArSession(domOverlayRoot, { requireDomOverlay = false, preferDomOverlay = false } = {}) {
     if (!navigator.xr) throw new Error('WebXR is unavailable in this browser.');
     if (!window.isSecureContext) throw new Error('WebXR requires a secure HTTPS connection.');
     if (requireDomOverlay && !domOverlayRoot) throw new Error('Creator AR requires a DOM overlay root.');
@@ -75,7 +84,7 @@ export async function requestImmersiveArSession(domOverlayRoot, { requireDomOver
 
     let lastError = null;
     for (const mode of modes) {
-        for (const options of sessionAttemptsForMode(mode, requireDomOverlay)) {
+        for (const options of sessionAttemptsForMode(mode, requireDomOverlay, preferDomOverlay)) {
             try {
                 const session = await requestSessionForMode(mode, options, domOverlayRoot);
                 if (requireDomOverlay && !session.domOverlayState) {
