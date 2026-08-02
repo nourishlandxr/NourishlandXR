@@ -323,19 +323,16 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /\['plant', 'sub_checkpoint'\]\.includes\(readyPlacementType\)/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
-    assert.match(arSource, /data-ar-view-mode/);
-    assert.match(arSource, /data-ar-hold-mode/);
-    assert.match(arSource, /data-ar-select-mode/);
-    assert.match(styles, /\.creator-ar-view-icon/);
+    assert.doesNotMatch(taskbar, /data-ar-view-mode|data-ar-hold-mode|data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 7);
+    assert.equal((taskbar.match(/<button/g) || []).length, 4);
+    assert.doesNotMatch(styles, /creator-ar-quest-link-bar \.creator-ar-taskbar > button:nth-child/);
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:var\(--marker-note-width,min\(72vw,280px\)\); height:var\(--marker-note-height,116px\)/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-note[\s\S]*background:#a95d32 !important/);
-    assert.match(styles, /\.creator-ar-taskbar \[data-ar-view-mode\][\s\S]*background:#246ea6 !important/);
     assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
     assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 72px; height: 132px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
@@ -529,7 +526,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
     assert.match(arSource, /Pointer mode is on/);
     assert.match(arSource, /if \(!directHold && interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
-    assert.match(arSource, /if \(!directHold && interactionMode === 'neutral'\) return/);
+    assert.match(arSource, /if \(!directHold && interactionMode === 'neutral'\) \{[\s\S]*openMarkerContextToolbar\(record\)/);
     assert.match(arSource, /openMarkerContextToolbar\(record\)/);
     assert.match(arSource, /function updateContextToolbar\(\)/);
     assert.match(arSource, /function cycleContextAppearance\(property\)/);
@@ -621,9 +618,11 @@ test('Creator AR keeps dashboard web-only while supporting controller controls',
     assert.match(arSource, /origin\.x \+ ray\.x \* distance/);
     assert.match(styles, /creator-ar-controller-pointer[^}]*z-index:12005/);
     assert.doesNotMatch(arSource, /move_dashboard|dashboardHoverRegionId|rayPositionedPanelMatrix/);
-    assert.match(taskbar, /data-ar-hold-mode/);
+    assert.doesNotMatch(taskbar, /data-ar-view-mode|data-ar-hold-mode|data-ar-select-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
+    assert.match(arSource, /function drawControllerPointerContact\(view\)/);
+    assert.match(arSource, /short press selects a placed object/);
     assert.match(arSource, /checkpointSessionOrigin/);
 });
 

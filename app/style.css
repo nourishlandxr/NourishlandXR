@@ -6516,19 +6516,13 @@ body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > b
     padding: 5px;
     justify-content: center;
     border-color: rgba(255,255,255,.22);
-    border-radius: 7px;
+    border-radius: 6px;
     font-size: 0;
-    transform-origin: 50% 100%;
+    box-shadow: 0 4px 0 rgba(7,13,15,.82), inset 0 1px rgba(255,255,255,.16);
+    transform: none;
     transition: transform .18s ease, filter .18s ease, background .18s ease;
 }
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(1),
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(7) { transform: translateY(7px) rotateZ(10deg); }
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(2),
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(6) { transform: translateY(3px) rotateZ(6deg); }
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(3),
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(5) { transform: translateY(1px) rotateZ(3deg); }
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(4) { transform: translateY(0); }
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.08); filter: brightness(1.18); }
+body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.04); filter: brightness(1.18); }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button b,
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }

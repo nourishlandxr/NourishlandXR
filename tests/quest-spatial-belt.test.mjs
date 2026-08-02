@@ -19,13 +19,14 @@ test('Quest spatial belt stays in a shallow waist-level arc in front of the view
     ]);
     const layout = questSpatialBeltLayout(viewer);
     assert.equal(layout.length, QUEST_SPATIAL_BELT_ACTIONS.length);
-    assert.equal(layout[3].id, 'view');
-    assert.ok(Math.abs(layout[3].position.y - 1.02) < .0001);
-    assert.ok(layout[0].position.x < layout[3].position.x);
-    assert.ok(layout[6].position.x > layout[3].position.x);
-    assert.ok(layout[0].position.z > layout[3].position.z);
-    assert.ok(layout[0].yaw < layout[3].yaw);
-    assert.ok(layout[6].yaw > layout[3].yaw);
+    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.id), ['plant', 'note', 'special', 'web']);
+    assert.equal(layout[1].id, 'note');
+    assert.ok(Math.abs(layout[1].position.y - 1.02) < .002);
+    assert.ok(layout[0].position.x < layout[1].position.x);
+    assert.ok(layout[3].position.x > layout[1].position.x);
+    assert.ok(layout[0].position.z > layout[1].position.z);
+    assert.ok(layout[0].yaw < layout[1].yaw);
+    assert.ok(layout[3].yaw > layout[1].yaw);
 });
 
 test('Quest spatial belt accepts compact panel hit radii for the 3D renderer', () => {
@@ -37,8 +38,8 @@ test('Quest spatial belt accepts compact panel hit radii for the 3D renderer', (
     ]);
     const layout = questSpatialBeltLayout(viewer, { radius: .09, spacing: .135, curve: .035 });
     assert.equal(layout[0].radius, .09);
-    assert.equal(layout[3].radius, .09);
-    assert.ok(layout[0].position.z > layout[3].position.z);
+    assert.equal(layout[1].radius, .09);
+    assert.ok(layout[0].position.z > layout[1].position.z);
 });
 
 test('Quest spatial belt resolves the first laser-hit action', () => {
@@ -49,9 +50,9 @@ test('Quest spatial belt resolves the first laser-hit action', () => {
         0, 1.6, 0, 1
     ]);
     const layout = questSpatialBeltLayout(viewer);
-    const button = layout[3];
+    const button = layout[1];
     const origin = { x: button.position.x, y: button.position.y, z: 0 };
     const target = questSpatialBeltRayTarget({ origin, direction: { x: 0, y: 0, z: -1 } }, layout);
-    assert.equal(target?.id, 'view');
-    assert.equal(target?.index, 3);
+    assert.equal(target?.id, 'note');
+    assert.equal(target?.index, 1);
 });
