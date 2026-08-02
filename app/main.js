@@ -375,9 +375,11 @@ window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
 window.openProjectArMode = async (projectId, areaId = '') => {
     const decodedProjectId = decodeArArgument(projectId);
     const decodedAreaId = decodeArArgument(areaId);
-    const started = await startArMode(decodedProjectId, decodedAreaId);
-    if (!started) await renderArAreaPicker(app, encodeURIComponent(decodedProjectId));
-    return started;
+    // The dashboard AR button is a direct entry point.  A failed immersive
+    // launch should leave the dashboard in place so Quest never drops the
+    // user into the creator setup picker; the explicit "Place in AR" action
+    // remains the route for setup and placement configuration.
+    return startArMode(decodedProjectId, decodedAreaId);
 };
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);
 window.openCheckpointQuickSetup = projectId => openCheckpointQuickSetup(app, projectId);

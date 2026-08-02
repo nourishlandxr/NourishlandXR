@@ -1100,6 +1100,26 @@ function pointerWorldOrigin() {
             : null;
 }
 
+function controllerMarkerRadius(record) {
+    const marker = record?.marker || {};
+    if (marker.type === 'note') return .62;
+    if (marker.type === 'area_checkpoint') return .48;
+    if (marker.special_symbol) return .5;
+    if (marker.type === 'plant') return .34;
+    return .3;
+}
+
+function controllerLaserSubjects() {
+    const subjects = activeAreaMarkers()
+        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
+        .map(record => ({ position: record.position, radius: controllerMarkerRadius(record) }));
+    if (readyPlacementType) {
+        const point = placementPoint();
+        if (point) subjects.push({ position: point, radius: .38 });
+    }
+    return subjects;
+}
+
 function controllerMarkerAtAim() {
     const ray = pointerWorldRay();
     const origin = pointerWorldOrigin();
@@ -1113,16 +1133,20 @@ function controllerMarkerAtAim() {
                 z: record.position.z - origin.z
             };
             const along = offset.x * ray.x + offset.y * ray.y + offset.z * ray.z;
-            if (along <= 0) return { record, distance: Infinity };
+            if (along <= 0) return { record, along: Infinity, distance: Infinity };
             const closest = {
                 x: origin.x + ray.x * along,
                 y: origin.y + ray.y * along,
                 z: origin.z + ray.z * along
             };
-            return { record, distance: Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z) };
+            return {
+                record,
+                along,
+                distance: Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z)
+            };
         })
-        .filter(item => item.distance <= (item.record.marker.type === 'note' ? .55 : .28))
-        .sort((left, right) => left.distance - right.distance)[0]?.record || null;
+        .filter(item => item.distance <= controllerMarkerRadius(item.record))
+        .sort((left, right) => left.along - right.along)[0]?.record || null;
     hoveredMarkerId = record?.marker?.id || '';
     overlayRoot?.querySelectorAll('[data-ar-marker-id]').forEach(element => {
         element.classList.toggle('is-xr-hover', element.dataset.arMarkerId === hoveredMarkerId);
@@ -1130,11 +1154,11 @@ function controllerMarkerAtAim() {
     return record;
 }
 
-function activateControllerTarget() {
+function activateControllerTarget(directHold = interactionMode === 'grab') {
     const record = controllerMarkerAtAim();
     const element = record && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
     if (!record || !element) {
-        setPlacementStatus('Aim at a placed element, then press the controller trigger.');
+        setPlacementStatus('Aim at a placed element, then press and hold the controller trigger.');
         return false;
     }
     beginMarkerInteraction(record, {
@@ -1144,7 +1168,7 @@ function activateControllerTarget() {
         clientX: window.innerWidth / 2,
         clientY: window.innerHeight / 2,
         currentTarget: element
-    }, { directHold: interactionMode === 'grab', element });
+    }, { directHold, element });
     return true;
 }
 
@@ -1153,6 +1177,7 @@ function activateControllerSelection() {
         void quickPlace(readyPlacementType);
         return true;
     }
+    if (controllerMarkerAtAim() && activateControllerTarget(true)) return true;
     if (!controllerMenuActive && interactionMode !== 'neutral') return activateControllerTarget();
     const action = controllerActionElements()[controllerActionIndex];
     if (!action) return false;
@@ -1192,7 +1217,7 @@ function drawHandTrackingLines(view) {
         const to = latestHandState.joints.get(toName);
         if (!from || !to) continue;
         drawSpatialTether(gl, controllerPointerRenderer, view, from, to, {
-            segments: 3, width: .009, curve: 0, lift: 0, color: [0.72, 1, 0.34, .82]
+            segments: 3, width: .012, curve: 0, lift: 0, color: [0.72, 1, 0.34, .88]
         });
     }
 }
@@ -1203,7 +1228,7 @@ function pollHandPinch() {
     if (pinching && !handPinchActive && interactionMode !== 'view') {
         const target = controllerMarkerAtAim();
         if (target) {
-            activateControllerTarget();
+            activateControllerTarget(true);
             if (dragState) dragState.pointerId = 'xr-hand';
         }
     }
@@ -1219,12 +1244,7 @@ function drawControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = controllerRayEnd(latestControllerRay, activeAreaMarkers()
-        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
-        .map(record => ({
-            position: record.position,
-            radius: record.marker.type === 'note' ? .55 : record.marker.type === 'area_checkpoint' ? .36 : .22
-        })), XR_LASER_POINTER_CONFIG.length);
+    const end = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -1243,12 +1263,7 @@ function positionControllerPointer(view = latestView) {
         pointer.classList.remove('is-edge');
         return;
     }
-    const point = controllerRayEnd(latestControllerRay, activeAreaMarkers()
-        .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
-        .map(record => ({
-            position: record.position,
-            radius: record.marker.type === 'note' ? .55 : record.marker.type === 'area_checkpoint' ? .36 : .22
-        })), XR_LASER_POINTER_CONFIG.length);
+    const point = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if (!point) {
         pointer.hidden = true;
         return;
@@ -3365,9 +3380,12 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
         });
         launchedSession.addEventListener('selectstart', event => {
-            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || controllerMenuActive || readyPlacementType || interactionMode !== 'grab') return;
+            if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
             const target = controllerMarkerAtAim();
-            if (target) activateControllerTarget();
+            // A placed object owns the trigger while it is under the laser,
+            // even when the taskbar is currently focused. This makes a
+            // press-and-hold orb gesture predictable in Quest neutral mode.
+            if (target) activateControllerTarget(true);
         });
         launchedSession.addEventListener('selectend', event => {
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || dragState?.pointerId !== 'xr-controller') return;
