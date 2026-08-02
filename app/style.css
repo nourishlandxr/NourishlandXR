@@ -889,8 +889,6 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-context-toolbar button b { grid-row:1 / 3; display:grid; place-items:center; min-width:19px; font-size:.92rem; }
 .creator-ar-context-toolbar button span { font-size:.55rem; font-weight:850; letter-spacing:.045em; line-height:1.05; white-space:nowrap; }
 .creator-ar-context-toolbar button small { color:rgba(255,255,255,.72); font-size:.52rem; line-height:1.05; white-space:nowrap; }
-.creator-ar-context-toolbar [data-ar-context-web] { border-color:rgba(103,174,226,.72); background:rgba(36,110,166,.78) !important; }
-.creator-ar-context-toolbar [data-ar-context-close] { min-width:38px; }
 .creator-ar-context-label { align-self:center; padding:0 3px; color:rgba(255,255,255,.58); font-size:.5rem; font-weight:900; letter-spacing:.12em; writing-mode:vertical-rl; transform:rotate(180deg); }
 .creator-ar-color-cycle { width:17px; height:17px; border:2px solid rgba(255,255,255,.8); border-radius:50%; background:var(--cycle-color); box-shadow:0 0 9px color-mix(in srgb,var(--cycle-color) 58%,transparent); }
 .creator-ar-placement-capture { position: fixed; inset: 0; z-index: 2; display: block; background: transparent !important; pointer-events: none; touch-action: manipulation; }
@@ -6413,10 +6411,6 @@ body[data-project-theme] .creator-ar-context-toolbar button {
     font-weight:780;
     letter-spacing:.06em;
     text-transform:uppercase;
-}
-.creator-ar-context-toolbar [data-ar-context-web] {
-    border-color:#78a6b6;
-    background:#365f70 !important;
 }
 .tryit-demo-taskbar button {
     border-radius:8px;
