@@ -3533,10 +3533,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        // Quest Web Hub is a live spatial window, so its DOM overlay is part
-        // of the Quest session contract. Phone AR keeps the optional overlay
-        // path and therefore retains its existing mobile behavior.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
+        // The Quest belt is rendered inside the XR WebGL layer. DOM overlay
+        // is still preferred for the spatial Web Hub, but it must not block
+        // the underlying Quest session: some Quest Browser builds refuse the
+        // optional feature while immersive AR/VR remains fully available.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';

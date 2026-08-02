@@ -1,7 +1,9 @@
 export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr']);
 
-export function isQuestHeadsetBrowser(userAgent = globalThis.navigator?.userAgent || '') {
-    return /(?:OculusBrowser|Meta Quest)/i.test(String(userAgent));
+export function isQuestHeadsetBrowser(userAgent = globalThis.navigator?.userAgent || '', userAgentData = globalThis.navigator?.userAgentData) {
+    const brands = Array.isArray(userAgentData?.brands) ? userAgentData.brands.map(brand => brand?.brand).join(' ') : '';
+    const deviceHints = [userAgentData?.model, userAgentData?.platform, brands].filter(Boolean).join(' ');
+    return /(?:OculusBrowser|Meta Quest|Quest(?:\s+(?:2|3|Pro))?)/i.test(`${String(userAgent)} ${deviceHints}`);
 }
 
 export function selectWebXRSessionMode(support = {}) {
@@ -40,7 +42,10 @@ const SESSION_ATTEMPTS = Object.freeze({
     // available, so the UI does not pretend it is seeing the real garden.
     'immersive-vr': [
         { requiredFeatures: ['dom-overlay'], optionalFeatures: ['local-floor', 'bounded-floor', 'hit-test'] },
-        { requiredFeatures: [], optionalFeatures: ['dom-overlay', 'local-floor', 'bounded-floor', 'hit-test'] }
+        { requiredFeatures: [], optionalFeatures: ['dom-overlay', 'local-floor', 'bounded-floor', 'hit-test'] },
+        // A valid native Quest session must still be usable when this
+        // browser does not expose DOM overlay at all.
+        { requiredFeatures: [], optionalFeatures: [] }
     ]
 });
 

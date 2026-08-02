@@ -715,7 +715,7 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
 test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     const webxrSource = read('app/services/webxrSession.js');
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(arSource, /document\.body\.dataset\.arDomOverlay = arSession\.domOverlay \? 'true' : 'false'/);
     assert.match(arSource, /questHeadsetSession = questBrowser \|\| sessionMode === 'immersive-vr' \|\| session\.interactionMode === 'world-space'/);
     assert.match(arSource, /classList\.toggle\('creator-ar-quest-headset', questHeadsetSession\)/);
@@ -1141,7 +1141,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
@@ -1186,7 +1186,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(arSource, /let startPromise = null/);
     assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
