@@ -726,6 +726,8 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     assert.match(arSource, /function questBeltUsesSpatialRenderer\(\)[\s\S]*return questHeadsetSession/);
     assert.match(arSource, /questSpatialBeltRayTarget\(latestControllerRay, currentQuestBeltLayout\(\)\)/);
     assert.match(arSource, /drawQuestSpatialBelt\(view\)/);
+    assert.match(arSource, /classList\.add\('creator-ar-quest-headset', 'creator-ar-quest-pending'\)/);
+    assert.match(arSource, /classList\.remove\('creator-ar-quest-pending'\)/);
     assert.match(arSource, /createQuestBeltPanelTexture/);
     assert.match(arSource, /let questBeltLayout = \[\]/);
     assert.match(arSource, /questBeltViewerMatrix = new Float32Array\(latestViewerMatrix\)/);
@@ -733,6 +735,7 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     assert.match(arSource, /classList\.add\('creator-ar-spatial-belt-ready'\)/);
     assert.match(arSource, /classList\.remove\('creator-ar-spatial-belt-ready'\)/);
     assert.match(read('app/style.css'), /body\.creator-ar-quest-headset\.creator-ar-spatial-belt-ready \.creator-ar-quest-link-bar > \.creator-ar-taskbar[\s\S]*opacity: 0 !important/);
+    assert.match(read('app/style.css'), /body\.creator-ar-quest-pending \.creator-ar-quest-link-bar[\s\S]*visibility: hidden !important/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-vr'/);
@@ -1051,7 +1054,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
-    assert.match(source, /const open = cell\.key === activeBranch/);
+    assert.match(source, /const nodes = pimVisibleNodes\(knowledge, expandedPaths\)/);
+    assert.match(source, /drawPimPetal/);
     assert.match(source, /bindSimulatedInformationPanels/);
     assert.match(source, /demoPanelOffset/);
     assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
@@ -1091,8 +1095,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /height: clamp\(228px, 52vw, 300px\)/);
     assert.match(styles, /\.plant-knowledge-left \.plant-knowledge-cell:nth-child\(1\) \{ left:calc\(50% - var\(--pim-x-half\)\); top:calc\(50% - var\(--pim-y-step\)\); \}/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
-    assert.match(source, /activateBranch\(branchKey\)/);
-    assert.doesNotMatch(source, /activateBranch\(record\.demoActiveBranch === branchKey \? '' : branchKey\)/);
+    assert.match(source, /pimVisibleNodes/);
+    assert.match(source, /pimToggleExpandedPaths/);
+    assert.match(source, /data-pim-node/);
+    assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
     const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));
     assert.doesNotMatch(sessionSelect, /toggleDemoPlantProfile/);
@@ -1119,7 +1125,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /border-radius: 32% 23% 35% 25% \/ 25% 34% 24% 37%/);
     assert.match(styles, /\.tryit-sim-totem-card::after/);
     assert.match(source, /ctx\.arc\(attachmentX, attachmentY, 6/);
-    assert.match(source, /ctx\.strokeText\(cell\.item\[0\], cell\.x/);
+    assert.match(source, /ctx\.strokeText\(line, point\.x/);
     assert.match(source, /ctx\.strokeText\('PIM', center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /Point of Interest/);
@@ -1319,8 +1325,8 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /core: \{ scientific, layer \}/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
-    assert.match(arSource, /const open = candidate === cell/);
-    assert.doesNotMatch(arSource, /const open = !cell\.classList\.contains\('is-open'\)/);
+    assert.match(arSource, /const wasOpen = record\.pimExpandedPaths\?\.includes\(nodePath\)/);
+    assert.match(arSource, /record\.pimExpandedPaths = pimToggleExpandedPaths/);
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);

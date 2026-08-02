@@ -23,6 +23,7 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialT
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
@@ -390,8 +391,19 @@ function creatorPlantKnowledge(record) {
 function creatorPlantKnowledgeMarkup(record) {
     const knowledge = creatorPlantKnowledge(record);
     const compactLabel = label => ({ RELATIONSHIPS: 'LINKS' })[String(label).toUpperCase()] || label;
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.slice(0, 3).map(([label, value], index) => `<button type="button" class="plant-knowledge-cell" data-ar-plant-branch="${side}-${index}" aria-label="${escapeHtml(label)}" aria-expanded="false"><b>${escapeHtml(compactLabel(label))}</b><small aria-hidden="true">${escapeHtml(value)}</small></button>`).join('')}</span>`;
-    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core"><small>PIM</small><strong>${escapeHtml(knowledge.title)}</strong><i>${escapeHtml(knowledge.core.scientific)}</i><em>${escapeHtml(knowledge.core.layer)}</em></span>${branch('right', knowledge.right)}</span>`;
+    const expandedPaths = record.pimExpandedPaths || [];
+    const expanded = new Set(expandedPaths);
+    const nodes = pimVisibleNodes(knowledge, expandedPaths);
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="M${node.parentPosition.x} ${node.parentPosition.y} L${node.position.x} ${node.position.y}"/>`).join('');
+    const cells = nodes.map(node => {
+        const hasChildren = pimNodeChildren(node).length > 0;
+        const open = expanded.has(node.path);
+        const detailsVisible = node.depth > 0 || open;
+        const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.62, 1 - node.depth * .14)}`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(compactLabel(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${escapeHtml(compactLabel(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
+    }).join('');
+    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}<span class="plant-knowledge-core"><small>PIM</small><strong>${escapeHtml(knowledge.title)}</strong><i>${escapeHtml(knowledge.core.scientific)}</i><em>${escapeHtml(knowledge.core.layer)}</em></span></span>`;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -1949,6 +1961,7 @@ function drawQuestSpatialBelt(view) {
     const textures = layout.length === QUEST_SPATIAL_BELT_ACTIONS.length && ensureQuestBeltTextures();
     if (!textures?.length || textures.some(texture => !texture)) return;
     document.body.classList.add('creator-ar-spatial-belt-ready');
+    document.body.classList.remove('creator-ar-quest-pending');
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -2333,21 +2346,18 @@ function renderSessionMarkers() {
         profilePanel?.addEventListener('pointerdown', event => {
             event.stopPropagation();
         });
-        layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(cell => {
-            const activate = () => {
-                layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-ar-plant-branch]`).forEach(candidate => {
-                    const open = candidate === cell;
-                    candidate.classList.toggle('is-open', open);
-                    candidate.setAttribute('aria-expanded', String(open));
-                    candidate.querySelector('small')?.setAttribute('aria-hidden', String(!open));
-                });
-            };
+        layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-pim-node]`).forEach(cell => {
             cell.addEventListener('pointerdown', event => {
                 event.stopPropagation();
             });
             cell.addEventListener('click', event => {
                 event.stopPropagation();
-                activate();
+                const nodePath = cell.dataset.pimNode;
+                const wasOpen = record.pimExpandedPaths?.includes(nodePath);
+                const label = cell.querySelector('b')?.textContent || 'Cell';
+                record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, nodePath);
+                renderSessionMarkers();
+                setPlacementStatus(wasOpen ? `${label} collapsed.` : `${label} opened into its information petals.`);
             });
         });
     });
@@ -2723,6 +2733,7 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             marker,
             plantProfile,
             profileExpanded: false,
+            pimExpandedPaths: [],
             position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: 0 },
             anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             siteId,
@@ -3261,6 +3272,7 @@ function cleanup() {
     document.body.classList.remove('creator-ar-session-active');
     document.body.classList.remove('creator-ar-immersive-vr');
     document.body.classList.remove('creator-ar-quest-headset');
+    document.body.classList.remove('creator-ar-quest-pending');
     document.body.classList.remove('creator-ar-spatial-belt-ready');
     delete document.body.dataset.webxrMode;
     delete document.body.dataset.arDomOverlay;
@@ -3471,6 +3483,12 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     arReturnContext = returnContext || '';
     const questBrowser = isQuestHeadsetBrowser();
     questHeadsetSession = questBrowser;
+    if (questBrowser) {
+        // Set the device class before the async WebXR request so the phone
+        // taskbar stylesheet never paints during Quest session startup.
+        document.body.classList.add('creator-ar-quest-headset', 'creator-ar-quest-pending');
+        document.body.dataset.arDevice = 'quest';
+    }
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';
     createOverlay();
 

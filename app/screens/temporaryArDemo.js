@@ -14,6 +14,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 
 let appRoot = null;
 let session = null;
@@ -583,6 +584,7 @@ function guidePlantConversion(record) {
         }
         record.demoExpanded = false;
         record.demoActiveBranch = '';
+        record.demoExpandedBranches = [];
         record.informationPosition = plantInformationPosition(record);
         record.demoInteractive = true;
         record.revealTitle = true;
@@ -781,7 +783,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), record.demoActiveBranch)}</span>`;
+    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), record.demoExpandedBranches)}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -796,6 +798,7 @@ function toggleDemoPlantProfile(record) {
     if (record.demoExpanded) {
         record.profileRevealStarted = performance.now();
         record.demoActiveBranch = '';
+        record.demoExpandedBranches = [];
         record.demoProfileInteracted = false;
     }
     refreshDemoRecord(record);
@@ -822,18 +825,52 @@ export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantP
 function selectDemoProfileCell() {
     const record = [...markers].reverse().find(candidate => candidate?.demoType === 'plant' && candidate.demoExpanded);
     if (!record) return false;
-    const knowledge = knowledgeFor(record);
-    const keys = [
-        ...knowledge.left.slice(0, 3).map((_, index) => `left-${index}`),
-        ...knowledge.right.slice(0, 3).map((_, index) => `right-${index}`)
-    ];
-    if (!keys.length) return false;
-    const currentIndex = keys.indexOf(record.demoActiveBranch);
-    record.demoActiveBranch = keys[(currentIndex + 1) % keys.length];
+    const node = demoPimNodeAtPointer(record);
+    if (!node) {
+        setGuide('Aim at a PIM cell, then press it to open its information petals.');
+        return true;
+    }
+    record.demoActiveBranch = node.path;
+    record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
-    setGuide('Plant Profile cell opened. Select again to explore the next cell.');
+    setGuide(record.demoExpandedBranches.includes(node.path)
+        ? `${node.label} opened into its connected information cells.`
+        : `${node.label} collapsed.`);
     return true;
+}
+
+function demoPimNodeAtPointer(record) {
+    const origin = demoPointerWorldOrigin();
+    const direction = demoPointerWorldRay();
+    if (!origin || !direction || !record) return null;
+    const position = record.informationPosition || (record.informationPosition = plantInformationPosition(record));
+    const camera = viewerMatrix || new Float32Array(16);
+    let towardX = camera[12] - position.x;
+    let towardZ = camera[14] - position.z;
+    const horizontalLength = Math.hypot(towardX, towardZ) || 1;
+    towardX /= horizontalLength;
+    towardZ /= horizontalLength;
+    const right = { x: towardZ, z: -towardX };
+    const normal = { x: towardX, z: towardZ };
+    const numerator = (position.x - origin.x) * normal.x + (position.z - origin.z) * normal.z;
+    const denominator = direction.x * normal.x + direction.z * normal.z;
+    const distance = numerator / denominator;
+    if (!Number.isFinite(distance) || distance <= 0) return null;
+    const hit = {
+        x: origin.x + direction.x * distance,
+        y: origin.y + direction.y * distance,
+        z: origin.z + direction.z * distance
+    };
+    const localX = (hit.x - position.x) * right.x + (hit.z - position.z) * right.z;
+    const localY = hit.y - position.y;
+    const xPercent = (localX / (.2 * 1.55) * .5 + .5) * 100;
+    const yPercent = (.5 - localY / (.08 * 2.5) * .5) * 100;
+    if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
+    return pimVisibleNodes(knowledgeFor(record), record.demoExpandedBranches)
+        .map(node => ({ node, distance: Math.hypot(xPercent - node.position.x, yPercent - node.position.y) }))
+        .sort((left, right) => left.distance - right.distance)
+        .find(candidate => candidate.distance <= (candidate.node.depth ? 11 : 13))?.node || null;
 }
 
 function updateSimulatedMarkers() {
@@ -996,21 +1033,7 @@ function bindSimulatedInformationPanels(layer) {
         const tether = layer.querySelector(`[data-demo-plant-tether="${index}"]`);
         const handle = profile.querySelector('[data-plant-profile-handle]');
         if (!record || !handle) return;
-        const cells = [...profile.querySelectorAll('[data-plant-branch]')];
-        const activateBranch = branchKey => {
-            record.demoActiveBranch = branchKey;
-            if (!record.demoProfileInteracted) {
-                record.demoProfileInteracted = true;
-                if (record.tutorialStage === 'plant2') showDemoAction('note');
-                else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
-            }
-            cells.forEach(candidate => {
-                const open = candidate.dataset.plantBranch === branchKey;
-                candidate.classList.toggle('is-open', open);
-                candidate.setAttribute('aria-expanded', String(open));
-                candidate.querySelector('small')?.setAttribute('aria-hidden', String(!open));
-            });
-        };
+        const cells = [...profile.querySelectorAll('[data-pim-node]')];
         cells.forEach(cell => {
             cell.addEventListener('pointerdown', event => {
                 event.stopPropagation();
@@ -1018,8 +1041,17 @@ function bindSimulatedInformationPanels(layer) {
             });
             cell.addEventListener('click', event => {
                 event.stopPropagation();
-                const branchKey = cell.dataset.plantBranch;
-                activateBranch(branchKey);
+                const nodePath = cell.dataset.pimNode;
+                const wasOpen = record.demoExpandedBranches?.includes(nodePath);
+                record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
+                record.demoActiveBranch = nodePath;
+                if (!record.demoProfileInteracted) {
+                    record.demoProfileInteracted = true;
+                    if (record.tutorialStage === 'plant2') showDemoAction('note');
+                    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+                }
+                refreshDemoRecord(record);
+                setGuide(wasOpen ? `${cell.querySelector('b')?.textContent || 'Cell'} collapsed.` : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.`);
             });
         });
         let start = null;
@@ -1064,13 +1096,19 @@ function bindSimulatedInformationPanels(layer) {
 
 const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
-function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, activeBranch = '') {
-    const branch = (side, items) => `<span class="plant-knowledge-branch plant-knowledge-${side}">${items.slice(0, 3).map(([label, value], index) => {
-        const key = `${side}-${index}`;
-        const open = activeBranch === key;
-        return `<button type="button" class="plant-knowledge-cell${open ? ' is-open' : ''}" data-plant-branch="${key}" aria-expanded="${open}"><b>${demoProfileEscape(label)}</b><small aria-hidden="${!open}">${demoProfileEscape(value)}</small></button>`;
-    }).join('')}</span>`;
-    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 50 L31 28 M50 50 L24 50 M50 50 L31 72 M50 50 L69 28 M50 50 L76 50 M50 50 L69 72"/></svg>${branch('left', knowledge.left)}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>PIM</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span>${branch('right', knowledge.right)}</span>`;
+function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
+    const expanded = new Set(expandedPaths);
+    const nodes = pimVisibleNodes(knowledge, expandedPaths);
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="M${node.parentPosition.x} ${node.parentPosition.y} L${node.position.x} ${node.position.y}"/>`).join('');
+    const cells = nodes.map(node => {
+        const hasChildren = pimNodeChildren(node).length > 0;
+        const open = expanded.has(node.path);
+        const detailsVisible = node.depth > 0 || open;
+        const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.62, 1 - node.depth * .14)}`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
+    }).join('');
+    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>PIM</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span></span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -1527,7 +1565,7 @@ function createSpatialKnowledgeTexture(record) {
     label.height = record.demoType === 'zone' ? 1120 : 720;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
-        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoActiveBranch || '');
+        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || []);
         return canvasTexture(label);
     }
     if (record.demoType === 'zone') {
@@ -1867,58 +1905,69 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
     ctx.stroke();
 }
 
-function drawPlantKnowledgeTexture(ctx, label, knowledge, activeBranch = '') {
+function drawPimPetal(ctx, x, y, radiusX, radiusY, fill, stroke, lineWidth = 2) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, -radiusY);
+    ctx.bezierCurveTo(radiusX * .8, -radiusY * .92, radiusX, -radiusY * .2, radiusX * .76, radiusY * .55);
+    ctx.bezierCurveTo(radiusX * .28, radiusY * 1.02, -radiusX * .28, radiusY * 1.02, -radiusX * .76, radiusY * .55);
+    ctx.bezierCurveTo(-radiusX, -radiusY * .2, -radiusX * .8, -radiusY * .92, 0, -radiusY);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = []) {
     ctx.clearRect(0, 0, label.width, label.height);
     const center = { x: label.width / 2, y: label.height / 2 };
-    const cells = [
-        ...knowledge.left.map((item, index) => ({
-            item,
-            key: `left-${index}`,
-            x: [390, 275, 390][index],
-            y: [170, 360, 550][index]
-        })).filter(cell => cell.item),
-        ...knowledge.right.map((item, index) => ({
-            item,
-            key: `right-${index}`,
-            x: [730, 845, 730][index],
-            y: [170, 360, 550][index]
-        })).filter(cell => cell.item)
-    ];
+    const expanded = new Set(expandedPaths);
+    const nodes = pimVisibleNodes(knowledge, expandedPaths);
+    const position = node => ({ x: node.position.x / 100 * label.width, y: node.position.y / 100 * label.height });
     ctx.strokeStyle = 'rgba(222,239,207,.74)';
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
-    cells.forEach(cell => {
+    nodes.forEach(node => {
+        const parent = node.parentPosition ? { x: node.parentPosition.x / 100 * label.width, y: node.parentPosition.y / 100 * label.height } : center;
+        const point = position(node);
         ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.lineTo(cell.x, cell.y);
+        ctx.moveTo(parent.x, parent.y);
+        ctx.lineTo(point.x, point.y);
         ctx.stroke();
     });
-    cells.forEach(cell => {
-        const open = cell.key === activeBranch;
-        drawHexagon(ctx, cell.x, cell.y, 92, 'rgba(13,42,28,.84)', 'rgba(240,250,233,.76)', 2);
+    nodes.forEach(node => {
+        const point = position(node);
+        const open = expanded.has(node.path);
+        const detailsVisible = node.depth > 0 || open;
+        const radiusX = node.depth ? 72 : 92;
+        const radiusY = node.depth ? 57 : 76;
+        if (node.depth) {
+            drawPimPetal(ctx, point.x, point.y, radiusX, radiusY, 'rgba(42,81,53,.92)', 'rgba(217,247,186,.82)', 3);
+        } else {
+            drawHexagon(ctx, point.x, point.y, 92, 'rgba(13,42,28,.84)', 'rgba(240,250,233,.76)', 2);
+        }
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
         ctx.strokeStyle = 'rgba(0,0,0,.94)';
         ctx.lineWidth = 4;
         ctx.lineJoin = 'round';
-        ctx.font = '850 18px system-ui, sans-serif';
-        const titleLines = wrappedTextureLines(ctx, cell.item[0], 138).slice(0, 2);
-        const titleStart = cell.y + (open ? -26 : 7) - (titleLines.length - 1) * 10;
-        if (titleLines.length === 1) {
-            ctx.strokeText(cell.item[0], cell.x, titleStart);
-            ctx.fillText(cell.item[0], cell.x, titleStart);
-        } else {
-            titleLines.forEach((line, lineIndex) => {
-                ctx.strokeText(line, cell.x, titleStart + lineIndex * 21);
-                ctx.fillText(line, cell.x, titleStart + lineIndex * 21);
-            });
-        }
-        if (open) {
+        ctx.font = `850 ${node.depth ? 16 : 18}px system-ui, sans-serif`;
+        const titleLines = wrappedTextureLines(ctx, node.label, node.depth ? 116 : 138).slice(0, 2);
+        const titleStart = point.y + (detailsVisible ? -24 : 7) - (titleLines.length - 1) * 10;
+        titleLines.forEach((line, lineIndex) => {
+            ctx.strokeText(line, point.x, titleStart + lineIndex * 21);
+            ctx.fillText(line, point.x, titleStart + lineIndex * 21);
+        });
+        if (detailsVisible) {
             ctx.fillStyle = '#fff';
-            ctx.font = '700 18px system-ui, sans-serif';
+            ctx.font = `700 ${node.depth ? 15 : 18}px system-ui, sans-serif`;
             ctx.shadowColor = 'rgba(0,0,0,.98)';
             ctx.shadowBlur = 6;
-            drawWrappedTextureText(ctx, cell.item[1], cell.x, titleStart + titleLines.length * 21 + 4, 142, 21, 3);
+            drawWrappedTextureText(ctx, node.value, point.x, titleStart + titleLines.length * 20 + 4, node.depth ? 112 : 142, node.depth ? 17 : 21, node.depth ? 2 : 3);
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
         }
