@@ -174,12 +174,6 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
 
-    if (options.highlighted) {
-        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * 1.22, {
-            color: [0.82, 1, 0.28], alpha: 0.22, emissive: 1, opacity: options.opacity
-        });
-    }
-
     if (plant) {
         drawSpatialSphere(
             gl,
@@ -200,6 +194,17 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         radius,
         { color: shellColor, alpha: plant ? 0.84 : 0.92, emissive: options.highlighted ? 0.9 : plant ? 0.34 : 0.24, opacity: options.opacity }
     );
+
+    // Draw the halo after the opaque shell and without writing depth. Drawing
+    // it first caused the larger transparent sphere to occlude the marker,
+    // which made a hovered Quest marker look faded instead of selected.
+    if (options.highlighted) {
+        gl.depthMask(false);
+        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * 1.22, {
+            color: [0.82, 1, 0.28], alpha: 0.22, emissive: 1, opacity: options.opacity
+        });
+        gl.depthMask(true);
+    }
 
     gl.depthMask(true);
     gl.disable(gl.CULL_FACE);
