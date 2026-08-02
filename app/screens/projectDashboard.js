@@ -54,8 +54,13 @@ function projectBreadcrumbMarkup(project, area, currentLabel = '') {
     const projectLabel = `Home ${project.name}`;
     const areaLabel = displayAreaName(area);
     const projectAction = `window.renderProjectDashboard('${encoded(project.id)}')`;
-    const areaAction = `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(area.id)}')`;
-    const areaSegment = isDefaultHomeArea(area) ? `<strong>HOME</strong>` : `<button type="button" onclick="${areaAction}">${escapeHtml(areaLabel)}</button>`;
+    const areaAction = isDefaultHomeArea(area)
+        ? `window.renderProjectHome('${encoded(project.id)}')`
+        : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(area.id)}')`;
+    const areaIsCurrent = !currentLabel;
+    const areaSegment = areaIsCurrent
+        ? `<strong>${escapeHtml(areaLabel)}</strong>`
+        : `<button type="button" onclick="${areaAction}">${escapeHtml(areaLabel)}</button>`;
     return `<nav class="project-breadcrumb" aria-label="Project location"><button type="button" onclick="${projectAction}">${escapeHtml(projectLabel)}</button><span aria-hidden="true">/</span>${areaSegment}${currentLabel ? `<span aria-hidden="true">/</span><strong>${escapeHtml(currentLabel)}</strong>` : ''}</nav>`;
 }
 const visibleQrCode = value => String(value || '').startsWith('nxr-spatial:') ? '' : String(value || '');
@@ -1139,6 +1144,21 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
         return;
     }
     app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>${escapeHtml(feature)}</h1><p class="subtitle">Coming Soon</p></div><div class="panel"><h2>Platform function</h2><p>${escapeHtml(feature)} will remain available from the welcome page.</p></div></div>`;
+}
+
+export async function renderProjectHome(app, encodedProjectId) {
+    const projectId = decodeURIComponent(encodedProjectId);
+    try {
+        const context = await projectContent(projectId);
+        const home = context.places.find(isDefaultHomeArea);
+        if (home) {
+            await renderProjectAreaDashboard(app, encoded(context.project.id), encoded(home.id));
+            return;
+        }
+        await renderProjectDashboard(app, encoded(context.project.id));
+    } catch (error) {
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Home unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+    }
 }
 
 export async function renderProjectDashboard(app, encodedProjectId) {
@@ -2631,8 +2651,9 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             </div>
         </div>
         <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div class="plant-spm-heading"><div><h2 id="plantSpmTitle">Super Plant Mode (SPM)</h2><p>Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.</p></div><span class="plant-profile-info-bubble" role="img" aria-label="Keep this Plant as a simple profile, or enable SPM to load its advanced Plant Information Mesh.">i</span></div>
-            <label class="tutorial-mode-toggle"><span><strong>Enable SPM / PIM</strong><small>Show advanced editing and the spatial PIM in AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+            <div class="plant-spm-heading"><strong id="plantSpmTitle">Enable SPM / PIM</strong><button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About SPM and PIM">i</button></div>
+            <p id="plantSpmHelp" class="plant-spm-help" hidden>SPM loads the advanced Plant Information Mesh for this Plant. Leave it off for a simple profile.</p>
+            <label class="tutorial-mode-toggle"><span><strong>Advanced plant information</strong><small>Load the PIM editor and spatial profile.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
         </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
         <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> PIM overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the PIM core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
@@ -2681,9 +2702,7 @@ function plantProfileHeaderMarkup(project, entry, placement, profile) {
         : `window.renderArPreparation('${encoded(project.id)}','existing-placement','${encoded(entry.marker.id)}','${encoded(entry.place.id)}','${encoded(entry.site?.id || '')}')`;
     const projectAction = `window.renderProjectDashboard('${encoded(project.id)}')`;
     const areaAction = `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
-    const areaSegment = isDefaultHomeArea(entry.place)
-        ? '<strong>HOME</strong>'
-        : `<button type="button" onclick="${areaAction}">${escapeHtml(areaLabel)}</button>`;
+    const areaSegment = `<button type="button" onclick="${isDefaultHomeArea(entry.place) ? `window.renderProjectHome('${encoded(project.id)}')` : areaAction}">${escapeHtml(areaLabel)}</button>`;
     return `<header class="plant-profile-header">
         <div class="plant-profile-heading">
             <p class="plant-profile-kicker">PLANT PROFILE</p>
@@ -2709,7 +2728,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
-    const returnArLabel = '&#x23CE; AR';
+    const returnArLabel = 'AR';
     const returnArCopy = plant
         ? 'Take your time with this Plant. Back to AR returns directly to the same Area with this orb open.'
         : 'Take your time with this information. Back to AR returns directly to the same Area and Marker.';
@@ -2725,41 +2744,41 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         <section class="plant-ar-quick-editor" aria-labelledby="plantArQuickTitle"><div><p class="welcome-label">QUICK EDIT</p><h2 id="plantArQuickTitle">Plant profile</h2></div>
         <div class="plant-ar-quick-fields"><label for="projectEntryCommonName">Common name<input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" required /></label><label for="projectEntryScientificName">Scientific name<input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></label><div class="plant-ar-quick-tone"><label for="projectEntryOrbColor">Plant tone</label><div class="plant-ar-quick-tones">${quickPlantTones}</div><label class="plant-ar-custom-tone" for="projectEntryOrbColor"><span>Custom</span><input id="projectEntryOrbColor" type="color" value="${escapeHtml(quickPlantColor)}" /></label></div></div></section>`
         : '';
-    const plantEditorFields = `<input id="projectEntryName" type="hidden" value="${escapeHtml(profile.common_name || entry.marker.name)}" /><input id="projectEntryArea" type="hidden" value="${escapeHtml(entry.place.id)}" />${plantProfileEditorMarkup(entry, profile, plantPhysicalAnchorMarkup)}<details class="plant-qr-anchor-card plant-profile-link-card"><summary><span aria-hidden="true">▦</span><span><strong>Physical label link</strong><small>Optional QR code for this Plant</small></span></summary><div><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" /></div></details>`;
+    const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
+        ? `<button type="button" class="plant-print-action" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
+        : '';
+    const plantEditorFields = `<input id="projectEntryName" type="hidden" value="${escapeHtml(profile.common_name || entry.marker.name)}" /><input id="projectEntryArea" type="hidden" value="${escapeHtml(entry.place.id)}" />${plantProfileEditorMarkup(entry, profile, plantPhysicalAnchorMarkup)}<details class="plant-qr-anchor-card plant-profile-link-card"><summary><span aria-hidden="true">▦</span><span><strong>Physical label link</strong><small>Optional QR code for this Plant</small></span></summary><div><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" />${plantPrintAction}</div></details>`;
     const standardEditorFields = quickArPlantEdit ? '' : plant ? plantEditorFields : `<div class="field"><label for="projectEntryName">${entry.marker.type === 'note' ? 'Title' : 'Rename'}</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Information' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>`;
     const entryContextName = displayAreaName(entry.place);
     const entryIsHome = isDefaultHomeArea(entry.place);
-    const webReturnAction = quickArPlantEdit
-        ? `window.renderProjectDashboard('${encoded(project.id)}')`
+    const webReturnAction = plant
+        ? `window.renderProjectHome('${encoded(project.id)}')`
         : entryIsHome
             ? `window.renderProjectDashboard('${encoded(project.id)}')`
             : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
-    const webReturnLabel = quickArPlantEdit || entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
-    const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
-        ? `<button type="button" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
-        : '';
+    const webReturnLabel = plant ? 'BACK' : entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
     const plantProfileBackButton = plant ? `<button class="ghost project-entry-back-button" type="button" onclick="${webReturnAction}">${webReturnLabel}</button>` : '';
     const entryHeader = plant
         ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile, !quickArPlantEdit)}`
         : `<div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>${projectBreadcrumbMarkup(project, entry.place, entry.marker.name)}</div>`;
     const placementStatus = plant ? '' : `<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>`;
     const placeButton = !plant && !quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action ar-square-action" type="button" aria-label="Place ${escapeHtml(entry.marker.name)} in AR" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">AR</button>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr && !plant ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save Quick Edit' : plant ? 'Save Plant Profile' : 'Save changes'}</button>${plantPrintAction}${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr && !plant ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save' : plant ? 'Save' : 'Save changes'}</button>${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
     if (quickArPlantEdit) {
         const quickSaveButton = app.querySelector('.project-entry-editor button.primary');
         const quickReturnButton = app.querySelector('.project-entry-back-button') || app.querySelector('.project-entry-editor .bottom-navigation .ghost');
         const contextBeacon = app.querySelector('.project-entry-editor .web-context-beacon');
-        if (quickSaveButton) quickSaveButton.textContent = 'Save Quick Edit';
+        if (quickSaveButton) quickSaveButton.textContent = 'SAVE';
         if (quickReturnButton) {
-            quickReturnButton.textContent = 'Back to Home';
-            quickReturnButton.onclick = () => window.renderProjectDashboard(encoded(project.id));
+            quickReturnButton.textContent = 'BACK';
+            quickReturnButton.onclick = () => window.renderProjectHome(encoded(project.id));
         }
         if (entryIsHome && contextBeacon) {
             const label = contextBeacon.querySelector('span');
             if (label) label.textContent = 'PROJECT HOME';
         }
     }
-    if (returnContext === 'field-guide' || returnContext === 'webhub') {
+    if (!plant && (returnContext === 'field-guide' || returnContext === 'webhub')) {
         const backButton = app.querySelector('.project-entry-back-button') || app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
             backButton.textContent = 'Back to Web Hub';
@@ -2806,6 +2825,13 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         spmToggle?.addEventListener('change', updateSpmFields);
         updateSpmFields();
         updatePlantPhysicalFields();
+        const spmInfo = app.querySelector('[data-spm-info]');
+        const spmHelp = app.querySelector('#plantSpmHelp');
+        spmInfo?.addEventListener('click', () => {
+            const expanded = Boolean(spmHelp && spmHelp.hidden);
+            if (spmHelp) spmHelp.hidden = !expanded;
+            spmInfo.setAttribute('aria-expanded', String(expanded));
+        });
         const quickColorInput = document.getElementById('projectEntryOrbColor');
         const syncQuickPlantTones = color => {
             app.querySelectorAll('[data-plant-quick-tone]').forEach(button => {

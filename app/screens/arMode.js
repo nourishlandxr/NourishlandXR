@@ -1409,6 +1409,40 @@ function closeAreaChooser() {
     }
 }
 
+async function openArAreaChooser() {
+    const chooser = overlayRoot?.querySelector('[data-ar-area-chooser]');
+    if (!chooser) return;
+    closePlacePicker();
+    const operation = captureArOperationContext();
+    chooser.hidden = false;
+    chooser.innerHTML = '<p>Loading Areas…</p>';
+    try {
+        const areas = await loadPlacementAreas(operation);
+        const namedAreas = areas.filter(area => !isDefaultHomeArea(area));
+        chooser.innerHTML = `<div><strong>Choose an Area for this Totem</strong><button type="button" data-ar-close-area aria-label="Close Area chooser">&times;</button></div>
+            <p>Totem Markers belong to named Areas. Home remains available for ordinary Plants, Notes and Markers.</p>
+            <div class="creator-ar-area-options">${namedAreas.map(area => `<button type="button" data-ar-choose-area="${escapeHtml(area.id)}"><strong>${escapeHtml(area.name)}</strong><small>${escapeHtml(area.type || 'Area')}</small></button>`).join('') || '<p>No named Areas yet.</p>'}</div>
+            <button type="button" data-ar-create-area>+ Create Area</button>`;
+        chooser.querySelector('[data-ar-close-area]')?.addEventListener('click', closeAreaChooser);
+        chooser.querySelector('[data-ar-create-area]')?.addEventListener('click', () => {
+            closeAreaChooser();
+            void openArAreaCreationForm();
+        });
+        chooser.querySelectorAll('[data-ar-choose-area]').forEach(button => button.addEventListener('click', async () => {
+            const area = namedAreas.find(candidate => candidate.id === button.dataset.arChooseArea);
+            if (!area) return;
+            button.disabled = true;
+            activateArea(area);
+            await restoreRecordedMarkers({ ...captureArOperationContext(), areaId: area.id });
+            closeAreaChooser();
+            await armPlacement('area_checkpoint');
+        }));
+    } catch (error) {
+        chooser.innerHTML = `<div><strong>Areas unavailable</strong><button type="button" data-ar-close-area aria-label="Close Area chooser">&times;</button></div><p>${escapeHtml(error.message)}</p>`;
+        chooser.querySelector('[data-ar-close-area]')?.addEventListener('click', closeAreaChooser);
+    }
+}
+
 function closePlacePicker() {
     specialPickerRequest += 1;
     const picker = overlayRoot?.querySelector('[data-ar-place-picker]');
@@ -1542,13 +1576,18 @@ function createTotemFromSpecial() {
         closePlacePicker();
         return;
     }
-    if (activeAreaId && !totem) {
+    if (activeAreaId && !totem && !isDefaultHomeArea(activeAreaName)) {
         closePlacePicker();
         void armPlacement('area_checkpoint');
         return;
     }
+    if (!activeAreaId || isDefaultHomeArea(activeAreaName)) {
+        closePlacePicker();
+        void openArAreaChooser();
+        return;
+    }
     closePlacePicker();
-    setPlacementStatus('Open an Area before adding a Totem Marker.');
+    setPlacementStatus('Choose a named Area before adding a Totem Marker.');
 }
 
 function returnToWebMode() {

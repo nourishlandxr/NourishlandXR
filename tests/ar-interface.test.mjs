@@ -1152,7 +1152,8 @@ test('Creator project AR is a no-code placement session without a dashboard over
     assert.match(styles, /\.creator-ar-status:empty \{ display: none; \}/);
     assert.doesNotMatch(source, /Choose its purpose/);
     assert.match(styles, /\.creator-ar-marker-hit-target-note \.creator-ar-spatial-name \{ opacity:var\(--marker-opacity,1\); visibility:visible/);
-    assert.doesNotMatch(source, /Choose an Area/);
+    assert.match(source, /openArAreaChooser/);
+    assert.match(source, /Choose an Area for this Totem/);
     assert.match(styles, /body\.creator-ar-session-active #app/);
     assert.match(styles, /\.creator-ar-taskbar/);
     assert.match(styles, /body\.creator-ar-quest-headset \.creator-ar-quest-link-bar/);
@@ -1342,7 +1343,8 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(styles, /\.creator-ar-open-web-profile/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
-    assert.match(dashboardSource, /Super Plant Mode \(SPM\)/);
+    assert.match(dashboardSource, /data-spm-info/);
+    assert.match(dashboardSource, /Enable SPM \/ PIM/);
     assert.match(dashboardSource, /projectEntrySpmEnabled/);
     assert.match(dashboardSource, /projectEntryClimate/);
     assert.match(dashboardSource, /spm_enabled: spmEnabled/);
@@ -1376,7 +1378,7 @@ test('an open AR Plant profile has no attached Web Mode card', () => {
     assert.doesNotMatch(arSource, /OPEN IN WEB MODE/);
     assert.doesNotMatch(arSource, /data-ar-context-web/);
     assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
-    assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
+    assert.match(dashboardSource, /const returnArLabel = 'AR'/);
     assert.match(dashboardSource, /const returnArAction = !plant && returnToAr/);
     assert.match(dashboardSource, /const entryHeader = plant/);
     assert.doesNotMatch(dashboardSource, /plantProfileReady && !returnToAr \?/);
@@ -1498,7 +1500,7 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     const styles = read('app/style.css');
     assert.match(arSource, /String\(returnContext\)\.slice\('web-marker:'\.length\)\), true\)/);
     assert.match(dashboardSource, /returnToAr = false/);
-    assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
+    assert.match(dashboardSource, /const returnArLabel = 'AR'/);
     assert.match(dashboardSource, /note-record-editor/);
     assert.match(dashboardSource, /id="projectEntryNoteSurface"/);
     assert.match(dashboardSource, /entry\.marker\.type === 'note' \? 'Title' : 'Rename'/);
@@ -1558,14 +1560,13 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     assert.match(dashboardSource, /data-plant-quick-tone/);
     assert.match(dashboardSource, /fieldValue\('projectEntryFamily', existingPlantProfile\.family/);
     assert.match(dashboardSource, /manageQrAnchor/);
-    assert.match(dashboardSource, /const webReturnAction = quickArPlantEdit/);
-    assert.match(dashboardSource, /window\.renderProjectDashboard\('\$\{encoded\(project\.id\)\}'\)/);
+    assert.match(dashboardSource, /const webReturnAction = plant/);
+    assert.match(dashboardSource, /window\.renderProjectHome\('\$\{encoded\(project\.id\)\}'\)/);
     assert.match(dashboardSource, /entryIsHome\s*\n\s*\? `window\.renderProjectDashboard/);
     assert.match(dashboardSource, /project-entry-back-button/);
     assert.match(dashboardSource, /plant-profile-action-row/);
-    assert.match(styles, /plant-profile-action-row \.danger[\s\S]{0,100}margin-left:\s*auto/);
-    assert.match(dashboardSource, /Save Quick Edit/);
-    assert.match(dashboardSource, /Back to Home/);
+    assert.match(styles, /\.plant-profile-action-row \{ display: grid; grid-template-columns: repeat\(3/);
+    assert.match(dashboardSource, />BACK<|textContent = 'BACK'/);
     assert.match(styles, /\.plant-ar-quick-fields/);
     assert.match(styles, /\.plant-ar-quick-tones/);
 });
