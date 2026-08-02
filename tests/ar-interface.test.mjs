@@ -641,7 +641,8 @@ test('project settings can rename a project while the dashboard stays overview-o
     assert.match(dashboardSource, /saveProjectName/);
     assert.match(dashboardSource, /renameProjectOnDisk\(projectId, \{ \.\.\.project, preserveId: true, name, description, coverImage \}\)/);
     assert.match(dashboardSource, /const button = trigger\?\.currentTarget \|\| trigger/);
-    assert.doesNotMatch(entrySource, /toggleAreas|project-area-overview-card|BIRD'S-EYE OVERVIEW/);
+    assert.match(entrySource, /project-area-overview-card/);
+    assert.match(entrySource, /PROJECT OVERVIEW/);
     assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
 });
 
@@ -1038,8 +1039,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /spatialMoveControlMarkup\('demo'\)/);
     assert.match(styles, /\.spatial-move-control/);
     assert.match(styles, /\.spatial-move-release/);
-    assert.match(styles, /\.spatial-move-control \{[\s\S]*left: var\(--move-control-x, 50%\); top: var\(--move-control-y, 68%\)/);
+    assert.match(styles, /\.spatial-move-control \{[\s\S]*left: var\(--move-control-x, 50%\); top: var\(--move-control-y, 50%\)/);
     assert.match(styles, /\.spatial-move-instruction/);
+    assert.match(styles, /\.spatial-move-instruction \{ display: none; \}/);
+    assert.match(styles, /\.spatial-move-release span::before \{ content: "\+"/);
     assert.match(styles, /\.spatial-grab-handle/);
     assert.doesNotMatch(source, /data-demo-move-mode|demoMoveMode|✋/);
     assert.match(source, /querySelector\('\.tryit-drag-hint'\)\?\.remove\(\)/);
