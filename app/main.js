@@ -263,6 +263,9 @@ window.renderDemoProjects = async () => {
     }
 };
 window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+    if (window.__nourishlandSpatialWindow?.renderProjectDashboard) {
+        return window.__nourishlandSpatialWindow.renderProjectDashboard(projectId);
+    }
     rememberCurrentView('dashboard', [projectId, projectName]);
     const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
     const gardenLoadingComments = [
@@ -427,6 +430,9 @@ window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => {
 window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
 window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
 window.renderProjectAreaDashboard = (projectId, areaId, options = {}) => {
+    if (window.__nourishlandSpatialWindow?.renderProjectAreaDashboard) {
+        return window.__nourishlandSpatialWindow.renderProjectAreaDashboard(projectId, areaId, options);
+    }
     const args = [projectId, areaId];
     rememberCurrentView('area', args);
     pushViewHistory('area', args);
@@ -452,6 +458,9 @@ window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
 window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContext = '') => {
+    if (window.__nourishlandSpatialWindow?.openProjectEntry) {
+        return window.__nourishlandSpatialWindow.openProjectEntry(projectId, markerId, returnToAr, returnContext);
+    }
     const args = [projectId, markerId, returnToAr, returnContext];
     rememberCurrentView('entry', args);
     pushViewHistory('entry', args);
@@ -573,6 +582,9 @@ window.renderVisitorLocationIntro = (projectId, creatorPreview = false, exploreP
 window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
 window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
 window.renderFieldGuide = (projectId, creator = false) => {
+    if (window.__nourishlandSpatialWindow?.renderFieldGuide) {
+        return window.__nourishlandSpatialWindow.renderFieldGuide(projectId, creator);
+    }
     const args = [projectId, creator];
     rememberCurrentView('field-guide', args);
     pushViewHistory('field-guide', args);

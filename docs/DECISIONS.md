@@ -33,7 +33,7 @@ Consequences:
 
 ## 2026-07-26 — Spatial Plant Profiles preserve the live Marker
 
-Decision: A Plant Profile never replaces or repositions its living orb. The orb remains at its recorded physical anchor while a separate, compact honeycomb appears nearby at a comfortable reading height. A subtle curved tether connects the two.
+Decision: A Plant Profile never replaces or repositions its living orb. The orb remains at its recorded physical anchor while a separate, compact PIM mesh appears nearby at a comfortable reading height. A subtle curved tether connects the two.
 
 Consequences:
 
