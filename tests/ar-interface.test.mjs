@@ -612,12 +612,17 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     assert.match(arSource, /renderProjectDashboard\(dashboardRoot, encodeURIComponent\(activeProjectId\)\)/);
     assert.match(mirrorSource, /import\('\.\.\/vendor\/html2canvas\.esm\.js'\)/);
     assert.match(mirrorSource, /foreignObjectRendering: false/);
+    assert.match(mirrorSource, /function waitForSpatialDashboardLayout\(\)/);
+    assert.match(mirrorSource, /window\.setTimeout\(resolve, 32\)/);
+    assert.doesNotMatch(mirrorSource, /requestAnimationFrame\(\(\) => requestAnimationFrame/);
     assert.match(mirrorSource, /target\.click\(\)/);
     assert.match(mirrorSource, /scrollBy/);
     assert.match(mirrorSource, /data-spatial-key/);
     assert.match(html2canvasSource, /html2canvas 1\.4\.1/);
     assert.match(html2canvasLicense, /Permission is hereby granted, free of charge/);
     assert.match(hostedBuildSource, /'vendor'/);
+    assert.match(hostedBuildSource, /style\\\.css\(\?:\\\?v=\[\^"\]\*\)\?/);
+    assert.match(hostedBuildSource, /main\\\.js\(\?:\\\?v=\[\^"\]\*\)\?/);
     assert.doesNotMatch(mirrorSource, /XMLSerializer|<foreignObject/);
     assert.doesNotMatch(arSource, /QUEST_SPATIAL_DASHBOARD_CONTROLS|dashboard-home|dashboard-area/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);

@@ -26,6 +26,14 @@ function loadHtml2canvas() {
     return html2canvasPromise;
 }
 
+function waitForSpatialDashboardLayout() {
+    // Immersive WebXR sessions can suspend window.requestAnimationFrame while
+    // XRSession.requestAnimationFrame continues to drive the headset. A window
+    // frame wait therefore leaves Quest displaying the initial loading texture
+    // forever. A short task delay still lets styles/layout settle in both modes.
+    return new Promise(resolve => window.setTimeout(resolve, 32));
+}
+
 function normalizeVector(vector, fallback) {
     const length = Math.hypot(vector.x, vector.y, vector.z);
     if (length < .0001) return { ...fallback };
@@ -253,7 +261,7 @@ export function createSpatialDashboardMirror(options = {}) {
     const capture = async () => {
         if (destroyed) return;
         const generation = ++refreshGeneration;
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await waitForSpatialDashboardLayout();
         if (destroyed || generation !== refreshGeneration) return;
         scrollTop = clamp(scrollTop, 0, maxScroll());
         positionKeyboard();

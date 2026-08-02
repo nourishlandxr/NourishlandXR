@@ -67,8 +67,8 @@ fs.copyFileSync(path.join(root, 'deploy', 'xr.htaccess'), path.join(webDist, '.h
 const indexPath = path.join(webDist, 'index.html');
 const versionQuery = encodeURIComponent(buildVersion);
 const versionedIndex = fs.readFileSync(indexPath, 'utf8')
-    .replace('href="style.css"', `href="style.css?v=${versionQuery}"`)
-    .replace('src="main.js"', `src="main.js?v=${versionQuery}"`);
+    .replace(/href="style\.css(?:\?v=[^"]*)?"/, `href="style.css?v=${versionQuery}"`)
+    .replace(/src="main\.js(?:\?v=[^"]*)?"/, `src="main.js?v=${versionQuery}"`);
 fs.writeFileSync(indexPath, versionedIndex);
 fs.writeFileSync(path.join(webDist, 'services', 'buildInfo.js'), `export const BUILD_INFO = Object.freeze(${JSON.stringify({
     version: buildVersion,
