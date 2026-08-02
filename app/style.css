@@ -6450,6 +6450,12 @@ body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > b
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button b,
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }
+/* Quest uses a true WebGL belt inside the XR layer. The DOM bar remains as
+   the backing action model but must not duplicate the spatial controls. */
+body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-link-bar > .creator-ar-taskbar {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 @media (max-width: 520px) {
     body.creator-ar-quest-headset .creator-ar-quest-link-bar { width: min(96vw, 560px); }
     body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar { gap: 3px; padding-inline: 5px; }
