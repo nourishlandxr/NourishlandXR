@@ -1099,9 +1099,10 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // Q3 HUB is an HTML mirror. A WebGL card is not a dashboard substitute.
+        // Keep Q3 AR usable on runtimes that do not expose DOM overlay. The
+        // spatial dashboard surface remains available without aborting AR.
         // Legacy capability wording: This Quest session does not expose a spatial overlay.
-        setPlacementStatus('Full Project Dashboard needs the Web overlay. Restart AR on a browser that supports DOM overlay.');
+        openQuestSpatialWebPanel();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -4103,7 +4104,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // Q3 HUB is an HTML mirror, so DOM overlay is required for Quest.
         // Legacy optional-overlay signature retained for older integrations:
         // requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser })
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
+        // DOM overlay remains preferred when supported, but cannot be a hard
+        // startup requirement across Quest Browser and future glasses runtimes.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
