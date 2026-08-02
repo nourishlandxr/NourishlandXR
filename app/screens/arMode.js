@@ -408,13 +408,14 @@ function creatorPlantKnowledgeMarkup(record) {
 
 function creatorTotemInformationMarkup(record) {
     const board = areaBoard(record.marker);
-    const text = [board.introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    const introduction = String(board.introduction || '').trim();
+    const isGeneratedWelcome = /^welcome to\s+[^.!?]+[.!?]?$/i.test(introduction);
+    const text = [isGeneratedWelcome ? '' : introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    if (!text.length) return '';
     return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
         <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
         <section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
-          <small>TOTEM MARKER</small>
-          <strong>${escapeHtml(board.title)}</strong>
           <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
         </section>
       </aside>`;
@@ -2334,7 +2335,7 @@ function positionSessionMarkers(view = latestView) {
             element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
             element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
             positionCreatorPlantProfile(record, x, y);
-            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y);
+            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y, view);
         }
     });
 }
@@ -2360,26 +2361,32 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
 
-function positionCreatorTotemInformation(record, markerX, markerY) {
+function positionCreatorTotemInformation(record, markerX, markerY, view = latestView) {
     if (!record.infoVisible || !overlayRoot) return;
     const information = overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
     if (!information) return;
-    const boardWidth = Math.min(window.innerWidth * .72, 460);
-    const sideOffset = window.innerWidth < 520 ? 0 : markerX < window.innerWidth / 2 ? boardWidth * .28 : -boardWidth * .28;
-    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, markerX + sideOffset));
-    const boardY = Math.max(92, Math.min(window.innerHeight - 190, markerY - Math.min(210, window.innerHeight * .28)));
-    const boardHalfHeight = Math.min(118, Math.max(72, window.innerHeight * .1));
+    const balloon = information.querySelector('.creator-ar-totem-balloon');
+    const balloonRect = balloon?.getBoundingClientRect();
+    const boardWidth = Math.min(window.innerWidth * .58, 320);
+    const boardHalfHeight = balloonRect?.height ? balloonRect.height / 2 : Math.min(86, Math.max(48, window.innerHeight * .09));
+    const ground = groundedTotemPosition(record.position);
+    const [, halfHeight] = markerDimensions(record.marker);
+    const topWorld = { ...ground, y: ground.y + .08 * markerSizeFactor(record.marker) + halfHeight * 2 };
+    const projectedTop = view ? projectWorldPoint(view, topWorld) : null;
+    const attachmentPoint = projectedTop || { x: markerX, y: markerY - Math.max(48, window.innerHeight * .08) };
+    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, attachmentPoint.x));
+    const boardY = Math.max(72, attachmentPoint.y - boardHalfHeight - 28);
     const stickStart = { x: boardX, y: boardY + boardHalfHeight };
-    const dx = markerX - stickStart.x;
-    const dy = markerY - stickStart.y;
+    const dx = attachmentPoint.x - stickStart.x;
+    const dy = attachmentPoint.y - stickStart.y;
     information.style.setProperty('--location-note-x', `${boardX.toFixed(1)}px`);
     information.style.setProperty('--location-note-y', `${boardY.toFixed(1)}px`);
     information.style.setProperty('--location-stick-x', `${stickStart.x.toFixed(1)}px`);
     information.style.setProperty('--location-stick-y', `${stickStart.y.toFixed(1)}px`);
     information.style.setProperty('--location-stick-length', `${Math.max(24, Math.hypot(dx, dy)).toFixed(1)}px`);
     information.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
-    information.style.setProperty('--location-ground-x', `${markerX.toFixed(1)}px`);
-    information.style.setProperty('--location-ground-y', `${markerY.toFixed(1)}px`);
+    information.style.setProperty('--location-ground-x', `${attachmentPoint.x.toFixed(1)}px`);
+    information.style.setProperty('--location-ground-y', `${attachmentPoint.y.toFixed(1)}px`);
 }
 
 function renderSessionMarkers() {
@@ -2393,12 +2400,15 @@ function renderSessionMarkers() {
             || record.marker.notes
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
+        const markerCaption = record.marker.type === 'area_checkpoint'
+            ? ''
+            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>`;
+        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}${markerCaption}</span>`;
         return `${markerLayer}${profileLayer}`;
     }).join('');
     visibleMarkers.forEach(record => {

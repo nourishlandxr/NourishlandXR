@@ -1112,7 +1112,6 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /knowledge\.core\?\.scientific/);
     assert.match(source, /knowledge\.core\?\.layer/);
     assert.match(styles, /\.plant-knowledge-cell b \{ color: #fff;[\s\S]*font-weight: 850;/);
-    assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(72vw,420px\)[\s\S]*aspect-ratio:1[\s\S]*border-radius:50% !important/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);
@@ -1405,6 +1404,16 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.doesNotMatch(dashboardSource, /id="areaInformationBoxNew"/);
     assert.match(styles, /\.area-content-grid/);
     assert.match(styles, /\.totem-text-box-grid/);
+    assert.match(styles, /\.creator-ar-location-note-board\.creator-ar-totem-balloon \{[\s\S]*width:min\(58vw,320px\)[\s\S]*border-radius:28px 28px 28px 12px !important/);
+    assert.match(styles, /\.creator-ar-totem-stick \{ width:2px/);
+    assert.match(styles, /\.creator-ar-totem-attachment \{ width:10px; height:10px/);
+    assert.doesNotMatch(arSource, /<small>TOTEM MARKER<\/small>/);
+    assert.doesNotMatch(arSource, /<strong>\$\{escapeHtml\(board\.title\)\}<\/strong>/);
+    assert.match(arSource, /const isGeneratedWelcome = \/\^welcome to/);
+    assert.match(arSource, /positionCreatorTotemInformation\(record, x, y, view\)/);
+    assert.match(arSource, /const topWorld = \{ \.\.\.ground, y: ground\.y \+ \.08 \* markerSizeFactor\(record\.marker\) \+ halfHeight \* 2 \}/);
+    assert.match(arSource, /const markerCaption = record\.marker\.type === 'area_checkpoint'/);
+    assert.match(dashboardSource, /description: ''/);
     assert.match(dashboardSource, /ANCHOR TOTEM/);
     assert.match(dashboardSource, />Link Totem Marker<\/label>/);
     assert.match(dashboardSource, /physical marker installed at its real-world position/);
@@ -1420,7 +1429,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(arSource, /data-ar-totem-information/);
     assert.match(arSource, /creator-ar-location-stick creator-ar-totem-stick/);
     assert.match(arSource, /creator-ar-location-note-board creator-ar-totem-balloon/);
-    assert.match(arSource, /function positionCreatorTotemInformation\(record, markerX, markerY\)/);
+    assert.match(arSource, /function positionCreatorTotemInformation\(record, markerX, markerY, view = latestView\)/);
     assert.match(arSource, /alignAreaToCheckpoint\(areaRecords, totem\.marker\.id, origin\)/);
     assert.doesNotMatch(arSource, /Checkpoint linked/);
     assert.match(dashboardSource, /Back to Area/);
