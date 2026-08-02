@@ -21,7 +21,7 @@ import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPri
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
-import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
 let session = null;
@@ -31,6 +31,9 @@ let controllerActionIndex = 0;
 let controllerMenuActive = true;
 let controllerAxisCooldownUntil = 0;
 let latestControllerRay = null;
+let latestHandState = null;
+let hoveredMarkerId = '';
+let handPinchActive = false;
 let gl = null;
 let refSpace = null;
 let canvas = null;
@@ -1032,7 +1035,7 @@ function controllerMarkerAtAim() {
     const ray = pointerWorldRay();
     const origin = pointerWorldOrigin();
     if (!ray || !origin) return null;
-    return activeAreaMarkers()
+    const record = activeAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
         .map(record => {
             const offset = {
@@ -1051,6 +1054,11 @@ function controllerMarkerAtAim() {
         })
         .filter(item => item.distance <= (item.record.marker.type === 'note' ? .55 : .28))
         .sort((left, right) => left.distance - right.distance)[0]?.record || null;
+    hoveredMarkerId = record?.marker?.id || '';
+    overlayRoot?.querySelectorAll('[data-ar-marker-id]').forEach(element => {
+        element.classList.toggle('is-xr-hover', element.dataset.arMarkerId === hoveredMarkerId);
+    });
+    return record;
 }
 
 function activateControllerTarget() {
@@ -1097,9 +1105,41 @@ function updateControllerRay(frame) {
     latestControllerRay = null;
     const source = controllerInputSource();
     if (!source || !refSpace) return;
+    if (source.hand) {
+        latestHandState = handTrackingState(frame, source, refSpace);
+        latestControllerRay = latestHandState?.pointer || null;
+        return;
+    }
+    latestHandState = null;
     const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
     const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
     latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
+}
+
+function drawHandTrackingLines(view) {
+    if (!latestHandState?.joints || !controllerPointerRenderer) return;
+    for (const [fromName, toName] of XR_HAND_JOINT_CONNECTIONS) {
+        const from = latestHandState.joints.get(fromName);
+        const to = latestHandState.joints.get(toName);
+        if (!from || !to) continue;
+        drawSpatialTether(gl, controllerPointerRenderer, view, from, to, {
+            segments: 3, width: .009, curve: 0, lift: 0, color: [0.72, 1, 0.34, .82]
+        });
+    }
+}
+
+function pollHandPinch() {
+    if (!latestHandState?.pointer) return;
+    const pinching = Boolean(latestHandState.pinch);
+    if (pinching && !handPinchActive && interactionMode !== 'view') {
+        const target = controllerMarkerAtAim();
+        if (target) {
+            activateControllerTarget();
+            if (dragState) dragState.pointerId = 'xr-hand';
+        }
+    }
+    if (!pinching && handPinchActive && dragState?.pointerId === 'xr-hand') void finishMarkerDrag();
+    handPinchActive = pinching;
 }
 
 function drawControllerPointer(view) {
@@ -2860,7 +2900,7 @@ function createOverlay() {
           </section>
         </aside>
         <div class="creator-ar-marker-layer" data-ar-marker-layer aria-label="Placed markers"></div>
-        <div class="creator-ar-control-dock" data-ar-taskbar-version="2">
+        <div class="creator-ar-control-dock creator-ar-quest-link-bar" data-ar-taskbar-version="2">
           <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
           <nav class="creator-ar-context-toolbar" data-ar-context-toolbar hidden></nav>
@@ -2981,6 +3021,9 @@ function cleanup() {
     controllerMenuActive = true;
     controllerAxisCooldownUntil = 0;
     latestControllerRay = null;
+    latestHandState = null;
+    hoveredMarkerId = '';
+    handPinchActive = false;
     pendingBagRecord = null;
     locatedTotemRecord = null;
     totemGuideVisible = false;
@@ -3204,6 +3247,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             latestView = pose.views[0] || null;
             pollControllerInput();
             updateControllerRay(frame);
+            if (creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             latestHitMatrix = matrixFromPose(hit?.getPose(refSpace));
@@ -3223,6 +3268,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialHomeSign(view);
+                drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);
             }

@@ -10,6 +10,42 @@ export const XR_LASER_POINTER_CONFIG = Object.freeze({
     alpha: 0.96
 });
 
+export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
+    ['wrist', 'thumb-metacarpal'], ['thumb-metacarpal', 'thumb-phalanx proximal'], ['thumb-phalanx proximal', 'thumb-phalanx distal'], ['thumb-phalanx distal', 'thumb-tip'],
+    ['wrist', 'index-finger-metacarpal'], ['index-finger-metacarpal', 'index-finger-phalanx proximal'], ['index-finger-phalanx proximal', 'index-finger-phalanx intermediate'], ['index-finger-phalanx intermediate', 'index-finger-phalanx distal'], ['index-finger-phalanx distal', 'index-finger-tip'],
+    ['wrist', 'middle-finger-metacarpal'], ['middle-finger-metacarpal', 'middle-finger-phalanx proximal'], ['middle-finger-phalanx proximal', 'middle-finger-phalanx intermediate'], ['middle-finger-phalanx intermediate', 'middle-finger-phalanx distal'], ['middle-finger-phalanx distal', 'middle-finger-tip'],
+    ['wrist', 'ring-finger-metacarpal'], ['ring-finger-metacarpal', 'ring-finger-phalanx proximal'], ['ring-finger-phalanx proximal', 'ring-finger-phalanx intermediate'], ['ring-finger-phalanx intermediate', 'ring-finger-phalanx distal'], ['ring-finger-phalanx distal', 'ring-finger-tip'],
+    ['wrist', 'pinky-finger-metacarpal'], ['pinky-finger-metacarpal', 'pinky-finger-phalanx proximal'], ['pinky-finger-phalanx proximal', 'pinky-finger-phalanx intermediate'], ['pinky-finger-phalanx intermediate', 'pinky-finger-phalanx distal'], ['pinky-finger-phalanx distal', 'pinky-finger-tip']
+]);
+
+export function handTrackingState(frame, source, referenceSpace) {
+    const hand = source?.hand;
+    if (!hand || !frame || !referenceSpace) return null;
+    const joints = new Map();
+    for (const name of new Set(XR_HAND_JOINT_CONNECTIONS.flat())) {
+        const space = hand.get?.(name);
+        const pose = space ? frame.getJointPose?.(space, referenceSpace) : null;
+        const matrix = pose?.transform?.matrix;
+        if (!matrix) continue;
+        joints.set(name, { x: matrix[12], y: matrix[13], z: matrix[14], radius: Number(pose.radius) || .012 });
+    }
+    const thumb = joints.get('thumb-tip');
+    const index = joints.get('index-finger-tip');
+    const wrist = joints.get('wrist');
+    if (!index || !wrist) return { joints, connections: XR_HAND_JOINT_CONNECTIONS, pinch: false, pointer: null };
+    const pinchDistance = thumb && Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
+    const dx = index.x - wrist.x;
+    const dy = index.y - wrist.y;
+    const dz = index.z - wrist.z;
+    const length = Math.hypot(dx, dy, dz) || 1;
+    return {
+        joints,
+        connections: XR_HAND_JOINT_CONNECTIONS,
+        pinch: Number.isFinite(pinchDistance) && pinchDistance < .035,
+        pointer: { origin: index, direction: { x: dx / length, y: dy / length, z: dz / length }, handedness: source.handedness || 'right' }
+    };
+}
+
 export function controllerRayEnd(ray, subjects = [], maxLength = XR_LASER_POINTER_CONFIG.length) {
     if (!ray?.origin || !ray?.direction) return null;
     const startDistance = XR_LASER_POINTER_CONFIG.startOffset;

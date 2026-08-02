@@ -41,7 +41,7 @@ const SESSION_ATTEMPTS = Object.freeze({
 });
 
 function requestSessionForMode(mode, options, domOverlayRoot) {
-    const requestOptions = { ...options };
+    const requestOptions = { ...options, optionalFeatures: [...new Set([...options.optionalFeatures, 'hand-tracking'])] };
     if (options.requiredFeatures.includes('dom-overlay') || options.optionalFeatures.includes('dom-overlay')) {
         requestOptions.domOverlay = { root: domOverlayRoot };
     }

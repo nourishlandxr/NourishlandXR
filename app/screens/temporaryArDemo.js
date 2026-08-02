@@ -409,7 +409,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const revealControls = () => {
         if (choiceButtons.length === 1 && continueButton) {
             const choiceButton = choiceButtons[0];
-            continueButton.textContent = choiceButton.textContent.trim();
+            continueButton.textContent = choiceButton.dataset.demoChoice === 'continue' ? 'Continue' : choiceButton.textContent.trim();
             continueButton.onclick = () => {
                 suppressSessionSelectUntil = performance.now() + 700;
                 onClick(choiceButton.dataset.demoChoice);

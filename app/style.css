@@ -950,7 +950,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-controller-hud strong { color:#dcef95; font-size:.56rem; font-weight:850; letter-spacing:.13em; }
 .creator-ar-controller-hud span { overflow:hidden; color:#fff; font-size:.74rem; font-weight:800; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
 .creator-ar-controller-hud small { color:rgba(255,255,255,.72); font-size:.58rem; line-height:1.2; }
-.creator-ar-overlay.is-controller-mode .creator-ar-taskbar { opacity:.42; pointer-events:none; }
+.creator-ar-overlay.is-controller-mode .creator-ar-taskbar { opacity:1; pointer-events:auto; }
 .creator-ar-recenter-prompt { position:fixed; left:50%; bottom:calc(max(14px, env(safe-area-inset-bottom)) + 66px); z-index:7; display:flex; align-items:center; gap:10px; width:min(calc(100vw - 28px),410px); box-sizing:border-box; padding:9px 10px 9px 13px; transform:translateX(-50%); border:1px solid rgba(196,231,178,.54); border-radius:14px; background:linear-gradient(145deg,rgba(25,53,34,.96),rgba(9,26,17,.96)); box-shadow:0 10px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.09); color:#fff; backdrop-filter:blur(12px); pointer-events:auto; }
 .creator-ar-recenter-prompt[hidden] { display:none; }
 .creator-ar-recenter-prompt span { display:grid; flex:1; gap:2px; min-width:0; }
@@ -1027,6 +1027,9 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-grab-mode .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:hover::after,
 .creator-ar-marker-layer.is-interactive .creator-ar-marker-hit-target:focus-visible::after { border-color: rgba(216,239,190,.72); transform: scale(.94); opacity: .78; box-shadow: 0 0 0 7px rgba(216,239,190,.08), 0 0 18px rgba(184,220,158,.25); }
+.creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover::after { border-color:#eaff9a; transform:scale(1); opacity:1; box-shadow:0 0 0 9px rgba(220,239,149,.16),0 0 28px rgba(220,239,149,.72); animation:creator-ar-marker-breathe 1s ease-in-out infinite alternate; }
+.creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover .creator-ar-spatial-name { opacity:1; visibility:visible; transform:translate(-50%,0); }
+.creator-ar-marker-layer .creator-ar-marker-hit-target.is-xr-hover .creator-ar-spatial-name::after { content:' · Press / hold'; color:#eaff9a; }
 .creator-ar-marker-hit-target.is-hold-armed::after { border-color: rgba(226,244,181,.92); transform: scale(.96); opacity: .9; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); animation: creator-ar-marker-breathe 1.1s ease-in-out infinite; }
 .creator-ar-marker-hit-target.is-adjusting { cursor: grabbing; touch-action: none; }
 .creator-ar-marker-hit-target.is-adjusting::after { border-color: rgba(226,244,181,.92); transform: scale(1); opacity: 1; box-shadow: 0 0 0 7px rgba(226,244,181,.1), 0 0 20px rgba(192,230,151,.32); }
@@ -6261,6 +6264,59 @@ body[data-project-theme] .creator-ar-taskbar [data-ar-web-return] {
     outline:2px solid rgba(220,238,165,.3);
     outline-offset:0;
     box-shadow:inset 0 -3px #dceea5,0 4px 10px rgba(0,0,0,.22);
+}
+
+/* Quest 3 spatial link bar: a compact, shallow arc anchored to the bottom
+   of the view, closer to Meta's system-bar language than a waist-wide panel. */
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar {
+    bottom: max(22px, env(safe-area-inset-bottom));
+    width: min(88vw, 560px);
+    perspective: 720px;
+}
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    min-height: 54px;
+    padding: 7px 10px 8px;
+    overflow: visible;
+    border: 1px solid rgba(232,245,226,.3);
+    border-radius: 50% / 24px;
+    background: linear-gradient(180deg, rgba(47,57,59,.92), rgba(14,20,22,.97));
+    box-shadow: 0 16px 32px rgba(0,0,0,.36), inset 0 1px rgba(255,255,255,.15);
+    transform: rotateX(10deg);
+    transform-origin: 50% 100%;
+}
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button {
+    width: 48px;
+    min-width: 48px;
+    height: 42px;
+    min-height: 42px;
+    padding: 5px;
+    justify-content: center;
+    border-color: rgba(255,255,255,.22);
+    border-radius: 7px;
+    font-size: 0;
+    transform-origin: 50% 100%;
+    transition: transform .18s ease, filter .18s ease, background .18s ease;
+}
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(1),
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(7) { transform: translateY(7px) rotateZ(10deg); }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(2),
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(6) { transform: translateY(3px) rotateZ(6deg); }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(3),
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(5) { transform: translateY(1px) rotateZ(3deg); }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:nth-child(4) { transform: translateY(0); }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.08); filter: brightness(1.18); }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button b,
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }
+body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar button span:not(.sr-only) { display: none; }
+@media (max-width: 520px) {
+    body.creator-ar-immersive-vr .creator-ar-quest-link-bar { width: min(96vw, 560px); }
+    body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar { gap: 3px; padding-inline: 5px; }
+    body.creator-ar-immersive-vr .creator-ar-quest-link-bar .creator-ar-taskbar > button { width: 42px; min-width: 42px; }
 }
 .creator-ar-context-toolbar {
     gap:5px;
