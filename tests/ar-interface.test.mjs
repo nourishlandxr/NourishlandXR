@@ -311,7 +311,11 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /data-ar-web-return/);
     assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
     assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
-    assert.match(arSource, /Quest Web Hub needs the spatial overlay/);
+    assert.match(arSource, /This Quest session does not expose a spatial overlay/);
+    assert.match(arSource, /arReturnContext = selectedReturnContext/);
+    assert.match(arSource, /`web-area:\$\{activeAreaId\}` : 'webhub'/);
+    assert.match(arSource, /returnContext === 'webhub'/);
+    assert.match(arSource, /String\(returnContext \|\| ''\)\.startsWith\('web-area:'\)/);
     assert.match(styles, /body\.creator-ar-quest-headset \.creator-ar-spatial-web-window[\s\S]*left: 7vw/);
     assert.match(arSource, /spatialWebWindow\.dataset\.arSpatialWebMode = 'quest'/);
     assert.doesNotMatch(arSource, /Choose its purpose/);

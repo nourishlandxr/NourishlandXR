@@ -1007,7 +1007,14 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        setPlacementStatus('Quest Web Hub needs the spatial overlay. Keep AR active and try WEB again.');
+        // Quest can start a valid AR/VR session without DOM overlay. In that
+        // case the HTML spatial window cannot be composited into the headset,
+        // so route the same request to the corresponding Web Hub destination
+        // instead of leaving the WEB control inert.
+        arReturnContext = selectedReturnContext
+            || (activeAreaId && !isDefaultHomeArea(activeAreaName || activeAreaId) ? `web-area:${activeAreaId}` : 'webhub');
+        setPlacementStatus('Opening Web Hub. This Quest session does not expose a spatial overlay.');
+        exitArMode();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -3459,6 +3466,10 @@ function navigateAfterAr(projectId, areaId, returnContext) {
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)), true);
         } else if (String(returnContext || '').startsWith('web-totem:')) {
             window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
+        } else if (String(returnContext || '').startsWith('web-area:')) {
+            window.renderProjectAreaDashboard?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-area:'.length)));
+        } else if (returnContext === 'webhub') {
+            window.renderFieldGuide?.(encodeURIComponent(projectId), true);
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
             window.resumeAreaCreationFlow(encodeURIComponent(projectId), encodeURIComponent(areaId), encodeURIComponent(returnContext));
         } else if (areaId && window.renderProjectAreaDashboard) {
