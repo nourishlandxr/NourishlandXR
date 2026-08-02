@@ -295,7 +295,8 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /data-ar-cycle-shape/);
     assert.match(arSource, /data-ar-cycle-size/);
     assert.match(arSource, /data-ar-cycle-opacity/);
-    assert.match(arSource, /data-ar-context-web/);
+    assert.doesNotMatch(arSource, /data-ar-context-web/);
+    assert.doesNotMatch(arSource, /data-ar-context-close/);
     assert.match(arSource, /data-ar-context-location-note/);
     assert.match(arSource, /const TASKBAR_V2_SIZES = Object\.freeze\(\['tiny', 'small', 'medium', 'large', 'huge'\]\)/);
     assert.match(arSource, /const TASKBAR_V2_OPACITIES = Object\.freeze\(\[1, \.8, \.6, \.4\]\)/);
@@ -1316,7 +1317,7 @@ test('an open AR Plant profile has no attached Web Mode card', () => {
     const styles = read('app/style.css');
     assert.doesNotMatch(arSource, /data-ar-open-web-profile/);
     assert.doesNotMatch(arSource, /OPEN IN WEB MODE/);
-    assert.match(arSource, /data-ar-context-web/);
+    assert.doesNotMatch(arSource, /data-ar-context-web/);
     assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
     assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
     assert.match(dashboardSource, /Back to AR returns directly to the same Area with this orb open/);
@@ -1486,7 +1487,8 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
-    assert.match(arSource, /QUICK EDIT/);
+    assert.doesNotMatch(arSource, /data-ar-context-web/);
+    assert.doesNotMatch(arSource, /data-ar-context-close/);
     assert.match(dashboardSource, /const quickArPlantEdit = returnToAr && plant/);
     assert.match(dashboardSource, /PLANT · AR QUICK EDIT/);
     assert.match(dashboardSource, /The full Plant Profile remains in the Web Hub/);

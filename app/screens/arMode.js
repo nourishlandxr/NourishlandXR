@@ -458,30 +458,12 @@ function updateContextToolbar() {
     toolbar.setAttribute('aria-label', `${stateLabel} tools`);
     toolbar.innerHTML = `<span class="creator-ar-context-label">${placementType ? 'CREATE' : 'EDIT'}</span>
         ${contextAppearanceButtons(type, appearance)}
-        ${locationNoteControl}
-        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>${!placementType && type === 'plant' ? 'QUICK EDIT' : 'WEB MODE'}</span></button>
-        <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
+        ${locationNoteControl}`;
     bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-shape]', () => cycleContextAppearance('shape'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
     bindContextToolbarAction(toolbar, '[data-ar-context-location-note]', () => toggleLocationNoteVisibility(selectedRecord));
-    bindContextToolbarAction(toolbar, '[data-ar-context-web]', () => void openContextInWebMode());
-    bindContextToolbarAction(toolbar, '[data-ar-context-close]', () => {
-        if (placementType) {
-            placementArmGeneration += 1;
-            readyPlacementType = '';
-            readySpecialMarker = null;
-            pendingBagRecord = null;
-            pendingPlacementAppearance = null;
-            updateReadyPlacementControl();
-            setPlacementStatus('Placement cancelled.');
-            return;
-        }
-        contextToolbarRecord = null;
-        updateContextToolbar();
-        setPlacementStatus('Pointer mode remains on. Select another object to edit it.');
-    });
 }
 
 function cycleContextAppearance(property) {
