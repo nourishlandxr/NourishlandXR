@@ -721,7 +721,7 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .creator-ar-marker-hit-target.is-adjusting .spatial-grab-handle, .tryit-sim-marker.is-held .spatial-grab-handle { opacity: 0; }
 .tryit-demo:has(.tryit-sim-marker.is-held) .tryit-place { opacity: 0 !important; visibility: hidden; pointer-events: none; }
 .creator-ar-totem-information { position:fixed; inset:0; z-index:2; overflow:hidden; pointer-events:none; }
-.creator-ar-location-note-board.creator-ar-totem-balloon { width:min(72vw,460px); min-height:clamp(126px,18vh,180px); max-height:min(42vh,360px); place-content:center; }
+.creator-ar-location-note-board.creator-ar-totem-balloon { width:min(72vw,420px); aspect-ratio:1; min-height:0; max-height:none; padding:clamp(28px,6vw,52px); place-content:center; border-radius:50% !important; overflow:auto; }
 .creator-ar-location-note-board.creator-ar-totem-balloon > small { color:rgba(247,255,242,.58); font-size:clamp(.48rem,1.2vw,.6rem); font-weight:800; letter-spacing:.14em; }
 .creator-ar-totem-balloon-text { display:grid; gap:5px; margin-top:3px; color:rgba(247,255,242,.84); font-size:clamp(.62rem,1.8vw,.82rem); font-weight:650; line-height:1.3; overflow-wrap:anywhere; }
 .creator-ar-totem-balloon-text > span + span { padding-top:5px; border-top:1px solid rgba(231,250,221,.14); }
@@ -5019,10 +5019,27 @@ body.ar-dashboard-open .ar-tutorial-panel {
     margin-top: 0.75rem;
 }
 
+.area-dashboard-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.area-dashboard-title-row h1 { margin:0; }
+.project-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; color:#64756a; font-size:.78rem; line-height:1.35; }
+.project-breadcrumb button { min-height:0; padding:0; border:0; background:transparent; color:var(--leaf-deep); font:inherit; font-weight:800; text-decoration:underline; text-underline-offset:2px; }
+.project-breadcrumb button:hover { background:transparent; color:#234f35; }
+.project-breadcrumb strong { color:#536458; font-weight:800; overflow-wrap:anywhere; }
+
 .area-go-ar-compact {
-    width: auto;
+    display:grid;
+    flex:0 0 46px;
+    width:46px;
+    height:46px;
+    min-height:46px;
+    place-items:center;
+    padding:0;
+    border-radius:10px;
     background: #1769d2;
     color: white;
+    font-size:.78rem;
+    font-weight:900;
+    letter-spacing:.06em;
 }
 
 @media (max-width: 680px) {

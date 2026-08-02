@@ -44,13 +44,6 @@ export function renderProjectEntry(config) {
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
-    const areaListHtml = areas.length
-        ? areas.map(area => `<button class="project-area-overview-card" type="button" data-home-area="${area.isHome ? 'true' : 'false'}" data-current-area="${area.isCurrent ? 'true' : 'false'}"${area.isCurrent ? ' aria-current="location"' : ''}" aria-label="Open ${area.label}" onclick="${area.action}">
-            <span class="project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
-            <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">DEFAULT</small>' : ''}${area.isCurrent ? '<small class="project-area-overview-current-badge">YOU ARE HERE</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
-            <span class="project-area-overview-totem"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true">⌖</i><small>${area.totemPlaced ? 'Totem' : 'No Totem'}</small></span>
-        </button>`).join('')
-        : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
         <span class="project-search-result-icon" aria-hidden="true">${item.icon}</span>
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
@@ -96,7 +89,7 @@ export function renderProjectEntry(config) {
         <header class="location-dashboard-header">
             <p class="dashboard-frame-kicker">PROJECT DASHBOARD</p>
             <h1>${config.locationName}</h1>
-            <p class="dashboard-frame-title">Dashboard</p>
+            <p class="dashboard-frame-title">Project overview</p>
         </header>
 
         ${growthJourneyHtml}
@@ -132,18 +125,6 @@ export function renderProjectEntry(config) {
                 ${statusItem('Areas', config.status.areas)}
                 ${statusItem('Updated', config.status.lastUpdated)}
             </div>
-        </section>
-
-        <section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
-            <div class="section-heading-row areas-heading-row">
-                <button class="areas-toggle" type="button" aria-expanded="true" onclick="window.toggleAreas(this)">
-                    <span><small class="dashboard-section-kicker">BIRD'S-EYE OVERVIEW</small><h2 id="projectAreasTitle">Project layout</h2></span>
-                    <span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span><span class="areas-arrow" aria-hidden="true">▴</span></span>
-                </button>
-            </div>
-            <div class="project-layout-info-row"><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project layout</span></button><p id="projectLayoutInfo" class="project-layout-intro" hidden>Areas are shown here as a bird's-eye overview. Open the Web Hub for detailed editing.</p></div>
-            ${contextualGuidance(config.guidance, 'areas')}
-            <div class="project-area-list">${areaListHtml}</div>
         </section>
 
         <nav class="location-tool-grid${spotlightTarget === 'helpGuide' ? ' tutorial-spotlight-target' : ''}" aria-label="Location tools">

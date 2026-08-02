@@ -101,18 +101,12 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.doesNotMatch(entrySource, /Home Base/);
-    assert.match(entrySource, /BIRD'S-EYE OVERVIEW/);
-    assert.match(entrySource, /<button class="project-area-overview-card" type="button" data-home-area=/);
-    assert.match(entrySource, /area\.isHome/);
-    assert.match(entrySource, /project-area-overview-home-badge.*DEFAULT/);
-    assert.match(entrySource, /project-area-overview-card[^>]*onclick/);
-    assert.match(entrySource, /YOU ARE HERE/);
-    assert.match(entrySource, /Totem placed|No Totem/);
+    assert.doesNotMatch(entrySource, /BIRD'S-EYE OVERVIEW|Project layout|project-area-overview-card/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /growth\.starterActions\.map/);
     assert.match(entrySource, /Why begin here\?/);
     assert.doesNotMatch(entrySource, /See your knowledge come alive in the place it belongs/);
-    assert.match(entrySource, /toggleProjectLayoutInfo/);
+    assert.doesNotMatch(entrySource, /toggleProjectLayoutInfo/);
     assert.match(source, /Add first Plant/);
     assert.match(source, /Create first Area/);
     assert.match(source, /Create first Totem/);
@@ -179,9 +173,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
-    assert.match(entrySource, /project-areas-section/);
-    assert.match(entrySource, /project-area-overview-copy/);
-    assert.ok(entrySource.indexOf('project-status') < entrySource.indexOf('project-areas-section'));
+    assert.doesNotMatch(entrySource, /project-areas-section|project-area-overview-copy/);
     assert.match(source, /areas: areaLinks/);
     assert.match(source, /renderProjectAreaDashboard/);
     assert.match(entrySource, />Search</);
@@ -196,7 +188,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /dashboard-identity/);
     assert.match(entrySource, /dashboard-frame/);
     assert.match(entrySource, /dashboard-frame-kicker/);
-    assert.match(entrySource, /dashboard-frame-title.*Dashboard/);
+    assert.match(entrySource, /dashboard-frame-title.*Project overview/);
     assert.match(source, /label: 'Printing options'/);
     assert.match(source, /collapseRecentlyAdded/);
     assert.match(source, /placedEntries\.slice\(0, 10\)/);
@@ -364,6 +356,7 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
 test('Area AR actions fall back to the Area dashboard when WebXR cannot start', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     const helperSource = dashboardSource.slice(
         dashboardSource.indexOf('export async function openProjectAreaAr'),
         dashboardSource.indexOf('export async function renderProjectAreaDashboard')
@@ -377,9 +370,13 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
-    assert.match(areaDashboardSource, /OPEN AREA IN AR/);
+    assert.match(areaDashboardSource, /<button class="global-ar-action area-go-ar-compact"[^>]*>AR<\/button>/);
+    assert.match(areaDashboardSource, /projectBreadcrumbMarkup\(context\.project, context\.area\)/);
+    assert.match(areaDashboardSource, /Area dashboard/);
+    assert.match(dashboardSource, /Home \$\{project\.name\}/);
+    assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*aspect-ratio:1[\s\S]*border-radius:50% !important/);
     assert.match(areaDashboardSource, /is-totem-entry/);
-    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)">PLACE IN AR/);
+    assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)[^>]*>PLACE IN AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
 });
