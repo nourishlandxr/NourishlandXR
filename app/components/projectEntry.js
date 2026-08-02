@@ -41,9 +41,23 @@ export function renderProjectEntry(config) {
     const latestEntries = config.latestEntries || [];
     const areas = config.areas || [];
     const searchItems = config.searchItems || [];
+    const spotlightTarget = config.guidance?.target || '';
     const latestEntriesHtml = latestEntries.length
         ? latestEntries.map(latestEntryRow).join('')
         : '<p class="project-empty-state">No entries have been added yet.</p>';
+    const areaListHtml = areas.length
+        ? areas.map(area => `<button class="project-area-overview-card" type="button" data-home-area="${area.isHome ? 'true' : 'false'}" data-current-area="${area.isCurrent ? 'true' : 'false'}"${area.isCurrent ? ' aria-current="location"' : ''} aria-label="Open ${area.label}" onclick="${area.action}">
+            <span class="project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
+            <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">HOME</small>' : ''}${area.isCurrent ? '<small class="project-area-overview-current-badge">YOU ARE HERE</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
+            <span class="project-area-overview-totem"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true">⌖</i><small>${area.totemPlaced ? 'Totem' : 'No Totem'}</small></span>
+        </button>`).join('')
+        : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
+    const areaOverviewHtml = `<section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
+        <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span></div>
+        <div class="project-layout-info-row"><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button><p id="projectLayoutInfo" class="project-layout-intro" hidden>Each Area is a focused part of the project. Open a card to see its dashboard and information.</p></div>
+        ${contextualGuidance(config.guidance, 'areas')}
+        <div class="project-area-list">${areaListHtml}</div>
+    </section>`;
     const searchResultsHtml = searchItems.map(item => `<button class="project-search-result" type="button" data-project-search-item data-search="${escapeAttribute(item.searchText)}" data-search-primary="${escapeAttribute(item.primarySearchText || item.label)}" onclick="${item.action}" hidden>
         <span class="project-search-result-icon" aria-hidden="true">${item.icon}</span>
         <span class="project-search-result-copy"><strong>${item.label}</strong><span>${item.type}${item.area ? ` · ${item.area}` : ''}</span>${item.detail ? `<small>${item.detail}</small>` : ''}</span>
@@ -65,8 +79,6 @@ export function renderProjectEntry(config) {
         </div>
         </div>
     </details>` : '';
-    const spotlightTarget = config.guidance?.target || '';
-
     // Quiet management tools displayed below the primary AR path.
     const contentSections = config.nonPlantMode ? `
         <section class="content-mode-section">
@@ -103,6 +115,8 @@ export function renderProjectEntry(config) {
         </section>
 
         <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>
+
+        ${areaOverviewHtml}
 
         <section class="project-search-section" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">

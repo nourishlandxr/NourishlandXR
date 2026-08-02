@@ -101,12 +101,13 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, /Add Starting Point/);
     assert.doesNotMatch(entrySource, />\+ CREATE AREA</);
     assert.doesNotMatch(entrySource, /Home Base/);
-    assert.doesNotMatch(entrySource, /BIRD'S-EYE OVERVIEW|Project layout|project-area-overview-card/);
+    assert.match(entrySource, /PROJECT OVERVIEW/);
+    assert.match(entrySource, /project-area-overview-card/);
     assert.match(entrySource, /living-map-progress/);
     assert.match(entrySource, /growth\.starterActions\.map/);
     assert.match(entrySource, /Why begin here\?/);
     assert.doesNotMatch(entrySource, /See your knowledge come alive in the place it belongs/);
-    assert.doesNotMatch(entrySource, /toggleProjectLayoutInfo/);
+    assert.match(entrySource, /toggleProjectLayoutInfo/);
     assert.match(source, /Add first Plant/);
     assert.match(source, /Create first Area/);
     assert.match(source, /Create first Totem/);
@@ -173,7 +174,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(entrySource, />Quick Access</);
     assert.doesNotMatch(entrySource, /Add content to this location/);
     assert.doesNotMatch(entrySource, /<strong>Add \$\{item\.label\}<\/strong>/);
-    assert.doesNotMatch(entrySource, /project-areas-section|project-area-overview-copy/);
+    assert.match(entrySource, /project-areas-section|project-area-overview-copy/);
     assert.match(source, /areas: areaLinks/);
     assert.match(source, /renderProjectAreaDashboard/);
     assert.match(entrySource, />Search</);
