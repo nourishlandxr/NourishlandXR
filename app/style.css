@@ -6555,6 +6555,25 @@ body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-li
     .creator-ar-spatial-web-window { top:4vh; width:94vw; height:78vh; border-radius:17px; }
     .creator-ar-spatial-web-nav button { font-size:.58rem; padding-inline:8px; }
 }
+/* Quest keeps this editor alive in AR and places it over the user's left
+   shoulder, leaving the world-locked belt and the centre view unobstructed. */
+body.creator-ar-quest-headset .creator-ar-spatial-web-window {
+    left: 7vw;
+    top: 15vh;
+    width: min(48vw, 520px);
+    height: min(64vh, 620px);
+    transform: perspective(1100px) rotateY(5deg);
+    transform-origin: left center;
+}
+@media (max-width: 620px) {
+    body.creator-ar-quest-headset .creator-ar-spatial-web-window {
+        left: 4vw;
+        top: 10vh;
+        width: min(72vw, 520px);
+        height: min(70vh, 600px);
+        transform: perspective(900px) rotateY(4deg);
+    }
+}
 .creator-ar-context-toolbar {
     gap:5px;
     padding:6px;

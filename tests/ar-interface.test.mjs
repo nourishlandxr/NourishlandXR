@@ -310,7 +310,9 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /data-ar-web-return/);
     assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
-    assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession \|\| document\.body\.dataset\.arDomOverlay !== 'true'\)[\s\S]*exitArMode\(\)/);
+    assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
+    assert.match(arSource, /Quest Web Hub needs the spatial overlay/);
+    assert.match(styles, /body\.creator-ar-quest-headset \.creator-ar-spatial-web-window[\s\S]*left: 7vw/);
     assert.match(arSource, /spatialWebWindow\.dataset\.arSpatialWebMode = 'quest'/);
     assert.doesNotMatch(arSource, /Choose its purpose/);
     assert.doesNotMatch(arSource, /data-ar-placed-type=/);
@@ -378,6 +380,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(styles, /@keyframes creator-ar-breathe/);
     assert.match(arSource, /addEventListener\('pointerup'/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 180/);
+    assert.match(arSource, /if \(readyPlacementType\) \{[\s\S]*void quickPlace\(readyPlacementType\);[\s\S]*handPinchActive = pinching/);
     assert.match(styles, /\.creator-ar-overlay\.is-placement-armed \.creator-ar-placement-capture \{ pointer-events: auto; \}/);
     assert.match(styles, /\.creator-ar-status/);
     assert.match(arSource, /performance\.now\(\) - placementArmedAt > 250/);
@@ -712,7 +715,7 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
 test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     const webxrSource = read('app/services/webxrSession.js');
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
     assert.match(arSource, /document\.body\.dataset\.arDomOverlay = arSession\.domOverlay \? 'true' : 'false'/);
     assert.match(arSource, /questHeadsetSession = questBrowser \|\| sessionMode === 'immersive-vr' \|\| session\.interactionMode === 'world-space'/);
     assert.match(arSource, /classList\.toggle\('creator-ar-quest-headset', questHeadsetSession\)/);
@@ -723,7 +726,10 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     assert.match(arSource, /function questBeltUsesSpatialRenderer\(\)[\s\S]*return questHeadsetSession/);
     assert.match(arSource, /questSpatialBeltRayTarget\(latestControllerRay, currentQuestBeltLayout\(\)\)/);
     assert.match(arSource, /drawQuestSpatialBelt\(view\)/);
-    assert.match(arSource, /createQuestBeltTexture/);
+    assert.match(arSource, /createQuestBeltPanelTexture/);
+    assert.match(arSource, /let questBeltLayout = \[\]/);
+    assert.match(arSource, /questBeltViewerMatrix = new Float32Array\(latestViewerMatrix\)/);
+    assert.match(arSource, /function questBeltPanelMatrix/);
     assert.match(arSource, /classList\.add\('creator-ar-spatial-belt-ready'\)/);
     assert.match(arSource, /classList\.remove\('creator-ar-spatial-belt-ready'\)/);
     assert.match(read('app/style.css'), /body\.creator-ar-quest-headset\.creator-ar-spatial-belt-ready \.creator-ar-quest-link-bar > \.creator-ar-taskbar[\s\S]*opacity: 0 !important/);
@@ -1129,7 +1135,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
+    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
@@ -1173,7 +1179,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(arSource, /let startPromise = null/);
     assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);

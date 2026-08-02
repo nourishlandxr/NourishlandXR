@@ -29,7 +29,11 @@ export function questSpatialBeltLayout(viewerMatrix, options = {}) {
         return {
             ...action,
             index,
-            radius: .105,
+            // Each panel turns very slightly toward the centre of the belt.
+            // Keeping this in the layout makes the same shallow 3D curve
+            // available to rendering and laser-hit testing.
+            yaw: slot * .12,
+            radius: Number(options.radius) || .105,
             position: {
                 x: camera.x + forward.x * (distance - edgeCurve) + right.x * slot * spacing,
                 y: camera.y - drop - edgeCurve * .65,

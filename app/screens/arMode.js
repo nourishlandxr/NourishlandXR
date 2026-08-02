@@ -72,8 +72,10 @@ let homeSignBuffer = null;
 let homeSignTexture = null;
 let homeSignTextureTitle = '';
 let homeSignAnchor = null;
-let questBeltTexture = null;
+let questBeltTextures = [];
 let questBeltTextureKey = '';
+let questBeltLayout = [];
+let questBeltViewerMatrix = null;
 let questBeltHoverIndex = -1;
 let sphereRenderer = null;
 let prismRenderer = null;
@@ -986,9 +988,13 @@ function openSpatialWebWindow() {
     // The floating spatial workspace is a Quest 3 affordance. Phone AR must
     // leave immersive mode and use the normal Web workspace instead of
     // inheriting the Quest menu/window treatment.
-    if (!questHeadsetSession || document.body.dataset.arDomOverlay !== 'true') {
+    if (!questHeadsetSession) {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
+        return;
+    }
+    if (document.body.dataset.arDomOverlay !== 'true') {
+        setPlacementStatus('Quest Web Hub needs the spatial overlay. Keep AR active and try WEB again.');
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
@@ -1133,7 +1139,21 @@ function questBeltActionElements() {
 }
 
 function currentQuestBeltLayout() {
-    return questBeltUsesSpatialRenderer() ? questSpatialBeltLayout(latestViewerMatrix) : [];
+    if (!questBeltUsesSpatialRenderer()) return [];
+    // Capture the belt in the first stable viewer pose. Subsequent head
+    // movement must not drag the belt with the user: it is a world-locked
+    // workspace surface, like a physical belt placed in the room.
+    if (!questBeltLayout.length && latestViewerMatrix) {
+        questBeltViewerMatrix = new Float32Array(latestViewerMatrix);
+        questBeltLayout = questSpatialBeltLayout(latestViewerMatrix, {
+            distance: .78,
+            drop: .5,
+            spacing: .135,
+            curve: .035,
+            radius: .09
+        });
+    }
+    return questBeltLayout;
 }
 
 function controllerBeltActionAtAim() {
@@ -1272,6 +1292,13 @@ function pollHandPinch() {
     if (!latestHandState?.pointer) return;
     const pinching = Boolean(latestHandState.pinch);
     if (pinching && !handPinchActive) {
+        // Hand tracking has no controller select event. Once Note (or Plant)
+        // is armed, a pinch is the placement press at the current aim point.
+        if (readyPlacementType) {
+            void quickPlace(readyPlacementType);
+            handPinchActive = pinching;
+            return;
+        }
         const beltTarget = controllerBeltActionAtAim();
         const beltAction = beltTarget && questBeltActionElements()[beltTarget.index];
         if (beltAction) dispatchControllerAction(beltAction);
@@ -1716,6 +1743,34 @@ function markerBillboardMatrix(position, scaleX = .045, scaleY = scaleX) {
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
+function questBeltPanelMatrix(button, scaleX = .078, scaleY = .068) {
+    const camera = questBeltViewerMatrix || latestViewerMatrix || new Float32Array(16);
+    let x = camera[12] - button.position.x;
+    let z = camera[14] - button.position.z;
+    const length = Math.hypot(x, z) || 1;
+    x /= length;
+    z /= length;
+    const right = { x: z, z: -x };
+    const towardCamera = { x, z };
+    const yaw = Number(button.yaw) || 0;
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+    const panelRight = {
+        x: right.x * cos + towardCamera.x * sin,
+        z: right.z * cos + towardCamera.z * sin
+    };
+    const panelFront = {
+        x: -right.x * sin + towardCamera.x * cos,
+        z: -right.z * sin + towardCamera.z * cos
+    };
+    return new Float32Array([
+        panelRight.x * scaleX, 0, panelRight.z * scaleX, 0,
+        0, scaleY, 0, 0,
+        panelFront.x, 0, panelFront.z, 0,
+        button.position.x, button.position.y, button.position.z, 1
+    ]);
+}
+
 function createHomeSignTexture(title, word) {
     const textureCanvas = document.createElement('canvas');
     textureCanvas.width = 1024;
@@ -1841,46 +1896,32 @@ function roundedCanvasRectangle(context, x, y, width, height, radius) {
     context.closePath();
 }
 
-function createQuestBeltTexture(activeIndex) {
+function createQuestBeltPanelTexture(action, selected) {
     const textureCanvas = document.createElement('canvas');
-    textureCanvas.width = 1792;
-    textureCanvas.height = 320;
+    textureCanvas.width = 256;
+    textureCanvas.height = 220;
     const context = textureCanvas.getContext('2d');
     if (!context) return null;
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
     context.save();
     context.shadowColor = 'rgba(0, 0, 0, .52)';
-    context.shadowBlur = 28;
-    roundedCanvasRectangle(context, 28, 24, 1736, 256, 72);
-    context.fillStyle = 'rgba(13, 19, 21, .94)';
+    context.shadowBlur = 18;
+    roundedCanvasRectangle(context, 14, 14, 228, 192, 30);
+    context.fillStyle = selected ? action.color : 'rgba(13, 19, 21, .95)';
     context.fill();
     context.shadowBlur = 0;
-    context.lineWidth = 5;
-    context.strokeStyle = 'rgba(235, 247, 235, .3)';
+    context.lineWidth = selected ? 6 : 3;
+    context.strokeStyle = selected ? 'rgba(230, 248, 184, .96)' : 'rgba(235, 247, 235, .3)';
     context.stroke();
     context.restore();
-    const slotWidth = 236;
-    const startX = 70;
-    QUEST_SPATIAL_BELT_ACTIONS.forEach((action, index) => {
-        const edge = Math.pow(Math.abs(index - 3) / 3, 2);
-        const x = startX + index * slotWidth;
-        const y = 55 + edge * 22;
-        const selected = index === activeIndex;
-        roundedCanvasRectangle(context, x, y, 212, 176, 28);
-        context.fillStyle = selected ? action.color : 'rgba(255, 255, 255, .075)';
-        context.fill();
-        context.lineWidth = selected ? 7 : 3;
-        context.strokeStyle = selected ? 'rgba(230, 248, 184, .96)' : 'rgba(255, 255, 255, .2)';
-        context.stroke();
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
-        context.font = '800 72px system-ui, sans-serif';
-        context.fillText(action.symbol, x + 106, y + 68);
-        context.font = '800 28px system-ui, sans-serif';
-        context.letterSpacing = '2px';
-        context.fillText(action.label, x + 106, y + 137);
-    });
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
+    context.font = '800 72px system-ui, sans-serif';
+    context.fillText(action.symbol, 128, 82);
+    context.font = '800 24px system-ui, sans-serif';
+    context.letterSpacing = '1.5px';
+    context.fillText(action.label, 128, 165);
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -1892,23 +1933,24 @@ function createQuestBeltTexture(activeIndex) {
     return texture;
 }
 
-function ensureQuestBeltTexture() {
+function ensureQuestBeltTextures() {
     const key = `${questBeltActiveIndex()}:${interactionMode}`;
-    if (questBeltTexture && questBeltTextureKey === key) return questBeltTexture;
-    if (questBeltTexture) gl.deleteTexture(questBeltTexture);
-    questBeltTexture = createQuestBeltTexture(questBeltActiveIndex());
+    if (questBeltTextures.length === QUEST_SPATIAL_BELT_ACTIONS.length && questBeltTextureKey === key) return questBeltTextures;
+    questBeltTextures.forEach(texture => texture && gl.deleteTexture(texture));
+    const activeIndex = questBeltActiveIndex();
+    questBeltTextures = QUEST_SPATIAL_BELT_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === activeIndex));
     questBeltTextureKey = key;
-    return questBeltTexture;
+    return questBeltTextures;
 }
 
 function drawQuestSpatialBelt(view) {
     if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
     const layout = currentQuestBeltLayout();
-    const anchor = layout[3]?.position;
-    const texture = anchor && ensureQuestBeltTexture();
-    if (!texture) return;
+    const textures = layout.length === QUEST_SPATIAL_BELT_ACTIONS.length && ensureQuestBeltTextures();
+    if (!textures?.length || textures.some(texture => !texture)) return;
     document.body.classList.add('creator-ar-spatial-belt-ready');
-    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
@@ -1917,13 +1959,15 @@ function drawQuestSpatialBelt(view) {
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    const model = markerBillboardMatrix(anchor, .62, .11);
-    const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
-    gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    layout.forEach((button, index) => {
+        const model = questBeltPanelMatrix(button);
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
     gl.depthMask(true);
 }
 
@@ -3153,7 +3197,7 @@ function createOverlay() {
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
-            <button type="button" data-ar-web-return aria-label="Return to Web"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
+            <button type="button" data-ar-web-return aria-label="Open spatial Web Hub"><b aria-hidden="true">&#x23CE;</b><span>WEB</span></button>
           </nav>
         </div>`;
 
@@ -3247,7 +3291,7 @@ function cleanup() {
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
-    if (gl && questBeltTexture) gl.deleteTexture(questBeltTexture);
+    questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -3261,8 +3305,10 @@ function cleanup() {
     homeSignTexture = null;
     homeSignTextureTitle = '';
     homeSignAnchor = null;
-    questBeltTexture = null;
+    questBeltTextures = [];
     questBeltTextureKey = '';
+    questBeltLayout = [];
+    questBeltViewerMatrix = null;
     questBeltHoverIndex = -1;
     placementArmedAt = 0;
     placementInProgress = false;
@@ -3429,12 +3475,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     createOverlay();
 
     try {
-        // Request the belt overlay when the runtime supports it, but do not
-        // reject the actual Quest session when a browser build cannot grant
-        // DOM overlay. Direct dashboard AR must enter the spatial session;
-        // requiring the optional UI feature was silently sending users back
-        // to Web Mode with no useful error.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
+        // Quest Web Hub is a live spatial window, so its DOM overlay is part
+        // of the Quest session contract. Phone AR keeps the optional overlay
+        // path and therefore retains its existing mobile behavior.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: questBrowser, preferDomOverlay: questBrowser });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';

@@ -24,6 +24,21 @@ test('Quest spatial belt stays in a shallow waist-level arc in front of the view
     assert.ok(layout[0].position.x < layout[3].position.x);
     assert.ok(layout[6].position.x > layout[3].position.x);
     assert.ok(layout[0].position.z > layout[3].position.z);
+    assert.ok(layout[0].yaw < layout[3].yaw);
+    assert.ok(layout[6].yaw > layout[3].yaw);
+});
+
+test('Quest spatial belt accepts compact panel hit radii for the 3D renderer', () => {
+    const viewer = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 1.6, 0, 1
+    ]);
+    const layout = questSpatialBeltLayout(viewer, { radius: .09, spacing: .135, curve: .035 });
+    assert.equal(layout[0].radius, .09);
+    assert.equal(layout[3].radius, .09);
+    assert.ok(layout[0].position.z > layout[3].position.z);
 });
 
 test('Quest spatial belt resolves the first laser-hit action', () => {
