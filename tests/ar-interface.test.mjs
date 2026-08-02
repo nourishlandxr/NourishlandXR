@@ -1486,13 +1486,17 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
-    assert.match(arSource, /EDIT BASICS/);
+    assert.match(arSource, /QUICK EDIT/);
     assert.match(dashboardSource, /const quickArPlantEdit = returnToAr && plant/);
     assert.match(dashboardSource, /PLANT · AR QUICK EDIT/);
     assert.match(dashboardSource, /The full Plant Profile remains in the Web Hub/);
     assert.match(dashboardSource, /data-plant-quick-tone/);
     assert.match(dashboardSource, /fieldValue\('projectEntryFamily', existingPlantProfile\.family/);
     assert.match(dashboardSource, /manageQrAnchor/);
+    assert.match(dashboardSource, /const webReturnAction = quickArPlantEdit/);
+    assert.match(dashboardSource, /window\.renderProjectDashboard\('\$\{encoded\(project\.id\)\}'\)/);
+    assert.match(dashboardSource, /Save Quick Edit/);
+    assert.match(dashboardSource, /Back to Project Home/);
     assert.match(styles, /\.plant-ar-quick-fields/);
     assert.match(styles, /\.plant-ar-quick-tones/);
 });

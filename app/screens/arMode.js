@@ -459,7 +459,7 @@ function updateContextToolbar() {
     toolbar.innerHTML = `<span class="creator-ar-context-label">${placementType ? 'CREATE' : 'EDIT'}</span>
         ${contextAppearanceButtons(type, appearance)}
         ${locationNoteControl}
-        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>${!placementType && type === 'plant' ? 'EDIT BASICS' : 'WEB MODE'}</span></button>
+        <button type="button" data-ar-context-web><b aria-hidden="true">&#8599;</b><span>${!placementType && type === 'plant' ? 'QUICK EDIT' : 'WEB MODE'}</span></button>
         <button type="button" data-ar-context-close aria-label="${placementType ? 'Cancel placement' : 'Close edit tools'}"><b aria-hidden="true">&times;</b><span class="sr-only">Close</span></button>`;
     bindContextToolbarAction(toolbar, '[data-ar-cycle-color]', () => cycleContextAppearance('color'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-shape]', () => cycleContextAppearance('shape'));
