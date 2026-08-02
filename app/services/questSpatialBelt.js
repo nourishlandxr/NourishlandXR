@@ -22,7 +22,8 @@ export function questSpatialBeltLayout(viewerMatrix, options = {}) {
     const distance = Number(options.distance) || .92;
     const drop = Number(options.drop) || .58;
     const spacing = Number(options.spacing) || .17;
-    const curve = Number(options.curve) || .025;
+    const curve = Number.isFinite(Number(options.curve)) ? Number(options.curve) : 0;
+    const yawStep = Number.isFinite(Number(options.yawStep)) ? Number(options.yawStep) : 0;
     const forwardLength = Math.hypot(viewerMatrix[8], viewerMatrix[10]) || 1;
     const rightLength = Math.hypot(viewerMatrix[0], viewerMatrix[2]) || 1;
     const forward = { x: -viewerMatrix[8] / forwardLength, z: -viewerMatrix[10] / forwardLength };
@@ -37,7 +38,7 @@ export function questSpatialBeltLayout(viewerMatrix, options = {}) {
             // Each panel turns very slightly toward the centre of the belt.
             // Keeping this in the layout makes the same shallow 3D curve
             // available to rendering and laser-hit testing.
-            yaw: slot * .09,
+            yaw: slot * yawStep,
             // Quest Link-style controls are a low tray: their front normal
             // points mostly upward with enough tilt toward the headset to
             // keep icons readable without turning them into upright cards.

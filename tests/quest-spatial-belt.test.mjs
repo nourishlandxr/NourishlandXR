@@ -11,7 +11,7 @@ test('tracked headset input identifies Quest controls without classifying phone 
     assert.equal(isTrackedHeadsetInputSource(null), false);
 });
 
-test('Quest spatial belt stays in a shallow waist-level arc in front of the viewer', () => {
+test('Quest spatial belt stays in one uniform waist-level tray in front of the viewer', () => {
     const viewer = new Float32Array([
         1, 0, 0, 0,
         0, 1, 0, 0,
@@ -27,9 +27,9 @@ test('Quest spatial belt stays in a shallow waist-level arc in front of the view
     assert.ok(Math.abs(layout[1].position.y - 1.02) < .002);
     assert.ok(layout[0].position.x < layout[1].position.x);
     assert.ok(layout[3].position.x > layout[1].position.x);
-    assert.ok(layout[0].position.z > layout[1].position.z);
-    assert.ok(layout[0].yaw < layout[1].yaw);
-    assert.ok(layout[3].yaw > layout[1].yaw);
+    assert.equal(layout[0].position.z, layout[1].position.z);
+    assert.equal(Math.abs(layout[0].yaw), 0);
+    assert.equal(Math.abs(layout[3].yaw), 0);
 });
 
 test('Quest spatial belt accepts compact panel hit radii for the 3D renderer', () => {
@@ -39,7 +39,7 @@ test('Quest spatial belt accepts compact panel hit radii for the 3D renderer', (
         0, 0, 1, 0,
         0, 1.6, 0, 1
     ]);
-    const layout = questSpatialBeltLayout(viewer, { radius: .09, spacing: .135, curve: .035 });
+    const layout = questSpatialBeltLayout(viewer, { radius: .09, spacing: .135, curve: .035, yawStep: .09 });
     assert.equal(layout[0].radius, .09);
     assert.equal(layout[1].radius, .09);
     assert.ok(layout[0].position.z > layout[1].position.z);

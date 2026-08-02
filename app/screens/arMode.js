@@ -90,6 +90,7 @@ let questSpatialDashboardMirror = null;
 let questSpatialDashboardPanel = null;
 let questSpatialDashboardHit = null;
 let questSpatialDashboardScrollCooldownUntil = 0;
+let questNoteTextures = new Map();
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -705,6 +706,10 @@ function positionNotePlacementPreview(view = latestView) {
     if (!preview || readyPlacementType !== 'note') return;
     const target = placementPoint('note');
     latestNotePlacementPoint = target;
+    if (questBeltUsesSpatialRenderer()) {
+        preview.hidden = true;
+        return;
+    }
     const pointer = overlayRoot?.querySelector('.creator-ar-placement-guide');
     const pointerRect = pointer?.getBoundingClientRect();
     const point = target && pointerRect
@@ -1102,14 +1107,11 @@ function openSpatialWebWindow() {
         exitArMode();
         return;
     }
-    if (document.body.dataset.arDomOverlay !== 'true') {
-        // Quest browsers without DOM Overlay receive the same live dashboard
-        // as a world-locked WebGL texture. Controller hits are relayed back to
-        // its real DOM controls, so this is a functional mirror rather than a
-        // second stats-only dashboard implementation.
-        void openQuestSpatialWebPanel();
-        return;
-    }
+    // Quest always receives the dashboard as a world-locked WebGL texture. DOM Overlay
+    // panels are head-locked by the compositor and become uncomfortable as
+    // soon as the user switches from controllers to hand tracking.
+    void openQuestSpatialWebPanel();
+    return;
     if (!overlayRoot || spatialWebWindow) return;
     const content = document.createElement('div');
     content.className = 'creator-ar-spatial-web-content';
@@ -1249,11 +1251,9 @@ function controllerMarkerRadius(record) {
 }
 
 function questBeltUsesSpatialRenderer() {
-    // Use the stable DOM controls when Quest provides DOM overlay. If a
-    // browser build omits that feature, keep the headset usable with the
-    // controller belt instead of failing the entire AR launch.
-    // Legacy compatibility contract: function questBeltUsesSpatialRenderer() return questHeadsetSession.
-    return questHeadsetSession && document.body.dataset.arDomOverlay !== 'true';
+    // Quest controls must stay in room space for both controllers and hands.
+    // The mobile interface continues to use its existing DOM controls.
+    return questHeadsetSession;
 }
 
 function questBeltActionElements() {
@@ -1275,8 +1275,9 @@ function currentQuestBeltLayout() {
         questBeltLayout = questSpatialBeltLayout(latestViewerMatrix, {
             distance: .72,
             drop: .54,
-            spacing: .158,
-            curve: .04,
+            spacing: .16,
+            curve: 0,
+            yawStep: 0,
             faceUp: .72,
             radius: .1
         });
@@ -1989,7 +1990,7 @@ async function openSpecialMarkerPicker() {
     // Legacy terminology retained for migrations: + SPECIAL, data-ar-toggle-location-note,
     // ARROWS, EXCLAMATION AND QUESTION MARKS. The active picker now exposes only
     // PLACE TOTEM and POINT TO TOTEM.
-    if (questHeadsetSession && document.body.dataset.arDomOverlay !== 'true') {
+    if (questHeadsetSession) {
         if (questSpecialPaletteVisible) {
             closeQuestSpecialPalette();
             setPlacementStatus('Special palette closed.');
@@ -2336,6 +2337,101 @@ function drawSpatialHomeSign(view) {
     gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, homeSignTexture);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function drawWrappedCanvasText(context, text, x, y, maxWidth, lineHeight, maxLines) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    words.forEach(word => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && context.measureText(candidate).width > maxWidth) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = candidate;
+        }
+    });
+    if (line) lines.push(line);
+    const visibleLines = lines.slice(0, maxLines);
+    if (lines.length > maxLines && visibleLines.length) {
+        let last = visibleLines.at(-1);
+        while (last && context.measureText(`${last}...`).width > maxWidth) last = last.slice(0, -1).trimEnd();
+        visibleLines[visibleLines.length - 1] = `${last}...`;
+    }
+    visibleLines.forEach((value, index) => context.fillText(value, x, y + index * lineHeight, maxWidth));
+}
+
+function createQuestNoteTexture(marker) {
+    const textureCanvas = document.createElement('canvas');
+    textureCanvas.width = 1024;
+    textureCanvas.height = 384;
+    const context = textureCanvas.getContext('2d');
+    if (!context) return null;
+    context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
+    roundedCanvasRectangle(context, 12, 12, 1000, 360, 58);
+    context.fillStyle = markerAppearanceColor(marker);
+    context.globalAlpha = Math.max(.58, markerAppearanceOpacity(marker));
+    context.fill();
+    context.globalAlpha = 1;
+    context.lineWidth = markerNoteSurface(marker) === 'outline' ? 9 : 3;
+    context.strokeStyle = 'rgba(239, 255, 235, .88)';
+    context.stroke();
+    const title = String(marker?.name || 'Note').trim();
+    const information = String(marker?.description || marker?.notes || '').trim();
+    context.fillStyle = '#ffffff';
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.font = '800 54px system-ui, sans-serif';
+    drawWrappedCanvasText(context, title, 68, 58, 888, 62, 2);
+    context.fillStyle = 'rgba(255, 255, 255, .92)';
+    context.font = '500 34px system-ui, sans-serif';
+    drawWrappedCanvasText(context, information, 68, 192, 888, 43, 3);
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+    return texture;
+}
+
+function ensureQuestNoteTexture(marker) {
+    const key = JSON.stringify([
+        marker?.name || '',
+        marker?.description || '',
+        marker?.notes || '',
+        markerAppearanceColor(marker),
+        markerAppearanceOpacity(marker),
+        markerNoteSurface(marker)
+    ]);
+    const cached = questNoteTextures.get(marker.id);
+    if (cached?.key === key) return cached.texture;
+    if (cached?.texture) gl.deleteTexture(cached.texture);
+    const texture = createQuestNoteTexture(marker);
+    if (texture) questNoteTextures.set(marker.id, { key, texture });
+    return texture;
+}
+
+function drawQuestSpatialNote(view, record) {
+    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    const texture = ensureQuestNoteTexture(record.marker);
+    if (!texture) return;
+    const [halfWidth, halfHeight] = markerDimensions(record.marker);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    const model = markerBillboardMatrix(record.position, halfWidth, halfHeight);
+    const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+    gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
@@ -2753,8 +2849,9 @@ function drawSpatialMarkers(view) {
             return;
         }
         if (isNoteMarker) {
-            // Notes are DOM surfaces only. A second WebGL board underneath
-            // the readable note creates the fuzzy red artifact in passthrough.
+            // Phones keep the single DOM note surface. Quest needs a textured
+            // WebGL board because DOM Overlay is head-locked or unavailable.
+            drawQuestSpatialNote(view, record);
             return;
         }
         if ((shape !== 0 && shape !== 4) || record.marker.special_symbol) return;
@@ -2790,8 +2887,13 @@ function drawSpatialMarkers(view) {
 
     if (readyPlacementType?.toLocaleLowerCase() === 'note' && latestViewerMatrix) {
         const noteTarget = placementPoint('note');
-        if (noteTarget) {
-            // The DOM placement surface is the only note preview.
+        if (noteTarget && questBeltUsesSpatialRenderer()) {
+            const previewMarker = {
+                ...placementPreviewMarker('note'),
+                id: '__quest-note-preview__',
+                name: pendingBagRecord?.marker?.name || 'New note'
+            };
+            drawQuestSpatialNote(view, { marker: previewMarker, position: noteTarget });
         }
     }
 
@@ -2887,6 +2989,11 @@ function positionSessionMarkers(view = latestView) {
             return;
         }
         if (!hasRenderableSpatialPosition(record) || hiddenStructuralMarkerIds.has(record.marker.id)) {
+            element.hidden = true;
+            setMarkerAncillaryVisibility(record, true);
+            return;
+        }
+        if (questBeltUsesSpatialRenderer() && record.marker.type === 'note') {
             element.hidden = true;
             setMarkerAncillaryVisibility(record, true);
             return;
@@ -3996,6 +4103,7 @@ function cleanup() {
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     questSpecialPaletteTextures.forEach(texture => texture && gl?.deleteTexture(texture));
+    questNoteTextures.forEach(entry => entry.texture && gl?.deleteTexture(entry.texture));
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -4024,6 +4132,7 @@ function cleanup() {
     questSpatialDashboardPanel = null;
     questSpatialDashboardHit = null;
     questSpatialDashboardScrollCooldownUntil = 0;
+    questNoteTextures = new Map();
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;

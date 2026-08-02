@@ -441,7 +441,7 @@ test('Creator AR keeps the editable Location Note hidden until it is opened from
     assert.match(mainSource, /window\.saveArLocationNoteSettings/);
 });
 
-test('Note placement preview uses the shared Note surface instead of the shader rectangle', () => {
+test('Note placement preview uses one DOM surface on phones and one spatial texture on Quest', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
     const drawStart = arSource.indexOf('function drawSpatialMarkers(view)');
@@ -455,7 +455,9 @@ test('Note placement preview uses the shared Note surface instead of the shader 
     assert.match(arSource, /--marker-note-width/);
     assert.match(arSource, /const marginX = noteFactor \? Math\.min\(window\.innerWidth \* \.48, 140 \* noteFactor \+ 48\) : 40/);
     assert.match(arSource, /const marginY = noteFactor \? 58 \* noteFactor \+ 56 : 40/);
-    assert.doesNotMatch(drawSource, /readyPlacementType === 'note'/);
+    assert.match(drawSource, /readyPlacementType\?\.toLocaleLowerCase\(\) === 'note'/);
+    assert.match(drawSource, /drawQuestSpatialNote\(view, \{ marker: previewMarker, position: noteTarget \}\)/);
+    assert.match(arSource, /if \(questBeltUsesSpatialRenderer\(\)\) \{\s*preview\.hidden = true/);
     assert.doesNotMatch(drawSource, /markerShape\('note'\)/);
     assert.match(styles, /\.creator-ar-note-placement-preview/);
     assert.match(styles, /\.creator-ar-note-placement-surface/);
@@ -635,7 +637,10 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /const origin = pointerWorldOrigin\(\)/);
     assert.match(arSource, /origin\.x \+ ray\.x \* distance/);
     assert.match(styles, /creator-ar-controller-pointer[^}]*z-index:12005/);
-    assert.match(arSource, /if \(document\.body\.dataset\.arDomOverlay !== 'true'\)[\s\S]*openQuestSpatialWebPanel/);
+    assert.match(arSource, /dashboard as a world-locked WebGL texture[\s\S]*openQuestSpatialWebPanel/);
+    assert.match(arSource, /function questBeltUsesSpatialRenderer\(\)[\s\S]*return questHeadsetSession;/);
+    assert.match(arSource, /drawQuestSpatialNote\(view, record\)/);
+    assert.match(arSource, /questNoteTextures/);
     assert.match(arSource, /controllerSpatialDashboardAtAim/);
     assert.match(arSource, /questSpatialDashboardMirror\.activateAt/);
     assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
