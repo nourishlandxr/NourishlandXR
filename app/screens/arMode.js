@@ -1099,10 +1099,13 @@ function openSpatialWebWindow() {
         return;
     }
     if (document.body.dataset.arDomOverlay !== 'true') {
-        // Keep Q3 AR usable on runtimes that do not expose DOM overlay. The
-        // spatial dashboard surface remains available without aborting AR.
+        // A no-overlay runtime cannot host editable HTML inside immersive AR.
+        // Open the real Web Mode dashboard instead of showing a non-editable
+        // texture that only resembles a dashboard.
         // Legacy capability wording: This Quest session does not expose a spatial overlay.
-        openQuestSpatialWebPanel();
+        arReturnContext = '';
+        setPlacementStatus('Opening the full editable Project Dashboard in Web Mode.');
+        exitArMode();
         return;
     }
     if (!overlayRoot || spatialWebWindow) return;
