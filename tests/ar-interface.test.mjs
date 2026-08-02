@@ -987,7 +987,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = nextDemoTextLength\(bodyText, typedLength\)/);
     assert.match(source, /const typingDelay = demoTextTypingDelay\(bodyText, typedLength\)/);
-    assert.match(source, /return 115;/);
+    assert.match(source, /return 34;/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
     assert.doesNotMatch(source, /boardControlTimer/);
     assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
@@ -1168,7 +1168,7 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     const dashboardSource = read('app/screens/projectDashboard.js');
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
-    assert.match(dashboardSource, /openArAction: `window\.startArMode\('\$\{encoded\(project\.id\)\}','\$\{encoded\(activeAreaId\)\}'\)`/);
+    assert.match(dashboardSource, /openArAction: `window\.openProjectArMode\('\$\{encoded\(project\.id\)\}','\$\{encoded\(activeAreaId\)\}'\)`/);
     assert.match(dashboardSource, /addUnplacedAction: `window\.renderAddToLocation/);
     assert.doesNotMatch(dashboardSource, /quickActions:/);
     assert.match(arSource, /openUnplacedBag/);
@@ -1193,6 +1193,8 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
     assert.match(arSource, /readyPlacementType = '';\s*pendingPlacementAppearance = null;\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = ''\)/);
+    assert.match(mainSource, /const decodeArArgument = value =>/);
+    assert.match(mainSource, /window\.openProjectArMode = async \(projectId, areaId = ''\)/);
     assert.match(mainSource, /window\.startExistingMarkerPlacement/);
     assert.doesNotMatch(styles, /\.creator-ar-ready-placement|creator-ar-ready-pulse/);
 });
@@ -1384,6 +1386,11 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(fieldGuideSource, /field-guide-fireplace-symbol/);
     assert.match(arSource, /web-totem:/);
     assert.match(arSource, /window\.renderAreaCheckpointForm/);
+    assert.match(arSource, /const selectedRecord = contextToolbarRecord && sessionMarkers\.includes\(contextToolbarRecord\)/);
+    assert.match(arSource, /selectedReturnContext = selectedRecord\?\.marker\?\.type === 'area_checkpoint'/);
+    assert.match(arSource, /return renderIntoWindow\(renderAreaCheckpointForm/);
+    assert.match(arSource, /void route\(selectedRecord \? 'selected' : 'area'\)/);
+    assert.match(arSource, /is-selected/);
     assert.match(arSource, /else if \(areaId && window\.renderProjectAreaDashboard\)/);
     assert.doesNotMatch(arSource, /data-ar-home-sign|creator-ar-home-sign/);
     assert.match(arSource, /function createHomeSignTexture\(title, word\)/);
@@ -1445,6 +1452,8 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     assert.match(dashboardSource, /const returnArLabel = '&#x23CE; AR'/);
     assert.match(dashboardSource, /note-record-editor/);
     assert.match(dashboardSource, /id="projectEntryNoteSurface"/);
+    assert.match(dashboardSource, /entry\.marker\.type === 'note' \? 'Title' : 'Rename'/);
+    assert.match(dashboardSource, /entry\.marker\.type === 'note' \? 'Information' : 'Description'/);
     assert.match(dashboardSource, /Transparent with color outline/);
     assert.match(dashboardSource, /surface: noteSurface === 'outline' \? 'outline' : 'filled'/);
     assert.match(arSource, /is-note-outline/);

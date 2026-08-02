@@ -372,6 +372,13 @@ window.addEventListener('popstate', event => {
 });
 window.toggleAreas = toggleAreas;
 window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
+window.openProjectArMode = async (projectId, areaId = '') => {
+    const decodedProjectId = decodeArArgument(projectId);
+    const decodedAreaId = decodeArArgument(areaId);
+    const started = await startArMode(decodedProjectId, decodedAreaId);
+    if (!started) await renderArAreaPicker(app, encodeURIComponent(decodedProjectId));
+    return started;
+};
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);
 window.openCheckpointQuickSetup = projectId => openCheckpointQuickSetup(app, projectId);
 window.openCreatorContentMode = projectId => openCreatorContentMode(app, projectId);
@@ -597,7 +604,19 @@ window.applyFieldGuideFilter = () => applyFieldGuideFilter();
 window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
 window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
 window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
-window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => startArMode(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId);
+const decodeArArgument = value => {
+    const text = String(value ?? '');
+    try { return decodeURIComponent(text); } catch { return text; }
+};
+window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => startArMode(
+    decodeArArgument(projectId),
+    decodeArArgument(areaId),
+    decodeArArgument(checkpointId),
+    decodeArArgument(initialPlacementType),
+    decodeArArgument(existingMarkerId),
+    decodeArArgument(returnContext),
+    decodeArArgument(preferredSiteId)
+);
 window.startExistingMarkerPlacement = async (projectId, siteId, areaId, markerId, markerType = 'sub_checkpoint') => {
     const started = await startArMode(
         decodeURIComponent(projectId),

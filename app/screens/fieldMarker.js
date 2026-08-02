@@ -22,6 +22,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 function draw() {
     const plant = markerType === 'plant';
     const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
+    const identityLabel = plant ? 'Name (optional)' : markerType === 'note' ? 'Title' : 'Name';
     const areaOptions = places.filter(place => !isDefaultHomeArea(place)).map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
     app.innerHTML = `
         <div class="screen">
@@ -39,7 +40,8 @@ function draw() {
                         <option value="__unassigned__" ${selected.place === '__unassigned__' ? 'selected' : ''}>Home — assign later</option>
                     </select><button class="inline-form-action" type="button" onclick="window.createFieldArea()">Create new Area</button></div>
                 </div>
-                <div class="compact-identity-row"><div class="field"><label for="fieldName">${plant ? 'Name (optional)' : 'Name'}</label><input id="fieldName" placeholder="Untitled is okay" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
+                <div class="compact-identity-row"><div class="field"><label for="fieldName">${identityLabel}</label><input id="fieldName" placeholder="${markerType === 'note' ? 'Title for this note' : 'Untitled is okay'}" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
+                ${markerType === 'note' ? '<div class="field note-quick-information"><label for="fieldDescription">Information</label><textarea id="fieldDescription" rows="5" placeholder="Write the information this note should contain."></textarea></div>' : ''}
                 ${plant ? `<details class="compact-advanced"><summary>Advanced plant search</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div>${plantSearchScope === 'global' ? `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em></span></button>`).join('')}</div>` : '<p class="meta">Choose a saved plant from “Use existing” above.</p>'}</div></details>` : ''}
                 <div class="placement-compact"><span><strong>Placement</strong><small>Not yet placed · can be placed later</small></span><button type="submit" name="saveIntent" value="ar">AR MODE</button></div>
                 <div class="button-row">
@@ -168,6 +170,7 @@ export async function saveFieldMarker(event) {
     const type = markerType;
     const defaults = { plant: 'Untitled plant', note: 'Untitled note', sub_checkpoint: nonPlantMode ? 'Untitled dynamic marker' : 'Untitled marker' };
     const name = document.getElementById('fieldName').value.trim() || defaults[type];
+    const description = document.getElementById('fieldDescription')?.value.trim() || '';
     const plantId = plantSearchScope === 'local' ? (document.getElementById('fieldPlantProfile')?.value || '') : '';
     const saveIntent = event?.submitter?.value || (placementMode === 'ar' ? 'ar' : 'later');
 
@@ -196,7 +199,7 @@ export async function saveFieldMarker(event) {
             : await createPlaceMarker(selected.project, selected.site, place.id, {
                 name,
                 type,
-                description: '',
+                description,
                 visibility,
                 ...(nonPlantMode && type === 'sub_checkpoint' ? { content_domain: 'nonplant', marker_kind: 'np_marker', dynamic_marker: true } : {})
             });

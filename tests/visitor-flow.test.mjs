@@ -267,6 +267,11 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /Project overview/);
     assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
     assert.match(fieldGuideSource, /All plants/);
+    assert.match(fieldGuideSource, /field-guide-all-plants-count/);
+    assert.match(fieldGuideSource, /app\.querySelector\('#fieldGuideCount'\)\?\.remove\(\)/);
+    assert.match(fieldGuideSource, /searchGlobalPlants/);
+    assert.match(fieldGuideSource, /data-field-guide-scope-button="global"/);
+    assert.match(fieldGuideSource, /data-field-guide-scope-button="local"/);
     assert.doesNotMatch(fieldGuideSource, /Your garden quest|Explore your garden|Bring the garden to life/);
     assert.doesNotMatch(fieldGuideSource, /CHOOSE YOUR NEXT PATCH|DISCOVER SOMETHING NEW/);
     assert.match(fieldGuideSource, /field-guide-area-grid/);
@@ -374,8 +379,13 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(areaDashboardSource, /<button class="global-ar-action area-go-ar-compact"[^>]*>AR<\/button>/);
     assert.match(areaDashboardSource, /projectBreadcrumbMarkup\(context\.project, context\.area\)/);
     assert.match(areaDashboardSource, /Area dashboard/);
+    assert.match(areaDashboardSource, /const canonicalAreaEntries = areaEntries\.filter/);
+    assert.match(areaDashboardSource, /<section class="area-totem-section"/);
+    assert.match(areaDashboardSource, /Markers in this Area/);
     assert.match(dashboardSource, /Home \$\{project\.name\}/);
     assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*aspect-ratio:1[\s\S]*border-radius:50% !important/);
+    assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
+    assert.doesNotMatch(styles, /BONUS PATH/);
     assert.match(areaDashboardSource, /is-totem-entry/);
     assert.match(areaDashboardSource, /window\.openProjectAreaAr\('\$\{encoded\(context\.project\.id\)\}', '\$\{encoded\(context\.area\.id\)\}', '', 'area_checkpoint'\)[^>]*>PLACE IN AR/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
@@ -415,6 +425,9 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.match(source, /Use existing/);
     assert.match(source, /Home — assign later/);
     assert.match(source, /Create new Area/);
+    assert.match(source, /markerType === 'note' \? 'Title' : 'Name'/);
+    assert.match(source, /for="fieldDescription">Information<\/label>/);
+    assert.match(source, /description,/);
     assert.match(source, /Not yet placed · can be placed later/);
     assert.doesNotMatch(source, /<label>Project<\/label>/);
     assert.doesNotMatch(source, /<label>Location<\/label>/);

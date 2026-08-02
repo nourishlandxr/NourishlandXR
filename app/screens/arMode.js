@@ -22,7 +22,7 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { renderProjectDashboard, renderProjectAreaDashboard, openProjectEntry } from './projectDashboard.js';
+import { renderProjectDashboard, renderProjectAreaDashboard, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, totemHeightPreset } from '../services/totemAppearance.js';
 
@@ -429,6 +429,9 @@ function bindContextToolbarAction(toolbar, selector, action) {
 }
 
 function updateContextToolbar() {
+    overlayRoot?.querySelectorAll('[data-ar-marker-id]').forEach(element => {
+        element.classList.toggle('is-selected', Boolean(contextToolbarRecord?.marker?.id) && element.dataset.arMarkerId === contextToolbarRecord.marker.id);
+    });
     const toolbar = overlayRoot?.querySelector('[data-ar-context-toolbar]');
     if (!toolbar) return;
     const placementType = ['plant', 'note'].includes(readyPlacementType) ? readyPlacementType : '';
@@ -957,10 +960,19 @@ function closeSpatialWebWindow() {
 }
 
 function openSpatialWebWindow() {
+    const selectedRecord = contextToolbarRecord && sessionMarkers.includes(contextToolbarRecord)
+        ? contextToolbarRecord
+        : null;
+    const selectedReturnContext = selectedRecord?.marker?.type === 'area_checkpoint'
+        ? `web-totem:${selectedRecord.areaId}`
+        : selectedRecord
+            ? `web-marker:${selectedRecord.marker.id}`
+            : '';
     // The floating spatial workspace is a Quest 3 affordance. Phone AR must
     // leave immersive mode and use the normal Web workspace instead of
     // inheriting the Quest menu/window treatment.
     if (sessionMode !== 'immersive-vr') {
+        if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
     }
@@ -992,6 +1004,15 @@ function openSpatialWebWindow() {
                 ? renderIntoWindow(renderProjectAreaDashboard, encodedProjectId, encodeURIComponent(areaId))
                 : renderIntoWindow(() => { content.innerHTML = '<div class="screen"><div class="panel"><h2>No named Area selected</h2><p>Select an Area in the Web Hub first, then reopen this spatial window.</p></div></div>'; });
         }
+        if (name === 'selected') {
+            if (selectedRecord?.marker?.type === 'area_checkpoint') {
+                return renderIntoWindow(renderAreaCheckpointForm, encodedProjectId, encodeURIComponent(selectedRecord.areaId));
+            }
+            if (selectedRecord?.marker?.id) {
+                return renderIntoWindow(openProjectEntry, encodedProjectId, encodeURIComponent(selectedRecord.marker.id), false, 'field-guide');
+            }
+            return route('area');
+        }
         const markerId = spatialWebPlantId();
         return markerId
             ? renderIntoWindow(openProjectEntry, encodedProjectId, encodeURIComponent(markerId), false, 'field-guide')
@@ -1007,7 +1028,7 @@ function openSpatialWebWindow() {
     spatialWebWindow.querySelectorAll('[data-spatial-web-route]').forEach(button => button.addEventListener('click', () => route(button.dataset.spatialWebRoute)));
     controllerMenuActive = true;
     updateControllerHud();
-    void route('dashboard');
+    void route(selectedRecord ? 'selected' : 'area');
 }
 
 function controllerActionLabel(button) {
@@ -2077,7 +2098,7 @@ function renderSessionMarkers() {
             : record.marker.type === 'area_checkpoint' && record.infoVisible
                 ? creatorTotemInformationMarkup(record)
                 : '';
-        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>`;
+        const markerLayer = `<span class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span></span>`;
         return `${markerLayer}${profileLayer}`;
     }).join('');
     visibleMarkers.forEach(record => {
