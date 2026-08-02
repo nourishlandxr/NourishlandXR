@@ -1548,6 +1548,10 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     assert.match(dashboardSource, /manageQrAnchor/);
     assert.match(dashboardSource, /const webReturnAction = quickArPlantEdit/);
     assert.match(dashboardSource, /window\.renderProjectDashboard\('\$\{encoded\(project\.id\)\}'\)/);
+    assert.match(dashboardSource, /entryIsHome\s*\n\s*\? `window\.renderProjectDashboard/);
+    assert.match(dashboardSource, /project-entry-back-button/);
+    assert.match(dashboardSource, /plant-profile-action-row/);
+    assert.match(styles, /plant-profile-action-row \.danger[\s\S]{0,100}margin-left:\s*auto/);
     assert.match(dashboardSource, /Save Quick Edit/);
     assert.match(dashboardSource, /Back to Project Home/);
     assert.match(styles, /\.plant-ar-quick-fields/);

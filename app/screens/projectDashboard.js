@@ -2732,21 +2732,22 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const webReturnAction = quickArPlantEdit
         ? `window.renderProjectDashboard('${encoded(project.id)}')`
         : entryIsHome
-            ? `window.renderUnplacedContent('${encoded(project.id)}')`
+            ? `window.renderProjectDashboard('${encoded(project.id)}')`
             : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
-    const webReturnLabel = quickArPlantEdit ? 'Back to Project Home' : entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
+    const webReturnLabel = quickArPlantEdit || entryIsHome ? 'Back to Project Home' : `Back to ${escapeHtml(entryContextName)}`;
     const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
         ? `<button type="button" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
         : '';
+    const plantProfileBackButton = plant ? `<button class="ghost project-entry-back-button" type="button" onclick="${webReturnAction}">${webReturnLabel}</button>` : '';
     const entryHeader = plant
         ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile, !quickArPlantEdit)}`
         : `<div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>${projectBreadcrumbMarkup(project, entry.place, entry.marker.name)}</div>`;
     const placementStatus = plant ? '' : `<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>`;
     const placeButton = !plant && !quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action ar-square-action" type="button" aria-label="Place ${escapeHtml(entry.marker.name)} in AR" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">AR</button>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr && !plant ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save Quick Edit' : plant ? 'Save Plant Profile' : 'Save changes'}</button>${plantPrintAction}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form><nav class="bottom-navigation">${plant || returnToAr ? '' : returnArAction}<button class="ghost" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav></div>`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr && !plant ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save Quick Edit' : plant ? 'Save Plant Profile' : 'Save changes'}</button>${plantPrintAction}${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
     if (quickArPlantEdit) {
         const quickSaveButton = app.querySelector('.project-entry-editor button.primary');
-        const quickReturnButton = app.querySelector('.project-entry-editor .bottom-navigation .ghost');
+        const quickReturnButton = app.querySelector('.project-entry-back-button') || app.querySelector('.project-entry-editor .bottom-navigation .ghost');
         const contextBeacon = app.querySelector('.project-entry-editor .web-context-beacon');
         if (quickSaveButton) quickSaveButton.textContent = 'Save Quick Edit';
         if (quickReturnButton) {
@@ -2759,7 +2760,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         }
     }
     if (returnContext === 'field-guide' || returnContext === 'webhub') {
-        const backButton = app.querySelector('.bottom-navigation .ghost');
+        const backButton = app.querySelector('.project-entry-back-button') || app.querySelector('.bottom-navigation .ghost');
         if (backButton) {
             backButton.textContent = 'Back to Web Hub';
             backButton.onclick = () => window.renderFieldGuide(encoded(project.id), true);
