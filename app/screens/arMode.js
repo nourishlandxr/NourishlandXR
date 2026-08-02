@@ -3238,7 +3238,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // DOM overlay as a required feature. Keep the overlay optional: phones
         // and supported Quest builds still receive it, while controller laser
         // input and spatial controls keep Creator AR from failing at launch.
-        const arSession = await requestImmersiveArSession(overlayRoot);
+        // The Quest 3 link bar is rendered in the WebXR DOM overlay. Do not
+        // accept the VR fallback without that overlay: it starts a session
+        // successfully but leaves the taskbar invisible in the headset.
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: true });
         session = arSession.session;
         sessionMode = arSession.mode || 'immersive-ar';
         const launchedSession = session;
