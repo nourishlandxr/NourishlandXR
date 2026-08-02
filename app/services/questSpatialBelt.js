@@ -6,18 +6,10 @@ export const QUEST_SPATIAL_BELT_ACTIONS = Object.freeze([
 ]);
 
 export const QUEST_SPECIAL_PALETTE_ACTIONS = Object.freeze([
-    Object.freeze({ id: 'totem', label: 'TOTEM', symbol: '\u2316', color: '#6f9d82' }),
-    Object.freeze({ id: 'arrow-down', label: 'DOWN', symbol: '\u2B07', arrowStyle: 1, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-up', label: 'UP', symbol: '\u2B06', arrowStyle: 2, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-right', label: 'RIGHT', symbol: '\u27A1', arrowStyle: 3, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-left', label: 'LEFT', symbol: '\u2B05', arrowStyle: 4, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-turn', label: 'TURN', symbol: '\u21AA', arrowStyle: 5, color: '#75a9cc' }),
-    Object.freeze({ id: 'chevron', label: 'CHEVRON', symbol: '\u276F', arrowStyle: 6, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-up-round', label: 'UP ROUND', symbol: '\u21E7', arrowStyle: 7, color: '#75a9cc' }),
-    Object.freeze({ id: 'arrow-down-round', label: 'DOWN ROUND', symbol: '\u21E9', arrowStyle: 8, color: '#75a9cc' }),
-    Object.freeze({ id: 'outline-arrow', label: 'OUTLINE', symbol: '\u21D2', arrowStyle: 9, color: '#75a9cc' }),
-    Object.freeze({ id: 'important', label: 'IMPORTANT', symbol: '!', color: '#eaa45d' }),
-    Object.freeze({ id: 'question', label: 'QUESTION', symbol: '?', color: '#eaa45d' })
+    Object.freeze({ id: 'totem', label: 'PLACE TOTEM', symbol: '\u2316', color: '#6f9d82' }),
+    Object.freeze({ id: 'point-totem', label: 'POINT TO TOTEM', symbol: '\u25C9', color: '#6f9d82' }),
+    Object.freeze({ id: 'legacy-hidden-1', label: '', symbol: '', hidden: true, color: '#6f9d82' }),
+    Object.freeze({ id: 'legacy-hidden-2', label: '', symbol: '', hidden: true, color: '#6f9d82' })
 ]);
 
 export function isTrackedHeadsetInputSource(source) {

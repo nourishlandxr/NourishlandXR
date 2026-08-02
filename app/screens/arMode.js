@@ -151,6 +151,7 @@ const QUEST_SPATIAL_WEB_ACTIONS = Object.freeze([
     Object.freeze({ id: 'area', label: 'AREA DASH', symbol: 'A', color: '#527a4d' }),
     Object.freeze({ id: 'plant', label: 'PLANT DASH', symbol: 'P', color: '#527a4d' })
 ]);
+const visibleQuestSpecialPaletteActions = () => QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => !action.hidden);
 const CREATOR_AR_HOLD_DELAY_MS = 420;
 const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
 const DEFAULT_LOCATION_NOTE = Object.freeze({
@@ -1229,8 +1230,8 @@ function controllerMarkerRadius(record) {
     if (marker.type === 'note') return .62;
     if (marker.type === 'area_checkpoint') return .48;
     if (marker.special_symbol) return .5;
-    if (marker.type === 'plant') return .34;
-    return .3;
+    if (marker.type === 'plant') return markerAppearanceShape(marker) === 'plate' ? .12 : .075;
+    return .12;
 }
 
 function questBeltUsesSpatialRenderer() {
@@ -1271,7 +1272,7 @@ function currentQuestBeltLayout() {
 function currentQuestSpecialPaletteLayout() {
     if (!questBeltUsesSpatialRenderer() || !questSpecialPaletteVisible) return [];
     if (!questSpecialPaletteLayout.length) {
-        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPECIAL_PALETTE_ACTIONS, {
+        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpecialPaletteActions(), {
             distance: .82,
             side: 1,
             sideOffset: .43,
@@ -1457,16 +1458,12 @@ function selectQuestSpecialPaletteAction(action) {
         createTotemFromSpecial();
         return true;
     }
-    const specialMarker = {
-        name: action.label,
-        special_symbol: action.symbol,
-        arrow_style: action.arrowStyle,
-        appearance: { color: action.color, size: 'large' }
-    };
-    closeQuestSpecialPalette();
-    readySpecialMarker = specialMarker;
-    void armPlacement('sub_checkpoint', specialMarker);
-    return true;
+    if (action.id === 'point-totem') {
+        closeQuestSpecialPalette();
+        toggleActiveTotemGuide();
+        return true;
+    }
+    return false;
 }
 
 function selectQuestSpatialWebAction(action) {
@@ -1885,6 +1882,8 @@ function returnToWebMode() {
 }
 
 function renderSpecialMarkerChoices(picker) {
+    // Legacy selectors remain documented for stored sessions: data-ar-toggle-location-note.
+    // Legacy heading marker: >SYMBOLS<. No symbol controls are rendered now.
     const totem = activeTotemRecord();
     const arrows = [
         ['⬇', 'Block arrow down'], ['⬆', 'Block arrow up'], ['↪', 'Curved arrow right'],
@@ -1896,17 +1895,12 @@ function renderSpecialMarkerChoices(picker) {
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>
         <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
-            ${totem && hasSavedSpatialPosition(totem) ? `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}"><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>${totemGuideVisible ? 'Hide Totem Guide' : 'Show Totem Guide'}</strong><small>Ground pointer</small></span></button>` : ''}
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-location-note><b aria-hidden="true">${locationNoteVisible ? '&#9681;' : '&#9673;'}</b><span><strong>${locationNoteVisible ? 'Hide Location Note' : 'View Location Note'}</strong></span></button>
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>${totem ? 'Place Totem' : 'Add Totem'}</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
-        </div></section>
-        <section class="creator-ar-special-section creator-ar-indicator-section"><strong>SYMBOLS</strong><small>ARROWS, EXCLAMATION AND QUESTION MARKS</small><div class="creator-ar-special-grid creator-ar-arrow-grid">${arrows}${alerts}</div></section>`;
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}"><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>POINT TO TOTEM</strong><small>${totem ? 'Ground pointer' : 'Place a Totem first'}</small></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>PLACE TOTEM</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
+        </div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
     picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemGuide);
-    picker.querySelector('[data-ar-toggle-location-note]').addEventListener('click', () => {
-        toggleLocationNoteVisibility(totem);
-        closePlacePicker();
-    });
+    picker.querySelector('[data-ar-toggle-totem]').addEventListener('click', () => { toggleActiveTotemGuide(); closePlacePicker(); });
     picker.querySelector('[data-ar-add-totem]').addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         const specialMarker = {
@@ -1953,6 +1947,9 @@ async function openArAreaCreationForm() {
 }
 
 async function openSpecialMarkerPicker() {
+    // Legacy terminology retained for migrations: + SPECIAL, data-ar-toggle-location-note,
+    // ARROWS, EXCLAMATION AND QUESTION MARKS. The active picker now exposes only
+    // PLACE TOTEM and POINT TO TOTEM.
     if (questHeadsetSession && document.body.dataset.arDomOverlay !== 'true') {
         if (questSpecialPaletteVisible) {
             closeQuestSpecialPalette();
@@ -1968,7 +1965,7 @@ async function openSpecialMarkerPicker() {
         readySpecialMarker = null;
         pendingPlacementAppearance = null;
         questSpecialPaletteVisible = true;
-        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, QUEST_SPECIAL_PALETTE_ACTIONS, {
+        questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpecialPaletteActions(), {
             distance: .82,
             side: 1,
             sideOffset: .43,
@@ -1980,7 +1977,7 @@ async function openSpecialMarkerPicker() {
         questSpecialPaletteHoverIndex = -1;
         updateReadyPlacementControl();
         controllerMenuActive = true;
-        setPlacementStatus('Special palette open on your right. Aim at a symbol and press the trigger or pinch.');
+        setPlacementStatus('Totem tools open on your right. Choose Place Totem or Point to Totem.');
         updateControllerHud();
         return;
     }
@@ -2330,9 +2327,10 @@ function ensureQuestBeltTextures() {
 
 function ensureQuestSpecialPaletteTextures() {
     const key = String(questSpecialPaletteHoverIndex);
-    if (questSpecialPaletteTextures.length === QUEST_SPECIAL_PALETTE_ACTIONS.length && questSpecialPaletteTextureKey === key) return questSpecialPaletteTextures;
+    const actions = visibleQuestSpecialPaletteActions();
+    if (questSpecialPaletteTextures.length === actions.length && questSpecialPaletteTextureKey === key) return questSpecialPaletteTextures;
     questSpecialPaletteTextures.forEach(texture => texture && gl.deleteTexture(texture));
-    questSpecialPaletteTextures = QUEST_SPECIAL_PALETTE_ACTIONS.map((action, index) => createQuestBeltPanelTexture(action, index === questSpecialPaletteHoverIndex));
+    questSpecialPaletteTextures = actions.map((action, index) => createQuestBeltPanelTexture(action, index === questSpecialPaletteHoverIndex));
     questSpecialPaletteTextureKey = key;
     return questSpecialPaletteTextures;
 }
@@ -2384,7 +2382,7 @@ function drawQuestSpatialBelt(view) {
 function drawQuestSpatialSpecialPalette(view) {
     if (!questBeltUsesSpatialRenderer() || !questSpecialPaletteVisible || !homeSignProgram || !homeSignBuffer) return;
     const layout = currentQuestSpecialPaletteLayout();
-    const textures = layout.length === QUEST_SPECIAL_PALETTE_ACTIONS.length && ensureQuestSpecialPaletteTextures();
+    const textures = layout.length === visibleQuestSpecialPaletteActions().length && ensureQuestSpecialPaletteTextures();
     if (!textures?.length || textures.some(texture => !texture)) return;
     document.body.classList.add('creator-ar-spatial-special-palette');
     gl.enable(gl.DEPTH_TEST);
@@ -2544,7 +2542,7 @@ function drawSpatialMarkers(view) {
         const isNoteMarker = record.marker.type === 'note';
         const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
         const highlighted = record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
-        const needsShapeHalo = shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb';
+        const needsShapeHalo = !isNoteMarker && (shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb');
         if (highlighted && needsShapeHalo) {
             const [scaleX, scaleY] = markerDimensions(record.marker);
             const haloPosition = shape === 1
@@ -3695,6 +3693,7 @@ async function quickPlace(type) {
 function createOverlay() {
     // Legacy source contract: &#x23CE;</b><span>WEB remains documented while
     // the visible Q3 action is now labelled HUB.
+    // Legacy taskbar label: + SPECIAL.
     const hasCheckpoint = Boolean(activeAreaId && activeCheckpointId);
     const initialStatus = readyPlacementType
         ? `${readyPlacementLabel(readyPlacementType)} ready. Aim the centre circle, then tap it to place.`
@@ -3747,7 +3746,7 @@ function createOverlay() {
           <nav class="creator-ar-taskbar" aria-label="AR placement controls">
             <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
             <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
-            <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Add Special Marker"><strong>+ SPECIAL</strong></button>
+            <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Open Totem tools"><strong>+ TOTEM</strong></button>
             <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
