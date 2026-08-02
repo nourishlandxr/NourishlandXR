@@ -9,7 +9,7 @@ import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRend
 import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
-import { normalizeTotemHeightPreset, totemHeightPreset, totemHeightScale } from '../app/services/totemAppearance.js';
+import { normalizeTotemHeightPreset, normalizeTotemStyle, totemHeightPreset, totemHeightScale, totemStylePreset } from '../app/services/totemAppearance.js';
 import {
     arucoMarkerMatrix,
     createPhysicalAnchorTrackingState,
@@ -454,7 +454,8 @@ test('Note placement preview uses the shared Note surface instead of the shader 
     assert.doesNotMatch(drawSource, /markerShape\('note'\)/);
     assert.match(styles, /\.creator-ar-note-placement-preview/);
     assert.match(styles, /\.creator-ar-note-placement-surface/);
-    assert.match(styles, /\.creator-ar-note-placement-preview\.creator-ar-marker-hit-target-note \.creator-ar-note-placement-surface \{ transform:none; \}/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-note \.creator-ar-spatial-name \{ --spatial-note-color:var\(--marker-accent\); position:absolute; left:0; top:0/);
+    assert.match(styles, /\.creator-ar-note-placement-preview\.creator-ar-marker-hit-target-note \.creator-ar-note-placement-surface \{ position:absolute; left:0; top:0/);
 });
 
 test('Special opens immediately with Totem tools above symbols', () => {
@@ -715,7 +716,7 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
 test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {
     const arSource = read('app/screens/arMode.js');
     const webxrSource = read('app/services/webxrSession.js');
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(arSource, /document\.body\.dataset\.arDomOverlay = arSession\.domOverlay \? 'true' : 'false'/);
     assert.match(arSource, /questHeadsetSession = questBrowser \|\| sessionMode === 'immersive-vr' \|\| session\.interactionMode === 'world-space'/);
     assert.match(arSource, /classList\.toggle\('creator-ar-quest-headset', questHeadsetSession\)/);
@@ -1141,7 +1142,7 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
     assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
-    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);
     assert.match(source, /requestHitTestSource/);
@@ -1186,7 +1187,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(arSource, /let startPromise = null/);
     assert.match(arSource, /startPromise = launchArMode\(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId\)/);
     assert.doesNotMatch(arSource, /isSessionSupported\('immersive-ar'\)/);
-    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: questBrowser, preferDomOverlay: questBrowser \}\)/);
+    assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
     assert.match(dashboardSource, /const started = await window\.startArMode/);
@@ -1412,10 +1413,8 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /site-map-totem-links/);
     assert.match(dashboardSource, /Main welcome text/);
     assert.match(dashboardSource, /areaCheckpointColor/);
-    assert.match(dashboardSource, /aria-label="\$\{isPlaced \? 'Open Totem in AR' : 'Place Totem in AR'\}"/);
-    assert.match(dashboardSource, /encoded\(isPlaced \? existing\?\.marker\.id \|\| '' : ''\)/);
-    assert.match(dashboardSource, /encoded\(existing && !isPlaced \? existing\.marker\.id : ''\)/);
-    assert.match(dashboardSource, /encoded\(isPlaced \? marker\.id : ''\)/);
+    assert.doesNotMatch(dashboardSource, /aria-label="\$\{isPlaced \? 'Open Totem in AR' : 'Place Totem in AR'\}"/);
+    assert.doesNotMatch(dashboardSource, /encoded\(isPlaced \? existing\?\.marker\.id \|\| '' : ''\)/);
     assert.match(arSource, /data-ar-recenter-prompt/);
     assert.match(arSource, /RECENTER AREA/);
     assert.match(arSource, /data-ar-totem-information/);
@@ -1533,6 +1532,23 @@ test('Totem height presets and earth tones remain simple and spatially consisten
     assert.match(styles, /\.totem-tone-presets/);
     assert.match(styles, /\.totem-essential-controls \{ display:grid; grid-template-columns:minmax\(0,1fr\)/);
     assert.match(styles, /\.tutorial-step-confirmation/);
+});
+
+test('Totem profiles expose three visual styles and keep the selected style in AR', () => {
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
+    assert.equal(normalizeTotemStyle(), 'basic');
+    assert.equal(normalizeTotemStyle({ appearance: { totemStyle: 'organic' } }), 'organic');
+    assert.equal(totemStylePreset('light-post').label, 'Light post');
+    assert.match(dashboardSource, /data-totem-style/);
+    assert.match(dashboardSource, /totemStyle/);
+    assert.match(arSource, /normalizeTotemStyle\(record\.marker\)/);
+    assert.match(arSource, /totemStyle === 'organic'/);
+    assert.match(arSource, /totemStyle === 'light-post'/);
+    assert.match(styles, /\.totem-style-presets/);
+    assert.match(styles, /\.totem-profile-visual\.is-style-organic/);
+    assert.match(styles, /\.totem-profile-visual\.is-style-light-post/);
 });
 
 test('Note placement waits for a valid one-metre projection and previews the saved board template', () => {
