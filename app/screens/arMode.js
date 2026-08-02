@@ -1365,7 +1365,11 @@ function controllerBeltActionAtAim() {
 function controllerLaserSubjects() {
     const subjects = renderableAreaMarkers()
         .filter(record => !hiddenStructuralMarkerIds.has(record.marker.id))
-        .map(record => ({ position: record.position, radius: controllerMarkerRadius(record) }));
+        .map(record => ({
+            position: record.position,
+            // Keep selection forgiving, but stop the visible laser on the orb surface.
+            radius: record.marker.type === 'plant' && markerAppearanceShape(record.marker) !== 'plate' ? .04 : controllerMarkerRadius(record)
+        }));
     if (readyPlacementType) {
         const point = placementPoint();
         if (point) subjects.push({ position: point, radius: .38 });
@@ -2314,9 +2318,20 @@ function createQuestBeltPanelTexture(action, selected) {
     context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
     if (action.id === 'dashboard') {
         context.font = '800 22px system-ui, sans-serif';
-        context.fillText('PROJECT', 128, 76);
-        context.font = '800 22px system-ui, sans-serif';
-        context.fillText('DASHBOARD', 128, 108);
+        context.fillText('PROJECT DASHBOARD', 128, 58);
+        const markers = activeAreaMarkers();
+        const plantCount = markers.filter(record => record.marker.type === 'plant').length;
+        const noteCount = markers.filter(record => record.marker.type === 'note').length;
+        const totemCount = markers.filter(record => record.marker.type === 'area_checkpoint').length;
+        context.font = '600 15px system-ui, sans-serif';
+        context.fillStyle = 'rgba(245, 250, 245, .76)';
+        context.fillText(activeProjectName || activeProjectId || 'Current project', 128, 84);
+        context.font = '700 15px system-ui, sans-serif';
+        context.fillStyle = selected ? '#f4ffd4' : 'rgba(245, 250, 245, .9)';
+        context.fillText(`${activeAreaName || 'Home'} · ${plantCount} plants · ${noteCount} notes · ${totemCount} totems`, 128, 124);
+        context.font = '600 13px system-ui, sans-serif';
+        context.fillStyle = 'rgba(245, 250, 245, .64)';
+        context.fillText('PROJECT OVERVIEW', 128, 164);
     } else {
         context.font = '800 62px system-ui, sans-serif';
         context.fillText(action.symbol, 128, 82);
