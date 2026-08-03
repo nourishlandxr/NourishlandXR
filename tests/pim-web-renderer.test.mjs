@@ -220,7 +220,7 @@ test('editing and import review controls appear only for editable Creator profil
 });
 
 test('Web PIM CSS reflows to ordered mobile groups without horizontal scrolling', () => {
-    assert.match(styles, /grid-template-areas:\s*"\. relationship \.[\s\S]*"agency identity certainty"[\s\S]*"\. process \."]/);
+    assert.match(styles, /grid-template-areas:\s*"\. relationship \."[\s\S]*"agency identity certainty"[\s\S]*"\. process \."/);
     assert.match(styles, /@media \(max-width: 760px\)/);
     assert.match(styles, /\.pim-web-identity \{ order: 1;/);
     assert.match(styles, /\.pim-web-sector--relationship \{ order: 2;/);

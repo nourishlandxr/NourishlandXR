@@ -321,7 +321,7 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
 
 function accessibleListMarkup(document, state, options) {
     const roots = PIM_COMPASS.map(entry => nodeById(document, entry.id)).filter(Boolean);
-    return `<section class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
+    return `<section class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
 }
 
 function detailMarkup(document, state, options) {
@@ -407,7 +407,10 @@ function importReviewMarkup(document, state, options) {
     return `<section class="pim-web-import-review" aria-labelledby="pim-web-import-title"><header><div><span>Editor review</span><h2 id="pim-web-import-title">Staged plant data</h2><p>Imported information remains unpublished until it is reviewed.</p></div><strong>${items.length}</strong></header><div class="pim-web-import-list">${items.map((item, index) => {
         const id = item.id || item.itemId || `import-${index + 1}`;
         const node = item.node || item.mappedNode || item.proposedNode || {};
-        const destination = item.destination || node.path || node.primaryCategory || item.primaryCategory || 'Needs mapping';
+        const rawDestination = item.destination || node.path || node.primaryCategory || item.primaryCategory || 'Needs mapping';
+        const destination = typeof rawDestination === 'object'
+            ? [rawDestination.primaryCategory, ...asList(rawDestination.parentChain).map(segment => segment?.title || segment?.id)].filter(Boolean).join(' → ')
+            : String(rawDestination);
         const status = item.reviewStatus || item.status || 'pending';
         return `<article data-pim-import-id="${attribute(id)}" data-pim-import-destination="${attribute(destination)}"><div><span>${escapeHtml(item.sourceDatabase || item.source?.name || 'External source')}</span><h3>${escapeHtml(node.title || item.title || 'Imported information')}</h3><p>${escapeHtml(node.preview || item.normalizedValue || item.originalValue || 'Review this proposed block.')}</p><small>${escapeHtml(destination)} · ${escapeHtml(titleCase(status))}${item.conflict ? ' · Conflict detected' : ''}</small></div><footer><button type="button" data-pim-import-decision="approve" data-pim-import-id="${attribute(id)}">Approve</button><button type="button" data-pim-import-decision="reject" data-pim-import-id="${attribute(id)}">Reject</button><button type="button" data-pim-import-decision="modify" data-pim-import-id="${attribute(id)}">Modify</button></footer></article>`;
     }).join('')}</div><p role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>`;
@@ -417,12 +420,13 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const source = normalizeDocument(document);
     const current = normalizedState(state);
     const renderOptions = { ...options, editable: options.editable === true };
-    const identity = identityMarkup(source, current);
+    const visualIdentity = identityMarkup(source, current, 'visual');
+    const listIdentity = identityMarkup(source, current, 'list');
     const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
         <header class="pim-web-heading"><div><p>Plant Information Mesh</p><h1>Knowledge Compass</h1></div><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Compass view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div></header>
-        <div class="pim-web-compass-shell" id="pim-web-compass-${attribute(source.plantId)}" data-pim-compass-view${current.centerOpen && current.viewMode === 'compass' ? '' : ' hidden'}>${identity}${groups}</div>
-        ${current.viewMode === 'list' ? `<div class="pim-web-list-identity">${identity}</div>` : ''}
+        <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}</div></div>
+        ${current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
         ${accessibleListMarkup(source, current, renderOptions)}
         ${detailMarkup(source, current, renderOptions)}
         ${editorMarkup(source, current, renderOptions)}
@@ -571,7 +575,17 @@ export function mountPlantInformationWeb(container, options = {}) {
                 const callback = decision === 'approve' ? options.onApproveImport : options.onRejectImport;
                 const callbackResult = await callback?.(item, document);
                 if (callbackResult?.nodes) document = normalizeDocument(callbackResult);
-                if (!callback && staging && typeof PimImportReview.reviewPimImport === 'function') importReview = PimImportReview.reviewPimImport(staging, id, decision);
+                else if (callbackResult?.document?.nodes) {
+                    importReview = callbackResult;
+                    document = normalizeDocument(callbackResult.document);
+                }
+                if (!callback && staging && typeof PimImportReview.reviewPimImport === 'function') {
+                    importReview = PimImportReview.reviewPimImport(staging, id, decision);
+                    if (importReview?.document?.nodes) {
+                        document = normalizeDocument(importReview.document);
+                        await options.onSaveDocument?.(document);
+                    }
+                }
                 commit({ ...state, importMessage: `${titleCase(decision)}d ${item?.node?.title || item?.title || 'imported information'}.` }, '', false);
             } catch (error) {
                 commit({ ...state, importMessage: `Import review failed: ${error.message}` }, '', false);

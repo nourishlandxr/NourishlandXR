@@ -109,6 +109,10 @@
     padding: 10px 4px 28px;
 }
 
+.pim-web-sectors {
+    display: contents;
+}
+
 .pim-web-identity {
     grid-area: identity;
     align-self: center;
