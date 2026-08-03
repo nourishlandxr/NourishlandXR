@@ -9,12 +9,13 @@ import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { pimConnectorPath, pimNodeChildren, pimNodeHue, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 
 let appRoot = null;
 let session = null;
@@ -37,6 +38,7 @@ let buffer = null;
 let sphereRenderer = null;
 let tetherRenderer = null;
 let prismRenderer = null;
+let triangleRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -46,6 +48,7 @@ let demoHoldTimer = null;
 let introNarrationTimer = null;
 let introSceneStartedAt = 0;
 let introSceneActive = true;
+let introBoardVisible = true;
 let introBoardHasEntered = false;
 let introWorldAnchor = null;
 let introNoteTexture = null;
@@ -74,10 +77,11 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardPosition: [0, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
+const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({ x: 2.4, y: 3.65 });
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
-    'Augmented reality (AR) and mixed reality (XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'Nourishland XR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how plant information can be mapped to real places.'
+    'Augmented reality(AR) & Mixed reality(XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
+    'NourishLandXR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how information can be mapped real places.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
@@ -98,13 +102,13 @@ const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demo
 // Keeping this at zero prevents Quest refresh rates from making the copy
 // appear in word-sized chunks.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0;
-const DEMO_SEQUENCE = ['plant', 'plant2', 'note'];
+const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
 const DEMO_ORB_MATERIALS = Object.freeze({
-    red: {
-        shell: [0.82, 0.15, 0.12],
-        core: [1, 0.43, 0.3],
+    brown: {
+        shell: [0.34, 0.23, 0.14],
+        core: [0.67, 0.48, 0.27],
         radius: 0.07,
-        style: '--demo-orb-size:52px;--demo-orb-light:#ffd8d1;--demo-orb-mid:#e65345;--demo-orb-dark:#7c1818;--demo-orb-core-light:#ffe8df;--demo-orb-core-mid:#ef6757;--demo-orb-core-dark:#8f1f1b'
+        style: '--demo-orb-size:56px;--demo-orb-light:#ead7ba;--demo-orb-mid:#8a6946;--demo-orb-dark:#3e2a1c;--demo-orb-core-light:#f1dfbd;--demo-orb-core-mid:#a77b48;--demo-orb-core-dark:#4d321e'
     },
     green: {
         shell: [0.34, 0.72, 0.28],
@@ -130,7 +134,18 @@ const BIOMAP_CATEGORIES = Object.freeze({
 const INTRO_KNOWLEDGE_KEYWORDS = Object.keys(BIOMAP_CATEGORIES);
 const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
-    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] }
+    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
+    zone: {
+        title: 'Food Forest Totem',
+        accent: '#75c9b6',
+        bubbles: [
+            'FOOD FOREST AREA',
+            'Pigeon Pea + Moringa guild',
+            'Warm sheltered microclimate',
+            'Pollinator activity',
+            'Seasonal garden observations'
+        ]
+    }
 });
 const MORINGA_KNOWLEDGE = Object.freeze({
     title: 'Moringa Tree',
@@ -152,6 +167,7 @@ const NOTE_TEMPLATES = Object.freeze({
     plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
     warning: { title: 'Warning Note · DON’T GO HERE', accent: '#ef9b78', lines: ['WARNING  Do not enter this place', 'GUIDANCE  Explain the risk or boundary', 'FUTURE  Sound · alerts · animation'] }
 });
+const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
     hitTestSource?.cancel?.();
@@ -180,6 +196,7 @@ function clearSessionState() {
     introNarrationTimer = null;
     introSceneStartedAt = 0;
     introSceneActive = true;
+    introBoardVisible = true;
     introBoardHasEntered = false;
     introWorldAnchor = null;
     if (introNoteTexture) gl?.deleteTexture(introNoteTexture);
@@ -206,9 +223,11 @@ function clearSessionState() {
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
+    destroySpatialTriangleRenderer(gl, triangleRenderer);
     sphereRenderer = null;
     tetherRenderer = null;
     prismRenderer = null;
+    triangleRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -249,7 +268,7 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     const messages = {
         plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
-        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge. Next, place a simple Note nearby.']
+        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
@@ -323,7 +342,7 @@ function openDemoVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-        showGuidedChoice('<h2>Open its Plant Live Tag</h2><p>This Plant Profile also has a full, view-only page in Web Mode. Open the Plant Live Tag to see how smoothly NourishlandXR moves between information in AR and the complete plant file.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
+        showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to Open the plant profile.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
         if (choice === 'virtual-tag') openDemoVirtualTag(record);
     });
 }
@@ -336,6 +355,7 @@ function hideGuidedChoice() {
     appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
+    introBoardVisible = false;
 }
 
 function activateImmersiveDemoControl() {
@@ -355,6 +375,7 @@ function activateImmersiveDemoControl() {
 function prepareTutorialBoard(panel) {
     const firstArrival = !introBoardHasEntered;
     panel.classList.add('is-welcome-board');
+    introBoardVisible = true;
     panel.classList.remove('is-leaving');
     panel.hidden = false;
     if (firstArrival) {
@@ -551,6 +572,7 @@ function finishIntroBoard() {
     appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
+    introBoardVisible = false;
 }
 
 function runArWelcomeTutorial() {
@@ -597,10 +619,14 @@ function guidePlantConversion(record) {
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     showIntroBoard(
-        moringa ? 'A SECOND PLANT ORB' : 'A SIMPLE PLANT ORB',
+        moringa ? 'A SECOND PLANT ORB' : 'What is A plant Orb ?',
         moringa
-            ? 'This Moringa orb can carry its own Plant Profile in the place where the tree grows. Continue, then press the orb to explore its information tree.'
-            : `${PIGEON_PEA_EXAMPLE.introduction} A simple Plant orb can become a hub of information, which we call a Plant Profile. Place it at a real plant or tree so its knowledge stays connected to where it grows. If its position is not quite right, you can hold the orb and move it whenever you want—adjusting it is optional. Continue, then press the orb to explore its information tree.`,
+            ? 'This Moringa orb can carry its own Plant Profile as well and can be linked to other plants. Press the Moringa orb to explore its information tree.'
+            : [
+                'A plant Orb is  knowledge stays connected to where a plant grows. A simple Plant orb can become a extended hub of information, part of a garden guild or linked into a ecosystem.',
+                'Lets pick a sample plant. A pigeon pea.  its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden. Adjust its position if needed.',
+                'Press Continue to explore its information tree.'
+            ],
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
@@ -610,27 +636,120 @@ function guidePlantConversion(record) {
     );
 }
 
+function showSceneContinue(label, onContinue) {
+    hideGuidedChoice();
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (!continueButton) return;
+    continueButton.textContent = demoLocalizedText(label);
+    continueButton.onclick = () => {
+        suppressSessionSelectUntil = performance.now() + 700;
+        continueButton.hidden = true;
+        onContinue();
+    };
+    continueButton.hidden = false;
+}
+
+function cycleDemoNoteTemplate(record) {
+    if (!record || record.demoType !== 'note') return false;
+    const current = Math.max(0, Number(record.demoNoteTemplateIndex) || 0);
+    record.demoNoteTemplateIndex = (current + 1) % DEMO_NOTE_TEMPLATE_KEYS.length;
+    const templateKey = DEMO_NOTE_TEMPLATE_KEYS[record.demoNoteTemplateIndex];
+    record.demoContent = NOTE_TEMPLATES[templateKey];
+    record.name = record.demoContent.title;
+    refreshDemoRecord(record);
+    setGuide(`${record.demoContent.title} is using the same Note template and remains anchored in the same place.`);
+    return true;
+}
+
+function showDemoClosingMessage() {
+    showIntroBoard(
+        'NourishlandXR',
+        [
+            'We hope NourishlandXR gives teachers and educators an engaging way to share knowledge, inspire curiosity, and help people reconnect with nature and the systems that produce our food.',
+            'Together, we can create new ways to explore, learn from, share, and care for the living world around us.'
+        ],
+        'Finish demo',
+        returnToWelcome
+    );
+}
+
+function createDemoTotemExample() {
+    const source = [...markers].reverse().find(record => record.demoType === 'note') || markers.at(-1);
+    const sourcePosition = source?.position || placementPosition() || { x: 0, y: 0, z: -1.4 };
+    const sourceAnchor = source?.simulatedAnchor || { x: 50, y: 56 };
+    const totem = {
+        ...createMinimalMarkerDraft('area_checkpoint', {
+            name: 'Food Forest Totem',
+            description: 'An example of Area information attached to a Totem Marker.'
+        }),
+        position: { x: sourcePosition.x + .72, y: sourcePosition.y, z: sourcePosition.z + .12 },
+        type: 'area_checkpoint',
+        demoType: 'zone',
+        tutorialStage: 'totem',
+        demoExpanded: true,
+        demoInteractive: true,
+        demoPanelOffset: { x: 0, y: 0 },
+        simulatedAnchor: {
+            x: Math.max(16, Math.min(84, sourceAnchor.x + 24)),
+            y: Math.max(18, Math.min(78, sourceAnchor.y - 4))
+        },
+        revealTitle: true,
+        revealLines: 5,
+        demoContent: DEMO_CONTENT.zone,
+        texture: null
+    };
+    totem.texture = createMarkerTexture(totem);
+    markers.push(totem);
+    updateSimulatedMarkers();
+    setGuide('This Totem keeps Area knowledge anchored to its real place. Press Continue when you are ready.');
+    showSceneContinue('Continue', showDemoClosingMessage);
+}
+
+function showTotemIntroduction() {
+    showIntroBoard(
+        'Totem Markers',
+        [
+            'Totems are the epicenters of each area where plant orbs live.',
+            'They carry information about guilds and microclimates and curiosities about a specific area',
+            'They also Help anchor virtual information into real spaces.',
+            'Press continue and see one example of information attached to a totem.'
+        ],
+        'Continue',
+        () => {
+            finishIntroBoard();
+            createDemoTotemExample();
+        }
+    );
+}
+
+function showSpatialGardenSummary() {
+    showIntroBoard(
+        'Your spatial garden information  is starting to become alive.',
+        'You placed two Plant Live Tags, opened their Plant Profiles, and added a Note.',
+        'Continue',
+        showTotemIntroduction
+    );
+}
+
 function guideNoteConversion(record) {
+    const pointer = appRoot?.querySelector('[data-tryit-place]');
+    pointer?.setAttribute('hidden', '');
+    pointer?.classList.remove('is-revealing', 'is-ready', 'is-pressed');
     setGuide('Your Note is placed.');
-    showGuidedChoice('<h2>Add a Note</h2><p>A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.</p><button type="button" data-demo-choice="continue">Continue</button>', choice => {
-        if (choice !== 'continue') return;
-        record.demoExpanded = true;
-        record.revealTitle = true;
-        record.revealLines = 3;
-        refreshDemoRecord(record);
-        hideGuidedChoice();
-        setGuide('The new Note stays softly connected to this place and can be grabbed whenever you want to adjust it.');
-        showGuidedChoice('<h2>Your spatial garden is alive</h2><p>You placed two Plant Live Tags, opened their Plant Profiles, and added a Note. Totem Markers belong to Areas and are created separately in Creator Mode.</p><div class="tryit-guided-grid"><button type="button" data-demo-choice="reset">Try again</button><button type="button" data-demo-choice="finish">Finish demo</button></div>', action => {
-            if (action === 'finish') returnToWelcome();
-            if (action === 'reset') {
-                markers.forEach(item => item.texture && gl?.deleteTexture(item.texture));
-                markers = [];
-                marker = null;
-                demoStage = 'plant';
-                renderInterface(simulatedMode);
-            }
-        });
-    });
+    showIntroBoard(
+        'Add a Note',
+        'A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.',
+        'Continue',
+        () => {
+            finishIntroBoard();
+            record.demoExpanded = false;
+            record.revealTitle = true;
+            record.revealLines = 3;
+            refreshDemoRecord(record);
+            setGuide('The Note remains at Creator Mode size and in its placed position. Tap it to preview another Note type, or press Continue.');
+            showSceneContinue('Continue', showSpatialGardenSummary);
+        }
+    );
 }
 
 function shiftSimulatedSceneForStage(type) {
@@ -680,15 +799,17 @@ function armDemoPlacement(type) {
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : 'Take in the space before choosing the next position.');
     const introductions = {
-        plant: ['Placing markers', 'Let’s first start with your first marker. Once you press Continue, a round pointer will appear on your screen. Position it where you’d like your plant to appear, then tap it to create a Plant Orb.'],
-        plant2: ['Let’s try Moringa', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
-        note: ['Find another place', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
+        plant: ['Virtual markers for Plants', [
+            'Let’s start with placing a simple marker.',
+            'To do so ,use the round pointer that will appear on your screen. Position it where you’d like your marker to appear, then tap it to create what we call a Plant Orb. Please press Continue..'
+        ]],
+        plant2: ['Let’s try another plant . A Moringa plant orb', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
+        note: ['Next, place a simple Note nearby.', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
     };
     const [title, introduction] = introductions[type];
-    showGuidedChoice(`<h2>${title}</h2><p>${introduction}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
-        if (choice !== 'continue') return;
+    showIntroBoard(title, introduction, 'Continue', () => {
         suppressSessionSelectUntil = performance.now() + 700;
-        hideGuidedChoice();
+        finishIntroBoard();
         setGuide(type === 'plant'
             ? 'Press the aiming circle to place the example Plant orb.'
             : type === 'plant2'
@@ -731,8 +852,8 @@ function tetherMetrics(offset) {
 function clampPlantPanelOffset(anchor, offset) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileWidth = Math.min(viewportWidth * 0.94, 560);
-    const profileHeight = Math.min(300, Math.max(228, viewportWidth * 0.52));
+    const profileWidth = Math.min(viewportWidth * 0.98, 960);
+    const profileHeight = Math.min(viewportHeight * 0.74, 680);
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
     const minimumX = 16 + profileWidth / 2 - anchorX;
@@ -748,7 +869,7 @@ function clampPlantPanelOffset(anchor, offset) {
 function defaultPlantPanelOffset(anchor) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileHeight = Math.min(300, Math.max(228, viewportWidth * 0.52));
+    const profileHeight = Math.min(viewportHeight * 0.74, 680);
     const anchorY = viewportHeight * anchor.y / 100;
     const margin = 28;
     const aboveOffset = -(profileHeight / 2 + margin);
@@ -779,7 +900,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbAppearance = demoOrbStyle(record);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" aria-hidden="true"></span></span>`;
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
@@ -825,11 +946,12 @@ export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantP
 function selectDemoProfileCell() {
     const record = [...markers].reverse().find(candidate => candidate?.demoType === 'plant' && candidate.demoExpanded);
     if (!record) return false;
-    const node = demoPimNodeAtPointer(record);
-    if (!node) {
-        setGuide('Aim at a PIM cell, then press it to open its information petals.');
-        return true;
-    }
+    // On headsets the projected controller point can land just outside a
+    // visible petal even though the profile itself was deliberately selected.
+    // Fall back to the first visible root so the tutorial can demonstrate the
+    // current expanding-cell PIM without trapping the user in this stage.
+    const node = demoPimNodeAtPointer(record) || pimVisibleNodes(knowledgeFor(record), record.demoExpandedBranches)[0];
+    if (!node) return true;
     record.demoActiveBranch = node.path;
     record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
     if (record.texture) gl?.deleteTexture(record.texture);
@@ -837,7 +959,15 @@ function selectDemoProfileCell() {
     setGuide(record.demoExpandedBranches.includes(node.path)
         ? `${node.label} opened into its connected information cells.`
         : `${node.label} collapsed.`);
+    advanceAfterDemoProfileInteraction(record);
     return true;
+}
+
+function advanceAfterDemoProfileInteraction(record) {
+    if (!record || record.demoProfileInteracted) return;
+    record.demoProfileInteracted = true;
+    if (record.tutorialStage === 'plant2') showDemoAction('note');
+    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
 }
 
 function demoPimNodeAtPointer(record) {
@@ -864,8 +994,8 @@ function demoPimNodeAtPointer(record) {
     };
     const localX = (hit.x - position.x) * right.x + (hit.z - position.z) * right.z;
     const localY = hit.y - position.y;
-    const xPercent = (localX / (.2 * 1.55) * .5 + .5) * 100;
-    const yPercent = (.5 - localY / (.08 * 2.5) * .5) * 100;
+    const xPercent = (localX / (.2 * DEMO_PIM_IMMERSIVE_SCALE.x) * .5 + .5) * 100;
+    const yPercent = (.5 - localY / (.08 * DEMO_PIM_IMMERSIVE_SCALE.y) * .5) * 100;
     if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
     return pimVisibleNodes(knowledgeFor(record), record.demoExpandedBranches)
         .map(node => ({ node, distance: Math.hypot(xPercent - node.position.x, yPercent - node.position.y) }))
@@ -878,7 +1008,7 @@ function updateSimulatedMarkers() {
     if (!layer || !simulatedMode) return;
     layer.innerHTML = markers.map((record, index) => {
         const content = demoContentFor(record);
-        const lines = content?.lines.slice(0, record.revealLines ?? content.lines.length) || [];
+        const lines = content?.lines?.slice(0, record.revealLines ?? content.lines.length) || [];
         const anchor = record.simulatedAnchor || { x: 50, y: 50 };
         if (record.demoType === 'plant') {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
@@ -888,7 +1018,9 @@ function updateSimulatedMarkers() {
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
-        const compactContent = record.demoType === 'note' && content ? `<strong>${content.title}</strong>` : '';
+        const compactContent = record.demoType === 'note' && content
+            ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`
+            : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
         return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('');
@@ -982,12 +1114,15 @@ function bindSimulatedInformationPanels(layer) {
             });
             return;
         }
-        if (record.demoExpanded || record.demoType !== 'note') return;
+        if (record.demoType !== 'note') return;
         compactMarker.setAttribute('role', 'button');
         compactMarker.setAttribute('tabindex', '0');
-        compactMarker.addEventListener('click', () => {
-            record.demoExpanded = true;
-            refreshDemoRecord(record);
+        compactMarker.setAttribute('aria-label', `Change Note type. Current ${record.demoContent?.title || record.name || 'Note'}`);
+        compactMarker.addEventListener('click', () => cycleDemoNoteTemplate(record));
+        compactMarker.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            cycleDemoNoteTemplate(record);
         });
     });
     layer.querySelectorAll('.tryit-sim-marker.is-expanded').forEach(panel => {
@@ -1045,11 +1180,7 @@ function bindSimulatedInformationPanels(layer) {
                 const wasOpen = record.demoExpandedBranches?.includes(nodePath);
                 record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
                 record.demoActiveBranch = nodePath;
-                if (!record.demoProfileInteracted) {
-                    record.demoProfileInteracted = true;
-                    if (record.tutorialStage === 'plant2') showDemoAction('note');
-                    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
-                }
+                advanceAfterDemoProfileInteraction(record);
                 refreshDemoRecord(record);
                 setGuide(wasOpen ? `${cell.querySelector('b')?.textContent || 'Cell'} collapsed.` : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.`);
             });
@@ -1099,13 +1230,13 @@ const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, chara
 function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
     const expanded = new Set(expandedPaths);
     const nodes = pimVisibleNodes(knowledge, expandedPaths);
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="M${node.parentPosition.x} ${node.parentPosition.y} L${node.position.x} ${node.position.y}"/>`).join('');
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
     const cells = nodes.map(node => {
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
         const detailsVisible = node.depth > 0 || open;
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.62, 1 - node.depth * .14)}`;
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.76, 1 - node.depth * .08)};--pim-hue:${pimNodeHue(node)}`;
         return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
     }).join('');
     return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>PIM</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span></span>`;
@@ -1261,6 +1392,12 @@ function beginControllerDemoHold() {
     return true;
 }
 
+function selectDemoNoteTemplateAtPointer() {
+    const target = demoRecordAtPointer();
+    if (!target || target.record?.demoType !== 'note') return false;
+    return cycleDemoNoteTemplate(target.record);
+}
+
 function releaseHeldDemoRecord() {
     clearTimeout(demoHoldTimer);
     demoHoldTimer = null;
@@ -1315,7 +1452,8 @@ function placeMarker() {
         type: type === 'note' ? 'note' : 'marker',
         demoType: type === 'note' ? 'note' : 'marker',
         tutorialStage: type,
-        demoOrbColor: type === 'plant' ? 'red' : type === 'plant2' ? 'green' : '',
+        demoOrbColor: type === 'plant' ? 'brown' : type === 'plant2' ? 'green' : '',
+        demoOrbShape: type === 'plant' ? 'triangle' : type === 'plant2' ? 'orb' : '',
         demoExpanded: false,
         demoInteractive: !['plant', 'plant2'].includes(type),
         demoPanelOffset: panelOffsets[type],
@@ -1324,7 +1462,12 @@ function placeMarker() {
         revealTitle: true,
         revealLines: 3,
         texture: null,
-        ...(type === 'note' ? { name: 'Seasonal observation', demoContent: NOTE_TEMPLATES.poi } : {})
+        ...(type === 'note' ? {
+            name: NOTE_TEMPLATES.poi.title,
+            demoContent: NOTE_TEMPLATES.poi,
+            demoNoteTemplateIndex: 0,
+            appearance: { color: '#9a6b50', size: 'medium', opacity: 1, surface: 'filled' }
+        } : {})
     };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
@@ -1469,6 +1612,7 @@ function setupRenderer() {
     sphereRenderer = createSpatialSphereRenderer(gl);
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
+    triangleRenderer = createSpatialTriangleRenderer(gl);
 }
 
 function demoControllerInputSource() {
@@ -1561,8 +1705,8 @@ function createSpatialKnowledgeTexture(record) {
     const content = demoContentFor(record);
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
-    label.width = record.demoType === 'zone' ? 720 : 1120;
-    label.height = record.demoType === 'zone' ? 1120 : 720;
+    label.width = record.demoType === 'zone' ? 720 : 1440;
+    label.height = record.demoType === 'zone' ? 1120 : 900;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
         drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || []);
@@ -1823,13 +1967,13 @@ function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= Float32Array.from(viewerMatrix);
     const now = performance.now();
-    if (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken)) {
+    if (introBoardVisible && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
         introTextureFrameToken = introFrameToken;
     }
-    introKnowledgeTexture ||= createIntroKnowledgeTexture();
+    if (introBoardVisible) introKnowledgeTexture ||= createIntroKnowledgeTexture();
     const elapsed = performance.now() - introSceneStartedAt;
     const drawTexture = (texture, position, scaleX, scaleY, opacity) => {
         const model = billboardMatrix(position, scaleX, scaleY, introWorldAnchor);
@@ -1845,7 +1989,7 @@ function drawIntroSpatial(view) {
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
-    if (introKnowledgeVisible) {
+    if (introBoardVisible && introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
             introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
@@ -1854,13 +1998,15 @@ function drawIntroSpatial(view) {
             easedKnowledge * .9
         );
     }
-    drawTexture(
-        introNoteTexture,
-        introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
-        AR_PHONE_COMFORT.boardScale[0],
-        AR_PHONE_COMFORT.boardScale[1],
-        easedNote
-    );
+    if (introBoardVisible && introNoteTexture) {
+        drawTexture(
+            introNoteTexture,
+            introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
+            AR_PHONE_COMFORT.boardScale[0],
+            AR_PHONE_COMFORT.boardScale[1],
+            easedNote
+        );
+    }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
         ? (continueButton.textContent || 'Continue').trim()
@@ -2014,9 +2160,40 @@ function createBoundaryTexture() {
     return texture;
 }
 
+function createDemoNoteTexture(record) {
+    const content = demoContentFor(record) || NOTE_TEMPLATES.poi;
+    const label = document.createElement('canvas');
+    label.width = 1024;
+    label.height = 384;
+    const ctx = label.getContext('2d');
+    const noteColor = record?.appearance?.color || '#9a6b50';
+    ctx.clearRect(0, 0, label.width, label.height);
+    ctx.fillStyle = noteColor;
+    ctx.globalAlpha = Number(record?.appearance?.opacity ?? 1);
+    ctx.beginPath();
+    ctx.roundRect(12, 12, 1000, 360, 58);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(239,255,235,.88)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 50px system-ui, sans-serif';
+    drawWrappedTextureText(ctx, content.title || record.name || 'Note', 62, 56, 900, 58, 2);
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    ctx.font = '650 27px system-ui, sans-serif';
+    (content.lines || []).slice(0, 3).forEach((line, index) => {
+        drawWrappedTextureText(ctx, line, 62, 184 + index * 54, 900, 34, 1);
+    });
+    return canvasTexture(label);
+}
+
 function createMarkerTexture(record) {
     if (!gl) return null;
     if (record.demoExpanded) return createSpatialKnowledgeTexture(record);
+    if (record.demoType === 'note') return createDemoNoteTexture(record);
     const label = document.createElement('canvas');
     label.width = 256;
     label.height = 256;
@@ -2067,24 +2244,6 @@ function createMarkerTexture(record) {
         ctx.beginPath();
         ctx.arc(128, 128, 78, 0, Math.PI * 2);
         ctx.stroke();
-    } else if (record.type === 'note') {
-        ctx.fillStyle = 'rgba(30,35,32,.72)';
-        ctx.beginPath();
-        ctx.roundRect(12, 68, 232, 120, 10);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(245,248,243,.78)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.moveTo(210, 68); ctx.lineTo(237, 68); ctx.lineTo(237, 95);
-        ctx.moveTo(46, 188); ctx.lineTo(19, 188); ctx.lineTo(19, 161);
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 22px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        drawWrappedTextureText(ctx, record.name || 'Note', 128, 126, 205, 27, 2);
     } else {
         ctx.fillStyle = '#357fc4';
         ctx.beginPath();
@@ -2107,7 +2266,7 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
-    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer) return;
+    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -2117,6 +2276,18 @@ function drawMarker(view) {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
         if (!orbType) return;
         const material = DEMO_ORB_MATERIALS[record.demoOrbColor];
+        if (record.demoOrbShape === 'triangle') {
+            drawSpatialTriangle(gl, triangleRenderer, view, record.position, {
+                halfWidth: .075,
+                halfHeight: .075,
+                halfDepth: .046,
+                color: material?.shell || [.34, .23, .14],
+                topColor: material?.core || [.67, .48, .27],
+                alpha: .98,
+                rotationY: Math.PI / 7
+            });
+            return;
+        }
         drawSpatialOrb(
             gl,
             sphereRenderer,
@@ -2170,11 +2341,12 @@ function drawMarker(view) {
             ? record.informationPosition || (record.informationPosition = plantInformationPosition(record))
             : totem
             ? { ...record.position, y: record.position.y + 1 }
-            : compact ? record.position : { ...record.position, y: record.position.y + 0.72 };
+            : record.position;
+        const noteScale = noteSign ? { x: 4.7, y: 4.3125 } : null;
         const model = billboardMatrix(
             displayPosition,
-            plantProfile ? 1.55 : totem ? 1.9 : compact && noteSign ? 1.52 : compact ? .38 : 2.35,
-            plantProfile ? 2.5 : totem ? 3 : compact && noteSign ? 1.52 : compact ? .38 : 3.45
+            plantProfile ? 1.55 : totem ? 1.9 : noteScale?.x || (compact ? .38 : 2.35),
+            plantProfile ? 2.5 : totem ? 3 : noteScale?.y || (compact ? .38 : 3.45)
         );
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
@@ -2274,11 +2446,16 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             if (placementReady) return pressPlacementPointer();
             if (selectDemoProfileCell()) return;
+            if (selectDemoNoteTemplateAtPointer()) return;
             selectGuidedDemoOrb();
         });
         session.addEventListener('selectstart', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (placementReady || activateImmersiveDemoControl()) return;
+            const actionTarget = demoRecordAtPointer()?.record;
+            if (markers.some(record => record.demoType === 'plant' && record.demoExpanded)
+                || actionTarget?.awaitingProfileReveal
+                || actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();
         });
         session.addEventListener('selectend', () => {

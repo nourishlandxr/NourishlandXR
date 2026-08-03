@@ -448,21 +448,21 @@ test('quick access creation is minimal and separates Area assignment from placem
     assert.doesNotMatch(source, /<label>Marker Type<\/label>/);
 });
 
-test('Try It Now guides two Plants and a Note without turning an orb into a Totem', () => {
+test('Try It Now guides two Plants, an in-place Note and a final Totem example', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
     const webxrSource = fs.readFileSync(path.join(root, 'app/services/webxrSession.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /Once you press Continue, a round pointer will appear on your screen/);
+    assert.match(source, /To do so ,use the round pointer that will appear on your screen/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note'\]/);
+    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.doesNotMatch(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /<h2>Add a Note<\/h2>/);
+    assert.match(source, /'Add a Note'/);
     assert.match(source, /const directType = type === 'note' \? 'note' : 'sub_checkpoint'/);
     assert.doesNotMatch(source, /record\.type = 'note'/);
     assert.match(source, /markers\.length >= DEMO_SEQUENCE\.length/);
@@ -473,7 +473,10 @@ test('Try It Now guides two Plants and a Note without turning an orb into a Tote
     assert.match(source, /createBoundaryTexture/);
     assert.doesNotMatch(source, /function guideAreaConversion/);
     assert.doesNotMatch(source, /showDemoAction\('zone'\)/);
-    assert.match(source, /Totem Markers belong to Areas and are created separately in Creator Mode/);
+    assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
+    assert.match(source, /record\.demoExpanded = false/);
+    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /Totems are the epicenters of each area where plant orbs live/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
     assert.match(source, /Press a cell to reveal its information/);
