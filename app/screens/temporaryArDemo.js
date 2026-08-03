@@ -650,6 +650,7 @@ function guidePlantConversion(record) {
         record.demoActiveBranch = '';
         record.demoExpandedBranches = [];
         record.informationPosition = plantInformationPosition(record);
+        record.demoAlive = true;
         record.demoInteractive = true;
         record.revealTitle = true;
         record.revealLines = 3;
@@ -719,12 +720,22 @@ function createDemoTotemExample() {
     const source = [...markers].reverse().find(record => record.demoType === 'note') || markers.at(-1);
     const sourcePosition = source?.position || placementPosition() || { x: 0, y: 0, z: -1.4 };
     const sourceAnchor = source?.simulatedAnchor || { x: 50, y: 56 };
+    const groundBaseY = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
+    groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Food Forest Totem',
             description: 'An example of Area information attached to a Totem Marker.'
         }),
-        position: { x: sourcePosition.x + .72, y: sourcePosition.y, z: sourcePosition.z + .12 },
+        // Spatial prisms are positioned from their centre. Raising the centre
+        // by one half-height keeps the Totem's base exactly on the detected or
+        // estimated ground plane, upright from the ground rather than at gaze.
+        position: {
+            x: sourcePosition.x + .72,
+            y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
+            z: sourcePosition.z + .12
+        },
+        groundBaseY,
         type: 'area_checkpoint',
         demoType: 'zone',
         tutorialStage: 'totem',
@@ -733,7 +744,7 @@ function createDemoTotemExample() {
         demoPanelOffset: { x: 0, y: 0 },
         simulatedAnchor: {
             x: Math.max(16, Math.min(84, sourceAnchor.x + 24)),
-            y: Math.max(18, Math.min(78, sourceAnchor.y - 4))
+            y: Math.max(64, Math.min(80, sourceAnchor.y + 14))
         },
         revealTitle: true,
         revealLines: 5,
@@ -1456,9 +1467,12 @@ function updateHeldDemoRecordPosition() {
     const distance = Math.max(.4, Math.min(4, Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
     record.position = {
         x: origin.x + ray.x * distance,
-        y: origin.y + ray.y * distance,
+        y: record.demoType === 'zone'
+            ? demoGroundBaseY(hitMatrix, viewerMatrix, record.groundBaseY ?? groundYEstimate) + DEMO_TOTEM_HALF_HEIGHT_METRES
+            : origin.y + ray.y * distance,
         z: origin.z + ray.z * distance
     };
+    if (record.demoType === 'zone') record.groundBaseY = record.position.y - DEMO_TOTEM_HALF_HEIGHT_METRES;
     record.informationPosition = null;
 }
 
@@ -1584,11 +1598,12 @@ function placeMarker() {
     marker = {
         ...sample,
         position,
-        type: type === 'note' ? 'note' : 'marker',
-        demoType: type === 'note' ? 'note' : 'marker',
+        type: type === 'note' ? 'note' : 'plant',
+        demoType: type === 'note' ? 'note' : 'plant',
         tutorialStage: type,
         demoOrbColor: type === 'plant' ? 'brown' : type === 'plant2' ? 'green' : '',
         demoOrbShape: type === 'plant' ? 'triangle' : type === 'plant2' ? 'orb' : '',
+        demoAlive: type !== 'note',
         demoExpanded: false,
         demoInteractive: !['plant', 'plant2'].includes(type),
         demoPanelOffset: panelOffsets[type],
@@ -2552,6 +2567,7 @@ async function startImmersive() {
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
+            groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
             updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
