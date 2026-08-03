@@ -17,12 +17,12 @@ const DIRECTION_AXIAL = Object.freeze({
 });
 
 const ROOT_HUES = Object.freeze({
-    top: 96,
+    top: 132,
     'upper-left': 42,
     'lower-left': 184,
-    'upper-right': 24,
-    'lower-right': 144,
-    bottom: 278
+    'upper-right': 212,
+    'lower-right': 270,
+    bottom: 25
 });
 
 // All world-space measurements are metres. The texture surface includes
@@ -89,9 +89,9 @@ function normalizeNode(item, path, parentPath = 'core', defaults = {}) {
     const value = Array.isArray(item) ? arrayValue : item?.description ?? item?.value;
     const children = Array.isArray(item) ? arrayChildren : item?.children;
     return {
-        path,
+        path: String(item?.path || path),
         id: String(item?.id || defaults.id || path),
-        parentPath,
+        parentPath: String(item?.parentPath || parentPath),
         label: String(label || 'Information'),
         value: String(value || ''),
         direction: String(item?.direction || defaults.direction || ''),
@@ -193,18 +193,20 @@ export function pimConnectorPath(node) {
 
 export function pimNodeAtPath(knowledge = {}, path = '') {
     const targetPath = String(path || '');
-    const rootPath = targetPath.split('.')[0];
-    let node = pimKnowledgeNodes(knowledge).find(candidate => candidate.path === rootPath);
-    if (!node) return null;
-    let depth = 0;
-    const segments = targetPath.split('.').slice(1);
-    for (const segment of segments) {
-        const childPath = `${node.path}.${segment}`;
-        node = pimNodeChildren({ ...node, depth }).find(candidate => candidate.path === childPath);
-        if (!node) return null;
-        depth += 1;
+    if (!targetPath) return null;
+    const visit = (node, depth, rootDirection) => {
+        if (node.path === targetPath) return { ...node, depth, rootDirection };
+        for (const child of pimNodeChildren({ ...node, depth })) {
+            const match = visit(child, depth + 1, rootDirection);
+            if (match) return match;
+        }
+        return null;
+    };
+    for (const root of pimKnowledgeNodes(knowledge)) {
+        const match = visit(root, 0, root.direction);
+        if (match) return match;
     }
-    return { ...node, depth, rootDirection: pimKnowledgeNodes(knowledge).find(candidate => candidate.path === rootPath)?.direction || node.direction };
+    return null;
 }
 
 // Deeper selections become the centre of the next connected honeycomb. This
@@ -212,7 +214,7 @@ export function pimNodeAtPath(knowledge = {}, path = '') {
 // clean generation at a time.
 export function pimFocusedView(knowledge = {}, expandedPaths = []) {
     const candidates = (Array.isArray(expandedPaths) ? expandedPaths : [])
-        .filter(path => String(path).includes('.'))
+        .filter(path => /[./]/.test(String(path)))
         .reverse();
     const focusNode = candidates.map(path => pimNodeAtPath(knowledge, path)).find(node => node && pimNodeChildren(node).length);
     if (!focusNode) return null;
@@ -230,11 +232,13 @@ export function pimFocusedView(knowledge = {}, expandedPaths = []) {
             childCount: children.length
         };
     });
-    const trail = [];
-    const segments = focusNode.path.split('.');
-    for (let index = 1; index <= segments.length; index += 1) {
-        const ancestor = pimNodeAtPath(knowledge, segments.slice(0, index).join('.'));
-        if (ancestor) trail.push(ancestor);
+    const trail = [focusNode];
+    let parentPath = focusNode.parentPath;
+    while (parentPath && parentPath !== 'core') {
+        const ancestor = pimNodeAtPath(knowledge, parentPath);
+        if (!ancestor || trail.some(node => node.path === ancestor.path)) break;
+        trail.unshift(ancestor);
+        parentPath = ancestor.parentPath;
     }
     return { focusNode, nodes, trail };
 }
@@ -275,9 +279,10 @@ export function pimToggleExpandedPaths(expandedPaths, path) {
     if (!target) return [];
     const current = Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
     const isOpen = current.includes(target);
-    if (isOpen) return current.filter(candidate => candidate !== target && !candidate.startsWith(`${target}.`));
-    const segments = target.split('.');
-    const ancestors = segments.map((_, index) => segments.slice(0, index + 1).join('.'));
+    if (isOpen) return current.filter(candidate => candidate !== target && !candidate.startsWith(`${target}.`) && !candidate.startsWith(`${target}/`));
+    const separator = target.includes('/') ? '/' : '.';
+    const segments = target.split(separator);
+    const ancestors = segments.map((_, index) => segments.slice(0, index + 1).join(separator));
     return ancestors;
 }
 

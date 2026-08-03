@@ -26,6 +26,8 @@ import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOI
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
+import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
+import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
@@ -419,47 +421,20 @@ function hasPlantProfile(record) {
 }
 
 function creatorPlantKnowledge(record) {
-    const profile = record.plantProfile || record.marker.plant_profile || {};
-    const summary = (...values) => values.find(value => String(value || '').trim()) || 'Add in Web Mode';
-    const scientific = summary(profile.scientific_name);
-    const layer = summary(profile.layer, profile.plant_type);
-    const fact = (id, label, description = '') => ({ id, label, description });
-    const category = (id, label, direction, description, children) => ({ id, label, direction, description, children });
-    const savedCategories = Array.isArray(profile.pim_categories) ? profile.pim_categories : null;
-    return {
-        id: record.marker.plantId || record.marker.id,
-        plantId: record.marker.plantId || record.marker.id,
-        name: profile.common_name || record.marker.name || 'Plant Profile',
-        scientificName: scientific,
-        title: profile.common_name || record.marker.name || 'Plant Profile',
-        core: { scientific, layer },
-        categories: savedCategories || [
-            category('food-forest', 'Food Forest', 'top', 'Roles in a layered food forest.', [
-                fact('forest-layer', layer === 'Add in Web Mode' ? 'Add forest layer in Web Mode' : layer, 'Forest layer'),
-                fact('garden-role', 'Garden role', summary(profile.role, profile.function, profile.overview)),
-                fact('relationships', 'Relationships', summary(profile.relationships, profile.companions))
-            ]),
-            category('uses', 'Uses', 'upper-left', 'Food and practical uses.', [
-                fact('uses-overview', 'Uses overview', summary(profile.uses, profile.edible_uses, profile.overview))
-            ]),
-            category('medicinal', 'Medicinal', 'lower-left', 'Traditional knowledge only; not medical advice.', [
-                fact('traditional-knowledge', 'Traditional knowledge', summary(profile.medicinal, profile.medicinal_uses, 'Add traditional knowledge in Web Mode'))
-            ]),
-            category('scientific-information', 'Scientific Information', 'upper-right', 'Botany and growth form.', [
-                fact('botanical-name', 'Botanical name', scientific),
-                fact('family', 'Family', summary(profile.family)),
-                fact('growth-form', 'Growth form', summary(profile.plant_type, profile.layer)),
-                fact('climate', 'Climate', summary(profile.climate, profile.growing_conditions, profile.care))
-            ]),
-            category('historical-data', 'Historical Data', 'lower-right', 'Origin and history.', [
-                fact('origin-history', 'Origin and history', summary(profile.origin, profile.history))
-            ]),
-            category('craft', 'Craft', 'bottom', 'Material and making knowledge.', [
-                fact('craft-uses', 'Craft uses', summary(profile.craft, profile.material_uses, 'Add craft knowledge in Web Mode')),
-                fact('propagation', 'Propagation', summary(profile.propagation))
-            ])
-        ]
-    };
+    const marker = record?.marker || {};
+    const profile = record?.plantProfile || marker.plant_profile || {};
+    const commonName = profile.common_name || marker.name || 'Plant Profile';
+    const plantId = marker.plantId || marker.id || profile.plant_id || commonName;
+    const document = resolvePlantPim(profile, {
+        id: plantId,
+        plantId,
+        name: commonName,
+        commonName,
+        title: commonName,
+        scientificName: profile.scientific_name || '',
+        image: profile.photo || profile.image || ''
+    });
+    return pimToArKnowledge(document);
 }
 
 function creatorPlantKnowledgeMarkup(record) {

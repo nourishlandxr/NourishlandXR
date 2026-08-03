@@ -5,6 +5,7 @@ import {
     PIM_SPATIAL_CONFIG,
     pimFocusedView,
     pimKnowledgeNodes,
+    pimNodeChildren,
     pimNodeHue,
     pimRootPosition,
     pimSpatialPanel,
@@ -15,16 +16,23 @@ import {
 } from '../app/services/plantInformationMesh.js';
 import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
 import { PIGEON_PEA_AR_KNOWLEDGE } from '../app/services/pigeonPeaExample.js';
+import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
+import { resolvePlantPim } from '../app/services/pimLegacyAdapter.js';
+import { pimToArKnowledge } from '../app/services/pimModel.js';
+
+function flattenedArNodes(nodes) {
+    return (Array.isArray(nodes) ? nodes : []).flatMap(node => [node, ...flattenedArNodes(node.children)]);
+}
 
 test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable directions', () => {
     const roots = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE);
     assert.deepEqual(roots.map(node => node.label), [
         'Food Forest',
         'Uses',
-        'Medicinal',
+        'Propagation',
         'Scientific Information',
         'Historical Data',
-        'Craft'
+        'Cultivation'
     ]);
     assert.deepEqual(roots.map(node => node.direction), [
         'top',
@@ -34,15 +42,27 @@ test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable direction
         'lower-right',
         'bottom'
     ]);
+    assert.deepEqual(roots.map(node => node.id), [
+        'food-forest',
+        'uses',
+        'propagation',
+        'scientific-information',
+        'historical-data',
+        'cultivation'
+    ]);
+    const usesChildren = pimNodeChildren(roots.find(node => node.id === 'uses'));
+    assert.ok(usesChildren.some(node => node.id === 'medicinal'), 'Medicinal is nested beneath Uses');
+    assert.ok(usesChildren.some(node => node.id === 'craft'), 'Craft is nested beneath Uses');
+    assert.equal(roots.some(node => ['medicinal', 'craft'].includes(node.id)), false);
     assert.deepEqual(
         roots.map(node => ({ label: node.label, ...pimRootPosition(node).axial })),
         [
             { label: 'Food Forest', q: 0, r: -1 },
             { label: 'Uses', q: -1, r: 0 },
-            { label: 'Medicinal', q: -1, r: 1 },
+            { label: 'Propagation', q: -1, r: 1 },
             { label: 'Scientific Information', q: 1, r: -1 },
             { label: 'Historical Data', q: 1, r: 0 },
-            { label: 'Craft', q: 0, r: 1 }
+            { label: 'Cultivation', q: 0, r: 1 }
         ]
     );
 });
@@ -52,10 +72,10 @@ test('PIM keeps one main category open at a time and closes it on a second press
     assert.deepEqual(expanded, ['food-forest']);
     expanded = pimToggleExpandedPaths(expanded, 'uses');
     assert.deepEqual(expanded, ['uses']);
-    expanded = pimToggleExpandedPaths(expanded, 'uses.1');
-    assert.deepEqual(expanded, ['uses', 'uses.1']);
-    expanded = pimToggleExpandedPaths(expanded, 'uses.1.1');
-    assert.deepEqual(expanded, ['uses', 'uses.1', 'uses.1.1']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses/culinary');
+    assert.deepEqual(expanded, ['uses', 'uses/culinary']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses/culinary/dried-pulse');
+    assert.deepEqual(expanded, ['uses', 'uses/culinary', 'uses/culinary/dried-pulse']);
     expanded = pimToggleExpandedPaths(expanded, 'uses');
     assert.deepEqual(expanded, []);
 });
@@ -64,7 +84,7 @@ test('PIM grows child cells outward from the selected category with stable famil
     const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest']);
     const root = nodes.find(node => node.path === 'food-forest');
     const children = nodes.filter(node => node.parentPath === 'food-forest');
-    assert.equal(children.length, 5);
+    assert.equal(children.length, 2);
     assert.ok(children.every(node => node.position.y < root.position.y));
     assert.ok(children.every(node => pimNodeHue(node) === pimNodeHue(root)));
     assert.ok(children.every(node => Math.hypot(
@@ -75,11 +95,43 @@ test('PIM grows child cells outward from the selected category with stable famil
 });
 
 test('PIM recentres each deeper generation as a clean recursive honeycomb', () => {
-    const focus = pimFocusedView(PIGEON_PEA_AR_KNOWLEDGE, ['uses', 'uses.1']);
-    assert.equal(focus.focusNode.label, 'Edible seeds');
-    assert.deepEqual(focus.nodes.map(node => node.label), ['Harvest', 'Processing', 'Seed saving']);
+    const focus = pimFocusedView(PIGEON_PEA_AR_KNOWLEDGE, ['uses', 'uses/culinary']);
+    assert.equal(focus.focusNode.label, 'Culinary');
+    assert.deepEqual(focus.nodes.map(node => node.label), ['Dried pulse', 'Fresh peas', 'Young pods']);
     assert.ok(focus.nodes.every(node => node.parentPosition.x === 50 && node.parentPosition.y === 50));
-    assert.deepEqual(focus.trail.map(node => node.label), ['Uses', 'Edible seeds']);
+    assert.deepEqual(focus.trail.map(node => node.label), ['Uses', 'Culinary']);
+});
+
+test('AR projection preserves every canonical Pigeon Pea node ID and stable path', () => {
+    const projectedNodes = flattenedArNodes(PIGEON_PEA_AR_KNOWLEDGE.categories);
+    const projectedById = new Map(projectedNodes.map(node => [node.id, node]));
+    assert.equal(projectedNodes.length, PIGEON_PEA_PIM.nodes.length);
+    PIGEON_PEA_PIM.nodes.forEach(node => {
+        assert.equal(projectedById.get(node.id)?.path, node.path, `${node.id} keeps its shared PIM path`);
+    });
+});
+
+test('legacy category arrays cannot redefine the global AR compass', () => {
+    const projected = pimToArKnowledge(resolvePlantPim({
+        common_name: 'Compass Test Plant',
+        pim_categories: [
+            { id: 'cultivation', label: 'Wrong top label', direction: 'top', children: [{ id: 'care', label: 'Care' }] },
+            { id: 'uses', label: 'Wrong bottom label', direction: 'bottom', children: [
+                { id: 'medicinal', label: 'Medicinal' },
+                { id: 'craft', label: 'Craft' }
+            ] }
+        ]
+    }, { plantId: 'compass-test', commonName: 'Compass Test Plant' }));
+    const roots = pimKnowledgeNodes(projected);
+    assert.deepEqual(roots.map(node => [node.id, node.label, node.direction]), [
+        ['food-forest', 'Food Forest', 'top'],
+        ['uses', 'Uses', 'upper-left'],
+        ['propagation', 'Propagation', 'lower-left'],
+        ['scientific-information', 'Scientific Information', 'upper-right'],
+        ['historical-data', 'Historical Data', 'lower-right'],
+        ['cultivation', 'Cultivation', 'bottom']
+    ]);
+    assert.deepEqual(pimNodeChildren(roots.find(node => node.id === 'uses')).map(node => node.id), ['medicinal', 'craft']);
 });
 
 test('PIM spatial pose is captured once, world-sized and JSON serializable', () => {

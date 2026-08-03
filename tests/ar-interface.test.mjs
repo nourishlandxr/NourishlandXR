@@ -1106,6 +1106,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
+    assert.match(source, /const MORINGA_KNOWLEDGE = Object\.freeze\(pimToArKnowledge\(resolvePlantPim\(MORINGA_PROFILE,/);
+    assert.match(source, /\{ id: 'medicinal', parentId: 'uses'/);
+    assert.match(source, /\{ id: 'craft', parentId: 'uses'/);
+    assert.match(source, /parentId: 'propagation'/);
+    assert.match(source, /parentId: 'cultivation'/);
     assert.match(source, /plantKnowledgeMarkup/);
     assert.match(source, /drawPlantKnowledgeTexture/);
     assert.match(source, /drawPlantInformationHoneycomb/);
@@ -1380,9 +1385,14 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
 
 test('Creator Plants use a compact encyclopedia file and collapsible AR information', () => {
     const arSource = read('app/screens/arMode.js');
+    const pigeonSource = read('app/services/pigeonPeaExample.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
     assert.match(arSource, /function hasPlantProfile\(record\)/);
+    assert.match(arSource, /resolvePlantPim\(profile,/);
+    assert.match(arSource, /pimToArKnowledge\(document\)/);
+    assert.doesNotMatch(arSource, /profile\.pim_categories/);
+    assert.match(pigeonSource, /pimToArKnowledge\(PIGEON_PEA_PIM\)/);
     assert.match(arSource, /const opening = !record\.profileExpanded/);
     assert.match(arSource, /sessionMarkers\.forEach\(candidate => \{[\s\S]*candidate\.profileExpanded = false/);
     assert.match(arSource, /setPlacementStatus\(''\)/);
@@ -1394,7 +1404,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /creator-ar-plant-profile is-anchored-profile/);
     assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
     assert.match(arSource, /RELATIONSHIPS: 'LINKS'/);
-    assert.match(arSource, /core: \{ scientific, layer \}/);
+    assert.match(arSource, /scientificName: profile\.scientific_name \|\| ''/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
     assert.match(arSource, /const wasOpen = record\.pimExpandedPaths\?\.includes\(nodePath\)/);

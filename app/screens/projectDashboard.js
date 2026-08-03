@@ -1,6 +1,7 @@
 ﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { languageOptionsMarkup, setNxrLanguage } from '../services/i18n.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
+import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { deleteSitePlace, updateSitePlace } from '../services/persistence.js';
 import { createProjectSite, deleteProjectOnDisk, renameProjectOnDisk } from '../services/persistence.js';
 import { deleteMarkerAnchor, loadMarkerAnchor, saveMarkerAnchor } from '../services/persistence.js';
@@ -31,6 +32,9 @@ import {
 } from '../services/physicalAnchor.js';
 import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
 import { PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
+import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
+import { reviewPimImport, stagePimImport } from '../services/pimImportReview.js';
+import { pimRouteFromUrl, pimRouteUrl } from '../services/pimRouting.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -45,6 +49,7 @@ const checkpointSetupFlows = new Map();
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
+const pimSlug = value => String(value || 'plant').trim().toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'plant';
 const effectiveMarkerType = marker => marker?.semantic_type === 'area_checkpoint' ? 'area_checkpoint' : marker?.type;
 const isAreaTotemMarker = (marker, areaName = '') => effectiveMarkerType(marker) === 'area_checkpoint'
     || (marker?.type === 'sub_checkpoint'
@@ -2727,7 +2732,7 @@ function plantProfileHeaderMarkup(project, entry, placement, profile) {
     </header>`;
 }
 
-export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, returnToAr = false, returnContext = '') {
+export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, returnToAr = false, returnContext = '', pimInitialState = null) {
     const projectId = decodeURIComponent(encodedProjectId);
     const markerId = decodeURIComponent(encodedMarkerId);
     const { project, site, places, entries } = await projectContent(projectId);
@@ -2739,6 +2744,18 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const markerAnchor = plant ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
     const plantQrCode = plant ? visibleQrCode(entry.marker.qr_reference || markerAnchor?.qr_code) : '';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
+    const pimIdentity = plant ? {
+        plantId: entry.marker.plantId || entry.marker.id,
+        commonName: profile.common_name || entry.marker.name || 'Unnamed plant',
+        scientificName: profile.scientific_name || '',
+        identityStatement: profile.overview || entry.marker.description || '',
+        image: profile.photo || profile.image || '',
+        cultivar: profile.cultivar || '',
+        synonyms: profile.synonyms || [],
+        regionalNames: profile.regional_names || profile.regionalNames || []
+    } : null;
+    let activePimDocument = plant ? resolvePlantPim(profile, pimIdentity, { plantId: pimIdentity.plantId }) : null;
+    let activePimImportReview = plant ? profile.pim_import_review || profile.pim_import_staging || null : null;
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');

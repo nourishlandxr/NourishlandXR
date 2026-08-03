@@ -299,6 +299,39 @@ function isPublicHierarchy(projectId, siteId = '', placeId = '') {
     return isPublic(place);
 }
 
+function publicPlantProfile(profile = {}) {
+    const filterDocument = document => {
+        if (!document || typeof document !== 'object' || !Array.isArray(document.nodes)) return document;
+        const visibleIds = new Set();
+        const pending = document.nodes.filter(node => {
+            const status = String(node?.status || 'published').toLowerCase();
+            const review = String(node?.reviewStatus || node?.review_status || '').toLowerCase();
+            return ['published', 'public'].includes(status) && !['pending', 'rejected', 'needs_review'].includes(review);
+        });
+        let changed = true;
+        while (changed) {
+            changed = false;
+            pending.forEach(node => {
+                const parentId = String(node?.parentId || node?.parent_id || '');
+                if ((!parentId || visibleIds.has(parentId)) && !visibleIds.has(String(node.id))) {
+                    visibleIds.add(String(node.id));
+                    changed = true;
+                }
+            });
+        }
+        const { importQueue, stagedImports, reviewQueue, ...safeDocument } = document;
+        return {
+            ...safeDocument,
+            nodes: pending.filter(node => visibleIds.has(String(node.id)))
+        };
+    };
+    const safe = { ...profile };
+    if (safe.pim) safe.pim = filterDocument(safe.pim);
+    if (Array.isArray(safe.pim_nodes)) safe.pim_nodes = filterDocument({ nodes: safe.pim_nodes })?.nodes || [];
+    delete safe.pim_import_queue;
+    return safe;
+}
+
 function toPlantId(value) {
     return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
@@ -1418,10 +1451,14 @@ function handleApi(req, res) {
     const plantProfileMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sites\/([^/]+)\/places\/([^/]+)\/markers\/([^/]+)\/plant-profile$/);
     if (plantProfileMatch && req.method === 'GET') {
         const [ , projectId, siteId, placeId, markerId ] = plantProfileMatch;
-        const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        const decodedPlaceId = decodeURIComponent(placeId);
+        const markerDir = path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'places', decodedPlaceId, 'markers', decodeURIComponent(markerId));
         const marker = readJson(path.join(markerDir, 'marker.json'), null);
-        if (!marker || marker.type !== 'plant' || (visitor && !isPublic(marker))) return sendJson(res, 404, { error: 'Plant Live Tag not found' });
-        sendJson(res, 200, readJson(path.join(markerDir, 'plant_profile.json'), {}));
+        if (!marker || marker.type !== 'plant' || (visitor && (!isPublicHierarchy(decodedProjectId, decodedSiteId, decodedPlaceId) || !isPublic(marker)))) return sendJson(res, 404, { error: 'Plant Live Tag not found' });
+        const profile = readJson(path.join(markerDir, 'plant_profile.json'), {});
+        sendJson(res, 200, visitor ? publicPlantProfile(profile) : profile);
         return true;
     }
     if (plantProfileMatch && req.method === 'PUT') {
@@ -1434,7 +1471,13 @@ function handleApi(req, res) {
             const data = JSON.parse(body || '{}');
             if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant Live Tag not found' });
             const existing = readJson(path.join(markerDir, 'plant_profile.json'), {});
-            const profile = { ...existing, ...data, common_name: String(data.common_name || '').trim(), scientific_name: String(data.scientific_name || '').trim(), modified: new Date().toISOString() };
+            const profile = {
+                ...existing,
+                ...data,
+                common_name: Object.hasOwn(data, 'common_name') ? String(data.common_name || '').trim() : String(existing.common_name || '').trim(),
+                scientific_name: Object.hasOwn(data, 'scientific_name') ? String(data.scientific_name || '').trim() : String(existing.scientific_name || '').trim(),
+                modified: new Date().toISOString()
+            };
             writeJson(path.join(markerDir, 'plant_profile.json'), profile);
             sendJson(res, 200, profile);
         });

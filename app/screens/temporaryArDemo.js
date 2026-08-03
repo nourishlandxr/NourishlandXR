@@ -17,6 +17,8 @@ import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
+import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
+import { pimToArKnowledge } from '../services/pimModel.js';
 
 let appRoot = null;
 let session = null;
@@ -153,42 +155,43 @@ const DEMO_CONTENT = Object.freeze({
         ]
     }
 });
-const MORINGA_KNOWLEDGE = Object.freeze({
-    id: 'moringa',
+const MORINGA_PROFILE = Object.freeze({
+    common_name: 'Moringa Tree',
+    scientific_name: 'Moringa oleifera',
+    pim: Object.freeze({
+        schemaVersion: 1,
+        plantId: 'moringa-oleifera',
+        identity: Object.freeze({
+            commonName: 'Moringa Tree',
+            scientificName: 'Moringa oleifera',
+            identityStatement: 'A fast-growing food and support tree for tropical and subtropical gardens.'
+        }),
+        nodes: Object.freeze([
+            { id: 'moringa-forest-layer', parentId: 'food-forest', title: 'Canopy / low tree layer', preview: 'Light canopy role', body: 'A fast-growing low tree within a layered food forest.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-relationships', parentId: 'food-forest', title: 'Garden relationships', preview: 'Shade and mulch', body: 'Light shade and pruned biomass can support nearby garden plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-culinary', parentId: 'uses', title: 'Culinary', preview: 'Leaves and pods', body: 'Nutritious leaves and long seed pods are used as food.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'medicinal', parentId: 'uses', title: 'Medicinal', preview: 'Attributed traditions', body: 'Traditional uses must record their source and cultural context.', informationType: 'traditional_knowledge', evidenceStatus: 'needs_review', safetyNote: 'Traditional knowledge only; not medical advice.', status: 'published' },
+            { id: 'craft', parentId: 'uses', title: 'Craft', preview: 'Dry stems', body: 'Dry stems and other garden material can be used in simple crafts.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-seed', parentId: 'propagation', title: 'Seed', preview: 'Direct sowing', body: 'Seed and direct sowing are common starting methods.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-cuttings', parentId: 'propagation', title: 'Cuttings', preview: 'Vegetative start', body: 'Cuttings are another propagation pathway.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-botanical-name', parentId: 'scientific-information', title: 'Botanical name', preview: 'Moringa oleifera', body: 'Moringa oleifera', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
+            { id: 'moringa-family', parentId: 'scientific-information', title: 'Family', preview: 'Moringaceae', body: 'Moringaceae', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
+            { id: 'moringa-growth-form', parentId: 'scientific-information', title: 'Growth form', preview: 'Fast-growing small tree', body: 'A fast-growing small tree.', informationType: 'fact', evidenceStatus: 'sourced', status: 'published' },
+            { id: 'moringa-origin', parentId: 'historical-data', title: 'Origin', preview: 'South Asia', body: 'Documented origin in South Asia.', informationType: 'historical_record', evidenceStatus: 'sourced', status: 'published' },
+            { id: 'moringa-food-cultures', parentId: 'historical-data', title: 'Food cultures', preview: 'Tropical cultivation', body: 'Cultivated through many tropical regions.', informationType: 'historical_record', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-climate', parentId: 'cultivation', title: 'Climate', preview: 'Tropical and subtropical', body: 'Adapted to tropical and subtropical growing conditions.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-care', parentId: 'cultivation', title: 'Growing care', preview: 'Sun, drainage, pruning', body: 'Grow in full sun and free-draining soil, with regular pruning where appropriate.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' }
+        ])
+    })
+});
+const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA_PROFILE, {
+    id: 'moringa-oleifera',
     plantId: 'moringa-oleifera',
     name: 'Moringa Tree',
-    scientificName: 'Moringa oleifera',
+    commonName: 'Moringa Tree',
     title: 'Moringa Tree',
-    core: Object.freeze({ scientific: 'Moringa oleifera · Moringaceae', layer: 'Canopy / low tree layer' }),
-    categories: [
-        { id: 'food-forest', label: 'Food Forest', direction: 'top', children: [
-            { label: 'Canopy / low tree layer' },
-            { label: 'Light shade' },
-            { label: 'Mulch biomass' }
-        ] },
-        { id: 'uses', label: 'Uses', direction: 'upper-left', children: [
-            { label: 'Nutritious leaves' },
-            { label: 'Long seed pods' },
-            { label: 'Garden mulch' }
-        ] },
-        { id: 'medicinal', label: 'Medicinal', direction: 'lower-left', description: 'Traditional knowledge only; not medical advice.', children: [
-            { label: 'Traditional uses', description: 'Record source and cultural context; not medical advice.' }
-        ] },
-        { id: 'scientific-information', label: 'Scientific Information', direction: 'upper-right', children: [
-            { label: 'Botanical name', description: 'Moringa oleifera' },
-            { label: 'Family', description: 'Moringaceae' },
-            { label: 'Growth form', description: 'Fast-growing small tree' }
-        ] },
-        { id: 'historical-data', label: 'Historical Data', direction: 'lower-right', children: [
-            { label: 'Origin', description: 'South Asia' },
-            { label: 'Food cultures', description: 'Cultivated through tropical regions' }
-        ] },
-        { id: 'craft', label: 'Craft', direction: 'bottom', children: [
-            { label: 'Garden material' },
-            { label: 'Dry stems' }
-        ] }
-    ]
-});
+    scientificName: 'Moringa oleifera'
+})));
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
