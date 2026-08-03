@@ -1401,6 +1401,21 @@ export function demoPlacementPosition(matrix, ray, origin = null) {
     };
 }
 
+export function demoGroundBaseY(hitPoseMatrix, cameraMatrix, previousGroundY = null) {
+    const hitY = Number(hitPoseMatrix?.[13]);
+    const hitNormalY = Math.abs(Number(hitPoseMatrix?.[5]));
+    const cameraY = Number(cameraMatrix?.[13]);
+    const hasCameraY = Number.isFinite(cameraY);
+    const floorLikeHit = Number.isFinite(hitY)
+        && Number.isFinite(hitNormalY)
+        && hitNormalY >= .65
+        && (!hasCameraY || cameraY - hitY >= .7);
+    if (floorLikeHit) return hitY;
+    if (previousGroundY !== null && previousGroundY !== undefined && Number.isFinite(Number(previousGroundY))) return Number(previousGroundY);
+    if (hasCameraY) return cameraY - DEMO_STABLE_EYE_HEIGHT_METRES;
+    return 0;
+}
+
 function placementPosition() {
     return demoPlacementPosition(viewerMatrix, demoPointerWorldRay(), demoPointerWorldOrigin());
 }
