@@ -1,40 +1,135 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { pimKnowledgeNodes, pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../app/services/plantInformationMesh.js';
+import {
+    PIM_SPATIAL_CONFIG,
+    pimFocusedView,
+    pimKnowledgeNodes,
+    pimNodeHue,
+    pimRootPosition,
+    pimSpatialPanel,
+    pimSpatialPoseFromStored,
+    pimSpatialPoseFromViewer,
+    pimToggleExpandedPaths,
+    pimVisibleNodes
+} from '../app/services/plantInformationMesh.js';
+import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
+import { PIGEON_PEA_AR_KNOWLEDGE } from '../app/services/pigeonPeaExample.js';
 
-const knowledge = {
-    title: 'Pigeon Pea',
-    left: [
-        ['USES', 'Food · soil · biomass'],
-        ['ORIGIN', 'South Asia · tropical regions'],
-        ['STORY', 'Food · habitat · resilience']
-    ],
-    right: [
-        ['CLIMATE', 'Tropical · subtropical'],
-        ['SOIL', 'Nitrogen fixing · mulch'],
-        ['ROLE', 'Support species · living hedge']
-    ]
-};
-
-test('PIM creates stable root cells and deterministic child petals', () => {
-    const roots = pimKnowledgeNodes(knowledge);
-    assert.deepEqual(roots.map(node => node.path), ['left-0', 'left-1', 'left-2', 'right-0', 'right-1', 'right-2']);
-    assert.deepEqual(pimNodeChildren(roots[0]).map(node => node.label), ['USES 1', 'USES 2', 'USES 3']);
-    const firstOpen = pimVisibleNodes(knowledge, ['left-0']);
-    const secondOpen = pimVisibleNodes(knowledge, ['left-0']);
-    assert.deepEqual(firstOpen.map(node => node.path), secondOpen.map(node => node.path));
-    assert.ok(firstOpen.some(node => node.path === 'left-0.1'));
-    assert.ok(!firstOpen.some(node => node.path === 'right-0.1'));
+test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable directions', () => {
+    const roots = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE);
+    assert.deepEqual(roots.map(node => node.label), [
+        'Food Forest',
+        'Uses',
+        'Medicinal',
+        'Scientific Information',
+        'Historical Data',
+        'Craft'
+    ]);
+    assert.deepEqual(roots.map(node => node.direction), [
+        'top',
+        'upper-left',
+        'lower-left',
+        'upper-right',
+        'lower-right',
+        'bottom'
+    ]);
+    assert.deepEqual(
+        roots.map(node => ({ label: node.label, ...pimRootPosition(node).axial })),
+        [
+            { label: 'Food Forest', q: 0, r: -1 },
+            { label: 'Uses', q: -1, r: 0 },
+            { label: 'Medicinal', q: -1, r: 1 },
+            { label: 'Scientific Information', q: 1, r: -1 },
+            { label: 'Historical Data', q: 1, r: 0 },
+            { label: 'Craft', q: 0, r: 1 }
+        ]
+    );
 });
 
-test('PIM expansion preserves independent branches and collapses descendants only', () => {
-    let expanded = pimToggleExpandedPaths([], 'left-0');
-    expanded = pimToggleExpandedPaths(expanded, 'right-0');
-    assert.deepEqual(new Set(expanded), new Set(['left-0', 'right-0']));
-    expanded = pimToggleExpandedPaths(expanded, 'left-0.1');
-    assert.ok(expanded.includes('right-0'));
-    expanded = pimToggleExpandedPaths(expanded, 'left-0');
-    assert.ok(!expanded.some(path => path === 'left-0' || path.startsWith('left-0.')));
-    assert.ok(expanded.includes('right-0'));
+test('PIM keeps one main category open at a time and closes it on a second press', () => {
+    let expanded = pimToggleExpandedPaths([], 'food-forest');
+    assert.deepEqual(expanded, ['food-forest']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses');
+    assert.deepEqual(expanded, ['uses']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses.1');
+    assert.deepEqual(expanded, ['uses', 'uses.1']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses.1.1');
+    assert.deepEqual(expanded, ['uses', 'uses.1', 'uses.1.1']);
+    expanded = pimToggleExpandedPaths(expanded, 'uses');
+    assert.deepEqual(expanded, []);
+});
+
+test('PIM grows child cells outward from the selected category with stable family colour', () => {
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest']);
+    const root = nodes.find(node => node.path === 'food-forest');
+    const children = nodes.filter(node => node.parentPath === 'food-forest');
+    assert.equal(children.length, 5);
+    assert.ok(children.every(node => node.position.y < root.position.y));
+    assert.ok(children.every(node => pimNodeHue(node) === pimNodeHue(root)));
+    assert.ok(children.every(node => Math.hypot(
+        node.position.x - root.position.x,
+        node.position.y - root.position.y
+    ) > 10));
+    assert.equal(pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []).length, 6);
+});
+
+test('PIM recentres each deeper generation as a clean recursive honeycomb', () => {
+    const focus = pimFocusedView(PIGEON_PEA_AR_KNOWLEDGE, ['uses', 'uses.1']);
+    assert.equal(focus.focusNode.label, 'Edible seeds');
+    assert.deepEqual(focus.nodes.map(node => node.label), ['Harvest', 'Processing', 'Seed saving']);
+    assert.ok(focus.nodes.every(node => node.parentPosition.x === 50 && node.parentPosition.y === 50));
+    assert.deepEqual(focus.trail.map(node => node.label), ['Uses', 'Edible seeds']);
+});
+
+test('PIM spatial pose is captured once, world-sized and JSON serializable', () => {
+    const viewerMatrix = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 1.6, 0, 1
+    ]);
+    const pose = pimSpatialPoseFromViewer(viewerMatrix, { plantId: 'pigeon-pea', anchorId: 'garden-totem' });
+    assert.equal(pose.position.x, 0);
+    assert.equal(pose.position.z, -PIM_SPATIAL_CONFIG.placementDistanceMetres);
+    assert.ok(pose.position.y < 1.6);
+    assert.equal(pose.plantId, 'pigeon-pea');
+    assert.equal(pose.anchorId, 'garden-totem');
+    const restoredPose = JSON.parse(JSON.stringify(pose));
+    assert.equal(restoredPose.position.z, pose.position.z);
+    assert.equal(restoredPose.rotation.w, pose.rotation.w);
+    assert.equal(restoredPose.plantId, pose.plantId);
+    assert.equal(restoredPose.anchorId, pose.anchorId);
+    const panel = pimSpatialPanel(pose);
+    assert.equal(panel.width, PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres);
+    assert.equal(panel.height, PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres);
+    assert.equal(PIM_SPATIAL_CONFIG.cellWidthMetres, .24);
+    assert.equal(PIM_SPATIAL_CONFIG.colliderScale, 1.2);
+
+    const markerPosition = { x: 2, y: .4, z: -3 };
+    const stored = {
+        position: { x: -.5, y: 1, z: 1.5 },
+        rotation: pose.rotation,
+        scale: 1,
+        plant_id: 'pigeon-pea',
+        anchor_id: 'pigeon-marker',
+        coordinate_space: 'marker-local'
+    };
+    const reopened = pimSpatialPoseFromStored(stored, markerPosition);
+    assert.deepEqual(reopened.position, { x: 1.5, y: 1.4, z: -1.5 });
+    assert.equal(reopened.plantId, 'pigeon-pea');
+    assert.equal(reopened.anchorId, 'pigeon-marker');
+});
+
+test('PIM shared hit testing exposes large cells and explicit recenter', () => {
+    const foodForest = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE)[0];
+    const point = pimRootPosition(foodForest);
+    assert.equal(pimHoneycombTargetAtPercent(
+        PIGEON_PEA_AR_KNOWLEDGE,
+        [],
+        point.x,
+        point.y
+    ).path, 'food-forest');
+    assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 50, 94).pimRecenter, true);
+    assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 2, 2), null);
 });

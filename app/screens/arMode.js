@@ -24,7 +24,8 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimNodeChildren, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
@@ -91,6 +92,8 @@ let questSpatialDashboardPanel = null;
 let questSpatialDashboardHit = null;
 let questSpatialDashboardScrollCooldownUntil = 0;
 let questNoteTextures = new Map();
+let spatialPimTextures = new Map();
+let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -420,18 +423,41 @@ function creatorPlantKnowledge(record) {
     const summary = (...values) => values.find(value => String(value || '').trim()) || 'Add in Web Mode';
     const scientific = summary(profile.scientific_name);
     const layer = summary(profile.layer, profile.plant_type);
+    const fact = (id, label, description = '') => ({ id, label, description });
+    const category = (id, label, direction, description, children) => ({ id, label, direction, description, children });
+    const savedCategories = Array.isArray(profile.pim_categories) ? profile.pim_categories : null;
     return {
+        id: record.marker.plantId || record.marker.id,
+        plantId: record.marker.plantId || record.marker.id,
+        name: profile.common_name || record.marker.name || 'Plant Profile',
+        scientificName: scientific,
         title: profile.common_name || record.marker.name || 'Plant Profile',
         core: { scientific, layer },
-        left: [
-            ['USES', summary(profile.uses, profile.overview)],
-            ['RELATIONSHIPS', summary(profile.relationships, profile.companions, profile.attribute_chain_count ? `${profile.attribute_chain_count} linked attributes` : '')],
-            ['ORIGIN', summary(profile.origin, profile.propagation)]
-        ],
-        right: [
-            ['BIOLOGY', summary(profile.family, profile.plant_type)],
-            ['CLIMATE', summary(profile.climate, profile.growing_conditions, profile.care)],
-            ['GARDEN ROLE', summary(profile.role, profile.function, profile.companions)]
+        categories: savedCategories || [
+            category('food-forest', 'Food Forest', 'top', 'Roles in a layered food forest.', [
+                fact('forest-layer', layer === 'Add in Web Mode' ? 'Add forest layer in Web Mode' : layer, 'Forest layer'),
+                fact('garden-role', 'Garden role', summary(profile.role, profile.function, profile.overview)),
+                fact('relationships', 'Relationships', summary(profile.relationships, profile.companions))
+            ]),
+            category('uses', 'Uses', 'upper-left', 'Food and practical uses.', [
+                fact('uses-overview', 'Uses overview', summary(profile.uses, profile.edible_uses, profile.overview))
+            ]),
+            category('medicinal', 'Medicinal', 'lower-left', 'Traditional knowledge only; not medical advice.', [
+                fact('traditional-knowledge', 'Traditional knowledge', summary(profile.medicinal, profile.medicinal_uses, 'Add traditional knowledge in Web Mode'))
+            ]),
+            category('scientific-information', 'Scientific Information', 'upper-right', 'Botany and growth form.', [
+                fact('botanical-name', 'Botanical name', scientific),
+                fact('family', 'Family', summary(profile.family)),
+                fact('growth-form', 'Growth form', summary(profile.plant_type, profile.layer)),
+                fact('climate', 'Climate', summary(profile.climate, profile.growing_conditions, profile.care))
+            ]),
+            category('historical-data', 'Historical Data', 'lower-right', 'Origin and history.', [
+                fact('origin-history', 'Origin and history', summary(profile.origin, profile.history))
+            ]),
+            category('craft', 'Craft', 'bottom', 'Material and making knowledge.', [
+                fact('craft-uses', 'Craft uses', summary(profile.craft, profile.material_uses, 'Add craft knowledge in Web Mode')),
+                fact('propagation', 'Propagation', summary(profile.propagation))
+            ])
         ]
     };
 }
@@ -441,17 +467,25 @@ function creatorPlantKnowledgeMarkup(record) {
     const compactLabel = label => ({ RELATIONSHIPS: 'LINKS' })[String(label).toUpperCase()] || label;
     const expandedPaths = record.pimExpandedPaths || [];
     const expanded = new Set(expandedPaths);
-    const nodes = pimVisibleNodes(knowledge, expandedPaths);
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="M${node.parentPosition.x} ${node.parentPosition.y} L${node.position.x} ${node.position.y}"/>`).join('');
+    const focus = pimFocusedView(knowledge, expandedPaths);
+    const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
     const cells = nodes.map(node => {
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
-        const detailsVisible = node.depth > 0 || open;
-        const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.62, 1 - node.depth * .14)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(compactLabel(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${escapeHtml(compactLabel(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
+        const detailsVisible = node.depth > 0;
+        const visualDepth = focus ? 1 : node.depth;
+        const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${escapeHtml(node.path)}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(compactLabel(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${escapeHtml(compactLabel(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
     }).join('');
-    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}<span class="plant-knowledge-core"><small>PIM</small><strong>${escapeHtml(knowledge.title)}</strong><i>${escapeHtml(knowledge.core.scientific)}</i><em>${escapeHtml(knowledge.core.layer)}</em></span></span>`;
+    const focusTrail = focus?.trail.map(node => compactLabel(node.label)).join(' › ') || '';
+    const back = focus ? `<button type="button" class="plant-knowledge-back" data-ar-pim-back="${escapeHtml(focus.focusNode.path)}" aria-label="Return from ${escapeHtml(compactLabel(focus.focusNode.label))} to the previous PIM bloom">← ${escapeHtml(knowledge.title)} · ${escapeHtml(focusTrail)}</button>` : '';
+    const core = focus
+        ? `<span class="plant-knowledge-core is-fractal-focus"><strong>${escapeHtml(compactLabel(focus.focusNode.label))}</strong><i>${escapeHtml(focus.focusNode.value)}</i></span>`
+        : `<span class="plant-knowledge-core"><strong>${escapeHtml(knowledge.title)}</strong></span>`;
+    const recenter = '<button type="button" class="plant-knowledge-recenter" data-ar-pim-recenter aria-label="Recenter this Plant Information Mesh in front of me">&#8595;</button>';
+    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}${recenter}</span>`;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -858,7 +892,7 @@ async function recenterActiveArea() {
             record.siteId,
             record.areaId,
             record.marker.id,
-            spatialAnchor(record.position, operation, record.rotationDegrees)
+            spatialAnchorForRecord(record, operation)
         )));
         if (checkpointRecord) {
             await saveMarkerAnchor(
@@ -866,7 +900,7 @@ async function recenterActiveArea() {
                 checkpointRecord.siteId,
                 checkpointRecord.areaId,
                 checkpointRecord.marker.id,
-                spatialAnchor(checkpointRecord.position, operation, checkpointRecord.rotationDegrees)
+                spatialAnchorForRecord(checkpointRecord, operation)
             );
         }
         if (!isArOperationCurrent(operation)) return false;
@@ -1010,6 +1044,7 @@ function controllerInputSource() {
         || trackedControllers.find(source => source.gamepad)
         || trackedControllers[0]
         || sources.find(source => source.hand)
+        || sources.find(source => source.targetRayMode === 'gaze')
         || null;
     activateQuestHeadsetFromInput(selectedSource);
     return selectedSource;
@@ -1388,6 +1423,7 @@ function controllerLaserSubjects() {
 function controllerPointerEnd() {
     const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     const beltHit = controllerQuestBeltSurfaceHit();
+    const pimHit = spatialPimTargetAtAim({ updateHover: false })?.hit || null;
     const dashboardHit = questSpatialWebVisible && questSpatialDashboardPanel
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror || {})
         : null;
@@ -1400,6 +1436,7 @@ function controllerPointerEnd() {
                 spatialEnd.z - latestControllerRay.origin.z
             )
         },
+        pimHit,
         beltHit,
         dashboardHit
     ].filter(candidate => candidate && candidate.distance <= XR_LASER_POINTER_CONFIG.length)
@@ -1519,6 +1556,8 @@ function activateControllerSelection() {
         void quickPlace(readyPlacementType);
         return true;
     }
+    const pimTarget = spatialPimTargetAtAim({ updateHover: false });
+    if (pimTarget) return activateSpatialPimTarget(pimTarget);
     const dashboardTarget = controllerSpatialDashboardAtAim();
     if (dashboardTarget) return activateQuestSpatialDashboard(dashboardTarget);
     const specialTarget = controllerSpecialPaletteActionAtAim();
@@ -1532,6 +1571,17 @@ function activateControllerSelection() {
     }
     const markerTarget = controllerMarkerAtAim();
     if (markerTarget) {
+        if (interactionMode === 'view') {
+            const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(markerTarget.marker.id)}"]`);
+            if (element) {
+                beginMarkerInteraction(markerTarget, {
+                    preventDefault() {},
+                    stopPropagation() {},
+                    currentTarget: element
+                }, { element });
+                return true;
+            }
+        }
         openMarkerContextToolbar(markerTarget, true);
         return true;
     }
@@ -1599,6 +1649,12 @@ function pollHandPinch() {
             handPinchActive = pinching;
             return;
         }
+        const pimTarget = spatialPimTargetAtAim({ updateHover: false });
+        if (pimTarget) {
+            activateSpatialPimTarget(pimTarget);
+            handPinchActive = pinching;
+            return;
+        }
         const dashboardTarget = controllerSpatialDashboardAtAim();
         if (dashboardTarget) {
             activateQuestSpatialDashboard(dashboardTarget);
@@ -1614,6 +1670,17 @@ function pollHandPinch() {
         const beltTarget = controllerBeltActionAtAim();
         const beltAction = beltTarget && questBeltActionElements()[beltTarget.index];
         if (beltAction) dispatchControllerAction(beltAction);
+        else if (interactionMode === 'view') {
+            const target = controllerMarkerAtAim();
+            const element = target && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(target.marker.id)}"]`);
+            if (target && element) {
+                beginMarkerInteraction(target, {
+                    preventDefault() {},
+                    stopPropagation() {},
+                    currentTarget: element
+                }, { element });
+            }
+        }
         else if (interactionMode !== 'view') {
             const target = controllerMarkerAtAim();
             if (target) {
@@ -1627,7 +1694,8 @@ function pollHandPinch() {
 }
 
 function drawControllerPointer(view) {
-    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !controllerPointerRenderer) return;
+    const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
+    if (creatorInputMode !== 'controller' || (interactionMode === 'view' && !viewingPim) || !latestControllerRay || !controllerPointerRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
@@ -2436,6 +2504,193 @@ function drawQuestSpatialNote(view, record) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
+function invalidateSpatialPimTexture(record) {
+    if (!record?.marker?.id) return;
+    const cached = spatialPimTextures.get(record.marker.id);
+    if (cached?.texture) gl?.deleteTexture(cached.texture);
+    spatialPimTextures.delete(record.marker.id);
+}
+
+function ensureSpatialPimPose(record, force = false) {
+    if (!record || !latestViewerMatrix) return null;
+    if (!record.pimSpatialPose && !force && record.pimStoredPose) {
+        record.pimSpatialPose = pimSpatialPoseFromStored(record.pimStoredPose, record.position);
+    }
+    if (!record.pimSpatialPose || force) {
+        record.pimSpatialPose = pimSpatialPoseFromViewer(latestViewerMatrix, {
+            plantId: record.marker.plantId || record.marker.id,
+            anchorId: record.marker.id,
+            coordinateSpace: 'session-local'
+        });
+    }
+    return record.pimSpatialPose;
+}
+
+function pimPoseAnchorPayload(record) {
+    if (!record?.pimSpatialPose) return record?.pimStoredPose || null;
+    const markerPosition = record.position || { x: 0, y: 0, z: 0 };
+    return {
+        position: {
+            x: roundCoordinate(record.pimSpatialPose.position.x - markerPosition.x),
+            y: roundCoordinate(record.pimSpatialPose.position.y - markerPosition.y),
+            z: roundCoordinate(record.pimSpatialPose.position.z - markerPosition.z)
+        },
+        rotation: record.pimSpatialPose.rotation,
+        scale: record.pimSpatialPose.scale,
+        plant_id: record.pimSpatialPose.plantId,
+        anchor_id: record.marker.id,
+        coordinate_space: 'marker-local'
+    };
+}
+
+function spatialAnchorForRecord(record, context = null) {
+    const anchor = spatialAnchor(record.position, context, record.rotationDegrees);
+    const pimPose = pimPoseAnchorPayload(record);
+    return pimPose ? { ...anchor, pim_pose: pimPose } : anchor;
+}
+
+function createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress) {
+    const textureCanvas = document.createElement('canvas');
+    textureCanvas.width = PIM_TEXTURE_SIZE.width;
+    textureCanvas.height = PIM_TEXTURE_SIZE.height;
+    const context = textureCanvas.getContext('2d', { alpha: true });
+    if (!context) return null;
+    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, record.pimExpandedPaths || [], {
+        hoverPath,
+        bloomProgress
+    });
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+    return texture;
+}
+
+function ensureSpatialPimTexture(record) {
+    if (!gl || !record?.profileExpanded) return null;
+    const knowledge = creatorPlantKnowledge(record);
+    const elapsed = record.pimBloomStarted ? performance.now() - record.pimBloomStarted : PIM_BLOOM_DURATION_MS;
+    const bloomProgress = Math.max(0, Math.min(1, elapsed / PIM_BLOOM_DURATION_MS));
+    if (bloomProgress >= 1) record.pimBloomStarted = 0;
+    const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
+    const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
+    const key = JSON.stringify([record.pimExpandedPaths || [], hoverPath, animationFrame, knowledge.categories]);
+    const cached = spatialPimTextures.get(record.marker.id);
+    if (cached?.key === key) return cached.texture;
+    if (cached?.texture) gl.deleteTexture(cached.texture);
+    const texture = createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress);
+    if (texture) spatialPimTextures.set(record.marker.id, { key, texture });
+    return texture;
+}
+
+function spatialPimTargetAtAim({ updateHover = true } = {}) {
+    if (!questBeltUsesSpatialRenderer() || !latestControllerRay) return null;
+    const candidate = renderableAreaMarkers()
+        .filter(record => record.marker.type === 'plant' && record.profileExpanded)
+        .map(record => {
+            const pose = ensureSpatialPimPose(record);
+            const panel = pimSpatialPanel(pose);
+            const hit = spatialDashboardRayHit(latestControllerRay, panel, PIM_TEXTURE_SIZE);
+            if (!hit) return null;
+            const target = pimHoneycombTargetAtPercent(
+                creatorPlantKnowledge(record),
+                record.pimExpandedPaths || [],
+                hit.u * 100,
+                hit.v * 100
+            );
+            return target ? { record, target, hit, panel } : null;
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.hit.distance - right.hit.distance)[0] || null;
+    if (updateHover) {
+        const next = {
+            recordId: candidate?.record?.marker?.id || '',
+            path: candidate?.target?.path || (candidate?.target?.pimRecenter ? 'recenter' : '')
+        };
+        if (next.recordId !== spatialPimHover.recordId || next.path !== spatialPimHover.path) {
+            const previous = sessionMarkers.find(record => record.marker.id === spatialPimHover.recordId);
+            if (previous) invalidateSpatialPimTexture(previous);
+            spatialPimHover = next;
+            if (candidate?.record) invalidateSpatialPimTexture(candidate.record);
+        }
+    }
+    return candidate;
+}
+
+function persistSpatialPimPose(record) {
+    if (!record?.pimSpatialPose) return;
+    const operation = captureArOperationContext();
+    record.pimStoredPose = pimPoseAnchorPayload(record);
+    const anchor = spatialAnchorForRecord(record, operation);
+    void saveMarkerAnchor(operation.projectId, record.siteId, record.areaId, record.marker.id, anchor)
+        .catch(error => setPlacementStatus(`PIM recentered for this visit, but its pose could not be saved: ${error.message}`));
+}
+
+function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
+    if (!candidate) return false;
+    const { record, target } = candidate;
+    if (target.pimRecenter) {
+        ensureSpatialPimPose(record, true);
+        invalidateSpatialPimTexture(record);
+        persistSpatialPimPose(record);
+        setPlacementStatus(`${record.marker.name} PIM recentered and world-locked in front of you.`);
+        return true;
+    }
+    if (target.pimBack) {
+        record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, target.path);
+        record.pimBloomStarted = performance.now();
+        invalidateSpatialPimTexture(record);
+        renderSessionMarkers();
+        setPlacementStatus('Returned to the previous PIM honeycomb.');
+        return true;
+    }
+    const children = pimNodeChildren(target);
+    if (!children.length) {
+        setPlacementStatus(`${target.label}: ${target.value || 'Information cell'}`);
+        return true;
+    }
+    const wasOpen = record.pimExpandedPaths?.includes(target.path);
+    record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, target.path);
+    record.pimBloomStarted = performance.now();
+    invalidateSpatialPimTexture(record);
+    renderSessionMarkers();
+    setPlacementStatus(wasOpen ? `${target.label} collapsed.` : `${target.label} opened outward.`);
+    return true;
+}
+
+function drawSpatialPlantProfiles(view) {
+    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    const records = renderableAreaMarkers().filter(record => record.marker.type === 'plant' && record.profileExpanded);
+    if (!records.length) return;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.useProgram(homeSignProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
+    const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    records.forEach(record => {
+        const panel = pimSpatialPanel(ensureSpatialPimPose(record));
+        const texture = ensureSpatialPimTexture(record);
+        const model = spatialDashboardPanelMatrix(panel);
+        if (!texture || !model) return;
+        const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
+        gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    });
+    gl.depthMask(true);
+}
+
 function questBeltActiveIndex() {
     if (questBeltHoverIndex >= 0) return questBeltHoverIndex;
     if (controllerMenuActive) return Math.max(0, Math.min(QUEST_SPATIAL_BELT_ACTIONS.length - 1, controllerActionIndex));
@@ -3125,6 +3380,25 @@ function renderSessionMarkers() {
         profilePanel?.addEventListener('pointerdown', event => {
             event.stopPropagation();
         });
+        profilePanel?.querySelector('[data-ar-pim-back]')?.addEventListener('click', event => {
+            event.stopPropagation();
+            const focusPath = event.currentTarget.dataset.arPimBack;
+            record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, focusPath);
+            record.pimBloomStarted = performance.now();
+            invalidateSpatialPimTexture(record);
+            renderSessionMarkers();
+            setPlacementStatus('Returned to the previous PIM bloom.');
+        });
+        profilePanel?.querySelector('[data-ar-pim-recenter]')?.addEventListener('click', event => {
+            event.stopPropagation();
+            record.pimSpatialPose = pimSpatialPoseFromViewer(latestViewerMatrix, {
+                plantId: record.marker.plantId || record.marker.id,
+                anchorId: record.checkpointId || activeCheckpointId || ''
+            });
+            invalidateSpatialPimTexture(record);
+            persistSpatialPimPose(record);
+            setPlacementStatus(`${record.marker.name} PIM recentered and world-locked in front of you.`);
+        });
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-pim-node]`).forEach(cell => {
             cell.addEventListener('pointerdown', event => {
                 event.stopPropagation();
@@ -3132,9 +3406,16 @@ function renderSessionMarkers() {
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 const nodePath = cell.dataset.pimNode;
+                const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
+                if (node && !pimNodeChildren(node).length) {
+                    setPlacementStatus(`${node.label}: ${node.value || 'Information cell'}`);
+                    return;
+                }
                 const wasOpen = record.pimExpandedPaths?.includes(nodePath);
                 const label = cell.querySelector('b')?.textContent || 'Cell';
                 record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, nodePath);
+                record.pimBloomStarted = performance.now();
+                invalidateSpatialPimTexture(record);
                 renderSessionMarkers();
                 setPlacementStatus(wasOpen ? `${label} collapsed.` : `${label} opened into its information petals.`);
             });
@@ -3278,6 +3559,13 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
             });
             record.profileExpanded = opening;
             record.infoVisible = record.profileExpanded;
+            if (opening) {
+                ensureSpatialPimPose(record, true);
+                record.pimExpandedPaths ||= [];
+                record.pimBloomStarted = performance.now();
+            } else {
+                invalidateSpatialPimTexture(record);
+            }
         } else {
             record.infoVisible = !record.infoVisible;
         }
@@ -3406,7 +3694,7 @@ async function finishMarkerDrag(event) {
     updateInteractionControls();
     setPlacementStatus(`Saving ${state.record.marker.name}… Move mode remains on.`);
     try {
-        await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchor(state.record.position, operation, state.record.rotationDegrees));
+        await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchorForRecord(state.record, operation));
         if (!isArOperationCurrent(operation)) return;
         setPlacementStatus(`${state.record.marker.name} moved. Select another glowing element, turn off Move, or choose View.`);
     } catch (error) {
@@ -3518,6 +3806,8 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             plantProfile,
             profileExpanded: false,
             pimExpandedPaths: [],
+            pimSpatialPose: null,
+            pimStoredPose: anchor?.pim_pose || null,
             position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: 0 },
             anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             siteId,
@@ -3827,7 +4117,8 @@ async function quickPlace(type) {
                         appearance: { ...(bagRecord.marker.appearance || {}), ...placementAppearance }
                     })
                     : bagRecord.marker;
-                const bagAnchor = spatialAnchor(position, operation);
+                const bagPlacementRecord = { ...bagRecord, marker: updatedBagMarker, position };
+                const bagAnchor = spatialAnchorForRecord(bagPlacementRecord, operation);
                 if (bagRecord.areaId !== operation.areaId) {
                     bagAnchor.coordinate_space = 'session-local';
                     bagAnchor.checkpoint_id = '';
@@ -4104,6 +4395,7 @@ function cleanup() {
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     questSpecialPaletteTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     questNoteTextures.forEach(entry => entry.texture && gl?.deleteTexture(entry.texture));
+    spatialPimTextures.forEach(entry => entry.texture && gl?.deleteTexture(entry.texture));
     if (gl && homeSignBuffer) gl.deleteBuffer(homeSignBuffer);
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
@@ -4133,6 +4425,8 @@ function cleanup() {
     questSpatialDashboardHit = null;
     questSpatialDashboardScrollCooldownUntil = 0;
     questNoteTextures = new Map();
+    spatialPimTextures = new Map();
+    spatialPimHover = { recordId: '', path: '' };
     placementArmedAt = 0;
     placementInProgress = false;
     activePlacementOperation = null;
@@ -4391,9 +4685,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             pollControllerInput();
             updateControllerRay(frame);
             const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
-            const specialPaletteTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
-            const beltTarget = !dashboardTarget && !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
-            if (!dashboardTarget && !specialPaletteTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            const pimTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? spatialPimTargetAtAim() : null;
+            const specialPaletteTarget = !dashboardTarget && !pimTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
+            const beltTarget = !dashboardTarget && !pimTarget && !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
+            if (!dashboardTarget && !pimTarget && !specialPaletteTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
             pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
@@ -4420,6 +4715,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
                 drawSpatialMarkers(view);
+                drawSpatialPlantProfiles(view);
                 drawControllerPointerContact(view);
             }
             gl.disable(gl.SCISSOR_TEST);
@@ -4443,6 +4739,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         });
         launchedSession.addEventListener('selectstart', event => {
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
+            if (interactionMode === 'view') return;
             if (controllerSpatialDashboardAtAim()) return;
             if (controllerSpecialPaletteActionAtAim()) return;
             if (controllerBeltActionAtAim()) return;

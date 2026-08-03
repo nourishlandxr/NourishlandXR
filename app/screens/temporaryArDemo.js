@@ -15,7 +15,8 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { pimConnectorPath, pimNodeChildren, pimNodeHue, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 
 let appRoot = null;
 let session = null;
@@ -77,7 +78,12 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardPosition: [0, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
-const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({ x: 2.4, y: 3.65 });
+// The shared demo quad is .4 m by .16 m before model scaling. These values
+// produce the configured 1.44 m by 1.08 m transparent PIM interaction wall.
+const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
+    x: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4,
+    y: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16
+});
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
     'Augmented reality(AR) & Mixed reality(XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
@@ -148,17 +154,39 @@ const DEMO_CONTENT = Object.freeze({
     }
 });
 const MORINGA_KNOWLEDGE = Object.freeze({
+    id: 'moringa',
+    plantId: 'moringa-oleifera',
+    name: 'Moringa Tree',
+    scientificName: 'Moringa oleifera',
     title: 'Moringa Tree',
     core: Object.freeze({ scientific: 'Moringa oleifera · Moringaceae', layer: 'Canopy / low tree layer' }),
-    left: [
-        ['USES', 'Nutritious leaves · shade · mulch'],
-        ['GROWTH', 'Warm climate · sun · free drainage'],
-        ['FRUIT & FLOWER', 'White flowers · long seed pods']
-    ],
-    right: [
-        ['ORIGIN', 'South Asia · tropical regions'],
-        ['SOIL & WATER', 'Free drainage · moderate water'],
-        ['STORY', 'Food cultures · medicine · resilience']
+    categories: [
+        { id: 'food-forest', label: 'Food Forest', direction: 'top', children: [
+            { label: 'Canopy / low tree layer' },
+            { label: 'Light shade' },
+            { label: 'Mulch biomass' }
+        ] },
+        { id: 'uses', label: 'Uses', direction: 'upper-left', children: [
+            { label: 'Nutritious leaves' },
+            { label: 'Long seed pods' },
+            { label: 'Garden mulch' }
+        ] },
+        { id: 'medicinal', label: 'Medicinal', direction: 'lower-left', description: 'Traditional knowledge only; not medical advice.', children: [
+            { label: 'Traditional uses', description: 'Record source and cultural context; not medical advice.' }
+        ] },
+        { id: 'scientific-information', label: 'Scientific Information', direction: 'upper-right', children: [
+            { label: 'Botanical name', description: 'Moringa oleifera' },
+            { label: 'Family', description: 'Moringaceae' },
+            { label: 'Growth form', description: 'Fast-growing small tree' }
+        ] },
+        { id: 'historical-data', label: 'Historical Data', direction: 'lower-right', children: [
+            { label: 'Origin', description: 'South Asia' },
+            { label: 'Food cultures', description: 'Cultivated through tropical regions' }
+        ] },
+        { id: 'craft', label: 'Craft', direction: 'bottom', children: [
+            { label: 'Garden material' },
+            { label: 'Dry stems' }
+        ] }
     ]
 });
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
@@ -852,14 +880,14 @@ function tetherMetrics(offset) {
 function clampPlantPanelOffset(anchor, offset) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileWidth = Math.min(viewportWidth * 0.98, 960);
+    const profileWidth = Math.min(viewportWidth - 24, 960);
     const profileHeight = Math.min(viewportHeight * 0.74, 680);
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
-    const minimumX = 16 + profileWidth / 2 - anchorX;
-    const maximumX = viewportWidth - 16 - profileWidth / 2 - anchorX;
-    const minimumY = 16 + profileHeight / 2 - anchorY;
-    const maximumY = viewportHeight - 16 - profileHeight / 2 - anchorY;
+    const minimumX = 12 + profileWidth / 2 - anchorX;
+    const maximumX = viewportWidth - 12 - profileWidth / 2 - anchorX;
+    const minimumY = 12 + profileHeight / 2 - anchorY;
+    const maximumY = viewportHeight - 12 - profileHeight / 2 - anchorY;
     return {
         x: Math.min(maximumX, Math.max(minimumX, offset.x)),
         y: Math.min(maximumY, Math.max(minimumY, offset.y))
@@ -878,7 +906,7 @@ function defaultPlantPanelOffset(anchor) {
     const belowBottom = anchorY + belowOffset + profileHeight / 2;
     return clampPlantPanelOffset(anchor, {
         x: 0,
-        y: aboveTop >= 16 || belowBottom > viewportHeight - 16 ? aboveOffset : belowOffset
+        y: aboveTop >= 12 || belowBottom > viewportHeight - 12 ? aboveOffset : belowOffset
     });
 }
 
@@ -921,6 +949,14 @@ function toggleDemoPlantProfile(record) {
         record.demoActiveBranch = '';
         record.demoExpandedBranches = [];
         record.demoProfileInteracted = false;
+        record.demoProfileInteractionCount = 0;
+        if (viewerMatrix) {
+            record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
+                plantId: record.id || record.name,
+                anchorId: record.demoAnchorId || ''
+            });
+            record.informationPosition = record.informationPose?.position || null;
+        }
     }
     refreshDemoRecord(record);
     if (record.demoExpanded && record.awaitingProfileReveal) {
@@ -950,41 +986,64 @@ function selectDemoProfileCell() {
     // visible petal even though the profile itself was deliberately selected.
     // Fall back to the first visible root so the tutorial can demonstrate the
     // current expanding-cell PIM without trapping the user in this stage.
-    const node = demoPimNodeAtPointer(record) || pimVisibleNodes(knowledgeFor(record), record.demoExpandedBranches)[0];
+    const knowledge = knowledgeFor(record);
+    const focus = pimFocusedView(knowledge, record.demoExpandedBranches);
+    const node = demoPimNodeAtPointer(record) || (focus?.nodes || pimVisibleNodes(knowledge, record.demoExpandedBranches))[0];
     if (!node) return true;
+    if (node.pimRecenter) {
+        record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
+            plantId: record.id || record.name,
+            anchorId: record.demoAnchorId || ''
+        });
+        record.informationPosition = record.informationPose?.position || record.informationPosition;
+        setGuide(`${record.name || 'Plant'} PIM recentered and world-locked in front of you.`);
+        return true;
+    }
+    if (node.pimBack) {
+        record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+        record.demoActiveBranch = node.parentPath === 'core' ? '' : node.parentPath;
+        refreshDemoRecord(record);
+        setGuide(`Returned to the previous ${node.label} bloom.`);
+        return true;
+    }
     record.demoActiveBranch = node.path;
     record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+    record.pimBloomStarted = performance.now();
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
-    setGuide(record.demoExpandedBranches.includes(node.path)
-        ? `${node.label} opened into its connected information cells.`
+    const opened = record.demoExpandedBranches.includes(node.path);
+    const remaining = advanceAfterDemoProfileInteraction(record);
+    setGuide(opened
+        ? `${node.label} opened into its connected information cells.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`
         : `${node.label} collapsed.`);
-    advanceAfterDemoProfileInteraction(record);
     return true;
 }
 
 function advanceAfterDemoProfileInteraction(record) {
-    if (!record || record.demoProfileInteracted) return;
+    if (!record || record.demoProfileInteracted) return 0;
+    const opened = record.demoExpandedBranches?.includes(record.demoActiveBranch);
+    const explorationGoal = record.tutorialStage === 'plant' ? 3 : 2;
+    if (opened) record.demoProfileInteractionCount = (Number(record.demoProfileInteractionCount) || 0) + 1;
+    const remaining = Math.max(0, explorationGoal - (Number(record.demoProfileInteractionCount) || 0));
+    if (remaining) return remaining;
     record.demoProfileInteracted = true;
     if (record.tutorialStage === 'plant2') showDemoAction('note');
     else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+    return 0;
 }
 
 function demoPimNodeAtPointer(record) {
     const origin = demoPointerWorldOrigin();
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
-    const position = record.informationPosition || (record.informationPosition = plantInformationPosition(record));
-    const camera = viewerMatrix || new Float32Array(16);
-    let towardX = camera[12] - position.x;
-    let towardZ = camera[14] - position.z;
-    const horizontalLength = Math.hypot(towardX, towardZ) || 1;
-    towardX /= horizontalLength;
-    towardZ /= horizontalLength;
-    const right = { x: towardZ, z: -towardX };
-    const normal = { x: towardX, z: towardZ };
-    const numerator = (position.x - origin.x) * normal.x + (position.z - origin.z) * normal.z;
-    const denominator = direction.x * normal.x + direction.z * normal.z;
+    record.informationPose ||= pimSpatialPoseFromViewer(viewerMatrix, { plantId: record.id || record.name });
+    const panel = pimSpatialPanel(record.informationPose);
+    if (!panel) return null;
+    record.informationPosition = panel.center;
+    const numerator = (panel.center.x - origin.x) * panel.normal.x
+        + (panel.center.y - origin.y) * panel.normal.y
+        + (panel.center.z - origin.z) * panel.normal.z;
+    const denominator = direction.x * panel.normal.x + direction.y * panel.normal.y + direction.z * panel.normal.z;
     const distance = numerator / denominator;
     if (!Number.isFinite(distance) || distance <= 0) return null;
     const hit = {
@@ -992,15 +1051,14 @@ function demoPimNodeAtPointer(record) {
         y: origin.y + direction.y * distance,
         z: origin.z + direction.z * distance
     };
-    const localX = (hit.x - position.x) * right.x + (hit.z - position.z) * right.z;
-    const localY = hit.y - position.y;
-    const xPercent = (localX / (.2 * DEMO_PIM_IMMERSIVE_SCALE.x) * .5 + .5) * 100;
-    const yPercent = (.5 - localY / (.08 * DEMO_PIM_IMMERSIVE_SCALE.y) * .5) * 100;
+    const offset = { x: hit.x - panel.center.x, y: hit.y - panel.center.y, z: hit.z - panel.center.z };
+    const localX = offset.x * panel.right.x + offset.y * panel.right.y + offset.z * panel.right.z;
+    const localY = offset.x * panel.up.x + offset.y * panel.up.y + offset.z * panel.up.z;
+    const xPercent = (localX / panel.width + .5) * 100;
+    const yPercent = (.5 - localY / panel.height) * 100;
     if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
-    return pimVisibleNodes(knowledgeFor(record), record.demoExpandedBranches)
-        .map(node => ({ node, distance: Math.hypot(xPercent - node.position.x, yPercent - node.position.y) }))
-        .sort((left, right) => left.distance - right.distance)
-        .find(candidate => candidate.distance <= (candidate.node.depth ? 11 : 13))?.node || null;
+    const knowledge = knowledgeFor(record);
+    return pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent);
 }
 
 function updateSimulatedMarkers() {
@@ -1168,6 +1226,35 @@ function bindSimulatedInformationPanels(layer) {
         const tether = layer.querySelector(`[data-demo-plant-tether="${index}"]`);
         const handle = profile.querySelector('[data-plant-profile-handle]');
         if (!record || !handle) return;
+        const back = profile.querySelector('[data-pim-back]');
+        back?.addEventListener('pointerdown', event => {
+            event.stopPropagation();
+            suppressSessionSelectUntil = performance.now() + 500;
+        });
+        back?.addEventListener('click', event => {
+            event.stopPropagation();
+            const focusPath = back.dataset.pimBack;
+            record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, focusPath);
+            record.demoActiveBranch = focusPath.split('.').slice(0, -1).join('.');
+            refreshDemoRecord(record);
+            setGuide('Returned to the previous PIM bloom.');
+        });
+        const recenter = profile.querySelector('[data-pim-recenter]');
+        recenter?.addEventListener('pointerdown', event => {
+            event.stopPropagation();
+            suppressSessionSelectUntil = performance.now() + 500;
+        });
+        recenter?.addEventListener('click', event => {
+            event.stopPropagation();
+            if (viewerMatrix) {
+                record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, { plantId: record.id || record.name });
+                record.informationPosition = record.informationPose?.position || record.informationPosition;
+            } else {
+                record.demoPanelOffset = defaultPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 });
+            }
+            refreshDemoRecord(record);
+            setGuide(`${record.name || 'Plant'} PIM recentered.`);
+        });
         const cells = [...profile.querySelectorAll('[data-pim-node]')];
         cells.forEach(cell => {
             cell.addEventListener('pointerdown', event => {
@@ -1180,9 +1267,12 @@ function bindSimulatedInformationPanels(layer) {
                 const wasOpen = record.demoExpandedBranches?.includes(nodePath);
                 record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
                 record.demoActiveBranch = nodePath;
-                advanceAfterDemoProfileInteraction(record);
+                record.pimBloomStarted = performance.now();
+                const remaining = advanceAfterDemoProfileInteraction(record);
                 refreshDemoRecord(record);
-                setGuide(wasOpen ? `${cell.querySelector('b')?.textContent || 'Cell'} collapsed.` : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.`);
+                setGuide(wasOpen
+                    ? `${cell.querySelector('b')?.textContent || 'Cell'} collapsed.`
+                    : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`);
             });
         });
         let start = null;
@@ -1229,17 +1319,25 @@ const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, chara
 
 function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
     const expanded = new Set(expandedPaths);
-    const nodes = pimVisibleNodes(knowledge, expandedPaths);
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
+    const focus = pimFocusedView(knowledge, expandedPaths);
+    const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
     const cells = nodes.map(node => {
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
-        const detailsVisible = node.depth > 0 || open;
-        const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-node-scale:${Math.max(.76, 1 - node.depth * .08)};--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
+        const detailsVisible = node.depth > 0;
+        const visualDepth = focus ? 1 : node.depth;
+        const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-pim-direction="${demoProfileEscape(node.rootDirection || node.direction)}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
     }).join('');
-    return `<span class="plant-knowledge-map" data-pim-layout="radial" aria-label="Plant Information Mesh"><svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>PIM</small><strong>${demoProfileEscape(knowledge.title)}</strong><i>${demoProfileEscape(knowledge.core?.scientific || 'Scientific name pending')}</i><em>${demoProfileEscape(knowledge.core?.layer || 'Layer not set')}</em></span></span>`;
+    const focusTrail = focus?.trail.map(node => node.label).join(' › ') || '';
+    const back = focus ? `<button type="button" class="plant-knowledge-back" data-pim-back="${demoProfileEscape(focus.focusNode.path)}" aria-label="Return from ${demoProfileEscape(focus.focusNode.label)} to the previous PIM bloom">← ${demoProfileEscape(knowledge.title)} · ${demoProfileEscape(focusTrail)}</button>` : '';
+    const core = focus
+        ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
+        : `<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(knowledge.title)}</strong></span>`;
+    const recenter = '<button type="button" class="plant-knowledge-recenter" data-pim-recenter aria-label="Recenter this Plant Information Mesh in front of me">&#8595;</button>';
+    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}${recenter}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -1411,6 +1509,14 @@ function releaseHeldDemoRecord() {
 }
 
 function plantInformationPosition(record) {
+    if (record?.informationPose?.position) return record.informationPose.position;
+    if (viewerMatrix) {
+        record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
+            plantId: record.id || record.name,
+            anchorId: record.demoAnchorId || ''
+        });
+        if (record.informationPose?.position) return record.informationPose.position;
+    }
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
     const cameraX = Number(viewerMatrix?.[12]);
     const cameraY = Number(viewerMatrix?.[13]);
@@ -1593,6 +1699,17 @@ function billboardMatrix(position, scaleX = 1, scaleY = 1, cameraMatrix = viewer
     return new Float32Array([z * scaleX, 0, -x * scaleX, 0, 0, scaleY, 0, 0, x, 0, z, 0, position.x, position.y, position.z, 1]);
 }
 
+function fixedPimPanelMatrix(pose, scaleX = DEMO_PIM_IMMERSIVE_SCALE.x, scaleY = DEMO_PIM_IMMERSIVE_SCALE.y) {
+    if (!pose?.position || !pose?.right || !pose?.up || !pose?.normal) return null;
+    const scale = Number(pose.scale) || 1;
+    return new Float32Array([
+        pose.right.x * scaleX * scale, pose.right.y * scaleX * scale, pose.right.z * scaleX * scale, 0,
+        pose.up.x * scaleY * scale, pose.up.y * scaleY * scale, pose.up.z * scaleY * scale, 0,
+        pose.normal.x, pose.normal.y, pose.normal.z, 0,
+        pose.position.x, pose.position.y, pose.position.z, 1
+    ]);
+}
+
 function groundMatrix(position, scale = 1) {
     return new Float32Array([scale, 0, 0, 0, 0, 0, -scale, 0, 0, scale, 0, 0, position.x, position.y - .12, position.z, 1]);
 }
@@ -1705,11 +1822,14 @@ function createSpatialKnowledgeTexture(record) {
     const content = demoContentFor(record);
     if (!gl || !content) return null;
     const label = document.createElement('canvas');
-    label.width = record.demoType === 'zone' ? 720 : 1440;
-    label.height = record.demoType === 'zone' ? 1120 : 900;
+    label.width = record.demoType === 'zone' ? 720 : PIM_TEXTURE_SIZE.width;
+    label.height = record.demoType === 'zone' ? 1120 : PIM_TEXTURE_SIZE.height;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
-        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || []);
+        const bloomProgress = record.pimBloomStarted
+            ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
+            : 1;
+        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || [], { bloomProgress });
         return canvasTexture(label);
     }
     if (record.demoType === 'zone') {
@@ -2051,91 +2171,8 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
     ctx.stroke();
 }
 
-function drawPimPetal(ctx, x, y, radiusX, radiusY, fill, stroke, lineWidth = 2) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.beginPath();
-    ctx.moveTo(0, -radiusY);
-    ctx.bezierCurveTo(radiusX * .8, -radiusY * .92, radiusX, -radiusY * .2, radiusX * .76, radiusY * .55);
-    ctx.bezierCurveTo(radiusX * .28, radiusY * 1.02, -radiusX * .28, radiusY * 1.02, -radiusX * .76, radiusY * .55);
-    ctx.bezierCurveTo(-radiusX, -radiusY * .2, -radiusX * .8, -radiusY * .92, 0, -radiusY);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = []) {
-    ctx.clearRect(0, 0, label.width, label.height);
-    const center = { x: label.width / 2, y: label.height / 2 };
-    const expanded = new Set(expandedPaths);
-    const nodes = pimVisibleNodes(knowledge, expandedPaths);
-    const position = node => ({ x: node.position.x / 100 * label.width, y: node.position.y / 100 * label.height });
-    ctx.strokeStyle = 'rgba(222,239,207,.74)';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    nodes.forEach(node => {
-        const parent = node.parentPosition ? { x: node.parentPosition.x / 100 * label.width, y: node.parentPosition.y / 100 * label.height } : center;
-        const point = position(node);
-        ctx.beginPath();
-        ctx.moveTo(parent.x, parent.y);
-        ctx.lineTo(point.x, point.y);
-        ctx.stroke();
-    });
-    nodes.forEach(node => {
-        const point = position(node);
-        const open = expanded.has(node.path);
-        const detailsVisible = node.depth > 0 || open;
-        const radiusX = node.depth ? 72 : 92;
-        const radiusY = node.depth ? 57 : 76;
-        if (node.depth) {
-            drawPimPetal(ctx, point.x, point.y, radiusX, radiusY, 'rgba(42,81,53,.92)', 'rgba(217,247,186,.82)', 3);
-        } else {
-            drawHexagon(ctx, point.x, point.y, 92, 'rgba(13,42,28,.84)', 'rgba(240,250,233,.76)', 2);
-        }
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = 'rgba(0,0,0,.94)';
-        ctx.lineWidth = 4;
-        ctx.lineJoin = 'round';
-        ctx.font = `850 ${node.depth ? 16 : 18}px system-ui, sans-serif`;
-        const titleLines = wrappedTextureLines(ctx, node.label, node.depth ? 116 : 138).slice(0, 2);
-        const titleStart = point.y + (detailsVisible ? -24 : 7) - (titleLines.length - 1) * 10;
-        titleLines.forEach((line, lineIndex) => {
-            ctx.strokeText(line, point.x, titleStart + lineIndex * 21);
-            ctx.fillText(line, point.x, titleStart + lineIndex * 21);
-        });
-        if (detailsVisible) {
-            ctx.fillStyle = '#fff';
-            ctx.font = `700 ${node.depth ? 15 : 18}px system-ui, sans-serif`;
-            ctx.shadowColor = 'rgba(0,0,0,.98)';
-            ctx.shadowBlur = 6;
-            drawWrappedTextureText(ctx, node.value, point.x, titleStart + titleLines.length * 20 + 4, node.depth ? 112 : 142, node.depth ? 17 : 21, node.depth ? 2 : 3);
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-        }
-    });
-    drawHexagon(ctx, center.x, center.y, 88, 'rgba(18,51,34,.76)', 'rgba(242,251,236,.72)', 3);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = 'rgba(0,0,0,.94)';
-    ctx.lineWidth = 4;
-    ctx.font = '800 16px system-ui, sans-serif';
-    ctx.strokeText('PIM', center.x, center.y - 15);
-    ctx.fillText('PIM', center.x, center.y - 15);
-    ctx.fillStyle = '#fff';
-    ctx.font = '850 28px system-ui, sans-serif';
-    ctx.strokeText(knowledge.title, center.x, center.y + 20);
-    ctx.fillText(knowledge.title, center.x, center.y + 20);
-    ctx.font = '650 16px system-ui, sans-serif';
-    ctx.strokeText(knowledge.core?.scientific || 'Scientific name pending', center.x, center.y + 46);
-    ctx.fillText(knowledge.core?.scientific || 'Scientific name pending', center.x, center.y + 46);
-    ctx.font = '650 15px system-ui, sans-serif';
-    ctx.strokeText(knowledge.core?.layer || 'Layer not set', center.x, center.y + 68);
-    ctx.fillText(knowledge.core?.layer || 'Layer not set', center.x, center.y + 68);
+function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], options = {}) {
+    drawPlantInformationHoneycomb(ctx, label, knowledge, expandedPaths, options);
 }
 
 function createBoundaryTexture() {
@@ -2329,6 +2366,15 @@ function drawMarker(view) {
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
     drawIntroSpatial(view);
     markers.forEach(record => {
+        if (record.demoType === 'plant' && record.demoExpanded && record.pimBloomStarted) {
+            const elapsed = performance.now() - record.pimBloomStarted;
+            if (elapsed <= PIM_BLOOM_DURATION_MS) {
+                if (record.texture) gl.deleteTexture(record.texture);
+                record.texture = createMarkerTexture(record);
+            } else {
+                record.pimBloomStarted = 0;
+            }
+        }
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
         if (orbOnly) return;
@@ -2343,11 +2389,14 @@ function drawMarker(view) {
             ? { ...record.position, y: record.position.y + 1 }
             : record.position;
         const noteScale = noteSign ? { x: 4.7, y: 4.3125 } : null;
-        const model = billboardMatrix(
-            displayPosition,
-            plantProfile ? 1.55 : totem ? 1.9 : noteScale?.x || (compact ? .38 : 2.35),
-            plantProfile ? 2.5 : totem ? 3 : noteScale?.y || (compact ? .38 : 3.45)
-        );
+        const model = plantProfile
+            ? fixedPimPanelMatrix(record.informationPose)
+            : billboardMatrix(
+                displayPosition,
+                totem ? 1.9 : noteScale?.x || (compact ? .38 : 2.35),
+                totem ? 3 : noteScale?.y || (compact ? .38 : 3.45)
+            );
+        if (!model) return;
         const mvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, model));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'mvp'), false, mvp);
         gl.activeTexture(gl.TEXTURE0);

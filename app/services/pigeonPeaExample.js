@@ -20,15 +20,68 @@ export const PIGEON_PEA_EXAMPLE = Object.freeze({
     ])
 });
 
-const treeSection = id => PIGEON_PEA_EXAMPLE.informationTree.find(section => section.id === id);
-const branch = id => {
-    const section = treeSection(id);
-    return [section.label, section.details.join(' · ')];
-};
+const informationCell = (id, label, description = '', children = []) => Object.freeze({
+    id,
+    label,
+    description,
+    children: Object.freeze(children)
+});
 
+// Reusable plant data: the renderer knows only about categories, directions
+// and children. Replacing this object with another plant produces the same PIM.
 export const PIGEON_PEA_AR_KNOWLEDGE = Object.freeze({
+    id: 'pigeon-pea',
+    plantId: PIGEON_PEA_EXAMPLE.slug,
+    name: PIGEON_PEA_EXAMPLE.commonName,
+    scientificName: PIGEON_PEA_EXAMPLE.scientificName,
     title: PIGEON_PEA_EXAMPLE.commonName,
     core: Object.freeze({ scientific: PIGEON_PEA_EXAMPLE.scientificName, layer: 'Shrub layer' }),
-    left: Object.freeze([branch('about'), branch('food'), branch('garden-role')]),
-    right: Object.freeze([branch('growth'), branch('soil'), branch('biodiversity')])
+    categories: Object.freeze([
+        informationCell('food-forest', 'Food Forest', 'Roles in a layered, living food system.', [
+            informationCell('shrub-layer', 'Shrub layer'),
+            informationCell('nitrogen-fixer', 'Nitrogen fixer', 'A legume relationship that supports living soil.'),
+            informationCell('nurse-plant', 'Nurse plant', 'Shelter and light shade while slower plants establish.'),
+            informationCell('windbreak', 'Windbreak', 'A temporary living screen in a young guild.'),
+            informationCell('biomass-mulch', 'Biomass and mulch', 'Prune, chop and return growth to the soil.', [
+                informationCell('prune', 'Prune', 'Manage height and stimulate branching.'),
+                informationCell('chop-drop', 'Chop and drop', 'Lay soft growth on the soil surface.'),
+                informationCell('succession', 'Succession', 'Sacrifice, save seed and replant when the guild needs space.')
+            ])
+        ]),
+        informationCell('uses', 'Uses', 'Food, fodder and practical garden value.', [
+            informationCell('edible-seeds', 'Edible seeds', 'Harvest green or mature seed.', [
+                informationCell('harvest', 'Harvest', 'Pick young pods or wait for mature dry seed.'),
+                informationCell('processing', 'Processing', 'Sort, dry, store and cook before eating.'),
+                informationCell('seed-saving', 'Seed saving', 'Keep vigorous seed for experimenting, sharing and expansion.')
+            ]),
+            informationCell('young-pods', 'Young edible pods'),
+            informationCell('dried-pulse', 'Dried pulse'),
+            informationCell('animal-fodder', 'Animal fodder')
+        ]),
+        informationCell('medicinal', 'Medicinal', 'Traditional knowledge only; not medical advice.', [
+            informationCell('traditional-leaf', 'Traditional leaf uses', 'Traditional knowledge; not medical advice.'),
+            informationCell('traditional-root', 'Traditional root uses', 'Traditional knowledge; not medical advice.'),
+            informationCell('safety', 'Knowledge and safety', 'Record the community, source and context. Do not present traditional use as clinical guidance.')
+        ]),
+        informationCell('scientific-information', 'Scientific Information', 'Botany and growth form.', [
+            informationCell('botanical-name', 'Botanical name', 'Cajanus cajan'),
+            informationCell('family', 'Family', 'Fabaceae'),
+            informationCell('growth-form', 'Growth form', 'Annual or short-lived perennial shrub.'),
+            informationCell('dry-tropical-legume', 'Dry-tropical legume')
+        ]),
+        informationCell('historical-data', 'Historical Data', 'Origin, cultivation and movement.', [
+            informationCell('native-range', 'Native range', 'Indian subcontinent.'),
+            informationCell('cultivated-pulse', 'Long-cultivated tropical pulse'),
+            informationCell('global-cultivation', 'Cultivated widely', 'Now grown throughout many tropical and subtropical regions.')
+        ]),
+        informationCell('craft', 'Craft', 'Practical uses for stems and dry material.', [
+            informationCell('basket-work', 'Basket work', 'Basket work from stems.'),
+            informationCell('fuelwood', 'Fuelwood', 'Stems used as fuelwood.'),
+            informationCell('garden-stakes', 'Garden stakes'),
+            informationCell('natural-crafts', 'Natural crafts', 'Dry plant material for simple natural crafts.')
+        ])
+    ].map((category, index) => Object.freeze({
+        ...category,
+        direction: ['top', 'upper-left', 'lower-left', 'upper-right', 'lower-right', 'bottom'][index]
+    })))
 });
