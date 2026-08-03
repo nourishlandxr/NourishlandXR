@@ -56,6 +56,7 @@ let introBoardHasEntered = false;
 let introWorldAnchor = null;
 let introNoteTexture = null;
 let introNoteCanvas = null;
+let persistentWelcomeTexture = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
 let introTextureUploadedAt = 0;
@@ -74,6 +75,7 @@ let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 let demoWebModeOpen = false;
+let groundYEstimate = null;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
@@ -86,6 +88,12 @@ const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
     x: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4,
     y: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16
 });
+// Creator Mode's medium Note is 1.88 m x .69 m on the shared quad. The demo
+// keeps the same real-world proportions at 88% so it reads as a nearby Note,
+// without turning into a flyaway presentation board.
+const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 4.14, y: 3.8 });
+const DEMO_TOTEM_HALF_HEIGHT_METRES = .9;
+const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
     'Augmented reality(AR) & Mixed reality(XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
@@ -208,6 +216,7 @@ function clearSessionState() {
     latestDemoView = null;
     hitMatrix = null;
     latestControllerRay = null;
+    groundYEstimate = null;
     marker = null;
     markerType = 'marker';
     demoStage = 'plant';
@@ -234,6 +243,7 @@ function clearSessionState() {
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
     if (introControlTexture) gl?.deleteTexture(introControlTexture);
     if (introPointerTexture) gl?.deleteTexture(introPointerTexture);
+    if (persistentWelcomeTexture) gl?.deleteTexture(persistentWelcomeTexture);
     introNoteTexture = null;
     introNoteCanvas = null;
     introBoardVisibleBody = '';
@@ -245,6 +255,7 @@ function clearSessionState() {
     introControlTexture = null;
     introControlTextureLabel = '';
     introPointerTexture = null;
+    persistentWelcomeTexture = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
     markers.forEach(record => {
@@ -783,25 +794,21 @@ function guideNoteConversion(record) {
     );
 }
 
-function shiftSimulatedSceneForStage(type) {
-    if (!simulatedMode || type === 'plant') return;
-    const shift = {
-        plant2: { x: -24, y: 2 },
-        note: { x: -16, y: -12 }
-    }[type];
-    if (!shift) return;
-    markers.forEach(record => {
-        record.simulatedSceneShifts ||= [];
-        if (record.simulatedSceneShifts.includes(type)) return;
-        const anchor = record.simulatedAnchor || { x: 50, y: 50 };
-        record.simulatedAnchor = {
-            x: Math.max(8, Math.min(92, anchor.x + shift.x)),
-            y: Math.max(12, Math.min(84, anchor.y + shift.y))
-        };
-        record.simulatedSceneShifts.push(type);
-        if (record.demoType === 'plant') record.demoPanelOffset = defaultPlantPanelOffset(record.simulatedAnchor);
+export function preservePlacedDemoPlants(records = markers) {
+    records.forEach(record => {
+        if (!['plant', 'plant2'].includes(record?.tutorialStage) || record.demoType !== 'plant') return;
+        record.demoAlive = true;
+        record.demoInteractive = true;
     });
-    updateSimulatedMarkers();
+    return records;
+}
+
+function shiftSimulatedSceneForStage(type) {
+    // Stage changes must not rewrite placed spatial anchors. Each new simulated
+    // aim gets its own position instead, so Plants and Notes remain where the
+    // user placed them and stay available for interaction.
+    preservePlacedDemoPlants();
+    if (simulatedMode) updateSimulatedMarkers();
 }
 
 function armDemoPlacement(type) {
@@ -812,11 +819,15 @@ function armDemoPlacement(type) {
     const place = appRoot?.querySelector('[data-tryit-place]');
     if (place && simulatedMode) {
         const comfortOffsetPercent = AR_PHONE_COMFORT.pointerOffsetPixels / Math.max(320, window.innerHeight || 640) * 100;
-        const comfortableY = Math.min(86, 50 + comfortOffsetPercent);
-        place.dataset.aimX = '50';
-        place.dataset.aimY = String(comfortableY);
-        place.style.setProperty('--aim-x', '50%');
-        place.style.setProperty('--aim-y', `${comfortableY}%`);
+        const stageAim = {
+            plant: { x: 34, y: Math.min(78, 50 + comfortOffsetPercent) },
+            plant2: { x: 66, y: Math.min(78, 50 + comfortOffsetPercent) },
+            note: { x: 50, y: Math.min(86, 58 + comfortOffsetPercent) }
+        }[type] || { x: 50, y: Math.min(86, 50 + comfortOffsetPercent) };
+        place.dataset.aimX = String(stageAim.x);
+        place.dataset.aimY = String(stageAim.y);
+        place.style.setProperty('--aim-x', `${stageAim.x}%`);
+        place.style.setProperty('--aim-y', `${stageAim.y}%`);
     } else if (place) {
         place.style.setProperty('--aim-x', '50%');
         place.style.setProperty('--aim-y', `calc(50% + ${AR_PHONE_COMFORT.pointerOffsetCss})`);
