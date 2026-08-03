@@ -610,7 +610,9 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
 
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
-    appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
+    // The tutorial copy closes, but the original spatial Welcome / Information
+    // Note remains anchored as part of the scene for the rest of the demo.
+    appRoot?.querySelector('[data-tryit-intro]')?.removeAttribute('hidden');
     appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
@@ -1004,16 +1006,38 @@ export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantP
     return true;
 }
 
+export function selectDemoPlantRecord(target, reveal = toggleDemoPlantProfile) {
+    const record = target?.record || target;
+    if (!record
+        || record.demoType !== 'plant'
+        || record.demoInteractive === false
+        || record.demoAlive === false) return false;
+    reveal(record);
+    return true;
+}
+
+function selectDemoPlantAtPointer() {
+    return selectDemoPlantRecord(demoRecordAtPointer());
+}
+
 function selectDemoProfileCell() {
-    const record = [...markers].reverse().find(candidate => candidate?.demoType === 'plant' && candidate.demoExpanded);
-    if (!record) return false;
-    // On headsets the projected controller point can land just outside a
-    // visible petal even though the profile itself was deliberately selected.
-    // Fall back to the first visible root so the tutorial can demonstrate the
-    // current expanding-cell PIM without trapping the user in this stage.
+    const selection = [...markers]
+        .reverse()
+        .filter(candidate => candidate?.demoType === 'plant' && candidate.demoExpanded)
+        .map(record => ({ record, target: demoPimPointerTarget(record) }))
+        .find(candidate => candidate.target);
+    if (!selection) return false;
+    const { record, target } = selection;
     const knowledge = knowledgeFor(record);
     const focus = pimFocusedView(knowledge, record.demoExpandedBranches);
-    const node = demoPimNodeAtPointer(record) || (focus?.nodes || pimVisibleNodes(knowledge, record.demoExpandedBranches))[0];
+    const visibleNodes = focus?.nodes || pimVisibleNodes(knowledge, record.demoExpandedBranches);
+    // Keep a forgiving Quest-sized target only after the ray has actually hit
+    // this PIM surface. A gap between large cells advances to another visible
+    // branch; a select elsewhere remains free to operate either Plant orb.
+    const node = target.node || visibleNodes.find(candidate =>
+        !record.demoExpandedBranches?.includes(candidate.path)
+        && pimNodeChildren(candidate).length
+    ) || visibleNodes[0];
     if (!node) return true;
     if (node.pimRecenter) {
         record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
@@ -1057,7 +1081,7 @@ function advanceAfterDemoProfileInteraction(record) {
     return 0;
 }
 
-function demoPimNodeAtPointer(record) {
+function demoPimPointerTarget(record) {
     const origin = demoPointerWorldOrigin();
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
@@ -1069,6 +1093,7 @@ function demoPimNodeAtPointer(record) {
         + (panel.center.y - origin.y) * panel.normal.y
         + (panel.center.z - origin.z) * panel.normal.z;
     const denominator = direction.x * panel.normal.x + direction.y * panel.normal.y + direction.z * panel.normal.z;
+    if (Math.abs(denominator) < .0001) return null;
     const distance = numerator / denominator;
     if (!Number.isFinite(distance) || distance <= 0) return null;
     const hit = {
@@ -1083,7 +1108,15 @@ function demoPimNodeAtPointer(record) {
     const yPercent = (.5 - localY / panel.height) * 100;
     if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
     const knowledge = knowledgeFor(record);
-    return pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent);
+    return {
+        xPercent,
+        yPercent,
+        node: pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent)
+    };
+}
+
+function demoPimNodeAtPointer(record) {
+    return demoPimPointerTarget(record)?.node || null;
 }
 
 function updateSimulatedMarkers() {
@@ -1346,20 +1379,21 @@ function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths
     const expanded = new Set(expandedPaths);
     const focus = pimFocusedView(knowledge, expandedPaths);
     const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
+    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}${node.depth > 0 ? ' is-parent-link' : ' is-core-link'}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
     const cells = nodes.map(node => {
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
         const detailsVisible = node.depth > 0;
         const visualDepth = focus ? 1 : node.depth;
         const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
+        const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-parent-grid-x:${parentPosition.gridX || 0};--pim-parent-grid-y:${parentPosition.gridY || 0};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
         return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-pim-direction="${demoProfileEscape(node.rootDirection || node.direction)}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
     }).join('');
     const focusTrail = focus?.trail.map(node => node.label).join(' › ') || '';
     const back = focus ? `<button type="button" class="plant-knowledge-back" data-pim-back="${demoProfileEscape(focus.focusNode.path)}" aria-label="Return from ${demoProfileEscape(focus.focusNode.label)} to the previous PIM bloom">← ${demoProfileEscape(knowledge.title)} · ${demoProfileEscape(focusTrail)}</button>` : '';
     const core = focus
-        ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
+        ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>SELECTED TOPIC</small><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
         : `<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(knowledge.title)}</strong></span>`;
     const recenter = '<button type="button" class="plant-knowledge-recenter" data-pim-recenter aria-label="Recenter this Plant Information Mesh in front of me">&#8595;</button>';
     return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}${recenter}</span>`;
@@ -1655,7 +1689,7 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface"><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface" data-tryit-persistent-welcome><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = document.createElement('button');
@@ -1664,7 +1698,7 @@ function renderInterface(simulated) {
     introContinue.type = 'button';
     introContinue.hidden = true;
     appRoot.querySelector('.tryit-demo')?.append(introContinue);
-    appRoot.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
+    appRoot.querySelector('[data-tryit-intro]')?.removeAttribute('hidden');
     appRoot.querySelector('.tryit-drag-hint')?.remove();
     const exitButton = appRoot.querySelector('[data-tryit-exit]');
     exitButton.textContent = 'Close';
@@ -2119,6 +2153,36 @@ function createIntroKnowledgeTexture() {
     return canvasTexture(label);
 }
 
+function createPersistentWelcomeTexture() {
+    const label = document.createElement('canvas');
+    label.width = 1024;
+    label.height = 384;
+    const ctx = label.getContext('2d');
+    ctx.clearRect(0, 0, label.width, label.height);
+    const background = ctx.createLinearGradient(0, 0, label.width, label.height);
+    background.addColorStop(0, 'rgba(76,127,89,.96)');
+    background.addColorStop(1, 'rgba(18,55,34,.9)');
+    ctx.fillStyle = background;
+    ctx.beginPath();
+    ctx.roundRect(12, 12, 1000, 360, 52);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(240,255,232,.78)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,18,8,.72)';
+    ctx.lineWidth = 6;
+    ctx.font = '760 64px system-ui, sans-serif';
+    ctx.strokeText('NOURISHLANDXR', 512, 158);
+    ctx.fillText('NOURISHLANDXR', 512, 158);
+    ctx.fillStyle = 'rgba(247,255,242,.92)';
+    ctx.font = '620 34px system-ui, sans-serif';
+    ctx.fillText('A web of living knowledge…', 512, 238);
+    return canvasTexture(label);
+}
+
 function introLocalPosition(matrix, [x, y, z]) {
     return {
         x: matrix[12] + matrix[0] * x + matrix[4] * y + matrix[8] * z,
@@ -2153,6 +2217,14 @@ function drawIntroSpatial(view) {
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
+    persistentWelcomeTexture ||= createPersistentWelcomeTexture();
+    drawTexture(
+        persistentWelcomeTexture,
+        introLocalPosition(introWorldAnchor, [-.78, -.18, -2.2]),
+        .9,
+        1.3,
+        .94
+    );
     if (introBoardVisible && introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,
@@ -2217,6 +2289,36 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
 
 function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], options = {}) {
     drawPlantInformationHoneycomb(ctx, label, knowledge, expandedPaths, options);
+    const focus = pimFocusedView(knowledge, expandedPaths);
+    const children = (focus?.nodes || pimVisibleNodes(knowledge, expandedPaths)).filter(node => node.depth > 0);
+    if (!children.length) return;
+    // The shared renderer owns the cells. Add only their parent links behind
+    // the rendered pixels so every new bloom is visibly connected to the
+    // topic that produced it in immersive AR as well as the DOM fallback.
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.lineCap = 'round';
+    children.forEach(node => {
+        const parent = node.parentPosition || { x: 50, y: 50 };
+        const point = node.position || parent;
+        const start = { x: parent.x / 100 * label.width, y: parent.y / 100 * label.height };
+        const end = { x: point.x / 100 * label.width, y: point.y / 100 * label.height };
+        const hue = pimNodeHue(node);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.bezierCurveTo(
+            start.x + (end.x - start.x) * .36,
+            start.y + (end.y - start.y) * .36,
+            start.x + (end.x - start.x) * .72,
+            start.y + (end.y - start.y) * .72,
+            end.x,
+            end.y
+        );
+        ctx.strokeStyle = `hsla(${hue}, 68%, 78%, .82)`;
+        ctx.lineWidth = 7;
+        ctx.stroke();
+    });
+    ctx.restore();
 }
 
 function createBoundaryTexture() {
@@ -2432,7 +2534,7 @@ function drawMarker(view) {
             : totem
             ? { ...record.position, y: record.position.y + 1 }
             : record.position;
-        const noteScale = noteSign ? { x: 4.7, y: 4.3125 } : null;
+        const noteScale = noteSign ? DEMO_NOTE_IMMERSIVE_SCALE : null;
         const model = plantProfile
             ? fixedPimPanelMatrix(record.informationPose)
             : billboardMatrix(
@@ -2540,6 +2642,7 @@ async function startImmersive() {
             if (placementReady) return pressPlacementPointer();
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
+            if (selectDemoPlantAtPointer()) return;
             selectGuidedDemoOrb();
         });
         session.addEventListener('selectstart', () => {

@@ -6,7 +6,13 @@ import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spati
 import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRenderer.js';
-import { demoPlacementPosition, selectGuidedDemoOrb } from '../app/screens/temporaryArDemo.js';
+import {
+    demoGroundBaseY,
+    demoPlacementPosition,
+    preservePlacedDemoPlants,
+    selectDemoPlantRecord,
+    selectGuidedDemoOrb
+} from '../app/screens/temporaryArDemo.js';
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
 import { normalizeTotemHeightPreset, normalizeTotemStyle, totemHeightPreset, totemHeightScale, totemStylePreset } from '../app/services/totemAppearance.js';
@@ -36,6 +42,28 @@ test('immersive demo selection opens the guided Plant Profile', () => {
     assert.equal(selected, waiting);
     waiting.awaitingProfileReveal = false;
     assert.equal(selectGuidedDemoOrb([waiting, unrelated], () => {}), false);
+});
+
+test('demo ground placement prefers a floor hit and otherwise keeps a stable floor estimate', () => {
+    const viewer = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1.65, 0, 1]);
+    const floorHit = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, .02, -1, 1]);
+    const wallHit = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1.1, -1, 1]);
+    assert.equal(demoGroundBaseY(floorHit, viewer), .019999999552965164);
+    assert.equal(demoGroundBaseY(wallHit, viewer), .09999999999999987);
+    assert.equal(demoGroundBaseY(wallHit, viewer, .04), .04);
+});
+
+test('both demo Plants remain alive, interactive and independently selectable after later stages', () => {
+    const pigeon = { tutorialStage: 'plant', demoType: 'plant', demoAlive: false, demoInteractive: false };
+    const moringa = { tutorialStage: 'plant2', demoType: 'plant', demoAlive: false, demoInteractive: false };
+    const note = { tutorialStage: 'note', demoType: 'note', demoInteractive: true };
+    preservePlacedDemoPlants([pigeon, moringa, note]);
+    assert.deepEqual([pigeon.demoAlive, pigeon.demoInteractive, moringa.demoAlive, moringa.demoInteractive], [true, true, true, true]);
+    const opened = [];
+    assert.equal(selectDemoPlantRecord({ record: pigeon }, record => opened.push(record)), true);
+    assert.equal(selectDemoPlantRecord({ record: moringa }, record => opened.push(record)), true);
+    assert.deepEqual(opened, [pigeon, moringa]);
+    assert.equal(selectDemoPlantRecord({ record: note }, () => {}), false);
 });
 
 test('Creator AR keeps the Plant orb tethered to its enlarged profile diagram', () => {
@@ -919,7 +947,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
     assert.doesNotMatch(source, /tryit-welcome-core-cell/);
     assert.match(source, /tryit-spatial-welcome-note/);
-    assert.match(styles, /\.tryit-spatial-welcome-note \{[^}]*height:clamp\(380px,76vh,760px\);[^}]*max-height:calc\(100vh - 32px\)/);
+    assert.match(styles, /\.tryit-spatial-welcome-note \{[^}]*width:min\(42vw,340px\);[^}]*aspect-ratio:2\.55;[^}]*animation:tryit-persistent-note-arrive/);
+    assert.match(source, /data-tryit-persistent-welcome/);
+    assert.match(source, /function createPersistentWelcomeTexture\(\)/);
+    assert.match(source, /finishIntroBoard\(\)[\s\S]*querySelector\('\[data-tryit-intro\]'\)\?\.removeAttribute\('hidden'\)/);
     assert.match(styles, /\.biomap-branch:nth-child\(1\) \{ left:29%; top:22%; \}/);
     assert.doesNotMatch(styles, /\.tryit-intro-knowledge::before/);
     assert.match(styles, /color:#fff/);
@@ -1072,7 +1103,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /radius: \.96/);
     assert.match(source, /introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
-    assert.match(source, /place\.dataset\.aimX = '50'/);
+    assert.match(source, /plant: \{ x: 34,[\s\S]*plant2: \{ x: 66,[\s\S]*note: \{ x: 50,/);
+    assert.match(source, /place\.dataset\.aimX = String\(stageAim\.x\)/);
+    assert.doesNotMatch(source, /simulatedSceneShifts/);
     assert.match(source, /50 \+ comfortOffsetPercent/);
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
     assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
@@ -1158,6 +1191,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimNodeHue/);
     assert.match(source, /pimFocusedView/);
     assert.match(source, /data-pim-back/);
+    assert.match(source, /is-parent-link/);
+    assert.match(styles, /@keyframes pim-demo-attached-grow/);
+    assert.match(styles, /--pim-parent-grid-x/);
+    assert.match(source, /globalCompositeOperation = 'destination-over'/);
     assert.match(source, /explorationGoal = record\.tutorialStage === 'plant' \? 3 : 2/);
     assert.match(source, /PIM_SPATIAL_CONFIG\.expandedSurfaceWidthMetres \/ \.4/);
     assert.match(styles, /left: calc\(50% \+ var\(--pim-grid-x, 0\) \* var\(--pim-cell-size\)\)/);
@@ -1170,6 +1207,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimSpatialPoseFromViewer/);
     assert.match(source, /advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(immersiveSelectHandler, /markers\.some\(record => record\.demoType === 'plant' && record\.demoExpanded\)/);
+    assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
     const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));
@@ -1205,7 +1243,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function createDemoTotemExample\(\)/);
     assert.match(source, /Totems are the epicenters of each area where plant orbs live/);
     assert.match(source, /tutorialStage: 'totem'/);
-    assert.match(source, /const noteScale = noteSign \? \{ x: 4\.7, y: 4\.3125 \} : null/);
+    assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 4\.14, y: 3\.8 \}\)/);
+    assert.match(source, /const noteScale = noteSign \? DEMO_NOTE_IMMERSIVE_SCALE : null/);
+    assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(78vw,248px\); height:102px;/);
+    assert.match(source, /groundBaseY = demoGroundBaseY\(hitMatrix, viewerMatrix, groundYEstimate\)/);
+    assert.match(source, /y: groundBaseY \+ DEMO_TOTEM_HALF_HEIGHT_METRES/);
+    assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);
+    assert.match(source, /demoOrbColor: type === 'plant' \? 'brown'/);
+    assert.match(source, /demoOrbShape: type === 'plant' \? 'triangle'/);
     assert.doesNotMatch(source, /compact \? record\.position : \{ \.\.\.record\.position, y: record\.position\.y \+ 0\.72 \}/);
     assert.match(source, /function guideNoteConversion\(record\) \{[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready', 'is-pressed'\)/);
     assert.match(styles, /\.tryit-guided-choice/);
