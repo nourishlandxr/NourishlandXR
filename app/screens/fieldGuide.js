@@ -133,10 +133,11 @@ function applyCreatorWebHubCopy(app) {
 
     const searchHeading = searchTitle?.closest('.field-guide-section-heading');
     const searchDeck = app.querySelector('.field-guide-search-deck');
-    const localSearchField = app.querySelector('#fieldGuideSearch')?.closest('.field');
+    const searchInput = app.querySelector('#fieldGuideSearch');
+    const searchField = searchInput?.closest('.field');
     const localFilters = searchDeck?.querySelector('.field-guide-advanced-search');
     const localPlants = app.querySelector('.field-guide-all-plants');
-    if (!searchHeading || !searchDeck || !localSearchField || !localPlants || searchHeading.querySelector('[data-field-guide-scope]')) return;
+    if (!searchHeading || !searchDeck || !searchInput || !searchField || !localPlants || searchHeading.querySelector('[data-field-guide-scope]')) return;
 
     const scope = document.createElement('div');
     scope.className = 'field-guide-plant-scope';
@@ -149,12 +150,12 @@ function applyCreatorWebHubCopy(app) {
     const globalPanel = document.createElement('div');
     globalPanel.className = 'field-guide-global-search';
     globalPanel.hidden = true;
-    globalPanel.innerHTML = '<div class="field"><label for="fieldGuideGlobalSearch">Search global plants</label><input id="fieldGuideGlobalSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" /><p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p></div><div class="field-guide-global-results" data-field-guide-global-results></div>';
+    globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p><div class="field-guide-global-results" data-field-guide-global-results></div>';
     searchDeck.append(globalPanel);
 
-    const globalInput = globalPanel.querySelector('#fieldGuideGlobalSearch');
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
+    let searchScope = 'local';
     const renderGlobalResults = results => {
         if (!globalResults) return;
         globalResults.innerHTML = results.map(result => `<article class="field-guide-global-result"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}</article>`).join('') || '<p class="meta">No public plant matches found.</p>';
@@ -171,7 +172,7 @@ function applyCreatorWebHubCopy(app) {
         globalGuideSearchTimer = setTimeout(async () => {
             try {
                 const results = await searchGlobalPlants(query);
-                if (globalInput?.value.trim() !== query) return;
+                if (searchInput.value.trim() !== query || searchScope !== 'global') return;
                 renderGlobalResults(results);
                 if (globalStatus) globalStatus.textContent = results.length ? `${results.length} public plant result${results.length === 1 ? '' : 's'}.` : 'No public plant matches found.';
             } catch (error) {
@@ -179,23 +180,35 @@ function applyCreatorWebHubCopy(app) {
             }
         }, 300);
     };
-    globalInput?.addEventListener('input', event => searchGlobal(event.target.value));
+    const updateSearchField = global => {
+        const label = searchField.querySelector('label');
+        if (label) label.textContent = global ? 'Search global plants' : 'Search plants';
+        searchInput.placeholder = global ? 'Common name, genus or species…' : 'Name, scientific name, use or Area';
+        if (global) searchInput.setAttribute('aria-describedby', 'fieldGuideGlobalSearchStatus');
+        else searchInput.removeAttribute('aria-describedby');
+    };
+    searchInput.addEventListener('input', event => {
+        if (searchScope === 'global') searchGlobal(event.target.value);
+        else applyFieldGuideFilter(currentGuidePlaceId);
+    });
 
     const setScope = value => {
         const global = value === 'global';
+        searchScope = global ? 'global' : 'local';
         scope.querySelectorAll('[data-field-guide-scope-button]').forEach(button => {
             const active = button.dataset.fieldGuideScopeButton === value;
             button.classList.toggle('is-active', active);
             button.setAttribute('aria-pressed', String(active));
         });
-        localSearchField.hidden = global;
         if (localFilters) localFilters.hidden = global;
         localPlants.hidden = global;
         globalPanel.hidden = !global;
+        updateSearchField(global);
         if (global) {
-            globalInput?.focus();
-            searchGlobal(globalInput?.value);
+            searchInput.focus();
+            searchGlobal(searchInput.value);
         } else {
+            if (globalResults) globalResults.innerHTML = '';
             applyFieldGuideFilter(currentGuidePlaceId);
         }
     };
@@ -281,7 +294,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             }).join('');
             const plantRows = guide.plants.map(plant => `<button class="analog-plant-row field-guide-plant-card" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-layer="${escapeHtml(String(plant.layer || '').toLowerCase())}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.origin, plant.plantType, plant.layer, Array.isArray(plant.uses) ? plant.uses.join(' ') : plant.uses, plant.propagation, plant.localNotes, plant.summary, plant.placeId, plant.placeName].join(' ').toLowerCase())}" type="button" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-card-icon" aria-hidden="true">&#x1F33F;</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em></small><small>${escapeHtml(isDefaultHomeArea(plant.placeName) ? DEFAULT_HOME_AREA_NAME : plant.placeName || plant.placeId)}${plant.layer ? ` &#x00B7; ${escapeHtml(plant.layer)}` : ''}</small></span></button>`).join('') || '<div class="panel"><p>No plants yet.</p></div>';
             const creatorPreparationTools = `<section class="field-guide-preparation field-guide-creative-tools" aria-labelledby="fieldGuideCreativeToolsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideCreativeToolsTitle">Creative Features</h2></div></div><div class="field-guide-preparation-grid"><button type="button" onclick="window.renderStartingPoints('${encoded(guide.project.id)}')"><strong>Visitor Entrances</strong><span>Guided beginning.</span></button><details class="field-guide-special-elements"><summary><strong>Special Elements</strong><span>Future V2 features.</span></summary><div class="field-guide-special-copy"><p>Planned place-based tools.</p><ul><li>Videos and moving image</li><li>3D models and spatial objects</li><li>Voice guidance and sound</li><li>More interactive visitor features</li></ul></div></details></div></section><section class="field-guide-preparation" aria-labelledby="fieldGuideAnchorsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAnchorsTitle">Anchored Elements</h2></div></div><details class="field-guide-anchor-readiness"><summary><span aria-hidden="true">&#x2316;</span><div><strong>${anchoredCount} anchored element${anchoredCount === 1 ? '' : 's'}</strong><p>Only successful physical-space connections.</p></div></summary><div class="field-guide-anchored-list">${anchoredRows || '<p>No elements are anchored yet.</p>'}</div></details></section>`;
-            app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div><section class="field-guide-essentials" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading"><h2 id="fieldGuideEssentialsTitle">Essentials</h2><button class="field-guide-map-action" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">Map</button></div><div class="field-guide-summary"><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${guide.totems.length}</strong> Totems</span><span><strong>${placedCount}</strong> Elements</span><span><strong>${anchoredCount}</strong> Anchored</span></div><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section><section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div><button type="button" onclick="${locationResetAction}">All</button></div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section><section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuidePlantSearchTitle">Search</h2></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" oninput="window.applyFieldGuideFilter()" /></div><details class="field-guide-advanced-search"><summary>More filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>${creatorPreparationTools}${virtualTagsSection}<details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
+            app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div><section class="field-guide-essentials" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading"><h2 id="fieldGuideEssentialsTitle">Essentials</h2><button class="field-guide-map-action" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">Map</button></div><div class="field-guide-summary"><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${guide.totems.length}</strong> Totems</span><span><strong>${placedCount}</strong> Elements</span><span><strong>${anchoredCount}</strong> Anchored</span></div><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section><section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div><button type="button" onclick="${locationResetAction}">All</button></div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section><section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuidePlantSearchTitle">Search</h2></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div><details class="field-guide-advanced-search"><summary>More filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>${creatorPreparationTools}${virtualTagsSection}<details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
             // Keep the footer navigation in the Web Hub. Only the print action
             // is removed from the live screen; removing its parent footer
             // leaves users with no route back to the project dashboard.

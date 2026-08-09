@@ -779,6 +779,13 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /field-guide-advanced-search/);
     assert.match(source, /Advanced search options/);
     assert.match(source, /searchLabel\.textContent = 'Search'/);
+    assert.match(source, /data-field-guide-scope-button="global"/);
+    assert.match(source, /data-field-guide-scope-button="local"/);
+    assert.match(source, /const searchInput = app\.querySelector\('#fieldGuideSearch'\)/);
+    assert.match(source, /let searchScope = 'local'/);
+    assert.match(source, /searchScope === 'global'/);
+    assert.doesNotMatch(source, /id="fieldGuideGlobalSearch"/);
+    assert.match(read('app/style.css'), /\.field-guide-global-search\[hidden\]\s*\{\s*display:none;/);
 });
 
 test('Creator AR opens a passthrough or native immersive WebXR session and cleans up on exit', () => {

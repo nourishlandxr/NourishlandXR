@@ -5820,6 +5820,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-plant-scope button { min-height:30px; padding:.28rem .55rem; border:0; border-radius:999px; background:transparent; color:#5f7263; font-size:.62rem; font-weight:850; letter-spacing:.08em; }
 .field-guide-plant-scope button.is-active { background:#3e744d; color:#fff; box-shadow:0 2px 5px rgba(48,98,59,.18); }
 .field-guide-global-search { display:grid; gap:.55rem; }
+.field-guide-global-search[hidden] { display:none; }
 .field-guide-global-search .field { gap:.25rem; }
 .field-guide-global-search .field > label { color:#405947; font-size:.68rem; font-weight:800; }
 .field-guide-global-results { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:.5rem; }
