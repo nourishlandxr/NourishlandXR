@@ -15,7 +15,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -935,7 +935,7 @@ function clampPlantPanelOffset(anchor, offset) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
     const profileWidth = Math.min(viewportWidth - 24, 960);
-    const profileHeight = Math.min(viewportHeight * 0.74, 680);
+    const profileHeight = Math.min(viewportHeight * 0.62, 620);
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
     const minimumX = 12 + profileWidth / 2 - anchorX;
@@ -951,16 +951,17 @@ function clampPlantPanelOffset(anchor, offset) {
 function defaultPlantPanelOffset(anchor) {
     const viewportWidth = Math.max(320, window.innerWidth || 320);
     const viewportHeight = Math.max(320, window.innerHeight || 640);
-    const profileHeight = Math.min(viewportHeight * 0.74, 680);
+    const profileHeight = Math.min(viewportHeight * 0.62, 620);
     const anchorY = viewportHeight * anchor.y / 100;
     const margin = 28;
     const aboveOffset = -(profileHeight / 2 + margin);
     const belowOffset = profileHeight / 2 + margin;
-    const aboveTop = anchorY + aboveOffset - profileHeight / 2;
     const belowBottom = anchorY + belowOffset + profileHeight / 2;
+    const fitsBelow = belowBottom <= viewportHeight - 12;
+    const preferAbove = anchorY >= viewportHeight * .42 || !fitsBelow;
     return clampPlantPanelOffset(anchor, {
         x: 0,
-        y: aboveTop >= 12 || belowBottom > viewportHeight - 12 ? aboveOffset : belowOffset
+        y: preferAbove ? aboveOffset : belowOffset
     });
 }
 
@@ -1004,13 +1005,8 @@ function toggleDemoPlantProfile(record) {
         record.demoExpandedBranches = [];
         record.demoProfileInteracted = false;
         record.demoProfileInteractionCount = 0;
-        if (viewerMatrix) {
-            record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
-                plantId: record.id || record.name,
-                anchorId: record.demoAnchorId || ''
-            });
-            record.informationPosition = record.informationPose?.position || null;
-        }
+        record.informationPose = plantInformationPose(record);
+        record.informationPosition = record.informationPose?.position || record.informationPosition || null;
     }
     refreshDemoRecord(record);
     if (record.demoExpanded && record.awaitingProfileReveal) {
@@ -1067,10 +1063,7 @@ function selectDemoProfileCell() {
     ) || visibleNodes[0];
     if (!node) return true;
     if (node.pimRecenter) {
-        record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
-            plantId: record.id || record.name,
-            anchorId: record.demoAnchorId || ''
-        });
+        record.informationPose = plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition;
         setGuide(`${record.name || 'Plant'} PIM recentered and world-locked in front of you.`);
         return true;
@@ -1112,7 +1105,7 @@ function demoPimPointerTarget(record) {
     const origin = demoPointerWorldOrigin();
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
-    record.informationPose ||= pimSpatialPoseFromViewer(viewerMatrix, { plantId: record.id || record.name });
+    record.informationPose ||= plantInformationPose(record);
     const panel = pimSpatialPanel(record.informationPose);
     if (!panel) return null;
     record.informationPosition = panel.center;
@@ -1332,7 +1325,7 @@ function bindSimulatedInformationPanels(layer) {
         recenter?.addEventListener('click', event => {
             event.stopPropagation();
             if (viewerMatrix) {
-                record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, { plantId: record.id || record.name });
+                record.informationPose = plantInformationPose(record);
                 record.informationPosition = record.informationPose?.position || record.informationPosition;
             } else {
                 record.demoPanelOffset = defaultPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 });
@@ -1615,10 +1608,7 @@ function releaseHeldDemoRecord() {
 function plantInformationPosition(record) {
     if (record?.informationPose?.position) return record.informationPose.position;
     if (viewerMatrix) {
-        record.informationPose = pimSpatialPoseFromViewer(viewerMatrix, {
-            plantId: record.id || record.name,
-            anchorId: record.demoAnchorId || ''
-        });
+        record.informationPose = plantInformationPose(record);
         if (record.informationPose?.position) return record.informationPose.position;
     }
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
@@ -1634,6 +1624,15 @@ function plantInformationPosition(record) {
         y: Math.max(position.y + .34, eyeLevelY),
         z: position.z + towardViewerZ / horizontalDistance * 0.14
     };
+}
+
+function plantInformationPose(record) {
+    if (!viewerMatrix) return null;
+    return pimSpatialPoseAboveAnchor(viewerMatrix, record?.position, {
+        plantId: record?.id || record?.name,
+        anchorId: record?.demoAnchorId || '',
+        coordinateSpace: 'session-local'
+    });
 }
 
 function placeMarker() {

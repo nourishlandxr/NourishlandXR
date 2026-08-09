@@ -21,6 +21,7 @@ import {
 import { adaptLegacyPlantProfile, resolvePlantPim } from '../app/services/pimLegacyAdapter.js';
 import { PIM_EXTERNAL_FIELD_MAP, reviewPimImport, stagePimImport } from '../app/services/pimImportReview.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
+import { createPigeonPeaTemplateProfile, PIGEON_PEA_TEMPLATE_ID } from '../app/services/pigeonPeaTemplate.js';
 
 const NOW = '2026-08-03T00:00:00.000Z';
 
@@ -225,6 +226,20 @@ test('Pigeon Pea is a complete four-level reference with Medicinal and Craft bel
     assert.equal(nitrogen.children[0].parentPath, nitrogen.path);
 });
 
+test('new project Pigeon Pea template carries the complete shared PIM into Home', () => {
+    const profile = createPigeonPeaTemplateProfile('cajanus-cajan-template');
+    assert.equal(profile.template_id, PIGEON_PEA_TEMPLATE_ID);
+    assert.equal(profile.common_name, 'Pigeon Pea');
+    assert.equal(profile.scientific_name, 'Cajanus cajan');
+    assert.equal(profile.spm_enabled, true);
+    assert.equal(profile.profile_enabled, true);
+    assert.equal(profile.pim_document.plantId, 'cajanus-cajan-template');
+    assert.equal(profile.pim_document.nodes.length, PIGEON_PEA_PIM.nodes.length);
+    assert.deepEqual(profile.pim_document.nodes.filter(node => !node.parentId).map(node => node.id), [
+        'food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data', 'cultivation'
+    ]);
+});
+
 test('external imports stage provenance and surface duplicates and conflicts without publishing', () => {
     assert.equal(PIM_EXTERNAL_FIELD_MAP.nitrogen_fixation.primaryCategory, 'food-forest');
     assert.equal(PIM_EXTERNAL_FIELD_MAP.traditional_medicinal_use.informationType, 'traditional_knowledge');
@@ -307,4 +322,3 @@ test('import review can acknowledge duplicates, reject conflicts, or modify an a
     assert.equal(staged.status, 'reviewed');
     assert.equal(validatePimDocument(normalizePimDocument(staged.document)).valid, true);
 });
-

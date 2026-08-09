@@ -119,6 +119,13 @@
     min-width: 0;
 }
 
+.pim-web-identity-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+}
+
 .pim-web-centre {
     display: grid;
     grid-template-columns: 84px minmax(0, 1fr);
@@ -187,6 +194,33 @@
     font-size: max(11px, .7rem);
     font-weight: 800;
     text-transform: uppercase;
+}
+
+.pim-web-direction-info {
+    display: inline-grid !important;
+    place-items: center;
+    width: 24px;
+    min-width: 24px !important;
+    height: 24px;
+    min-height: 24px !important;
+    max-height: 24px;
+    padding: 0;
+    border: 1px solid rgba(174, 133, 30, .55);
+    border-radius: 50%;
+    background: #fff3b6;
+    color: #7b5d13;
+    font-size: .72rem;
+    font-weight: 850;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pim-web-direction-info:hover,
+.pim-web-direction-info:focus-visible,
+.pim-web-direction-info[aria-expanded="true"] {
+    border-color: #9c7413;
+    background: #ffe78a;
+    color: #634a0e;
 }
 
 .pim-web-direction-key {

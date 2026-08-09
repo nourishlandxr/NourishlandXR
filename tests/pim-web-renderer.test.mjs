@@ -75,7 +75,7 @@ function referenceDocument() {
     });
 }
 
-test('Web PIM renders the six stable categories as a rectangular Knowledge Compass', () => {
+test('Web PIM renders the six stable categories as a rectangular plant knowledge diagram', () => {
     const document = referenceDocument();
     const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document));
     assert.match(markup, /class="pim-web-compass-shell"/);
@@ -88,8 +88,19 @@ test('Web PIM renders the six stable categories as a rectangular Knowledge Compa
     }
     assert.match(markup, /Pigeon Pea/);
     assert.match(markup, /<em>Cajanus cajan<\/em>/);
-    assert.match(markup, /Knowledge Compass directions/);
+    assert.match(markup, /Plant knowledge/);
+    assert.match(markup, /data-pim-directions-info/);
+    assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
+    assert.doesNotMatch(markup, /Knowledge Compass/);
     assert.doesNotMatch(`${rendererSource}\n${styles}`, /hexagon|honeycomb|clip-path:\s*polygon/i);
+});
+
+test('Plant Profile can use a compact PIM surface without the Web search field', () => {
+    const document = referenceDocument();
+    const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document), { showSearch: false });
+    assert.doesNotMatch(markup, /data-pim-search-form/);
+    assert.match(markup, /data-pim-directions-info/);
+    assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
 });
 
 test('open-node state keeps multiple branches and closes only a selected branch with descendants', () => {

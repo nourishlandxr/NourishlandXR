@@ -120,3 +120,25 @@ test('visitor deep reads enforce the full public hierarchy', async () => {
     const response = await fetch(`${baseUrl}${profilePath}?view=visitor`);
     assert.equal(response.status, 404);
 });
+
+test('new projects seed a complete Pigeon Pea template in Home', async () => {
+    const response = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Pigeon Pea Template Project', siteSuggestions: ['Main Location', 'Second Location'] })
+    });
+    const project = await response.json();
+    assert.equal(response.status, 201);
+    const sites = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites`)).json();
+    assert.equal(sites.length, 2);
+    const places = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places`)).json();
+    const home = places.find(place => place.systemKey === 'home');
+    assert.ok(home);
+    const markers = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers`)).json();
+    const pigeonPea = markers.find(marker => marker.name === 'Pigeon Pea');
+    assert.ok(pigeonPea);
+    const profile = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers/${pigeonPea.id}/plant-profile`)).json();
+    assert.equal(profile.template_id, 'pigeon-pea-reference');
+    assert.equal(profile.spm_enabled, true);
+    assert.equal(profile.pim_document.nodes.length, 58);
+});

@@ -7,6 +7,8 @@ import crypto from 'crypto';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { createProjectSpatialData } from '../app/services/spatialDataModel.js';
+import { createPigeonPeaTemplateProfile } from '../app/services/pigeonPeaTemplate.js';
+import { PIGEON_PEA_EXAMPLE } from '../app/services/pigeonPeaExample.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -560,15 +562,43 @@ function createProject(projectData) {
     const siteSuggestions = Array.isArray(projectData.siteSuggestions) && projectData.siteSuggestions.length
         ? projectData.siteSuggestions
         : ['Main Location'];
+    let seededPigeonPea = false;
     for (const siteName of siteSuggestions) {
         const siteId = toProjectId(siteName);
         if (!siteId) continue;
         const siteDir = path.join(projectDir, 'sites', siteId);
         fs.mkdirSync(path.join(siteDir, 'places'), { recursive: true });
         writeJson(path.join(siteDir, 'site.json'), { id: siteId, name: siteName.trim(), description: '', visibility: 'draft' });
-        ensureDefaultHomeArea(projectId, siteId);
+        const home = ensureDefaultHomeArea(projectId, siteId);
+        if (!seededPigeonPea) {
+            seedPigeonPeaTemplate(projectId, siteId, home.id);
+            seededPigeonPea = true;
+        }
     }
     return project;
+}
+
+function seedPigeonPeaTemplate(projectId, siteId, placeId) {
+    const sharedPigeonPea = loadPlantRegistryData().data.plants.find(plant => plant.id === 'cajanus-cajan');
+    const created = createSpatialPlant(projectId, siteId, placeId, {
+        ...(sharedPigeonPea ? { plantId: sharedPigeonPea.id } : {}),
+        commonName: PIGEON_PEA_EXAMPLE.commonName,
+        scientificName: PIGEON_PEA_EXAMPLE.scientificName,
+        family: PIGEON_PEA_EXAMPLE.family,
+        description: PIGEON_PEA_EXAMPLE.shortProfile,
+        visibility: 'draft',
+        status: 'ready'
+    });
+    const markerDir = path.join(getCanonicalSitePath(projectId, siteId), 'places', placeId, 'markers', created.marker.id);
+    const profile = createPigeonPeaTemplateProfile(created.plant?.id || created.marker?.plantId || 'cajanus-cajan');
+    writeJson(path.join(markerDir, 'plant_profile.json'), profile);
+    writeJson(path.join(markerDir, 'marker.json'), {
+        ...created.marker,
+        description: PIGEON_PEA_EXAMPLE.shortProfile,
+        template_id: profile.template_id,
+        is_template: true
+    });
+    return created;
 }
 
 function renameProject(projectId, projectData) {

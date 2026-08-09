@@ -821,7 +821,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 @keyframes tryit-plant-profile-ready { from { transform: translate(-50%, -50%) translate(-1px, 0) scale(.99); } to { transform: translate(-50%, -50%) translate(1px, -1px) scale(1.015); } }
 .tryit-sim-plant-tether { position: fixed; left: var(--marker-x, 50%); top: calc(var(--marker-y, 50%) - 9px); z-index: 12000; width: var(--tether-length, 120px); height: 18px; transform: rotate(var(--tether-angle, -90deg)); transform-origin: 0 9px; overflow: visible; filter: drop-shadow(0 0 3px rgba(183,232,149,.20)); opacity: .9; pointer-events: none; }
 .tryit-sim-plant-tether path { fill: none; stroke: rgba(222,239,207,.36); stroke-width: 1; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.tryit-sim-plant-profile { position: fixed; left: var(--marker-x, 50%); top: var(--marker-y, 50%); z-index: 12001; width: min(calc(100vw - 24px), 960px); height: min(74vh, 680px); height: min(74dvh, 680px); transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); overflow:visible; border:1px solid rgba(214,242,191,.14); border-radius:clamp(24px,4vw,42px); background:radial-gradient(ellipse at center,rgba(19,66,40,.28),rgba(7,26,17,.08) 58%,transparent 78%); color: rgba(255,255,255,.92); box-shadow:inset 0 0 70px rgba(150,213,117,.05); filter: drop-shadow(0 12px 28px rgba(0,0,0,.16)); pointer-events: none; animation: tryit-profile-arrive 1.15s cubic-bezier(.18,.78,.28,1) both; }
+.tryit-sim-plant-profile { position: fixed; left: var(--marker-x, 50%); top: var(--marker-y, 50%); z-index: 12001; width: min(calc(100vw - 24px), 960px); height: min(62vh, 620px); height: min(62dvh, 620px); transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); overflow:visible; border:1px solid rgba(214,242,191,.14); border-radius:clamp(24px,4vw,42px); background:radial-gradient(ellipse at center,rgba(19,66,40,.28),rgba(7,26,17,.08) 58%,transparent 78%); color: rgba(255,255,255,.92); box-shadow:inset 0 0 70px rgba(150,213,117,.05); filter: drop-shadow(0 12px 28px rgba(0,0,0,.16)); pointer-events: auto; animation: tryit-profile-arrive 1.15s cubic-bezier(.18,.78,.28,1) both; }
 .tryit-sim-plant-profile.is-dragging { filter: drop-shadow(0 11px 24px rgba(0,0,0,.16)); }
 @keyframes tryit-profile-arrive { from { opacity: 0; transform: translate(calc(-50% + var(--panel-x)), calc(-46% + var(--panel-y))) scale(.94); } to { opacity: 1; transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))) scale(1); } }
 .plant-knowledge-map { --pim-cell-size:clamp(96px,14vw,164px); --pim-cell-height:calc(var(--pim-cell-size) * .8); --pim-x-step:clamp(63px,17.25vw,84px); --pim-x-half:clamp(31.5px,8.625vw,42px); --pim-y-step:clamp(55px,14.9vw,73px); position:relative; isolation:isolate; display:block; width:100%; height:100%; overflow:visible; }
@@ -1929,6 +1929,15 @@ body:not(.ar-session-active) #globalArToggle {
     top: -8px;
 }
 
+/* Project guidance is an onboarding overlay, not a footer notice. */
+.tutorial-spotlight-projectTutorial {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+}
+
+.tutorial-spotlight-projectTutorial::before { display: none; }
+
 .tutorial-spotlight-callout p {
     margin: 0;
     color: #4f5c53;
@@ -1986,6 +1995,12 @@ body:not(.ar-session-active) #globalArToggle {
     .tutorial-spotlight-welcome {
         top: 50%;
         bottom: auto;
+    }
+
+    .tutorial-spotlight-callout.tutorial-spotlight-projectTutorial {
+        top: 50%;
+        bottom: auto;
+        transform: translate(-50%, -50%);
     }
 }
 
@@ -4971,7 +4986,6 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-profile-spm-toggle { display:grid; gap:10px; padding:14px; border:1px solid rgba(48,111,69,.24); border-radius:16px; background:linear-gradient(145deg,rgba(235,247,228,.86),rgba(247,244,220,.62)); }
 .plant-profile-spm-toggle h2 { margin:0 0 4px; color:#234e31; }
 .plant-profile-spm-toggle p { margin:0; color:var(--muted,#536457); font-size:.84rem; line-height:1.45; }
-.plant-spm-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .plant-profile-info-bubble { display:inline-grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border:1px solid rgba(49,91,55,.3); border-radius:50%; background:rgba(255,255,255,.76); color:#315b39; font-size:.7rem; font-style:normal; font-weight:900; line-height:1; }
 .plant-physical-anchor-unavailable { display:flex; align-items:flex-start; gap:7px; }
 .plant-profile-invitation { display: grid; gap: 8px; justify-items: start; }
@@ -4982,7 +4996,6 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-profile-fields { display: block; }
 .plant-profile-fields[hidden] { display: none; }
 .plant-profile-spm-fields[hidden] { display:none; }
-.plant-profile-spm-vitals { margin-top:12px; }
 .plant-profile-pim-web-section,
 .plant-example-pim-section { display:grid; gap:12px; margin-top:14px; padding:16px; border:1px solid rgba(48,111,69,.2); border-radius:20px; background:rgba(248,251,241,.78); }
 .plant-profile-pim-web-heading { display:grid; gap:5px; }
@@ -5377,66 +5390,6 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-color-field input[type="color"] {
     width: 100%;
     padding: 0.25rem;
-}
-
-.plant-overview-card {
-    display: grid;
-    gap: 0.35rem;
-    padding: 0.8rem 0.9rem;
-    border: 1px solid rgba(197, 146, 93, 0.18);
-    border-radius: 18px;
-    background: linear-gradient(145deg, #fff9ed, var(--pastel-peach));
-}
-
-.plant-overview-card label {
-    color: #725b41;
-    font-weight: 850;
-}
-
-.plant-overview-card textarea {
-    min-height: 66px;
-    resize: vertical;
-    border-color: rgba(162, 119, 74, 0.2);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.7);
-}
-
-.plant-info-drawer {
-    overflow: hidden;
-    border: 1px solid rgba(74, 110, 78, 0.16);
-    border-radius: 17px;
-    background: rgba(252, 253, 248, 0.94);
-}
-
-.plant-info-drawer:nth-of-type(2) { background: linear-gradient(145deg, #fbfdf5, var(--pastel-sky)); }
-.plant-info-drawer:nth-of-type(3) { background: linear-gradient(145deg, #fbfdf5, var(--pastel-lilac)); }
-
-.plant-info-drawer summary {
-    display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
-    gap: 0 0.55rem;
-    align-items: center;
-    padding: 0.75rem 0.85rem;
-    cursor: pointer;
-    list-style: none;
-}
-
-.plant-info-drawer summary::-webkit-details-marker { display: none; }
-.plant-info-drawer summary > span { grid-row: 1 / 3; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 11px; background: rgba(104, 148, 109, 0.14); color: #4d7554; font-size: 1rem; }
-.plant-info-drawer summary strong { font-size: 0.82rem; }
-.plant-info-drawer summary small { color: #6b786d; font-size: 0.67rem; }
-.plant-info-drawer[open] summary { border-bottom: 1px solid rgba(74, 110, 78, 0.12); }
-
-.plant-drawer-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.7rem;
-    padding: 0.8rem;
-}
-
-.plant-drawer-fields textarea {
-    min-height: 58px;
-    resize: vertical;
 }
 
 .project-entry-editor .spatial-focus-panel {
@@ -6008,10 +5961,6 @@ body.ar-dashboard-open .ar-tutorial-panel {
 
     .plant-vital-grid .field {
         padding: 0.42rem;
-    }
-
-    .plant-drawer-fields {
-        grid-template-columns: 1fr;
     }
 
     .area-profile-hero,
@@ -7807,32 +7756,40 @@ button.ar-square-action::before { display: none !important; }
 .project-entry .location-dashboard-header h1 { background: transparent !important; border-color: transparent !important; color: #111 !important; }
 
 /* Compact, circular information controls retain the button reset's dimensions. */
-.project-layout-info {
+.project-layout-info,
+.plant-profile-info-bubble,
+.pim-web-direction-info {
     box-sizing: border-box;
+    display: inline-grid;
+    place-items: center;
     width: 24px;
     min-width: 24px;
     height: 24px;
     min-height: 24px;
     max-height: 24px;
+    padding: 0;
     border-radius: 50%;
     border-color: rgba(174, 133, 30, .55);
     background: #fff3b6;
     color: #7b5d13;
+    font-size: .72rem;
+    font-weight: 850;
+    line-height: 1;
+    cursor: pointer;
 }
 .project-layout-info:hover,
 .project-layout-info:focus-visible,
-.project-layout-info[aria-expanded="true"] { border-color: #9c7413; background: #ffe78a; color: #634a0e; }
-.plant-profile-spm-toggle .plant-profile-info-bubble {
-    border-color: rgba(174, 133, 30, .55);
-    background: #fff3b6;
-    color: #7b5d13;
-    cursor: pointer;
-}
-.plant-profile-spm-toggle .plant-profile-info-bubble:hover,
-.plant-profile-spm-toggle .plant-profile-info-bubble:focus-visible,
-.plant-profile-spm-toggle .plant-profile-info-bubble[aria-expanded="true"] { border-color: #9c7413; background: #ffe78a; color: #634a0e; }
-.plant-spm-heading { align-items: center; }
-.plant-spm-heading > strong { color: #234e31; font-size: .84rem; letter-spacing: .03em; }
+.project-layout-info[aria-expanded="true"],
+.plant-profile-info-bubble:hover,
+.plant-profile-info-bubble:focus-visible,
+.plant-profile-info-bubble[aria-expanded="true"],
+.pim-web-direction-info:hover,
+.pim-web-direction-info:focus-visible,
+.pim-web-direction-info[aria-expanded="true"] { border-color: #9c7413; background: #ffe78a; color: #634a0e; }
+.plant-spm-toggle-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.plant-spm-toggle-label { display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer; }
+.plant-spm-toggle-label > strong { color:#234e31; font-size:.84rem; letter-spacing:.05em; }
+.plant-spm-toggle-label > input { flex:0 0 auto; width:20px; height:20px; margin:0; accent-color:#4c7c39; }
 .plant-spm-help { margin: 0 !important; color: #5c674f !important; font-size: .78rem !important; }
 
 /* Keep the Area description control on one readable line. */
@@ -7854,13 +7811,14 @@ button.ar-square-action::before { display: none !important; }
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+    pointer-events: auto;
 }
 .creator-ar-quest-headset .creator-ar-plant-profile,
 .creator-ar-quest-headset .creator-ar-plant-tether {
     display: none !important;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] {
-    --pim-cell-size: clamp(76px, 22vw, 220px);
+    --pim-cell-size: clamp(76px, 14vw, 132px);
     --pim-cell-height: calc(var(--pim-cell-size) * .8660254);
     --pim-center-y: calc(50% + 18px);
     position: relative;

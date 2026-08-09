@@ -2702,6 +2702,7 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
         <div class="plant-card-hero">
             <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
             <div class="plant-vital-grid">
+                <div class="field plant-orb-size-control"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
                 <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
                 <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
                 <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select></div>
@@ -2710,28 +2711,15 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             </div>
         </div>
         <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div class="plant-spm-heading"><strong id="plantSpmTitle">Activate Info Mesh</strong><button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button></div>
-            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh activates the expandable plant knowledge diagram for this Plant. Leave it off for a simple profile.</p>
-            <label class="tutorial-mode-toggle"><span><strong>Info Mesh</strong><small>Open the expandable Info Mesh in Web Mode and AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+            <div class="plant-spm-toggle-line">
+                <label class="plant-spm-toggle-label" for="projectEntrySpmEnabled"><strong id="plantSpmTitle">ACTIVATE INFO MESH</strong><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+                <button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button>
+            </div>
+            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh opens the expandable plant knowledge diagram shared by Web Mode and AR.</p>
         </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
-        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Info Mesh overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the Info Mesh core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
-        <div class="plant-vital-grid plant-profile-spm-vitals">
-            <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
-        </div>
-        <details class="plant-info-drawer"><summary><span aria-hidden="true">⌕</span><strong>Advanced identity &amp; photo</strong><small>Optional family and image</small></summary><div class="plant-drawer-fields">
-            <div class="field"><label for="projectEntryFamily">Family / genus</label><input id="projectEntryFamily" value="${escapeHtml(profile.family || '')}" /></div>
-            <div class="field"><label for="projectEntryPhoto">Photo URL</label><input id="projectEntryPhoto" type="url" value="${escapeHtml(photo)}" placeholder="Optional" /></div>
-        </div></details>
-        <details class="plant-info-drawer"><summary><span aria-hidden="true">☀</span><strong>Growing knowledge</strong><small>Uses, relationships and propagation</small></summary><div class="plant-drawer-fields">
-            <div class="field"><label for="projectEntryUses">Uses</label><textarea id="projectEntryUses" rows="2">${escapeHtml(profile.uses || '')}</textarea></div>
-            <div class="field"><label for="projectEntryRelationships">Relationships</label><textarea id="projectEntryRelationships" rows="2">${escapeHtml(profile.relationships || profile.companions || '')}</textarea></div>
-            <div class="field"><label for="projectEntryAttributeChainCount">Attribute chain count</label><input id="projectEntryAttributeChainCount" type="number" min="0" step="1" value="${escapeHtml(profile.attribute_chain_count ?? '')}" placeholder="Optional relationship count" /></div>
-            <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="2">${escapeHtml(profile.propagation || '')}</textarea></div>
-        </div></details>
-        <details class="plant-info-drawer"><summary><span aria-hidden="true">◌</span><strong>Origin &amp; story</strong><small>Optional history and context</small></summary><div class="plant-drawer-fields"><div class="field"><label for="projectEntryOrigin">Origin and history</label><textarea id="projectEntryOrigin" rows="2">${escapeHtml(profile.origin || '')}</textarea></div></div></details>
         <section class="plant-profile-pim-web-section" aria-labelledby="plantInfoMeshWebTitle">
-            <div class="plant-profile-pim-web-heading"><p class="welcome-label">WEB MODE · SHARED PIM</p><h2 id="plantInfoMeshWebTitle">Info Mesh diagram</h2><p>Explore the same plant knowledge that appears as the spatial AR mesh. Open several branches, select a block for details, or add a structured information block.</p></div>
+            <div class="plant-profile-pim-web-heading"><p class="welcome-label">PLANT INFORMATION MESH</p><h2 id="plantInfoMeshWebTitle">Plant knowledge</h2></div>
             <div data-plant-pim-web-mount></div>
         </section>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
@@ -2886,6 +2874,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             pimWebController = mountPlantInformationWeb(mount, {
                 document: activePimDocument,
                 editable: true,
+                showSearch: false,
                 importReview: activePimImportReview,
                 initialState: pimInitialRouteState,
                 onRouteChange: (state, node) => {
@@ -3076,17 +3065,17 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 common_name: fieldValue('projectEntryCommonName', existingPlantProfile.common_name || name) || name,
                 scientific_name: fieldValue('projectEntryScientificName', existingPlantProfile.scientific_name || ''),
                 climate: fieldValue('projectEntryClimate', existingPlantProfile.climate || ''),
-                family: fieldValue('projectEntryFamily', existingPlantProfile.family || ''),
-                origin: fieldValue('projectEntryOrigin', existingPlantProfile.origin || ''),
+                family: existingPlantProfile.family || '',
+                origin: existingPlantProfile.origin || '',
                 layer: fieldValue('projectEntryLayer', existingPlantProfile.layer || ''),
-                photo: fieldValue('projectEntryPhoto', existingPlantProfile.photo || ''),
+                photo: existingPlantProfile.photo || '',
                 orb_color: plantColor || existingPlantProfile.orb_color || entry.marker.appearance?.color || '#5e7956',
                 orb_size: fieldValue('projectEntryOrbSize', existingPlantProfile.orb_size || 'medium'),
-                uses: fieldValue('projectEntryUses', existingPlantProfile.uses || ''),
-                relationships: fieldValue('projectEntryRelationships', existingPlantProfile.relationships || existingPlantProfile.companions || ''),
-                attribute_chain_count: fieldValue('projectEntryAttributeChainCount', existingPlantProfile.attribute_chain_count ?? ''),
-                propagation: fieldValue('projectEntryPropagation', existingPlantProfile.propagation || ''),
-                overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || ''),
+                uses: existingPlantProfile.uses || '',
+                relationships: existingPlantProfile.relationships || existingPlantProfile.companions || '',
+                attribute_chain_count: existingPlantProfile.attribute_chain_count ?? '',
+                propagation: existingPlantProfile.propagation || '',
+                overview: existingPlantProfile.overview || entry.marker.description || '',
                 virtual_tag_enabled: document.getElementById('projectEntryVirtualTag')?.checked ?? existingPlantProfile.virtual_tag_enabled === true
             };
             if (profileEnabled) {

@@ -34,6 +34,8 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
     expandedSurfaceWidthMetres: 1.44,
     expandedSurfaceHeightMetres: 1.08,
     placementDistanceMetres: 1.5,
+    overheadLiftMetres: .72,
+    overheadClearanceMetres: .09,
     gazeDropDegrees: 5,
     selectedDepthMetres: .018,
     colliderScale: 1.2
@@ -322,6 +324,33 @@ export function pimSpatialPoseFromViewer(viewerMatrix, options = {}) {
         plantId: String(options.plantId || ''),
         anchorId: String(options.anchorId || options.totemId || ''),
         coordinateSpace: String(options.coordinateSpace || 'session-local')
+    };
+}
+
+// Attach plant information to the orb, rather than to the user's current
+// gaze point. The mesh therefore opens overhead and slightly toward the
+// viewer instead of appearing behind the plant marker.
+export function pimSpatialPoseAboveAnchor(viewerMatrix, anchorPosition, options = {}) {
+    const pose = pimSpatialPoseFromViewer(viewerMatrix, options);
+    if (!pose || !anchorPosition) return pose;
+    const lift = Number.isFinite(Number(options.liftMetres))
+        ? Number(options.liftMetres)
+        : PIM_SPATIAL_CONFIG.overheadLiftMetres;
+    const clearance = Number.isFinite(Number(options.clearanceMetres))
+        ? Number(options.clearanceMetres)
+        : PIM_SPATIAL_CONFIG.overheadClearanceMetres;
+    const anchor = {
+        x: Number(anchorPosition.x) || 0,
+        y: Number(anchorPosition.y) || 0,
+        z: Number(anchorPosition.z) || 0
+    };
+    return {
+        ...pose,
+        position: {
+            x: anchor.x + pose.normal.x * clearance,
+            y: anchor.y + lift,
+            z: anchor.z + pose.normal.z * clearance
+        }
     };
 }
 

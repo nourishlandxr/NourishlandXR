@@ -9,6 +9,7 @@ import {
     pimNodeHue,
     pimRootPosition,
     pimSpatialPanel,
+    pimSpatialPoseAboveAnchor,
     pimSpatialPoseFromStored,
     pimSpatialPoseFromViewer,
     pimToggleExpandedPaths,
@@ -171,6 +172,19 @@ test('PIM spatial pose is captured once, world-sized and JSON serializable', () 
     assert.deepEqual(reopened.position, { x: 1.5, y: 1.4, z: -1.5 });
     assert.equal(reopened.plantId, 'pigeon-pea');
     assert.equal(reopened.anchorId, 'pigeon-marker');
+});
+
+test('PIM plant pose is lifted above its orb for first-open AR placement', () => {
+    const viewerMatrix = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 1.6, 0, 1
+    ]);
+    const pose = pimSpatialPoseAboveAnchor(viewerMatrix, { x: 1, y: .2, z: -2 }, { plantId: 'pigeon-pea' });
+    assert.equal(pose.position.y, .2 + PIM_SPATIAL_CONFIG.overheadLiftMetres);
+    assert.ok(pose.position.z > -2, 'the panel is nudged toward the viewer');
+    assert.ok(pose.position.y > .2, 'the panel is overhead relative to the orb');
 });
 
 test('PIM shared hit testing exposes large cells and explicit recenter', () => {

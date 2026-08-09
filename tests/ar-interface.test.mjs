@@ -1160,7 +1160,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-plant-tether/);
     assert.match(styles, /\.tryit-sim-plant-tether path \{ fill: none;/);
     assert.match(styles, /\.tryit-sim-plant-profile/);
-    assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: none;/);
+    assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: auto;/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function toggleDemoPlantProfile/);
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
@@ -1183,8 +1183,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-map/);
     assert.match(source, /plant-knowledge-connectors/);
     assert.match(styles, /\.plant-knowledge-connectors path/);
-    assert.match(styles, /--pim-cell-size: clamp\(76px, 22vw, 220px\)/);
-    assert.match(styles, /height: min\(74dvh, 680px\)/);
+    assert.match(styles, /--pim-cell-size: clamp\(76px, 14vw, 132px\)/);
+    assert.match(styles, /height: min\(62dvh, 620px\)/);
     assert.match(styles, /@keyframes pim-cell-bloom/);
     assert.match(styles, /data-pim-layout="honeycomb"/);
     assert.match(source, /pimConnectorPath/);
@@ -1204,7 +1204,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /data-pim-node/);
     assert.match(source, /pimHoneycombTargetAtPercent/);
     assert.match(source, /fixedPimPanelMatrix/);
-    assert.match(source, /pimSpatialPoseFromViewer/);
+    assert.match(source, /pimSpatialPoseAboveAnchor/);
+    assert.match(source, /function plantInformationPose/);
     assert.match(source, /advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(immersiveSelectHandler, /markers\.some\(record => record\.demoType === 'plant' && record\.demoExpanded\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
@@ -1459,6 +1460,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /drawPlantInformationHoneycomb/);
     assert.match(arSource, /pim_pose/);
     assert.match(arSource, /pimSpatialPoseFromViewer/);
+    assert.match(arSource, /pimSpatialPoseAboveAnchor/);
     assert.match(arSource, /pimSpatialPoseFromStored/);
     assert.match(arSource, /coordinate_space: 'marker-local'/);
     assert.match(arSource, /spatialAnchorForRecord/);
@@ -1480,22 +1482,23 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
     assert.match(dashboardSource, /data-spm-info/);
-    assert.match(dashboardSource, /Activate Info Mesh/);
+    assert.match(dashboardSource, /ACTIVATE INFO MESH/);
+    assert.match(dashboardSource, /plant-spm-toggle-line/);
     assert.match(dashboardSource, /mountPlantInformationWeb/);
     assert.match(dashboardSource, /data-plant-pim-web-mount/);
     assert.match(dashboardSource, /pim_document: activePimDocument/);
     assert.match(dashboardSource, /projectEntrySpmEnabled/);
     assert.match(dashboardSource, /projectEntryClimate/);
     assert.match(dashboardSource, /spm_enabled: spmEnabled/);
-    assert.ok(dashboardSource.indexOf('plant-card-hero') < dashboardSource.indexOf('projectEntrySpmEnabled'));
+    assert.ok(dashboardSource.indexOf('projectEntryOrbSize') < dashboardSource.indexOf('projectEntrySpmEnabled'));
     assert.match(arSource, /profile\.spm_enabled === true \|\| profile\.profile_enabled === true/);
-    assert.match(dashboardSource, /plant-info-drawer/);
-    assert.match(dashboardSource, /projectEntryRelationships/);
+    assert.doesNotMatch(dashboardSource, /Info Mesh overview|Advanced identity|Growing knowledge|Origin &amp; story|projectEntryRelationships/);
+    assert.match(dashboardSource, /PLANT INFORMATION MESH/);
+    assert.match(dashboardSource, /Plant knowledge/);
+    assert.match(dashboardSource, /showSearch: false/);
     assert.match(dashboardSource, /if \(plantProfileFormPresent\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = focusedProfileView/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
-    assert.match(dashboardSource, /Growing knowledge/);
-    assert.match(dashboardSource, /Origin &amp; story/);
     assert.match(dashboardSource, /projectEntryVirtualTag/);
     assert.match(dashboardSource, /Make this Plant a Plant Live Tag/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
@@ -1715,7 +1718,7 @@ test('Note placement waits for a valid one-metre projection and previews the sav
     assert.match(styles, /\.creator-ar-note-placement-preview \.creator-ar-note-placement-surface/);
 });
 
-test('editing a Plant from AR opens only the basic identity and earth-tone controls', () => {
+test('editing a Plant from AR keeps the compact identity controls and shared Info Mesh path', () => {
     const arSource = read('app/screens/arMode.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
@@ -1725,7 +1728,8 @@ test('editing a Plant from AR opens only the basic identity and earth-tone contr
     assert.match(dashboardSource, /class="plant-ar-quick-editor"/);
     assert.doesNotMatch(dashboardSource, /The full Plant Profile remains in the Web Hub/);
     assert.match(dashboardSource, /data-plant-quick-tone/);
-    assert.match(dashboardSource, /fieldValue\('projectEntryFamily', existingPlantProfile\.family/);
+    assert.match(dashboardSource, /family: existingPlantProfile\.family/);
+    assert.match(dashboardSource, /orb_size: fieldValue\('projectEntryOrbSize'/);
     assert.match(dashboardSource, /manageQrAnchor/);
     assert.match(dashboardSource, /const webReturnAction = plant/);
     assert.match(dashboardSource, /window\.renderProjectHome\('\$\{encoded\(project\.id\)\}'\)/);

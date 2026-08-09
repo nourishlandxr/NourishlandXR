@@ -24,7 +24,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -2492,7 +2492,7 @@ function ensureSpatialPimPose(record, force = false) {
         record.pimSpatialPose = pimSpatialPoseFromStored(record.pimStoredPose, record.position);
     }
     if (!record.pimSpatialPose || force) {
-        record.pimSpatialPose = pimSpatialPoseFromViewer(latestViewerMatrix, {
+        record.pimSpatialPose = pimSpatialPoseAboveAnchor(latestViewerMatrix, record.position, {
             plantId: record.marker.plantId || record.marker.id,
             anchorId: record.marker.id,
             coordinateSpace: 'session-local'
@@ -3366,7 +3366,7 @@ function renderSessionMarkers() {
         });
         profilePanel?.querySelector('[data-ar-pim-recenter]')?.addEventListener('click', event => {
             event.stopPropagation();
-            record.pimSpatialPose = pimSpatialPoseFromViewer(latestViewerMatrix, {
+            record.pimSpatialPose = pimSpatialPoseAboveAnchor(latestViewerMatrix, record.position, {
                 plantId: record.marker.plantId || record.marker.id,
                 anchorId: record.checkpointId || activeCheckpointId || ''
             });
