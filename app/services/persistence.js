@@ -121,7 +121,9 @@ export async function createSpatialPlant(projectId, siteId, placeId, plant) {
             plantId: plant.plantId || '',
             plant_profile: {
                 common_name: name,
-                scientific_name: plant.scientificName || ''
+                scientific_name: plant.scientificName || '',
+                family: plant.family || '',
+                externalSources: Array.isArray(plant.externalSources) ? plant.externalSources : []
             },
             visibility: plant.visibility || 'draft',
             status: plant.status || 'draft'

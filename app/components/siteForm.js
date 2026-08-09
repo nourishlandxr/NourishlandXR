@@ -21,6 +21,7 @@ export function renderSiteForm(onCancel, onSubmit, project = null, templateKey =
             <select id="projectTemplate">
                 ${options}
             </select>
+            ${!project ? '<p class="meta project-template-note">Every new project includes a complete Pigeon Pea example plant in Home. Find it at Web Hub → Home → Pigeon Pea.</p>' : ''}
         </div>
         <details class="project-advanced-options">
             <summary>Advanced options</summary>

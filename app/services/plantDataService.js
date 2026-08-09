@@ -1,4 +1,5 @@
 import { API_BASE, apiFetch } from './apiClient.js';
+import { searchAlaPlants } from './alaPlantSearch.js';
 const KEBAB_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const libraryCache = new Map();
@@ -75,10 +76,7 @@ export async function createPlantRecord(data) {
 }
 
 export async function searchGlobalPlants(query) {
-    const value = String(query || '').trim();
-    if (value.length < 2) return [];
-    const payload = await requestJson(`${API_BASE}/plant-search/global?q=${encodeURIComponent(value)}`, { results: [] }, { throwOnError: true });
-    return Array.isArray(payload?.results) ? payload.results : [];
+    return searchAlaPlants(query);
 }
 
 export async function updatePlantRecord(plantId, data) {

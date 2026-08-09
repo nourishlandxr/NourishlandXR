@@ -393,7 +393,7 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*width:min\(58vw,320px\)[\s\S]*border-radius:28px 28px 28px 12px !important/);
     assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
     assert.doesNotMatch(styles, /BONUS PATH/);
-    assert.match(areaDashboardSource, /is-totem-entry/);
+    assert.match(dashboardSource, /is-totem-entry/);
     assert.doesNotMatch(areaDashboardSource, /window\.openProjectAreaAr\([\s\S]*area_checkpoint[\s\S]*>AR/);
     assert.match(areaDashboardSource, /totem-stat-grid/);
     assert.match(areaDashboardSource, /TEXT BALLOONS/);
@@ -403,6 +403,14 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
     assert.match(areaDashboardSource, /data-area-about-info/);
     assert.match(areaDashboardSource, /id="projectAreaArStatus" class="meta" aria-live="polite"/);
     assert.match(areaDashboardSource, /encoded\(checkpoint\?\.marker\.id/);
+    assert.match(areaDashboardSource, /areaEntryPresentation\(markerType, plantProfile\)/);
+    assert.match(areaDashboardSource, /data-marker-type="\$\{escapeHtml\(markerType\)\}"/);
+    assert.match(areaDashboardSource, /area-entry-icon/);
+    assert.match(styles, /\.area-content-grid/);
+    assert.match(styles, /\.area-content-card\.is-plant/);
+    assert.match(styles, /\.area-content-card\.is-note/);
+    assert.match(styles, /\.project-entry \.dashboard-frame > \.tutorial-spotlight-callout/);
+    assert.match(styles, /\.tutorial-spotlight-projectTutorial \{ top:50%/);
 });
 
 test('Area dashboards use selectable icons and keep summary counts in the profile card', () => {
@@ -509,6 +517,7 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(form, /Location name/);
     assert.match(form, /Description \(optional\)/);
     assert.match(form, /projectTemplate/);
+    assert.match(form, /Every new project includes a complete Pigeon Pea example plant in Home/);
     assert.doesNotMatch(form, /projectCoverImage|Suggested Locations/);
     for (const label of ['Blank', 'Food Forest', 'Native Forest', 'Orchard', 'Home Garden', 'Kitchen Garden', 'Plant Nursery', 'Stock Inventory']) {
         assert.match(templates, new RegExp(label));
@@ -527,6 +536,11 @@ test('new location asks only for core details and supported templates', () => {
     assert.ok(templates.indexOf('empty:') < templates.indexOf('food_forest:'));
     assert.match(dashboard, /projectSettingsCoverImage/);
     assert.match(dashboard, /Cover image \(optional\)/);
+    assert.match(dashboard, /STARTER PLANT TEMPLATE/);
+    assert.match(dashboard, /Open Plant Profile/);
+    assert.match(dashboard, /type="file" accept="image\/\*"/);
+    assert.match(dashboard, /projectEntryPhotoData/);
+    assert.match(dashboard, /showIdentity: false/);
 });
 
 test('new projects separate guided tutorial choice from advanced controls', () => {

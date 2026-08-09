@@ -103,6 +103,15 @@ test('Plant Profile can use a compact PIM surface without the Web search field',
     assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
 });
 
+test('Plant Profile can omit the repeated PIM identity card while retaining the mesh', () => {
+    const document = referenceDocument();
+    const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document), { showSearch: false, showIdentity: false });
+    assert.match(markup, /class="pim-web-compass-shell"/);
+    assert.match(markup, /data-pim-group="certainty"/);
+    assert.match(markup, /data-pim-directions-info/);
+    assert.doesNotMatch(markup, /pim-web-plant-visual|<em>Cajanus cajan<\/em>/);
+});
+
 test('open-node state keeps multiple branches and closes only a selected branch with descendants', () => {
     const document = referenceDocument();
     let state = createPlantInformationWebState(document);

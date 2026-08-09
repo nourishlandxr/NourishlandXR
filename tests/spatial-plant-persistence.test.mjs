@@ -119,7 +119,7 @@ test('create with or without position -> restart -> Field Guide -> later GPS pos
     });
     const created = await jsonRequest(`/api/projects/${projectId}/sites/${siteId}/places/${placeId}/plants`, {
         method: 'POST',
-        body: JSON.stringify({ commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', description: 'A fruiting Garcinia at Hillyards.', latitude: -28.6911053, longitude: 153.003029, accuracy: 3.5, visibility: 'public' })
+        body: JSON.stringify({ commonName: 'Lemon Drop Garcinia', scientificName: 'Garcinia intermedia', description: 'A fruiting Garcinia at Hillyards.', latitude: -28.6911053, longitude: 153.003029, accuracy: 3.5, visibility: 'public', externalSources: [{ provider: 'Atlas of Living Australia', providerId: 'ala-test', url: 'https://example.test/ala-test', retrievedAt: '2026-08-09T00:00:00.000Z', scientificName: 'Garcinia intermedia' }] })
     });
     assert.equal(created.marker.plantId, created.plant.id);
     assert.equal(created.marker.plantInstanceId, created.instance.id);
@@ -167,6 +167,7 @@ test('create with or without position -> restart -> Field Guide -> later GPS pos
     assert.equal(marker.plantId, created.plant.id);
     assert.equal(fieldGuidePlant.commonName, 'Lemon Drop Garcinia');
     assert.equal(fieldGuidePlant.summary, 'A fruiting Garcinia at Hillyards.');
+    assert.equal(fieldGuidePlant.externalSources[0].provider, 'Atlas of Living Australia');
     assert.equal(fieldGuidePlant.markerId, created.marker.id);
     assert.equal(gpsPlant.anchor.latitude, -28.6911053);
     assert.equal(gpsPlant.anchor.longitude, 153.003029);

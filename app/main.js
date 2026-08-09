@@ -12,7 +12,7 @@ import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors
 import { exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, startArWithSkipCheck, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
 import { startArMode, exitArMode, isArModeActive } from './screens/arMode.js';
-import { createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, searchGlobalPlantOptions, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, selectGlobalPlant, setFieldMarkerType, setPlantSearchScope } from './screens/fieldMarker.js';
+import { cancelGlobalPlantPreview, confirmGlobalPlantImport, continueManualPlantCreation, createFieldArea, refreshFieldLocation, renderFieldMarker, saveFieldMarker, searchGlobalPlantOptions, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, selectGlobalPlant, setFieldMarkerType, setPlantSearchScope } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
 import { deleteHillyardsMarker, openHillyardsEntry, openHillyardsMarkerActions, openHillyardsPlantProfileEditor, openMarkerPlantProfile, renderCheckpointForm, renderComingSoon, renderDemoProjects, renderFirstSteps, renderGlobalPlantList, renderHillyardsGuidelines, renderHillyardsProject, saveCheckpoint, editDraftMarker, saveDraftMarker, editDraftPlantProfile, saveDraftPlantProfile, deleteDraftMarker } from './screens/v1Navigation.js';
@@ -541,6 +541,9 @@ window.selectFieldPlantProfile = (id) => selectFieldPlantProfile(id);
 window.setPlantSearchScope = setPlantSearchScope;
 window.searchGlobalPlantOptions = searchGlobalPlantOptions;
 window.selectGlobalPlant = selectGlobalPlant;
+window.cancelGlobalPlantPreview = cancelGlobalPlantPreview;
+window.confirmGlobalPlantImport = () => confirmGlobalPlantImport().catch(error => { const status = document.getElementById('fieldError'); if (status) status.textContent = `Plant profile could not be created. ${error.message}`; });
+window.continueManualPlantCreation = continueManualPlantCreation;
 window.createFieldArea = () => createFieldArea().catch(error => window.alert(`Area could not be created: ${error.message}`));
 window.refreshFieldLocation = () => refreshFieldLocation();
 window.saveFieldMarker = event => saveFieldMarker(event);

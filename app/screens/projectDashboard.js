@@ -58,6 +58,35 @@ const isAreaTotemMarker = (marker, areaName = '') => effectiveMarkerType(marker)
         && String(marker?.name || '').trim().toLocaleLowerCase() === `${String(areaName || '').trim().toLocaleLowerCase()} totem`);
 const markerTypeLabel = type => ({ plant: 'Plant Live Tag', note: 'Note', intro_checkpoint: 'Trail Entrance', sub_checkpoint: 'Checkpoint', area_checkpoint: 'Totem Marker' })[type] || 'Content';
 const markerIcon = type => ({ plant: '🌱', note: '✎', intro_checkpoint: '⚑', sub_checkpoint: '⚑', area_checkpoint: '⌖' })[type] || '◆';
+const PLANT_LAYER_COLORS = Object.freeze({
+    emergent: '#b77a35',
+    canopy: '#39784a',
+    understory: '#5f9b54',
+    shrub: '#748b46',
+    herbaceous: '#a27b37',
+    groundcover: '#3f8e72',
+    rootrhizosphere: '#9b6652',
+    climbervine: '#7460a4',
+    aquatic: '#3a86a0',
+    default: '#5e7956'
+});
+const plantLayerKey = value => String(value || '').toLocaleLowerCase().replace(/[^a-z]/g, '');
+function areaEntryPresentation(markerType, plantProfile = {}) {
+    if (markerType === 'plant') {
+        const layer = String(plantProfile.layer || '').trim();
+        return {
+            className: 'is-plant',
+            icon: '🌱',
+            accent: PLANT_LAYER_COLORS[plantLayerKey(layer)] || PLANT_LAYER_COLORS.default,
+            kind: `Plant · ${layer || 'Layer not set'}`
+        };
+    }
+    if (markerType === 'note') return { className: 'is-note', icon: '✎', accent: '#b47560', kind: 'Note · Information record' };
+    if (markerType === 'area_checkpoint') return { className: 'is-totem is-totem-entry', icon: '⌖', accent: '#4b7e77', kind: 'Totem Marker · Area anchor' };
+    if (markerType === 'intro_checkpoint') return { className: 'is-checkpoint is-trail-entrance', icon: '⚑', accent: '#8060a4', kind: 'Trail Entrance · Guided start' };
+    if (markerType === 'sub_checkpoint') return { className: 'is-checkpoint', icon: '⚑', accent: '#5d769b', kind: 'Checkpoint · Spatial record' };
+    return { className: 'is-record', icon: markerIcon(markerType), accent: '#68765d', kind: markerTypeLabel(markerType) };
+}
 const displayAreaName = area => isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : String(area?.name || area || DEFAULT_HOME_AREA_NAME);
 function projectBreadcrumbMarkup(project, area, currentLabel = '') {
     const projectLabel = `Home ${project.name}`;
@@ -149,7 +178,15 @@ const isPigeonPeaIdentity = identity => {
 };
 function initialPlantPimDocument(profile, identity) {
     const stored = profile?.pim_document || profile?.pim || profile?.pim_nodes || profile?.pim_categories;
-    if (stored) return resolvePlantPim(profile, identity, { plantId: identity.plantId });
+    if (stored) {
+        const document = resolvePlantPim(profile, identity, { plantId: identity.plantId });
+        const nextIdentity = { ...document.identity };
+        Object.entries(identity || {}).forEach(([key, value]) => {
+            const meaningful = Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? value.trim() : value !== undefined && value !== null;
+            if (meaningful) nextIdentity[key] = clonePimValue(value);
+        });
+        return normalizePimDocument({ ...document, identity: nextIdentity });
+    }
     if (isPigeonPeaIdentity(identity)) {
         const canonicalIdentity = clonePimValue(PIGEON_PEA_PIM.identity);
         Object.entries(identity || {}).forEach(([key, value]) => {
@@ -1728,15 +1765,16 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             const markerType = isAreaTotemMarker(marker, context.area.name) ? 'area_checkpoint' : effectiveMarkerType(marker);
             const status = entryStatus(marker);
             const placementLabel = isPlaced ? 'Placed' : 'Not yet placed';
+            const presentation = areaEntryPresentation(markerType, plantProfile);
             const webAction = markerType === 'area_checkpoint'
                 ? `window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                 : markerType === 'intro_checkpoint'
                     ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                     : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', false, 'area-dashboard')`;
-            return `<article class="area-content-entry area-content-card${markerType === 'area_checkpoint' ? ' is-totem-entry' : ''}" role="button" tabindex="0" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
-                <span class="latest-entry-icon" aria-hidden="true">${markerIcon(markerType)}</span>
-                <span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>${markerTypeLabel(markerType)} · ${editedLabel(marker.modified || marker.created)}</span><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel}</span></span>
-                <span class="entry-status entry-status-${status.tone}">${status.label}</span>
+            return `<article class="area-content-entry area-content-card ${presentation.className}" style="--area-entry-accent:${presentation.accent}" data-marker-type="${escapeHtml(markerType)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(marker.name)} · ${escapeHtml(presentation.kind)}" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
+                <span class="area-entry-icon" aria-hidden="true"><span>${presentation.icon}</span></span>
+                <span class="area-entry-copy"><strong>${escapeHtml(marker.name)}</strong><small class="area-entry-kind">${escapeHtml(presentation.kind)}</small><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel} · ${escapeHtml(editedLabel(marker.modified || marker.created))}</span></span>
+                <span class="area-entry-status entry-status-${status.tone}">${status.label}</span>
             </article>`;
         }).join('');
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
@@ -1751,6 +1789,12 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             : '';
         const linkedTotems = (Array.isArray(context.area.totem_links) ? context.area.totem_links : []).map(link => ({ ...link, area: context.places.find(place => place.id === link.target_area_id) })).filter(link => link.area);
         const areaDescription = String(context.area.description || '').trim();
+        const pigeonPeaTemplateEntry = isDefaultHomeArea(context.area)
+            ? areaEntries.find(entry => entry.marker.template_id === 'pigeon-pea-reference' || entry.plantProfile.template_id === 'pigeon-pea-reference')
+            : null;
+        const pigeonPeaTemplateCard = pigeonPeaTemplateEntry
+            ? `<section class="home-template-card" aria-labelledby="homePigeonPeaTemplateTitle"><div><p class="welcome-label">STARTER PLANT TEMPLATE</p><h2 id="homePigeonPeaTemplateTitle">Pigeon Pea</h2><p>Complete Plant Profile · Info Mesh ready · saved in Home for this new project.</p></div><button type="button" class="primary" onclick="window.openProjectEntry('${encoded(context.project.id)}','${encoded(pigeonPeaTemplateEntry.marker.id)}',false,'home-template')">Open Plant Profile</button></section>`
+            : '';
         const areaAboutInfo = isDefaultHomeArea(context.area)
             ? '<span class="area-overview-actions"><button type="button" class="plant-profile-info-bubble" data-area-about-info aria-expanded="false" aria-label="About the default Home area">i</button><button type="button" data-edit-area-description>Edit</button></span>'
             : '<button type="button" data-edit-area-description>Edit</button>';
@@ -1787,6 +1831,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 </form>
                 ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
+            ${pigeonPeaTemplateCard}
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
             <details class="latest-entries-section area-content-section">
@@ -2017,6 +2062,7 @@ export async function renderPigeonPeaExample(app, encodedProjectId) {
     mountPlantInformationWeb(app.querySelector('[data-pigeon-pea-pim-mount]'), {
         document: pigeonPeaExamplePimDocument,
         editable: true,
+        showIdentity: false,
         onSaveDocument: nextDocument => {
             pigeonPeaExamplePimDocument = normalizePimDocument(nextDocument);
             return pigeonPeaExamplePimDocument;
@@ -2511,6 +2557,25 @@ function compressedMapImage(file) {
     });
 }
 
+function compressedPlantImage(file) {
+    return new Promise((resolve, reject) => {
+        if (file.size > 12 * 1024 * 1024) return reject(new Error('Choose an image smaller than 12 MB.'));
+        const image = new Image();
+        image.onerror = () => reject(new Error('The selected image could not be opened.'));
+        image.onload = () => {
+            const maximum = 1200;
+            const scale = Math.min(1, maximum / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(image.src);
+            resolve(canvas.toDataURL('image/jpeg', .82));
+        };
+        image.src = URL.createObjectURL(file);
+    });
+}
+
 export async function uploadSiteMapPhoto(event, encodedProjectId) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2700,7 +2765,13 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
     return `<section class="plant-encyclopedia-card">
         <input id="projectEntryProfileEnabled" type="hidden" value="${spmEnabled ? 'true' : 'false'}">
         <div class="plant-card-hero">
-            <div class="plant-photo-space">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
+            <div class="plant-photo-column">
+                <div class="plant-photo-space" data-plant-photo-preview>${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(entry.marker.name)}" />` : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>'}</div>
+                <input id="projectEntryPhotoData" type="hidden" value="${escapeHtml(photo)}" />
+                <label class="plant-photo-upload" for="projectEntryPhoto">Upload plant photo<input id="projectEntryPhoto" type="file" accept="image/*" /></label>
+                <button type="button" class="plant-photo-remove" data-remove-plant-photo ${photo ? '' : 'hidden'}>Remove photo</button>
+                <p class="plant-photo-status" data-plant-photo-status aria-live="polite"></p>
+            </div>
             <div class="plant-vital-grid">
                 <div class="field plant-orb-size-control"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
                 <div class="field"><label for="projectEntryCommonName">Common name</label><input id="projectEntryCommonName" value="${escapeHtml(profile.common_name || entry.marker.name)}" oninput="document.getElementById('projectEntryName').value=this.value" /></div>
@@ -2875,6 +2946,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
                 document: activePimDocument,
                 editable: true,
                 showSearch: false,
+                showIdentity: false,
                 importReview: activePimImportReview,
                 initialState: pimInitialRouteState,
                 onRouteChange: (state, node) => {
@@ -2969,6 +3041,44 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             overviewArea.innerHTML = areaOptions;
             overviewArea.value = entry.place.id;
         }
+        const plantPhotoInput = app.querySelector('#projectEntryPhoto');
+        const plantPhotoData = app.querySelector('#projectEntryPhotoData');
+        const plantPhotoPreview = app.querySelector('[data-plant-photo-preview]');
+        const plantPhotoRemove = app.querySelector('[data-remove-plant-photo]');
+        const plantPhotoStatus = app.querySelector('[data-plant-photo-status]');
+        const renderPlantPhotoPreview = photoValue => {
+            if (plantPhotoPreview) plantPhotoPreview.innerHTML = photoValue
+                ? `<img src="${escapeHtml(photoValue)}" alt="${escapeHtml(profile.common_name || entry.marker.name)}" />`
+                : '<span aria-hidden="true">🌿</span><small>Add a plant photo</small>';
+            if (plantPhotoRemove) plantPhotoRemove.hidden = !photoValue;
+        };
+        plantPhotoInput?.addEventListener('change', async () => {
+            const file = plantPhotoInput.files?.[0];
+            if (!file) return;
+            if (!String(file.type || '').startsWith('image/')) {
+                plantPhotoInput.value = '';
+                if (plantPhotoStatus) plantPhotoStatus.textContent = 'Choose an image file.';
+                return;
+            }
+            plantPhotoInput.dataset.processing = 'true';
+            if (plantPhotoStatus) plantPhotoStatus.textContent = 'Preparing photo…';
+            try {
+                const photoValue = await compressedPlantImage(file);
+                if (plantPhotoData) plantPhotoData.value = photoValue;
+                renderPlantPhotoPreview(photoValue);
+                if (plantPhotoStatus) plantPhotoStatus.textContent = 'Photo ready to save with this Plant Profile.';
+            } catch (error) {
+                if (plantPhotoStatus) plantPhotoStatus.textContent = `Photo could not be prepared: ${error.message}`;
+            } finally {
+                delete plantPhotoInput.dataset.processing;
+            }
+        });
+        plantPhotoRemove?.addEventListener('click', () => {
+            plantPhotoInput.value = '';
+            if (plantPhotoData) plantPhotoData.value = '';
+            renderPlantPhotoPreview('');
+            if (plantPhotoStatus) plantPhotoStatus.textContent = 'Photo removed. Save the Plant Profile to confirm.';
+        });
     }
 }
 
@@ -2978,6 +3088,10 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
     const markerId = decodeURIComponent(encodedMarkerId);
     const status = document.getElementById('projectEntryEditStatus');
     try {
+        if (document.getElementById('projectEntryPhoto')?.dataset.processing === 'true') {
+            if (status) status.textContent = 'Please wait for the plant photo to finish preparing.';
+            return;
+        }
         status.textContent = 'Saving…';
         const { project, site, entries } = await projectContent(projectId);
         const entry = entries.find(item => item.marker.id === markerId);
@@ -3068,7 +3182,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 family: existingPlantProfile.family || '',
                 origin: existingPlantProfile.origin || '',
                 layer: fieldValue('projectEntryLayer', existingPlantProfile.layer || ''),
-                photo: existingPlantProfile.photo || '',
+                photo: document.getElementById('projectEntryPhotoData')?.value || existingPlantProfile.photo || existingPlantProfile.image || '',
                 orb_color: plantColor || existingPlantProfile.orb_color || entry.marker.appearance?.color || '#5e7956',
                 orb_size: fieldValue('projectEntryOrbSize', existingPlantProfile.orb_size || 'medium'),
                 uses: existingPlantProfile.uses || '',

@@ -313,6 +313,12 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
     </section>`;
 }
 
+function directionsInfoMarkup(document, suffix = 'compact') {
+    const token = `${domToken(document.plantId)}-${domToken(suffix)}`;
+    const panelId = `pim-web-directions-${token}`;
+    return `<div class="pim-web-standalone-directions"><button class="pim-web-direction-info" type="button" data-pim-directions-info aria-expanded="false" aria-controls="${panelId}" aria-label="About plant knowledge directions">i</button><div class="pim-web-direction-key" id="${panelId}" aria-label="Plant knowledge directions" hidden><span><b>Top</b> Relationship</span><span><b>Left</b> Agency</span><span><b>Right</b> Certainty</span><span><b>Bottom</b> Process</span></div></div>`;
+}
+
 function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = new Set()) {
     if (seen.has(node.id)) return '';
     const nextSeen = new Set(seen).add(node.id);
@@ -425,13 +431,15 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const source = normalizeDocument(document);
     const current = normalizedState(state);
     const renderOptions = { ...options, editable: options.editable === true };
-    const visualIdentity = identityMarkup(source, current, 'visual', renderOptions);
-    const listIdentity = identityMarkup(source, current, 'list', renderOptions);
+    const showIdentity = options.showIdentity !== false;
+    const visualIdentity = showIdentity ? identityMarkup(source, current, 'visual', renderOptions) : '';
+    const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
+    const standaloneDirections = showIdentity ? '' : directionsInfoMarkup(source);
     const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading"><div><p>Plant Information Mesh</p><h1>Plant knowledge</h1></div><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div></header>
+        <header class="pim-web-heading"><div><p>Plant Information Mesh</p><h1>Plant knowledge</h1></div><div class="pim-web-heading-tools">${standaloneDirections}<div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div></div></header>
         <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}</div></div>
-        ${current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
+        ${showIdentity && current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
         ${accessibleListMarkup(source, current, renderOptions)}
         ${detailMarkup(source, current, renderOptions)}
         ${editorMarkup(source, current, renderOptions)}

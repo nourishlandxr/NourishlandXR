@@ -1,5 +1,6 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
+import { createAlaProvenance, ALA_SOURCE } from '../services/alaPlantSearch.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 
@@ -15,9 +16,36 @@ let plantSearchScope = 'local';
 let globalPlantResults = [];
 let selectedGlobalPlant = null;
 let globalSearchTimer = null;
+let globalSearchQuery = '';
+let alaImportPreview = false;
+let alaImportConfirmed = false;
 let nonPlantMode = false;
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+function alaResultMarkup(result, index) {
+    const thumbnail = result.thumbnailUrl
+        ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
+        : '<span class="ala-result-placeholder" aria-hidden="true">🌿</span>';
+    return `<button class="ala-search-result" type="button" onclick="window.selectGlobalPlant(${index})">
+        <span class="ala-result-image">${thumbnail}</span>
+        <span class="ala-result-copy"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><em>${escapeHtml(result.scientificName)}</em><small>${escapeHtml([result.rank, result.family].filter(Boolean).join(' · ') || 'Plant record')}</small><small class="ala-result-source">${escapeHtml(result.sourceLabel || ALA_SOURCE)}</small></span>
+    </button>`;
+}
+
+function alaPreviewMarkup(result) {
+    const thumbnail = result.thumbnailUrl
+        ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
+        : '<span class="ala-result-placeholder" aria-hidden="true">🌿</span>';
+    return `<section class="ala-import-preview" aria-labelledby="alaImportPreviewTitle">
+        <div class="ala-preview-heading"><div><p class="welcome-label">IMPORT PREVIEW</p><h2 id="alaImportPreviewTitle">Review plant record</h2></div><span class="ala-preview-source">${escapeHtml(result.sourceLabel || ALA_SOURCE)}</span></div>
+        <div class="ala-preview-identity"><span class="ala-result-image">${thumbnail}</span><div><strong>${escapeHtml(result.scientificName)}</strong><small>${escapeHtml([result.rank, result.family, result.kingdom].filter(Boolean).join(' · ') || 'Plant taxonomy')}</small></div></div>
+        <div class="field"><label for="alaImportCommonName">Display / common name</label><input id="alaImportCommonName" value="${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}" /></div>
+        <dl class="ala-preview-facts"><div><dt>Scientific name</dt><dd><i>${escapeHtml(result.scientificName)}</i></dd></div><div><dt>Family</dt><dd>${escapeHtml(result.family || 'Not supplied by ALA')}</dd></div><div><dt>Source record</dt><dd>${escapeHtml(result.externalId)}</dd></div></dl>
+        <p class="meta">This imports external taxonomy as reference information. Your local observations, practices and relationships stay separate.</p>
+        <div class="button-row"><button type="button" onclick="window.cancelGlobalPlantPreview()">Return to results</button><button class="primary" type="button" onclick="window.confirmGlobalPlantImport()">Create Plant Profile</button></div>
+    </section>`;
+}
 
 function draw() {
     const plant = markerType === 'plant';
@@ -42,7 +70,7 @@ function draw() {
                 </div>
                 <div class="compact-identity-row"><div class="field"><label for="fieldName">${identityLabel}</label><input id="fieldName" placeholder="${markerType === 'note' ? 'Title for this note' : 'Untitled is okay'}" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
                 ${markerType === 'note' ? '<div class="field note-quick-information"><label for="fieldDescription">Information</label><textarea id="fieldDescription" rows="5" placeholder="Write the information this note should contain."></textarea></div>' : ''}
-                ${plant ? `<details class="compact-advanced"><summary>Advanced plant search</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Global</button></div>${plantSearchScope === 'global' ? `<input id="globalPlantSearch" type="search" placeholder="Common name, genus or species…" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : 'Type at least 2 letters.'}</div><div class="global-plant-results">${globalPlantResults.map((result, index) => `<button type="button" onclick="window.selectGlobalPlant(${index})"><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}</strong><span><em>${escapeHtml(result.scientificName)}</em></span></button>`).join('')}</div>` : '<p class="meta">Choose a saved plant from “Use existing” above.</p>'}</div></details>` : ''}
+                ${plant ? `<details class="compact-advanced" ${plantSearchScope === 'global' ? 'open' : ''}><summary>Search plant database</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved records</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Search plant database</button></div>${plantSearchScope === 'global' ? `${alaImportPreview && selectedGlobalPlant ? alaPreviewMarkup(selectedGlobalPlant) : `<label class="sr-only" for="globalPlantSearch">Search plant database</label><input id="globalPlantSearch" type="search" placeholder="Common or scientific plant name…" value="${escapeHtml(globalSearchQuery)}" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : `Type at least 2 letters to search ${ALA_SOURCE}.`}</div><div class="global-plant-results">${globalPlantResults.map(alaResultMarkup).join('') || (globalSearchQuery.length >= 2 ? `<p class="meta">No plant matches found in ${ALA_SOURCE}.</p>` : '')}</div><button class="ghost ala-manual-action" type="button" onclick="window.continueManualPlantCreation()">Continue with manual plant creation</button>`}` : '<p class="meta">Choose a saved plant from “Use existing” above, or search the Atlas of Living Australia.</p>'}</div></details>` : ''}
                 <div class="placement-compact"><span><strong>Placement</strong><small>Not yet placed · can be placed later</small></span><button type="submit" name="saveIntent" value="ar">AR MODE</button></div>
                 <div class="button-row">
                     <button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>
@@ -64,6 +92,9 @@ export async function renderFieldMarker(target, defaults = null) {
     plantSearchScope = 'local';
     globalPlantResults = [];
     selectedGlobalPlant = null;
+    globalSearchQuery = '';
+    alaImportPreview = false;
+    alaImportConfirmed = false;
     if (defaults) {
         dashboardProjectId = defaults.dashboardProjectId || '';
         selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
@@ -109,12 +140,18 @@ export function setPlantSearchScope(scope) {
     plantSearchScope = scope === 'global' ? 'global' : 'local';
     globalPlantResults = [];
     selectedGlobalPlant = null;
+    globalSearchQuery = '';
+    alaImportPreview = false;
+    alaImportConfirmed = false;
     draw();
 }
 
 export function searchGlobalPlantOptions(value) {
     clearTimeout(globalSearchTimer);
     const query = String(value || '').trim();
+    globalSearchQuery = query;
+    alaImportPreview = false;
+    alaImportConfirmed = false;
     const status = document.getElementById('globalPlantSearchStatus');
     if (query.length < 2) {
         globalPlantResults = [];
@@ -125,20 +162,22 @@ export function searchGlobalPlantOptions(value) {
     globalSearchTimer = setTimeout(async () => {
         try {
             globalPlantResults = await searchGlobalPlants(query);
+            if (globalSearchQuery !== query || plantSearchScope !== 'global') return;
             selectedGlobalPlant = null;
             draw();
             const input = document.getElementById('globalPlantSearch');
             if (input) { input.value = query; input.focus(); }
             const nextStatus = document.getElementById('globalPlantSearchStatus');
-            if (nextStatus) nextStatus.textContent = globalPlantResults.length ? `${globalPlantResults.length} public API result${globalPlantResults.length === 1 ? '' : 's'}.` : 'No public plant matches found.';
+            if (nextStatus) nextStatus.textContent = globalPlantResults.length ? `${globalPlantResults.length} plant record${globalPlantResults.length === 1 ? '' : 's'} found in ${ALA_SOURCE}.` : `No plant matches found in ${ALA_SOURCE}.`;
         } catch (error) {
+            if (globalSearchQuery !== query || plantSearchScope !== 'global') return;
             globalPlantResults = [];
             selectedGlobalPlant = null;
             draw();
             const input = document.getElementById('globalPlantSearch');
             if (input) { input.value = query; input.focus(); }
             const nextStatus = document.getElementById('globalPlantSearchStatus');
-            if (nextStatus) nextStatus.textContent = `Public plant search unavailable: ${error.message}`;
+            if (nextStatus) nextStatus.textContent = error.name === 'AbortError' ? 'Search updated.' : 'Plant database unavailable. You can continue with manual creation.';
         }
     }, 350);
 }
@@ -146,9 +185,39 @@ export function searchGlobalPlantOptions(value) {
 export function selectGlobalPlant(index) {
     selectedGlobalPlant = globalPlantResults[Number(index)] || null;
     if (!selectedGlobalPlant) return;
-    document.getElementById('fieldName').value = selectedGlobalPlant.commonName || selectedGlobalPlant.canonicalName || selectedGlobalPlant.scientificName || '';
-    const status = document.getElementById('globalPlantSearchStatus');
-    if (status) status.textContent = `Selected from GBIF: ${selectedGlobalPlant.scientificName}`;
+    alaImportPreview = true;
+    alaImportConfirmed = false;
+    draw();
+}
+
+export function cancelGlobalPlantPreview() {
+    alaImportPreview = false;
+    alaImportConfirmed = false;
+    draw();
+}
+
+export function continueManualPlantCreation() {
+    plantSearchScope = 'local';
+    globalPlantResults = [];
+    selectedGlobalPlant = null;
+    globalSearchQuery = '';
+    alaImportPreview = false;
+    alaImportConfirmed = false;
+    draw();
+    document.getElementById('fieldName')?.focus();
+}
+
+export async function confirmGlobalPlantImport() {
+    if (!selectedGlobalPlant) return;
+    const commonName = document.getElementById('alaImportCommonName')?.value.trim();
+    if (!commonName) {
+        document.getElementById('fieldError').textContent = 'Add a display or common name before creating the Plant Profile.';
+        return;
+    }
+    selectedGlobalPlant = { ...selectedGlobalPlant, commonName };
+    document.getElementById('fieldName').value = commonName;
+    alaImportConfirmed = true;
+    await saveFieldMarker({ preventDefault() {}, submitter: { value: 'later' } });
 }
 
 export async function createFieldArea() {
@@ -176,6 +245,10 @@ export async function saveFieldMarker(event) {
 
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
     if (!selected.place) { error.textContent = 'Select an Area or choose Home.'; return; }
+    if (type === 'plant' && plantSearchScope === 'global' && selectedGlobalPlant && !alaImportConfirmed) {
+        error.textContent = 'Review the selected database record before creating the Plant Profile.';
+        return;
+    }
     try {
         error.textContent = 'Saving…';
         let place = places.find(item => item.id === selected.place);
@@ -191,9 +264,10 @@ export async function saveFieldMarker(event) {
                 commonName: name,
                 scientificName: profile?.scientificName || selectedGlobalPlant?.scientificName || '',
                 family: selectedGlobalPlant?.family || '',
-                source: selectedGlobalPlant?.source || '',
-                sourceId: selectedGlobalPlant?.sourceId || '',
+                source: selectedGlobalPlant?.sourceLabel || selectedGlobalPlant?.source || '',
+                sourceId: selectedGlobalPlant?.externalId || selectedGlobalPlant?.sourceId || '',
                 sourceUrl: selectedGlobalPlant?.sourceUrl || '',
+                externalSources: selectedGlobalPlant ? [createAlaProvenance(selectedGlobalPlant)] : [],
                 visibility
             })).marker
             : await createPlaceMarker(selected.project, selected.site, place.id, {

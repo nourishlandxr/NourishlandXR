@@ -5,6 +5,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..');
 const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nourishland-pim-persistence-'));
@@ -140,5 +141,5 @@ test('new projects seed a complete Pigeon Pea template in Home', async () => {
     const profile = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers/${pigeonPea.id}/plant-profile`)).json();
     assert.equal(profile.template_id, 'pigeon-pea-reference');
     assert.equal(profile.spm_enabled, true);
-    assert.equal(profile.pim_document.nodes.length, 58);
+    assert.equal(profile.pim_document.nodes.length, PIGEON_PEA_PIM.nodes.length);
 });

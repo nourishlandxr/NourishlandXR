@@ -995,7 +995,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /TRY and move your orb by pressing and holding it with your pointer/);
+    assert.match(source, /Now try and move your orb by pressing and holding it with your pointer/);
     assert.match(source, /Once you feel ready, press Continue/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
@@ -1401,17 +1401,18 @@ test('dashboard search indexes readable content and ranks name matches', () => {
 test('plant creation separates Local records from read-only Global discovery', () => {
     const fieldMarker = read('app/screens/fieldMarker.js');
     const plantService = read('app/services/plantDataService.js');
-    const server = read('tools/persistence-server.mjs');
-    assert.match(fieldMarker, />Saved<\/button>/);
-    assert.match(fieldMarker, />Global<\/button>/);
-    assert.match(fieldMarker, /Advanced plant search/);
+    const alaSearch = read('app/services/alaPlantSearch.js');
+    assert.match(fieldMarker, />Saved records<\/button>/);
+    assert.match(fieldMarker, /Search plant database/);
+    assert.match(fieldMarker, /Search plant database/);
     assert.match(fieldMarker, /searchGlobalPlants\(query\)/);
-    assert.match(fieldMarker, /sourceId: selectedGlobalPlant\?\.sourceId/);
-    assert.match(plantService, /plant-search\/global/);
-    assert.match(server, /api\.gbif\.org\/v1\/species\/suggest/);
-    assert.match(server, /api\.inaturalist\.org\/v2\/taxa\/autocomplete/);
-    assert.match(plantService, /throwOnError/);
-    assert.match(server, /source: 'GBIF'/);
+    assert.match(fieldMarker, /externalSources: selectedGlobalPlant/);
+    assert.match(plantService, /searchAlaPlants/);
+    assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);
+    assert.match(alaSearch, /encodeURIComponent/);
+    assert.match(alaSearch, /AbortController/);
+    assert.match(alaSearch, /autoCompleteList/);
+    assert.match(alaSearch, /sourceLabel: ALA_SOURCE_LABEL/);
 });
 
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {

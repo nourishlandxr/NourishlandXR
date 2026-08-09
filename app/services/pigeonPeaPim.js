@@ -66,6 +66,8 @@ const nodes = [
     node('morphology', 'scientific-information', 'Morphology', 'Woody branching legume', '', { informationType: 'category' }),
     node('growth-form', 'morphology', 'Growth form', 'Shrub or small tree', 'It is a branching, often short-lived perennial shrub that can become a small tree under favourable management.'),
     node('phenology', 'scientific-information', 'Phenology', 'Flowering and pod cycles', 'Flowering and pod production respond to variety, day length, temperature, water and plant age.'),
+    node('common-names', 'scientific-information', 'Common names', 'Regional and local names', '', { informationType: 'category' }),
+    node('pigeon-pea-common-name', 'common-names', 'Pigeon pea', 'Primary common name', 'Pigeon pea is the primary common name used in this reference profile. Use this menu to add regional names with their language, place and source.', { informationType: 'fact' }),
 
     node('historical-data', null, 'Historical Data', 'Long-cultivated tropical pulse', '', { informationType: 'category' }),
     node('range-and-movement', 'historical-data', 'Range and movement', 'Origins and cultivation spread', '', { informationType: 'category' }),
@@ -117,4 +119,3 @@ export const PIGEON_PEA_PIM = deepFreeze(createPimDocument({
         editorialNote: 'Claims marked needs_review require an authoritative source or attributed local record before evidence status is upgraded.'
     }
 }));
-

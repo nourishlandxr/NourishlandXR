@@ -214,6 +214,8 @@ test('Pigeon Pea is a complete four-level reference with Medicinal and Craft bel
     assert.equal(pimNodeById(PIGEON_PEA_PIM, 'root-nodule-symbiosis').level, 4);
     assert.equal(pimNodeById(PIGEON_PEA_PIM, 'medicinal').parentId, 'uses');
     assert.equal(pimNodeById(PIGEON_PEA_PIM, 'craft').parentId, 'uses');
+    assert.equal(pimNodeById(PIGEON_PEA_PIM, 'common-names').parentId, 'scientific-information');
+    assert.equal(pimNodeById(PIGEON_PEA_PIM, 'pigeon-pea-common-name').parentId, 'common-names');
     assert.equal(PIM_COMPASS_BY_ID.medicinal, undefined);
     assert.equal(PIM_COMPASS_BY_ID.craft, undefined);
 

@@ -1,5 +1,4 @@
 import http from 'http';
-import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -61,27 +60,6 @@ function sendJson(res, statusCode, payload) {
     return true;
 }
 
-function fetchJson(url, timeoutMs = 7000) {
-    return new Promise((resolve, reject) => {
-        const request = https.get(url, {
-            headers: { Accept: 'application/json', 'User-Agent': 'NourishlandXR/1.0 plant-search' }
-        }, response => {
-            let body = '';
-            response.on('data', chunk => {
-                body += chunk;
-                if (Buffer.byteLength(body) > 1024 * 1024) request.destroy(new Error('Plant search response is too large'));
-            });
-            response.on('end', () => {
-                if (response.statusCode < 200 || response.statusCode >= 300) return reject(new Error(`Plant source returned ${response.statusCode}`));
-                try { resolve(JSON.parse(body)); }
-                catch { reject(new Error('Plant source returned invalid data')); }
-            });
-        });
-        request.setTimeout(timeoutMs, () => request.destroy(new Error('Plant search timed out')));
-        request.on('error', reject);
-    });
-}
-
 function readJson(filePath, fallback = null) {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
@@ -115,7 +93,7 @@ function writeJson(filePath, data) {
     fs.renameSync(tempPath, filePath);
 }
 
-const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library', 'plant-search']);
+const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library']);
 
 function normalizeApiPath(pathname) {
     if (pathname === '/xr-api') return '/api';
@@ -815,7 +793,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     let instanceId = instanceBaseId, instanceSuffix = 2;
     while (instanceData.instances.some(instance => instance.id === instanceId)) instanceId = `${instanceBaseId}-${instanceSuffix++}`;
     const now = new Date().toISOString();
-    const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', source: String(data.source || ''), sourceId: String(data.sourceId || ''), sourceUrl: String(data.sourceUrl || ''), visibility, created: now, modified: now };
+    const plant = existingPlant || { id: plantId, commonName, scientificName, cultivar: '', family: String(data.family || ''), origin: '', plantType: '', layer: '', uses: [], propagation: [], summary, image: '', source: String(data.source || ''), sourceId: String(data.sourceId || ''), sourceUrl: String(data.sourceUrl || ''), externalSources: Array.isArray(data.externalSources) ? data.externalSources : [], visibility, created: now, modified: now };
     const instance = { id: instanceId, plantId, placeId, zoneId: '', markerId, cultivarOverride: '', status: data.status || '', plantingDate: '', localNotes: '', map: { latitude, longitude, x: null, y: null }, visibility, created: now, modified: now };
     const marker = { id: markerId, type: 'plant', plant_code: plantCode, name: commonName, description: '', notes: '', parent_checkpoint: '', plantId, plantInstanceId: instanceId, status: data.status || 'ready', visibility, created: now, modified: now };
     const anchor = hasAnyPosition ? { type: 'gps', latitude, longitude, altitude: data.altitude ?? '', accuracy, captured_at: data.captured_at || now, qr_code: '', description: '', created: now, modified: now } : null;
@@ -912,70 +890,6 @@ function handleApi(req, res) {
         const result = loadPlantRegistryData();
         const plants = visitor ? result.data.plants.filter(isPublic) : result.data.plants;
         return sendJson(res, 200, { ...result.data, plants, warnings: result.warnings });
-    }
-    if (pathname === '/api/plant-search/global' && req.method === 'GET') {
-        const query = String(url.searchParams.get('q') || '').trim().slice(0, 120);
-        if (query.length < 2) return sendJson(res, 200, { source: 'GBIF', readonly: true, results: [] });
-        const gbifEndpoint = `https://api.gbif.org/v1/species/suggest?q=${encodeURIComponent(query)}&rank=SPECIES&limit=12`;
-        const inaturalistEndpoint = `https://api.inaturalist.org/v2/taxa/autocomplete?q=${encodeURIComponent(query)}&rank=species&per_page=12`;
-        Promise.allSettled([fetchJson(gbifEndpoint), fetchJson(inaturalistEndpoint)]).then(results => {
-            const merged = new Map();
-            const warnings = [];
-            const addResult = (item, source, normalized) => {
-                const value = normalized(item);
-                if (!value?.scientificName) return;
-                const key = value.scientificName.toLocaleLowerCase();
-                const existing = merged.get(key);
-                if (!existing) {
-                    merged.set(key, { ...value, source, sources: [source] });
-                    return;
-                }
-                existing.sources = [...new Set([...existing.sources, source])];
-                existing.source = existing.sources.join(' + ');
-                existing.commonName ||= value.commonName;
-                existing.family ||= value.family;
-                existing.sourceUrl ||= value.sourceUrl;
-                existing.imageUrl ||= value.imageUrl;
-            };
-            const normalizeGbif = item => String(item.kingdom || '').toLowerCase() === 'plantae' ? {
-                sourceId: String(item.key || item.usageKey || ''),
-                commonName: String(item.vernacularName || ''),
-                scientificName: String(item.scientificName || item.canonicalName || ''),
-                canonicalName: String(item.canonicalName || ''),
-                genus: String(item.genus || ''),
-                family: String(item.family || ''),
-                rank: String(item.rank || ''),
-                status: String(item.status || ''),
-                sourceUrl: item.key ? `https://www.gbif.org/species/${item.key}` : ''
-            } : null;
-            const normalizeInaturalist = item => String(item.iconic_taxon_name || '').toLowerCase() === 'plantae' ? {
-                sourceId: String(item.id || ''),
-                commonName: String(item.preferred_common_name || ''),
-                scientificName: String(item.name || ''),
-                canonicalName: String(item.name || ''),
-                genus: String(item.genus || ''),
-                family: String(item.family || ''),
-                rank: String(item.rank || ''),
-                status: String(item.conservation_status?.status_name || ''),
-                sourceUrl: item.id ? `https://www.inaturalist.org/taxa/${item.id}` : '',
-                imageUrl: item.default_photo?.medium_url || item.default_photo?.square_url || ''
-            } : null;
-            results.forEach((result, index) => {
-                const source = index === 0 ? 'GBIF' : 'iNaturalist';
-                if (result.status !== 'fulfilled') {
-                    warnings.push(`${source} search unavailable: ${result.reason?.message || 'request failed'}`);
-                    return;
-                }
-                const items = index === 0 ? result.value : result.value?.results;
-                (Array.isArray(items) ? items : []).forEach(item => addResult(item, source, index === 0 ? normalizeGbif : normalizeInaturalist));
-            });
-            if (!merged.size && warnings.length === results.length) {
-                sendJson(res, 502, { error: `Public plant search is temporarily unavailable. ${warnings.join(' ')}` });
-                return;
-            }
-            sendJson(res, 200, { source: 'GBIF + iNaturalist', readonly: true, warnings, results: [...merged.values()].slice(0, 20) });
-        });
-        return true;
     }
     if (pathname === '/api/plant-library' && req.method === 'POST') {
         let body = '';
