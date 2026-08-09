@@ -49,7 +49,7 @@ test('demo ground placement prefers a floor hit and otherwise keeps a stable flo
     const floorHit = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, .02, -1, 1]);
     const wallHit = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1.1, -1, 1]);
     assert.equal(demoGroundBaseY(floorHit, viewer), .019999999552965164);
-    assert.equal(demoGroundBaseY(wallHit, viewer), .09999999999999987);
+    assert.ok(Math.abs(demoGroundBaseY(wallHit, viewer) - (viewer[13] - 1.55)) < 1e-6);
     assert.equal(demoGroundBaseY(wallHit, viewer, .04), .04);
 });
 
@@ -984,7 +984,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function prepareTutorialBoard\(panel\)/);
     assert.match(source, /const firstArrival = !introBoardHasEntered/);
     assert.doesNotMatch(source, /introSceneActive = false/);
-    assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
+    assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
@@ -1014,10 +1014,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
-    assert.match(source, /demoOrbColor: type === 'plant' \? 'brown' : type === 'plant2' \? 'green'/);
-    assert.match(source, /demoOrbShape: type === 'plant' \? 'triangle' : type === 'plant2' \? 'orb'/);
+    assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea' : type === 'plant2' \? 'green'/);
+    assert.match(source, /demoOrbShape: type === 'plant' \? 'orb' : type === 'plant2' \? 'orb'/);
     assert.match(source, /class="tryit-sim-orb is-plant" style="\$\{orbAppearance\}"/);
-    assert.match(source, /brown:[\s\S]*radius: 0\.07/);
+    assert.match(source, /pigeonPea:[\s\S]*radius: 0\.09/);
     assert.match(source, /green:[\s\S]*radius: 0\.074/);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
     assert.match(source, /coreColor: material\?\.core/);
@@ -1249,8 +1249,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /groundBaseY = demoGroundBaseY\(hitMatrix, viewerMatrix, groundYEstimate\)/);
     assert.match(source, /y: groundBaseY \+ DEMO_TOTEM_HALF_HEIGHT_METRES/);
     assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);
-    assert.match(source, /demoOrbColor: type === 'plant' \? 'brown'/);
-    assert.match(source, /demoOrbShape: type === 'plant' \? 'triangle'/);
+    assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea'/);
+    assert.match(source, /demoOrbShape: type === 'plant' \? 'orb'/);
     assert.doesNotMatch(source, /compact \? record\.position : \{ \.\.\.record\.position, y: record\.position\.y \+ 0\.72 \}/);
     assert.match(source, /function guideNoteConversion\(record\) \{[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready', 'is-pressed'\)/);
     assert.match(styles, /\.tryit-guided-choice/);

@@ -126,6 +126,12 @@ const DEMO_ORB_MATERIALS = Object.freeze({
         radius: 0.07,
         style: '--demo-orb-size:56px;--demo-orb-light:#ead7ba;--demo-orb-mid:#8a6946;--demo-orb-dark:#3e2a1c;--demo-orb-core-light:#f1dfbd;--demo-orb-core-mid:#a77b48;--demo-orb-core-dark:#4d321e'
     },
+    pigeonPea: {
+        shell: [0.08, 0.24, 0.14],
+        core: [0.22, 0.48, 0.27],
+        radius: 0.09,
+        style: '--demo-orb-size:78px;--demo-orb-light:#c3e0b1;--demo-orb-mid:#427d4f;--demo-orb-dark:#112f1e;--demo-orb-core-light:#dcefc5;--demo-orb-core-mid:#5a9a5b;--demo-orb-core-dark:#1d5331'
+    },
     green: {
         shell: [0.34, 0.72, 0.28],
         core: [0.75, 0.95, 0.42],
@@ -1635,8 +1641,8 @@ function placeMarker() {
         type: type === 'note' ? 'note' : 'plant',
         demoType: type === 'note' ? 'note' : 'plant',
         tutorialStage: type,
-        demoOrbColor: type === 'plant' ? 'brown' : type === 'plant2' ? 'green' : '',
-        demoOrbShape: type === 'plant' ? 'triangle' : type === 'plant2' ? 'orb' : '',
+        demoOrbColor: type === 'plant' ? 'pigeonPea' : type === 'plant2' ? 'green' : '',
+        demoOrbShape: type === 'plant' ? 'orb' : type === 'plant2' ? 'orb' : '',
         demoAlive: type !== 'note',
         demoExpanded: false,
         demoInteractive: !['plant', 'plant2'].includes(type),
