@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
     PIM_SPATIAL_CONFIG,
+    pimEnsureExpandedPaths,
     pimFocusedView,
     pimKnowledgeNodes,
     pimNodeChildren,
@@ -81,6 +82,15 @@ test('PIM keeps one main category open at a time and closes it on a second press
     assert.deepEqual(expanded, []);
 });
 
+test('PIM cell opening keeps the mesh open and follows the selected submenu path', () => {
+    let expanded = pimEnsureExpandedPaths([], 'uses');
+    assert.deepEqual(expanded, ['uses']);
+    expanded = pimEnsureExpandedPaths(expanded, 'uses/culinary');
+    assert.deepEqual(expanded, ['uses', 'uses/culinary']);
+    assert.deepEqual(pimEnsureExpandedPaths(expanded, 'uses/culinary'), expanded);
+    assert.deepEqual(pimToggleExpandedPaths(expanded, 'uses/culinary'), ['uses']);
+});
+
 test('PIM grows child cells outward from the selected category with stable family colour', () => {
     const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest']);
     const root = nodes.find(node => node.path === 'food-forest');
@@ -95,11 +105,18 @@ test('PIM grows child cells outward from the selected category with stable famil
     assert.equal(pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []).length, 6);
 });
 
+test('PIM treats explicit empty child lists as leaves', () => {
+    const uses = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE).find(node => node.id === 'uses');
+    const animalFodder = pimNodeChildren(uses).find(node => node.id === 'animal-fodder');
+    assert.equal(pimNodeChildren(animalFodder).length, 0);
+});
+
 test('PIM recentres each deeper generation as a clean recursive honeycomb', () => {
     const focus = pimFocusedView(PIGEON_PEA_AR_KNOWLEDGE, ['uses', 'uses/culinary']);
     assert.equal(focus.focusNode.label, 'Culinary');
     assert.deepEqual(focus.nodes.map(node => node.label), ['Dried pulse', 'Fresh peas', 'Young pods']);
     assert.ok(focus.nodes.every(node => node.parentPosition.x === 50 && node.parentPosition.y === 50));
+    assert.ok(focus.nodes.every(node => pimNodeHue(node) === pimNodeHue(focus.focusNode)));
     assert.deepEqual(focus.trail.map(node => node.label), ['Uses', 'Culinary']);
 });
 

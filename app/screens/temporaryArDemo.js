@@ -15,7 +15,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimEnsureExpandedPaths, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -1052,17 +1052,10 @@ function selectDemoProfileCell() {
         .find(candidate => candidate.target);
     if (!selection) return false;
     const { record, target } = selection;
-    const knowledge = knowledgeFor(record);
-    const focus = pimFocusedView(knowledge, record.demoExpandedBranches);
-    const visibleNodes = focus?.nodes || pimVisibleNodes(knowledge, record.demoExpandedBranches);
-    // Keep a forgiving Quest-sized target only after the ray has actually hit
-    // this PIM surface. A gap between large cells advances to another visible
-    // branch; a select elsewhere remains free to operate either Plant orb.
-    const node = target.node || visibleNodes.find(candidate =>
-        !record.demoExpandedBranches?.includes(candidate.path)
-        && pimNodeChildren(candidate).length
-    ) || visibleNodes[0];
-    if (!node) return true;
+    const node = target.node || (target.pimRecenter || target.pimBack ? target : null);
+    // A ray that lands in the transparent gap must not guess a branch. The
+    // next selection step may then hit the orb and close the PIM deliberately.
+    if (!node) return false;
     if (node.pimRecenter) {
         record.informationPose = plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition;
@@ -1076,16 +1069,21 @@ function selectDemoProfileCell() {
         setGuide(`Returned to the previous ${node.label} bloom.`);
         return true;
     }
+    if (!pimNodeChildren(node).length) {
+        setGuide(`${node.label}: ${node.value || 'Information cell'}`);
+        return true;
+    }
+    const wasOpen = record.demoExpandedBranches?.includes(node.path);
     record.demoActiveBranch = node.path;
-    record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+    record.demoExpandedBranches = pimEnsureExpandedPaths(record.demoExpandedBranches, node.path);
     record.pimBloomStarted = performance.now();
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
     const opened = record.demoExpandedBranches.includes(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
     setGuide(opened
-        ? `${node.label} opened into its connected information cells.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`
-        : `${node.label} collapsed.`);
+        ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'}${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`
+        : `${node.label} remains closed.`);
     return true;
 }
 
@@ -1314,7 +1312,8 @@ function bindSimulatedInformationPanels(layer) {
             event.stopPropagation();
             const focusPath = back.dataset.pimBack;
             record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, focusPath);
-            record.demoActiveBranch = focusPath.split('.').slice(0, -1).join('.');
+            const separator = focusPath.includes('/') ? '/' : '.';
+            record.demoActiveBranch = focusPath.split(separator).slice(0, -1).join(separator);
             refreshDemoRecord(record);
             setGuide('Returned to the previous PIM bloom.');
         });
@@ -1343,14 +1342,19 @@ function bindSimulatedInformationPanels(layer) {
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 const nodePath = cell.dataset.pimNode;
+                const node = pimNodeAtPath(knowledgeFor(record), nodePath);
+                if (!node || !pimNodeChildren(node).length) {
+                    setGuide(`${cell.querySelector('b')?.textContent || 'Cell'}: ${node?.value || 'Information cell'}`);
+                    return;
+                }
                 const wasOpen = record.demoExpandedBranches?.includes(nodePath);
-                record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
+                record.demoExpandedBranches = pimEnsureExpandedPaths(record.demoExpandedBranches, nodePath);
                 record.demoActiveBranch = nodePath;
                 record.pimBloomStarted = performance.now();
                 const remaining = advanceAfterDemoProfileInteraction(record);
                 refreshDemoRecord(record);
                 setGuide(wasOpen
-                    ? `${cell.querySelector('b')?.textContent || 'Cell'} collapsed.`
+                    ? `${cell.querySelector('b')?.textContent || 'Cell'} remains open.`
                     : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`);
             });
         });

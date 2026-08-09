@@ -24,7 +24,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { pimConnectorPath, pimEnsureExpandedPaths, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -2629,11 +2629,11 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
         return true;
     }
     const wasOpen = record.pimExpandedPaths?.includes(target.path);
-    record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, target.path);
+    record.pimExpandedPaths = pimEnsureExpandedPaths(record.pimExpandedPaths, target.path);
     record.pimBloomStarted = performance.now();
     invalidateSpatialPimTexture(record);
     renderSessionMarkers();
-    setPlacementStatus(wasOpen ? `${target.label} collapsed.` : `${target.label} opened outward.`);
+    setPlacementStatus(wasOpen ? `${target.label} remains open.` : `${target.label} opened outward.`);
     return true;
 }
 
@@ -3382,17 +3382,18 @@ function renderSessionMarkers() {
                 event.stopPropagation();
                 const nodePath = cell.dataset.pimNode;
                 const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
+                if (!node) return;
                 if (node && !pimNodeChildren(node).length) {
                     setPlacementStatus(`${node.label}: ${node.value || 'Information cell'}`);
                     return;
                 }
                 const wasOpen = record.pimExpandedPaths?.includes(nodePath);
                 const label = cell.querySelector('b')?.textContent || 'Cell';
-                record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, nodePath);
+                record.pimExpandedPaths = pimEnsureExpandedPaths(record.pimExpandedPaths, nodePath);
                 record.pimBloomStarted = performance.now();
                 invalidateSpatialPimTexture(record);
                 renderSessionMarkers();
-                setPlacementStatus(wasOpen ? `${label} collapsed.` : `${label} opened into its information petals.`);
+                setPlacementStatus(wasOpen ? `${label} remains open.` : `${label} opened into its information petals.`);
             });
         });
     });

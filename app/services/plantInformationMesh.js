@@ -126,10 +126,11 @@ export function pimKnowledgeNodes(knowledge = {}) {
 }
 
 export function pimNodeChildren(node) {
-    const explicitChildren = Array.isArray(node?.children) ? node.children : [];
-    const details = explicitChildren.length ? explicitChildren : splitKnowledgeDetails(node?.value);
+    const hasExplicitChildren = Array.isArray(node?.children);
+    const explicitChildren = hasExplicitChildren ? node.children : [];
+    const details = hasExplicitChildren ? explicitChildren : splitKnowledgeDetails(node?.value);
     if (!details.length || /^add in web mode$/i.test(String(node?.value || '').trim())) return [];
-    if (!explicitChildren.length && node?.depth > 0 && details.length === 1) return [];
+    if (!hasExplicitChildren && node?.depth > 0 && details.length === 1) return [];
     return details.map((detail, index) => {
         const child = Array.isArray(detail) || typeof detail === 'object'
             ? detail
@@ -226,7 +227,7 @@ export function pimFocusedView(knowledge = {}, expandedPaths = []) {
         return {
             ...node,
             direction,
-            rootDirection: direction,
+            rootDirection: focusNode.rootDirection || focusNode.direction,
             depth: focusNode.depth + 1,
             position: positionedAxial(DIRECTION_AXIAL[direction]),
             parentPosition: positionedAxial({ q: 0, r: 0 }),
@@ -282,6 +283,14 @@ export function pimToggleExpandedPaths(expandedPaths, path) {
     const current = Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
     const isOpen = current.includes(target);
     if (isOpen) return current.filter(candidate => candidate !== target && !candidate.startsWith(`${target}.`) && !candidate.startsWith(`${target}/`));
+    return pimEnsureExpandedPaths(current, target);
+}
+
+export function pimEnsureExpandedPaths(expandedPaths, path) {
+    const target = String(path || '');
+    if (!target) return Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
+    const current = Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
+    if (current.includes(target)) return current;
     const separator = target.includes('/') ? '/' : '.';
     const segments = target.split(separator);
     const ancestors = segments.map((_, index) => segments.slice(0, index + 1).join(separator));

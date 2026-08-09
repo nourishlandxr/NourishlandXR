@@ -1199,6 +1199,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimConnectorPath/);
     assert.match(source, /pimNodeHue/);
     assert.match(source, /pimFocusedView/);
+    assert.match(source, /pimEnsureExpandedPaths/);
+    assert.doesNotMatch(source, /visibleNodes\.find\(/);
+    assert.match(source, /if \(!node\) return false;/);
+    assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
     assert.match(source, /is-parent-link/);
     assert.match(styles, /@keyframes pim-demo-attached-grow/);
@@ -1210,6 +1214,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(source, /pimVisibleNodes/);
     assert.match(source, /pimToggleExpandedPaths/);
+    assert.match(read('app/screens/arMode.js'), /pimEnsureExpandedPaths/);
     assert.match(source, /data-pim-node/);
     assert.match(source, /pimHoneycombTargetAtPercent/);
     assert.match(source, /fixedPimPanelMatrix/);
