@@ -696,8 +696,9 @@ function guidePlantConversion(record) {
             ? 'This Moringa orb can carry its own Plant Profile as well and can be linked to other plants. Press the Moringa orb to explore its information tree.'
             : [
                 'A plant Orb is  knowledge stays connected to where a plant grows. A simple Plant orb can become a extended hub of information, part of a garden guild or linked into a ecosystem.',
-                'Lets pick a sample plant. A pigeon pea.  its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden. Adjust its position if needed.',
-                'Press Continue to explore its information tree.'
+                'Lets pick a sample plant. A pigeon pea.  its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden.',
+                'TRY and move your orb by pressing and holding it with your pointer.',
+                'Once you feel ready, press Continue.'
             ],
         'Continue',
         () => {

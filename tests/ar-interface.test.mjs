@@ -995,7 +995,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /Adjust its position if needed/);
+    assert.match(source, /TRY and move your orb by pressing and holding it with your pointer/);
+    assert.match(source, /Once you feel ready, press Continue/);
+    assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
