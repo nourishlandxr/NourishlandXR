@@ -1001,6 +1001,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
+    assert.match(source, /const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800/);
+    assert.match(source, /function simulatedAnchorFromPointer\(startAnchor, startX, startY, event\)/);
+    assert.match(source, /record\.simulatedAnchor = simulatedAnchorFromPointer\(/);
+    assert.match(source, /function applySimulatedMarkerAnchor\(layer, index, anchor\)/);
+    assert.match(source, /compactMarker\.addEventListener\('pointercancel', \(\) => \{[\s\S]*releaseHeldDemoRecord\(\)/);
     assert.match(source, /event\.currentTarget\?\.setPointerCapture\?\.\(event\.pointerId\)/);
     assert.match(source, /placementPointer\.addEventListener\('pointercancel'/);
     assert.match(source, /if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
@@ -1036,6 +1041,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.tryit-place\.creator-ar-placement-guide \{[^}]*outline:0 !important;[^}]*border-radius:50% !important;[^}]*background:transparent !important;[^}]*backdrop-filter:none !important;/);
     assert.match(source, /placementPointer\.addEventListener\('pointerup', event => \{[\s\S]*releaseHeldDemoRecord\(\)[\s\S]*pressPlacementPointer\(event\)/);
     assert.match(source, /placementPointer\.addEventListener\('mousedown'[\s\S]*beginPointerDemoHold\(event\)/);
+    assert.match(source, /session\.addEventListener\('selectend', \(\) => \{[\s\S]*clearTimeout\(demoHoldTimer\)/);
     assert.doesNotMatch(source, /awaitingPositionAdjustment/);
     assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(

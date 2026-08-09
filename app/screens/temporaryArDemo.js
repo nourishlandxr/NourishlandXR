@@ -120,6 +120,7 @@ const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demo
 // Keeping this at zero prevents Quest refresh rates from making the copy
 // appear in word-sized chunks.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0;
+const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
@@ -925,6 +926,24 @@ function simulatedAnchorStyle(anchor) {
     return `--marker-x:${Number(anchor.x).toFixed(2)}%;--marker-y:${Number(anchor.y).toFixed(2)}%`;
 }
 
+function simulatedAnchorFromPointer(startAnchor, startX, startY, event) {
+    const viewportWidth = Math.max(320, window.innerWidth || 320);
+    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    return {
+        x: Math.max(8, Math.min(92, Number(startAnchor?.x) + ((event.clientX - startX) / viewportWidth) * 100)),
+        y: Math.max(12, Math.min(88, Number(startAnchor?.y) + ((event.clientY - startY) / viewportHeight) * 100))
+    };
+}
+
+function applySimulatedMarkerAnchor(layer, index, anchor) {
+    const markerX = `${Number(anchor.x).toFixed(2)}%`;
+    const markerY = `${Number(anchor.y).toFixed(2)}%`;
+    layer.querySelectorAll(`[data-demo-marker-index="${index}"], [data-demo-plant-tether="${index}"], [data-demo-plant-profile="${index}"]`).forEach(element => {
+        element.style.setProperty('--marker-x', markerX);
+        element.style.setProperty('--marker-y', markerY);
+    });
+}
+
 function tetherMetrics(offset) {
     return {
         length: Math.max(8, Math.hypot(offset.x, offset.y)),
@@ -1179,19 +1198,19 @@ function bindSimulatedInformationPanels(layer) {
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
             if (demoHeldIndex === index) return;
-            holdGesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
+            holdGesture = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                startAnchor: { ...(record.simulatedAnchor || { x: 50, y: 50 }) }
+            };
             compactMarker.setPointerCapture?.(event.pointerId);
             compactMarker.classList.add('is-drag-ready');
             holdTimer = setTimeout(() => {
                 demoHeldIndex = index;
                 suppressDemoMarkerClick = true;
-                record.simulatedAnchor = { x: 50, y: 50 };
-                compactMarker.style.setProperty('--marker-x', '50%');
-                compactMarker.style.setProperty('--marker-y', '50%');
-                layer.querySelector(`[data-demo-plant-tether="${index}"]`)?.style.setProperty('--marker-x', '50%');
-                layer.querySelector(`[data-demo-plant-tether="${index}"]`)?.style.setProperty('--marker-y', '50%');
-                layer.querySelector(`[data-demo-plant-profile="${index}"]`)?.style.setProperty('--marker-x', '50%');
-                layer.querySelector(`[data-demo-plant-profile="${index}"]`)?.style.setProperty('--marker-y', '50%');
+                record.simulatedAnchor = { ...holdGesture.startAnchor };
+                applySimulatedMarkerAnchor(layer, index, record.simulatedAnchor);
                 compactMarker.classList.add('is-held');
                 const joystick = appRoot.querySelector('[data-demo-depth-joystick]');
                 joystick.hidden = false;
@@ -1201,11 +1220,15 @@ function bindSimulatedInformationPanels(layer) {
                 const readout = joystick.querySelector('[data-demo-depth-readout]');
                 if (readout) readout.textContent = `${(record.demoDistance || 1).toFixed(1)} m`;
                 joystick.style.setProperty('--depth-shift', '0px');
-                setGuide(`Holding ${record.name || 'this element'} at the aim. Keep this finger down: slide up to push away or down to pull closer.`);
-            }, 420);
+                setGuide(`Holding ${record.name || 'this element'}. Move the orb, then release.`);
+            }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
         });
         compactMarker.addEventListener('pointermove', event => {
             if (demoHeldIndex !== index || event.pointerId !== holdGesture?.pointerId) return;
+            if (simulatedMode) {
+                record.simulatedAnchor = simulatedAnchorFromPointer(holdGesture.startAnchor, holdGesture.startX, holdGesture.startY, event);
+                applySimulatedMarkerAnchor(layer, index, record.simulatedAnchor);
+            }
             const verticalTravel = holdGesture.startY - event.clientY;
             record.demoDistance = Math.max(.4, Math.min(4, 1 + verticalTravel / 120));
             record.demoDepthScale = Math.max(.55, Math.min(1.8, 1 / record.demoDistance));
@@ -1225,7 +1248,10 @@ function bindSimulatedInformationPanels(layer) {
             cancelHoldTimer();
             if (demoHeldIndex === index) releaseHeldDemoRecord();
         });
-        compactMarker.addEventListener('pointercancel', cancelHoldTimer);
+        compactMarker.addEventListener('pointercancel', () => {
+            cancelHoldTimer();
+            if (demoHeldIndex === index) releaseHeldDemoRecord();
+        });
         compactMarker.addEventListener('click', event => {
             if (suppressDemoMarkerClick) {
                 suppressDemoMarkerClick = false;
@@ -1549,7 +1575,7 @@ function beginPointerDemoHold(event) {
             markers[index].simulatedAnchor = capturedSimulatedAnchor();
             setGuide(`Holding ${markers[index].name || 'the orb'}. Move the pointer, then release.`);
             updateSimulatedMarkers();
-        }, 420);
+        }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
         return true;
     }
     const target = demoRecordAtPointer();
@@ -1570,7 +1596,7 @@ function beginPointerDemoHold(event) {
         };
         target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
         setGuide(`Holding ${target.record.name || 'the orb'}. Move your phone, then release.`);
-    }, 420);
+    }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
 }
 
@@ -1586,9 +1612,12 @@ function beginControllerDemoHold() {
         z: target.record.position.z - origin.z
     };
     target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
-    demoHeldIndex = target.index;
     suppressSessionSelectUntil = performance.now() + 1200;
-    setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
+    demoHoldTimer = setTimeout(() => {
+        demoHoldTimer = null;
+        demoHeldIndex = target.index;
+        setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
+    }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
 }
 
@@ -2648,7 +2677,11 @@ async function startImmersive() {
             beginControllerDemoHold();
         });
         session.addEventListener('selectend', () => {
-            if (demoHeldIndex < 0) return;
+            if (demoHeldIndex < 0) {
+                clearTimeout(demoHoldTimer);
+                demoHoldTimer = null;
+                return;
+            }
             releaseHeldDemoRecord();
             suppressSessionSelectUntil = performance.now() + 280;
         });
