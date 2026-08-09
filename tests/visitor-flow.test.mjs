@@ -487,7 +487,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /Totems are the epicenters of each area where plant orbs live/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
-    assert.match(source, /Press a cell to reveal its information/);
+    assert.match(source, /Select a cell to expand its connected knowledge/);
     assert.match(source, /navigator\.vibrate/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);

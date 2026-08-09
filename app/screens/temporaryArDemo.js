@@ -400,7 +400,7 @@ function openDemoVirtualTag(record) {
 function inviteVirtualTag(record) {
         showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to Open the plant profile.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
         if (choice === 'virtual-tag') openDemoVirtualTag(record);
-    });
+    }, { persistent: true });
 }
 
 function demoContentFor(record) {
@@ -433,6 +433,14 @@ function activateImmersiveDemoControl() {
     const choiceButton = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden]) [data-demo-choice]:not([hidden])');
     if (choiceButton) {
         choiceButton.click();
+        return true;
+    }
+    // In Quest/WebGL-control mode the large DOM board is hidden and its
+    // action button stays hidden while copy is typing. A controller select
+    // must still be able to finish that copy so the next action can appear.
+    const board = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden])');
+    if (board?.classList.contains('is-typing')) {
+        board.click();
         return true;
     }
     return false;
@@ -479,6 +487,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     }
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
+    if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
@@ -645,6 +654,35 @@ function finishIntroBoard() {
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
     introBoardVisible = true;
+}
+
+function showPersistentPimPrompt(record) {
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (!panel || !continueButton) return;
+    const plantName = record?.name || 'Plant';
+    const title = demoLocalizedText('Plant Information Mesh');
+    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge, or continue when you are ready.`);
+    panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
+    panel.hidden = false;
+    panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
+    panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
+    panel.onclick = null;
+    introSceneActive = true;
+    introBoardTitle = title;
+    introBoardBody = body;
+    introBoardVisibleBody = body;
+    introBoardTextureDirty = true;
+    introBoardVisible = true;
+    continueButton.textContent = demoLocalizedText('Continue');
+    continueButton.onclick = () => {
+        suppressSessionSelectUntil = performance.now() + 700;
+        continueButton.hidden = true;
+        record.demoProfileInteracted = true;
+        inviteVirtualTag(record);
+    };
+    continueButton.hidden = false;
+    setGuide(`${plantName} profile opened. Select a cell to explore, or press Continue when ready.`);
 }
 
 function runArWelcomeTutorial() {
@@ -1033,9 +1071,8 @@ function toggleDemoPlantProfile(record) {
         record.awaitingProfileReveal = false;
         navigator.vibrate?.([45, 40, 75]);
     }
-    setGuide(record.demoExpanded
-        ? `${record.name || 'Plant'} profile opened. Press a cell to reveal its information.`
-        : `${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
+    if (record.demoExpanded) showPersistentPimPrompt(record);
+    else setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
 }
 
 export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantProfile) {
@@ -1456,13 +1493,23 @@ function refreshDemoRecord(record) {
     updateSimulatedMarkers();
 }
 
+export function demoPointerScreenPoint(rect, viewportWidth = globalThis.innerWidth, viewportHeight = globalThis.innerHeight) {
+    const width = Number(rect?.width);
+    const height = Number(rect?.height);
+    const hasVisibleRect = Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
+    return hasVisibleRect
+        ? { x: Number(rect.left) + width / 2, y: Number(rect.top) + height / 2 }
+        : { x: Number(viewportWidth) / 2, y: Number(viewportHeight) / 2 };
+}
+
 function demoPointerWorldRay() {
     if (latestControllerRay) return latestControllerRay.direction;
     if (!viewerMatrix || !latestDemoView?.projectionMatrix) return null;
     const pointer = appRoot?.querySelector('[data-tryit-place]');
     const rect = pointer?.getBoundingClientRect();
-    const screenX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-    const screenY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const screenPoint = demoPointerScreenPoint(rect, window.innerWidth, window.innerHeight);
+    const screenX = screenPoint.x;
+    const screenY = screenPoint.y;
     const projection = latestDemoView.projectionMatrix;
     let x = (screenX / window.innerWidth * 2 - 1 + projection[8]) / projection[0];
     let y = (1 - screenY / window.innerHeight * 2 + projection[9]) / projection[5];

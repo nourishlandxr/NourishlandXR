@@ -9,6 +9,7 @@ import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRend
 import {
     demoGroundBaseY,
     demoPlacementPosition,
+    demoPointerScreenPoint,
     preservePlacedDemoPlants,
     selectDemoPlantRecord,
     selectGuidedDemoOrb
@@ -51,6 +52,18 @@ test('demo ground placement prefers a floor hit and otherwise keeps a stable flo
     assert.equal(demoGroundBaseY(floorHit, viewer), .019999999552965164);
     assert.ok(Math.abs(demoGroundBaseY(wallHit, viewer) - (viewer[13] - 1.55)) < 1e-6);
     assert.equal(demoGroundBaseY(wallHit, viewer, .04), .04);
+});
+
+test('immersive demo pointer falls back to the viewport when the placement cursor is hidden', () => {
+    assert.deepEqual(
+        demoPointerScreenPoint({ left: 40, top: 80, width: 200, height: 100 }, 1280, 720),
+        { x: 140, y: 130 }
+    );
+    assert.deepEqual(
+        demoPointerScreenPoint({ left: 0, top: 0, width: 0, height: 0 }, 1280, 720),
+        { x: 640, y: 360 }
+    );
+    assert.deepEqual(demoPointerScreenPoint(null, 390, 844), { x: 195, y: 422 });
 });
 
 test('both demo Plants remain alive, interactive and independently selectable after later stages', () => {
@@ -1178,6 +1191,15 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: auto;/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function toggleDemoPlantProfile/);
+    assert.match(source, /function showPersistentPimPrompt\(record\)/);
+    assert.match(source, /persistent: true/);
+    assert.match(source, /if \(options\.persistent\) panel\.classList\.add\('is-persistent-demo-board'\)/);
+    assert.ok(source.includes('record.demoProfileInteracted = true;'));
+    assert.match(source, /inviteVirtualTag\(record\)/);
+    assert.match(source, /board\?\.classList\.contains\('is-typing'\)/);
+    assert.match(source, /board\.click\(\);/);
+    assert.match(source, /export function demoPointerScreenPoint\(rect/);
+    assert.match(source, /const hasVisibleRect = Number\.isFinite\(width\) && width > 0/);
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
     assert.match(source, /uniform float opacity/);
     assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
