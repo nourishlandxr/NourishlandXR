@@ -19,6 +19,8 @@ import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeChildren, 
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
+import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
+import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 
 let appRoot = null;
 let session = null;
@@ -56,7 +58,6 @@ let introBoardHasEntered = false;
 let introWorldAnchor = null;
 let introNoteTexture = null;
 let introNoteCanvas = null;
-let persistentWelcomeTexture = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
 let introTextureUploadedAt = 0;
@@ -75,6 +76,7 @@ let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 let demoWebModeOpen = false;
+let demoPimWebController = null;
 let groundYEstimate = null;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
@@ -249,7 +251,6 @@ function clearSessionState() {
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
     if (introControlTexture) gl?.deleteTexture(introControlTexture);
     if (introPointerTexture) gl?.deleteTexture(introPointerTexture);
-    if (persistentWelcomeTexture) gl?.deleteTexture(persistentWelcomeTexture);
     introNoteTexture = null;
     introNoteCanvas = null;
     introBoardVisibleBody = '';
@@ -261,7 +262,8 @@ function clearSessionState() {
     introControlTexture = null;
     introControlTextureLabel = '';
     introPointerTexture = null;
-    persistentWelcomeTexture = null;
+    demoPimWebController?.destroy();
+    demoPimWebController = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
     markers.forEach(record => {
@@ -325,7 +327,6 @@ function showDemoAction(nextStage) {
 }
 
 function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
-    const facts = profile.informationTree.map(section => [section.label, section.details.join(' · ')]);
     return `<div class="tryit-virtual-tag-shell">
         <header class="tryit-virtual-tag-header">
           <span>WEB MODE · PLANT LIVE TAG</span>
@@ -342,7 +343,7 @@ function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
             <p>${profile.shortProfile}</p>
             <p>A Plant Live Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
           </section>
-          <section class="tryit-virtual-tag-facts">${facts.map(([label, value]) => `<article><small>${label}</small><p>${value}</p></article>`).join('')}</section>
+          <section class="tryit-virtual-tag-pim" aria-label="Pigeon Pea Plant Information Mesh"><div data-demo-pim-web-mount></div></section>
         </main>
         <button type="button" class="tryit-virtual-tag-close" data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR</button>
       </div>`;
@@ -354,6 +355,8 @@ function closeDemoVirtualTag(record) {
     webMode.classList.add('is-closing');
     suppressSessionSelectUntil = performance.now() + 900;
     setTimeout(() => {
+        demoPimWebController?.destroy();
+        demoPimWebController = null;
         webMode.hidden = true;
         webMode.classList.remove('is-closing');
         appRoot?.querySelector('.tryit-demo')?.classList.remove('is-web-mode');
@@ -375,7 +378,7 @@ function openDemoVirtualTag(record) {
     demoWebModeOpen = true;
     placementReady = false;
     suppressSessionSelectUntil = Number.POSITIVE_INFINITY;
-    hideGuidedChoice();
+    hideGuidedChoice({ hideBoard: true });
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
     appRoot?.querySelector('.tryit-demo')?.classList.add('is-web-mode');
     const stage = appRoot?.querySelector('.tryit-stage');
@@ -385,6 +388,10 @@ function openDemoVirtualTag(record) {
     }
     webMode.innerHTML = virtualTagProfileMarkup();
     webMode.hidden = false;
+    demoPimWebController = mountPlantInformationWeb(webMode.querySelector('[data-demo-pim-web-mount]'), {
+        document: PIGEON_PEA_PIM,
+        editable: false
+    });
     webMode.querySelector('[data-demo-close-web-mode]')?.addEventListener('click', () => closeDemoVirtualTag(record));
     setGuide('Web Mode is showing the complete Pigeon Pea Plant Profile.');
 }
@@ -399,11 +406,21 @@ function demoContentFor(record) {
     return record.demoContent || DEMO_CONTENT[record.demoType || record.type];
 }
 
-function hideGuidedChoice() {
-    appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
+function hideGuidedChoice({ hideBoard = false } = {}) {
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    if (hideBoard) {
+        panel?.setAttribute('hidden', '');
+        panel?.classList.remove('is-persistent-demo-board');
+    } else {
+        // Keep the large instruction board as the stable demo surface. It is
+        // made click-through while it is only carrying the previous message,
+        // so placed markers and controls remain reachable underneath it.
+        panel?.removeAttribute('hidden');
+        panel?.classList.add('is-persistent-demo-board');
+    }
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
-    introBoardVisible = false;
+    introBoardVisible = !hideBoard;
 }
 
 function activateImmersiveDemoControl() {
@@ -423,6 +440,7 @@ function activateImmersiveDemoControl() {
 function prepareTutorialBoard(panel) {
     const firstArrival = !introBoardHasEntered;
     panel.classList.add('is-welcome-board');
+    panel.classList.remove('is-persistent-demo-board');
     introBoardVisible = true;
     panel.classList.remove('is-leaving');
     panel.hidden = false;
@@ -439,6 +457,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
     panel.innerHTML = html;
+    panel.classList.remove('is-persistent-demo-board');
     const title = panel.querySelector('h2');
     const paragraph = panel.querySelector('p');
     if (title) title.textContent = demoLocalizedText(title.textContent);
@@ -616,13 +635,15 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
 
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
-    // The tutorial copy closes, but the original spatial Welcome / Information
-    // Note remains anchored as part of the scene for the rest of the demo.
-    appRoot?.querySelector('[data-tryit-intro]')?.removeAttribute('hidden');
-    appRoot?.querySelector('[data-tryit-guided-choice]')?.setAttribute('hidden', '');
+    // The large welcome/instruction board stays present for the entire demo.
+    // The old small spatial welcome card is intentionally never restored.
+    appRoot?.querySelector('[data-tryit-intro]')?.setAttribute('hidden', '');
+    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
+    panel?.removeAttribute('hidden');
+    panel?.classList.add('is-persistent-demo-board');
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
-    introBoardVisible = false;
+    introBoardVisible = true;
 }
 
 function runArWelcomeTutorial() {
@@ -1695,7 +1716,7 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div><div class="tryit-spatial-welcome-note nourishland-spatial-note-surface" data-tryit-persistent-welcome><strong>NOURISHLANDXR</strong><span data-tryit-spatial-tagline>A web of living knowledge…</span></div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = document.createElement('button');
@@ -2159,36 +2180,6 @@ function createIntroKnowledgeTexture() {
     return canvasTexture(label);
 }
 
-function createPersistentWelcomeTexture() {
-    const label = document.createElement('canvas');
-    label.width = 1024;
-    label.height = 384;
-    const ctx = label.getContext('2d');
-    ctx.clearRect(0, 0, label.width, label.height);
-    const background = ctx.createLinearGradient(0, 0, label.width, label.height);
-    background.addColorStop(0, 'rgba(76,127,89,.96)');
-    background.addColorStop(1, 'rgba(18,55,34,.9)');
-    ctx.fillStyle = background;
-    ctx.beginPath();
-    ctx.roundRect(12, 12, 1000, 360, 52);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(240,255,232,.78)';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = 'rgba(0,18,8,.72)';
-    ctx.lineWidth = 6;
-    ctx.font = '760 64px system-ui, sans-serif';
-    ctx.strokeText('NOURISHLANDXR', 512, 158);
-    ctx.fillText('NOURISHLANDXR', 512, 158);
-    ctx.fillStyle = 'rgba(247,255,242,.92)';
-    ctx.font = '620 34px system-ui, sans-serif';
-    ctx.fillText('A web of living knowledge…', 512, 238);
-    return canvasTexture(label);
-}
-
 function introLocalPosition(matrix, [x, y, z]) {
     return {
         x: matrix[12] + matrix[0] * x + matrix[4] * y + matrix[8] * z,
@@ -2223,14 +2214,6 @@ function drawIntroSpatial(view) {
     const easedNote = 1 - Math.pow(1 - noteProgress, 3);
     const knowledgeProgress = Math.min(1, Math.max(0, (elapsed - 1900) / 2800));
     const easedKnowledge = 1 - Math.pow(1 - knowledgeProgress, 3);
-    persistentWelcomeTexture ||= createPersistentWelcomeTexture();
-    drawTexture(
-        persistentWelcomeTexture,
-        introLocalPosition(introWorldAnchor, [-.78, -.18, -2.2]),
-        .9,
-        1.3,
-        .94
-    );
     if (introBoardVisible && introKnowledgeVisible) {
         drawTexture(
             introKnowledgeTexture,

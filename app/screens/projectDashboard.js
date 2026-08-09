@@ -32,7 +32,9 @@ import {
 } from '../services/physicalAnchor.js';
 import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
 import { PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
+import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
+import { normalizePimDocument } from '../services/pimModel.js';
 import { reviewPimImport, stagePimImport } from '../services/pimImportReview.js';
 import { pimRouteFromUrl, pimRouteUrl } from '../services/pimRouting.js';
 
@@ -136,6 +138,33 @@ const isPlantProfileUpgraded = (marker, profile = {}) => Boolean(
     marker?.type === 'plant'
     && (profile.spm_enabled === true || profile.profile_enabled === true)
 );
+const clonePimValue = value => {
+    if (value === undefined) return undefined;
+    if (typeof structuredClone === 'function') return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+};
+const isPigeonPeaIdentity = identity => {
+    const name = `${identity?.commonName || ''} ${identity?.scientificName || ''}`.toLocaleLowerCase();
+    return name.includes('pigeon pea') || name.includes('cajanus cajan');
+};
+function initialPlantPimDocument(profile, identity) {
+    const stored = profile?.pim_document || profile?.pim || profile?.pim_nodes || profile?.pim_categories;
+    if (stored) return resolvePlantPim(profile, identity, { plantId: identity.plantId });
+    if (isPigeonPeaIdentity(identity)) {
+        const canonicalIdentity = clonePimValue(PIGEON_PEA_PIM.identity);
+        Object.entries(identity || {}).forEach(([key, value]) => {
+            const meaningful = Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? value.trim() : value !== undefined && value !== null;
+            if (meaningful) canonicalIdentity[key] = clonePimValue(value);
+        });
+        return normalizePimDocument({
+            ...clonePimValue(PIGEON_PEA_PIM),
+            plantId: identity.plantId,
+            identity: canonicalIdentity
+        });
+    }
+    return resolvePlantPim(profile, identity, { plantId: identity.plantId });
+}
+let pigeonPeaExamplePimDocument = null;
 const entryStatus = marker => marker.visibility === 'public'
     ? { label: 'Published', tone: 'published' }
     : marker.visibility === 'draft' || !marker.visibility
@@ -1983,9 +2012,17 @@ export async function renderUnplacedContent(app, encodedProjectId) {
 
 export async function renderPigeonPeaExample(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
-    const sections = PIGEON_PEA_EXAMPLE.informationTree.map(section => `<details class="plant-info-drawer"><summary><strong>${escapeHtml(section.label)}</strong><small>Advanced Plant Profile information</small></summary><ul>${section.details.map(detail => `<li>${escapeHtml(detail)}</li>`).join('')}</ul></details>`).join('');
-        app.innerHTML = `<div class="screen plant-example-profile" data-example-marker-id="${PIGEON_PEA_EXAMPLE.id}" data-example-plant-slug="${PIGEON_PEA_EXAMPLE.slug}"><div class="page-header"><button class="ghost" onclick="window.renderUnplacedContent('${encoded(project.id)}')">Back to Home</button><p class="welcome-label">COMPLETE PLANT LIVE TAG · TUTORIAL</p><h1>${PIGEON_PEA_EXAMPLE.name}</h1><p class="subtitle">${PIGEON_PEA_EXAMPLE.commonName}</p></div><section class="panel"><h2>${PIGEON_PEA_EXAMPLE.commonName}</h2><p><i>${PIGEON_PEA_EXAMPLE.scientificName}</i> · ${PIGEON_PEA_EXAMPLE.family}</p><p>Location: Home · ${escapeHtml(project.name)}</p><p>${PIGEON_PEA_EXAMPLE.shortProfile}</p></section><section aria-label="Advanced Pigeon Pea Plant Profile"><p class="welcome-label">ADVANCED PLANT PROFILE</p>${sections}</section></div>`;
-        app.querySelector('.plant-example-profile .page-header .ghost')?.setAttribute('onclick', `window.renderProjectDashboard('${encoded(project.id)}')`);
+    pigeonPeaExamplePimDocument ||= normalizePimDocument(clonePimValue(PIGEON_PEA_PIM));
+    app.innerHTML = `<div class="screen plant-example-profile" data-example-marker-id="${PIGEON_PEA_EXAMPLE.id}" data-example-plant-slug="${PIGEON_PEA_EXAMPLE.slug}"><div class="page-header"><button class="ghost" onclick="window.renderUnplacedContent('${encoded(project.id)}')">Back to Home</button><p class="welcome-label">COMPLETE PLANT LIVE TAG · TUTORIAL</p><h1>${PIGEON_PEA_EXAMPLE.name}</h1><p class="subtitle">${PIGEON_PEA_EXAMPLE.commonName}</p></div><section class="panel"><h2>${PIGEON_PEA_EXAMPLE.commonName}</h2><p><i>${PIGEON_PEA_EXAMPLE.scientificName}</i> · ${PIGEON_PEA_EXAMPLE.family}</p><p>Location: Home · ${escapeHtml(project.name)}</p><p>${PIGEON_PEA_EXAMPLE.shortProfile}</p></section><section class="plant-example-pim-section" aria-label="Advanced Pigeon Pea Plant Profile"><p class="welcome-label">ADVANCED PLANT PROFILE · INFO MESH</p><p class="meta">The Pigeon Pea example uses the same six-root PIM document as the AR demonstration. Add structured information below to extend a branch.</p><div data-pigeon-pea-pim-mount></div></section></div>`;
+    mountPlantInformationWeb(app.querySelector('[data-pigeon-pea-pim-mount]'), {
+        document: pigeonPeaExamplePimDocument,
+        editable: true,
+        onSaveDocument: nextDocument => {
+            pigeonPeaExamplePimDocument = normalizePimDocument(nextDocument);
+            return pigeonPeaExamplePimDocument;
+        }
+    });
+    app.querySelector('.plant-example-profile .page-header .ghost')?.setAttribute('onclick', `window.renderProjectDashboard('${encoded(project.id)}')`);
 }
 
 export async function renderStoriesAndFocus(app, encodedProjectId) {
@@ -2673,12 +2710,12 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             </div>
         </div>
         <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div class="plant-spm-heading"><strong id="plantSpmTitle">Enable SPM / PIM</strong><button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About SPM and PIM">i</button></div>
-            <p id="plantSpmHelp" class="plant-spm-help" hidden>SPM loads the advanced Plant Information Mesh for this Plant. Leave it off for a simple profile.</p>
-            <label class="tutorial-mode-toggle"><span><strong>Advanced plant information</strong><small>Load the PIM editor and spatial profile.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+            <div class="plant-spm-heading"><strong id="plantSpmTitle">Activate Info Mesh</strong><button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button></div>
+            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh activates the expandable plant knowledge diagram for this Plant. Leave it off for a simple profile.</p>
+            <label class="tutorial-mode-toggle"><span><strong>Info Mesh</strong><small>Open the expandable Info Mesh in Web Mode and AR.</small></span><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
         </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
-        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> PIM overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the PIM core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
+        <div class="plant-overview-card"><label for="projectEntryOverview"><span aria-hidden="true">✦</span> Info Mesh overview</label><textarea id="projectEntryOverview" rows="2" placeholder="A precise summary for the Info Mesh core.">${escapeHtml(profile.overview || entry.marker.description || '')}</textarea></div>
         <div class="plant-vital-grid plant-profile-spm-vitals">
             <div class="field"><label for="projectEntryOrbSize">Orb size</label><select id="projectEntryOrbSize"><option value="small" ${profile.orb_size === 'small' ? 'selected' : ''}>Small</option><option value="medium" ${!profile.orb_size || profile.orb_size === 'medium' ? 'selected' : ''}>Medium</option><option value="large" ${profile.orb_size === 'large' ? 'selected' : ''}>Large</option></select></div>
         </div>
@@ -2693,6 +2730,10 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             <div class="field"><label for="projectEntryPropagation">Propagation / biology</label><textarea id="projectEntryPropagation" rows="2">${escapeHtml(profile.propagation || '')}</textarea></div>
         </div></details>
         <details class="plant-info-drawer"><summary><span aria-hidden="true">◌</span><strong>Origin &amp; story</strong><small>Optional history and context</small></summary><div class="plant-drawer-fields"><div class="field"><label for="projectEntryOrigin">Origin and history</label><textarea id="projectEntryOrigin" rows="2">${escapeHtml(profile.origin || '')}</textarea></div></div></details>
+        <section class="plant-profile-pim-web-section" aria-labelledby="plantInfoMeshWebTitle">
+            <div class="plant-profile-pim-web-heading"><p class="welcome-label">WEB MODE · SHARED PIM</p><h2 id="plantInfoMeshWebTitle">Info Mesh diagram</h2><p>Explore the same plant knowledge that appears as the spatial AR mesh. Open several branches, select a block for details, or add a structured information block.</p></div>
+            <div data-plant-pim-web-mount></div>
+        </section>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
         ${physicalAnchorMarkup}
         </div>
@@ -2712,7 +2753,7 @@ function plantProfileStatsMarkup(project, entry, profile, editableColor = false)
         <div class="plant-profile-stat-color"><small>PLANT COLOR</small><strong>${editableColor ? `<input id="projectEntryOrbColor" type="color" value="${escapeHtml(color)}" aria-label="Plant color" /><span>${color}</span>` : `<i style="--plant-profile-color:${color}" aria-hidden="true"></i>${color}`}</strong></div>
         <div><small>MARKER TYPE</small><strong>PLANT</strong></div>
         <div><small>NUMBER</small><strong>${escapeHtml(plantProfileId(project, entry.marker))}</strong></div>
-        <div><small>SPM</small><strong>${spmEnabled ? 'ENABLED' : 'OFF'}</strong></div>
+        <div><small>INFO MESH</small><strong>${spmEnabled ? 'ACTIVE' : 'OFF'}</strong></div>
     </section>`;
 }
 
@@ -2754,7 +2795,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         synonyms: profile.synonyms || [],
         regionalNames: profile.regional_names || profile.regionalNames || []
     } : null;
-    let activePimDocument = plant ? resolvePlantPim(profile, pimIdentity, { plantId: pimIdentity.plantId }) : null;
+    let activePimDocument = plant ? initialPlantPimDocument(profile, pimIdentity) : null;
     let activePimImportReview = plant ? profile.pim_import_review || profile.pim_import_staging || null : null;
     const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
@@ -2824,10 +2865,67 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         const spmToggle = app.querySelector('#projectEntrySpmEnabled');
         const spmFields = app.querySelector('#projectEntrySpmFields');
         const profileEnabledField = app.querySelector('#projectEntryProfileEnabled');
+        let pimWebController = null;
+        const routeFromUrl = typeof location !== 'undefined' ? pimRouteFromUrl(location.href) : {};
+        const pimInitialRouteState = pimInitialState || (routeFromUrl.path && (!routeFromUrl.markerId || routeFromUrl.markerId === entry.marker.id) ? { path: routeFromUrl.path } : {});
+        const savePimDocument = async nextDocument => {
+            activePimDocument = normalizePimDocument(nextDocument);
+            await savePlantProfile(project.id, site.id, entry.place.id, entry.marker.id, {
+                ...profile,
+                profile_enabled: true,
+                spm_enabled: true,
+                pim_document: activePimDocument
+            });
+            return activePimDocument;
+        };
+        const mountInfoMesh = () => {
+            const mount = app.querySelector('[data-plant-pim-web-mount]');
+            if (!mount || !activePimDocument || !spmToggle?.checked) return;
+            pimWebController?.destroy();
+            mount.hidden = false;
+            pimWebController = mountPlantInformationWeb(mount, {
+                document: activePimDocument,
+                editable: true,
+                importReview: activePimImportReview,
+                initialState: pimInitialRouteState,
+                onRouteChange: (state, node) => {
+                    if (!node || typeof history === 'undefined' || typeof history.replaceState !== 'function') return;
+                    const routeUrl = pimRouteUrl({
+                        projectId: project.id,
+                        siteId: site.id,
+                        placeId: entry.place.id,
+                        markerId: entry.marker.id,
+                        slug: pimSlug(activePimDocument.identity?.commonName),
+                        path: node.path
+                    });
+                    history.replaceState(null, '', `${routeUrl.pathname}${routeUrl.search}${routeUrl.hash}`);
+                },
+                onSaveDocument: savePimDocument,
+                onApproveImport: async item => {
+                    const nextReview = reviewPimImport(activePimImportReview, item?.id || item?.itemId, 'approve');
+                    activePimImportReview = nextReview;
+                    if (nextReview?.document) {
+                        activePimDocument = normalizePimDocument(nextReview.document);
+                        await savePimDocument(activePimDocument);
+                    }
+                    return activePimDocument;
+                },
+                onRejectImport: async item => {
+                    activePimImportReview = reviewPimImport(activePimImportReview, item?.id || item?.itemId, 'reject');
+                    return activePimDocument;
+                },
+                onModifyImport: () => undefined
+            });
+        };
         const updateSpmFields = () => {
             const enabled = Boolean(spmToggle?.checked);
             spmFields?.toggleAttribute('hidden', !enabled);
             if (profileEnabledField) profileEnabledField.value = enabled ? 'true' : 'false';
+            if (enabled) mountInfoMesh();
+            else {
+                pimWebController?.destroy();
+                pimWebController = null;
+            }
         };
         const plantAssignments = physicalAnchorAssignments(entries, entry.marker.id);
         const updatePlantPhysicalFields = () => {
@@ -2971,7 +3069,7 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
             await syncMarkerQrAnchor(project.id, site.id, targetAreaId, savedMarker.id, qrCode, `Physical QR label for ${name}.`, movableAnchor);
         }
         if (plantProfileFormPresent) {
-            await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, {
+            const nextPlantProfile = {
                 ...existingPlantProfile,
                 profile_enabled: spmEnabled,
                 spm_enabled: spmEnabled,
@@ -2990,7 +3088,21 @@ export async function saveProjectEntryChanges(event, encodedProjectId, encodedMa
                 propagation: fieldValue('projectEntryPropagation', existingPlantProfile.propagation || ''),
                 overview: fieldValue('projectEntryOverview', existingPlantProfile.overview || entry.marker.description || ''),
                 virtual_tag_enabled: document.getElementById('projectEntryVirtualTag')?.checked ?? existingPlantProfile.virtual_tag_enabled === true
-            });
+            };
+            if (profileEnabled) {
+                const nextPimIdentity = {
+                    plantId: entry.marker.plantId || savedMarker.id,
+                    commonName: nextPlantProfile.common_name,
+                    scientificName: nextPlantProfile.scientific_name,
+                    identityStatement: nextPlantProfile.overview,
+                    image: nextPlantProfile.photo,
+                    cultivar: nextPlantProfile.cultivar || '',
+                    synonyms: nextPlantProfile.synonyms || [],
+                    regionalNames: nextPlantProfile.regional_names || nextPlantProfile.regionalNames || []
+                };
+                nextPlantProfile.pim_document = initialPlantPimDocument(nextPlantProfile, nextPimIdentity);
+            }
+            await savePlantProfile(project.id, site.id, targetAreaId, savedMarker.id, nextPlantProfile);
         }
         await openProjectEntry(document.getElementById('app'), encoded(project.id), encoded(savedMarker.id), returnToAr, decodeURIComponent(encodedReturnContext || ''));
     } catch (error) {

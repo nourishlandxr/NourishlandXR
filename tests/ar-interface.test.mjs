@@ -459,7 +459,7 @@ test('Creator AR keeps the editable Location Note hidden until it is opened from
     assert.match(styles, /\.creator-ar-location-stick \{[^}]*height:1px;[^}]*repeating-linear-gradient/);
     assert.match(styles, /100% \{ opacity:\.7;[^}]*translate\(-50%,-50%\)/);
     assert.match(styles, /\.nourishland-spatial-note-surface/);
-    assert.match(demoSource, /tryit-spatial-welcome-note nourishland-spatial-note-surface/);
+    assert.doesNotMatch(demoSource, /tryit-spatial-welcome-note nourishland-spatial-note-surface/);
     assert.match(demoSource, /record\.demoType === 'note' \? ' nourishland-spatial-note-surface'/);
     assert.match(arSource, /record\.marker\.type === 'note' \? ' nourishland-spatial-note-surface'/);
     assert.match(dashboardSource, /<h2 id="projectLocationNoteTitle">AR Location Note<\/h2>/);
@@ -928,8 +928,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
     assert.doesNotMatch(source, /tryit-spatial-pim-web/);
-    assert.match(source, /NOURISHLANDXR/);
-    assert.match(source, /A web of living knowledge…/);
+    assert.match(source, /Nourishland XR/);
     assert.match(source, /INTRO_KNOWLEDGE_KEYWORDS/);
     for (const keyword of ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO CLIMATE', 'USES', 'PROPAGATION', 'LAYERS']) {
         assert.match(source, new RegExp(keyword));
@@ -946,11 +945,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.biomap-branch > button/);
     assert.match(styles, /\.biomap-branch\.is-expanded \.biomap-children/);
     assert.doesNotMatch(source, /tryit-welcome-core-cell/);
-    assert.match(source, /tryit-spatial-welcome-note/);
-    assert.match(styles, /\.tryit-spatial-welcome-note \{[^}]*width:min\(42vw,340px\);[^}]*aspect-ratio:2\.55;[^}]*animation:tryit-persistent-note-arrive/);
-    assert.match(source, /data-tryit-persistent-welcome/);
-    assert.match(source, /function createPersistentWelcomeTexture\(\)/);
-    assert.match(source, /finishIntroBoard\(\)[\s\S]*querySelector\('\[data-tryit-intro\]'\)\?\.removeAttribute\('hidden'\)/);
+    assert.doesNotMatch(source, /tryit-spatial-welcome-note/);
+    assert.doesNotMatch(styles, /\.tryit-spatial-welcome-note \{/);
+    assert.doesNotMatch(source, /data-tryit-persistent-welcome/);
+    assert.doesNotMatch(source, /function createPersistentWelcomeTexture\(\)/);
+    assert.match(source, /finishIntroBoard\(\)[\s\S]*querySelector\('\[data-tryit-guided-choice\]'\)/);
+    assert.match(source, /is-persistent-demo-board/);
     assert.match(styles, /\.biomap-branch:nth-child\(1\) \{ left:29%; top:22%; \}/);
     assert.doesNotMatch(styles, /\.tryit-intro-knowledge::before/);
     assert.match(styles, /color:#fff/);
@@ -984,8 +984,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function prepareTutorialBoard\(panel\)/);
     assert.match(source, /const firstArrival = !introBoardHasEntered/);
     assert.doesNotMatch(source, /introSceneActive = false/);
-    assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.removeAttribute\('hidden'\)/);
-    assert.match(source, /querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
+    assert.match(source, /querySelector\('\[data-tryit-intro\]'\)\?\.setAttribute\('hidden', ''\)/);
+    assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
     assert.match(source, /Adjust its position if needed/);
@@ -996,7 +996,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointer\.addEventListener\('pointercancel'/);
     assert.match(source, /if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
     assert.match(source, /pointer\?\.removeAttribute\('hidden'\);[\s\S]*pointer\?\.classList\.add\('is-revealing', 'is-ready'\)/);
-    assert.match(source, /function hideGuidedChoice\(\) \{[\s\S]*querySelector\('\[data-tryit-guided-choice\]'\)\?\.setAttribute\('hidden', ''\)/);
+    assert.match(source, /function hideGuidedChoice\(\{ hideBoard = false \} = \{\}\)/);
     assert.match(source, /addEventListener\('beforexrselect', event => event\.preventDefault\(\)\)/);
     assert.match(source, /demoInteractive: !\['plant', 'plant2'\]\.includes\(type\)/);
     assert.match(source, /record\.demoInteractive = true/);
@@ -1480,7 +1480,10 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile[\s\S]{0,180}background:rgba\(15,48,32,.94\)/);
     assert.match(dashboardSource, /plant-encyclopedia-card/);
     assert.match(dashboardSource, /data-spm-info/);
-    assert.match(dashboardSource, /Enable SPM \/ PIM/);
+    assert.match(dashboardSource, /Activate Info Mesh/);
+    assert.match(dashboardSource, /mountPlantInformationWeb/);
+    assert.match(dashboardSource, /data-plant-pim-web-mount/);
+    assert.match(dashboardSource, /pim_document: activePimDocument/);
     assert.match(dashboardSource, /projectEntrySpmEnabled/);
     assert.match(dashboardSource, /projectEntryClimate/);
     assert.match(dashboardSource, /spm_enabled: spmEnabled/);

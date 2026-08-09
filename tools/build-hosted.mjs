@@ -23,6 +23,7 @@ const frontendEntries = [
     'index.html',
     'main.js',
     'style.css',
+    'pim.css',
     'assets',
     'components',
     'managers',
