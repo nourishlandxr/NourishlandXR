@@ -239,6 +239,26 @@ test('editing and import review controls appear only for editable Creator profil
     assert.doesNotMatch(visitor, /Structured PIM editor|Add information|Staged plant data|Edit information/);
 });
 
+test('Uses children use compact plant-part templates without rendering empty information boxes', () => {
+    const document = referenceDocument();
+    const state = createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'culinary' });
+    const markup = plantInformationWebMarkup(document, state, { editable: true, showSearch: false, showIdentity: false });
+    assert.match(markup, /pim-web-template-palette/);
+    for (const part of ['Root', 'Leaves', 'Pods', 'Fruit', 'Beans', 'Seeds', 'Bark', 'Custom']) {
+        assert.match(markup, new RegExp(`data-pim-template-id="[^"]*"[^>]*>${part}<`));
+    }
+    assert.match(markup, /pim-web-editor-fields--essential/);
+    assert.match(markup, /pim-web-editor-advanced/);
+    assert.match(markup, /Sources, evidence and display settings/);
+    assert.doesNotMatch(markup, /Full content/);
+});
+
+test('Web PIM save action stays available while the compact editor scrolls', () => {
+    assert.match(styles, /\.pim-web-editor form > footer \{[\s\S]*position: sticky;[\s\S]*bottom: 0;/);
+    assert.match(styles, /\.pim-web-editor-context/);
+    assert.match(styles, /\.pim-web-template-options/);
+});
+
 test('Web PIM CSS reflows to ordered mobile groups without horizontal scrolling', () => {
     assert.match(styles, /grid-template-areas:\s*"\. relationship \."[\s\S]*"agency identity certainty"[\s\S]*"\. process \."/);
     assert.match(styles, /@media \(max-width: 760px\)/);

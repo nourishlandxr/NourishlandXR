@@ -1471,6 +1471,10 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /float rect/);
     assert.match(arSource, /float core/);
     assert.match(arSource, /function plantTagDimensions\(marker\)/);
+    assert.match(arSource, /function plantTagGeometry\(position, marker, groundY = currentGroundY\(\)\)/);
+    assert.match(arSource, /plateBaseY = Math\.max\(floorY \+ dimensions\.stemHeight, requestedY\)/);
+    assert.match(arSource, /halfHeight: geometry\.stemHeight \* \.5/);
+    assert.match(arSource, /\{ \.\.\.position, y: geometry\.groundY \}/);
     assert.match(arSource, /drawPlantTagStem\(view, record\.position, record\.marker/);
     assert.match(arSource, /plantTagPlatePosition\(record\.position, record\.marker\)/);
     assert.match(arSource, /Totem Marker/);
@@ -1571,7 +1575,8 @@ test('an open AR Plant profile has no attached Web Mode card', () => {
     assert.doesNotMatch(arSource, /data-ar-context-web/);
     assert.match(arSource, /: `web-marker:\$\{record\.marker\.id\}`/);
     assert.match(dashboardSource, /const returnArLabel = 'AR'/);
-    assert.match(dashboardSource, /const returnArAction = !plant && returnToAr/);
+    assert.match(dashboardSource, /const returnArAction = returnToAr/);
+    assert.match(dashboardSource, /const arHandoff = returnToAr/);
     assert.match(dashboardSource, /const entryHeader = plant/);
     assert.doesNotMatch(dashboardSource, /plantProfileReady && !returnToAr \?/);
     assert.match(dashboardSource, /projectEntryQrCode/);
@@ -1786,8 +1791,8 @@ test('editing a Plant from AR keeps the compact identity controls and shared Inf
     assert.match(dashboardSource, /entryIsHome\s*\n\s*\? `window\.renderProjectDashboard/);
     assert.match(dashboardSource, /project-entry-back-button/);
     assert.match(dashboardSource, /plant-profile-action-row/);
-    assert.match(styles, /\.plant-profile-action-row \{ display: grid; grid-template-columns: repeat\(3/);
-    assert.match(dashboardSource, />BACK<|textContent = 'BACK'/);
+    assert.match(styles, /\.plant-profile-action-row \{ position: sticky; bottom: 10px; z-index: 18; display: grid; grid-template-columns: repeat\(3/);
+    assert.match(dashboardSource, /textContent = returnToAr \? 'BACK TO AR' : 'BACK'/);
     assert.match(styles, /\.plant-ar-quick-fields/);
     assert.match(styles, /\.plant-ar-quick-tones/);
 });

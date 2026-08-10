@@ -34,6 +34,18 @@ const PUBLICATION_STATES = Object.freeze([
     ['archived', 'Archived']
 ]);
 
+const USE_INFORMATION_TEMPLATES = Object.freeze([
+    ['root', 'Root', 'Root use or observation'],
+    ['leaves', 'Leaves', 'Leaf use or observation'],
+    ['pods', 'Pods', 'Pod use or observation'],
+    ['fruit', 'Fruit', 'Fruit use or observation'],
+    ['beans', 'Beans', 'Bean use or preparation'],
+    ['seeds', 'Seeds', 'Seed use or preparation'],
+    ['bark', 'Bark', 'Bark use or material']
+]);
+
+const USE_TEMPLATE_PARENT_IDS = new Set(['culinary', 'medicinal', 'craft']);
+
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[character]);
@@ -363,6 +375,14 @@ function selectMarkup(name, label, values, selected, required = false) {
     return `<label>${escapeHtml(label)}<select name="${attribute(name)}"${required ? ' required' : ''}>${values.map(([value, text]) => `<option value="${attribute(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(text)}</option>`).join('')}</select></label>`;
 }
 
+function informationTemplateMarkup(parent, state) {
+    if (state.editorMode !== 'add' || !USE_TEMPLATE_PARENT_IDS.has(parent?.id)) return '';
+    return `<section class="pim-web-template-palette" aria-labelledby="pim-web-template-title">
+        <div><strong id="pim-web-template-title">Start with a plant part</strong><small>Choose a common part or start with a custom information block.</small></div>
+        <div class="pim-web-template-options">${USE_INFORMATION_TEMPLATES.map(([id, title, preview]) => `<button type="button" data-pim-template-id="${attribute(id)}" data-pim-template-title="${attribute(title)}" data-pim-template-preview="${attribute(preview)}">${escapeHtml(title)}</button>`).join('')}<button type="button" class="is-custom" data-pim-template-id="custom">Custom</button></div>
+    </section>`;
+}
+
 function editorMarkup(document, state, options) {
     if (!options.editable || !state.editorMode) return '';
     const editing = state.editorMode === 'edit' ? nodeById(document, state.editorNodeId) : null;
@@ -375,30 +395,36 @@ function editorMarkup(document, state, options) {
     return `<aside class="pim-web-editor" role="dialog" aria-modal="true" aria-labelledby="pim-web-editor-title">
         <form data-pim-editor-form data-pim-editor-mode="${attribute(state.editorMode)}" data-pim-editor-node-id="${attribute(editing?.id || '')}" data-pim-editor-parent-id="${attribute(parent?.id || '')}">
             <header><div><span>Structured PIM editor</span><h2 id="pim-web-editor-title">${escapeHtml(title)}</h2></div><button type="button" data-pim-cancel-editor aria-label="Close information editor">×</button></header>
-            <div class="pim-web-editor-fields">
-                <label>Parent plant<input name="plantId" value="${inputValue(document.plantId)}" readonly /></label>
-                <label>Parent node<input name="parentId" value="${inputValue(parent?.id || editing?.parentId)}" readonly /></label>
-                <label>Primary category<input name="primaryCategory" value="${inputValue(category.id)}" readonly /></label>
-                <label>Knowledge mode<input name="knowledgeMode" value="${inputValue(category.knowledgeMode)}" readonly /></label>
+            ${informationTemplateMarkup(parent, state)}
+            <div class="pim-web-editor-context" aria-label="Information location"><span>Plant <strong>${escapeHtml(document.identity?.commonName || document.plantId)}</strong></span><span>Parent <strong>${escapeHtml(parent?.title || editing?.parentId || '')}</strong></span><span>Category <strong>${escapeHtml(category.title)}</strong></span></div>
+            <input type="hidden" name="plantId" value="${inputValue(document.plantId)}" readonly />
+            <input type="hidden" name="parentId" value="${inputValue(parent?.id || editing?.parentId)}" readonly />
+            <input type="hidden" name="primaryCategory" value="${inputValue(category.id)}" readonly />
+            <input type="hidden" name="knowledgeMode" value="${inputValue(category.knowledgeMode)}" readonly />
+            <div class="pim-web-editor-fields pim-web-editor-fields--essential">
                 ${selectMarkup('informationType', 'Information type', INFORMATION_TYPES, seed.informationType || 'fact', true)}
-                <label>Title<input name="title" value="${inputValue(seed.title)}" required maxlength="120" /></label>
+                <label>Title<input name="title" value="${inputValue(seed.title)}" required maxlength="120" autofocus /></label>
                 <label>Short preview<input name="preview" value="${inputValue(seed.preview)}" required maxlength="80" placeholder="Two to five useful words" /></label>
-                <label class="pim-web-editor-wide">Full content<textarea name="body" rows="6" required>${escapeHtml(seed.body || '')}</textarea></label>
-                <label>Tags<input name="tags" value="${inputValue(seed.tags)}" placeholder="soil, nitrogen, classroom" /></label>
-                <label>Region or environmental context<input name="region" value="${inputValue(seed.region)}" /></label>
-                <label>Climate context<input name="climateContext" value="${inputValue(seed.climateContext)}" /></label>
-                <label>Source<input name="sourceIds" value="${inputValue(seed.sourceIds)}" /></label>
-                <label>Author or organisation<input name="authorOrganisation" value="${inputValue(seed.authorOrganisation || provenance.authorOrganisation)}" /></label>
-                <label>Attribution<input name="attribution" value="${inputValue(seed.attribution)}" /></label>
-                <label>Publication date<input name="publicationDate" type="date" value="${inputValue(seed.publicationDate || provenance.publicationDate)}" /></label>
-                <label>Retrieved date<input name="retrievalDate" type="date" value="${inputValue(seed.retrievalDate || provenance.retrievalDate)}" /></label>
-                ${selectMarkup('evidenceStatus', 'Evidence status', EVIDENCE_STATES, seed.evidenceStatus || 'needs_review', true)}
-                <label class="pim-web-editor-wide">Safety note<textarea name="safetyNote" rows="3">${escapeHtml(seed.safetyNote || '')}</textarea></label>
-                <label>Media<input name="media" value="${inputValue(asList(seed.media).map(item => typeof item === 'string' ? item : item.url))}" placeholder="Media URLs" /></label>
-                <label>Display order<input name="displayOrder" type="number" min="0" step="1" value="${inputValue(seed.displayOrder ?? 0)}" /></label>
-                ${selectMarkup('status', 'Publication status', PUBLICATION_STATES, seed.status || 'draft', true)}
-                <fieldset class="pim-web-editor-wide"><legend>Source provenance</legend><label>Database<input name="sourceDatabase" value="${inputValue(provenance.sourceDatabase)}" /></label><label>Record ID<input name="sourceRecordId" value="${inputValue(provenance.sourceRecordId)}" /></label><label>Source URL<input name="sourceUrl" type="url" value="${inputValue(provenance.sourceUrl)}" /></label><label>Licence<input name="licence" value="${inputValue(provenance.licence)}" /></label></fieldset>
+                <label class="pim-web-editor-wide">Information<textarea name="body" rows="5" required placeholder="Add the useful detail that belongs in this one information block.">${escapeHtml(seed.body || '')}</textarea></label>
             </div>
+            <details class="pim-web-editor-advanced"><summary>More fields <span>Sources, evidence and display settings</span></summary>
+                <div class="pim-web-editor-fields pim-web-editor-fields--advanced">
+                    <label>Tags<input name="tags" value="${inputValue(seed.tags)}" placeholder="soil, nitrogen, classroom" /></label>
+                    <label>Region or environmental context<input name="region" value="${inputValue(seed.region)}" /></label>
+                    <label>Climate context<input name="climateContext" value="${inputValue(seed.climateContext)}" /></label>
+                    <label>Source<input name="sourceIds" value="${inputValue(seed.sourceIds)}" /></label>
+                    <label>Author or organisation<input name="authorOrganisation" value="${inputValue(seed.authorOrganisation || provenance.authorOrganisation)}" /></label>
+                    <label>Attribution<input name="attribution" value="${inputValue(seed.attribution)}" /></label>
+                    <label>Publication date<input name="publicationDate" type="date" value="${inputValue(seed.publicationDate || provenance.publicationDate)}" /></label>
+                    <label>Retrieved date<input name="retrievalDate" type="date" value="${inputValue(seed.retrievalDate || provenance.retrievalDate)}" /></label>
+                    ${selectMarkup('evidenceStatus', 'Evidence status', EVIDENCE_STATES, seed.evidenceStatus || 'needs_review', true)}
+                    <label class="pim-web-editor-wide">Safety note<textarea name="safetyNote" rows="3">${escapeHtml(seed.safetyNote || '')}</textarea></label>
+                    <label>Media<input name="media" value="${inputValue(asList(seed.media).map(item => typeof item === 'string' ? item : item.url))}" placeholder="Media URLs" /></label>
+                    <label>Display order<input name="displayOrder" type="number" min="0" step="1" value="${inputValue(seed.displayOrder ?? 0)}" /></label>
+                    ${selectMarkup('status', 'Publication status', PUBLICATION_STATES, seed.status || 'draft', true)}
+                    <fieldset class="pim-web-editor-wide"><legend>Source provenance</legend><label>Database<input name="sourceDatabase" value="${inputValue(provenance.sourceDatabase)}" /></label><label>Record ID<input name="sourceRecordId" value="${inputValue(provenance.sourceRecordId)}" /></label><label>Source URL<input name="sourceUrl" type="url" value="${inputValue(provenance.sourceUrl)}" /></label><label>Licence<input name="licence" value="${inputValue(provenance.licence)}" /></label></fieldset>
+                </div>
+            </details>
             <p class="pim-web-editor-status" role="status" aria-live="polite">${escapeHtml(state.editorMessage)}</p>
             <footer><button type="button" data-pim-cancel-editor>Cancel</button><button class="pim-web-primary-action" type="submit">Save information</button></footer>
         </form>
@@ -561,6 +587,16 @@ export function mountPlantInformationWeb(container, options = {}) {
         }
         if (button.matches('[data-pim-add-parent-id]')) {
             commit({ ...state, editorMode: 'add', editorParentId: button.dataset.pimAddParentId, editorNodeId: '', editorSeed: null, editorMessage: '' }, '', false);
+            return;
+        }
+        if (button.matches('[data-pim-template-id]')) {
+            const templateId = button.dataset.pimTemplateId;
+            const template = USE_INFORMATION_TEMPLATES.find(([id]) => id === templateId);
+            const existingSeed = state.editorSeed || {};
+            const editorSeed = template
+                ? { ...existingSeed, informationType: 'practice', title: template[1], preview: template[2], body: existingSeed.body || '' }
+                : { ...existingSeed, title: '', preview: '', body: '' };
+            commit({ ...state, editorSeed, editorMessage: template ? `${template[1]} template selected. Add the detail for this plant.` : 'Custom information block selected.' }, '', false);
             return;
         }
         if (button.matches('[data-pim-edit-node-id]')) {

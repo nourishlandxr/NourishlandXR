@@ -242,21 +242,33 @@ function plantTagDimensions(marker) {
     };
 }
 
-function plantTagPlatePosition(position, marker) {
+function plantTagGeometry(position, marker, groundY = currentGroundY()) {
     const dimensions = plantTagDimensions(marker);
+    const floorY = Number.isFinite(Number(groundY)) ? Number(groundY) : 0;
+    const requestedY = Number.isFinite(Number(position?.y)) ? Number(position.y) : floorY;
+    const plateBaseY = Math.max(floorY + dimensions.stemHeight, requestedY);
     return {
-        x: Number(position?.x) || 0,
-        y: (Number(position?.y) || 0) + dimensions.stemHeight + dimensions.halfHeight,
-        z: Number(position?.z) || 0
+        groundY: floorY,
+        plateBaseY,
+        stemHeight: Math.max(dimensions.stemHeight, plateBaseY - floorY),
+        platePosition: {
+            x: Number(position?.x) || 0,
+            y: plateBaseY + dimensions.halfHeight,
+            z: Number(position?.z) || 0
+        }
     };
 }
 
+function plantTagPlatePosition(position, marker) {
+    return plantTagGeometry(position, marker).platePosition;
+}
+
 function drawPlantTagStem(view, position, marker, opacity = 1) {
-    const dimensions = plantTagDimensions(marker);
+    const geometry = plantTagGeometry(position, marker);
     const scale = markerSizeFactor(marker);
-    drawSpatialPrism(gl, prismRenderer, view, position, {
+    drawSpatialPrism(gl, prismRenderer, view, { ...position, y: geometry.groundY }, {
         halfWidth: .009 * scale,
-        halfHeight: dimensions.stemHeight * .5,
+        halfHeight: geometry.stemHeight * .5,
         halfDepth: .009 * scale,
         color: markerRgb(marker, [.32, .48, .27]),
         topColor: markerRgb(marker, [.64, .8, .52]),

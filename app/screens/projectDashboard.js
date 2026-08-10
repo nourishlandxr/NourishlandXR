@@ -34,7 +34,7 @@ import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
 import { PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
-import { normalizePimDocument } from '../services/pimModel.js';
+import { normalizePimDocument, pimAddNode } from '../services/pimModel.js';
 import { reviewPimImport, stagePimImport } from '../services/pimImportReview.js';
 import { pimRouteFromUrl, pimRouteUrl } from '../services/pimRouting.js';
 
@@ -177,6 +177,29 @@ const isPigeonPeaIdentity = identity => {
     return name.includes('pigeon pea') || name.includes('cajanus cajan');
 };
 function initialPlantPimDocument(profile, identity) {
+    const starterUseCategories = [
+        ['culinary', 'Culinary', 10],
+        ['medicinal', 'Medicinal', 20],
+        ['craft', 'Craft', 30]
+    ];
+    const ensureUseCategories = document => {
+        let next = normalizePimDocument(document);
+        starterUseCategories.forEach(([id, title, displayOrder]) => {
+            if (next.nodes.some(node => node.id === id)) return;
+            next = pimAddNode(next, {
+                id,
+                parentId: 'uses',
+                title,
+                preview: 'Add plant-part information',
+                body: '',
+                informationType: 'category',
+                evidenceStatus: 'needs_review',
+                status: 'published',
+                displayOrder
+            });
+        });
+        return next;
+    };
     const stored = profile?.pim_document || profile?.pim || profile?.pim_nodes || profile?.pim_categories;
     if (stored) {
         const document = resolvePlantPim(profile, identity, { plantId: identity.plantId });
@@ -185,7 +208,7 @@ function initialPlantPimDocument(profile, identity) {
             const meaningful = Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? value.trim() : value !== undefined && value !== null;
             if (meaningful) nextIdentity[key] = clonePimValue(value);
         });
-        return normalizePimDocument({ ...document, identity: nextIdentity });
+        return ensureUseCategories({ ...document, identity: nextIdentity });
     }
     if (isPigeonPeaIdentity(identity)) {
         const canonicalIdentity = clonePimValue(PIGEON_PEA_PIM.identity);
@@ -193,13 +216,13 @@ function initialPlantPimDocument(profile, identity) {
             const meaningful = Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? value.trim() : value !== undefined && value !== null;
             if (meaningful) canonicalIdentity[key] = clonePimValue(value);
         });
-        return normalizePimDocument({
+        return ensureUseCategories({
             ...clonePimValue(PIGEON_PEA_PIM),
             plantId: identity.plantId,
             identity: canonicalIdentity
         });
     }
-    return resolvePlantPim(profile, identity, { plantId: identity.plantId });
+    return ensureUseCategories(resolvePlantPim(profile, identity, { plantId: identity.plantId }));
 }
 let pigeonPeaExamplePimDocument = null;
 const entryStatus = marker => marker.visibility === 'public'
@@ -2879,8 +2902,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const returnArCopy = plant
         ? 'Take your time with this Plant. Back to AR returns directly to the same Area with this orb open.'
         : 'Take your time with this information. Back to AR returns directly to the same Area and Marker.';
-    const returnArAction = !plant && returnToAr ? `<button class="global-ar-action ar-portal" type="button" aria-label="Return to AR with ${escapeHtml(entry.marker.name)}" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
-    const arHandoff = !plant && returnToAr ? `<aside class="ar-web-handoff" aria-label="Return to augmented reality"><div><strong>WEB MODE</strong><p>${returnArCopy}</p></div>${returnArAction}</aside>` : '';
+    const returnArAction = returnToAr ? `<button class="global-ar-action ar-portal" type="button" aria-label="Return to AR with ${escapeHtml(entry.marker.name)}" onclick="window.startArMode('${encoded(project.id)}', '${encoded(entry.place.id)}', '', '', '${encoded(entry.marker.id)}', 'web-marker:${encoded(entry.marker.id)}', '${encoded(site?.id || '')}')">${returnArLabel}</button>` : '';
+    const arHandoff = returnToAr ? `<aside class="ar-web-handoff" aria-label="Return to augmented reality"><div><strong>WEB MODE</strong><p>${returnArCopy}</p></div>${returnArAction}</aside>` : '';
     const specialMarkerEditor = entry.marker.type === 'sub_checkpoint' ? `<div class="field"><label for="projectEntrySpecialSymbol">Marker symbol</label><select id="projectEntrySpecialSymbol"><option value="" ${entry.marker.special_symbol ? '' : 'selected'}>Standard checkpoint</option>${[['↑', 'Arrow up'], ['→', 'Arrow right'], ['↓', 'Arrow down'], ['←', 'Arrow left'], ['!', 'Exclamation point'], ['?', 'Question mark']].map(([symbol, label]) => `<option value="${symbol}" ${entry.marker.special_symbol === symbol ? 'selected' : ''}>${label}</option>`).join('')}</select></div>` : '';
     const noteColor = /^#[0-9a-f]{6}$/i.test(entry.marker.appearance?.color || '') ? entry.marker.appearance.color : '#d7834f';
     const noteSurface = entry.marker.appearance?.surface === 'outline' ? 'outline' : 'filled';
@@ -2910,15 +2933,17 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         : `<div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>${projectBreadcrumbMarkup(project, entry.place, entry.marker.name)}</div>`;
     const placementStatus = plant ? '' : `<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>`;
     const placeButton = !plant && !quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action ar-square-action" type="button" aria-label="Place ${escapeHtml(entry.marker.name)} in AR" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">AR</button>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr && !plant ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save' : plant ? 'Save' : 'Save changes'}</button>${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save' : plant ? 'Save' : 'Save changes'}</button>${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
     if (quickArPlantEdit) {
         const quickSaveButton = app.querySelector('.project-entry-editor button.primary');
         const quickReturnButton = app.querySelector('.project-entry-back-button') || app.querySelector('.project-entry-editor .bottom-navigation .ghost');
         const contextBeacon = app.querySelector('.project-entry-editor .web-context-beacon');
         if (quickSaveButton) quickSaveButton.textContent = 'SAVE';
         if (quickReturnButton) {
-            quickReturnButton.textContent = 'BACK';
-            quickReturnButton.onclick = () => window.renderProjectHome(encoded(project.id));
+            quickReturnButton.textContent = returnToAr ? 'BACK TO AR' : 'BACK';
+            quickReturnButton.onclick = returnToAr
+                ? () => window.startArMode(encoded(project.id), encoded(entry.place.id), '', '', encoded(entry.marker.id), `web-marker:${encoded(entry.marker.id)}`, encoded(site?.id || ''))
+                : () => window.renderProjectHome(encoded(project.id));
         }
         if (entryIsHome && contextBeacon) {
             const label = contextBeacon.querySelector('span');
