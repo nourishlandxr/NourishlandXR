@@ -10,7 +10,6 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
-import { createSpatialTotemRenderer, destroySpatialTotemRenderer, drawSpatialTotem } from '../services/spatialTotemRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
@@ -45,7 +44,6 @@ let sphereRenderer = null;
 let tetherRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
-let totemRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -302,12 +300,10 @@ function clearSessionState() {
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
-    destroySpatialTotemRenderer(gl, totemRenderer);
     sphereRenderer = null;
     tetherRenderer = null;
     prismRenderer = null;
     triangleRenderer = null;
-    totemRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -2117,7 +2113,6 @@ function setupRenderer() {
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
-    totemRenderer = createSpatialTotemRenderer(gl);
 }
 
 function demoControllerInputSource() {
@@ -2721,7 +2716,7 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
-    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer || !totemRenderer) return;
+    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -2758,18 +2753,36 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
-        drawSpatialTotem(gl, totemRenderer, view, {
-            ...record.position,
-            y: groundBaseY
-        }, {
-            style,
-            height: DEMO_TOTEM_HALF_HEIGHT_METRES * 2,
-            width: 1,
-            color: [.22, .34, .18],
-            topColor: [.52, .42, .24],
-            accentColor: [.92, .7, .28],
-            alpha: .98,
-            rotationY: Math.PI / 12
+        if (style === 'organic') {
+            drawSpatialSphere(gl, sphereRenderer, view, {
+                ...record.position,
+                y: groundBaseY + .44
+            }, .44, {
+                color: [.06, .24, .12],
+                alpha: .98,
+                emissive: .2
+            });
+            return;
+        }
+        if (style === 'flat-disc') {
+            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
+                ...record.position,
+                y: groundBaseY + .06
+            }, .48, {
+                color: [.16, .43, .22],
+                alpha: .98,
+                emissive: .2,
+                scale: { x: 1, y: .16, z: 1 }
+            });
+            return;
+        }
+        drawSpatialPrism(gl, prismRenderer, view, record.position, {
+            halfWidth: .16,
+            halfHeight: .9,
+            halfDepth: .16,
+            color: [.3, .7, .69],
+            topColor: [.62, .92, .84],
+            rotationY: Math.PI / 7
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);
