@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
-import { createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
+import { createGroundArrowPathGeometry, createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRenderer.js';
 import {
@@ -17,6 +17,7 @@ import {
 import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
 import { normalizeTotemHeightPreset, normalizeTotemStyle, totemHeightPreset, totemHeightScale, totemStylePreset } from '../app/services/totemAppearance.js';
+import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../app/services/totemLinkCalibration.js';
 import {
     arucoMarkerMatrix,
     createPhysicalAnchorTrackingState,
@@ -127,6 +128,34 @@ test('Creator AR recenters a saved Area around its Totem without losing relative
     ], 'kitchen-totem', { x: 4, y: 0, z: 4 });
     assert.deepEqual(mixedMigration.records[1].position, { x: 4.6, y: .8, z: 2.8 });
     assert.deepEqual(mixedMigration.records[2].position, { x: 3.5, y: 1, z: 4.5 });
+});
+
+test('Totem link calibration stores a reversible same-session transform', () => {
+    const calibration = createTotemLinkCalibration(
+        { id: 'living-totem', position: { x: 1, y: 0, z: -2 } },
+        { id: 'kitchen-totem', position: { x: 3, y: 0, z: -5 } },
+        { capturedAt: '2026-08-10T00:00:00.000Z' }
+    );
+    assert.deepEqual(calibration.relative_position, { x: 2, y: 0, z: -3 });
+    assert.equal(calibration.distance_m, 3.606);
+    assert.equal(calibration.source_totem_id, 'living-totem');
+    assert.equal(calibration.target_totem_id, 'kitchen-totem');
+    assert.deepEqual(applyTotemLinkCalibration({ x: 8, y: 0, z: 4 }, calibration), { x: 10, y: 0, z: 1 });
+    const reverse = reverseTotemLinkCalibration(calibration);
+    assert.deepEqual(reverse.relative_position, { x: -2, y: 0, z: 3 });
+    assert.deepEqual(applyTotemLinkCalibration({ x: 10, y: 0, z: 1 }, reverse), { x: 8, y: 0, z: 4 });
+});
+
+test('calibrated Totem routes render as a segmented ground path with arrows', () => {
+    const vertices = createGroundArrowPathGeometry(
+        { x: 0, y: .05, z: 0 },
+        { x: 2, y: .05, z: -1 },
+        { dashLength: .2, gapLength: .1, arrowLength: .16, arrowWidth: .1, arrowSpacing: .6 }
+    );
+    assert.ok(vertices.length > 18);
+    assert.equal(vertices.length % 9, 0);
+    const values = Array.from(vertices);
+    assert.ok(values.some(value => Math.abs(value - .05) < .01));
 });
 
 test('Physical Marker IDs use the exact original ArUco 5x5 encoding and NL labels', () => {
@@ -528,6 +557,8 @@ test('Special opens immediately with Totem tools above symbols', () => {
     assert.match(specialChoices, /data-ar-toggle-totem/);
     assert.match(specialChoices, /data-ar-toggle-location-note/);
     assert.match(specialChoices, /data-ar-add-totem/);
+    assert.match(specialChoices, /data-ar-start-link-calibration/);
+    assert.match(specialChoices, /data-ar-capture-link-target/);
     assert.match(specialChoices, /Add Totem/);
     assert.match(specialChoices, /'Hide Totem Guide'/);
     assert.match(specialChoices, /'Show Totem Guide'/);
@@ -538,6 +569,9 @@ test('Special opens immediately with Totem tools above symbols', () => {
     assert.match(specialChoices, /\['!', 'Important'\]/);
     assert.match(specialChoices, /\['\?', 'Question'\]/);
     assert.doesNotMatch(specialChoices, /EXISTING RECORDS|data-ar-import-marker/);
+    assert.match(arSource, /function startTotemLinkCalibration\(\)/);
+    assert.match(arSource, /function captureTotemLinkCalibration\(\)/);
+    assert.match(arSource, /alignActiveAreaToCalibrationTarget\(expectedTargetPosition\)/);
 });
 
 test('Creator AR places lightweight drafts and keeps move and select modes exclusive', () => {

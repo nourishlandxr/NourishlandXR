@@ -7,7 +7,7 @@
  * are not required for a test session.
  */
 
-import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProject, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker } from '../services/persistence.js';
+import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarker, loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProject, loadProjectSites, loadSitePlaces, saveMarkerAnchor, updatePlaceMarker, updateSitePlace } from '../services/persistence.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
@@ -19,7 +19,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
-import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
@@ -31,6 +31,7 @@ import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
+import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
 
 let session = null;
 let sessionMode = 'immersive-ar';
@@ -114,6 +115,8 @@ let activePlacementOperation = null;
 let pendingPlacementPromise = null;
 let totemGuideVisible = false;
 let totemLinkGuideVisible = true;
+let totemLinkCalibration = null;
+let runtimeTotemLinkCalibrations = new Map();
 let pendingExistingMarkerId = '';
 let arReturnContext = '';
 let locationNoteAnchor = null;
@@ -161,7 +164,7 @@ const visibleQuestSpecialPaletteActions = () => {
     return QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => {
         if (action.hidden) return false;
         if (action.id === 'totem') return !totemPlaced;
-        if (['point-totem', 'link-totem', 'recenter-totem'].includes(action.id)) return Boolean(totem);
+        if (['point-totem', 'link-totem', 'recenter-totem', 'calibrate-link'].includes(action.id)) return Boolean(totem);
         return true;
     });
 };
@@ -485,10 +488,30 @@ function totemLinkMeasure(link) {
     ].filter(Boolean).join(' · ');
 }
 
+function totemLinkRuntimeKey(sourceAreaId, targetAreaId) {
+    return `${String(sourceAreaId || '').trim()}::${String(targetAreaId || '').trim()}`;
+}
+
+function runtimeCalibrationForLink(record, link) {
+    if (!record || !link?.targetAreaId) return null;
+    return runtimeTotemLinkCalibrations.get(totemLinkRuntimeKey(record.areaId, link.targetAreaId)) || null;
+}
+
+function calibratedTargetPosition(record, link) {
+    return runtimeCalibrationForLink(record, link)
+        ? applyTotemLinkCalibration(record.position, runtimeCalibrationForLink(record, link))
+        : null;
+}
+
 async function transitionToLinkedArea(areaId) {
     const targetId = String(areaId || '').trim();
     if (!targetId || !activeProjectId || !activeSiteId) return false;
     const operation = captureArOperationContext();
+    const sourceTotem = activeTotemRecord();
+    const sourceLink = linkedTotemAreas(sourceTotem).find(link => link.targetAreaId === targetId);
+    const expectedTargetPosition = sourceTotem && sourceLink
+        ? calibratedTargetPosition(sourceTotem, sourceLink)
+        : null;
     const areas = await loadSitePlaces(activeProjectId, activeSiteId).catch(() => []);
     if (!isArOperationCurrent(operation, { matchLocation: false })) return false;
     const area = areas.find(candidate => candidate.id === targetId);
@@ -500,8 +523,28 @@ async function transitionToLinkedArea(areaId) {
     const restoreOperation = captureArOperationContext();
     await restoreRecordedMarkers({ ...restoreOperation, areaId: area.id });
     if (!isArOperationCurrent(restoreOperation, { matchLocation: false })) return false;
+    if (expectedTargetPosition) alignActiveAreaToCalibrationTarget(expectedTargetPosition);
     closeAreaLens();
-    setPlacementStatus(`${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded from its linked Totem. Its saved content is now active.`);
+    setPlacementStatus(totemLinkCalibration?.targetAreaId === area.id
+        ? `Calibration target ${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded. Place or recenter its Totem, then capture the link.`
+        : expectedTargetPosition
+        ? `${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded at its calibrated Totem position.`
+        : `${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded from its linked Totem. Its saved content is now active.`);
+    return true;
+}
+
+function alignActiveAreaToCalibrationTarget(targetPosition) {
+    const targetTotem = activeTotemRecord();
+    if (!targetTotem || !hasSavedSpatialPosition(targetTotem)) return false;
+    const alignment = alignAreaToCheckpoint(activeAreaMarkers(), targetTotem.marker.id, groundedTotemPosition(targetPosition));
+    if (!alignment.checkpoint) return false;
+    activeCheckpointId = alignment.checkpoint.marker.id;
+    checkpointSessionOrigin = checkpointOriginMatrix(alignment.origin);
+    const alignedById = new Map(alignment.records.map(record => [record.marker.id, record]));
+    sessionMarkers = sessionMarkers.map(record => record.areaId === activeAreaId
+        ? alignedById.get(record.marker.id) || record
+        : record);
+    renderSessionMarkers();
     return true;
 }
 
@@ -531,6 +574,7 @@ function activateArea(area) {
         sessionMarkers = [];
         locatedTotemRecord = null;
         activeCheckpointId = '';
+        checkpointSessionOrigin = null;
         totemGuideVisible = false;
         totemLinkGuideVisible = true;
         locationNoteVisible = false;
@@ -601,7 +645,7 @@ function creatorTotemInformationMarkup(record) {
     const text = [isGeneratedWelcome ? '' : introduction, areaContext ? `Area context: ${areaContext}` : '', ...board.informationBubbles].filter(Boolean).slice(0, 6);
     const linkedAreas = totemLinkGuideVisible ? linkedTotemAreas(record) : [];
     if (!text.length && !linkedAreas.length) return '';
-    const signs = linkedAreas.map(link => `<button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
+    const signs = linkedAreas.map(link => `<span class="creator-ar-totem-link-branch is-${escapeHtml(link.direction)}" data-ar-totem-link-branch="${escapeHtml(link.targetAreaId)}" aria-hidden="true"></span><button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
     const balloon = record.infoVisible && text.length
         ? `<section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
           <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
@@ -611,7 +655,11 @@ function creatorTotemInformationMarkup(record) {
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
         <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
         ${balloon}
-        <div class="creator-ar-totem-link-signs" aria-label="Linked Area transitions">${signs}</div>
+        <div class="creator-ar-totem-link-signs" aria-label="Linked Area transitions">
+          <span class="creator-ar-totem-link-mast" aria-hidden="true"></span>
+          <span class="creator-ar-totem-link-hub" aria-hidden="true"></span>
+          ${signs}
+        </div>
       </aside>`;
 }
 
@@ -1657,6 +1705,13 @@ function selectQuestSpecialPaletteAction(action) {
         void recenterActiveArea();
         return true;
     }
+    if (action.id === 'calibrate-link') {
+        closeQuestSpecialPalette();
+        void (totemLinkCalibration?.targetAreaId === activeAreaId
+            ? captureTotemLinkCalibration()
+            : startTotemLinkCalibration());
+        return true;
+    }
     return false;
 }
 
@@ -2064,6 +2119,118 @@ function toggleActiveTotemLinkGuide() {
         : 'Totem link path disabled.');
 }
 
+async function startTotemLinkCalibration() {
+    const sourceTotem = activeTotemRecord();
+    const sourceLink = linkedTotemAreas(sourceTotem)[0];
+    if (!sourceTotem || !hasSavedSpatialPosition(sourceTotem)) {
+        setPlacementStatus('Place or recenter this Totem before calibrating a link.');
+        return false;
+    }
+    if (!sourceLink) {
+        setPlacementStatus('Save a Web Mode link to another Area before calibrating it.');
+        return false;
+    }
+    totemLinkCalibration = {
+        sourceAreaId: activeAreaId,
+        sourceAreaName: activeAreaName,
+        sourceTotemId: sourceTotem.marker.id,
+        sourcePosition: { ...sourceTotem.position },
+        targetAreaId: sourceLink.targetAreaId,
+        targetAreaName: sourceLink.targetAreaName,
+        startedAt: new Date().toISOString()
+    };
+    closePlacePicker();
+    setPlacementStatus(`Calibration started from ${activeAreaName || 'this Area'}. Walk to ${sourceLink.targetAreaName}, then capture its Totem.`);
+    await transitionToLinkedArea(sourceLink.targetAreaId);
+    return true;
+}
+
+async function persistTotemLinkCalibration(state, targetTotem, calibration) {
+    const areas = await loadSitePlaces(activeProjectId, activeSiteId).catch(() => []);
+    const sourceArea = areas.find(area => area.id === state.sourceAreaId);
+    const targetArea = areas.find(area => area.id === state.targetAreaId);
+    if (!sourceArea || !targetArea) throw new Error('The calibrated Areas could not be loaded.');
+    const sourceLinks = Array.isArray(sourceArea.totem_links) ? sourceArea.totem_links : [];
+    const targetLinks = Array.isArray(targetArea.totem_links) ? targetArea.totem_links : [];
+    const sourceRoute = sourceLinks.find(link => link.target_area_id === state.targetAreaId) || { target_area_id: state.targetAreaId };
+    const targetRoute = targetLinks.find(link => link.target_area_id === state.sourceAreaId) || { target_area_id: state.sourceAreaId };
+    const reverseCalibration = reverseTotemLinkCalibration(calibration);
+    const savedSourceRoute = {
+        ...sourceRoute,
+        target_area_id: state.targetAreaId,
+        distance_m: calibration.distance_m,
+        calibration
+    };
+    const savedTargetRoute = {
+        ...targetRoute,
+        target_area_id: state.sourceAreaId,
+        distance_m: calibration.distance_m,
+        calibration: reverseCalibration
+    };
+    await Promise.all([
+        updateSitePlace(activeProjectId, activeSiteId, sourceArea.id, {
+            totem_links: [...sourceLinks.filter(link => link.target_area_id !== state.targetAreaId), savedSourceRoute]
+        }),
+        updateSitePlace(activeProjectId, activeSiteId, targetArea.id, {
+            totem_links: [...targetLinks.filter(link => link.target_area_id !== state.sourceAreaId), savedTargetRoute]
+        })
+    ]);
+    runtimeTotemLinkCalibrations.set(totemLinkRuntimeKey(state.sourceAreaId, state.targetAreaId), calibration);
+    if (reverseCalibration) runtimeTotemLinkCalibrations.set(totemLinkRuntimeKey(state.targetAreaId, state.sourceAreaId), reverseCalibration);
+    const targetAreaLinks = [...targetLinks.filter(link => link.target_area_id !== state.sourceAreaId), savedTargetRoute]
+        .map(link => ({
+            ...link,
+            target_area_name: areas.find(area => area.id === link.target_area_id)?.name || link.target_area_id || 'Linked Area'
+        }));
+    const currentAreaRecords = activeAreaMarkers();
+    currentAreaRecords.forEach(record => { record.areaLinks = targetAreaLinks; });
+    return { sourceArea, targetArea, targetTotem };
+}
+
+async function captureTotemLinkCalibration() {
+    const state = totemLinkCalibration;
+    const targetTotem = activeTotemRecord();
+    if (!state) {
+        setPlacementStatus('Start calibration from a linked Totem first.');
+        return false;
+    }
+    if (activeAreaId !== state.targetAreaId) {
+        setPlacementStatus(`Open ${state.targetAreaName} before capturing its Totem.`);
+        return false;
+    }
+    if (!targetTotem || !hasSavedSpatialPosition(targetTotem)) {
+        setPlacementStatus(`Place or recenter the ${state.targetAreaName} Totem, then capture it.`);
+        return false;
+    }
+    const calibration = createTotemLinkCalibration(
+        { id: state.sourceTotemId, position: state.sourcePosition },
+        targetTotem,
+        { capturedAt: new Date().toISOString() }
+    );
+    if (!calibration) {
+        setPlacementStatus('The two Totems are too close to create a reliable Area link.');
+        return false;
+    }
+    try {
+        setPlacementStatus('Saving calibrated Area link…');
+        await persistTotemLinkCalibration(state, targetTotem, calibration);
+        totemLinkCalibration = null;
+        totemLinkGuideVisible = true;
+        renderSessionMarkers();
+        setPlacementStatus(`Area link calibrated: ${calibration.distance_m.toFixed(1)} m to ${state.sourceAreaName || 'the linked Area'}.`);
+        return true;
+    } catch (error) {
+        setPlacementStatus(`Calibration measured, but could not be saved: ${error.message}`);
+        return false;
+    }
+}
+
+function cancelTotemLinkCalibration() {
+    totemLinkCalibration = null;
+    setPlacementStatus('Totem link calibration cancelled.');
+    closePlacePicker();
+}
+
 function toggleLocationNoteVisibility(record = activeTotemRecord()) {
     const config = locationNoteConfig || normalizedLocationNote();
     if (!config.enabled) {
@@ -2145,6 +2312,12 @@ function renderSpecialMarkerChoices(picker) {
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
     const totemPlaced = hasSavedSpatialPosition(totem);
     const hasLinks = linkedTotemAreas(totem).length > 0;
+    const calibrationTarget = linkedTotemAreas(totem)[0];
+    const calibrationAction = totemLinkCalibration?.targetAreaId === activeAreaId
+        ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-capture-link-target><b aria-hidden="true">&#9673;</b><span><strong>CAPTURE LINK TARGET</strong><small>Save this Area in the calibrated mesh</small></span></button>'
+        : totemLinkCalibration
+            ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-cancel-link-calibration><b aria-hidden="true">&#10005;</b><span><strong>CANCEL CALIBRATION</strong><small>Return to normal Totem tools</small></span></button>'
+            : `<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-start-link-calibration ${totemPlaced && hasLinks ? '' : 'disabled'}><b aria-hidden="true">&#8644;</b><span><strong>CALIBRATE LINK</strong><small>${totemPlaced && calibrationTarget ? `Join ${escapeHtml(calibrationTarget.targetAreaName)}` : 'Create a Web Mode link first'}</small></span></button>`;
     const placeTotemAction = !totemPlaced
         ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>PLACE TOTEM</strong><small>To this Area</small></span></button>'
         : '';
@@ -2153,6 +2326,7 @@ function renderSpecialMarkerChoices(picker) {
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}" ${totem ? '' : 'disabled'}><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>POINT TO TOTEM</strong><small>${totem ? (totemGuideVisible ? 'Disable ground pointer' : 'Enable ground pointer') : 'Place a Totem first'}</small></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem-links aria-pressed="${totemLinkGuideVisible}" ${hasLinks ? '' : 'disabled'}><b aria-hidden="true">&#8596;</b><span><strong>LINK PATH</strong><small>${hasLinks ? (totemLinkGuideVisible ? 'Disable Area route' : 'Enable Area route') : 'Link Areas in Web Mode'}</small></span></button>
             <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-recenter-totem ${totemPlaced ? '' : 'disabled'}><b aria-hidden="true">&#8635;</b><span><strong>RECENTER TOTEM</strong><small>${totemPlaced ? 'Aim at its real position' : 'Place the Totem first'}</small></span></button>
+            ${calibrationAction}
             ${placeTotemAction}
         </div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
@@ -2168,6 +2342,9 @@ function renderSpecialMarkerChoices(picker) {
         closePlacePicker();
         void recenterActiveArea();
     });
+    picker.querySelector('[data-ar-start-link-calibration]')?.addEventListener('click', () => void startTotemLinkCalibration());
+    picker.querySelector('[data-ar-capture-link-target]')?.addEventListener('click', () => void captureTotemLinkCalibration());
+    picker.querySelector('[data-ar-cancel-link-calibration]')?.addEventListener('click', cancelTotemLinkCalibration);
     picker.querySelector('[data-ar-add-totem]')?.addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         const specialMarker = {
@@ -2216,7 +2393,7 @@ async function openArAreaCreationForm() {
 async function openSpecialMarkerPicker() {
     // Legacy terminology retained for migrations: + SPECIAL, data-ar-toggle-location-note,
     // ARROWS, EXCLAMATION AND QUESTION MARKS. The active picker now exposes only
-    // PLACE TOTEM and POINT TO TOTEM.
+    // PLACE TOTEM, POINT TO TOTEM and CALIBRATE LINK.
     if (questHeadsetSession) {
         if (questSpecialPaletteVisible) {
             closeQuestSpecialPalette();
@@ -3099,6 +3276,24 @@ function groundGuideMatrix(target) {
     ]);
 }
 
+function drawCalibratedTotemPath(view) {
+    if (!totemLinkGuideVisible || !controllerPointerRenderer) return;
+    const totem = activeTotemRecord();
+    const link = linkedTotemAreas(totem).find(candidate => runtimeCalibrationForLink(totem, candidate));
+    const target = link ? calibratedTargetPosition(totem, link) : null;
+    if (!totem || !target) return;
+    const startGround = groundedTotemPosition(totem.position);
+    const endGround = groundedTotemPosition(target);
+    if (Math.hypot(endGround.x - startGround.x, endGround.z - startGround.z) < .1) return;
+    drawSpatialGroundArrowPath(gl, controllerPointerRenderer, view,
+        { ...startGround, y: startGround.y + .05 },
+        { ...endGround, y: endGround.y + .05 },
+        { width: .024, dashLength: .13, gapLength: .11, arrowLength: .14, arrowWidth: .105, arrowSpacing: .72, color: [0.55, 1, 0.42, .92] });
+    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix,
+        { ...endGround, y: endGround.y + .045 }, .065,
+        { color: [.55, 1, .42], alpha: .7, emissive: 1 });
+}
+
 function setupSpatialMarkerRenderer() {
     const vertex = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
@@ -3494,16 +3689,36 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
     information.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
     information.style.setProperty('--location-ground-x', `${attachmentPoint.x.toFixed(1)}px`);
     information.style.setProperty('--location-ground-y', `${attachmentPoint.y.toFixed(1)}px`);
+    const projectedGround = view ? projectWorldPoint(view, ground) : null;
+    const mastTop = attachmentPoint.y - 30;
+    const mastBottom = projectedGround?.y || markerY;
+    information.style.setProperty('--totem-link-hub-x', `${attachmentPoint.x.toFixed(1)}px`);
+    information.style.setProperty('--totem-link-hub-y', `${attachmentPoint.y.toFixed(1)}px`);
+    information.style.setProperty('--totem-link-mast-x', `${attachmentPoint.x.toFixed(1)}px`);
+    information.style.setProperty('--totem-link-mast-y', `${mastTop.toFixed(1)}px`);
+    information.style.setProperty('--totem-link-mast-height', `${Math.max(40, mastBottom - mastTop).toFixed(1)}px`);
     const signWidth = Math.min(184, Math.max(132, window.innerWidth * .34));
-    const signGap = Math.max(12, Math.min(28, window.innerWidth * .035));
+    const signGap = Math.max(14, Math.min(28, window.innerWidth * .035));
     information.querySelectorAll('[data-ar-totem-link-area]').forEach((sign, index) => {
         const direction = sign.classList.contains('is-left') ? -1 : 1;
         const row = Math.floor(index / 2);
-        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (boardWidth / 2 + signWidth / 2 + signGap + row * 8)));
-        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 22 - row * 54));
+        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8)));
+        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 18 - row * 54));
+        const armLength = Math.max(14, Math.abs(signX - attachmentPoint.x) - signWidth / 2 + 4);
         sign.style.left = `${signX.toFixed(1)}px`;
         sign.style.top = `${signY.toFixed(1)}px`;
         sign.style.width = `${signWidth.toFixed(1)}px`;
+        sign.style.setProperty('--sign-arm-length', `${armLength.toFixed(1)}px`);
+    });
+    information.querySelectorAll('[data-ar-totem-link-branch]').forEach((branch, index) => {
+        const direction = branch.classList.contains('is-left') ? -1 : 1;
+        const row = Math.floor(index / 2);
+        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8)));
+        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 18 - row * 54));
+        const armLength = Math.max(14, Math.abs(signX - attachmentPoint.x) - signWidth / 2 + 4);
+        branch.style.left = `${(direction > 0 ? attachmentPoint.x : attachmentPoint.x - armLength).toFixed(1)}px`;
+        branch.style.top = `${signY.toFixed(1)}px`;
+        branch.style.width = `${armLength.toFixed(1)}px`;
     });
 }
 
@@ -4573,6 +4788,8 @@ function cleanup() {
     activeCheckpointId = '';
     totemGuideVisible = false;
     totemLinkGuideVisible = true;
+    totemLinkCalibration = null;
+    runtimeTotemLinkCalibrations = new Map();
     areaLensOpen = false;
     latestViewerMatrix = null;
     latestView = null;
@@ -4645,6 +4862,8 @@ function cleanup() {
     locatedTotemRecord = null;
     totemGuideVisible = false;
     totemLinkGuideVisible = true;
+    totemLinkCalibration = null;
+    runtimeTotemLinkCalibrations = new Map();
     pendingExistingMarkerId = '';
     arReturnContext = '';
     locationNoteAnchor = null;
@@ -4918,6 +5137,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialWebPanel(view);
                 drawHandTrackingLines(view);
                 drawControllerPointer(view);
+                drawCalibratedTotemPath(view);
                 drawSpatialMarkers(view);
                 drawSpatialPlantProfiles(view);
                 drawControllerPointerContact(view);

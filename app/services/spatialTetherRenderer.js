@@ -98,6 +98,74 @@ export function createTetherRibbonGeometry(start, end, cameraPosition, options =
     return new Float32Array(vertices);
 }
 
+function pushGroundRibbon(vertices, start, end, halfWidth) {
+    const dx = end.x - start.x;
+    const dz = end.z - start.z;
+    const length = Math.hypot(dx, dz);
+    if (length < 0.00001) return;
+    const side = { x: -dz / length * halfWidth, z: dx / length * halfWidth };
+    const leftStart = { x: start.x + side.x, y: start.y, z: start.z + side.z };
+    const rightStart = { x: start.x - side.x, y: start.y, z: start.z - side.z };
+    const leftEnd = { x: end.x + side.x, y: end.y, z: end.z + side.z };
+    const rightEnd = { x: end.x - side.x, y: end.y, z: end.z - side.z };
+    [leftStart, rightStart, leftEnd, leftEnd, rightStart, rightEnd]
+        .forEach(point => vertices.push(point.x, point.y, point.z));
+}
+
+export function createGroundArrowPathGeometry(start, end, options = {}) {
+    if (!start || !end) return new Float32Array();
+    const dx = Number(end.x) - Number(start.x);
+    const dz = Number(end.z) - Number(start.z);
+    const distance = Math.hypot(dx, dz);
+    if (!Number.isFinite(distance) || distance < 0.00001) return new Float32Array();
+    const direction = { x: dx / distance, z: dz / distance };
+    const side = { x: -direction.z, z: direction.x };
+    const width = Math.max(0.002, Number(options.width) || .018);
+    const dashLength = Math.max(.02, Number(options.dashLength) || .12);
+    const gapLength = Math.max(.01, Number(options.gapLength) || .1);
+    const vertices = [];
+    for (let offset = 0; offset < distance; offset += dashLength + gapLength) {
+        const dashEnd = Math.min(distance, offset + dashLength);
+        const dashStart = {
+            x: start.x + direction.x * offset,
+            y: start.y + (end.y - start.y) * offset / distance,
+            z: start.z + direction.z * offset
+        };
+        const dashTarget = {
+            x: start.x + direction.x * dashEnd,
+            y: start.y + (end.y - start.y) * dashEnd / distance,
+            z: start.z + direction.z * dashEnd
+        };
+        pushGroundRibbon(vertices, dashStart, dashTarget, width);
+    }
+    const arrowLength = Math.max(.04, Number(options.arrowLength) || .13);
+    const arrowWidth = Math.max(.03, Number(options.arrowWidth) || .09);
+    const arrowSpacing = Math.max(.18, Number(options.arrowSpacing) || .72);
+    const arrowHalfLength = Math.min(arrowLength * .5, distance * .2);
+    const arrowCenters = [];
+    for (let center = Math.min(distance - arrowHalfLength, arrowSpacing * .5); center < distance; center += arrowSpacing) {
+        if (center > arrowHalfLength) arrowCenters.push(center);
+    }
+    if (!arrowCenters.length && distance > arrowLength * 1.2) arrowCenters.push(distance - arrowHalfLength);
+    arrowCenters.forEach(center => {
+        const tip = {
+            x: start.x + direction.x * Math.min(distance, center + arrowHalfLength),
+            y: start.y + (end.y - start.y) * Math.min(distance, center + arrowHalfLength) / distance + .002,
+            z: start.z + direction.z * Math.min(distance, center + arrowHalfLength)
+        };
+        const baseDistance = Math.max(0, center - arrowHalfLength);
+        const base = {
+            x: start.x + direction.x * baseDistance,
+            y: start.y + (end.y - start.y) * baseDistance / distance + .002,
+            z: start.z + direction.z * baseDistance
+        };
+        const left = { x: base.x + side.x * arrowWidth, y: base.y, z: base.z + side.z * arrowWidth };
+        const right = { x: base.x - side.x * arrowWidth, y: base.y, z: base.z - side.z * arrowWidth };
+        [tip, left, right].forEach(point => vertices.push(point.x, point.y, point.z));
+    });
+    return new Float32Array(vertices);
+}
+
 export function createSpatialTetherRenderer(gl) {
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, `
         attribute vec3 position;
@@ -150,6 +218,28 @@ export function drawSpatialTether(gl, renderer, view, start, end, options = {}) 
     gl.uniformMatrix4fv(renderer.projectionLocation, false, view.projectionMatrix);
     gl.uniformMatrix4fv(renderer.viewLocation, false, view.transform.inverse.matrix);
     gl.uniform4fv(renderer.colorLocation, options.color || [0.84, 0.93, 0.76, 0.27]);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.CULL_FACE);
+    gl.depthMask(false);
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+    gl.depthMask(true);
+}
+
+export function drawSpatialGroundArrowPath(gl, renderer, view, start, end, options = {}) {
+    if (!renderer || !view?.projectionMatrix || !view?.transform?.inverse?.matrix || !start || !end) return;
+    const vertices = createGroundArrowPathGeometry(start, end, options);
+    if (!vertices.length) return;
+    gl.useProgram(renderer.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, renderer.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(renderer.positionLocation);
+    gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 12, 0);
+    gl.uniformMatrix4fv(renderer.projectionLocation, false, view.projectionMatrix);
+    gl.uniformMatrix4fv(renderer.viewLocation, false, view.transform.inverse.matrix);
+    gl.uniform4fv(renderer.colorLocation, options.color || [0.55, 1, 0.42, .88]);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
