@@ -269,6 +269,10 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /currentGuidePlaceId = '';/);
     assert.match(fieldGuideSource, /applyFieldGuideFilter\(''\)/);
     assert.match(fieldGuideSource, /field-guide-essentials/);
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
+    assert.match(styles, /\.field-guide-tool \.field-guide-essentials \{[\s\S]*grid-template-columns:minmax\(145px,auto\) minmax\(0,1fr\)/);
+    assert.match(styles, /\.field-guide-tool \.field-guide-summary > span \{[\s\S]*display:flex[\s\S]*min-height:32px/);
+    assert.match(styles, /\.field-guide-tool \.field-guide-map-action \{[\s\S]*min-height:32px/);
     assert.match(fieldGuideSource, /field-guide-primary-actions/);
     assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
     assert.match(fieldGuideSource, /Project overview/);
