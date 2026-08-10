@@ -47,6 +47,7 @@ let triangleRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
+let boardTypingWatchdogTimer = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
 let demoHoldTimer = null;
@@ -121,6 +122,10 @@ const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demo
 // appear in word-sized chunks.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
+// A paused XR/browser timer must never leave the demo waiting forever for
+// the last character. The copy still types in normally, then completes within
+// this bounded window so Continue remains available on every runtime.
+const DEMO_BOARD_TYPING_MAX_MS = 7000;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
@@ -234,11 +239,13 @@ function clearSessionState() {
     suppressSessionSelectUntil = 0;
     demoWebModeOpen = false;
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardTypingWatchdogTimer);
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
     boardTypingTimer = null;
+    boardTypingWatchdogTimer = null;
     aimRevealTimer = null;
     pointerPressTimer = null;
     demoHoldTimer = null;
@@ -504,7 +511,10 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     choiceButtons.forEach(button => button.setAttribute('hidden', ''));
     revealTargets.forEach(target => target.classList.add('is-awaiting-text'));
     let typedLength = 0;
-    let typing = Boolean(paragraph && fullText);
+    // Persistent boards sit alongside the live PIM. Their action must be
+    // available immediately so a long narration cannot make the demo appear
+    // stalled after the mesh opens.
+    let typing = Boolean(paragraph && fullText && !options.persistent);
     let completionNotified = false;
     const revealControls = () => {
         if (choiceButtons.length === 1 && continueButton) {
@@ -521,6 +531,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
+        clearTimeout(boardTypingWatchdogTimer);
         if (paragraph) paragraph.textContent = fullText;
         introBoardVisibleBody = fullText;
         introBoardTextureDirty = true;
@@ -550,6 +561,9 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     } else {
         finishTyping();
     }
+    if (typing) {
+        boardTypingWatchdogTimer = setTimeout(finishTyping, Math.min(DEMO_BOARD_TYPING_MAX_MS, Math.max(2400, 1200 + fullText.length * 14)));
+    }
     panel.onclick = () => {
         if (typing) {
             finishTyping();
@@ -570,6 +584,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardVisibleBody = '';
     introBoardTextureDirty = true;
     clearTimeout(boardTypingTimer);
+    clearTimeout(boardTypingWatchdogTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
@@ -591,6 +606,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     const finishTyping = () => {
         clearTimeout(boardTypingTimer);
+        clearTimeout(boardTypingWatchdogTimer);
         introBoardVisibleBody = bodyText;
         introBoardTextureDirty = true;
         paintBoardParagraphs(bodyText);
@@ -640,6 +656,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
+    boardTypingWatchdogTimer = setTimeout(finishTyping, Math.min(DEMO_BOARD_TYPING_MAX_MS, Math.max(typingStartDelay + 500, 1200 + bodyText.length * 14)));
     setGuide(`${localizedTitle}. ${bodyText}`);
 }
 

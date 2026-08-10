@@ -55,6 +55,7 @@ let activeSiteId = '';
 let activeAreaId = '';
 let activeAreaName = '';
 let activeCheckpointId = '';
+let areaLensOpen = false;
 let startPromise = null;
 let latestViewerMatrix = null;
 let latestView = null;
@@ -376,6 +377,62 @@ function updateLocationNote() {
     if (area) area.textContent = `AREA · ${areaName}`;
 }
 
+function updateAreaLens() {
+    const lens = overlayRoot?.querySelector('[data-ar-area-lens]');
+    if (!lens) return;
+    const current = lens.querySelector('[data-ar-current-area]');
+    if (current) current.textContent = activeAreaName || DEFAULT_HOME_AREA_NAME;
+    lens.setAttribute('aria-label', `Current Area: ${activeAreaName || DEFAULT_HOME_AREA_NAME}`);
+}
+
+function closeAreaLens() {
+    const panel = overlayRoot?.querySelector('[data-ar-area-lens-panel]');
+    if (panel) {
+        panel.hidden = true;
+        panel.innerHTML = '';
+    }
+    areaLensOpen = false;
+}
+
+async function openAreaLens() {
+    const panel = overlayRoot?.querySelector('[data-ar-area-lens-panel]');
+    if (!panel) return;
+    if (areaLensOpen) {
+        closeAreaLens();
+        return;
+    }
+    areaLensOpen = true;
+    panel.hidden = false;
+    panel.innerHTML = '<p>Loading Areasâ€¦</p>';
+    const operation = captureArOperationContext();
+    try {
+        const areas = await loadPlacementAreas(operation);
+        if (!isArOperationCurrent(operation)) return;
+        const choices = areas.map(area => ({
+            area,
+            current: area.id === activeAreaId,
+            label: isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : area.name,
+            description: area.description || area.type || 'Area'
+        }));
+        panel.innerHTML = `<div class="creator-ar-area-lens-heading"><strong>AREAS IN THIS PROJECT</strong><button type="button" data-ar-close-lens aria-label="Close Area lens">&times;</button></div>
+            <p class="creator-ar-area-lens-help">Stay in the current Area, or choose another Area to load its saved Totem, Plants and Notes.</p>
+            <div class="creator-ar-area-lens-options">${choices.map(({ area, current, label, description }) => `<button type="button" data-ar-lens-area="${escapeHtml(area.id)}"${current ? ' disabled aria-current="true"' : ''}><span class="creator-ar-area-lens-totem" aria-hidden="true">⌖</span><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}${current ? ' Â· CURRENT' : ''}</small></span></button>`).join('')}</div>`;
+        panel.querySelector('[data-ar-close-lens]')?.addEventListener('click', closeAreaLens);
+        panel.querySelectorAll('[data-ar-lens-area]').forEach(button => button.addEventListener('click', async () => {
+            const area = areas.find(candidate => candidate.id === button.dataset.arLensArea);
+            if (!area || button.disabled) return;
+            button.disabled = true;
+            activateArea(area);
+            await restoreRecordedMarkers({ ...captureArOperationContext(), areaId: area.id });
+            closeAreaLens();
+            setPlacementStatus(`${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded. Its saved content is now active.`);
+        }));
+    } catch (error) {
+        panel.innerHTML = `<div class="creator-ar-area-lens-heading"><strong>AREAS UNAVAILABLE</strong><button type="button" data-ar-close-lens aria-label="Close Area lens">&times;</button></div><p>${escapeHtml(error.message)}</p>`;
+        panel.querySelector('[data-ar-close-lens]')?.addEventListener('click', closeAreaLens);
+    }
+}
+
 function activeAreaMarkers() {
     return sessionMarkers.filter(record => record.areaId === activeAreaId);
 }
@@ -405,6 +462,7 @@ function activateArea(area) {
     if (activeAreaId !== nextAreaId) {
         sessionMarkers = [];
         locatedTotemRecord = null;
+        activeCheckpointId = '';
         locationNoteVisible = false;
         locationNoteAnchor = null;
         homeSignAnchor = null;
@@ -413,6 +471,7 @@ function activateArea(area) {
     activeAreaId = nextAreaId;
     activeAreaName = isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : area?.name || '';
     updateLocationNote();
+    updateAreaLens();
 }
 
 function hasPlantProfile(record) {
@@ -3211,7 +3270,15 @@ function positionSessionMarkers(view = latestView) {
     positionNotePlacementPreview(view);
     positionControllerPointer(view);
     const inverse = view.transform?.inverse?.matrix;
-    if (!inverse || !view.projectionMatrix) return;
+    if (!inverse || !view.projectionMatrix) {
+        // A Web -> AR handoff can render the DOM marker layer before the first
+        // valid XR view arrives. Keep profiles, tethers and Totem boards
+        // hidden instead of letting fixed-position elements fall back to
+        // (0, 0) in the top-left corner.
+        const currentRecords = activeAreaMarkers();
+        currentRecords.forEach(record => setMarkerAncillaryVisibility(record, true));
+        return;
+    }
     activeAreaMarkers().forEach(record => {
         const element = overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         if (!element) {
@@ -3340,6 +3407,10 @@ function renderSessionMarkers() {
         const markerLayer = `<span hidden class="creator-ar-marker-hit-target creator-ar-marker-hit-target-${escapeHtml(record.marker.type)}${contextToolbarRecord?.marker?.id === record.marker.id ? ' is-selected' : ''}${record.marker.type === 'note' && markerNoteSurface(record.marker) === 'outline' ? ' is-note-outline' : ''}${record.marker.special_symbol ? ' is-symbol-marker' : ''}${record.marker.arrow_style ? ` is-arrow-marker is-arrow-style-${record.marker.arrow_style}` : ''}${profileAvailable ? ' has-plant-profile' : ''}${record.infoVisible ? ' is-info-open' : ''}" role="button" tabindex="${interactionMode ? '0' : '-1'}" data-ar-marker-id="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} ${markerLabel(record.marker.type)}${profileLabel}" style="${markerDomAppearanceStyle(record.marker)};--marker-rotation:${Number(record.rotationDegrees) || 0}deg">${record.marker.special_symbol ? `<span class="creator-ar-special-symbol" aria-hidden="true">${escapeHtml(record.marker.special_symbol)}</span>` : ''}${markerCaption}</span>`;
         return `${markerLayer}${profileLayer}`;
     }).join('');
+    // renderSessionMarkers can run before the first XR projection (notably
+    // when returning from Web Mode). Ancillary panels have no safe CSS origin,
+    // so they remain hidden until positionSessionMarkers has a valid view.
+    renderableMarkers.forEach(record => setMarkerAncillaryVisibility(record, true));
     renderableMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
         element?.addEventListener('pointerdown', event => handleMarkerPointerDown(record, event));
@@ -3801,6 +3872,7 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
     renderSessionMarkers();
     const totem = activeTotemRecord();
+    if (restoreOperation.areaId === activeAreaId) activeCheckpointId = totem?.marker?.id || '';
     if (activeCheckpointId && totem && hasSavedSpatialPosition(totem)) {
         updateAreaRecenterPrompt({ ready: true });
         setPlacementStatus(`Aim at the real position of ${totem.marker.name}, then tap Recenter Area to restore this Area.`);
@@ -4242,6 +4314,11 @@ function createOverlay() {
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
         <div class="creator-ar-controller-pointer" data-ar-controller-pointer aria-hidden="true" hidden><span></span></div>
         ${spatialMoveControlMarkup('ar')}
+        <header class="creator-ar-area-lens" data-ar-area-lens aria-live="polite">
+          <div><span>YOU ARE IN</span><strong data-ar-current-area>${escapeHtml(activeAreaName || DEFAULT_HOME_AREA_NAME)}</strong></div>
+          <button type="button" data-ar-open-area-lens aria-label="Open Area lens">AREAS</button>
+          <section class="creator-ar-area-lens-panel" data-ar-area-lens-panel hidden></section>
+        </header>
         <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
           <span class="creator-ar-location-stick" aria-hidden="true"></span>
           <span class="creator-ar-location-ground" aria-hidden="true"></span>
@@ -4299,6 +4376,11 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
+    overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        void openAreaLens();
+    });
     overlayRoot.querySelector('.creator-ar-placement-guide').addEventListener('pointerup', event => {
         if (!readyPlacementType || performance.now() - placementArmedAt <= 180) return;
         event.preventDefault();
@@ -4326,6 +4408,7 @@ function createOverlay() {
 function cleanup() {
     clearControllerMarkerPress();
     cleanupDrag();
+    closeAreaLens();
     closeSpatialWebWindow();
     closeQuestSpecialPalette();
     closeQuestSpatialWebPanel();
@@ -4348,6 +4431,7 @@ function cleanup() {
     activeAreaId = '';
     activeAreaName = '';
     activeCheckpointId = '';
+    areaLensOpen = false;
     latestViewerMatrix = null;
     latestView = null;
     hitTestSource?.cancel?.();
@@ -4556,6 +4640,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     activeAreaId = areaId;
     activeAreaName = '';
     activeCheckpointId = checkpointId;
+    areaLensOpen = false;
     sessionMarkers = [];
     locatedTotemRecord = null;
     totemGuideVisible = false;
