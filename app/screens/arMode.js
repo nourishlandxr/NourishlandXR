@@ -24,7 +24,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimConnectorPath, pimEnsureExpandedPaths, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -720,7 +720,7 @@ function queueContextAppearanceSave(record, appearance, property) {
             record.marker = { ...updated, appearance: { ...appearance } };
             renderSessionMarkers();
             updateContextToolbar();
-            setPlacementStatus(`${record.marker.name} ${property} saved. Pointer mode remains on.`);
+            setPlacementStatus(`${record.marker.name} ${property} saved. EDIT mode remains on.`);
         })
         .catch(error => {
             if (record.appearanceRevision === revision) {
@@ -1095,14 +1095,11 @@ function cleanupDrag() {
 
 function updateInteractionControls() {
     const eye = overlayRoot?.querySelector('[data-ar-view-mode]');
-    const hold = overlayRoot?.querySelector('[data-ar-hold-mode]');
-    const pointer = overlayRoot?.querySelector('[data-ar-select-mode]');
+    const edit = overlayRoot?.querySelector('[data-ar-select-mode]');
     eye?.classList.toggle('is-active', interactionMode === 'view');
-    hold?.classList.toggle('is-active', interactionMode === 'grab');
-    pointer?.classList.toggle('is-active', interactionMode === 'select');
+    edit?.classList.toggle('is-active', interactionMode === 'select');
     eye?.setAttribute('aria-pressed', String(interactionMode === 'view'));
-    hold?.setAttribute('aria-pressed', String(interactionMode === 'grab'));
-    pointer?.setAttribute('aria-pressed', String(interactionMode === 'select'));
+    edit?.setAttribute('aria-pressed', String(interactionMode === 'select'));
     const markerLayer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     markerLayer?.classList.toggle('is-interactive', Boolean(interactionMode));
     markerLayer?.classList.toggle('is-view-mode', interactionMode === 'view');
@@ -1864,10 +1861,10 @@ function setInteractionMode(mode) {
     closeUnplacedBag();
     if (interactionMode !== 'select') closeMarkerContextToolbar();
     updateInteractionControls();
-    if (interactionMode === 'view') setPlacementStatus('View / Edit mode. Tap a Marker to reveal or hide information; hold it for 0.8 seconds to move it.');
-    else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.');
-    else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed object to open its compact edit tools.');
-    else setPlacementStatus('Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.');
+    if (interactionMode === 'view') setPlacementStatus('PLAY mode is on. Tap a Marker to reveal or hide information; hold it for 0.8 seconds to move it.');
+    else if (interactionMode === 'grab') setPlacementStatus('EDIT mode is on. Hold a glowing element for 0.8 seconds to move it, then release it.');
+    else if (interactionMode === 'select') setPlacementStatus('EDIT mode is on. Tap a placed object to open its edit tools.');
+    else setPlacementStatus('Aim dot ready. Hold any placed item to move it, or choose EDIT to edit it.');
 }
 
 function closeAreaChooser() {
@@ -2742,7 +2739,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
         return true;
     }
     const wasOpen = record.pimExpandedPaths?.includes(target.path);
-    record.pimExpandedPaths = pimEnsureExpandedPaths(record.pimExpandedPaths, target.path);
+    record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, target.path);
     record.pimBloomStarted = performance.now();
     invalidateSpatialPimTexture(record);
     renderSessionMarkers();
@@ -3528,7 +3525,7 @@ function renderSessionMarkers() {
                 }
                 const wasOpen = record.pimExpandedPaths?.includes(nodePath);
                 const label = cell.querySelector('b')?.textContent || 'Cell';
-                record.pimExpandedPaths = pimEnsureExpandedPaths(record.pimExpandedPaths, nodePath);
+                record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, nodePath);
                 record.pimBloomStarted = performance.now();
                 invalidateSpatialPimTexture(record);
                 renderSessionMarkers();
@@ -3652,7 +3649,7 @@ function openInlineEditor(record, force = false) {
             record.marker = updated;
             renderSessionMarkers();
             closeInlineEditor();
-            setPlacementStatus(`${updated.name} updated. Continue in Pointer mode or turn interaction off.`);
+            setPlacementStatus(`${updated.name} updated. Continue in EDIT mode or turn interaction off.`);
         } catch (error) {
             status.textContent = `Could not save: ${error.message}`;
         }
@@ -3807,7 +3804,7 @@ async function finishMarkerDrag(event) {
     }
     cleanupDrag();
     updateInteractionControls();
-    setPlacementStatus(`Saving ${state.record.marker.name}… Move mode remains on.`);
+    setPlacementStatus(`Saving ${state.record.marker.name}… EDIT mode remains on.`);
     try {
         await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchorForRecord(state.record, operation));
         if (!isArOperationCurrent(operation)) return;
@@ -3847,7 +3844,7 @@ function cancelMarkerDrag(event) {
     cleanupDrag();
     updateInteractionControls();
     positionSessionMarkers();
-    setPlacementStatus('Move cancelled. Move mode remains on.');
+    setPlacementStatus('Move cancelled. EDIT mode remains on.');
 }
 
 async function loadPlacementAreas(operation = captureArOperationContext(), guardOptions = {}) {
@@ -4185,7 +4182,7 @@ async function setPlacedMarkerType(record, type) {
             : await updatePlaceMarker(activeProjectId, record.siteId, record.areaId, record.marker.id, update);
         record.marker = updated;
         renderSessionMarkers();
-        setPlacementStatus(`${readyPlacementLabel(type)} created. Tap it in Pointer mode whenever you want to edit or resize it.`);
+        setPlacementStatus(`${readyPlacementLabel(type)} created. Tap it in EDIT mode whenever you want to edit or resize it.`);
     } catch (error) {
         setPlacementStatus(`Could not change marker type: ${error.message}`);
     }
@@ -4335,7 +4332,7 @@ async function quickPlace(type) {
         if (type === 'area_checkpoint') {
             setPlacementStatus(`${operation.areaName || 'Area'} Totem placed. Your previous interaction mode is still active.`);
         } else {
-            setPlacementStatus(`${marker.name} placed. Hold it to move it, or use Pointer mode to edit it.`);
+        setPlacementStatus(`${marker.name} placed. Hold it to move it, or use EDIT mode to edit it.`);
         }
     } catch (error) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
@@ -4362,7 +4359,7 @@ function createOverlay() {
         : hasCheckpoint
         ? 'Loading the saved Totem Marker…'
         : activeAreaId
-        ? 'Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.'
+        ? 'Aim dot ready. Hold any placed item to move it, or choose EDIT for edit tools.'
         : '';
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
@@ -4390,11 +4387,6 @@ function createOverlay() {
         <div class="creator-ar-mode-pointer" aria-hidden="true"><span></span></div>
         <div class="creator-ar-controller-pointer" data-ar-controller-pointer aria-hidden="true" hidden><span></span></div>
         ${spatialMoveControlMarkup('ar')}
-        <header class="creator-ar-area-lens" data-ar-area-lens aria-live="polite">
-          <div><span>YOU ARE IN</span><strong data-ar-current-area>${escapeHtml(activeAreaName || DEFAULT_HOME_AREA_NAME)}</strong></div>
-          <button type="button" data-ar-open-area-lens aria-label="Open Area lens">AREAS</button>
-          <section class="creator-ar-area-lens-panel" data-ar-area-lens-panel hidden></section>
-        </header>
         <aside class="creator-ar-location-note" data-ar-location-note aria-live="polite">
           <span class="creator-ar-location-stick" aria-hidden="true"></span>
           <span class="creator-ar-location-ground" aria-hidden="true"></span>
@@ -4414,9 +4406,8 @@ function createOverlay() {
             <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
             <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
             <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Open Totem tools"><strong>+ TOTEM</strong></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View / Edit mode: tap Markers for information or hold them to move" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View / Edit mode</span></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="PLAY mode: view markers and open information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span>PLAY</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="EDIT mode: select markers and open edit tools" aria-pressed="false"><b aria-hidden="true">&#x270E;</b><span>EDIT</span></button>
             <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open project Hub"><b aria-hidden="true">&#x23CE;</b><span>HUB</span></button>
           </nav>
         </div>`;
@@ -4449,7 +4440,6 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-add-note]', () => armDirectPlacement('note'));
     bindTaskbarAction('[data-ar-add-special]', () => void openSpecialMarkerPicker());
     bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
-    bindTaskbarAction('[data-ar-hold-mode]', () => setInteractionMode('grab'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
     overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {

@@ -1058,11 +1058,10 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-add-marker strong { font-size: .68rem; letter-spacing: .055em; }
 .creator-ar-taskbar .creator-ar-special-marker, body[data-project-theme] .creator-ar-taskbar .creator-ar-special-marker { min-height: 38px; padding: 7px 10px; border-color:#aa93cf; background:#665086 !important; color:#fff; }
 .creator-ar-taskbar [data-ar-view-mode], body[data-project-theme] .creator-ar-taskbar [data-ar-view-mode] { border-color:#67aee2; background:#246ea6 !important; }
-.creator-ar-taskbar [data-ar-hold-mode], body[data-project-theme] .creator-ar-taskbar [data-ar-hold-mode] { border-color:#e4b36e; background:#8e5e2d !important; }
 .creator-ar-taskbar [data-ar-select-mode], body[data-project-theme] .creator-ar-taskbar [data-ar-select-mode] { border-color:#72c4ce; background:#267681 !important; }
 .creator-ar-special-marker strong { font-size: .62rem; letter-spacing: .04em; }
 .creator-ar-mode-control, .creator-ar-icon-control { min-width: 34px; justify-content: center; padding-inline: 6px !important; }
-.creator-ar-taskbar [data-ar-view-mode], .creator-ar-taskbar [data-ar-hold-mode], .creator-ar-taskbar [data-ar-select-mode] { overflow: hidden; }
+.creator-ar-taskbar [data-ar-view-mode], .creator-ar-taskbar [data-ar-select-mode] { overflow: hidden; }
 .creator-ar-mode-control b { font-size: 1rem !important; }
 .creator-ar-view-icon { position: relative; display: inline-block; width: 17px; height: 10px; border: 1px solid rgba(255,255,255,.76); border-radius: 70% 12% 70% 12%; transform: rotate(-45deg); background: rgba(255,255,255,.06); }
 .creator-ar-view-icon::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(220,239,149,.82); box-shadow: 0 0 6px rgba(220,239,149,.48); }
@@ -6541,11 +6540,6 @@ body[data-project-theme] .creator-ar-taskbar [data-ar-view-mode] {
     border-color:#7096a5;
     background:#365e6d !important;
 }
-.creator-ar-taskbar [data-ar-hold-mode],
-body[data-project-theme] .creator-ar-taskbar [data-ar-hold-mode] {
-    border-color:#a88960;
-    background:#6f5232 !important;
-}
 .creator-ar-taskbar [data-ar-select-mode],
 body[data-project-theme] .creator-ar-taskbar [data-ar-select-mode] {
     border-color:#78a2a0;
@@ -6618,7 +6612,6 @@ body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > b
 }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button:is(:hover,:focus-visible,.is-active) { transform: translateY(-3px) scale(1.04); filter: brightness(1.18); }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-view-mode],
-body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-hold-mode],
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > [data-ar-select-mode] { display: none !important; }
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button b,
 body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar button strong { font-size: 1.05rem; line-height: 1; }

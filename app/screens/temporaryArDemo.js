@@ -15,7 +15,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimEnsureExpandedPaths, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -125,7 +125,9 @@ const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // A paused XR/browser timer must never leave the demo waiting forever for
 // the last character. The copy still types in normally, then completes within
 // this bounded window so Continue remains available on every runtime.
-const DEMO_BOARD_TYPING_MAX_MS = 7000;
+// Only a suspended/background tab should need the safety timeout. A normal
+// narration must finish character-by-character without snapping its tail in.
+const DEMO_BOARD_TYPING_SAFETY_MS = 30000;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
 const DEMO_TOTEM_STYLES = Object.freeze([
     { id: 'basic', label: 'Basic' },
@@ -459,14 +461,9 @@ function activateImmersiveDemoControl() {
         choiceButton.click();
         return true;
     }
-    // In Quest/WebGL-control mode the large DOM board is hidden and its
-    // action button stays hidden while copy is typing. A controller select
-    // must still be able to finish that copy so the next action can appear.
-    const board = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden])');
-    if (board?.classList.contains('is-typing')) {
-        board.click();
-        return true;
-    }
+    // Never let a controller select finish narration or steal a marker grab.
+    // The board continues typing naturally; only an exposed action button
+    // advances the tutorial.
     return false;
 }
 
@@ -579,13 +576,14 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         finishTyping();
     }
     if (typing) {
-        boardTypingWatchdogTimer = setTimeout(finishTyping, Math.min(DEMO_BOARD_TYPING_MAX_MS, Math.max(2400, 1200 + fullText.length * 14)));
+        boardTypingWatchdogTimer = setTimeout(
+            finishTyping,
+            Math.max(DEMO_BOARD_TYPING_SAFETY_MS, 1200 + fullText.length * 60)
+        );
     }
-    panel.onclick = () => {
-        if (typing) {
-            finishTyping();
-        }
-    };
+    // The board is display-only while it types. Clicking it must not snap the
+    // remaining copy into place or consume a marker gesture.
+    panel.onclick = null;
     setGuide(`${introBoardTitle}. ${fullText}`);
 }
 
@@ -652,13 +650,13 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
+        // Keep the large instruction surface visible without blocking the orb
+        // underneath. The fixed Continue button remains interactive.
+        board.classList.add('is-persistent-demo-board');
         if (firstArrival) {
             introSceneStartedAt = performance.now();
             typingStartDelay = 1800;
         }
-        board.onclick = () => {
-            if (typing) finishTyping();
-        };
     }
     finalActions?.setAttribute('hidden', '');
     if (continueButton && buttonLabel) {
@@ -673,7 +671,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
-    boardTypingWatchdogTimer = setTimeout(finishTyping, Math.min(DEMO_BOARD_TYPING_MAX_MS, Math.max(typingStartDelay + 500, 1200 + bodyText.length * 14)));
+    boardTypingWatchdogTimer = setTimeout(
+        finishTyping,
+        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + bodyText.length * 60)
+    );
     setGuide(`${localizedTitle}. ${bodyText}`);
 }
 
@@ -770,16 +771,19 @@ function guidePlantConversion(record) {
             : [
                 'A plant Orb is  knowledge stays connected to where a plant grows. A simple Plant orb can become a extended hub of information, part of a garden guild or linked into a ecosystem.',
                 'Lets pick a sample plant. A pigeon pea.  its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden.',
-                'Now try and move your orb by pressing and holding it with your pointer.',
-                'Once you feel ready, press Continue.'
+                'EDIT mode: press and hold the Pigeon Pea orb for 0.8 seconds. Move it, then release it.',
+                'When you feel ready, press Continue. PLAY mode will open the Plant Information Mesh when you select the orb.'
             ],
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
             finishIntroBoard();
-            completeConversion();
+            setGuide(`The ${plantName} orb is ready. Use EDIT to move it, then PLAY to open its Plant Information Mesh.`);
         }
     );
+    // The sample plant is interactive while the large instruction board is
+    // still visible, so the suggested grab can be tried immediately.
+    completeConversion();
 }
 
 function showSceneContinue(label, onContinue) {
@@ -1261,8 +1265,10 @@ function selectDemoProfileCell() {
         return true;
     }
     const wasOpen = record.demoExpandedBranches?.includes(node.path);
-    record.demoActiveBranch = node.path;
-    record.demoExpandedBranches = pimEnsureExpandedPaths(record.demoExpandedBranches, node.path);
+    record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+    record.demoActiveBranch = wasOpen
+        ? (node.parentPath === 'core' ? '' : node.parentPath)
+        : node.path;
     record.pimBloomStarted = performance.now();
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
@@ -1582,8 +1588,10 @@ function bindSimulatedInformationPanels(layer) {
                     return;
                 }
                 const wasOpen = record.demoExpandedBranches?.includes(nodePath);
-                record.demoExpandedBranches = pimEnsureExpandedPaths(record.demoExpandedBranches, nodePath);
-                record.demoActiveBranch = nodePath;
+                record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
+                record.demoActiveBranch = wasOpen
+                    ? (node.parentPath === 'core' ? '' : node.parentPath)
+                    : nodePath;
                 record.pimBloomStarted = performance.now();
                 const remaining = advanceAfterDemoProfileInteraction(record);
                 refreshDemoRecord(record);
@@ -1830,10 +1838,10 @@ function beginControllerDemoHold() {
         z: target.record.position.z - origin.z
     };
     target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
-    suppressSessionSelectUntil = performance.now() + 1200;
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
         demoHeldIndex = target.index;
+        suppressSessionSelectUntil = performance.now() + 420;
         setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
     }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
@@ -2916,24 +2924,22 @@ async function startImmersive() {
         session.addEventListener('select', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
-            // Quest controllers do not reliably generate DOM click events for
-            // the optional overlay. Map one deliberate select to the same
-            // tutorial control a phone user sees, then to the live aim.
-            if (activateImmersiveDemoControl()) return;
             if (placementReady) return pressPlacementPointer();
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
             if (selectDemoPlantAtPointer()) return;
             if (selectDemoTotemStyleAtPointer()) return;
+            // Quest controllers do not reliably generate DOM click events for
+            // the optional overlay. Only after spatial targets decline the
+            // select do we activate an exposed tutorial action.
+            if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
         session.addEventListener('selectstart', () => {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
-            if (placementReady || activateImmersiveDemoControl()) return;
+            if (placementReady) return;
             const actionTarget = demoRecordAtPointer()?.record;
-            if (markers.some(record => record.demoType === 'plant' && record.demoExpanded)
-                || actionTarget?.awaitingProfileReveal
-                || actionTarget?.demoType === 'note') return;
+            if (actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();
         });
         session.addEventListener('selectend', () => {

@@ -368,13 +368,16 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(taskbar, /data-ar-view-mode/);
-    assert.match(taskbar, /data-ar-hold-mode/);
     assert.match(taskbar, /data-ar-select-mode/);
+    assert.match(taskbar, />PLAY<|>PLAY<\/span>/);
+    assert.match(taskbar, />EDIT<|>EDIT<\/span>/);
+    assert.doesNotMatch(taskbar, /data-ar-hold-mode|&#x270B;/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 7);
+    assert.equal((taskbar.match(/<button/g) || []).length, 6);
     assert.doesNotMatch(styles, /creator-ar-quest-link-bar \.creator-ar-taskbar > button:nth-child/);
     assert.match(styles, /body\.creator-ar-quest-headset[\s\S]*\.creator-ar-taskbar > \[data-ar-view-mode\][\s\S]*display: none !important/);
+    assert.doesNotMatch(styles, /data-ar-hold-mode/);
     assert.doesNotMatch(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target::after/);
     assert.match(styles, /\.creator-ar-marker-layer\.is-grab-mode \.creator-ar-marker-hit-target:is\(:hover,:focus-visible\)::after/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-adjusting::after/);
@@ -551,8 +554,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /let interactionMode = 'neutral'/);
     assert.match(arSource, /interactionMode = interactionMode === mode && \['grab', 'select'\]\.includes\(mode\) \? 'neutral' : mode/);
-    assert.match(arSource, /View \/ Edit mode\. Tap a Marker to reveal or hide information; hold it for 0\.8 seconds to move it/);
-    assert.match(arSource, /Move mode is on\. Select a glowing element/);
+    assert.match(arSource, /PLAY mode is on\. Tap a Marker to reveal or hide information; hold it for 0\.8 seconds to move it/);
+    assert.match(arSource, /EDIT mode is on\. Hold a glowing element for 0\.8 seconds to move it/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
     assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
@@ -573,7 +576,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /updateGrabbedMarkerFromCamera/);
     assert.match(arSource, /origin\.z \+ ray\.z \* distance/);
     assert.doesNotMatch(arSource, /data-ar-depth-joystick\] input/);
-    assert.match(arSource, /Pointer mode is on/);
+    assert.match(arSource, /EDIT mode is on\. Tap a placed object to open its edit tools/);
     assert.match(arSource, /if \(!directHold && interactionMode === 'view'\) \{[\s\S]*record\.infoVisible = !record\.infoVisible/);
     assert.match(arSource, /if \(!directHold && interactionMode === 'neutral'\) \{[\s\S]*openMarkerContextToolbar\(record\)/);
     assert.match(arSource, /openMarkerContextToolbar\(record\)/);
@@ -590,7 +593,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /pointercancel/);
     assert.match(arSource, /setPointerCapture/);
     assert.match(arSource, /moved\. Select another glowing element, turn off Move, or choose View/);
-    assert.match(arSource, /Move cancelled\. Move mode remains on/);
+    assert.match(arSource, /Move cancelled\. EDIT mode remains on/);
     const finishHold = arSource.slice(arSource.indexOf('async function finishMarkerDrag'), arSource.indexOf('function cancelMarkerDrag'));
     assert.doesNotMatch(finishHold, /interactionMode\s*=/);
     assert.match(finishHold, /state\.record\.position = state\.position/);
@@ -696,7 +699,7 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /questSpatialDashboardMirror\.activateAt/);
     assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
     assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
-    assert.match(taskbar, /data-ar-hold-mode/);
+    assert.doesNotMatch(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.match(arSource, /function drawControllerPointerContact\(view\)/);
@@ -886,7 +889,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(launch, /const launchedSession = session/);
     assert.match(launch, /activeAreaId = areaId;[\s\S]*sessionMarkers = \[\];[\s\S]*locatedTotemRecord = null;/);
     assert.doesNotMatch(arSource, /selectedMarker/);
-    assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hold any placed item to move it, or use Pointer mode for edit tools\.'[\s\S]*: '';/);
+    assert.match(arSource, /: activeAreaId[\s\S]*\? 'Aim dot ready\. Hold any placed item to move it, or choose EDIT for edit tools\.'[\s\S]*: '';/);
     assert.match(launch, /if \(session !== launchedSession\) return/);
     assert.match(launch, /const restorationGuard = \{ matchGeneration: false \}/);
     assert.match(launch, /loadPlacementAreas\(loadingOperation, restorationGuard\)/);
@@ -1008,8 +1011,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /Now try and move your orb by pressing and holding it with your pointer/);
-    assert.match(source, /Once you feel ready, press Continue/);
+    assert.match(source, /EDIT mode: press and hold the Pigeon Pea orb for 0\.8 seconds/);
+    assert.match(source, /When you feel ready, press Continue/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
@@ -1071,8 +1074,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introTextureFrameToken !== introFrameToken/);
     assert.match(source, /introFrameToken = _time/);
     assert.match(styles, /\.tryit-demo\.uses-webgl-controls > \.tryit-intro-continue \{ display:none !important; \}/);
-    assert.match(immersiveSelectHandler, /if \(activateImmersiveDemoControl\(\)\) return;/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
+    assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
+    const immersiveSelectStartHandler = source.slice(
+        source.indexOf("session.addEventListener('selectstart'"),
+        source.indexOf("session.addEventListener('selectend'")
+    );
+    assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
@@ -1196,8 +1204,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /if \(options\.persistent\) panel\.classList\.add\('is-persistent-demo-board'\)/);
     assert.ok(source.includes('record.demoProfileInteracted = true;'));
     assert.match(source, /inviteVirtualTag\(record\)/);
-    assert.match(source, /board\?\.classList\.contains\('is-typing'\)/);
-    assert.match(source, /board\.click\(\);/);
+    assert.doesNotMatch(source, /board\?\.classList\.contains\('is-typing'\)/);
+    assert.doesNotMatch(source, /board\.click\(\);/);
     assert.match(source, /export function demoPointerScreenPoint\(rect/);
     assert.match(source, /const hasVisibleRect = Number\.isFinite\(width\) && width > 0/);
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
@@ -1227,7 +1235,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimConnectorPath/);
     assert.match(source, /pimNodeHue/);
     assert.match(source, /pimFocusedView/);
-    assert.match(source, /pimEnsureExpandedPaths/);
+    assert.match(source, /pimToggleExpandedPaths/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
     assert.match(source, /if \(!node\) return false;/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
@@ -1242,15 +1250,16 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(source, /pimVisibleNodes/);
     assert.match(source, /pimToggleExpandedPaths/);
-    assert.match(read('app/screens/arMode.js'), /pimEnsureExpandedPaths/);
+    assert.match(read('app/screens/arMode.js'), /pimToggleExpandedPaths/);
     assert.match(source, /data-pim-node/);
     assert.match(source, /pimHoneycombTargetAtPercent/);
     assert.match(source, /fixedPimPanelMatrix/);
     assert.match(source, /pimSpatialPoseAboveAnchor/);
     assert.match(source, /function plantInformationPose/);
     assert.match(source, /advanceAfterDemoProfileInteraction\(record\)/);
-    assert.match(immersiveSelectHandler, /markers\.some\(record => record\.demoType === 'plant' && record\.demoExpanded\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
+    assert.match(immersiveSelectHandler, /selectDemoProfileCell\(\)[\s\S]*selectDemoPlantAtPointer\(\)/);
+    assert.match(source, /if \(actionTarget\?\.demoType === 'note'\) return;[\s\S]*beginControllerDemoHold\(\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
     const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));
