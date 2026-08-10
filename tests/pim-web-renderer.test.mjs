@@ -253,6 +253,23 @@ test('Uses children use compact plant-part templates without rendering empty inf
     assert.doesNotMatch(markup, /Full content/);
 });
 
+test('Historical Data and Food Forest expose focused parent-specific starters', () => {
+    const document = referenceDocument();
+    const historical = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'historical-data' }), { editable: true, showSearch: false, showIdentity: false });
+    assert.match(historical, /Country of origin/);
+    assert.match(historical, /Scripture &amp; traditional links/);
+    assert.doesNotMatch(historical, /Root|Leaves|Pods/);
+
+    const country = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'historical-data', editorSeed: { templateId: 'country-of-origin', title: 'Country of origin', preview: 'Select a country' } }), { editable: true, showSearch: false, showIdentity: false });
+    assert.match(country, /name="countryOfOrigin"/);
+    assert.match(country, /value="India"/);
+
+    const foodForest = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'food-forest' }), { editable: true, showSearch: false, showIdentity: false });
+    assert.match(foodForest, /data-pim-template-id="function"/);
+    assert.match(foodForest, />Function</);
+    assert.match(foodForest, />Custom</);
+});
+
 test('Web PIM save action stays available while the compact editor scrolls', () => {
     assert.match(styles, /\.pim-web-editor form > footer \{[\s\S]*position: sticky;[\s\S]*bottom: 0;/);
     assert.match(styles, /\.pim-web-editor-context/);

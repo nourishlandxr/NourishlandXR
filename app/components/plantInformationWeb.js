@@ -44,7 +44,44 @@ const USE_INFORMATION_TEMPLATES = Object.freeze([
     ['bark', 'Bark', 'Bark use or material']
 ]);
 
+const HISTORICAL_INFORMATION_TEMPLATES = Object.freeze([
+    ['country-of-origin', 'Country of origin', 'Select a country'],
+    ['scripture-traditional-links', 'Scripture & traditional links', 'Attributed cultural links']
+]);
+
+const FOOD_FOREST_INFORMATION_TEMPLATES = Object.freeze([
+    ['function', 'Function', 'Ecological or food-forest role']
+]);
+
+const COUNTRY_OPTIONS = Object.freeze([
+    ['AU', 'Australia'],
+    ['BD', 'Bangladesh'],
+    ['BR', 'Brazil'],
+    ['CN', 'China'],
+    ['ET', 'Ethiopia'],
+    ['GH', 'Ghana'],
+    ['ID', 'Indonesia'],
+    ['IN', 'India'],
+    ['KE', 'Kenya'],
+    ['MM', 'Myanmar'],
+    ['MX', 'Mexico'],
+    ['NG', 'Nigeria'],
+    ['PK', 'Pakistan'],
+    ['LK', 'Sri Lanka'],
+    ['TZ', 'Tanzania'],
+    ['US', 'United States'],
+    ['OTHER', 'Other / not documented']
+]);
+
 const USE_TEMPLATE_PARENT_IDS = new Set(['culinary', 'medicinal', 'craft']);
+
+const templatesForParent = parentId => USE_TEMPLATE_PARENT_IDS.has(parentId)
+    ? USE_INFORMATION_TEMPLATES
+    : parentId === 'historical-data'
+        ? HISTORICAL_INFORMATION_TEMPLATES
+        : parentId === 'food-forest'
+            ? FOOD_FOREST_INFORMATION_TEMPLATES
+            : [];
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -357,7 +394,7 @@ function detailMarkup(document, state, options) {
     return `<aside class="pim-web-detail" role="dialog" aria-modal="false" aria-labelledby="pim-web-detail-title-${attribute(node.id)}" data-pim-detail-id="${attribute(node.id)}" data-pim-detail-path="${attribute(node.path)}" style="--pim-category:${attribute(category.color)}">
         <header><div><span>${escapeHtml(category.title)} · ${escapeHtml(evidenceLabel(node.evidenceStatus))}</span><h2 id="pim-web-detail-title-${attribute(node.id)}">${escapeHtml(node.title)}</h2><p>${escapeHtml(plantInformationWebPath(document, node.id))}</p></div><button type="button" data-pim-close-detail aria-label="Close ${attribute(node.title)} details">×</button></header>
         <div class="pim-web-detail-body">${node.body ? `<p>${escapeHtml(node.body).replace(/\n/g, '<br />')}</p>` : '<p>Detailed information is still growing.</p>'}
-            <dl><div><dt>Information type</dt><dd>${escapeHtml(titleCase(node.informationType))}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(evidenceLabel(node.evidenceStatus))}</dd></div>${node.region ? `<div><dt>Region</dt><dd>${escapeHtml(node.region)}</dd></div>` : ''}${node.climateContext ? `<div><dt>Climate context</dt><dd>${escapeHtml(node.climateContext)}</dd></div>` : ''}${node.attribution ? `<div><dt>Attribution</dt><dd>${escapeHtml(node.attribution)}</dd></div>` : ''}</dl>
+            <dl><div><dt>Information type</dt><dd>${escapeHtml(titleCase(node.informationType))}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(evidenceLabel(node.evidenceStatus))}</dd></div>${node.countryOfOrigin ? `<div><dt>Country of origin</dt><dd>${escapeHtml(node.countryOfOrigin)}</dd></div>` : ''}${node.region ? `<div><dt>Region</dt><dd>${escapeHtml(node.region)}</dd></div>` : ''}${node.climateContext ? `<div><dt>Climate context</dt><dd>${escapeHtml(node.climateContext)}</dd></div>` : ''}${node.attribution ? `<div><dt>Attribution</dt><dd>${escapeHtml(node.attribution)}</dd></div>` : ''}</dl>
             ${node.safetyNote ? `<section class="pim-web-safety-note" aria-label="Safety note"><strong>Safety note</strong><p>${escapeHtml(node.safetyNote)}</p></section>` : ''}
             ${sources.length ? `<section><h3>Sources</h3><ul>${sources.map(source => `<li>${escapeHtml(source)}</li>`).join('')}</ul></section>` : ''}
             ${provenance.length ? `<section><h3>Provenance</h3><ul>${provenance.map(item => `<li>${escapeHtml(item.sourceDatabase || item.source || 'Source')}${item.licence ? ` · ${escapeHtml(item.licence)}` : ''}${item.retrievalDate ? ` · ${escapeHtml(item.retrievalDate)}` : ''}</li>`).join('')}</ul></section>` : ''}
@@ -376,11 +413,20 @@ function selectMarkup(name, label, values, selected, required = false) {
 }
 
 function informationTemplateMarkup(parent, state) {
-    if (state.editorMode !== 'add' || !USE_TEMPLATE_PARENT_IDS.has(parent?.id)) return '';
+    if (state.editorMode !== 'add') return '';
+    const templates = templatesForParent(parent?.id);
+    if (!templates.length) return '';
+    const heading = USE_TEMPLATE_PARENT_IDS.has(parent?.id) ? 'Start with a plant part' : 'Start with a knowledge block';
     return `<section class="pim-web-template-palette" aria-labelledby="pim-web-template-title">
-        <div><strong id="pim-web-template-title">Start with a plant part</strong><small>Choose a common part or start with a custom information block.</small></div>
-        <div class="pim-web-template-options">${USE_INFORMATION_TEMPLATES.map(([id, title, preview]) => `<button type="button" data-pim-template-id="${attribute(id)}" data-pim-template-title="${attribute(title)}" data-pim-template-preview="${attribute(preview)}">${escapeHtml(title)}</button>`).join('')}<button type="button" class="is-custom" data-pim-template-id="custom">Custom</button></div>
+        <div><strong id="pim-web-template-title">${heading}</strong><small>Choose a starter or create a custom information block.</small></div>
+        <div class="pim-web-template-options">${templates.map(([id, title, preview]) => `<button type="button" data-pim-template-id="${attribute(id)}" data-pim-template-title="${attribute(title)}" data-pim-template-preview="${attribute(preview)}">${escapeHtml(title)}</button>`).join('')}<button type="button" class="is-custom" data-pim-template-id="custom">Custom</button></div>
     </section>`;
+}
+
+function countryOfOriginMarkup(parent, state, seed) {
+    const countryTemplate = parent?.id === 'historical-data' && (state.editorSeed?.templateId === 'country-of-origin' || seed.countryOfOrigin);
+    if (!countryTemplate) return '';
+    return `<label class="pim-web-country-picker">Country of origin<select name="countryOfOrigin" required><option value="">Choose a country</option>${COUNTRY_OPTIONS.map(([value, label]) => `<option value="${attribute(label)}"${label === seed.countryOfOrigin ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('')}</select></label>`;
 }
 
 function editorMarkup(document, state, options) {
@@ -402,10 +448,11 @@ function editorMarkup(document, state, options) {
             <input type="hidden" name="primaryCategory" value="${inputValue(category.id)}" readonly />
             <input type="hidden" name="knowledgeMode" value="${inputValue(category.knowledgeMode)}" readonly />
             <div class="pim-web-editor-fields pim-web-editor-fields--essential">
+                ${countryOfOriginMarkup(parent, state, seed)}
                 ${selectMarkup('informationType', 'Information type', INFORMATION_TYPES, seed.informationType || 'fact', true)}
                 <label>Title<input name="title" value="${inputValue(seed.title)}" required maxlength="120" autofocus /></label>
                 <label>Short preview<input name="preview" value="${inputValue(seed.preview)}" required maxlength="80" placeholder="Two to five useful words" /></label>
-                <label class="pim-web-editor-wide">Information<textarea name="body" rows="5" required placeholder="Add the useful detail that belongs in this one information block.">${escapeHtml(seed.body || '')}</textarea></label>
+                <label class="pim-web-editor-wide">Information<textarea name="body" rows="5"${state.editorSeed?.templateId === 'country-of-origin' ? '' : ' required'} placeholder="Add the useful detail that belongs in this one information block.">${escapeHtml(seed.body || '')}</textarea></label>
             </div>
             <details class="pim-web-editor-advanced"><summary>More fields <span>Sources, evidence and display settings</span></summary>
                 <div class="pim-web-editor-fields pim-web-editor-fields--advanced">
@@ -476,6 +523,8 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
 function editorPayload(form, document) {
     const values = Object.fromEntries(new FormData(form).entries());
     const split = value => String(value || '').split(',').map(item => item.trim()).filter(Boolean);
+    const countryOfOrigin = String(values.countryOfOrigin || '').trim();
+    const body = String(values.body || '').trim() || (countryOfOrigin ? `Country of origin: ${countryOfOrigin}.` : '');
     const provenance = values.sourceDatabase || values.sourceRecordId || values.sourceUrl || values.licence || values.authorOrganisation || values.publicationDate || values.retrievalDate
         ? [{
             sourceDatabase: values.sourceDatabase,
@@ -496,7 +545,8 @@ function editorPayload(form, document) {
         informationType: values.informationType,
         title: String(values.title || '').trim(),
         preview: String(values.preview || '').trim(),
-        body: String(values.body || '').trim(),
+        body,
+        ...(countryOfOrigin ? { countryOfOrigin } : {}),
         tags: split(values.tags),
         region: String(values.region || '').trim(),
         climateContext: String(values.climateContext || '').trim(),
@@ -591,11 +641,18 @@ export function mountPlantInformationWeb(container, options = {}) {
         }
         if (button.matches('[data-pim-template-id]')) {
             const templateId = button.dataset.pimTemplateId;
-            const template = USE_INFORMATION_TEMPLATES.find(([id]) => id === templateId);
+            const template = templatesForParent(state.editorParentId).find(([id]) => id === templateId);
             const existingSeed = state.editorSeed || {};
+            const informationType = templateId === 'scripture-traditional-links'
+                ? 'traditional_knowledge'
+                : templateId === 'country-of-origin'
+                    ? 'historical_record'
+                    : templateId === 'function'
+                        ? 'fact'
+                        : 'practice';
             const editorSeed = template
-                ? { ...existingSeed, informationType: 'practice', title: template[1], preview: template[2], body: existingSeed.body || '' }
-                : { ...existingSeed, title: '', preview: '', body: '' };
+                ? { ...existingSeed, templateId, informationType, title: template[1], preview: template[2], body: templateId === 'country-of-origin' ? '' : existingSeed.body || '', countryOfOrigin: templateId === 'country-of-origin' ? existingSeed.countryOfOrigin || '' : '' }
+                : { ...existingSeed, templateId: '', title: '', preview: '', body: '', countryOfOrigin: '' };
             commit({ ...state, editorSeed, editorMessage: template ? `${template[1]} template selected. Add the detail for this plant.` : 'Custom information block selected.' }, '', false);
             return;
         }
