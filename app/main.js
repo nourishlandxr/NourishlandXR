@@ -558,13 +558,59 @@ window.startCreatorLocationAr = async projectId => {
     }
 };
 window.toggleArTechnicalDetails = toggleArTechnicalDetails;
+let globalInfoTriggerSequence = 0;
+function closeGlobalInfoOverlay(restoreFocus = false) {
+    const overlay = document.querySelector('[data-global-info-overlay]');
+    if (!overlay) return;
+    const trigger = overlay.dataset.infoTrigger ? document.getElementById(overlay.dataset.infoTrigger) : null;
+    const source = overlay.dataset.infoSource ? document.getElementById(overlay.dataset.infoSource) : null;
+    source?.setAttribute('hidden', '');
+    trigger?.setAttribute('aria-expanded', 'false');
+    overlay.remove();
+    if (restoreFocus) trigger?.focus();
+}
+window.toggleInfoOverlay = button => {
+    const sourceId = button?.getAttribute('data-info-source') || button?.getAttribute('aria-controls');
+    const source = sourceId ? document.getElementById(sourceId) : null;
+    if (!button || !source) return;
+    if (!button.id) button.id = `globalInfoTrigger${++globalInfoTriggerSequence}`;
+    const existing = document.querySelector('[data-global-info-overlay]');
+    if (existing?.dataset.infoTrigger === button.id) {
+        closeGlobalInfoOverlay(true);
+        return;
+    }
+    closeGlobalInfoOverlay();
+    source.setAttribute('hidden', '');
+    const overlay = document.createElement('aside');
+    overlay.className = 'global-info-overlay';
+    overlay.dataset.globalInfoOverlay = 'true';
+    overlay.dataset.infoTrigger = button.id;
+    overlay.dataset.infoSource = source.id;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'false');
+    const header = document.createElement('header');
+    const title = document.createElement('strong');
+    title.textContent = source.dataset.infoTitle || String(button.getAttribute('aria-label') || 'Information').replace(/^About\s+/i, '');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'global-info-overlay-close';
+    close.setAttribute('aria-label', 'Close information');
+    close.textContent = 'Close';
+    header.append(title, close);
+    const body = document.createElement('div');
+    body.className = 'global-info-overlay-body';
+    body.innerHTML = source.innerHTML;
+    overlay.append(header, body);
+    document.body.append(overlay);
+    button.setAttribute('aria-expanded', 'true');
+    close.addEventListener('click', () => closeGlobalInfoOverlay(true), { once: true });
+    overlay.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeGlobalInfoOverlay(true);
+    });
+    close.focus();
+};
 window.toggleProjectLayoutInfo = button => {
-    const infoId = button?.getAttribute('aria-controls');
-    const info = infoId ? document.getElementById(infoId) : null;
-    if (!info) return;
-    const expanded = info.hidden;
-    info.hidden = !expanded;
-    button.setAttribute('aria-expanded', String(expanded));
+    window.toggleInfoOverlay(button);
 };
 window.copyArDiagnostics = () => copyArDiagnostics().catch(error => {
     const status = document.getElementById('developerDiagnosticsStatus') || document.getElementById('arTechnicalCopyStatus');

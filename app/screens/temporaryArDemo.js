@@ -697,7 +697,7 @@ function showPersistentPimPrompt(record) {
     if (!panel || !continueButton) return;
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Plant Information Mesh');
-    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge, or continue when you are ready.`);
+    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Press Continue after you have explored the Plant Information Mesh.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
@@ -713,11 +713,10 @@ function showPersistentPimPrompt(record) {
     continueButton.onclick = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         continueButton.hidden = true;
-        record.demoProfileInteracted = true;
-        inviteVirtualTag(record);
+        setGuide(`${plantName} Plant Information Mesh remains open. Select another cell to continue exploring.`);
     };
     continueButton.hidden = false;
-    setGuide(`${plantName} profile opened. Select a cell to explore, or press Continue when ready.`);
+    setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh.`);
 }
 
 function runArWelcomeTutorial() {
@@ -771,14 +770,14 @@ function guidePlantConversion(record) {
             : [
                 'A plant Orb is  knowledge stays connected to where a plant grows. A simple Plant orb can become a extended hub of information, part of a garden guild or linked into a ecosystem.',
                 'Lets pick a sample plant. A pigeon pea.  its one of the best plants to have in a garden. A highly productive support plant that provides food, replenished soil and biodiversity within the garden.',
-                'EDIT mode: press and hold the Pigeon Pea orb for 0.8 seconds. Move it, then release it.',
-                'When you feel ready, press Continue. PLAY mode will open the Plant Information Mesh when you select the orb.'
+                'You can grab and hold the Pigeon Pea orb or any Plant marker to position it. Release it when you are ready.',
+                'Press Continue after positioning. Press the orb to open or close its Plant Information Mesh.'
             ],
         'Continue',
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
             finishIntroBoard();
-            setGuide(`The ${plantName} orb is ready. Use EDIT to move it, then PLAY to open its Plant Information Mesh.`);
+            setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its Plant Information Mesh.`);
         }
     );
     // The sample plant is interactive while the large instruction board is
@@ -1244,9 +1243,13 @@ function selectDemoProfileCell() {
     if (!selection) return false;
     const { record, target } = selection;
     const node = target.node || (target.pimRecenter || target.pimBack ? target : null);
-    // A ray that lands in the transparent gap must not guess a branch. The
-    // next selection step may then hit the orb and close the PIM deliberately.
-    if (!node) return false;
+    // Consume every selection that lands on the open PIM surface. A hit in a
+    // transparent gap must never fall through to the Live Tag/Web Mode
+    // action underneath it; the user can simply aim at a visible cell next.
+    if (!node) {
+        setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
+        return true;
+    }
     if (node.pimRecenter) {
         record.informationPose = plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition;
@@ -1321,6 +1324,7 @@ function demoPimPointerTarget(record) {
     if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
     const knowledge = knowledgeFor(record);
     return {
+        panelHit: true,
         xPercent,
         yPercent,
         node: pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent)
@@ -1775,16 +1779,39 @@ function updateHeldDemoRecordPosition() {
     const ray = demoPointerWorldRay();
     const origin = demoPointerWorldOrigin();
     if (!record || !origin || !ray) return;
-    const distance = Math.max(.4, Math.min(4, Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
+    const distance = Math.max(.4, Math.min(4, Number(record.demoGrabDepth) || Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
+    const lateral = record.demoGrabLateral || { x: 0, y: 0, z: 0 };
     record.position = {
-        x: origin.x + ray.x * distance,
+        x: origin.x + ray.x * distance + lateral.x,
         y: record.demoType === 'zone'
             ? demoGroundBaseY(hitMatrix, viewerMatrix, record.groundBaseY ?? groundYEstimate) + DEMO_TOTEM_HALF_HEIGHT_METRES
-            : origin.y + ray.y * distance,
-        z: origin.z + ray.z * distance
+            : origin.y + ray.y * distance + lateral.y,
+        z: origin.z + ray.z * distance + lateral.z
     };
     if (record.demoType === 'zone') record.groundBaseY = record.position.y - DEMO_TOTEM_HALF_HEIGHT_METRES;
     record.informationPosition = null;
+    record.informationPose = null;
+}
+
+function captureDemoGrabPose(record, origin, ray) {
+    if (!record || !origin || !ray) return false;
+    const rayLength = Math.hypot(ray.x, ray.y, ray.z) || 1;
+    const direction = { x: ray.x / rayLength, y: ray.y / rayLength, z: ray.z / rayLength };
+    const offset = {
+        x: Number(record.position?.x || 0) - origin.x,
+        y: Number(record.position?.y || 0) - origin.y,
+        z: Number(record.position?.z || 0) - origin.z
+    };
+    const projectedDepth = offset.x * direction.x + offset.y * direction.y + offset.z * direction.z;
+    const depth = Math.max(.4, Math.min(4, projectedDepth > .1 ? projectedDepth : Math.hypot(offset.x, offset.y, offset.z)));
+    record.demoGrabDepth = depth;
+    record.demoGrabLateral = {
+        x: offset.x - direction.x * depth,
+        y: offset.y - direction.y * depth,
+        z: offset.z - direction.z * depth
+    };
+    record.demoDistance = depth;
+    return true;
 }
 
 function beginPointerDemoHold(event) {
@@ -1810,17 +1837,10 @@ function beginPointerDemoHold(event) {
     event.stopPropagation();
     event.currentTarget?.setPointerCapture?.(event.pointerId);
     suppressSessionSelectUntil = performance.now() + 1200;
+    captureDemoGrabPose(target.record, demoPointerWorldOrigin(), demoPointerWorldRay());
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
         demoHeldIndex = target.index;
-        const origin = demoPointerWorldOrigin();
-        if (!origin) return;
-        const offset = {
-            x: target.record.position.x - origin.x,
-            y: target.record.position.y - origin.y,
-            z: target.record.position.z - origin.z
-        };
-        target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
         setGuide(`Holding ${target.record.name || 'the orb'}. Move your phone, then release.`);
     }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
@@ -1832,12 +1852,7 @@ function beginControllerDemoHold() {
     if (!target || target.record.demoInteractive === false) return false;
     const origin = demoPointerWorldOrigin();
     if (!origin) return false;
-    const offset = {
-        x: target.record.position.x - origin.x,
-        y: target.record.position.y - origin.y,
-        z: target.record.position.z - origin.z
-    };
-    target.record.demoDistance = Math.max(.4, Math.min(4, Math.hypot(offset.x, offset.y, offset.z)));
+    captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
         demoHeldIndex = target.index;
@@ -1859,6 +1874,10 @@ function releaseHeldDemoRecord() {
     if (demoHeldIndex < 0) return false;
     const record = markers[demoHeldIndex];
     demoHeldIndex = -1;
+    if (record) {
+        record.demoGrabDepth = null;
+        record.demoGrabLateral = null;
+    }
     appRoot?.querySelector('[data-demo-depth-joystick]')?.setAttribute('hidden', '');
     updateSimulatedMarkers();
     setGuide(`${record?.name || 'Element'} released in its adjusted position.`);

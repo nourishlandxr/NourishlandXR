@@ -664,11 +664,11 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: `window.openCreatorArMode('${encoded(projectId)}')`
         },
         helpGuide: {
-            title: 'You can find more help here',
-            full: 'More project guidance and settings live further down the Dashboard. Return here whenever you need another explanation or want to adjust how the project works.',
-            short: 'More guidance and project tools are available here whenever you need them.',
-            actionLabel: '',
-            action: ''
+            title: 'Suggest reading: Help Guide',
+            full: 'The Help Guide explains the main workflows, Areas, Totems, Plant Live Tags and the relationship between Web Hub and AR Mode.',
+            short: 'Open the Help Guide whenever you want a concise explanation of the project tools.',
+            actionLabel: 'Open Help Guide',
+            action: `window.renderPlatformComingSoon('Help Guide', 'creator')`
         },
         contentMode: {
             title: 'About Content Mode',
@@ -1795,6 +1795,10 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         const checkpoint = areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
         const areaMarkerLocated = Boolean(checkpoint?.isPlaced);
         const canonicalAreaEntries = areaEntries.filter(entry => !isAreaTotemMarker(entry.marker, context.area.name));
+        const areaPlantLayers = [...new Set(areaEntries
+            .filter(entry => effectiveMarkerType(entry.marker) === 'plant')
+            .map(entry => String(entry.plantProfile?.layer || '').trim())
+            .filter(Boolean))].sort((left, right) => left.localeCompare(right));
         const orderedEntries = [...canonicalAreaEntries].sort((left, right) => {
             const leftTotem = isAreaTotemMarker(left.marker, context.area.name) ? 0 : 1;
             const rightTotem = isAreaTotemMarker(right.marker, context.area.name) ? 0 : 1;
@@ -1810,12 +1814,14 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 : markerType === 'intro_checkpoint'
                     ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                     : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', false, 'area-dashboard')`;
-            return `<article class="area-content-entry area-content-card ${presentation.className}" style="--area-entry-accent:${presentation.accent}" data-marker-type="${escapeHtml(markerType)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(marker.name)} · ${escapeHtml(presentation.kind)}" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
+            const layerKey = markerType === 'plant' ? plantLayerKey(plantProfile?.layer || '') : 'other';
+            return `<article class="area-content-entry area-content-card ${presentation.className}" style="--area-entry-accent:${presentation.accent}" data-area-marker-entry data-marker-type="${escapeHtml(markerType)}" data-marker-layer="${escapeHtml(layerKey)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(marker.name)} · ${escapeHtml(presentation.kind)}" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
                 <span class="area-entry-icon" aria-hidden="true"><span>${presentation.icon}</span></span>
                 <span class="area-entry-copy"><strong>${escapeHtml(marker.name)}</strong><small class="area-entry-kind">${escapeHtml(presentation.kind)}</small><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel} · ${escapeHtml(editedLabel(marker.modified || marker.created))}</span></span>
                 <span class="area-entry-status entry-status-${status.tone}">${status.label}</span>
             </article>`;
         }).join('');
+        const areaMarkerFilter = `<div class="area-marker-filter"><label for="areaMarkerLayerFilter">Plant layer</label><select id="areaMarkerLayerFilter" data-area-marker-layer-filter><option value="">All plant layers</option>${areaPlantLayers.map(layer => `<option value="${escapeHtml(plantLayerKey(layer))}">${escapeHtml(layer)}</option>`).join('')}</select><span id="areaMarkerFilterStatus" class="meta" aria-live="polite">${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</span></div>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1835,7 +1841,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ? `<section class="home-template-card" aria-labelledby="homePigeonPeaTemplateTitle"><div><p class="welcome-label">STARTER PLANT TEMPLATE</p><h2 id="homePigeonPeaTemplateTitle">Pigeon Pea</h2><p>Complete Plant Profile · Info Mesh ready · saved in Home for this new project.</p></div><button type="button" class="primary" onclick="window.openProjectEntry('${encoded(context.project.id)}','${encoded(pigeonPeaTemplateEntry.marker.id)}',false,'home-template')">Open Plant Profile</button></section>`
             : '';
         const areaAboutInfo = isDefaultHomeArea(context.area)
-            ? '<span class="area-overview-actions"><button type="button" class="plant-profile-info-bubble" data-area-about-info aria-expanded="false" aria-label="About the default Home area">i</button><button type="button" data-edit-area-description>Edit</button></span>'
+            ? '<span class="area-overview-actions"><button type="button" class="plant-profile-info-bubble" data-area-about-info data-info-trigger data-info-source="areaAboutHelp" aria-expanded="false" aria-label="About the default Home area">i</button><button type="button" data-edit-area-description>Edit</button></span>'
             : '<button type="button" data-edit-area-description>Edit</button>';
         const areaDangerZone = isDefaultHomeArea(context.area)
             ? ''
@@ -1863,7 +1869,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 </div>
                 <form class="area-information-form is-reading" onsubmit="window.saveAreaInformation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
                     <p data-area-type-form-reading hidden>${escapeHtml(context.area.type || 'Other')}</p><label for="areaType" hidden>Area type</label><select id="areaType" hidden><option value="Outdoor Area" ${context.area.type === 'Outdoor Area' ? 'selected' : ''}>Outdoor Area</option><option value="Indoor Area" ${context.area.type === 'Indoor Area' ? 'selected' : ''}>Indoor Area</option><option value="Bed or Plot" ${context.area.type === 'Bed or Plot' ? 'selected' : ''}>Bed or Plot</option><option value="Room" ${context.area.type === 'Room' ? 'selected' : ''}>Room</option><option value="Enclosure" ${context.area.type === 'Enclosure' ? 'selected' : ''}>Enclosure</option><option value="Path or Route" ${context.area.type === 'Path or Route' ? 'selected' : ''}>Path or Route</option><option value="Other" ${!context.area.type || context.area.type === 'Other' ? 'selected' : ''}>Other</option></select>
-                    <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong>${areaAboutInfo}</div>${areaDescription ? `<p data-area-description-reading>${escapeHtml(areaDescription)}</p>` : ''}<p class="area-about-help" data-area-about-help hidden>DEFAULT HOME FOR CONTENT — Home holds items that are not yet assigned to a named Area.</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(areaDescription)}</textarea></div>
+                    <div class="area-overview-card"><div class="area-overview-heading"><strong><span aria-hidden="true">✦</span> About this Area</strong>${areaAboutInfo}</div>${areaDescription ? `<p data-area-description-reading>${escapeHtml(areaDescription)}</p>` : ''}<p id="areaAboutHelp" class="area-about-help" data-area-about-help hidden>DEFAULT HOME FOR CONTENT — Home holds items that are not yet assigned to a named Area.</p><label for="areaDescription" hidden>Description</label><textarea id="areaDescription" rows="3" hidden>${escapeHtml(areaDescription)}</textarea></div>
                     <p data-area-icon-form-reading hidden>${areaIcon(context.area)} ${AREA_ICON_OPTIONS.find(option => option.value === areaIcon(context.area))?.label || 'Leaves'}</p><label for="areaIcon" hidden>Area icon</label><select id="areaIcon" hidden>${AREA_ICON_OPTIONS.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === areaIcon(context.area) ? 'selected' : ''}>${option.value} ${escapeHtml(option.label)}</option>`).join('')}</select>
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit" data-save-area-description hidden>Save Area information</button>
@@ -1873,9 +1879,9 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             ${pigeonPeaTemplateCard}
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}
-            <details class="latest-entries-section area-content-section">
+            <details class="latest-entries-section area-content-section" open>
                 <summary class="section-heading-row"><div><h2>Markers in this Area</h2><p>${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</p></div><span aria-hidden="true">▾</span></summary>
-                <div class="area-content-grid">${rows}</div>
+                ${areaMarkerFilter}<div class="area-content-grid">${rows}</div>
             </details>
             <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Return to Dashboard</button></nav>
             ${areaDangerZone}
@@ -1888,12 +1894,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             textarea?.focus();
         });
-        app.querySelector('[data-area-about-info]')?.addEventListener('click', event => {
-            const help = app.querySelector('[data-area-about-help]');
-            const expanded = Boolean(help?.hidden);
-            if (help) help.hidden = !expanded;
-            event.currentTarget.setAttribute('aria-expanded', String(expanded));
-        });
+        app.querySelector('[data-area-about-info]')?.addEventListener('click', event => window.toggleInfoOverlay?.(event.currentTarget));
         app.querySelector('[data-edit-area-type]')?.addEventListener('click', () => {
             app.querySelector('[data-area-type-reading]')?.setAttribute('hidden', '');
             app.querySelector('[data-area-type-form-reading]')?.setAttribute('hidden', '');
@@ -1908,6 +1909,18 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('label[for="areaIcon"]')?.removeAttribute('hidden');
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             app.querySelector('#areaIcon')?.focus();
+        });
+        app.querySelector('[data-area-marker-layer-filter]')?.addEventListener('change', event => {
+            const selectedLayer = event.currentTarget.value;
+            const entries = [...app.querySelectorAll('[data-area-marker-entry]')];
+            let visible = 0;
+            entries.forEach(entry => {
+                const show = !selectedLayer || entry.dataset.markerLayer === selectedLayer || entry.dataset.markerType !== 'plant';
+                entry.hidden = !show;
+                if (show) visible += 1;
+            });
+            const status = app.querySelector('#areaMarkerFilterStatus');
+            if (status) status.textContent = `${visible} marker${visible === 1 ? '' : 's'} shown`;
         });
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
@@ -2823,13 +2836,12 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
         <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
             <div class="plant-spm-toggle-line">
                 <label class="plant-spm-toggle-label" for="projectEntrySpmEnabled"><strong id="plantSpmTitle">ACTIVATE INFO MESH</strong><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
-                <button class="plant-profile-info-bubble" type="button" data-spm-info aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button>
+                <button class="plant-profile-info-bubble" type="button" data-spm-info data-info-trigger data-info-source="plantSpmHelp" aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button>
             </div>
-            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh opens the expandable plant knowledge diagram shared by Web Mode and AR.</p>
+            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh opens an expandable information diagram shared by Web Mode and AR.</p>
         </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
-        <section class="plant-profile-pim-web-section" aria-labelledby="plantInfoMeshWebTitle">
-            <div class="plant-profile-pim-web-heading"><p class="welcome-label">PLANT INFORMATION MESH</p><h2 id="plantInfoMeshWebTitle">Plant knowledge</h2></div>
+        <section class="plant-profile-pim-web-section" aria-label="Plant Information Mesh">
             <div data-plant-pim-web-mount></div>
         </section>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
@@ -3057,12 +3069,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         updateSpmFields();
         updatePlantPhysicalFields();
         const spmInfo = app.querySelector('[data-spm-info]');
-        const spmHelp = app.querySelector('#plantSpmHelp');
-        spmInfo?.addEventListener('click', () => {
-            const expanded = Boolean(spmHelp && spmHelp.hidden);
-            if (spmHelp) spmHelp.hidden = !expanded;
-            spmInfo.setAttribute('aria-expanded', String(expanded));
-        });
+        spmInfo?.addEventListener('click', () => window.toggleInfoOverlay?.(spmInfo));
         const quickColorInput = document.getElementById('projectEntryOrbColor');
         const syncQuickPlantTones = color => {
             app.querySelectorAll('[data-plant-quick-tone]').forEach(button => {

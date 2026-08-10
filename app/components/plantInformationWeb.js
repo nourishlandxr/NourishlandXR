@@ -9,6 +9,22 @@ const GROUPS = Object.freeze([
     { id: 'process', label: 'Process', question: 'How plants begin, grow and receive care' }
 ]);
 
+const ACCESSIBLE_ROOT_ORDER = Object.freeze([
+    'scientific-information',
+    'uses',
+    'food-forest',
+    'cultivation',
+    'propagation',
+    'historical-data'
+]);
+
+const DIRECTION_ITEMS = Object.freeze([
+    ['Top', 'Relationship'],
+    ['Left', 'Agency'],
+    ['Right', 'Certainty'],
+    ['Bottom', 'Process']
+]);
+
 const INFORMATION_TYPES = Object.freeze([
     ['fact', 'Fact'],
     ['guidance', 'Guidance'],
@@ -292,12 +308,15 @@ function nodeButtonMarkup(document, node, state, options, suffix = 'visual', dep
     const panelId = `pim-web-children-${domToken(document.plantId)}-${domToken(node.id)}-${suffix}`;
     const highlighted = state.highlightedNodeId === node.id;
     const preview = concisePreview(node, primary);
+    const cellStats = primary
+        ? `<small class="pim-web-node-stats">${childNodes.length} submenu${childNodes.length === 1 ? '' : 's'} · ${descendantsOf(document, node.id).size + 1} cells</small>`
+        : '';
     const expansion = expandable
         ? ` aria-expanded="${open}" aria-controls="${panelId}"`
         : ' aria-haspopup="dialog"';
     return `<button class="pim-web-node-button${open ? ' is-open' : ''}${highlighted ? ' is-highlighted' : ''}" type="button" data-pim-node-id="${attribute(node.id)}" data-pim-node-path="${attribute(node.path)}" data-pim-depth="${depth}"${expansion} style="--pim-category:${attribute(category.color)}">
         <span class="pim-web-category-marker" aria-hidden="true"></span>
-        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small>${escapeHtml(preview)}</small></span>
+        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small>${escapeHtml(preview)}</small>${cellStats}</span>
         <span class="pim-web-node-kind">${escapeHtml(category.title)}</span>
         <span class="pim-web-expansion-indicator" aria-hidden="true">${expandable ? open ? '−' : '+' : '→'}</span>
     </button>`;
@@ -326,8 +345,9 @@ function visualNodeMarkup(document, node, state, options, depth = 1, seen = new 
 function groupMarkup(document, group, state, options) {
     const entries = PIM_COMPASS.filter(entry => entry.compassGroup === group.id);
     const roots = entries.map(entry => nodeById(document, entry.id)).filter(Boolean);
+    const cellCount = roots.reduce((total, root) => total + descendantsOf(document, root.id).size + 1, 0);
     return `<section class="pim-web-sector pim-web-sector--${attribute(group.id)}" data-pim-group="${attribute(group.id)}" aria-labelledby="pim-web-group-${attribute(group.id)}">
-        <header class="pim-web-sector-heading"><p>${escapeHtml(group.label)}</p><span>${escapeHtml(group.question)}</span></header>
+        <header class="pim-web-sector-heading"><p id="pim-web-group-${attribute(group.id)}"><strong>${escapeHtml(group.label)}</strong><span> — ${escapeHtml(group.question)}</span><small>${roots.length} section${roots.length === 1 ? '' : 's'} · ${cellCount} cells</small></p></header>
         <div class="pim-web-sector-branches">${roots.map(root => visualNodeMarkup(document, root, state, options)).join('')}</div>
     </section>`;
 }
@@ -342,7 +362,6 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
     const progress = Math.min(100, Math.round((explored / explorable) * 100));
     const token = `${domToken(document.plantId)}-${domToken(suffix)}`;
     const showSearch = options.showSearch !== false;
-    const directionPanelId = `pim-web-directions-${token}`;
     return `<section class="pim-web-identity" aria-labelledby="pim-web-identity-title-${token}">
         <div class="pim-web-identity-topline">
         <button class="pim-web-centre" type="button" data-pim-centre aria-expanded="${state.centerOpen}" aria-controls="pim-web-sectors-${token}">
@@ -350,9 +369,7 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
             <span class="pim-web-identity-copy"><strong id="pim-web-identity-title-${token}">${escapeHtml(commonName)}</strong><em>${escapeHtml(scientificName)}</em><small>${escapeHtml(statement)}</small></span>
             <span class="pim-web-centre-action">${state.centerOpen ? 'Close plant knowledge' : 'Open plant knowledge'}</span>
         </button>
-        <button class="pim-web-direction-info" type="button" data-pim-directions-info aria-expanded="false" aria-controls="${directionPanelId}" aria-label="About plant knowledge directions">i</button>
         </div>
-        <div class="pim-web-direction-key" id="${directionPanelId}" aria-label="Plant knowledge directions" hidden><span><b>Top</b> Relationship</span><span><b>Left</b> Agency</span><span><b>Right</b> Certainty</span><span><b>Bottom</b> Process</span></div>
         ${showSearch ? `<form class="pim-web-search" data-pim-search-form role="search">
             <label for="pim-web-search-${token}">Search this plant’s knowledge</label>
             <div><input id="pim-web-search-${token}" name="query" type="search" value="${attribute(state.searchQuery)}" placeholder="Try nitrogen, seed or soil" autocomplete="off" aria-describedby="pim-web-search-status-${token}" /><button type="submit">Find</button></div>
@@ -365,7 +382,8 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
 function directionsInfoMarkup(document, suffix = 'compact') {
     const token = `${domToken(document.plantId)}-${domToken(suffix)}`;
     const panelId = `pim-web-directions-${token}`;
-    return `<div class="pim-web-standalone-directions"><button class="pim-web-direction-info" type="button" data-pim-directions-info aria-expanded="false" aria-controls="${panelId}" aria-label="About plant knowledge directions">i</button><div class="pim-web-direction-key" id="${panelId}" aria-label="Plant knowledge directions" hidden><span><b>Top</b> Relationship</span><span><b>Left</b> Agency</span><span><b>Right</b> Certainty</span><span><b>Bottom</b> Process</span></div></div>`;
+    const items = DIRECTION_ITEMS.map(([direction, label]) => `<span><b>${direction}</b>${label}</span>`).join('');
+    return `<div class="pim-web-standalone-directions"><button class="pim-web-direction-info" type="button" data-pim-directions-info aria-expanded="false" aria-controls="${panelId}" aria-label="About plant knowledge directions">i</button><aside class="pim-web-info-overlay" id="${panelId}" data-pim-directions-panel role="dialog" aria-modal="false" aria-labelledby="${panelId}-title" aria-label="Plant knowledge directions" hidden><header><div><span>Plant Information Mesh</span><h2 id="${panelId}-title">How to read the diagram</h2></div><button type="button" data-pim-directions-close aria-label="Close diagram guide">×</button></header><p>Each cell opens the next level of plant knowledge. Several branches can stay open while you explore.</p><div class="pim-web-direction-key">${items}</div></aside></div>`;
 }
 
 function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = new Set()) {
@@ -380,7 +398,7 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
 }
 
 function accessibleListMarkup(document, state, options) {
-    const roots = PIM_COMPASS.map(entry => nodeById(document, entry.id)).filter(Boolean);
+    const roots = ACCESSIBLE_ROOT_ORDER.map(id => nodeById(document, id)).filter(Boolean);
     return `<section class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
 }
 
@@ -507,10 +525,10 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const showIdentity = options.showIdentity !== false;
     const visualIdentity = showIdentity ? identityMarkup(source, current, 'visual', renderOptions) : '';
     const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
-    const standaloneDirections = showIdentity ? '' : directionsInfoMarkup(source);
+    const standaloneDirections = directionsInfoMarkup(source);
     const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading"><div><p>Plant Information Mesh</p><h1>Plant knowledge</h1></div><div class="pim-web-heading-tools">${standaloneDirections}<div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div></div></header>
+        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div>${standaloneDirections}</div></header>
         <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}</div></div>
         ${showIdentity && current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
         ${accessibleListMarkup(source, current, renderOptions)}
@@ -609,6 +627,14 @@ export function mountPlantInformationWeb(container, options = {}) {
     container.addEventListener('click', async event => {
         const button = event.target.closest('button');
         if (!button || !container.contains(button)) return;
+        if (button.matches('[data-pim-directions-close]')) {
+            const panel = button.closest('[data-pim-directions-panel]');
+            const trigger = panel?.id ? container.querySelector(`[aria-controls="${panel.id}"]`) : null;
+            panel?.setAttribute('hidden', '');
+            trigger?.setAttribute('aria-expanded', 'false');
+            trigger?.focus();
+            return;
+        }
         if (button.matches('[data-pim-node-id]')) {
             const next = togglePlantInformationWebNode(document, state, button.dataset.pimNodeId);
             commit(next, button.dataset.pimNodeId);
@@ -624,6 +650,7 @@ export function mountPlantInformationWeb(container, options = {}) {
             const expanded = button.getAttribute('aria-expanded') === 'true';
             button.setAttribute('aria-expanded', String(!expanded));
             panel?.toggleAttribute('hidden', expanded);
+            if (!expanded) panel?.querySelector('[data-pim-directions-close]')?.focus();
             return;
         }
         if (button.matches('[data-pim-view]')) {

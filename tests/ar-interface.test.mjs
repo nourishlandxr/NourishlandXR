@@ -1011,8 +1011,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /EDIT mode: press and hold the Pigeon Pea orb for 0\.8 seconds/);
-    assert.match(source, /When you feel ready, press Continue/);
+    assert.match(source, /You can grab and hold the Pigeon Pea orb or any Plant marker to position it/);
+    assert.match(source, /Press Continue after positioning/);
+    assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
+    assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
@@ -1202,6 +1204,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function showPersistentPimPrompt\(record\)/);
     assert.match(source, /persistent: true/);
     assert.match(source, /if \(options\.persistent\) panel\.classList\.add\('is-persistent-demo-board'\)/);
+    const persistentPimPrompt = source.slice(source.indexOf('function showPersistentPimPrompt'), source.indexOf('function runArWelcomeTutorial'));
+    assert.doesNotMatch(persistentPimPrompt, /inviteVirtualTag/);
+    assert.match(persistentPimPrompt, /Plant Information Mesh remains open/);
     assert.ok(source.includes('record.demoProfileInteracted = true;'));
     assert.match(source, /inviteVirtualTag\(record\)/);
     assert.doesNotMatch(source, /board\?\.classList\.contains\('is-typing'\)/);
@@ -1211,6 +1216,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
     assert.match(source, /uniform float opacity/);
     assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
+    assert.match(source, /function captureDemoGrabPose\(record, origin, ray\)/);
+    assert.match(source, /record\.demoGrabLateral/);
+    assert.match(source, /panelHit: true/);
     assert.match(source, /spatialMoveControlMarkup\('demo'\)/);
     assert.match(styles, /\.spatial-move-control/);
     assert.match(styles, /\.spatial-move-release/);
@@ -1237,7 +1245,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimFocusedView/);
     assert.match(source, /pimToggleExpandedPaths/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
-    assert.match(source, /if \(!node\) return false;/);
+    assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return true;/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
     assert.match(source, /is-parent-link/);
@@ -1556,8 +1564,8 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.ok(dashboardSource.indexOf('projectEntryOrbSize') < dashboardSource.indexOf('projectEntrySpmEnabled'));
     assert.match(arSource, /profile\.spm_enabled === true \|\| profile\.profile_enabled === true/);
     assert.doesNotMatch(dashboardSource, /Info Mesh overview|Advanced identity|Growing knowledge|Origin &amp; story|projectEntryRelationships/);
-    assert.match(dashboardSource, /PLANT INFORMATION MESH/);
-    assert.match(dashboardSource, /Plant knowledge/);
+    assert.match(dashboardSource, /Plant Information Mesh/);
+    assert.match(dashboardSource, /Info Mesh opens an expandable information diagram/);
     assert.match(dashboardSource, /showSearch: false/);
     assert.match(dashboardSource, /if \(plantProfileFormPresent\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = focusedProfileView/);
@@ -1644,7 +1652,7 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(dashboardSource, /data-edit-area-type/);
     assert.match(dashboardSource, /id="areaType"/);
     assert.match(dashboardSource, /context\.project\.name/);
-    assert.match(dashboardSource, /<details class="latest-entries-section area-content-section">/);
+    assert.match(dashboardSource, /<details class="latest-entries-section area-content-section" open>/);
     assert.doesNotMatch(dashboardSource, /Precise location/);
     assert.doesNotMatch(dashboardSource, />Open profile</);
     assert.doesNotMatch(fieldGuideSource, /Open &amp; manage/);

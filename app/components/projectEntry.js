@@ -53,7 +53,7 @@ export function renderProjectEntry(config) {
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
     const areaOverviewHtml = `<section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
-        <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><div class="areas-heading-actions"><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span><button class="project-layout-info" type="button" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button></div></div>
+        <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><div class="areas-heading-actions"><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span><button class="project-layout-info" type="button" data-info-trigger data-info-source="projectLayoutInfo" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button></div></div>
         <p id="projectLayoutInfo" class="project-layout-intro" hidden>Each Area is a focused part of the project. Open a card to see its dashboard and information.</p>
         ${contextualGuidance(config.guidance, 'areas')}
         <div class="project-area-list">${areaListHtml}</div>
@@ -74,6 +74,7 @@ export function renderProjectEntry(config) {
             ${growth.steps.map(step => `<span class="${step.complete ? 'is-complete' : ''}" role="listitem"><i aria-hidden="true">${step.complete ? '✓' : '○'}</i><strong>${escapeAttribute(step.label)}</strong>${step.progress ? `<small>${escapeAttribute(step.progress)}</small>` : ''}</span>`).join('')}
         </div>
         <div class="tutorial-purpose"><strong>Why begin here?</strong><p>Spatial knowledge becomes useful when information is attached to a real object or place. These small actions show the complete idea—identify something, organise its place, give the place a Totem, then let its information grow. Plant records receive a unique ID automatically when they are created.</p></div>
+        <div class="tutorial-purpose-link"><button class="tutorial-guide-link" type="button" onclick="window.renderPlatformComingSoon('Help Guide', 'creator')">Suggest reading: Help Guide</button></div>
         <div class="tutorial-quick-starts${config.guidance?.target === 'quickStarts' ? ' tutorial-spotlight-target' : ''}" aria-label="Tutorial quick starts">
             ${growth.starterActions.map(action => `<button type="button" onclick="${action.action}"><span aria-hidden="true">${action.icon}</span><strong>${escapeAttribute(action.label)}</strong><small>${escapeAttribute(action.description)}</small></button>`).join('')}
         </div>

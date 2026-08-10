@@ -112,13 +112,13 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         context.fillStyle = '#fff';
         context.strokeStyle = 'rgba(0, 0, 0, .94)';
         context.lineWidth = 7;
-        context.font = `850 ${node.depth ? 20 : 25}px system-ui, sans-serif`;
+        context.font = `850 ${node.depth ? 23 : 29}px system-ui, sans-serif`;
         const titleLines = wrapLines(context, node.label, 148).slice(0, 3);
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const startY = point.y + (hasDescription ? -28 : 0) - (titleLines.length - 1) * 14;
         drawOutlinedLines(context, titleLines, point.x, startY, 28);
         if (hasDescription) {
-            context.font = '700 16px system-ui, sans-serif';
+            context.font = '700 19px system-ui, sans-serif';
             context.fillStyle = 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'rgba(0, 0, 0, .98)';
             context.shadowBlur = 7;
@@ -135,12 +135,12 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     context.lineWidth = 8;
-    context.font = '850 30px system-ui, sans-serif';
+    context.font = '850 36px system-ui, sans-serif';
     const coreTitle = focus?.focusNode.label || knowledge.title || knowledge.name || 'Plant';
     const coreLines = wrapLines(context, coreTitle, 154).slice(0, 3);
     drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * 18, 36);
     if (focus?.focusNode.value) {
-        context.font = '650 15px system-ui, sans-serif';
+        context.font = '650 18px system-ui, sans-serif';
         context.fillStyle = 'rgba(255, 255, 255, .94)';
         drawWrappedText(context, focus.focusNode.value, center.x, center.y + 52, 150, 18, 2);
     }
@@ -155,7 +155,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .9)';
     context.lineWidth = 6;
-    context.font = '700 39px system-ui, sans-serif';
+    context.font = '700 44px system-ui, sans-serif';
     context.strokeText('↓', center.x, height * .94 + 2);
     context.fillText('↓', center.x, height * .94 + 2);
 }

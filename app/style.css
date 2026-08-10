@@ -3783,6 +3783,9 @@ button.site-map-pin:hover, button.site-map-pin:focus-visible { z-index: 5; trans
 .tutorial-purpose strong, .tutorial-purpose p { margin: 0; }
 .tutorial-purpose strong { color: #315b3b; font-size: .78rem; }
 .tutorial-purpose p { color: #56675b; font-size: .75rem; line-height: 1.42; }
+.tutorial-purpose-link { display:flex; justify-content:flex-start; margin-top:3px; }
+.tutorial-guide-link { min-height:34px; padding:6px 11px; border:1px solid rgba(75,126,66,.34); border-radius:999px; background:#fff8df; color:#315b3b; font-size:.7rem; font-weight:800; }
+.tutorial-guide-link:hover, .tutorial-guide-link:focus-visible { border-color:#bd8c28; background:#fff0b9; }
 .tutorial-quick-starts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .tutorial-quick-starts button { display: grid; grid-template-columns: 22px minmax(0,1fr); align-content: center; gap: 2px 6px; min-width: 0; min-height: 58px; padding: 7px 8px; border: 1px solid rgba(161,70,61,.3); border-radius: 12px; background: #f7d9d2; color: #713f39; text-align: left; }
 .tutorial-quick-starts button:nth-child(2) { background: #f4dfc7; }
@@ -5997,6 +6000,10 @@ body.ar-dashboard-open .ar-tutorial-panel {
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
     gap: .65rem;
 }
+.area-marker-filter { display:flex; align-items:end; flex-wrap:wrap; gap:8px 12px; margin:10px 0 12px; padding:10px 12px; border:1px solid rgba(57,105,79,.16); border-radius:12px; background:rgba(255,255,255,.55); }
+.area-marker-filter label { display:grid; gap:4px; color:#526257; font-size:.68rem; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
+.area-marker-filter select { min-height:36px; padding:5px 9px; border:1px solid rgba(57,105,79,.25); border-radius:9px; background:#fffdf4; color:#31523a; font-size:.76rem; }
+.area-marker-filter .meta { margin:0 0 7px auto; color:#66736a; font-size:.7rem; }
 
 .area-content-card {
     position: relative;
@@ -7806,8 +7813,10 @@ body:has(.creator-project-menu) #app {
 
 /* One AR control language across Dashboard, Area, Plant Profile and Web Hub. */
 .dashboard-ar-path {
-    grid-template-columns: 104px minmax(0, 1fr);
-    max-width: 540px;
+    grid-template-columns: repeat(2, 104px);
+    justify-content: center;
+    max-width: none;
+    margin-inline: auto;
     align-items: stretch;
 }
 .dashboard-open-ar,
@@ -7857,7 +7866,8 @@ button.global-ar-action:not(.dashboard-open-ar)::before,
 button.ar-square-action::before { display: none !important; }
 .dashboard-open-ar strong { justify-self: center; font-size: 1rem; }
 .dashboard-field-guide { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-content: center; text-align: left; }
-.dashboard-field-guide > span { grid-row: 1 / 3; }
+.dashboard-field-guide { width: 104px; max-width: 104px; min-height: 104px; padding: 8px !important; grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 4px; text-align: center; }
+.dashboard-field-guide > span { grid-row: auto; }
 
 /* The dashboard title must stay text, never inherit the AR button surface. */
 .project-entry .location-dashboard-header h1 { background: transparent !important; border-color: transparent !important; color: #111 !important; }
@@ -7893,6 +7903,13 @@ button.ar-square-action::before { display: none !important; }
 .pim-web-direction-info:hover,
 .pim-web-direction-info:focus-visible,
 .pim-web-direction-info[aria-expanded="true"] { border-color: #9c7413; background: #ffe78a; color: #634a0e; }
+.global-info-overlay { position:fixed; left:50%; bottom:max(14px,env(safe-area-inset-bottom)); z-index:15000; display:grid; gap:9px; width:min(calc(100vw - 24px),520px); max-height:min(46vh,360px); box-sizing:border-box; overflow:auto; padding:14px 16px 16px; transform:translateX(-50%); border:1px solid rgba(174,133,30,.5); border-radius:18px; background:rgba(255,253,240,.98); color:#2c4b35; box-shadow:0 16px 38px rgba(29,67,43,.24); animation:global-info-overlay-in .2s ease-out both; }
+.global-info-overlay > header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.global-info-overlay > header strong { color:#6f5414; font-size:.76rem; letter-spacing:.04em; text-transform:uppercase; }
+.global-info-overlay-body { color:#526257; font-size:.78rem; line-height:1.45; }
+.global-info-overlay-close { min-height:34px; padding:6px 11px; border:1px solid rgba(174,133,30,.46); border-radius:10px; background:#fff3b6; color:#634a0e; font-size:.7rem; font-weight:850; }
+.global-info-overlay-close:hover, .global-info-overlay-close:focus-visible { border-color:#9c7413; background:#ffe78a; }
+@keyframes global-info-overlay-in { from { opacity:0; transform:translate(-50%,10px); } to { opacity:1; transform:translate(-50%,0); } }
 .plant-spm-toggle-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .plant-spm-toggle-label { display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer; }
 .plant-spm-toggle-label > strong { color:#234e31; font-size:.84rem; letter-spacing:.05em; }
@@ -8213,3 +8230,20 @@ button.ar-square-action::before { display: none !important; }
     color:rgba(220,239,149,.72);
     animation-duration:2.2s;
 }
+
+/* Demo guidance is deliberately readable at a distance. Keep the large
+   instruction surface and the live PIM controls legible on both phone and
+   headset views. */
+.tryit-demo { font-size:1.08rem; }
+.tryit-demo .tryit-guided-choice h2 { font-size:clamp(1.35rem,3.8vw,1.9rem); }
+.tryit-demo .tryit-guided-choice p { font-size:clamp(1rem,2.4vw,1.18rem); line-height:1.5; }
+.tryit-demo .tryit-guided-choice.is-welcome-board > small { font-size:.82rem; }
+.tryit-demo .tryit-guided-choice.is-welcome-board h2 { font-size:clamp(1.8rem,5vw,3.25rem); }
+.tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.25rem,min(3.8vw,3.2vh),1.85rem); line-height:1.42; }
+.tryit-demo > .tryit-intro-continue { min-height:70px; padding-inline:38px; font-size:clamp(1.2rem,4.3vw,1.5rem); }
+.tryit-demo .tryit-demo-taskbar button { min-height:40px; padding:8px 14px; font-size:.84rem; }
+.tryit-demo .plant-knowledge-cell b { font-size:clamp(.9rem,1.4vw,1.12rem); }
+.tryit-demo .plant-knowledge-cell small { font-size:clamp(.78rem,1.25vw,.98rem); }
+.tryit-demo .plant-knowledge-core strong { font-size:clamp(1rem,1.8vw,1.3rem); }
+.tryit-demo .plant-knowledge-core i,
+.tryit-demo .plant-knowledge-core em { font-size:clamp(.68rem,1.1vw,.86rem); }
