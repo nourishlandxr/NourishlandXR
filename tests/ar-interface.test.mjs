@@ -1284,7 +1284,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Garden plaque/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /Totems are the epicenters of each area where plant orbs live/);
+    assert.match(source, /Each Totem represents an Area/);
     assert.match(source, /tutorialStage: 'totem'/);
     assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 4\.14, y: 3\.8 \}\)/);
     assert.match(source, /const noteScale = noteSign \? DEMO_NOTE_IMMERSIVE_SCALE : null/);

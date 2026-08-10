@@ -805,6 +805,28 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-totem-card-1::after,.tryit-sim-totem-card-2::after { left:50%; bottom:-4px; transform:translateX(-50%); }
 .tryit-sim-totem-card-3::after,.tryit-sim-totem-card-5::after { left:-4px; top:50%; transform:translateY(-50%); }
 .tryit-sim-totem-card-4::after { right:-4px; top:50%; transform:translateY(-50%); }
+.tryit-sim-area-link-line { position:fixed; z-index:12000; height:3px; transform-origin:0 50%; border-radius:999px; background:linear-gradient(90deg,rgba(117,201,182,.28),rgba(220,255,186,.95),rgba(117,201,182,.28)); box-shadow:0 0 12px rgba(117,201,182,.58); pointer-events:none; }
+.tryit-sim-area-link-line::after { content:""; position:absolute; right:-3px; top:50%; width:10px; height:10px; transform:translateY(-50%) rotate(45deg); border-top:3px solid #dfffbf; border-right:3px solid #dfffbf; }
+.tryit-sim-area-link-label { position:fixed; z-index:12004; transform:translate(-50%,-50%); padding:5px 10px; border:1px solid rgba(220,255,186,.7); border-radius:999px; background:rgba(9,43,29,.9); color:#eaffc8; box-shadow:0 5px 16px rgba(0,0,0,.2); font-size:.61rem; font-weight:900; letter-spacing:.08em; white-space:nowrap; pointer-events:none; }
+.tryit-sim-totem-link-label { position:absolute; left:50%; top:74%; z-index:7; transform:translateX(-50%); width:max-content; max-width:92%; padding:6px 10px; border:1px solid rgba(220,255,186,.78); border-radius:999px; background:rgba(8,48,31,.92); color:#eaffc8; box-shadow:0 4px 13px rgba(0,0,0,.24); font-size:clamp(.58rem,2vw,.7rem); font-weight:900; letter-spacing:.04em; white-space:nowrap; pointer-events:none; }
+.tryit-sim-totem-model-toggle { position:absolute; left:50%; bottom:-8px; z-index:8; display:grid; gap:2px; min-width:112px; padding:7px 10px; transform:translateX(-50%); border:1px solid rgba(220,255,186,.82); border-radius:12px; background:rgba(9,43,29,.96); color:#f3ffdf; box-shadow:0 6px 16px rgba(0,0,0,.28); font:800 .68rem/1.15 system-ui,sans-serif; cursor:pointer; pointer-events:auto; }
+.tryit-sim-totem-model-toggle small { color:rgba(239,255,232,.7); font-size:.52rem; font-weight:700; }
+.tryit-sim-totem-system.is-totem-style-organic .tryit-sim-totem-branches,
+.tryit-sim-totem-system.is-totem-style-flat-disc .tryit-sim-totem-branches { opacity:.16; }
+.tryit-sim-totem-system.is-totem-style-organic .tryit-sim-totem-pillar { left:34%; top:28%; width:32%; height:31%; border-radius:50%; background:radial-gradient(circle at 30% 24%,#c9e5ae,#477b4e 58%,#163a25); box-shadow:inset -10px -12px 18px rgba(5,28,14,.48),inset 6px 6px 11px rgba(255,255,255,.16),0 0 25px rgba(105,190,107,.46); }
+.tryit-sim-totem-system.is-totem-style-flat-disc .tryit-sim-totem-pillar { left:28%; top:45%; width:44%; height:13%; border-radius:50%; background:radial-gradient(ellipse at 32% 22%,#b8dc9b,#527a4c 58%,#23452e); box-shadow:inset -9px -6px 11px rgba(5,28,14,.48),inset 5px 3px 8px rgba(255,255,255,.14),0 0 22px rgba(105,190,107,.4); }
+.tryit-sim-totem-system.is-totem-style-organic .tryit-sim-totem-pillar::before,
+.tryit-sim-totem-system.is-totem-style-organic .tryit-sim-totem-pillar::after,
+.tryit-sim-totem-system.is-totem-style-flat-disc .tryit-sim-totem-pillar::before,
+.tryit-sim-totem-system.is-totem-style-flat-disc .tryit-sim-totem-pillar::after { display:none; }
+@media (max-width: 680px) {
+    .tryit-sim-totem-system { width:min(58vw,250px); height:min(48vh,360px); }
+    .tryit-sim-totem-card { min-height:52px; padding:7px 6px; font-size:.56rem; }
+    .tryit-sim-totem-card-2 { min-height:58px; }
+    .tryit-sim-totem-model-toggle { min-width:96px; padding:6px 7px; font-size:.58rem; }
+    .tryit-sim-totem-link-label { max-width:100%; padding:4px 6px; font-size:.5rem; }
+    .tryit-sim-area-link-label { font-size:.5rem; }
+}
 @keyframes tryit-frame-arrive { from { opacity: 0; transform: translate(calc(-50% + var(--panel-x)), calc(-45% + var(--panel-y))) scale(.88); } to { opacity: 1; transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))) scale(1); } }
 @keyframes tryit-subtitle-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .tryit-sim-marker.is-expanded { transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); }

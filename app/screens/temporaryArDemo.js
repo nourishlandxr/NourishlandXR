@@ -6,7 +6,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from '../services/spatialSphereRenderer.js';
+import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
@@ -127,6 +127,11 @@ const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // this bounded window so Continue remains available on every runtime.
 const DEMO_BOARD_TYPING_MAX_MS = 7000;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
+const DEMO_TOTEM_STYLES = Object.freeze([
+    { id: 'basic', label: 'Basic' },
+    { id: 'organic', label: 'Organic' },
+    { id: 'flat-disc', label: 'Flat disc' }
+]);
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
         shell: [0.34, 0.23, 0.14],
@@ -174,6 +179,17 @@ const DEMO_CONTENT = Object.freeze({
             'Warm sheltered microclimate',
             'Pollinator activity',
             'Seasonal garden observations'
+        ]
+    },
+    zoneTwo: {
+        title: 'Kitchen Garden Totem',
+        accent: '#b7e895',
+        bubbles: [
+            'KITCHEN GARDEN AREA',
+            'Seed-to-table plants',
+            'Warm growing space',
+            'Kitchen observations',
+            'LINKED TO FOOD FOREST'
         ]
     }
 });
@@ -376,7 +392,8 @@ function closeDemoVirtualTag(record) {
         demoWebModeOpen = false;
         record.demoExpanded = false;
         refreshDemoRecord(record);
-        armDemoPlacement('plant2');
+        if (record.tutorialStage === 'plant2') showDemoAction('note');
+        else armDemoPlacement('plant2');
     }, 320);
 }
 
@@ -825,6 +842,8 @@ function createDemoTotemExample() {
         type: 'area_checkpoint',
         demoType: 'zone',
         tutorialStage: 'totem',
+        demoTotemStyle: 'basic',
+        demoLinkVisible: false,
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
@@ -840,18 +859,100 @@ function createDemoTotemExample() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('This Totem keeps Area knowledge anchored to its real place. Press Continue when you are ready.');
-    showSceneContinue('Continue', showDemoClosingMessage);
+    setGuide('This Totem represents the Food Forest Area and keeps its knowledge anchored to place. Press Continue to add a second Area.');
+    showSceneContinue('Add second Totem', createDemoSecondTotem);
+}
+
+function createDemoSecondTotem() {
+    const first = [...markers].reverse().find(record => record.demoType === 'zone');
+    const source = [...markers].reverse().find(record => record.demoType === 'note') || markers.at(-1);
+    const sourcePosition = first?.position || source?.position || placementPosition() || { x: 0, y: 0, z: -1.4 };
+    const sourceAnchor = first?.simulatedAnchor || source?.simulatedAnchor || { x: 50, y: 56 };
+    const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
+    groundYEstimate = groundBaseY;
+    const totem = {
+        ...createMinimalMarkerDraft('area_checkpoint', {
+            name: 'Kitchen Garden Totem',
+            description: 'A second Area Totem linked to the Food Forest Area.'
+        }),
+        position: {
+            x: sourcePosition.x - 1.15,
+            y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
+            z: sourcePosition.z + .1
+        },
+        groundBaseY,
+        type: 'area_checkpoint',
+        demoType: 'zone',
+        tutorialStage: 'totem2',
+        demoTotemStyle: 'basic',
+        demoLinkVisible: true,
+        demoLinkDirection: 'left',
+        demoLinkDestination: 'Food Forest Area',
+        demoExpanded: true,
+        demoInteractive: true,
+        demoPanelOffset: { x: 0, y: 0 },
+        simulatedAnchor: {
+            x: Math.max(18, Math.min(38, sourceAnchor.x - 38)),
+            y: Math.max(64, Math.min(80, sourceAnchor.y))
+        },
+        revealTitle: true,
+        revealLines: 5,
+        demoContent: DEMO_CONTENT.zoneTwo,
+        texture: null
+    };
+    if (first) {
+        first.demoLinkVisible = true;
+        first.demoLinkDirection = 'right';
+        first.demoLinkDestination = 'Kitchen Garden Area';
+        first.demoLinkPartner = totem.id;
+        first.demoContent = {
+            ...first.demoContent,
+            bubbles: [...(first.demoContent?.bubbles || []), 'LINKED TO KITCHEN GARDEN'].slice(0, 5)
+        };
+        totem.demoLinkPartner = first.id;
+        if (first.texture) gl?.deleteTexture(first.texture);
+        first.texture = createMarkerTexture(first);
+    }
+    totem.texture = createMarkerTexture(totem);
+    markers.push(totem);
+    updateSimulatedMarkers();
+    setGuide('Two Totems now represent two Areas. Tap the second Totem model control to cycle Basic, Organic and Flat disc.');
+    showSceneContinue('Explain linked Areas', showLinkedTotemsIntroduction);
+}
+
+function cycleDemoTotemStyle(record) {
+    if (!record || record.demoType !== 'zone' || record.tutorialStage !== 'totem2') return false;
+    const currentIndex = DEMO_TOTEM_STYLES.findIndex(style => style.id === (record.demoTotemStyle || 'basic'));
+    const next = DEMO_TOTEM_STYLES[(currentIndex + 1 + DEMO_TOTEM_STYLES.length) % DEMO_TOTEM_STYLES.length];
+    record.demoTotemStyle = next.id;
+    record.demoTotemStyleCycles = (Number(record.demoTotemStyleCycles) || 0) + 1;
+    refreshDemoRecord(record);
+    setGuide(`Second Totem model: ${next.label}. Cycle again to compare all three Totem forms.`);
+    return true;
+}
+
+function showLinkedTotemsIntroduction() {
+    showIntroBoard(
+        'Linked Areas',
+        [
+            'Each Totem represents one Area: a place where local plants, observations, and Area information can live together.',
+            'Linking two Totems creates a visible bridge between Areas. The direction sign names the other Area so visitors can follow the connection.',
+            'In a real project, selecting that sign can move from one Area to the next — for example, from a living room Area to a kitchen Area.',
+            'The second Totem can use a Basic, Organic, or Flat disc model while keeping the same Area link and information.'
+        ],
+        'Continue',
+        showDemoClosingMessage
+    );
 }
 
 function showTotemIntroduction() {
     showIntroBoard(
         'Totem Markers',
         [
-            'Totems are the epicenters of each area where plant orbs live.',
-            'They carry information about guilds and microclimates and curiosities about a specific area',
-            'They also Help anchor virtual information into real spaces.',
-            'Press continue and see one example of information attached to a totem.'
+            'Each Totem represents an Area: a real place where plant orbs, observations, and local knowledge live together.',
+            'Totems carry information about guilds, microclimates, and curiosities for that specific Area.',
+            'Two Totems can be linked to create a bridge between Areas, such as a Living Room Area and a Kitchen Area.',
+            'Press Continue to place the first Area Totem, then add a second one and see the link.'
         ],
         'Continue',
         () => {
@@ -1068,7 +1169,14 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
     const bubbles = (content?.bubbles || content?.lines || []).filter(Boolean).slice(0, 5);
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem Marker information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}</span>`;
+    const style = DEMO_TOTEM_STYLES.find(item => item.id === (record.demoTotemStyle || 'basic')) || DEMO_TOTEM_STYLES[0];
+    const styleControl = record.tutorialStage === 'totem2'
+        ? `<button type="button" class="tryit-sim-totem-model-toggle" data-demo-totem-style-toggle aria-label="Change second Totem model">Model: ${style.label}<small>Tap to change</small></button>`
+        : '';
+    const linkLabel = record.demoLinkVisible
+        ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
+        : '';
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system is-totem-style-${style.id}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem Marker information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}${linkLabel}${styleControl}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -1115,6 +1223,12 @@ export function selectDemoPlantRecord(target, reveal = toggleDemoPlantProfile) {
 
 function selectDemoPlantAtPointer() {
     return selectDemoPlantRecord(demoRecordAtPointer());
+}
+
+function selectDemoTotemStyleAtPointer() {
+    const target = demoRecordAtPointer();
+    if (!target || target.record.demoType !== 'zone' || target.record.tutorialStage !== 'totem2') return false;
+    return cycleDemoTotemStyle(target.record);
 }
 
 function selectDemoProfileCell() {
@@ -1211,10 +1325,24 @@ function demoPimNodeAtPointer(record) {
     return demoPimPointerTarget(record)?.node || null;
 }
 
+function renderSimulatedAreaLink() {
+    const linked = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && record.simulatedAnchor);
+    if (linked.length < 2) return '';
+    const [first, second] = linked;
+    const start = first.simulatedAnchor;
+    const end = second.simulatedAnchor;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const width = Math.max(2, Math.hypot(dx, dy));
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    return `<span class="tryit-sim-area-link-line" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
+}
+
 function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
-    layer.innerHTML = markers.map((record, index) => {
+    layer.innerHTML = `${renderSimulatedAreaLink()}${markers.map((record, index) => {
         const content = demoContentFor(record);
         const lines = content?.lines?.slice(0, record.revealLines ?? content.lines.length) || [];
         const anchor = record.simulatedAnchor || { x: 50, y: 50 };
@@ -1231,7 +1359,7 @@ function updateSimulatedMarkers() {
             : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
         return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
-    }).join('');
+    }).join('')}`;
     bindSimulatedInformationPanels(layer);
 }
 
@@ -1326,6 +1454,32 @@ function bindSimulatedInformationPanels(layer) {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
                 compactMarker.click();
+            });
+            return;
+        }
+        if (record.demoType === 'zone') {
+            const cycle = event => {
+                event?.preventDefault();
+                event?.stopPropagation();
+                cycleDemoTotemStyle(record);
+            };
+            compactMarker.querySelector('[data-demo-totem-style-toggle]')?.addEventListener('pointerdown', event => {
+                event.stopPropagation();
+                suppressSessionSelectUntil = performance.now() + 500;
+            });
+            compactMarker.querySelector('[data-demo-totem-style-toggle]')?.addEventListener('click', cycle);
+            compactMarker.querySelector('[data-demo-totem-style-toggle]')?.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                cycle(event);
+            });
+            compactMarker.addEventListener('click', event => {
+                if (record.tutorialStage !== 'totem2' || event.target?.closest?.('[data-demo-totem-style-toggle]')) return;
+                cycle(event);
+            });
+            compactMarker.addEventListener('keydown', event => {
+                if (record.tutorialStage !== 'totem2' || (event.key !== 'Enter' && event.key !== ' ')) return;
+                event.preventDefault();
+                cycle(event);
             });
             return;
         }
@@ -2568,6 +2722,33 @@ function drawMarker(view) {
     });
     markers.forEach(record => {
         if (record.demoType !== 'zone') return;
+        const style = record.demoTotemStyle || 'basic';
+        const groundBaseY = Number.isFinite(Number(record.groundBaseY))
+            ? Number(record.groundBaseY)
+            : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
+        if (style === 'organic') {
+            drawSpatialOrb(gl, sphereRenderer, view, {
+                ...record.position,
+                y: groundBaseY + .44
+            }, .44, {
+                color: [.06, .24, .12],
+                alpha: .98,
+                emissive: .2
+            });
+            return;
+        }
+        if (style === 'flat-disc') {
+            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
+                ...record.position,
+                y: groundBaseY + .06
+            }, .48, {
+                color: [.16, .43, .22],
+                alpha: .98,
+                emissive: .2,
+                scale: { x: 1, y: .16, z: 1 }
+            });
+            return;
+        }
         drawSpatialPrism(gl, prismRenderer, view, record.position, {
             halfWidth: .16,
             halfHeight: .9,
@@ -2577,6 +2758,20 @@ function drawMarker(view) {
             rotationY: Math.PI / 7
         });
     });
+    const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);
+    if (linkedTotems.length >= 2) {
+        const [first, second] = linkedTotems;
+        const firstGround = Number(first.groundBaseY ?? (first.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES);
+        const secondGround = Number(second.groundBaseY ?? (second.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES);
+        drawSpatialTether(
+            gl,
+            tetherRenderer,
+            view,
+            { ...first.position, y: firstGround + .52 },
+            { ...second.position, y: secondGround + .52 },
+            { width: .012, color: [.4, .9, .72, .82], curve: .02, lift: .04 }
+        );
+    }
 
     markers.forEach(record => {
         if (record.demoType !== 'plant' || !record.demoExpanded) return;
@@ -2729,6 +2924,7 @@ async function startImmersive() {
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
             if (selectDemoPlantAtPointer()) return;
+            if (selectDemoTotemStyleAtPointer()) return;
             selectGuidedDemoOrb();
         });
         session.addEventListener('selectstart', () => {

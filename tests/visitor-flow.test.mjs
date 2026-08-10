@@ -484,7 +484,15 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /Totems are the epicenters of each area where plant orbs live/);
+    assert.match(source, /Each Totem represents an Area/);
+    assert.match(source, /function createDemoSecondTotem\(\)/);
+    assert.match(source, /const DEMO_TOTEM_STYLES/);
+    assert.match(source, /function cycleDemoTotemStyle\(record\)/);
+    assert.match(source, /demoLinkVisible: true/);
+    assert.match(source, /LINKED AREAS/);
+    assert.match(source, /if \(record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
+    assert.match(styles, /\.tryit-sim-totem-model-toggle/);
+    assert.match(styles, /\.tryit-sim-area-link-line/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
     assert.match(source, /Select a cell to expand its connected knowledge/);
