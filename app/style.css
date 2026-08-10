@@ -5056,6 +5056,11 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .ala-preview-facts div { display:grid; gap:.16rem; min-width:0; padding:.45rem; border-radius:9px; background:rgba(226,238,220,.48); }
 .ala-preview-facts dt { color:#68806c; font-size:.57rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
 .ala-preview-facts dd { overflow:hidden; margin:0; color:#354c3b; font-size:.66rem; text-overflow:ellipsis; white-space:nowrap; }
+.ala-import-extraction { display:grid; gap:.35rem; margin:0; padding:.6rem; border:1px solid rgba(57,105,79,.16); border-radius:11px; background:rgba(226,238,220,.3); }
+.ala-import-extraction legend { padding:0 .2rem; color:#3b6545; font-size:.7rem; font-weight:850; }
+.ala-import-extraction p { margin:0 0 .15rem; font-size:.65rem; }
+.ala-import-extraction label { display:flex; align-items:center; gap:.4rem; color:#46614b; font-size:.68rem; }
+.ala-import-extraction input { accent-color:#39764a; }
 .ala-manual-action { justify-self:start; margin-top:.35rem; }
 
 @media (max-width:520px) {
@@ -5928,6 +5933,32 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-global-result em { color:#526b59; font-size:.7rem; }
 .field-guide-global-result small { color:#68766c; font-size:.65rem; }
 .field-guide-global-convert { justify-self:start; min-height:32px; padding:.35rem .65rem; font-size:.68rem; }
+.field-guide-global-profile { grid-column:1 / -1; display:grid; gap:.75rem; min-width:0; padding:.85rem; border:1px solid rgba(55,104,68,.24); border-radius:16px 7px 16px 7px; background:linear-gradient(145deg,#fffdf4,#e9f3e5); }
+.field-guide-global-profile-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
+.field-guide-global-profile-heading h3 { margin:.15rem 0 .1rem; color:#244f36; font-size:1.15rem; }
+.field-guide-global-profile-heading em { color:#526b59; font-size:.76rem; }
+.field-guide-global-profile-kicker { color:#8a682e; font-size:.58rem; font-weight:900; letter-spacing:.12em; }
+.field-guide-global-profile-heading .ghost { min-height:30px; padding:.3rem .55rem; font-size:.64rem; }
+.field-guide-global-profile-body { display:grid; grid-template-columns:72px minmax(0,1fr); gap:.7rem; align-items:start; }
+.field-guide-global-profile-body > img,.field-guide-global-profile-placeholder { display:grid; place-items:center; width:72px; height:72px; border-radius:13px; background:#e1eee0; color:#4d8156; font-size:1.8rem; object-fit:cover; }
+.field-guide-global-profile-body dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.45rem .7rem; margin:0; }
+.field-guide-global-profile-body dl div { display:grid; gap:.08rem; min-width:0; }
+.field-guide-global-profile-body dt { color:#6b786d; font-size:.58rem; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
+.field-guide-global-profile-body dd { margin:0; overflow:hidden; color:#304e39; font-size:.72rem; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-global-profile-note { margin:0; color:#5d6c60; font-size:.7rem; line-height:1.4; }
+.field-guide-global-profile-extract { display:grid; gap:.55rem; padding:.7rem; border:1px solid rgba(55,104,68,.18); border-radius:13px; background:rgba(255,255,252,.76); }
+.field-guide-global-profile-extract h4,.field-guide-global-profile-extract p { margin:0; }
+.field-guide-global-profile-extract h4 { color:#315c3e; font-size:.84rem; }
+.field-guide-global-profile-extract > div p { margin-top:.15rem; color:#66746a; font-size:.67rem; line-height:1.35; }
+.field-guide-global-profile-extract fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; margin:0; padding:0; border:0; }
+.field-guide-global-profile-extract legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.field-guide-global-profile-extract label { display:flex; align-items:flex-start; gap:.4rem; min-width:0; padding:.4rem .45rem; border:1px solid rgba(55,104,68,.13); border-radius:9px; background:#fff; color:#3e5d47; font-size:.67rem; line-height:1.25; }
+.field-guide-global-profile-extract label span { display:grid; gap:.08rem; min-width:0; }
+.field-guide-global-profile-extract label small { color:#748078; font-size:.59rem; }
+.field-guide-global-profile-extract input { flex:0 0 auto; margin-top:.1rem; accent-color:#39764a; }
+.field-guide-global-profile-extract > button { justify-self:start; min-height:34px; padding:.35rem .7rem; font-size:.68rem; }
+.field-guide-global-profile-status { color:#9b4f2d; font-size:.66rem; }
+.field-guide-global-profile-status:empty { display:none; }
 .field-guide-tool .field-guide-search-deck { padding:.6rem; }
 .field-guide-tool .field-guide-search-deck .field { gap:.25rem; }
 .field-guide-tool .field-guide-search-deck label { color:#405947; font-size:.68rem; font-weight:800; }

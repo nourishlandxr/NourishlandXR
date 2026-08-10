@@ -1498,8 +1498,12 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(providerService, /searchAlaPlants/);
     assert.match(providerService, /searchGbifPlants/);
     assert.match(providerService, /searchINaturalistPlants/);
-    assert.match(fieldGuide, /Convert to NLXR profile/);
+    assert.match(fieldGuide, /Open profile/);
+    assert.match(fieldGuide, /data-global-extract-field/);
+    assert.match(fieldGuide, /Convert selected content/);
     assert.match(fieldGuide, /openGlobalPlantProfile/);
+    assert.match(fieldMarker, /stagePimImport/);
+    assert.match(fieldMarker, /Content selected for NLXR/);
     assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);
     assert.match(alaSearch, /encodeURIComponent/);
     assert.match(alaSearch, /AbortController/);

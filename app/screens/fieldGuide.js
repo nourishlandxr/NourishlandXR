@@ -158,14 +158,61 @@ function applyCreatorWebHubCopy(app) {
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
     let searchScope = 'local';
+    let openGlobalProfile = null;
+    const globalExtractionFields = result => new Set(Array.isArray(result?.extractionFields) && result.extractionFields.length
+        ? result.extractionFields
+        : ['common_name', 'scientific_name', ...(result?.family ? ['family'] : []), ...(result?.thumbnailUrl ? ['image'] : [])]);
+    const referenceProfileMarkup = result => {
+        const extraction = globalExtractionFields(result);
+        const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
+        return `<article class="field-guide-global-profile" aria-labelledby="fieldGuideGlobalProfileTitle">
+            <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL REFERENCE PROFILE</span><h3 id="fieldGuideGlobalProfileTitle">${escapeHtml(displayName)}</h3><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em></div><button type="button" class="ghost" data-global-profile-back>Back to results</button></header>
+            <div class="field-guide-global-profile-body">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-profile-placeholder" aria-hidden="true">🌿</span>'}<dl><div><dt>Scientific name</dt><dd><i>${escapeHtml(result.scientificName || 'Not supplied')}</i></dd></div><div><dt>Family</dt><dd>${escapeHtml(result.family || 'Not supplied')}</dd></div><div><dt>Rank</dt><dd>${escapeHtml(result.rank || 'Taxon')}</dd></div><div><dt>Source</dt><dd>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</dd></div></dl></div>
+            <p class="field-guide-global-profile-note">This is the source record as returned by the global plant databases. It is not added to your project until you choose what to extract.</p>
+            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div><h4 id="fieldGuideGlobalExtractTitle">Convert selected content</h4><p>Choose only the facts that belong in your NLXR Plant Profile and PIM. The source citation is kept automatically.</p></div><fieldset><legend>Content to bring into NLXR</legend><label><input type="checkbox" data-global-extract-field="common_name" ${extraction.has('common_name') ? 'checked' : ''} /> <span><strong>Display name</strong><small>Plant identity</small></span></label><label><input type="checkbox" data-global-extract-field="scientific_name" ${extraction.has('scientific_name') ? 'checked' : ''} /> <span><strong>Accepted scientific name</strong><small>Scientific Information · taxonomy</small></span></label>${result.family ? `<label><input type="checkbox" data-global-extract-field="family" ${extraction.has('family') ? 'checked' : ''} /> <span><strong>Family</strong><small>Scientific Information · classification</small></span></label>` : ''}${result.thumbnailUrl ? `<label><input type="checkbox" data-global-extract-field="image" ${extraction.has('image') ? 'checked' : ''} /> <span><strong>Reference image</strong><small>Plant profile image</small></span></label>` : ''}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Convert selected content</button></section>
+        </article>`;
+    };
     const renderGlobalResults = results => {
         if (!globalResults) return;
-        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : ''}<span><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-convert" data-global-plant-index="${index}">Convert to NLXR profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : ''}<span><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
         globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
             const result = results[Number(button.dataset.globalPlantIndex)];
-            const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
-            if (!result || !siteGroup?.site?.id || !currentGuide?.creator) return;
-            button.disabled = true;
+            if (!result) return;
+            openGlobalProfile = result;
+            globalResults.innerHTML = referenceProfileMarkup(result);
+            globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
+                openGlobalProfile = null;
+                renderGlobalResults(results);
+                if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
+            });
+            const profileStatus = globalResults.querySelector('[data-global-profile-status]');
+            globalResults.querySelector('[data-global-profile-convert]')?.addEventListener('click', async event => {
+                const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
+                const hasPimContent = selectedFields.some(field => ['scientific_name', 'family'].includes(field));
+                if (!hasPimContent) {
+                    if (profileStatus) profileStatus.textContent = 'Select at least one Scientific Information field to create usable PIM content.';
+                    return;
+                }
+                const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
+                if (!siteGroup?.site?.id || !currentGuide?.creator) return;
+                event.currentTarget.disabled = true;
+                event.currentTarget.textContent = 'Opening NLXR profile';
+                try {
+                    await openGlobalPlantProfile(app, {
+                        project: currentGuide.project.id,
+                        site: siteGroup.site.id,
+                        place: currentGuidePlaceId || '__unassigned__',
+                        globalPlant: { ...result, extractionFields: selectedFields }
+                    });
+                } catch (error) {
+                    event.currentTarget.disabled = false;
+                    event.currentTarget.textContent = 'Convert selected content';
+                    if (profileStatus) profileStatus.textContent = `Could not open the NLXR profile: ${error.message}`;
+                }
+            });
+            return;
+            /* Legacy direct conversion flow retained below for compatibility. */
+            if (false) {
             button.textContent = 'Opening profile…';
             try {
                 await openGlobalPlantProfile(app, {
@@ -179,12 +226,14 @@ function applyCreatorWebHubCopy(app) {
                 button.textContent = 'Convert to NLXR profile';
                 if (globalStatus) globalStatus.textContent = `Could not open the plant profile: ${error.message}`;
             }
+            }
         }));
     };
     const searchGlobal = value => {
         clearTimeout(globalGuideSearchTimer);
         const query = String(value || '').trim();
         if (globalResults) globalResults.innerHTML = '';
+        openGlobalProfile = null;
         if (query.length < 2) {
             if (globalStatus) globalStatus.textContent = 'Type at least 2 letters.';
             return;
@@ -195,7 +244,7 @@ function applyCreatorWebHubCopy(app) {
                 const results = await searchGlobalPlants(query);
                 if (searchInput.value.trim() !== query || searchScope !== 'global') return;
                 renderGlobalResults(results);
-                if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to convert it into an NLXR profile.` : `No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.`;
+                if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.` : `No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.`;
             } catch (error) {
                 if (globalStatus) globalStatus.textContent = 'Plant database unavailable. Try again or continue with local records.';
             }

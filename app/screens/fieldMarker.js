@@ -1,6 +1,8 @@
-import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
+import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces, savePlantProfile } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { createPlantProvenance, PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
+import { createPimDocument } from '../services/pimModel.js';
+import { stagePimImport } from '../services/pimImportReview.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 
@@ -34,16 +36,20 @@ function alaResultMarkup(result, index) {
 }
 
 function alaPreviewMarkup(result) {
+    const extraction = new Set(Array.isArray(result.extractionFields) && result.extractionFields.length
+        ? result.extractionFields
+        : ['common_name', 'scientific_name', ...(result.family ? ['family'] : []), ...(result.thumbnailUrl ? ['image'] : [])]);
     const thumbnail = result.thumbnailUrl
         ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
         : '<span class="ala-result-placeholder" aria-hidden="true">🌿</span>';
     return `<section class="ala-import-preview" aria-labelledby="alaImportPreviewTitle">
-        <div class="ala-preview-heading"><div><p class="welcome-label">IMPORT PREVIEW</p><h2 id="alaImportPreviewTitle">Review plant record</h2></div><span class="ala-preview-source">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</span></div>
+        <div class="ala-preview-heading"><div><p class="welcome-label">REFERENCE PROFILE</p><h2 id="alaImportPreviewTitle">Review plant record</h2></div><span class="ala-preview-source">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</span></div>
         <div class="ala-preview-identity"><span class="ala-result-image">${thumbnail}</span><div><strong>${escapeHtml(result.scientificName)}</strong><small>${escapeHtml([result.rank, result.family, result.kingdom].filter(Boolean).join(' · ') || 'Plant taxonomy')}</small></div></div>
         <div class="field"><label for="alaImportCommonName">Display / common name</label><input id="alaImportCommonName" value="${escapeHtml(result.commonName || result.canonicalName || result.scientificName)}" /></div>
+        <fieldset class="ala-import-extraction"><legend>Content selected for NLXR</legend><p class="meta">Choose the fields to carry into the Plant Profile and PIM. Source provenance is always kept.</p><label><input type="checkbox" data-global-extract-field="common_name" ${extraction.has('common_name') ? 'checked' : ''} /> Display name · Plant identity</label><label><input type="checkbox" data-global-extract-field="scientific_name" ${extraction.has('scientific_name') ? 'checked' : ''} /> Accepted scientific name · Scientific Information</label>${result.family ? `<label><input type="checkbox" data-global-extract-field="family" ${extraction.has('family') ? 'checked' : ''} /> Family · Scientific Information</label>` : ''}${result.thumbnailUrl ? `<label><input type="checkbox" data-global-extract-field="image" ${extraction.has('image') ? 'checked' : ''} /> Reference image · Plant Profile</label>` : ''}</fieldset>
         <dl class="ala-preview-facts"><div><dt>Scientific name</dt><dd><i>${escapeHtml(result.scientificName)}</i></dd></div><div><dt>Family</dt><dd>${escapeHtml(result.family || 'Not supplied by ALA')}</dd></div><div><dt>Source record</dt><dd>${escapeHtml(result.externalId)}</dd></div></dl>
-        <p class="meta">This converts the selected record into an editable NLXR Plant Profile. External taxonomy remains cited reference information; your observations, practices and relationships stay separate.</p>
-        <div class="button-row"><button type="button" onclick="window.cancelGlobalPlantPreview()">Return to results</button><button class="primary" type="button" onclick="window.confirmGlobalPlantImport()">Convert to NLXR Plant Profile</button></div>
+        <p class="meta">This is the source record as returned by the global plant databases. Nothing is added until you convert the selected content into an editable NLXR Plant Profile.</p>
+        <div class="button-row"><button type="button" onclick="window.cancelGlobalPlantPreview()">Return to results</button><button class="primary" type="button" onclick="window.confirmGlobalPlantImport()">Create profile with selected content</button></div>
     </section>`;
 }
 
@@ -211,11 +217,16 @@ export function continueManualPlantCreation() {
 export async function confirmGlobalPlantImport() {
     if (!selectedGlobalPlant) return;
     const commonName = document.getElementById('alaImportCommonName')?.value.trim();
+    const extractionFields = [...document.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
     if (!commonName) {
         document.getElementById('fieldError').textContent = 'Add a display or common name before creating the Plant Profile.';
         return;
     }
-    selectedGlobalPlant = { ...selectedGlobalPlant, commonName };
+    if (!extractionFields.some(field => ['scientific_name', 'family'].includes(field))) {
+        document.getElementById('fieldError').textContent = 'Select at least one Scientific Information field to create usable PIM content.';
+        return;
+    }
+    selectedGlobalPlant = { ...selectedGlobalPlant, commonName, extractionFields };
     document.getElementById('fieldName').value = commonName;
     alaImportConfirmed = true;
     await saveFieldMarker({ preventDefault() {}, submitter: { value: 'later' } });
@@ -246,6 +257,41 @@ export async function openGlobalPlantProfile(target, defaults = {}) {
 
 export function refreshFieldLocation() {
     document.getElementById('fieldError').textContent = 'Use Place in AR after saving to add a physical position.';
+}
+
+async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId, commonName) {
+    if (!selectedGlobalPlant || !Array.isArray(selectedGlobalPlant.extractionFields)) return;
+    const selectedFields = new Set(selectedGlobalPlant.extractionFields);
+    const profile = {
+        common_name: commonName,
+        scientific_name: selectedFields.has('scientific_name') ? selectedGlobalPlant.scientificName || '' : '',
+        family: selectedFields.has('family') ? selectedGlobalPlant.family || '' : '',
+        photo: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
+        image: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
+        externalSources: [createPlantProvenance(selectedGlobalPlant)]
+    };
+    const importFields = {};
+    if (profile.scientific_name) importFields.scientificName = profile.scientific_name;
+    if (profile.family) importFields.family = profile.family;
+    if (Object.keys(importFields).length) {
+        const document = createPimDocument({
+            plantId: markerId,
+            identity: { commonName, scientificName: profile.scientific_name, image: profile.image }
+        });
+        const staging = stagePimImport(document, {
+            ...importFields,
+            sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL,
+            sourceRecordId: selectedGlobalPlant.externalId || selectedGlobalPlant.sourceId || '',
+            sourceUrl: selectedGlobalPlant.sourceUrl || '',
+            licence: selectedGlobalPlant.imageLicense || '',
+            attribution: selectedGlobalPlant.imageAttribution || ''
+        }, { plantId: markerId, attribution: selectedGlobalPlant.imageAttribution || '' });
+        profile.profile_enabled = true;
+        profile.spm_enabled = true;
+        profile.pim_document = staging.document;
+        profile.pim_import_review = staging;
+    }
+    await savePlantProfile(projectId, siteId, placeId, markerId, profile);
 }
 
 export async function saveFieldMarker(event) {
@@ -295,6 +341,9 @@ export async function saveFieldMarker(event) {
                 visibility,
                 ...(nonPlantMode && type === 'sub_checkpoint' ? { content_domain: 'nonplant', marker_kind: 'np_marker', dynamic_marker: true } : {})
             });
+        if (type === 'plant' && selectedGlobalPlant && alaImportConfirmed) {
+            await saveSelectedGlobalPimContent(selected.project, selected.site, place.id, marker.id, name);
+        }
         recordTutorialEvent(selected.project, 'first_item_created');
         if (saveIntent === 'later') recordTutorialEvent(selected.project, 'first_unplaced_item_saved');
         if (saveIntent === 'ar') window.renderArPreparation(encodeURIComponent(selected.project), 'existing-placement', encodeURIComponent(marker.id), encodeURIComponent(place.id), encodeURIComponent(selected.site));
