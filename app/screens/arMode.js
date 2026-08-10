@@ -54,6 +54,7 @@ let activeProjectName = '';
 let activeSiteId = '';
 let activeAreaId = '';
 let activeAreaName = '';
+let activeAreaDescription = '';
 let activeCheckpointId = '';
 let areaLensOpen = false;
 let startPromise = null;
@@ -154,7 +155,10 @@ const TASKBAR_V2_COLORS = Object.freeze({
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
 const visibleQuestSpecialPaletteActions = () => QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => !action.hidden);
-const CREATOR_AR_HOLD_DELAY_MS = 420;
+// Keep the same deliberate hold gesture in every AR mode. This makes an orb
+// movable without first switching to the HAND/Grab control, while preserving
+// a short tap for opening information or edit tools.
+const CREATOR_AR_HOLD_DELAY_MS = 800;
 const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14;
 const DEFAULT_LOCATION_NOTE = Object.freeze({
     enabled: true,
@@ -437,6 +441,37 @@ function activeAreaMarkers() {
     return sessionMarkers.filter(record => record.areaId === activeAreaId);
 }
 
+function linkedTotemAreas(record) {
+    return (Array.isArray(record?.areaLinks) ? record.areaLinks : [])
+        .map((link, index) => ({
+            ...link,
+            targetAreaId: String(link?.target_area_id || link?.targetAreaId || '').trim(),
+            targetAreaName: String(link?.target_area_name || link?.targetAreaName || link?.target_area_id || 'Linked Area').trim(),
+            direction: index % 2 === 0 ? 'right' : 'left'
+        }))
+        .filter(link => link.targetAreaId);
+}
+
+async function transitionToLinkedArea(areaId) {
+    const targetId = String(areaId || '').trim();
+    if (!targetId || !activeProjectId || !activeSiteId) return false;
+    const operation = captureArOperationContext();
+    const areas = await loadSitePlaces(activeProjectId, activeSiteId).catch(() => []);
+    if (!isArOperationCurrent(operation, { matchLocation: false })) return false;
+    const area = areas.find(candidate => candidate.id === targetId);
+    if (!area) {
+        setPlacementStatus('The linked Area is no longer available in this project.');
+        return false;
+    }
+    activateArea(area);
+    const restoreOperation = captureArOperationContext();
+    await restoreRecordedMarkers({ ...restoreOperation, areaId: area.id });
+    if (!isArOperationCurrent(restoreOperation, { matchLocation: false })) return false;
+    closeAreaLens();
+    setPlacementStatus(`${activeAreaName || DEFAULT_HOME_AREA_NAME} loaded from its linked Totem. Its saved content is now active.`);
+    return true;
+}
+
 function hasRenderableSpatialPosition(record) {
     return record?.unplaced !== true
         && record?.position
@@ -470,6 +505,7 @@ function activateArea(area) {
     }
     activeAreaId = nextAreaId;
     activeAreaName = isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : area?.name || '';
+    activeAreaDescription = String(area?.description || '').trim();
     updateLocationNote();
     updateAreaLens();
 }
@@ -526,14 +562,21 @@ function creatorTotemInformationMarkup(record) {
     const board = areaBoard(record.marker);
     const introduction = String(board.introduction || '').trim();
     const isGeneratedWelcome = /^welcome to\s+[^.!?]+[.!?]?$/i.test(introduction);
-    const text = [isGeneratedWelcome ? '' : introduction, ...board.informationBubbles].filter(Boolean).slice(0, 6);
-    if (!text.length) return '';
+    const areaContext = String(record.areaDescription || '').trim();
+    const text = [isGeneratedWelcome ? '' : introduction, areaContext ? `Area context: ${areaContext}` : '', ...board.informationBubbles].filter(Boolean).slice(0, 6);
+    const linkedAreas = linkedTotemAreas(record);
+    if (!text.length && !linkedAreas.length) return '';
+    const signs = linkedAreas.map(link => `<button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Open linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>OPEN AREA</small></span></button>`).join('');
+    const balloon = text.length
+        ? `<section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
+          <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
+        </section>`
+        : '';
     return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
         <span class="creator-ar-location-ground creator-ar-totem-attachment" aria-hidden="true"></span>
-        <section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
-          <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
-        </section>
+        ${balloon}
+        <div class="creator-ar-totem-link-signs" aria-label="Linked Area transitions">${signs}</div>
       </aside>`;
 }
 
@@ -957,7 +1000,7 @@ function clearMarkerHoldGesture() {
 }
 
 function beginMarkerHoldGesture(record, event) {
-    if (!interactionMode || readyPlacementType || dragState || markerHoldGesture) return false;
+    if (!['neutral', 'view', 'grab', 'select'].includes(interactionMode) || readyPlacementType || dragState || markerHoldGesture) return false;
     if (event.button != null && event.button !== 0) return false;
     const element = event.currentTarget;
     if (!element) return false;
@@ -1002,6 +1045,9 @@ function finishMarkerHoldGesture(record, event) {
     clearMarkerHoldGesture();
     event.preventDefault();
     event.stopPropagation();
+    // In explicit Grab mode a short tap should not turn into a one-frame drag.
+    // The delayed hold above is the only gesture that starts movement.
+    if (interactionMode === 'grab') return true;
     beginMarkerInteraction(record, event);
     return true;
 }
@@ -1017,10 +1063,6 @@ function cancelMarkerHoldGesture(event) {
 }
 
 function handleMarkerPointerDown(record, event) {
-    if (interactionMode === 'grab') {
-        beginMarkerInteraction(record, event);
-        return;
-    }
     beginMarkerHoldGesture(record, event);
 }
 
@@ -1313,7 +1355,7 @@ function pointerWorldOrigin() {
 function controllerMarkerRadius(record) {
     const marker = record?.marker || {};
     if (marker.type === 'note') return .62;
-    if (marker.type === 'area_checkpoint') return .48;
+    if (marker.type === 'area_checkpoint') return .7;
     if (marker.special_symbol) return .5;
     if (marker.type === 'plant') return markerAppearanceShape(marker) === 'plate' ? .12 : .064;
     return .12;
@@ -1810,7 +1852,7 @@ function setInteractionMode(mode) {
     closeUnplacedBag();
     if (interactionMode !== 'select') closeMarkerContextToolbar();
     updateInteractionControls();
-    if (interactionMode === 'view') setPlacementStatus('View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.');
+    if (interactionMode === 'view') setPlacementStatus('View / Edit mode. Tap a Marker to reveal or hide information; hold it for 0.8 seconds to move it.');
     else if (interactionMode === 'grab') setPlacementStatus('Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.');
     else if (interactionMode === 'select') setPlacementStatus('Pointer mode is on. Tap a placed object to open its compact edit tools.');
     else setPlacementStatus('Aim dot ready. Hold any placed item to move it, or use Pointer mode for edit tools.');
@@ -3099,22 +3141,13 @@ function drawSpatialMarkers(view) {
                 });
                 return;
             }
-            if (totemStyle === 'light-post') {
-                const poleHalfHeight = Math.max(.24, halfHeight * .72);
-                const poleHalfWidth = Math.max(.025, halfWidth * .32);
-                drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
-                    halfWidth: poleHalfWidth,
-                    halfHeight: poleHalfHeight,
-                    halfDepth: poleHalfWidth,
-                    color: [.17, .36, .3],
-                    topColor: [.56, .78, .64],
-                    rotationY: (Number(record.rotationDegrees) || 0) * Math.PI / 180
-                });
-                const domeRadius = Math.max(.07, halfWidth * .86);
-                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + poleHalfHeight * 2 + domeRadius * .72 }, domeRadius, {
+            if (totemStyle === 'flat-disc') {
+                const radius = Math.max(.14, Math.min(.38, halfHeight * .56));
+                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + .035 }, radius, {
                     color: totemColor,
-                    alpha: .96,
-                    emissive: .28
+                    alpha: .98,
+                    emissive: .18,
+                    scale: { x: 1, y: .16, z: 1 }
                 });
                 return;
             }
@@ -3378,6 +3411,17 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
     information.style.setProperty('--location-stick-angle', `${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2)}deg`);
     information.style.setProperty('--location-ground-x', `${attachmentPoint.x.toFixed(1)}px`);
     information.style.setProperty('--location-ground-y', `${attachmentPoint.y.toFixed(1)}px`);
+    const signWidth = Math.min(184, Math.max(132, window.innerWidth * .34));
+    const signGap = Math.max(12, Math.min(28, window.innerWidth * .035));
+    information.querySelectorAll('[data-ar-totem-link-area]').forEach((sign, index) => {
+        const direction = sign.classList.contains('is-left') ? -1 : 1;
+        const row = Math.floor(index / 2);
+        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (boardWidth / 2 + signWidth / 2 + signGap + row * 8)));
+        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 22 - row * 54));
+        sign.style.left = `${signX.toFixed(1)}px`;
+        sign.style.top = `${signY.toFixed(1)}px`;
+        sign.style.width = `${signWidth.toFixed(1)}px`;
+    });
 }
 
 function renderSessionMarkers() {
@@ -3444,6 +3488,18 @@ function renderSessionMarkers() {
             invalidateSpatialPimTexture(record);
             persistSpatialPimPose(record);
             setPlacementStatus(`${record.marker.name} PIM recentered and world-locked in front of you.`);
+        });
+        const totemInformation = layer.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
+        totemInformation?.querySelectorAll('[data-ar-totem-link-area]').forEach(sign => {
+            sign.addEventListener('pointerdown', event => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            sign.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                void transitionToLinkedArea(sign.dataset.arTotemLinkArea);
+            });
         });
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-pim-node]`).forEach(cell => {
             cell.addEventListener('pointerdown', event => {
@@ -3832,6 +3888,12 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     };
     if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
     const savedMarkers = await loadPlaceMarkers(operation.projectId, siteId, area.id).catch(() => []);
+    const areaLinks = (Array.isArray(area.totem_links) ? area.totem_links : [])
+        .map(link => ({
+            ...link,
+            target_area_name: areas.find(candidate => candidate.id === link?.target_area_id)?.name || link?.target_area_id || 'Linked Area'
+        }))
+        .filter(link => link?.target_area_id);
     const restored = await Promise.all(savedMarkers.map(async savedMarker => {
         const marker = normalizeSpatialMarker(savedMarker);
         const [anchor, plantProfile] = await Promise.all([
@@ -3860,6 +3922,8 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             siteId,
             areaId: area.id,
             areaName: area.name,
+            areaDescription: String(area.description || '').trim(),
+            areaLinks,
             coordinateSpace: anchor?.coordinate_space || 'session-local',
             checkpointId: anchor?.checkpoint_id || '',
             rotationDegrees: Number(anchor?.rotation_degrees) || 0,
@@ -4253,7 +4317,7 @@ async function quickPlace(type) {
         if (!operationIsCurrent() || !marker) return;
         await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation, 0));
         if (!operationIsCurrent()) return;
-        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName, spawnedAt: performance.now() };
+        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName, areaDescription: activeAreaDescription, spawnedAt: performance.now() };
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {
@@ -4338,7 +4402,7 @@ function createOverlay() {
             <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
             <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
             <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Open Totem tools"><strong>+ TOTEM</strong></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View only mode: hide the pointer and tap Markers for information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View mode</span></button>
+            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="View / Edit mode: tap Markers for information or hold them to move" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span class="sr-only">View / Edit mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-hold-mode aria-label="Move mode: adjust one Marker" aria-pressed="false"><b aria-hidden="true">&#x270B;</b><span class="sr-only">Move mode</span></button>
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="Pointer mode: select markers" aria-pressed="false"><b aria-hidden="true">&#x27A4;</b><span class="sr-only">Pointer mode</span></button>
             <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open project Hub"><b aria-hidden="true">&#x23CE;</b><span>HUB</span></button>

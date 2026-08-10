@@ -53,11 +53,14 @@ export function createUvSphereGeometry(latitudeBands = 12, longitudeBands = 16) 
     };
 }
 
-export function sphereModelMatrix(position, radius) {
+export function sphereModelMatrix(position, radius, scale = {}) {
+    const scaleX = Number.isFinite(Number(scale?.x)) ? Number(scale.x) : 1;
+    const scaleY = Number.isFinite(Number(scale?.y)) ? Number(scale.y) : 1;
+    const scaleZ = Number.isFinite(Number(scale?.z)) ? Number(scale.z) : 1;
     return new Float32Array([
-        radius, 0, 0, 0,
-        0, radius, 0, 0,
-        0, 0, radius, 0,
+        radius * scaleX, 0, 0, 0,
+        0, radius * scaleY, 0, 0,
+        0, 0, radius * scaleZ, 0,
         Number(position?.x) || 0,
         Number(position?.y) || 0,
         Number(position?.z) || 0,
@@ -143,7 +146,7 @@ export function createSpatialSphereRenderer(gl) {
 
 export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, position, radius, material = {}) {
     if (!renderer || !projectionMatrix || !viewMatrix || !position || !Number.isFinite(Number(radius))) return;
-    const modelView = multiplyMatrices(viewMatrix, sphereModelMatrix(position, Number(radius)));
+    const modelView = multiplyMatrices(viewMatrix, sphereModelMatrix(position, Number(radius), material.scale));
     gl.useProgram(renderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);

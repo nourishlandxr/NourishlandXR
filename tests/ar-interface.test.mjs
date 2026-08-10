@@ -381,7 +381,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(styles, /\.creator-ar-marker-hit-target-note \{ width:var\(--marker-note-width,min\(72vw,280px\)\); height:var\(--marker-note-height,116px\)/);
     assert.match(styles, /\.creator-ar-taskbar \.creator-ar-add-note[\s\S]*background:#a95d32 !important/);
     assert.match(arSource, /note: \[\.94 \* factor, \.345 \* factor\]/);
-    assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 72px; height: 132px/);
+    assert.match(styles, /\.creator-ar-marker-hit-target-area_checkpoint \{ width: 116px; height: 184px/);
     assert.doesNotMatch(styles, /\.is-grab-mode \.creator-ar-marker-hit-target::before/);
     assert.match(arSource, /creator-ar-mode-pointer/);
     assert.match(arSource, /is-hold-mode/);
@@ -551,13 +551,13 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /let interactionMode = 'neutral'/);
     assert.match(arSource, /interactionMode = interactionMode === mode && \['grab', 'select'\]\.includes\(mode\) \? 'neutral' : mode/);
-    assert.match(arSource, /View only mode\. The pointer is hidden; tap a Marker to reveal or hide its information/);
+    assert.match(arSource, /View \/ Edit mode\. Tap a Marker to reveal or hide information; hold it for 0\.8 seconds to move it/);
     assert.match(arSource, /Move mode is on\. Select a glowing element/);
     assert.match(arSource, /dragState\.distance \+ dragState\.depthOffset/);
     assert.match(arSource, /const verticalTravel = dragState\.gestureStartY - event\.clientY/);
     assert.match(arSource, /setHeldMarkerDepthOffset\(verticalTravel \/ 120\)/);
     assert.match(arSource, /function heldPointerRay\(\)/);
-    assert.match(arSource, /const CREATOR_AR_HOLD_DELAY_MS = 420/);
+    assert.match(arSource, /const CREATOR_AR_HOLD_DELAY_MS = 800/);
     assert.match(arSource, /const CREATOR_AR_HOLD_MOVE_TOLERANCE_PX = 14/);
     assert.match(arSource, /function beginMarkerHoldGesture\(record, event\)/);
     assert.match(arSource, /function moveMarkerHoldGesture\(event\)/);
@@ -1737,15 +1737,15 @@ test('Totem profiles expose three visual styles and keep the selected style in A
     const styles = read('app/style.css');
     assert.equal(normalizeTotemStyle(), 'basic');
     assert.equal(normalizeTotemStyle({ appearance: { totemStyle: 'organic' } }), 'organic');
-    assert.equal(totemStylePreset('light-post').label, 'Light post');
+    assert.equal(totemStylePreset('flat-disc').label, 'Flat disc');
     assert.match(dashboardSource, /data-totem-style/);
     assert.match(dashboardSource, /totemStyle/);
     assert.match(arSource, /normalizeTotemStyle\(record\.marker\)/);
     assert.match(arSource, /totemStyle === 'organic'/);
-    assert.match(arSource, /totemStyle === 'light-post'/);
+    assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(styles, /\.totem-style-presets/);
     assert.match(styles, /\.totem-profile-visual\.is-style-organic/);
-    assert.match(styles, /\.totem-profile-visual\.is-style-light-post/);
+    assert.match(styles, /\.totem-profile-visual\.is-style-flat-disc/);
 });
 
 test('Note placement waits for a valid one-metre projection and previews the saved board template', () => {

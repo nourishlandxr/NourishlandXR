@@ -733,6 +733,7 @@ const DUTCH_PHRASES = {
     'AIM DOT READY': 'RICHTPUNT GEREED',
     'Right Quest controller active. Aim with the controller, move the thumbstick to choose an AR action, then press the trigger.': 'Rechter Quest-controller actief. Richt met de controller, beweeg de thumbstick om een AR-actie te kiezen en druk daarna op de trigger.',
     'Touch controls active. Aim dot ready.': 'Aanraakbediening actief. Richtpunt gereed.',
+    'View / Edit mode. Tap a Marker to reveal or hide information; hold it for 0.8 seconds to move it.': 'Bekijk-/bewerkmodus. Tik op een marker voor informatie of houd deze 0,8 seconde vast om hem te verplaatsen.',
     'View only mode. The pointer is hidden; tap a Marker to reveal or hide its information.': 'Alleen bekijken. De aanwijzer is verborgen; tik op een marker om de informatie te tonen of te verbergen.',
     'Move mode is on. Select a glowing element, adjust it with the plus control, then press Release.': 'Verplaatsmodus is actief. Kies een oplichtend element, pas het aan met de plusknop en druk daarna op Vrijgeven.',
     'Pointer mode is on. Tap a placed object to open its compact edit tools.': 'Aanwijzermodus is actief. Tik op een geplaatst object om de compacte bewerkingstools te openen.',

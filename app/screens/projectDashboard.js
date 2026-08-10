@@ -1094,9 +1094,25 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         }
         if (linkTarget) {
             try {
+                const route = { target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) };
                 const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
-                links.push({ target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) });
+                links.push(route);
                 await updateSitePlace(projectId, context.site.id, areaId, { totem_links: links });
+                // A Totem route is a transition in both directions. Keep the
+                // destination aware of the return route so either Area can
+                // show a sign and load the other Area in AR.
+                const targetArea = context.places.find(place => place.id === linkTarget);
+                if (targetArea) {
+                    const reverseLinks = Array.isArray(targetArea.totem_links)
+                        ? targetArea.totem_links.filter(link => link.target_area_id !== areaId)
+                        : [];
+                    reverseLinks.push({
+                        target_area_id: areaId,
+                        steps: route.steps,
+                        distance_m: route.distance_m
+                    });
+                    await updateSitePlace(projectId, context.site.id, targetArea.id, { totem_links: reverseLinks });
+                }
             } catch (error) {
                 optionalWarnings.push(`Area link: ${error.message}`);
             }
