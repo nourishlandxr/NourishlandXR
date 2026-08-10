@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createGroundArrowPathGeometry, createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
+import { createTotemDiskGeometry, createTotemGeometry } from '../app/services/spatialTotemRenderer.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRenderer.js';
 import {
@@ -156,6 +157,17 @@ test('calibrated Totem routes render as a segmented ground path with arrows', ()
     assert.equal(vertices.length % 9, 0);
     const values = Array.from(vertices);
     assert.ok(values.some(value => Math.abs(value - .05) < .01));
+});
+
+test('v2 Totem geometry gives each saved style a grounded, higher-detail object', () => {
+    const simple = createTotemGeometry('basic');
+    const lightBulb = createTotemGeometry('organic');
+    const disk = createTotemGeometry('flat-disc');
+    assert.ok(simple.length >= 2);
+    assert.ok(lightBulb.length > simple.length);
+    assert.ok(disk.some(part => part.name === 'disk'));
+    assert.ok(simple.every(part => part.geometry.length % 6 === 0));
+    assert.ok(createTotemDiskGeometry(.22, .055, 28, .77).length > 28 * 6 * 3);
 });
 
 test('Physical Marker IDs use the exact original ArUco 5x5 encoding and NL labels', () => {
@@ -663,7 +675,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const requestedArea = operation\.areaId/);
     assert.match(arSource, /createSpatialPrismRenderer/);
-    assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, groundPosition/);
+    assert.match(arSource, /drawSpatialTotem\(gl, totemRenderer, view, groundPosition/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /DEFAULT_HOME_AREA_NAME = 'Home'/);
@@ -1321,7 +1333,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-totem-pillar/);
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
-    assert.match(source, /drawSpatialPrism\(gl, prismRenderer, view, record\.position/);
+    assert.match(source, /drawSpatialTotem\(gl, totemRenderer, view/);
     assert.match(source, /const bubbles = \(content\?\.bubbles \|\| content\?\.lines \|\| \[\]\)\.filter\(Boolean\)\.slice\(0, 5\)/);
     assert.doesNotMatch(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
@@ -1498,22 +1510,26 @@ test('plant creation separates Local records from read-only Global discovery', (
 test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     const prismSource = read('app/services/spatialPrismRenderer.js');
+    const totemSource = read('app/services/spatialTotemRenderer.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
     assert.match(arSource, /area_checkpoint: \[\.11 \* factor, totemHeightPreset\(marker\)\.halfHeightMetres \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /createSpatialPrismRenderer/);
-    assert.match(arSource, /shape === 1[\s\S]*drawSpatialPrism/);
+    assert.match(arSource, /shape === 1[\s\S]*drawSpatialTotem/);
     assert.match(arSource, /function groundedTotemPosition\(position\)/);
     assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - 1\.55/);
-    assert.match(arSource, /const baseHalfHeight = \.04 \* markerSizeFactor\(record\.marker\)/);
-    assert.match(arSource, /halfWidth: halfWidth \* 1\.62/);
-    assert.match(arSource, /groundPosition\.y \+ baseHalfHeight \* 2/);
+    assert.match(arSource, /style: totemStyle/);
+    assert.match(arSource, /height: halfHeight \* 2/);
+    assert.match(arSource, /width: markerSizeFactor\(record\.marker\)/);
     assert.match(arSource, /type === 'area_checkpoint'[\s\S]*groundedTotemPosition\(placementPosition\)/);
     assert.match(arSource, /shape === 0 \|\| shape === 1 \|\| shape === 3 \|\| shape === 4/);
     assert.match(prismSource, /attribute vec3 position/);
     assert.match(prismSource, /attribute vec3 normal/);
     assert.match(prismSource, /float topFace = smoothstep/);
+    assert.match(totemSource, /createTotemGeometry/);
+    assert.match(totemSource, /createTotemDiskGeometry/);
+    assert.match(totemSource, /localPosition/);
     assert.equal(createPrismGeometry().length, 216);
     const prismMatrix = prismModelMatrix({ x: 1, y: 2, z: 3 }, { halfWidth: .14, halfHeight: .72, halfDepth: .14 }, 0);
     assert.equal(prismMatrix[12], 1);
@@ -1800,12 +1816,12 @@ test('Totem profiles expose three visual styles and keep the selected style in A
     const styles = read('app/style.css');
     assert.equal(normalizeTotemStyle(), 'basic');
     assert.equal(normalizeTotemStyle({ appearance: { totemStyle: 'organic' } }), 'organic');
-    assert.equal(totemStylePreset('flat-disc').label, 'Flat disc');
+    assert.equal(totemStylePreset('flat-disc').label, 'Disk Totem');
     assert.match(dashboardSource, /data-totem-style/);
     assert.match(dashboardSource, /totemStyle/);
     assert.match(arSource, /normalizeTotemStyle\(record\.marker\)/);
-    assert.match(arSource, /totemStyle === 'organic'/);
-    assert.match(arSource, /totemStyle === 'flat-disc'/);
+    assert.match(arSource, /drawSpatialTotem\(gl, totemRenderer/);
+    assert.match(arSource, /style: totemStyle/);
     assert.match(styles, /\.totem-style-presets/);
     assert.match(styles, /\.totem-profile-visual\.is-style-organic/);
     assert.match(styles, /\.totem-profile-visual\.is-style-flat-disc/);

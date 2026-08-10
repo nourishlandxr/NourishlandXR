@@ -19,6 +19,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
+import { createSpatialTotemRenderer, destroySpatialTotemRenderer, drawSpatialTotem } from '../services/spatialTotemRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
@@ -102,6 +103,7 @@ let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
+let totemRenderer = null;
 let controllerPointerRenderer = null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
@@ -3365,11 +3367,12 @@ function setupSpatialMarkerRenderer() {
     sphereRenderer = createSpatialSphereRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
+    totemRenderer = createSpatialTotemRenderer(gl);
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
 }
 
 function drawSpatialMarkers(view) {
-    if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer || !triangleRenderer) return;
+    if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer || !triangleRenderer || !totemRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -3406,45 +3409,19 @@ function drawSpatialMarkers(view) {
             gl.depthMask(true);
         }
         if (shape === 1) {
-            const [halfWidth, halfHeight] = markerDimensions(record.marker);
+            const [, halfHeight] = markerDimensions(record.marker);
             const groundPosition = groundedTotemPosition(record.position);
             const totemStyle = normalizeTotemStyle(record.marker);
-            const totemColor = markerRgb(record.marker, colors.area_checkpoint);
-            if (totemStyle === 'organic') {
-                const radius = Math.max(.12, Math.min(.36, halfHeight * .56));
-                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + radius }, radius, {
-                    color: totemColor,
-                    alpha: .94,
-                    emissive: .14
-                });
-                return;
-            }
-            if (totemStyle === 'flat-disc') {
-                const radius = Math.max(.14, Math.min(.38, halfHeight * .56));
-                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + .035 }, radius, {
-                    color: totemColor,
-                    alpha: .98,
-                    emissive: .18,
-                    scale: { x: 1, y: .16, z: 1 }
-                });
-                return;
-            }
-            const baseHalfHeight = .04 * markerSizeFactor(record.marker);
-            drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
-                halfWidth: halfWidth * 1.62,
-                halfHeight: baseHalfHeight,
-                halfDepth: halfWidth * 1.62,
-                color: [.16, .38, .31],
-                topColor: [.48, .78, .64],
-                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
-            });
-            drawSpatialPrism(gl, prismRenderer, view, { ...groundPosition, y: groundPosition.y + baseHalfHeight * 2 }, {
-                halfWidth,
-                halfHeight,
-                halfDepth: halfWidth * .92,
-                color: markerRgb(record.marker, colors.area_checkpoint),
-                topColor: [.68, .95, .87],
-                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
+            const totemColor = markerRgb(record.marker, [.28, .4, .22]);
+            drawSpatialTotem(gl, totemRenderer, view, groundPosition, {
+                style: totemStyle,
+                height: halfHeight * 2,
+                width: markerSizeFactor(record.marker),
+                color: totemColor,
+                topColor: [.5, .42, .24],
+                accentColor: [.9, .68, .28],
+                alpha: markerAppearanceOpacity(record.marker),
+                rotationY: (Number(record.rotationDegrees) || 12) * Math.PI / 180
             });
             return;
         }
@@ -4809,6 +4786,7 @@ function cleanup() {
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
+    destroySpatialTotemRenderer(gl, totemRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
@@ -4820,6 +4798,7 @@ function cleanup() {
     sphereRenderer = null;
     prismRenderer = null;
     triangleRenderer = null;
+    totemRenderer = null;
     controllerPointerRenderer = null;
     markerProgram = null;
     markerBuffer = null;

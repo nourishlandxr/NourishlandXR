@@ -10,6 +10,7 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
+import { createSpatialTotemRenderer, destroySpatialTotemRenderer, drawSpatialTotem } from '../services/spatialTotemRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
@@ -44,6 +45,7 @@ let sphereRenderer = null;
 let tetherRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
+let totemRenderer = null;
 let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -130,9 +132,9 @@ const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 const DEMO_BOARD_TYPING_SAFETY_MS = 30000;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
 const DEMO_TOTEM_STYLES = Object.freeze([
-    { id: 'basic', label: 'Basic' },
-    { id: 'organic', label: 'Organic' },
-    { id: 'flat-disc', label: 'Flat disc' }
+    { id: 'basic', label: 'Simple Totem' },
+    { id: 'organic', label: 'Light Bulb' },
+    { id: 'flat-disc', label: 'Disk Totem' }
 ]);
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
@@ -300,10 +302,12 @@ function clearSessionState() {
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
+    destroySpatialTotemRenderer(gl, totemRenderer);
     sphereRenderer = null;
     tetherRenderer = null;
     prismRenderer = null;
     triangleRenderer = null;
+    totemRenderer = null;
     markers = [];
     program = null;
     buffer = null;
@@ -919,7 +923,7 @@ function createDemoSecondTotem() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('Two Totems now represent two Areas. Tap the second Totem model control to cycle Basic, Organic and Flat disc.');
+    setGuide('Two Totems now represent two Areas. Tap the second Totem model control to cycle Simple Totem, Light Bulb and Disk Totem.');
     showSceneContinue('Explain linked Areas', showLinkedTotemsIntroduction);
 }
 
@@ -941,7 +945,7 @@ function showLinkedTotemsIntroduction() {
             'Each Totem represents one Area: a place where local plants, observations, and Area information can live together.',
             'Linking two Totems creates a visible bridge between Areas. The direction sign names the other Area so visitors can follow the connection.',
             'In a real project, selecting that sign can move from one Area to the next — for example, from a living room Area to a kitchen Area.',
-            'The second Totem can use a Basic, Organic, or Flat disc model while keeping the same Area link and information.'
+            'The second Totem can use a Simple Totem, Light Bulb, or Disk Totem model while keeping the same Area link and information.'
         ],
         'Continue',
         showDemoClosingMessage
@@ -2113,6 +2117,7 @@ function setupRenderer() {
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
+    totemRenderer = createSpatialTotemRenderer(gl);
 }
 
 function demoControllerInputSource() {
@@ -2716,7 +2721,7 @@ function createMarkerTexture(record) {
 }
 
 function drawMarker(view) {
-    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer) return;
+    if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer || !totemRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -2753,36 +2758,18 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
-        if (style === 'organic') {
-            drawSpatialOrb(gl, sphereRenderer, view, {
-                ...record.position,
-                y: groundBaseY + .44
-            }, .44, {
-                color: [.06, .24, .12],
-                alpha: .98,
-                emissive: .2
-            });
-            return;
-        }
-        if (style === 'flat-disc') {
-            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
-                ...record.position,
-                y: groundBaseY + .06
-            }, .48, {
-                color: [.16, .43, .22],
-                alpha: .98,
-                emissive: .2,
-                scale: { x: 1, y: .16, z: 1 }
-            });
-            return;
-        }
-        drawSpatialPrism(gl, prismRenderer, view, record.position, {
-            halfWidth: .16,
-            halfHeight: .9,
-            halfDepth: .16,
-            color: [.3, .7, .69],
-            topColor: [.62, .92, .84],
-            rotationY: Math.PI / 7
+        drawSpatialTotem(gl, totemRenderer, view, {
+            ...record.position,
+            y: groundBaseY
+        }, {
+            style,
+            height: DEMO_TOTEM_HALF_HEIGHT_METRES * 2,
+            width: 1,
+            color: [.22, .34, .18],
+            topColor: [.52, .42, .24],
+            accentColor: [.92, .7, .28],
+            alpha: .98,
+            rotationY: Math.PI / 12
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);
