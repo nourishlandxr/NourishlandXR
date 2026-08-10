@@ -113,6 +113,7 @@ let placementArmGeneration = 0;
 let activePlacementOperation = null;
 let pendingPlacementPromise = null;
 let totemGuideVisible = false;
+let totemLinkGuideVisible = true;
 let pendingExistingMarkerId = '';
 let arReturnContext = '';
 let locationNoteAnchor = null;
@@ -154,7 +155,16 @@ const TASKBAR_V2_COLORS = Object.freeze({
 });
 const TASKBAR_V2_SIZES = Object.freeze(['tiny', 'small', 'medium', 'large', 'huge']);
 const TASKBAR_V2_OPACITIES = Object.freeze([1, .8, .6, .4]);
-const visibleQuestSpecialPaletteActions = () => QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => !action.hidden);
+const visibleQuestSpecialPaletteActions = () => {
+    const totem = activeTotemRecord();
+    const totemPlaced = hasSavedSpatialPosition(totem);
+    return QUEST_SPECIAL_PALETTE_ACTIONS.filter(action => {
+        if (action.hidden) return false;
+        if (action.id === 'totem') return !totemPlaced;
+        if (['point-totem', 'link-totem', 'recenter-totem'].includes(action.id)) return Boolean(totem);
+        return true;
+    });
+};
 // Keep the same deliberate hold gesture in every AR mode. This makes an orb
 // movable without first switching to the HAND/Grab control, while preserving
 // a short tap for opening information or edit tools.
@@ -459,9 +469,20 @@ function linkedTotemAreas(record) {
             ...link,
             targetAreaId: String(link?.target_area_id || link?.targetAreaId || '').trim(),
             targetAreaName: String(link?.target_area_name || link?.targetAreaName || link?.target_area_id || 'Linked Area').trim(),
+            steps: Number.isFinite(Number(link?.steps)) && Number(link.steps) > 0 ? Number(link.steps) : null,
+            distanceM: Number.isFinite(Number(link?.distance_m ?? link?.distanceM)) && Number(link?.distance_m ?? link?.distanceM) > 0
+                ? Number(link?.distance_m ?? link?.distanceM)
+                : null,
             direction: index % 2 === 0 ? 'right' : 'left'
         }))
         .filter(link => link.targetAreaId);
+}
+
+function totemLinkMeasure(link) {
+    return [
+        link?.steps ? `${link.steps} steps` : '',
+        link?.distanceM ? `${Number(link.distanceM).toFixed(1)} m` : ''
+    ].filter(Boolean).join(' · ');
 }
 
 async function transitionToLinkedArea(areaId) {
@@ -510,6 +531,8 @@ function activateArea(area) {
         sessionMarkers = [];
         locatedTotemRecord = null;
         activeCheckpointId = '';
+        totemGuideVisible = false;
+        totemLinkGuideVisible = true;
         locationNoteVisible = false;
         locationNoteAnchor = null;
         homeSignAnchor = null;
@@ -576,10 +599,10 @@ function creatorTotemInformationMarkup(record) {
     const isGeneratedWelcome = /^welcome to\s+[^.!?]+[.!?]?$/i.test(introduction);
     const areaContext = String(record.areaDescription || '').trim();
     const text = [isGeneratedWelcome ? '' : introduction, areaContext ? `Area context: ${areaContext}` : '', ...board.informationBubbles].filter(Boolean).slice(0, 6);
-    const linkedAreas = linkedTotemAreas(record);
+    const linkedAreas = totemLinkGuideVisible ? linkedTotemAreas(record) : [];
     if (!text.length && !linkedAreas.length) return '';
-    const signs = linkedAreas.map(link => `<button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Open linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>OPEN AREA</small></span></button>`).join('');
-    const balloon = text.length
+    const signs = linkedAreas.map(link => `<button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
+    const balloon = record.infoVisible && text.length
         ? `<section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
           <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
         </section>`
@@ -1624,6 +1647,16 @@ function selectQuestSpecialPaletteAction(action) {
         toggleActiveTotemGuide();
         return true;
     }
+    if (action.id === 'link-totem') {
+        closeQuestSpecialPalette();
+        toggleActiveTotemLinkGuide();
+        return true;
+    }
+    if (action.id === 'recenter-totem') {
+        closeQuestSpecialPalette();
+        void recenterActiveArea();
+        return true;
+    }
     return false;
 }
 
@@ -2012,6 +2045,25 @@ function toggleActiveTotemGuide() {
     closePlacePicker();
 }
 
+function toggleActiveTotemLinkGuide() {
+    const totem = activeTotemRecord();
+    const links = linkedTotemAreas(totem);
+    if (!totem) {
+        setPlacementStatus(`${activeAreaName || 'This Area'} has no Totem yet. Choose Place Totem.`);
+        return;
+    }
+    if (!links.length) {
+        setPlacementStatus('No linked Area route is saved yet. Open this Totem in Web Mode and enable a link first.');
+        return;
+    }
+    totemLinkGuideVisible = !totemLinkGuideVisible;
+    renderSessionMarkers();
+    closePlacePicker();
+    setPlacementStatus(totemLinkGuideVisible
+        ? `Totem link path enabled. Follow the sign to ${links[0].targetAreaName}.`
+        : 'Totem link path disabled.');
+}
+
 function toggleLocationNoteVisibility(record = activeTotemRecord()) {
     const config = locationNoteConfig || normalizedLocationNote();
     if (!config.enabled) {
@@ -2046,6 +2098,11 @@ async function createTotemFromSpecial() {
     if (activeAreaId && totem && !hasSavedSpatialPosition(totem)) {
         void prepareExistingMarkerPlacement(totem.marker.id);
         closePlacePicker();
+        return;
+    }
+    if (activeAreaId && totem) {
+        closePlacePicker();
+        setPlacementStatus(`${totem.marker.name} is already placed in ${activeAreaName || 'this Area'}. Use Recenter Totem or Point to Totem.`);
         return;
     }
     if (activeAreaId && !totem) {
@@ -2086,15 +2143,32 @@ function renderSpecialMarkerChoices(picker) {
     const alerts = [
         ['!', 'Important'], ['?', 'Question']
     ].map(([symbol, label]) => `<button class="creator-ar-special-totem creator-ar-symbol-marker" type="button" data-ar-special-symbol="${escapeHtml(symbol)}" data-ar-special-label="${escapeHtml(label)}"><b aria-hidden="true">${escapeHtml(symbol)}</b><span><strong>${escapeHtml(label)}</strong></span></button>`).join('');
+    const totemPlaced = hasSavedSpatialPosition(totem);
+    const hasLinks = linkedTotemAreas(totem).length > 0;
+    const placeTotemAction = !totemPlaced
+        ? '<button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>PLACE TOTEM</strong><small>To this Area</small></span></button>'
+        : '';
     picker.innerHTML = `<div class="creator-ar-picker-heading"><p>Special</p><button type="button" data-ar-close-special aria-label="Close">&times;</button></div>
         <section class="creator-ar-special-section creator-ar-totem-section"><strong>TOTEM</strong><div class="creator-ar-special-grid">
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}"><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>POINT TO TOTEM</strong><small>${totem ? 'Ground pointer' : 'Place a Totem first'}</small></span></button>
-            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-add-totem><b aria-hidden="true">+</b><span><strong>PLACE TOTEM</strong><small>${totem ? 'Use saved Totem' : 'To this Area'}</small></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem aria-pressed="${totemGuideVisible}" ${totem ? '' : 'disabled'}><b aria-hidden="true">${totemGuideVisible ? '&#9673;' : '&#9675;'}</b><span><strong>POINT TO TOTEM</strong><small>${totem ? (totemGuideVisible ? 'Disable ground pointer' : 'Enable ground pointer') : 'Place a Totem first'}</small></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-toggle-totem-links aria-pressed="${totemLinkGuideVisible}" ${hasLinks ? '' : 'disabled'}><b aria-hidden="true">&#8596;</b><span><strong>LINK PATH</strong><small>${hasLinks ? (totemLinkGuideVisible ? 'Disable Area route' : 'Enable Area route') : 'Link Areas in Web Mode'}</small></span></button>
+            <button class="creator-ar-special-totem creator-ar-totem-action" type="button" data-ar-recenter-totem ${totemPlaced ? '' : 'disabled'}><b aria-hidden="true">&#8635;</b><span><strong>RECENTER TOTEM</strong><small>${totemPlaced ? 'Aim at its real position' : 'Place the Totem first'}</small></span></button>
+            ${placeTotemAction}
         </div></section>`;
     picker.querySelector('[data-ar-close-special]').addEventListener('click', closePlacePicker);
-    picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', toggleActiveTotemGuide);
-    picker.querySelector('[data-ar-toggle-totem]').addEventListener('click', () => { toggleActiveTotemGuide(); closePlacePicker(); });
-    picker.querySelector('[data-ar-add-totem]').addEventListener('click', createTotemFromSpecial);
+    picker.querySelector('[data-ar-toggle-totem]')?.addEventListener('click', () => {
+        toggleActiveTotemGuide();
+        closePlacePicker();
+    });
+    picker.querySelector('[data-ar-toggle-totem-links]')?.addEventListener('click', () => {
+        toggleActiveTotemLinkGuide();
+        closePlacePicker();
+    });
+    picker.querySelector('[data-ar-recenter-totem]')?.addEventListener('click', () => {
+        closePlacePicker();
+        void recenterActiveArea();
+    });
+    picker.querySelector('[data-ar-add-totem]')?.addEventListener('click', createTotemFromSpecial);
     picker.querySelectorAll('[data-ar-special-symbol]').forEach(button => button.addEventListener('click', () => {
         const specialMarker = {
             name: button.dataset.arSpecialLabel,
@@ -3395,7 +3469,7 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
 }
 
 function positionCreatorTotemInformation(record, markerX, markerY, view = latestView) {
-    if (!record.infoVisible || !overlayRoot) return;
+    if ((!record.infoVisible && !(totemLinkGuideVisible && linkedTotemAreas(record).length)) || !overlayRoot) return;
     const information = overlayRoot.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
     if (!information) return;
     const balloon = information.querySelector('.creator-ar-totem-balloon');
@@ -3451,8 +3525,8 @@ function renderSessionMarkers() {
             : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
-            : record.marker.type === 'area_checkpoint' && record.infoVisible
-                ? creatorTotemInformationMarkup(record)
+             : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
+                 ? creatorTotemInformationMarkup(record)
                 : '';
         // Keep every marker hidden until the first valid XR projection positions it.
         // This prevents notes from appearing at the browser's default fixed origin during Web -> AR handoff.
@@ -4497,6 +4571,8 @@ function cleanup() {
     activeAreaId = '';
     activeAreaName = '';
     activeCheckpointId = '';
+    totemGuideVisible = false;
+    totemLinkGuideVisible = true;
     areaLensOpen = false;
     latestViewerMatrix = null;
     latestView = null;
@@ -4568,6 +4644,7 @@ function cleanup() {
     pendingBagRecord = null;
     locatedTotemRecord = null;
     totemGuideVisible = false;
+    totemLinkGuideVisible = true;
     pendingExistingMarkerId = '';
     arReturnContext = '';
     locationNoteAnchor = null;

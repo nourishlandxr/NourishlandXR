@@ -9,6 +9,8 @@ export const QUEST_SPATIAL_BELT_ACTIONS = Object.freeze([
 export const QUEST_SPECIAL_PALETTE_ACTIONS = Object.freeze([
     Object.freeze({ id: 'totem', label: 'PLACE TOTEM', symbol: '\u2316', color: '#6f9d82' }),
     Object.freeze({ id: 'point-totem', label: 'POINT TO TOTEM', symbol: '\u25C9', color: '#6f9d82' }),
+    Object.freeze({ id: 'link-totem', label: 'LINK PATH', symbol: '\u2194', color: '#6f9d82' }),
+    Object.freeze({ id: 'recenter-totem', label: 'RECENTER TOTEM', symbol: '\u21BB', color: '#6f9d82' }),
     Object.freeze({ id: 'legacy-hidden-1', label: '', symbol: '', hidden: true, color: '#6f9d82' }),
     Object.freeze({ id: 'legacy-hidden-2', label: '', symbol: '', hidden: true, color: '#6f9d82' })
 ]);
