@@ -1,5 +1,5 @@
 import { API_BASE, apiFetch } from './apiClient.js';
-import { searchAlaPlants } from './alaPlantSearch.js';
+import { searchPlantSources } from './plantSearchProviders.js';
 const KEBAB_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const libraryCache = new Map();
@@ -76,7 +76,7 @@ export async function createPlantRecord(data) {
 }
 
 export async function searchGlobalPlants(query) {
-    return searchAlaPlants(query);
+    return searchPlantSources(query);
 }
 
 export async function updatePlantRecord(plantId, data) {

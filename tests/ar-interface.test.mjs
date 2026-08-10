@@ -1423,13 +1423,20 @@ test('dashboard search indexes readable content and ranks name matches', () => {
 test('plant creation separates Local records from read-only Global discovery', () => {
     const fieldMarker = read('app/screens/fieldMarker.js');
     const plantService = read('app/services/plantDataService.js');
+    const providerService = read('app/services/plantSearchProviders.js');
+    const fieldGuide = read('app/screens/fieldGuide.js');
     const alaSearch = read('app/services/alaPlantSearch.js');
     assert.match(fieldMarker, />Saved records<\/button>/);
     assert.match(fieldMarker, /Search plant database/);
     assert.match(fieldMarker, /Search plant database/);
     assert.match(fieldMarker, /searchGlobalPlants\(query\)/);
     assert.match(fieldMarker, /externalSources: selectedGlobalPlant/);
-    assert.match(plantService, /searchAlaPlants/);
+    assert.match(plantService, /searchPlantSources/);
+    assert.match(providerService, /searchAlaPlants/);
+    assert.match(providerService, /searchGbifPlants/);
+    assert.match(providerService, /searchINaturalistPlants/);
+    assert.match(fieldGuide, /Convert to NLXR profile/);
+    assert.match(fieldGuide, /openGlobalPlantProfile/);
     assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);
     assert.match(alaSearch, /encodeURIComponent/);
     assert.match(alaSearch, /AbortController/);

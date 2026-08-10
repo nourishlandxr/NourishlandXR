@@ -1,6 +1,7 @@
 import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor } from '../services/persistence.js';
 import { loadResolvedPlantsForPlace, searchGlobalPlants } from '../services/plantDataService.js';
-import { ALA_SOURCE } from '../services/alaPlantSearch.js';
+import { openGlobalPlantProfile } from './fieldMarker.js';
+import { PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
 import { DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { DEFAULT_TOTEM_COLOR } from '../services/totemAppearance.js';
 import { physicalMarkerLabel } from '../services/physicalAnchor.js';
@@ -159,7 +160,26 @@ function applyCreatorWebHubCopy(app) {
     let searchScope = 'local';
     const renderGlobalResults = results => {
         if (!globalResults) return;
-        globalResults.innerHTML = results.map(result => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : ''}<span><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}<small>${escapeHtml(result.sourceLabel || ALA_SOURCE)}</small></span></article>`).join('') || `<p class="meta">No plant matches found in ${ALA_SOURCE}.</p>`;
+        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : ''}<span><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-convert" data-global-plant-index="${index}">Convert to NLXR profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
+            const result = results[Number(button.dataset.globalPlantIndex)];
+            const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
+            if (!result || !siteGroup?.site?.id || !currentGuide?.creator) return;
+            button.disabled = true;
+            button.textContent = 'Opening profile…';
+            try {
+                await openGlobalPlantProfile(app, {
+                    project: currentGuide.project.id,
+                    site: siteGroup.site.id,
+                    place: currentGuidePlaceId || '__unassigned__',
+                    globalPlant: result
+                });
+            } catch (error) {
+                button.disabled = false;
+                button.textContent = 'Convert to NLXR profile';
+                if (globalStatus) globalStatus.textContent = `Could not open the plant profile: ${error.message}`;
+            }
+        }));
     };
     const searchGlobal = value => {
         clearTimeout(globalGuideSearchTimer);
@@ -175,7 +195,7 @@ function applyCreatorWebHubCopy(app) {
                 const results = await searchGlobalPlants(query);
                 if (searchInput.value.trim() !== query || searchScope !== 'global') return;
                 renderGlobalResults(results);
-                if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found in ${ALA_SOURCE}.` : `No plant matches found in ${ALA_SOURCE}.`;
+                if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to convert it into an NLXR profile.` : `No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.`;
             } catch (error) {
                 if (globalStatus) globalStatus.textContent = 'Plant database unavailable. Try again or continue with local records.';
             }
