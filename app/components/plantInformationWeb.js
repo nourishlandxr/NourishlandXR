@@ -50,24 +50,17 @@ const PUBLICATION_STATES = Object.freeze([
     ['archived', 'Archived']
 ]);
 
-const USE_INFORMATION_TEMPLATES = Object.freeze([
-    ['root', 'Root', 'Root use or observation'],
-    ['leaves', 'Leaves', 'Leaf use or observation'],
-    ['pods', 'Pods', 'Pod use or observation'],
-    ['fruit', 'Fruit', 'Fruit use or observation'],
-    ['beans', 'Beans', 'Bean use or preparation'],
-    ['seeds', 'Seeds', 'Seed use or preparation'],
-    ['bark', 'Bark', 'Bark use or material']
-]);
-
-const HISTORICAL_INFORMATION_TEMPLATES = Object.freeze([
-    ['country-of-origin', 'Country of origin', 'Select a country'],
-    ['scripture-traditional-links', 'Scripture & traditional links', 'Attributed cultural links']
-]);
-
-const FOOD_FOREST_INFORMATION_TEMPLATES = Object.freeze([
-    ['function', 'Function', 'Ecological or food-forest role']
-]);
+const PIM_CHILD_LIBRARY = Object.freeze({
+    uses: ['Food', 'Medicine', 'Materials', 'Fuel', 'Animal use', 'Household use', 'Commercial use', 'Other / custom'],
+    'food-forest': ['Layer', 'Roles', 'Relationships', 'Function', 'Companion plants', 'Wildlife relationships', 'Pollinator support', 'Site placement', 'Other / custom'],
+    cultivation: ['Climate requirements', 'Soil requirements', 'Sun / light', 'Water', 'Temperature', 'Frost tolerance', 'Drought tolerance', 'Planting', 'Spacing', 'Maintenance', 'Pruning', 'Feeding', 'Pests and diseases', 'Harvest', 'Other / custom'],
+    propagation: ['Seed', 'Cutting', 'Grafting', 'Division', 'Layering', 'Pollination', 'Germination', 'Establishment', 'Other / custom'],
+    'scientific-information': ['Taxonomy', 'Scientific name', 'Accepted / common names', 'Family', 'Growth form', 'Height and spread', 'Life cycle', 'Evergreen / deciduous', 'Flower characteristics', 'Reproductive traits', 'Fruit and seed', 'Native habitat', 'Observed tolerances', 'Other / custom'],
+    'historical-data': ['Country of origin (country or region)', 'Predominant parts of the world', 'Distribution history', 'Introduction history', 'Traditional knowledge', 'Religious connections', 'Scripture & traditional links', 'Cultural connections', 'Historical uses', 'Other / custom'],
+    culinary: ['Root', 'Leaves', 'Pods', 'Fruit', 'Beans', 'Seeds', 'Bark'],
+    medicinal: ['Root', 'Leaves', 'Pods', 'Fruit', 'Beans', 'Seeds', 'Bark'],
+    craft: ['Root', 'Leaves', 'Pods', 'Fruit', 'Beans', 'Seeds', 'Bark']
+});
 
 const COUNTRY_OPTIONS = Object.freeze([
     ['AU', 'Australia'],
@@ -89,15 +82,8 @@ const COUNTRY_OPTIONS = Object.freeze([
     ['OTHER', 'Other / not documented']
 ]);
 
-const USE_TEMPLATE_PARENT_IDS = new Set(['culinary', 'medicinal', 'craft']);
-
-const templatesForParent = parentId => USE_TEMPLATE_PARENT_IDS.has(parentId)
-    ? USE_INFORMATION_TEMPLATES
-    : parentId === 'historical-data'
-        ? HISTORICAL_INFORMATION_TEMPLATES
-        : parentId === 'food-forest'
-            ? FOOD_FOREST_INFORMATION_TEMPLATES
-            : [];
+const templateId = title => String(title).toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const templatesForParent = parentId => (PIM_CHILD_LIBRARY[parentId] || []).map(title => [templateId(title), title, `Add information about ${title.toLocaleLowerCase()}`]);
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -168,7 +154,7 @@ function evidenceLabel(value) {
 }
 
 function categoryFor(node) {
-    return PIM_COMPASS_BY_ID[node?.primaryCategory || node?.id] || PIM_COMPASS[0];
+    return PIM_COMPASS_BY_ID[node?.primaryCategory || node?.id] || (node?.primaryCategory === 'custom' || node?.direction === 'custom' ? { id: 'custom', title: 'Custom', knowledgeMode: 'agency', color: '#4e7d62' } : PIM_COMPASS[0]);
 }
 
 function normalizedState(state = {}) {
@@ -327,6 +313,12 @@ function addInformationMarkup(parent, options, suffix) {
     return `<button class="pim-web-add-information" type="button" data-pim-add-parent-id="${attribute(parent.id)}" data-pim-add-parent-path="${attribute(parent.path)}" data-pim-surface="${attribute(suffix)}"><span aria-hidden="true">+</span> Add information</button>`;
 }
 
+function nodeActionsMarkup(node, options) {
+    if (!options.editable) return '';
+    const archived = node.status === 'archived';
+    return `<div class="pim-web-node-actions" aria-label="Manage ${attribute(node.title)}"><button type="button" data-pim-edit-node-id="${attribute(node.id)}" aria-label="Rename or edit ${attribute(node.title)}">Edit</button><button type="button" data-pim-move-node="up" data-pim-move-node-id="${attribute(node.id)}" aria-label="Move ${attribute(node.title)} up">↑</button><button type="button" data-pim-move-node="down" data-pim-move-node-id="${attribute(node.id)}" aria-label="Move ${attribute(node.title)} down">↓</button><button type="button" data-pim-${archived ? 'restore' : 'archive'}-node-id="${attribute(node.id)}">${archived ? 'Restore' : 'Remove'}</button></div>`;
+}
+
 function visualNodeMarkup(document, node, state, options, depth = 1, seen = new Set()) {
     if (seen.has(node.id)) return '';
     const nextSeen = new Set(seen).add(node.id);
@@ -339,7 +331,7 @@ function visualNodeMarkup(document, node, state, options, depth = 1, seen = new 
     const panel = primary || childNodes.length
         ? `<div class="pim-web-node-children" id="${panelId}" data-pim-parent-id="${attribute(node.id)}" data-pim-parent-path="${attribute(node.path)}"${open ? '' : ' hidden'}><span class="pim-web-connector" aria-hidden="true"></span><div class="pim-web-child-list">${children}${empty}</div>${addInformationMarkup(node, options, 'compass')}</div>`
         : '';
-    return `<article class="pim-web-node${primary ? ' pim-web-node--primary' : ''}" data-pim-node-container-id="${attribute(node.id)}" data-pim-node-container-path="${attribute(node.path)}" style="--pim-category:${attribute(categoryFor(node).color)}">${nodeButtonMarkup(document, node, state, options, 'visual', depth)}${panel}</article>`;
+    return `<article class="pim-web-node${primary ? ' pim-web-node--primary' : ''}${node.status === 'archived' ? ' is-archived' : ''}" data-pim-node-container-id="${attribute(node.id)}" data-pim-node-container-path="${attribute(node.path)}" style="--pim-category:${attribute(categoryFor(node).color)}">${nodeButtonMarkup(document, node, state, options, 'visual', depth)}${nodeActionsMarkup(node, options)}${panel}</article>`;
 }
 
 function groupMarkup(document, group, state, options) {
@@ -350,6 +342,14 @@ function groupMarkup(document, group, state, options) {
         <header class="pim-web-sector-heading"><p id="pim-web-group-${attribute(group.id)}"><strong>${escapeHtml(group.label)}</strong><span> — ${escapeHtml(group.question)}</span><small>${roots.length} section${roots.length === 1 ? '' : 's'} · ${cellCount} cells</small></p></header>
         <div class="pim-web-sector-branches">${roots.map(root => visualNodeMarkup(document, root, state, options)).join('')}</div>
     </section>`;
+}
+
+function customRootsMarkup(document, state, options) {
+    const roots = typeof PimModel.pimChildren === 'function'
+        ? PimModel.pimChildren(document, null).filter(node => !PimModel.PIM_COMPASS_BY_ID?.[node.id])
+        : [];
+    if (!roots.length) return '';
+    return `<section class="pim-web-sector pim-web-sector--custom" data-pim-group="custom" aria-label="Custom main cells"><header class="pim-web-sector-heading"><p><strong>Custom cells</strong><span> — User-defined knowledge branches</span><small>${roots.length} main cell${roots.length === 1 ? '' : 's'}</small></p></header><div class="pim-web-sector-branches">${roots.map(root => visualNodeMarkup(document, root, state, options)).join('')}</div></section>`;
 }
 
 function identityMarkup(document, state, suffix = 'visual', options = {}) {
@@ -394,11 +394,12 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
     const open = state.openNodeIds.includes(node.id);
     const expandable = primary || children.length > 0;
     const panelId = `pim-web-children-${domToken(document.plantId)}-${domToken(node.id)}-list`;
-    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
+    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${nodeActionsMarkup(node, options)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
 }
 
 function accessibleListMarkup(document, state, options) {
-    const roots = ACCESSIBLE_ROOT_ORDER.map(id => nodeById(document, id)).filter(Boolean);
+    const customRoots = typeof PimModel.pimChildren === 'function' ? PimModel.pimChildren(document, null).filter(node => !PimModel.PIM_COMPASS_BY_ID?.[node.id]) : [];
+    const roots = [...ACCESSIBLE_ROOT_ORDER.map(id => nodeById(document, id)).filter(Boolean), ...customRoots];
     return `<section class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
 }
 
@@ -430,11 +431,10 @@ function selectMarkup(name, label, values, selected, required = false) {
     return `<label>${escapeHtml(label)}<select name="${attribute(name)}"${required ? ' required' : ''}>${values.map(([value, text]) => `<option value="${attribute(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(text)}</option>`).join('')}</select></label>`;
 }
 
-function informationTemplateMarkup(parent, state) {
+function informationTemplateMarkup(parent, state, document) {
     if (state.editorMode !== 'add') return '';
-    const templates = templatesForParent(parent?.id);
-    if (!templates.length) return '';
-    const heading = USE_TEMPLATE_PARENT_IDS.has(parent?.id) ? 'Start with a plant part' : 'Start with a knowledge block';
+    const templates = templatesForParent(parent?.id).filter(([id]) => !document || !nodeById(document, parent?.id ? `${parent.id}-${id}` : id));
+    const heading = templates.length ? 'Suggested child cells' : 'New child cell';
     return `<section class="pim-web-template-palette" aria-labelledby="pim-web-template-title">
         <div><strong id="pim-web-template-title">${heading}</strong><small>Choose a starter or create a custom information block.</small></div>
         <div class="pim-web-template-options">${templates.map(([id, title, preview]) => `<button type="button" data-pim-template-id="${attribute(id)}" data-pim-template-title="${attribute(title)}" data-pim-template-preview="${attribute(preview)}">${escapeHtml(title)}</button>`).join('')}<button type="button" class="is-custom" data-pim-template-id="custom">Custom</button></div>
@@ -442,7 +442,7 @@ function informationTemplateMarkup(parent, state) {
 }
 
 function countryOfOriginMarkup(parent, state, seed) {
-    const countryTemplate = parent?.id === 'historical-data' && (state.editorSeed?.templateId === 'country-of-origin' || seed.countryOfOrigin);
+    const countryTemplate = parent?.id === 'historical-data' && (state.editorSeed?.templateId === 'country-or-region-of-origin' || state.editorSeed?.templateId === 'country-of-origin' || seed.countryOfOrigin);
     if (!countryTemplate) return '';
     return `<label class="pim-web-country-picker">Country of origin<select name="countryOfOrigin" required><option value="">Choose a country</option>${COUNTRY_OPTIONS.map(([value, label]) => `<option value="${attribute(label)}"${label === seed.countryOfOrigin ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('')}</select></label>`;
 }
@@ -451,18 +451,19 @@ function editorMarkup(document, state, options) {
     if (!options.editable || !state.editorMode) return '';
     const editing = state.editorMode === 'edit' ? nodeById(document, state.editorNodeId) : null;
     const seed = { ...(state.editorSeed || {}), ...(editing || {}) };
-    const parent = editing ? nodeById(document, editing.parentId) : nodeById(document, state.editorParentId);
-    if (!parent && !editing) return '';
-    const category = categoryFor(editing || parent);
-    const title = editing ? `Edit ${editing.title}` : `Add information to ${parent.title}`;
+    const topLevel = !editing && state.editorParentId === '__top_level__';
+    const parent = editing ? nodeById(document, editing.parentId) : topLevel ? null : nodeById(document, state.editorParentId);
+    if (!parent && !editing && !topLevel) return '';
+    const category = editing || parent || { id: 'custom', title: 'Custom main cell', knowledgeMode: 'agency', color: '#4e7d62' };
+    const title = editing ? `Edit ${editing.title}` : topLevel ? 'Add a custom main cell' : `Add information to ${parent.title}`;
     const provenance = asList(seed.provenance)[0] || {};
     return `<aside class="pim-web-editor" role="dialog" aria-modal="true" aria-labelledby="pim-web-editor-title">
         <form data-pim-editor-form data-pim-editor-mode="${attribute(state.editorMode)}" data-pim-editor-node-id="${attribute(editing?.id || '')}" data-pim-editor-parent-id="${attribute(parent?.id || '')}">
             <header><div><span>Structured PIM editor</span><h2 id="pim-web-editor-title">${escapeHtml(title)}</h2></div><button type="button" data-pim-cancel-editor aria-label="Close information editor">×</button></header>
-            ${informationTemplateMarkup(parent, state)}
-            <div class="pim-web-editor-context" aria-label="Information location"><span>Plant <strong>${escapeHtml(document.identity?.commonName || document.plantId)}</strong></span><span>Parent <strong>${escapeHtml(parent?.title || editing?.parentId || '')}</strong></span><span>Category <strong>${escapeHtml(category.title)}</strong></span></div>
+            ${informationTemplateMarkup(parent, state, document)}
+            <div class="pim-web-editor-context" aria-label="Information location"><span>Plant <strong>${escapeHtml(document.identity?.commonName || document.plantId)}</strong></span><span>Parent <strong>${escapeHtml(parent?.title || (topLevel ? 'Mesh root' : editing?.parentId || ''))}</strong></span><span>Category <strong>${escapeHtml(category.title)}</strong></span></div>
             <input type="hidden" name="plantId" value="${inputValue(document.plantId)}" readonly />
-            <input type="hidden" name="parentId" value="${inputValue(parent?.id || editing?.parentId)}" readonly />
+            <input type="hidden" name="parentId" value="${inputValue(parent?.id || editing?.parentId || (topLevel ? '__top_level__' : ''))}" readonly />
             <input type="hidden" name="primaryCategory" value="${inputValue(category.id)}" readonly />
             <input type="hidden" name="knowledgeMode" value="${inputValue(category.knowledgeMode)}" readonly />
             <div class="pim-web-editor-fields pim-web-editor-fields--essential">
@@ -528,8 +529,8 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const standaloneDirections = directionsInfoMarkup(source);
     const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div>${standaloneDirections}</div></header>
-        <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}</div></div>
+        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
+        <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}${customRootsMarkup(source, current, renderOptions)}</div></div>
         ${showIdentity && current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
         ${accessibleListMarkup(source, current, renderOptions)}
         ${detailMarkup(source, current, renderOptions)}
@@ -556,6 +557,7 @@ function editorPayload(form, document) {
         }]
         : [];
     return {
+        id: form.dataset.pimEditorMode === 'edit' ? form.dataset.pimEditorNodeId : values.parentId && values.parentId !== '__top_level__' ? `${String(values.parentId).replace(/[^a-z0-9-]+/gi, '-')}-${String(values.title || 'information').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}` : String(values.title || 'information').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-'),
         plantId: document.plantId,
         parentId: values.parentId,
         primaryCategory: values.primaryCategory,
@@ -586,6 +588,7 @@ export function applyPlantInformationWebEdit(document, mode, nodeId, payload) {
         if (typeof PimModel.pimUpdateNode !== 'function') throw new Error('PIM editing is not available in this build.');
         return PimModel.pimUpdateNode(document, nodeId, payload);
     }
+    if (payload.parentId === '__top_level__' && typeof PimModel.pimAddTopLevelNode === 'function') return PimModel.pimAddTopLevelNode(document, { ...payload, parentId: null, primaryCategory: 'custom' });
     if (typeof PimModel.pimAddNode !== 'function') throw new Error('PIM editing is not available in this build.');
     return PimModel.pimAddNode(document, payload);
 }
@@ -657,6 +660,28 @@ export function mountPlantInformationWeb(container, options = {}) {
             commit({ ...state, viewMode: button.dataset.pimView === 'list' ? 'list' : 'compass' }, '', false);
             return;
         }
+        if (button.matches('[data-pim-add-top-level]')) {
+            commit({ ...state, editorMode: 'add', editorParentId: '__top_level__', editorNodeId: '', editorSeed: null, editorMessage: '' }, '', false);
+            return;
+        }
+        if (button.matches('[data-pim-move-node]')) {
+            try {
+                const moved = PimModel.pimMoveNode?.(document, button.dataset.pimMoveNodeId, button.dataset.pimMoveNode);
+                if (moved) { document = normalizeDocument(moved); commit(state, button.dataset.pimMoveNodeId); }
+            } catch (error) { commit({ ...state, editorMessage: error.message }, button.dataset.pimMoveNodeId, false); }
+            return;
+        }
+        if (button.matches('[data-pim-archive-node-id], [data-pim-restore-node-id]')) {
+            const nodeId = button.dataset.pimArchiveNodeId || button.dataset.pimRestoreNodeId;
+            const node = nodeById(document, nodeId);
+            const restoring = button.matches('[data-pim-restore-node-id]');
+            if (!restoring && !window.confirm(`Remove “${node?.title || 'this cell'}” from the active Mesh? Its information will be kept for restore.`)) return;
+            try {
+                const next = restoring ? PimModel.pimRestoreNode?.(document, nodeId) : PimModel.pimArchiveNode?.(document, nodeId);
+                if (next) { document = normalizeDocument(next); commit(state, nodeId); }
+            } catch (error) { commit({ ...state, editorMessage: error.message }, nodeId, false); }
+            return;
+        }
         if (button.matches('[data-pim-close-detail]')) {
             const focusId = state.detailNodeId;
             commit({ ...state, detailNodeId: '' }, focusId);
@@ -670,15 +695,15 @@ export function mountPlantInformationWeb(container, options = {}) {
             const templateId = button.dataset.pimTemplateId;
             const template = templatesForParent(state.editorParentId).find(([id]) => id === templateId);
             const existingSeed = state.editorSeed || {};
-            const informationType = templateId === 'scripture-traditional-links'
+            const informationType = templateId.includes('traditional') || templateId.includes('religious') || templateId.includes('cultural')
                 ? 'traditional_knowledge'
-                : templateId === 'country-of-origin'
+                : templateId.includes('country') || templateId.includes('origin')
                     ? 'historical_record'
-                    : templateId === 'function'
+                    : templateId === 'roles'
                         ? 'fact'
                         : 'practice';
             const editorSeed = template
-                ? { ...existingSeed, templateId, informationType, title: template[1], preview: template[2], body: templateId === 'country-of-origin' ? '' : existingSeed.body || '', countryOfOrigin: templateId === 'country-of-origin' ? existingSeed.countryOfOrigin || '' : '' }
+                ? { ...existingSeed, templateId, informationType, title: template[1], preview: template[2], body: templateId.includes('country') || templateId.includes('origin') ? '' : existingSeed.body || '', countryOfOrigin: templateId.includes('country') || templateId.includes('origin') ? existingSeed.countryOfOrigin || '' : '' }
                 : { ...existingSeed, templateId: '', title: '', preview: '', body: '', countryOfOrigin: '' };
             commit({ ...state, editorSeed, editorMessage: template ? `${template[1]} template selected. Add the detail for this plant.` : 'Custom information block selected.' }, '', false);
             return;
@@ -752,8 +777,9 @@ export function mountPlantInformationWeb(container, options = {}) {
             document = normalizeDocument(saved?.nodes ? saved : nextDocument);
             const nodeId = form.dataset.pimEditorMode === 'edit'
                 ? form.dataset.pimEditorNodeId
-                : document.nodes.find(node => node.parentId === payload.parentId && node.title === payload.title)?.id;
-            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null, editorMessage: '', openNodeIds: unique([...state.openNodeIds, payload.parentId]), highlightedNodeId: nodeId || payload.parentId }, nodeId || payload.parentId);
+                : document.nodes.find(node => (payload.parentId === '__top_level__' ? node.parentId === null : node.parentId === payload.parentId) && node.title === payload.title)?.id;
+            const focusId = nodeId || (payload.parentId === '__top_level__' ? '' : payload.parentId);
+            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null, editorMessage: '', openNodeIds: focusId ? unique([...state.openNodeIds, focusId]) : state.openNodeIds, highlightedNodeId: nodeId || '' }, focusId);
         } catch (error) {
             commit({ ...state, editorMessage: `Could not save: ${error.message}` }, '', false);
         }

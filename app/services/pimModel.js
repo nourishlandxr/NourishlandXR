@@ -116,10 +116,10 @@ function rootNode(compass, plantId, timestamps, existing = {}) {
         knowledgeModes: [...compass.knowledgeModes],
         direction: compass.direction,
         informationType: 'category',
-        title: compass.title,
-        question: compass.question,
-        color: compass.color,
-        displayOrder: compass.order,
+        title: existing.title || compass.title,
+        question: existing.question || compass.question,
+        color: existing.color || compass.color,
+        displayOrder: Number.isFinite(Number(existing.displayOrder)) ? Number(existing.displayOrder) : compass.order,
         status: 'published',
         evidenceStatus: existing.evidenceStatus || existing.evidence_status || 'draft'
     }, { plantId, ...timestamps });
@@ -464,6 +464,19 @@ export function pimAddNode(document, node, options = {}) {
     }, { now });
 }
 
+export function pimAddTopLevelNode(document, node, options = {}) {
+    const source = normalizePimDocument(document, options);
+    const id = safeId(node?.id || node?.title);
+    if (!id || PIM_COMPASS_BY_ID[id] || pimNodeById(source, id)) throw new Error(`PIM top-level cell ID is unavailable: ${id || 'blank'}.`);
+    const now = dateText(options.now || new Date().toISOString());
+    return normalizePimDocument({ ...source, nodes: [...source.nodes, {
+        ...clone(node), id, plantId: source.plantId, parentId: null, primaryCategory: id,
+        knowledgeMode: text(node.knowledgeMode || 'agency'), direction: 'custom', informationType: 'category',
+        status: node.status || 'published', evidenceStatus: node.evidenceStatus || 'draft',
+        createdAt: node.createdAt || now, updatedAt: now
+    }], updatedAt: now }, { now });
+}
+
 export function pimUpdateNode(document, nodeId, patch = {}, options = {}) {
     const source = normalizePimDocument(document, options);
     const existing = pimNodeById(source, nodeId);
@@ -483,6 +496,43 @@ export function pimUpdateNode(document, nodeId, patch = {}, options = {}) {
         updatedAt: now
     });
     return normalizePimDocument({ ...source, nodes, updatedAt: now }, { now });
+}
+
+// Structural controls keep removed cells recoverable and never discard their
+// body, sources or provenance. Archived cells remain addressable for restore.
+export function pimArchiveNode(document, nodeId, options = {}) {
+    const source = normalizePimDocument(document, options);
+    const node = pimNodeById(source, nodeId);
+    if (!node) throw new Error(`PIM node was not found: ${nodeId}.`);
+    const archived = new Set([nodeId, ...descendantIds(source, nodeId)]);
+    const now = dateText(options.now || new Date().toISOString());
+    return normalizePimDocument({ ...source, nodes: source.nodes.map(item => archived.has(item.id) ? { ...item, status: 'archived', archivedFromStatus: item.status, archivedAt: now, updatedAt: now } : item), updatedAt: now }, { now });
+}
+
+export function pimRestoreNode(document, nodeId, options = {}) {
+    const source = normalizePimDocument(document, options);
+    const node = pimNodeById(source, nodeId);
+    if (!node) throw new Error(`PIM node was not found: ${nodeId}.`);
+    const restored = new Set([nodeId, ...descendantIds(source, nodeId)]);
+    const now = dateText(options.now || new Date().toISOString());
+    return normalizePimDocument({ ...source, nodes: source.nodes.map(item => restored.has(item.id) && item.status === 'archived' ? { ...item, status: item.archivedFromStatus || 'draft', updatedAt: now } : item), updatedAt: now }, { now });
+}
+
+export function pimMoveNode(document, nodeId, direction, options = {}) {
+    const source = normalizePimDocument(document, options);
+    const node = pimNodeById(source, nodeId);
+    if (!node) throw new Error(`PIM node was not found: ${nodeId}.`);
+    const siblings = pimChildren(source, node.parentId).filter(item => item.status !== 'archived');
+    const index = siblings.findIndex(item => item.id === nodeId);
+    const nextIndex = index + (direction === 'up' ? -1 : 1);
+    if (index < 0 || nextIndex < 0 || nextIndex >= siblings.length) return source;
+    const other = siblings[nextIndex];
+    const now = dateText(options.now || new Date().toISOString());
+    return normalizePimDocument({ ...source, nodes: source.nodes.map(item => item.id === node.id ? { ...item, displayOrder: other.displayOrder, updatedAt: now } : item.id === other.id ? { ...item, displayOrder: node.displayOrder, updatedAt: now } : item), updatedAt: now }, { now });
+}
+
+export function pimArchivedNodes(document) {
+    return normalizePimDocument(document).nodes.filter(node => node.status === 'archived');
 }
 
 export function pimPublishedDocument(document) {

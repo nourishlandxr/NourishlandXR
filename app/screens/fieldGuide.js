@@ -12,6 +12,58 @@ let currentGuide = null;
 let currentGuidePlaceId = '';
 let globalGuideSearchTimer = null;
 
+const GLOBAL_FACT_DESTINATIONS = Object.freeze({
+    common_name: ['Plant identity', 'Identity & taxonomy'], scientific_name: ['Scientific Information', 'Taxonomy'],
+    canonical_name: ['Scientific Information', 'Taxonomy'], family: ['Scientific Information', 'Classification'],
+    kingdom: ['Scientific Information', 'Classification'], rank: ['Scientific Information', 'Classification'],
+    image: ['Plant profile', 'Reference image'], description: ['Scientific Information', 'Description'],
+    growth_form: ['Scientific Information', 'Form & dimensions'], height: ['Scientific Information', 'Form & dimensions'],
+    climate: ['Cultivation', 'Climate & tolerances'], sun: ['Cultivation', 'Sun, water & soil'],
+    water: ['Cultivation', 'Sun, water & soil'], soil: ['Cultivation', 'Sun, water & soil'],
+    cultivation: ['Cultivation', 'Cultivation'], propagation: ['Propagation', 'Propagation'],
+    edible_uses: ['Uses', 'Culinary'], useful_parts: ['Uses', 'Useful parts'],
+    ecological_relationships: ['Food Forest', 'Ecological relationships'], food_forest_roles: ['Food Forest', 'Functions'],
+    distribution: ['Historical Data', 'Distribution & history'], warnings: ['Scientific Information', 'Warnings']
+});
+const GLOBAL_FACT_SECONDARY_DESTINATIONS = Object.freeze({
+    height: ['Food Forest', 'Layer'], growth_form: ['Food Forest', 'Layer'], climate: ['Food Forest', 'Site placement'],
+    soil: ['Food Forest', 'Relationships'], sun: ['Food Forest', 'Site placement'], water: ['Food Forest', 'Site placement'],
+    life_cycle: ['Food Forest', 'Layer'], evergreen_deciduous: ['Food Forest', 'Layer'],
+    flower_characteristics: ['Propagation', 'Pollination'], reproductive_traits: ['Propagation', 'Pollination'],
+    traditional_use: ['Historical Data', 'Traditional knowledge'], traditional_uses: ['Historical Data', 'Traditional knowledge'],
+    ecological_function: ['Scientific Information', 'Observed relationships']
+});
+const factDestinations = key => [GLOBAL_FACT_DESTINATIONS[key] || ['Unassigned', 'Review and choose destination'], ...(GLOBAL_FACT_SECONDARY_DESTINATIONS[key] ? [GLOBAL_FACT_SECONDARY_DESTINATIONS[key]] : [])];
+const destinationCategoryId = value => ({ 'Plant identity': 'plant-identity', 'Scientific Information': 'scientific-information', Uses: 'uses', 'Food Forest': 'food-forest', Cultivation: 'cultivation', Propagation: 'propagation', 'Historical Data': 'historical-data', Unassigned: 'unassigned' }[value] || String(value || '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-'));
+const destinationValue = pair => [destinationCategoryId(pair[0]), pair[1]].join('|');
+
+const humanFactLabel = key => String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+const usefulFactValue = value => {
+    if (value === null || value === undefined || value === '') return '';
+    if (Array.isArray(value)) return value.map(usefulFactValue).filter(Boolean).join('; ');
+    if (typeof value === 'object') {
+        try { return JSON.stringify(value); } catch { return ''; }
+    }
+    return String(value).trim();
+};
+const sourceFacts = result => {
+    const raw = result?.rawSourceData && typeof result.rawSourceData === 'object' ? result.rawSourceData : {};
+    const preferred = {
+        common_name: result?.commonName, scientific_name: result?.scientificName, canonical_name: result?.canonicalName,
+        family: result?.family, kingdom: result?.kingdom, rank: result?.rank, image: result?.thumbnailUrl
+    };
+    const ignored = new Set(['id', 'key', 'guid', 'url', 'thumbnailUrl', 'imageUrl', 'default_photo', 'ancestors']);
+    const facts = new Map();
+    Object.entries({ ...raw, ...preferred }).forEach(([key, value]) => {
+        const normalizedKey = String(key).replace(/([a-z])([A-Z])/g, '$1_$2').toLocaleLowerCase();
+        const normalizedValue = usefulFactValue(value);
+        if (!normalizedValue || ignored.has(key) || ignored.has(normalizedKey) || normalizedValue.length > 1200) return;
+        const destinations = factDestinations(normalizedKey);
+        facts.set(normalizedKey, { key: normalizedKey, label: humanFactLabel(normalizedKey), value: normalizedValue, destination: destinations[0], destinations });
+    });
+    return [...facts.values()];
+};
+
 async function loadAreaPlants(projectId, siteId, placeId, visitor) {
     const [resolved, markers] = await Promise.all([
         loadResolvedPlantsForPlace(projectId, siteId, placeId, visitor),
@@ -161,7 +213,7 @@ function applyCreatorWebHubCopy(app) {
     let openGlobalProfile = null;
     const globalExtractionFields = result => new Set(Array.isArray(result?.extractionFields) && result.extractionFields.length
         ? result.extractionFields
-        : ['common_name', 'scientific_name', ...(result?.family ? ['family'] : []), ...(result?.thumbnailUrl ? ['image'] : [])]);
+        : sourceFacts(result).filter(fact => fact.destination[0] !== 'Unassigned').map(fact => fact.key));
     const referenceProfileMarkup = result => {
         const extraction = globalExtractionFields(result);
         const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
@@ -172,27 +224,51 @@ function applyCreatorWebHubCopy(app) {
             <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div><h4 id="fieldGuideGlobalExtractTitle">Convert selected content</h4><p>Choose only the facts that belong in your NLXR Plant Profile and PIM. The source citation is kept automatically.</p></div><fieldset><legend>Content to bring into NLXR</legend><label><input type="checkbox" data-global-extract-field="common_name" ${extraction.has('common_name') ? 'checked' : ''} /> <span><strong>Display name</strong><small>Plant identity</small></span></label><label><input type="checkbox" data-global-extract-field="scientific_name" ${extraction.has('scientific_name') ? 'checked' : ''} /> <span><strong>Accepted scientific name</strong><small>Scientific Information · taxonomy</small></span></label>${result.family ? `<label><input type="checkbox" data-global-extract-field="family" ${extraction.has('family') ? 'checked' : ''} /> <span><strong>Family</strong><small>Scientific Information · classification</small></span></label>` : ''}${result.thumbnailUrl ? `<label><input type="checkbox" data-global-extract-field="image" ${extraction.has('image') ? 'checked' : ''} /> <span><strong>Reference image</strong><small>Plant profile image</small></span></label>` : ''}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Convert selected content</button></section>
         </article>`;
     };
+    const researchProfileMarkup = result => {
+        const extraction = globalExtractionFields(result);
+        const facts = sourceFacts(result);
+        const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
+        const sections = facts.reduce((groups, fact) => {
+            const heading = fact.destination[0] === 'Plant identity' ? 'Identity & taxonomy' : fact.destination[1];
+            (groups[heading] ||= []).push(fact);
+            return groups;
+        }, {});
+        const destinations = fact => [...(fact.destinations || [fact.destination]), ['scientific-information', 'Other discovered information'], ['uses', 'Other useful information'], ['food-forest', 'Other ecological information'], ['cultivation', 'Other growing information'], ['propagation', 'Other propagation information'], ['historical-data', 'Other historical information'], ['unassigned', 'Review later']];
+        return `<article class="field-guide-global-profile field-guide-research-workspace" aria-labelledby="fieldGuideGlobalProfileTitle">
+            <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL SOURCE PROFILE</span><h3 id="fieldGuideGlobalProfileTitle">${escapeHtml(displayName)}</h3><em title="${escapeHtml(result.scientificName || '')}">${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em></div><button type="button" class="ghost" data-global-profile-back>Back to results</button></header>
+            <div class="field-guide-global-profile-body">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="${escapeHtml(displayName)} reference" loading="lazy" />` : '<span class="field-guide-global-profile-placeholder" aria-hidden="true">🌿</span>'}<dl><div><dt>Source</dt><dd title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</dd></div><div><dt>Source record</dt><dd title="${escapeHtml(result.externalId || '')}">${escapeHtml(result.externalId || 'Not supplied')}</dd></div></dl></div>
+            <div class="field-guide-research-sections">${Object.entries(sections).map(([title, items]) => `<section><h4>${escapeHtml(title)}</h4><dl>${items.map(fact => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')}</dl></section>`).join('')}</div>
+            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Extraction tray</h4><p>Select facts and accept, change or add destinations. Suggested secondary cells are optional.</p></div><div><button type="button" class="ghost" data-global-select-all>Select all</button><button type="button" class="ghost" data-global-clear-all>Clear</button></div></div><fieldset><legend>Content to bring into NLXR</legend>${facts.map(fact => `<div class="field-guide-extract-row"><label class="field-guide-extract-fact"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong><small title="${escapeHtml(fact.value)}">${escapeHtml(fact.value)}</small><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${fact.destination[0] === 'Unassigned' ? 'Needs review' : 'Suggested destination'}</small></span></label><details class="field-guide-extract-destinations"><summary>Assign destination</summary>${destinations(fact).map((destination, index) => `<label><input type="checkbox" data-global-extract-destination="${escapeHtml(fact.key)}" value="${escapeHtml(destinationValue(destination))}" ${index === 0 && fact.destination[0] !== 'Unassigned' ? 'checked' : ''} />${escapeHtml(destination.join(' → '))}</label>`).join('')}</details></div>`).join('')}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Continue with selected facts</button></section>
+        </article>`;
+    };
     const renderGlobalResults = results => {
         if (!globalResults) return;
-        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : ''}<span><strong>${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em>${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small>${escapeHtml(result.family)}</small>` : ''}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
         globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
             const result = results[Number(button.dataset.globalPlantIndex)];
             if (!result) return;
             openGlobalProfile = result;
-            globalResults.innerHTML = referenceProfileMarkup(result);
+            globalResults.innerHTML = researchProfileMarkup(result);
             globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
                 openGlobalProfile = null;
                 renderGlobalResults(results);
                 if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
             });
             const profileStatus = globalResults.querySelector('[data-global-profile-status]');
+            globalResults.querySelector('[data-global-select-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = true; }));
+            globalResults.querySelector('[data-global-clear-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = false; }));
             globalResults.querySelector('[data-global-profile-convert]')?.addEventListener('click', async event => {
                 const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
-                const hasPimContent = selectedFields.some(field => ['scientific_name', 'family'].includes(field));
-                if (!hasPimContent) {
-                    if (profileStatus) profileStatus.textContent = 'Select at least one Scientific Information field to create usable PIM content.';
+                if (!selectedFields.length) {
+                    if (profileStatus) profileStatus.textContent = 'Select at least one fact to continue.';
                     return;
                 }
+                const factsByKey = new Map(sourceFacts(result).map(fact => [fact.key, fact]));
+                const extractedFacts = selectedFields.map(key => {
+                    const fact = factsByKey.get(key);
+                    const selectedDestinations = [...globalResults.querySelectorAll(`[data-global-extract-destination="${CSS.escape(key)}"]:checked`)].map(input => input.value.split('|'));
+                    return { ...fact, destination: selectedDestinations[0] || ['unassigned', 'Review later'], confirmedDestinations: selectedDestinations.length ? selectedDestinations : [['unassigned', 'Review later']], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: selectedDestinations.length ? 'suggested' : 'needs_review', reviewStatus: 'pending' };
+                }).filter(fact => fact.key);
                 const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
                 if (!siteGroup?.site?.id || !currentGuide?.creator) return;
                 event.currentTarget.disabled = true;
@@ -202,7 +278,7 @@ function applyCreatorWebHubCopy(app) {
                         project: currentGuide.project.id,
                         site: siteGroup.site.id,
                         place: currentGuidePlaceId || '__unassigned__',
-                        globalPlant: { ...result, extractionFields: selectedFields }
+                        globalPlant: { ...result, extractionFields: selectedFields, extractedFacts }
                     });
                 } catch (error) {
                     event.currentTarget.disabled = false;

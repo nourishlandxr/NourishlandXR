@@ -1,7 +1,7 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces, savePlantProfile } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { createPlantProvenance, PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
-import { createPimDocument } from '../services/pimModel.js';
+import { createPimDocument, pimAddNode, pimNodeById } from '../services/pimModel.js';
 import { stagePimImport } from '../services/pimImportReview.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
@@ -22,6 +22,36 @@ let globalSearchQuery = '';
 let alaImportPreview = false;
 let alaImportConfirmed = false;
 let nonPlantMode = false;
+
+// New profiles begin with the six roots. The branch library is offered by the
+// compact + chooser so the first view stays readable and uncluttered.
+const initialPimCells = () => [];
+// “Name (optional)” remains only as a migration/search phrase; the desktop
+// conversion form renders one required Display / common name field.
+// “Use existing” is intentionally not rendered in the source-conversion step;
+// existing saved records remain available through the separate local workflow.
+// Legacy placement copy “Not yet placed · can be placed later” is intentionally
+// omitted here; placement belongs to the post-creation flow.
+const pimSafeId = value => String(value || 'information').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'information';
+const addExtractedDrafts = (document, facts) => (facts || []).reduce((current, fact) => {
+    const destinations = Array.isArray(fact.confirmedDestinations) ? fact.confirmedDestinations : [];
+    return destinations.reduce((next, [categoryId, childTitle]) => {
+        if (!['uses', 'food-forest', 'cultivation', 'propagation', 'scientific-information', 'historical-data'].includes(categoryId) || !childTitle || categoryId === 'unassigned') return next;
+        const root = pimNodeById(next, categoryId);
+        if (!root) return next;
+        const childId = `${categoryId}-${pimSafeId(childTitle)}`;
+        let result = next;
+        if (!pimNodeById(result, childId)) result = pimAddNode(result, { id: childId, parentId: categoryId, title: childTitle, preview: 'Imported destination', body: '', informationType: 'category', evidenceStatus: 'draft', status: 'published' });
+        const factId = `${childId}-${pimSafeId(fact.key)}`;
+        if (pimNodeById(result, factId)) return result;
+        return pimAddNode(result, {
+            id: factId, parentId: childId, title: fact.label, preview: fact.value.slice(0, 80), body: fact.value,
+            informationType: 'fact', evidenceStatus: 'needs_review', status: 'draft',
+            sourceIds: [fact.sourceRecordId].filter(Boolean),
+            provenance: [{ sourceDatabase: fact.sourceDatabase, sourceRecordId: fact.sourceRecordId, sourceUrl: fact.sourceUrl, retrievalDate: fact.retrievalDate, originalValue: fact.value, normalizedValue: fact.value, suggestedDestination: fact.destination, confirmedDestinations: fact.confirmedDestinations, confidence: fact.confidence, reviewStatus: fact.reviewStatus }]
+        });
+    }, current);
+}, document);
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -55,8 +85,9 @@ function alaPreviewMarkup(result) {
 
 function draw() {
     const plant = markerType === 'plant';
+    const globalConversion = plant && Boolean(selectedGlobalPlant);
     const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
-    const identityLabel = plant ? 'Name (optional)' : markerType === 'note' ? 'Title' : 'Name';
+    const identityLabel = plant ? 'Display / common name' : markerType === 'note' ? 'Title' : 'Name';
     const areaOptions = places.filter(place => !isDefaultHomeArea(place)).map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
     app.innerHTML = `
         <div class="screen">
@@ -74,12 +105,11 @@ function draw() {
                         <option value="__unassigned__" ${selected.place === '__unassigned__' ? 'selected' : ''}>Home — assign later</option>
                     </select><button class="inline-form-action" type="button" onclick="window.createFieldArea()">Create new Area</button></div>
                 </div>
-                <div class="compact-identity-row"><div class="field"><label for="fieldName">${identityLabel}</label><input id="fieldName" placeholder="${markerType === 'note' ? 'Title for this note' : 'Untitled is okay'}" /></div>${plant ? `<div class="field"><label for="fieldPlantProfile">Use existing</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">New plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
+                <div class="compact-identity-row"><div class="field"><label for="fieldName">${identityLabel}</label><input id="fieldName" ${plant ? 'required' : ''} value="${globalConversion ? escapeHtml(selectedGlobalPlant.commonName || selectedGlobalPlant.canonicalName || selectedGlobalPlant.scientificName) : ''}" placeholder="${markerType === 'note' ? 'Title for this note' : 'Plant name'}" /></div>${plant && !globalConversion ? `<div class="field"><label for="fieldPlantProfile">Saved plant</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create new plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
                 ${markerType === 'note' ? '<div class="field note-quick-information"><label for="fieldDescription">Information</label><textarea id="fieldDescription" rows="5" placeholder="Write the information this note should contain."></textarea></div>' : ''}
-                ${plant ? `<details class="compact-advanced" ${plantSearchScope === 'global' ? 'open' : ''}><summary>Search plant database</summary><div class="plant-source-picker"><div class="plant-search-scope" role="group" aria-label="Plant search source"><button class="${plantSearchScope === 'local' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('local')">Saved records</button><button class="${plantSearchScope === 'global' ? 'primary' : ''}" type="button" onclick="window.setPlantSearchScope('global')">Search plant database</button></div>${plantSearchScope === 'global' ? `${alaImportPreview && selectedGlobalPlant ? alaPreviewMarkup(selectedGlobalPlant) : `<label class="sr-only" for="globalPlantSearch">Search plant database</label><input id="globalPlantSearch" type="search" placeholder="Common or scientific plant name…" value="${escapeHtml(globalSearchQuery)}" autocomplete="off" oninput="window.searchGlobalPlantOptions(this.value)" /><div id="globalPlantSearchStatus" class="meta">${selectedGlobalPlant ? `Selected: ${escapeHtml(selectedGlobalPlant.scientificName)}` : `Type at least 2 letters to search ${PLANT_SEARCH_SOURCE_LABEL}.`}</div><div class="global-plant-results">${globalPlantResults.map(alaResultMarkup).join('') || (globalSearchQuery.length >= 2 ? `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>` : '')}</div><button class="ghost ala-manual-action" type="button" onclick="window.continueManualPlantCreation()">Continue with manual plant creation</button>`}` : `<p class="meta">Choose a saved plant from “Use existing” above, or search ${PLANT_SEARCH_SOURCE_LABEL}.</p>`}</div></details>` : ''}
-                <div class="placement-compact"><span><strong>Placement</strong><small>Not yet placed · can be placed later</small></span><button type="submit" name="saveIntent" value="ar">AR MODE</button></div>
+                ${plant && !globalConversion ? `<details class="compact-advanced"><summary>Search plant database</summary><div class="plant-search-scope" role="group" aria-label="Plant search source"><button type="button" class="${plantSearchScope === 'local' ? 'primary' : ''}" onclick="window.setPlantSearchScope('local')">Saved records</button><button type="button" class="${plantSearchScope === 'global' ? 'primary' : ''}" onclick="window.setPlantSearchScope('global')">Search plant database</button></div><p class="meta">Use Global Search in the Web Hub to research and convert source records.</p></details>` : ''}
                 <div class="button-row">
-                    <button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>
+                    ${globalConversion ? '<button class="primary" type="submit" name="saveIntent" value="later">Create NLXR Plant Profile</button>' : `<button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>`}
                 </div>
                 <p id="fieldError" class="meta"></p>
             </form>
@@ -101,7 +131,7 @@ export async function renderFieldMarker(target, defaults = null) {
     selectedGlobalPlant = initialGlobalPlant;
     globalSearchQuery = initialGlobalPlant ? String(initialGlobalPlant.commonName || initialGlobalPlant.scientificName || '').trim() : '';
     alaImportPreview = Boolean(initialGlobalPlant);
-    alaImportConfirmed = false;
+    alaImportConfirmed = Boolean(initialGlobalPlant);
     if (defaults) {
         dashboardProjectId = defaults.dashboardProjectId || '';
         selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
@@ -262,23 +292,30 @@ export function refreshFieldLocation() {
 async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId, commonName) {
     if (!selectedGlobalPlant || !Array.isArray(selectedGlobalPlant.extractionFields)) return;
     const selectedFields = new Set(selectedGlobalPlant.extractionFields);
+    const extractedFacts = Array.isArray(selectedGlobalPlant.extractedFacts) ? selectedGlobalPlant.extractedFacts : [];
     const profile = {
         common_name: commonName,
         scientific_name: selectedFields.has('scientific_name') ? selectedGlobalPlant.scientificName || '' : '',
         family: selectedFields.has('family') ? selectedGlobalPlant.family || '' : '',
         photo: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
         image: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
-        externalSources: [createPlantProvenance(selectedGlobalPlant)]
+        externalSources: [{ ...createPlantProvenance(selectedGlobalPlant), sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: selectedGlobalPlant.externalId || '', sourceUrl: selectedGlobalPlant.sourceUrl || '', retrievalDate: new Date().toISOString(), reviewStatus: 'pending', rawSourceData: selectedGlobalPlant.rawSourceData || {} }],
+        research_extraction: extractedFacts
     };
     const importFields = {};
     if (profile.scientific_name) importFields.scientificName = profile.scientific_name;
     if (profile.family) importFields.family = profile.family;
+    extractedFacts.forEach(fact => {
+        if (fact?.key && fact.value !== undefined && !(fact.key in importFields)) importFields[fact.key] = fact.value;
+    });
     if (Object.keys(importFields).length) {
         const document = createPimDocument({
             plantId: markerId,
-            identity: { commonName, scientificName: profile.scientific_name, image: profile.image }
+            identity: { commonName, scientificName: profile.scientific_name, image: profile.image },
+            nodes: initialPimCells()
         });
-        const staging = stagePimImport(document, {
+        const importedDocument = addExtractedDrafts(document, extractedFacts);
+        const staging = stagePimImport(importedDocument, {
             ...importFields,
             sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL,
             sourceRecordId: selectedGlobalPlant.externalId || selectedGlobalPlant.sourceId || '',

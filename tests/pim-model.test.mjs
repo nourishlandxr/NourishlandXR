@@ -8,11 +8,15 @@ import {
     normalizePimDocument,
     validatePimDocument,
     pimAddNode,
+    pimAddTopLevelNode,
+    pimArchiveNode,
     pimAncestors,
     pimChildren,
     pimNodeById,
     pimOpenAncestors,
     pimPublishedDocument,
+    pimRestoreNode,
+    pimMoveNode,
     pimSearch,
     pimToArKnowledge,
     pimToggleOpenNodes,
@@ -323,4 +327,18 @@ test('import review can acknowledge duplicates, reject conflicts, or modify an a
     assert.equal(saved.provenance[0].reviewStatus, 'modified');
     assert.equal(staged.status, 'reviewed');
     assert.equal(validatePimDocument(normalizePimDocument(staged.document)).valid, true);
+});
+
+test('custom PIM cells are visible, reorderable and recoverable without losing content', () => {
+    let document = createPimDocument({ plantId: 'custom-plant', now: NOW });
+    document = pimAddTopLevelNode(document, { title: 'Garden experiments', preview: 'Local observations', body: '', status: 'published' }, { now: NOW });
+    document = pimAddNode(document, { id: 'garden-experiments-first-trial', title: 'First trial', parentId: 'garden-experiments', preview: 'Trial result', body: 'Keep provenance', status: 'published', displayOrder: 0 }, { now: NOW });
+    document = pimAddNode(document, { id: 'garden-experiments-second-trial', title: 'Second trial', parentId: 'garden-experiments', preview: 'Another result', body: 'Second note', status: 'published', displayOrder: 1 }, { now: NOW });
+    document = pimMoveNode(document, 'garden-experiments-second-trial', 'up', { now: NOW });
+    assert.equal(pimChildren(document, 'garden-experiments')[0].id, 'garden-experiments-second-trial');
+    document = pimArchiveNode(document, 'garden-experiments', { now: NOW });
+    assert.equal(pimNodeById(document, 'garden-experiments-first-trial').body, 'Keep provenance');
+    assert.equal(pimNodeById(document, 'garden-experiments').status, 'archived');
+    document = pimRestoreNode(document, 'garden-experiments', { now: NOW });
+    assert.equal(pimNodeById(document, 'garden-experiments').status, 'published');
 });
