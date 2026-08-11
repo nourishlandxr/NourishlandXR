@@ -204,7 +204,7 @@ test('PIM plant pose is lifted above its orb for first-open AR placement', () =>
     assert.ok(pose.position.y > .2, 'the panel is overhead relative to the orb');
 });
 
-test('PIM shared hit testing exposes large cells and explicit recenter', () => {
+test('PIM shared hit testing exposes large cells without a floating recenter control', () => {
     const foodForest = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE)[0];
     const point = pimRootPosition(foodForest);
     assert.equal(pimHoneycombTargetAtPercent(
@@ -213,6 +213,6 @@ test('PIM shared hit testing exposes large cells and explicit recenter', () => {
         point.x,
         point.y
     ).path, 'food-forest');
-    assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 50, 94).pimRecenter, true);
+    assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 50, 94), null);
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 2, 2), null);
 });

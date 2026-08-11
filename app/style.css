@@ -847,7 +847,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-demo .tryit-sim-marker-zone:is(:hover, :focus-visible, .is-drag-ready) { border-radius: 18px; }
 @keyframes tryit-plant-profile-ready { from { transform: translate(-50%, -50%) translate(-1px, 0) scale(.99); } to { transform: translate(-50%, -50%) translate(1px, -1px) scale(1.015); } }
 .tryit-sim-plant-tether { position: fixed; left: var(--marker-x, 50%); top: calc(var(--marker-y, 50%) - 9px); z-index: 12000; width: var(--tether-length, 120px); height: 18px; transform: rotate(var(--tether-angle, -90deg)); transform-origin: 0 9px; overflow: visible; filter: drop-shadow(0 0 3px rgba(183,232,149,.20)); opacity: .9; pointer-events: none; }
-.tryit-sim-plant-tether path { fill: none; stroke: rgba(222,239,207,.36); stroke-width: 1; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tryit-sim-plant-tether path { fill: none; stroke: rgba(222,239,207,.72); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 7 10; vector-effect: non-scaling-stroke; animation: plant-pim-tether-flow 1.25s linear infinite; }
 .tryit-sim-plant-profile { position: fixed; left: var(--marker-x, 50%); top: var(--marker-y, 50%); z-index: 12001; width: min(calc(100vw - 24px), 960px); height: min(62vh, 620px); height: min(62dvh, 620px); transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); overflow:visible; border:1px solid rgba(214,242,191,.14); border-radius:clamp(24px,4vw,42px); background:radial-gradient(ellipse at center,rgba(19,66,40,.28),rgba(7,26,17,.08) 58%,transparent 78%); color: rgba(255,255,255,.92); box-shadow:inset 0 0 70px rgba(150,213,117,.05); filter: drop-shadow(0 12px 28px rgba(0,0,0,.16)); pointer-events: auto; animation: tryit-profile-arrive 1.15s cubic-bezier(.18,.78,.28,1) both; }
 .tryit-sim-plant-profile.is-dragging { filter: drop-shadow(0 11px 24px rgba(0,0,0,.16)); }
 @keyframes tryit-profile-arrive { from { opacity: 0; transform: translate(calc(-50% + var(--panel-x)), calc(-46% + var(--panel-y))) scale(.94); } to { opacity: 1; transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))) scale(1); } }
@@ -1165,7 +1165,7 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-marker-layer.is-neutral-mode .creator-ar-marker-hit-target.has-plant-profile:is(:hover, :focus-visible)::after { animation: creator-ar-profile-ready .38s ease-in-out infinite alternate; border-color: rgba(220,239,149,.88); opacity: 1; }
 @keyframes creator-ar-profile-ready { from { transform: translateX(-1px) scale(.96); } to { transform: translateX(1px) translateY(-1px) scale(1.03); } }
 .creator-ar-plant-tether { position:fixed; z-index:3; display:block; height:18px; transform-origin:0 9px; overflow:visible; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--marker-accent,#b7e895) 55%,transparent)); opacity:0; pointer-events:none; animation:creator-ar-profile-fade .65s .08s ease forwards; }
-.creator-ar-plant-tether path { fill:none; stroke:color-mix(in srgb,var(--marker-accent,#b7e895) 72%,#edf8e7); stroke-width:1.5; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+.creator-ar-plant-tether path { fill:none; stroke:color-mix(in srgb,var(--marker-accent,#b7e895) 72%,#edf8e7); stroke-width:1.5; stroke-linecap:round; stroke-dasharray:7 10; vector-effect:non-scaling-stroke; animation:plant-pim-tether-flow 1.25s linear infinite; }
 .creator-ar-plant-profile { position:fixed; z-index:4; width:min(calc(100vw - 24px),960px); height:min(74dvh,680px); transform:translate(-50%,-50%) scale(.965); overflow:visible; border:1px solid rgba(214,242,191,.12); border-radius:clamp(24px,4vw,42px); background:radial-gradient(ellipse at center,color-mix(in srgb,var(--profile-accent,#b7e895) 11%,transparent),rgba(7,26,17,.05) 62%,transparent 80%); color:rgba(255,255,255,.94); box-shadow:inset 0 0 70px color-mix(in srgb,var(--profile-accent,#b7e895) 6%,transparent); filter:drop-shadow(0 12px 28px rgba(0,0,0,.14)); opacity:0; pointer-events:none; animation:creator-ar-profile-arrive .72s cubic-bezier(.18,.78,.28,1) forwards; }
 .creator-ar-plant-profile .plant-knowledge-map { --pim-cell-size:clamp(92px,13vw,158px); --pim-cell-height:calc(var(--pim-cell-size) * .8); --pim-x-step:clamp(60px,15vw,84px); --pim-x-half:clamp(31px,7.8vw,44px); --pim-y-step:clamp(48px,12.4vw,68px); }
 .creator-ar-plant-profile .plant-knowledge-connectors path { stroke:hsl(var(--pim-hue,112) 68% 78% / .86); stroke-width:1.7; filter:drop-shadow(0 0 6px hsl(var(--pim-hue,112) 72% 66% / .42)); }
@@ -8174,7 +8174,8 @@ button.ar-square-action::before { display: none !important; }
     height: calc(var(--pim-cell-height) * 1.2);
     animation: pim-honeycomb-grow 220ms cubic-bezier(.2,.72,.3,1) both;
 }
-.tryit-sim-plant-profile .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child {
+.tryit-sim-plant-profile .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child,
+.creator-ar-plant-profile .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child {
     animation: pim-demo-attached-grow 260ms cubic-bezier(.2,.72,.3,1) both;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-recenter {
@@ -8233,6 +8234,11 @@ button.ar-square-action::before { display: none !important; }
         opacity: 1;
         transform: translate(-50%,-50%) scale(1);
     }
+}
+@keyframes plant-pim-tether-flow {
+    from { stroke-dashoffset: 0; opacity: .48; }
+    50% { opacity: 1; }
+    to { stroke-dashoffset: -34; opacity: .48; }
 }
 @media (prefers-reduced-motion: reduce) {
     .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell,

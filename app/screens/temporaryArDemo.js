@@ -48,6 +48,7 @@ let ending = false;
 let demoStage = 'plant';
 let boardTypingTimer = null;
 let boardTypingWatchdogTimer = null;
+let skipDemoNarration = null;
 let aimRevealTimer = null;
 let pointerPressTimer = null;
 let demoHoldTimer = null;
@@ -258,6 +259,7 @@ function clearSessionState() {
     demoWebModeOpen = false;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
+    skipDemoNarration = null;
     clearTimeout(aimRevealTimer);
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
@@ -568,6 +570,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         const typingDelay = demoTextTypingDelay(fullText, typedLength);
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
+    skipDemoNarration = finishTyping;
     if (typing) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
@@ -645,6 +648,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         const typingDelay = demoTextTypingDelay(bodyText, typedLength);
         boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
     };
+    skipDemoNarration = finishTyping;
     if (board) {
         board.classList.add('is-typing');
         board.classList.remove('is-copy-ready');
@@ -716,6 +720,10 @@ function showPersistentPimPrompt(record) {
         setGuide(`${plantName} Plant Information Mesh remains open. Select another cell to continue exploring.`);
     };
     continueButton.hidden = false;
+    skipDemoNarration = () => {
+        continueButton.hidden = false;
+        continueButton.focus?.();
+    };
     setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh.`);
 }
 
@@ -1184,13 +1192,19 @@ function renderSimulatedTotem(record, index, anchor) {
 
 function toggleDemoPlantProfile(record) {
     if (!record || record.demoType !== 'plant') return;
+    const recordIndex = markers.indexOf(record);
+    if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
         record.profileRevealStarted = performance.now();
-        record.demoActiveBranch = '';
-        record.demoExpandedBranches = [];
-        record.demoProfileInteracted = false;
-        record.demoProfileInteractionCount = 0;
+        const firstOpen = !record.demoProfileOpened;
+        record.demoProfileOpened = true;
+        record.demoActiveBranch ||= '';
+        record.demoExpandedBranches ||= [];
+        if (firstOpen) {
+            record.demoProfileInteracted = false;
+            record.demoProfileInteractionCount = 0;
+        }
         record.informationPose = plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition || null;
     }
@@ -1242,18 +1256,12 @@ function selectDemoProfileCell() {
         .find(candidate => candidate.target);
     if (!selection) return false;
     const { record, target } = selection;
-    const node = target.node || (target.pimRecenter || target.pimBack ? target : null);
+    const node = target.node || (target.pimBack ? target : null);
     // Consume every selection that lands on the open PIM surface. A hit in a
     // transparent gap must never fall through to the Live Tag/Web Mode
     // action underneath it; the user can simply aim at a visible cell next.
     if (!node) {
         setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
-        return true;
-    }
-    if (node.pimRecenter) {
-        record.informationPose = plantInformationPose(record);
-        record.informationPosition = record.informationPose?.position || record.informationPosition;
-        setGuide(`${record.name || 'Plant'} PIM recentered and world-locked in front of you.`);
         return true;
     }
     if (node.pimBack) {
@@ -1389,6 +1397,9 @@ function bindSimulatedInformationPanels(layer) {
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
+            // A plant is intentionally locked while its mesh is visible.
+            // Press the orb again to close the mesh, then hold to move it.
+            if (record.demoType === 'plant' && record.demoExpanded) return;
             if (demoHeldIndex === index) return;
             holdGesture = {
                 pointerId: event.pointerId,
@@ -1561,25 +1572,10 @@ function bindSimulatedInformationPanels(layer) {
             refreshDemoRecord(record);
             setGuide('Returned to the previous PIM bloom.');
         });
-        const recenter = profile.querySelector('[data-pim-recenter]');
-        recenter?.addEventListener('pointerdown', event => {
-            event.stopPropagation();
-            suppressSessionSelectUntil = performance.now() + 500;
-        });
-        recenter?.addEventListener('click', event => {
-            event.stopPropagation();
-            if (viewerMatrix) {
-                record.informationPose = plantInformationPose(record);
-                record.informationPosition = record.informationPose?.position || record.informationPosition;
-            } else {
-                record.demoPanelOffset = defaultPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 });
-            }
-            refreshDemoRecord(record);
-            setGuide(`${record.name || 'Plant'} PIM recentered.`);
-        });
         const cells = [...profile.querySelectorAll('[data-pim-node]')];
         cells.forEach(cell => {
             cell.addEventListener('pointerdown', event => {
+                event.preventDefault();
                 event.stopPropagation();
                 suppressSessionSelectUntil = performance.now() + 500;
             });
@@ -1666,8 +1662,7 @@ function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths
     const core = focus
         ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>SELECTED TOPIC</small><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
         : `<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(knowledge.title)}</strong></span>`;
-    const recenter = '<button type="button" class="plant-knowledge-recenter" data-pim-recenter aria-label="Recenter this Plant Information Mesh in front of me">&#8595;</button>';
-    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}${recenter}</span>`;
+    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
 }
 
 function refreshDemoRecord(record) {
@@ -2008,6 +2003,12 @@ function renderInterface(simulated) {
     const exitButton = appRoot.querySelector('[data-tryit-exit]');
     exitButton.textContent = 'Close';
     exitButton.setAttribute('aria-label', 'Close demo');
+    const skipButton = document.createElement('button');
+    skipButton.type = 'button';
+    skipButton.dataset.tryitSkip = '';
+    skipButton.textContent = 'Skip to Continue';
+    skipButton.setAttribute('aria-label', 'Show the current Continue action');
+    exitButton.before(skipButton);
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -2018,6 +2019,7 @@ function renderInterface(simulated) {
         button.addEventListener('click', expand);
     });
     exitButton.addEventListener('click', returnToWelcome);
+    skipButton.addEventListener('click', () => skipDemoNarration?.());
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
     appRoot.querySelector('.tryit-demo')?.append(placementPointer);
     introContinue.addEventListener('beforexrselect', event => event.preventDefault());
@@ -2803,13 +2805,14 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (record.demoType !== 'plant' || !record.demoExpanded) return;
         const informationPosition = record.informationPosition || (record.informationPosition = plantInformationPosition(record));
+        const pulse = .5 + Math.sin(performance.now() / 380) * .5;
         drawSpatialTether(
             gl,
             tetherRenderer,
             view,
             { ...record.position, y: record.position.y + 0.07 },
             { ...informationPosition, y: informationPosition.y - 0.22 },
-            { width: 0.003, color: [0.84, 0.93, 0.76, 0.25], curve: 0.035, lift: 0.05 }
+            { width: 0.0028 + pulse * .0022, color: [0.84, 0.93, 0.76, 0.22 + pulse * .34], curve: 0.035, lift: 0.05 }
         );
     });
 

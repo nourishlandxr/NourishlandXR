@@ -1587,7 +1587,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /pimSpatialPoseFromStored/);
     assert.match(arSource, /coordinate_space: 'marker-local'/);
     assert.match(arSource, /spatialAnchorForRecord/);
-    assert.match(arSource, /data-ar-pim-recenter/);
+    assert.doesNotMatch(arSource, /data-ar-pim-recenter/);
     assert.match(arSource, /loadPlantProfile\(operation\.projectId/);
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);

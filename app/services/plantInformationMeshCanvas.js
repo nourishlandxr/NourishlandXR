@@ -31,6 +31,7 @@ function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines = 2
 }
 
 function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) {
+    /* Retained only as a historical rendering reference for the old control.
     context.beginPath();
     for (let point = 0; point < 6; point += 1) {
         const angle = Math.PI / 3 * point;
@@ -145,6 +146,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         drawWrappedText(context, focus.focusNode.value, center.x, center.y + 52, 150, 18, 2);
     }
 
+    // PIM placement is automatic above the orb; its surface has no recenter
+    // control, so the former bottom arrow is deliberately not rendered.
+    return;
     context.beginPath();
     context.arc(center.x, height * .94, 34, 0, Math.PI * 2);
     context.fillStyle = 'rgba(24, 29, 27, .68)';
@@ -158,11 +162,11 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.font = '700 44px system-ui, sans-serif';
     context.strokeText('↓', center.x, height * .94 + 2);
     context.fillText('↓', center.x, height * .94 + 2);
+    */
 }
 
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
-    if (Math.hypot(xPercent - 50, yPercent - 94) <= 5.5) return { pimRecenter: true, label: 'Recenter PIM' };
     const focus = pimFocusedView(knowledge, expandedPaths);
     if (focus && Math.hypot(xPercent - 50, yPercent - 50) <= 10) return { ...focus.focusNode, pimBack: true };
     const hitRadius = PIM_SPATIAL_CONFIG.cellWidthMetres / PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * 50 * PIM_SPATIAL_CONFIG.colliderScale;

@@ -625,7 +625,8 @@ function creatorPlantKnowledgeMarkup(record) {
         const detailsVisible = node.depth > 0;
         const visualDepth = focus ? 1 : node.depth;
         const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
+        const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
+        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-parent-grid-x:${parentPosition.gridX || 0};--pim-parent-grid-y:${parentPosition.gridY || 0};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
         return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${escapeHtml(node.path)}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(compactLabel(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${escapeHtml(compactLabel(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
     }).join('');
     const focusTrail = focus?.trail.map(node => compactLabel(node.label)).join(' › ') || '';
@@ -633,8 +634,7 @@ function creatorPlantKnowledgeMarkup(record) {
     const core = focus
         ? `<span class="plant-knowledge-core is-fractal-focus"><strong>${escapeHtml(compactLabel(focus.focusNode.label))}</strong><i>${escapeHtml(focus.focusNode.value)}</i></span>`
         : `<span class="plant-knowledge-core"><strong>${escapeHtml(knowledge.title)}</strong></span>`;
-    const recenter = '<button type="button" class="plant-knowledge-recenter" data-ar-pim-recenter aria-label="Recenter this Plant Information Mesh in front of me">&#8595;</button>';
-    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}${recenter}</span>`;
+    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -1084,6 +1084,7 @@ function clearMarkerHoldGesture() {
 
 function beginMarkerHoldGesture(record, event) {
     if (!['neutral', 'view', 'grab', 'select'].includes(interactionMode) || readyPlacementType || dragState || markerHoldGesture) return false;
+    if (hasPlantProfile(record) && record.profileExpanded) return false;
     if (event.button != null && event.button !== 0) return false;
     const element = event.currentTarget;
     if (!element) return false;
@@ -1146,6 +1147,12 @@ function cancelMarkerHoldGesture(event) {
 }
 
 function handleMarkerPointerDown(record, event) {
+    if (hasPlantProfile(record) && record.profileExpanded) {
+        event.preventDefault();
+        event.stopPropagation();
+        beginMarkerInteraction(record, event);
+        return;
+    }
     beginMarkerHoldGesture(record, event);
 }
 
@@ -1661,6 +1668,17 @@ function finishControllerMarkerPress() {
     }
     if (!press?.record) return false;
     const target = controllerMarkerAtAim() || press.record;
+    if (hasPlantProfile(target)) {
+        const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(target.marker.id)}"]`);
+        if (element) {
+            beginMarkerInteraction(target, {
+                preventDefault() {},
+                stopPropagation() {},
+                currentTarget: element
+            }, { element });
+            return true;
+        }
+    }
     openMarkerContextToolbar(target);
     return true;
 }
@@ -1671,6 +1689,17 @@ function activateControllerTarget(directHold = interactionMode === 'grab') {
     if (!record || !element) {
         setPlacementStatus('Aim at a placed element, then press and hold the controller trigger.');
         return false;
+    }
+    if (directHold && hasPlantProfile(record) && record.profileExpanded) {
+        beginMarkerInteraction(record, {
+            preventDefault() {},
+            stopPropagation() {},
+            pointerId: 'xr-controller',
+            clientX: window.innerWidth / 2,
+            clientY: window.innerHeight / 2,
+            currentTarget: element
+        }, { element });
+        return true;
     }
     beginMarkerInteraction(record, {
         preventDefault() {},
@@ -1744,6 +1773,17 @@ function activateControllerSelection() {
     }
     const markerTarget = controllerMarkerAtAim();
     if (markerTarget) {
+        if (hasPlantProfile(markerTarget)) {
+            const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(markerTarget.marker.id)}"]`);
+            if (element) {
+                beginMarkerInteraction(markerTarget, {
+                    preventDefault() {},
+                    stopPropagation() {},
+                    currentTarget: element
+                }, { element });
+                return true;
+            }
+        }
         if (interactionMode === 'view') {
             const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(markerTarget.marker.id)}"]`);
             if (element) {
@@ -2945,7 +2985,7 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
     if (updateHover) {
         const next = {
             recordId: candidate?.record?.marker?.id || '',
-            path: candidate?.target?.path || (candidate?.target?.pimRecenter ? 'recenter' : '')
+            path: candidate?.target?.path || ''
         };
         if (next.recordId !== spatialPimHover.recordId || next.path !== spatialPimHover.path) {
             const previous = sessionMarkers.find(record => record.marker.id === spatialPimHover.recordId);
@@ -2957,25 +2997,9 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
     return candidate;
 }
 
-function persistSpatialPimPose(record) {
-    if (!record?.pimSpatialPose) return;
-    const operation = captureArOperationContext();
-    record.pimStoredPose = pimPoseAnchorPayload(record);
-    const anchor = spatialAnchorForRecord(record, operation);
-    void saveMarkerAnchor(operation.projectId, record.siteId, record.areaId, record.marker.id, anchor)
-        .catch(error => setPlacementStatus(`PIM recentered for this visit, but its pose could not be saved: ${error.message}`));
-}
-
 function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
     if (!candidate) return false;
     const { record, target } = candidate;
-    if (target.pimRecenter) {
-        ensureSpatialPimPose(record, true);
-        invalidateSpatialPimTexture(record);
-        persistSpatialPimPose(record);
-        setPlacementStatus(`${record.marker.name} PIM recentered and world-locked in front of you.`);
-        return true;
-    }
     if (target.pimBack) {
         record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, target.path);
         record.pimBloomStarted = performance.now();
@@ -3007,6 +3031,19 @@ function drawSpatialPlantProfiles(view) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
+    const pulse = .5 + Math.sin(performance.now() / 380) * .5;
+    records.forEach(record => {
+        const panel = pimSpatialPanel(ensureSpatialPimPose(record));
+        if (!panel || !controllerPointerRenderer) return;
+        drawSpatialTether(
+            gl,
+            controllerPointerRenderer,
+            view,
+            { ...record.position, y: record.position.y + .07 },
+            { ...panel.center, y: panel.center.y - Math.min(.22, panel.height * .2) },
+            { width: .0028 + pulse * .0022, color: [.84, .93, .76, .22 + pulse * .34], curve: .035, lift: .05 }
+        );
+    });
     gl.useProgram(homeSignProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
@@ -3777,16 +3814,6 @@ function renderSessionMarkers() {
             renderSessionMarkers();
             setPlacementStatus('Returned to the previous PIM bloom.');
         });
-        profilePanel?.querySelector('[data-ar-pim-recenter]')?.addEventListener('click', event => {
-            event.stopPropagation();
-            record.pimSpatialPose = pimSpatialPoseAboveAnchor(latestViewerMatrix, record.position, {
-                plantId: record.marker.plantId || record.marker.id,
-                anchorId: record.checkpointId || activeCheckpointId || ''
-            });
-            invalidateSpatialPimTexture(record);
-            persistSpatialPimPose(record);
-            setPlacementStatus(`${record.marker.name} PIM recentered and world-locked in front of you.`);
-        });
         const totemInformation = layer.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
         totemInformation?.querySelectorAll('[data-ar-totem-link-area]').forEach(sign => {
             sign.addEventListener('pointerdown', event => {
@@ -3801,6 +3828,7 @@ function renderSessionMarkers() {
         });
         layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-pim-node]`).forEach(cell => {
             cell.addEventListener('pointerdown', event => {
+                event.preventDefault();
                 event.stopPropagation();
             });
             cell.addEventListener('click', event => {
@@ -3946,32 +3974,36 @@ function openInlineEditor(record, force = false) {
 }
 
 function beginMarkerInteraction(record, event, { directHold = false, element = event.currentTarget } = {}) {
+    if (hasPlantProfile(record) && !directHold) {
+        event.preventDefault();
+        event.stopPropagation();
+        const opening = !record.profileExpanded;
+        sessionMarkers.forEach(candidate => {
+            if (candidate !== record && candidate.marker.type === 'plant') {
+                candidate.profileExpanded = false;
+                candidate.infoVisible = false;
+            }
+        });
+        record.profileExpanded = opening;
+        record.infoVisible = record.profileExpanded;
+        if (opening) {
+            ensureSpatialPimPose(record, true);
+            record.pimExpandedPaths ||= [];
+            record.pimBloomStarted = performance.now();
+        } else {
+            invalidateSpatialPimTexture(record);
+        }
+        renderSessionMarkers();
+        setPlacementStatus('');
+        return;
+    }
     if (!interactionMode) return;
+    if (directHold && hasPlantProfile(record) && record.profileExpanded) return;
     if (!directHold && interactionMode === 'view') {
         event.preventDefault();
         event.stopPropagation();
-        if (hasPlantProfile(record)) {
-            const opening = !record.profileExpanded;
-            sessionMarkers.forEach(candidate => {
-                if (candidate !== record && candidate.marker.type === 'plant') {
-                    candidate.profileExpanded = false;
-                    candidate.infoVisible = false;
-                }
-            });
-            record.profileExpanded = opening;
-            record.infoVisible = record.profileExpanded;
-            if (opening) {
-                ensureSpatialPimPose(record, true);
-                record.pimExpandedPaths ||= [];
-                record.pimBloomStarted = performance.now();
-            } else {
-                invalidateSpatialPimTexture(record);
-            }
-        } else {
-            record.infoVisible = !record.infoVisible;
-        }
+        record.infoVisible = !record.infoVisible;
         renderSessionMarkers();
-        const visible = hasPlantProfile(record) ? record.profileExpanded : record.infoVisible;
         setPlacementStatus('');
         return;
     }
