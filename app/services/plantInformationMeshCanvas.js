@@ -31,7 +31,6 @@ function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines = 2
 }
 
 function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) {
-    /* Retained only as a historical rendering reference for the old control.
     context.beginPath();
     for (let point = 0; point < 6; point += 1) {
         const angle = Math.PI / 3 * point;
@@ -162,7 +161,6 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.font = '700 44px system-ui, sans-serif';
     context.strokeText('↓', center.x, height * .94 + 2);
     context.fillText('↓', center.x, height * .94 + 2);
-    */
 }
 
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent) {
