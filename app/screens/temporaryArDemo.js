@@ -1563,6 +1563,8 @@ function bindSimulatedInformationPanels(layer) {
             event.stopPropagation();
             suppressSessionSelectUntil = performance.now() + 500;
         });
+        back?.addEventListener('pointerup', event => event.stopPropagation());
+        back?.addEventListener('pointercancel', event => event.stopPropagation());
         back?.addEventListener('click', event => {
             event.stopPropagation();
             const focusPath = back.dataset.pimBack;
@@ -1575,10 +1577,16 @@ function bindSimulatedInformationPanels(layer) {
         const cells = [...profile.querySelectorAll('[data-pim-node]')];
         cells.forEach(cell => {
             cell.addEventListener('pointerdown', event => {
-                event.preventDefault();
                 event.stopPropagation();
                 suppressSessionSelectUntil = performance.now() + 500;
             });
+            cell.addEventListener('pointerup', event => {
+                // Keep a cell tap inside the cell. If this reaches the
+                // draggable profile surface it is mistaken for a blank
+                // profile tap and closes the PIM before click can expand it.
+                event.stopPropagation();
+            });
+            cell.addEventListener('pointercancel', event => event.stopPropagation());
             cell.addEventListener('click', event => {
                 event.stopPropagation();
                 const nodePath = cell.dataset.pimNode;

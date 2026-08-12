@@ -1236,6 +1236,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawPlantInformationHoneycomb/);
     assert.match(source, /PIM_BLOOM_DURATION_MS/);
     assert.match(source, /bindSimulatedInformationPanels/);
+    const cellBindings = source.slice(source.indexOf('const cells = [...profile.querySelectorAll'), source.indexOf('let start = null;', source.indexOf('const cells =')));
+    assert.match(cellBindings, /cell.addEventListener\('pointerup', event => \{[\s\S]*event.stopPropagation\(\)/);
+    assert.doesNotMatch(cellBindings, /cell.addEventListener\('pointerdown', event => \{[\s\S]*event.preventDefault\(\)/);
     assert.match(source, /demoPanelOffset/);
     assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
     assert.match(source, /const eyeLevelY = Number\.isFinite\(cameraY\) \? cameraY - \.12 : position\.y \+ \.45/);
