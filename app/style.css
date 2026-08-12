@@ -5986,13 +5986,13 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-global-profile-extract h4,.field-guide-global-profile-extract p { margin:0; }
 .field-guide-global-profile-extract h4 { color:#315c3e; font-size:.84rem; }
 .field-guide-global-profile-extract > div p { margin-top:.15rem; color:#66746a; font-size:.67rem; line-height:1.35; }
-.field-guide-global-profile-extract fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; margin:0; padding:0; border:0; }
+.field-guide-global-profile-extract fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; width:100%; min-width:0; margin:0; padding:0; border:0; }
 .field-guide-global-profile-extract fieldset:not(.field-guide-allocation-list) { grid-template-columns:1fr; }
 .field-guide-global-profile-extract legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 .field-guide-global-profile-extract label { display:flex; align-items:flex-start; gap:.4rem; min-width:0; padding:.4rem .45rem; border:1px solid rgba(55,104,68,.13); border-radius:9px; background:#fff; color:#3e5d47; font-size:.67rem; line-height:1.25; }
 .field-guide-global-profile-extract label span { display:grid; gap:.08rem; min-width:0; }
 .field-guide-global-profile-extract label small { color:#748078; font-size:.59rem; }
-.field-guide-global-profile-extract input { flex:0 0 auto; margin-top:.1rem; accent-color:#39764a; }
+.field-guide-global-profile-extract input[type="checkbox"] { flex:0 0 18px !important; width:18px !important; min-width:18px !important; max-width:18px !important; height:18px; min-height:18px; max-height:18px; margin:.1rem 0 0; padding:0; accent-color:#39764a; }
 .field-guide-global-profile-extract > button { justify-self:start; min-height:34px; padding:.35rem .7rem; font-size:.68rem; }
 .field-guide-global-profile-status { color:#9b4f2d; font-size:.66rem; }
 .field-guide-global-profile-status:empty { display:none; }
@@ -6008,8 +6008,8 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-extract-heading > div:last-child { display:flex; gap:.35rem; flex:0 0 auto; }
 .field-guide-global-profile-extract .field-guide-extract-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,.55fr); gap:.5rem; align-items:center; }
 .field-guide-extract-fact { display:flex; align-items:flex-start; gap:.4rem; min-width:0; }
-.field-guide-extract-fact input { flex:0 0 auto; margin-top:.18rem; accent-color:#39764a; }
-.field-guide-extract-fact span { min-width:0; overflow-wrap:anywhere; }
+.field-guide-extract-fact input[type="checkbox"] { flex:0 0 18px !important; width:18px !important; min-width:18px !important; max-width:18px !important; height:18px; min-height:18px; max-height:18px; margin:.18rem 0 0; padding:0; accent-color:#39764a; }
+.field-guide-extract-fact span { flex:1 1 auto; min-width:0; max-width:none; overflow-wrap:anywhere; }
 .field-guide-extract-fact strong { display:block; color:#315c3e; font-size:.72rem; line-height:1.25; }
 .field-guide-extract-fact small { display:block; overflow-wrap:anywhere; color:#748078; font-size:.64rem; line-height:1.35; }
 .field-guide-extract-suggestion { display:grid; gap:.08rem; min-width:0; padding:.4rem .5rem; border-left:3px solid #9abf88; border-radius:0 8px 8px 0; background:#f3f7ef; color:#4d6652; }
@@ -6039,7 +6039,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
     .field-guide-global-profile-extract { padding:.6rem; }
     .field-guide-global-profile-extract fieldset { grid-template-columns:1fr !important; }
     .field-guide-global-profile-extract label { align-items:flex-start; min-width:0; font-size:.72rem; }
-    .field-guide-global-profile-extract input[type="checkbox"] { appearance:none; width:1rem; height:1rem; min-width:1rem; margin:.12rem 0 0; border:1px solid #73907a; border-radius:4px; background:#fff; }
+    .field-guide-global-profile-extract input[type="checkbox"] { appearance:none; width:1rem !important; height:1rem; min-width:1rem !important; max-width:1rem !important; min-height:1rem; max-height:1rem; margin:.12rem 0 0; padding:0; border:1px solid #73907a; border-radius:4px; background:#fff; }
     .field-guide-global-profile-extract input[type="checkbox"]:checked { border-color:#39764a; background:#39764a; box-shadow:inset 0 0 0 3px #fff; }
     .field-guide-global-profile-extract .field-guide-extract-row { grid-template-columns:1fr; }
     .field-guide-extract-suggestion { margin-left:1.4rem; }
