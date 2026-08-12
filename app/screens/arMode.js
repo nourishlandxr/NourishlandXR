@@ -14,6 +14,7 @@ import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js
 import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { alignAreaToCheckpoint } from '../services/areaSpatialAlignment.js';
+import { normalizeAreaLink, normalizeAreaLinks } from '../services/areaLinks.js';
 import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
@@ -25,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8931';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8932';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -468,17 +469,20 @@ function activeAreaMarkers() {
 
 function linkedTotemAreas(record) {
     return (Array.isArray(record?.areaLinks) ? record.areaLinks : [])
-        .map((link, index) => ({
+        .map((rawLink, index) => {
+            const link = normalizeAreaLink(rawLink, { sourceAreaId: record?.areaId });
+            return {
             ...link,
-            targetAreaId: String(link?.target_area_id || link?.targetAreaId || '').trim(),
-            targetAreaName: String(link?.target_area_name || link?.targetAreaName || link?.target_area_id || 'Linked Area').trim(),
+            targetAreaId: link.toAreaId,
+            targetAreaName: String(rawLink?.target_area_name || rawLink?.targetAreaName || link.toAreaId || 'Linked Area').trim(),
             steps: Number.isFinite(Number(link?.steps)) && Number(link.steps) > 0 ? Number(link.steps) : null,
-            distanceM: Number.isFinite(Number(link?.distance_m ?? link?.distanceM)) && Number(link?.distance_m ?? link?.distanceM) > 0
-                ? Number(link?.distance_m ?? link?.distanceM)
+            distanceM: Number.isFinite(Number(link?.distanceMetres)) && Number(link.distanceMetres) > 0
+                ? Number(link.distanceMetres)
                 : null,
             direction: index % 2 === 0 ? 'right' : 'left'
-        }))
-        .filter(link => link.targetAreaId);
+            };
+        })
+        .filter(link => link.targetAreaId && link.enabled);
 }
 
 function totemLinkMeasure(link) {
@@ -4218,12 +4222,12 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     };
     if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
     const savedMarkers = await loadPlaceMarkers(operation.projectId, siteId, area.id).catch(() => []);
-    const areaLinks = (Array.isArray(area.totem_links) ? area.totem_links : [])
+    const areaLinks = normalizeAreaLinks(area, areas)
         .map(link => ({
             ...link,
-            target_area_name: areas.find(candidate => candidate.id === link?.target_area_id)?.name || link?.target_area_id || 'Linked Area'
+            target_area_name: areas.find(candidate => candidate.id === link?.toAreaId)?.name || link?.toAreaId || 'Linked Area'
         }))
-        .filter(link => link?.target_area_id);
+        .filter(link => link?.toAreaId && link.destinationExists !== false && link.enabled);
     const restored = await Promise.all(savedMarkers.map(async savedMarker => {
         const marker = normalizeSpatialMarker(savedMarker);
         const [anchor, plantProfile] = await Promise.all([

@@ -37,6 +37,7 @@ import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { normalizePimDocument, pimAddNode } from '../services/pimModel.js';
 import { reviewPimImport, stagePimImport } from '../services/pimImportReview.js';
 import { pimRouteFromUrl, pimRouteUrl } from '../services/pimRouting.js';
+import { createAreaLink, normalizeAreaLinks } from '../services/areaLinks.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -812,9 +813,11 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const totemStyleButtons = TOTEM_STYLES.map(style => `<button type="button" data-totem-style="${style.id}" aria-pressed="${style.id === totemStyle}"><span class="totem-style-preview totem-style-preview-${style.id}" aria-hidden="true"></span><strong>${style.label}</strong><small>${style.description}</small></button>`).join('');
         const board = existing?.marker.area_information_board || {};
         const linkableAreas = context.places.filter(place => !isDefaultHomeArea(place) && place.id !== context.area.id);
-        const existingLinks = Array.isArray(context.area.totem_links) ? context.area.totem_links : [];
-        const selectedLink = existingLinks.find(link => linkableAreas.some(area => area.id === link?.target_area_id)) || null;
+        const existingLinks = normalizeAreaLinks(context.area, context.places);
+        const selectedLink = existingLinks.find(link => linkableAreas.some(area => area.id === link?.toAreaId)) || null;
         const linkOptions = linkableAreas.map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selectedLink?.target_area_id ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
+        const destinationTotems = context.entries.filter(entry => linkableAreas.some(area => area.id === entry.place.id) && isAreaTotemMarker(entry.marker, entry.place.name));
+        const linkTotemOptions = destinationTotems.map(entry => `<option value="${escapeHtml(entry.marker.id)}" ${entry.marker.id === selectedLink?.targetTotemId ? 'selected' : ''}>${escapeHtml(entry.place.name)} · ${escapeHtml(entry.marker.name || 'Totem')}</option>`).join('');
         const linkMeasure = value => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : '';
         const bubbles = Array.isArray(board.information_bubbles) ? board.information_bubbles : [];
         const startingBubbles = bubbles.length ? bubbles : [''];
@@ -888,7 +891,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             ${physicalMarkerCard}
             <section class="totem-relationship-grid">
                 <div class="totem-anchor-card"><span aria-hidden="true">⌖</span><div><strong>ANCHOR TOTEM MARKER</strong><p>Link this Totem Marker to the physical marker installed at its real-world position.</p><label for="areaCheckpointCode">Link Totem Marker</label><input id="areaCheckpointCode" value="${escapeHtml(savedCode)}" placeholder="Scan or enter this Totem Marker’s physical marker" /></div></div>
-                <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINK</strong><p>Connect this Totem Marker to another Totem Marker in the location.</p>${linkOptions ? `<label class="tutorial-mode-toggle" for="areaCheckpointLinkEnabled"><span><strong>Enable AR link path</strong><small>Show a direction sign and open the linked Area from this Totem.</small></span><input id="areaCheckpointLinkEnabled" type="checkbox" ${selectedLink ? 'checked' : ''} /></label><label for="areaCheckpointLinkTarget">Link to Totem Marker</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Totem Marker</option>${linkOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkSteps" type="number" min="0" placeholder="Steps" value="${escapeHtml(String(linkMeasure(selectedLink?.steps)))}" /><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Metres" value="${escapeHtml(String(linkMeasure(selectedLink?.distance_m)))}" /></div><p class="meta">Steps and metres are optional planning estimates. They are shown on the AR path sign; device step counting and compass capture are not enabled yet.</p>` : '<small>Create another Area before linking Totem Markers.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.target_area_id)?.name || link.target_area_id)}${link.steps || link.distance_m ? ` · ${escapeHtml([link.steps ? `${link.steps} steps` : '', link.distance_m ? `${link.distance_m} m` : ''].filter(Boolean).join(' · '))}` : ''}</span>`).join('')}</div></div></div>
+                <div class="totem-link-card"><span aria-hidden="true">↗</span><div><strong>LINKED AREAS</strong><p>Connect this Totem to another Area. The route is guidance only until the destination Totem is confirmed.</p>${linkOptions ? `<label class="tutorial-mode-toggle" for="areaCheckpointLinkEnabled"><span><strong>Enable Area link</strong><small>Keep the destination selected while walking, then align at its Totem.</small></span><input id="areaCheckpointLinkEnabled" type="checkbox" ${selectedLink ? 'checked' : ''} /></label><label for="areaCheckpointLinkTarget">Destination Area</label><select id="areaCheckpointLinkTarget"><option value="">Choose another Area</option>${linkOptions}</select><label for="areaCheckpointLinkTotem">Destination Totem <small>(optional until placed)</small></label><select id="areaCheckpointLinkTotem"><option value="">Choose a destination Totem</option>${linkTotemOptions}</select><div class="totem-link-measure"><input id="areaCheckpointLinkDistance" type="number" min="0" step="0.1" placeholder="Approx. metres" value="${escapeHtml(String(linkMeasure(selectedLink?.distanceMetres)))}" /><input id="areaCheckpointLinkBearing" type="number" min="0" max="359" step="1" placeholder="Bearing ° (optional)" value="${escapeHtml(String(Number.isFinite(Number(selectedLink?.bearingDegrees)) ? selectedLink.bearingDegrees : ''))}" /></div><label class="tutorial-mode-toggle" for="areaCheckpointLinkBidirectional"><span><strong>Bidirectional</strong><small>Also offer the return link from the destination Area.</small></span><input id="areaCheckpointLinkBidirectional" type="checkbox" ${selectedLink?.bidirectional === false ? '' : 'checked'} /></label><p class="meta">No step counter or compass capture is used. Distance and bearing are optional notes, not precise positioning.</p>` : '<small>Create another Area before linking Totems.</small>'}<div class="totem-existing-links">${existingLinks.map(link => `<span>${escapeHtml(linkableAreas.find(area => area.id === link.toAreaId)?.name || link.toAreaId)}${link.distanceMetres !== null ? ` · about ${escapeHtml(String(link.distanceMetres))} m` : ''}${link.destinationExists === false ? ' · destination missing' : ''}</span>`).join('')}</div></div></div>
             </section>
             <p id="areaCheckpointStatus" class="meta"></p>
         </form><nav class="bottom-navigation totem-bottom-navigation"><button class="primary" type="submit" form="totemFileForm">${submitLabel}</button>${existing ? `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(context.project.id)}','${encoded(existing.marker.id)}')">Delete</button>` : ''}<button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button><button type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button></nav></div>`;
@@ -1077,8 +1080,10 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         const informationBubbles = [...document.querySelectorAll('[data-totem-information-box]')].map(field => field.value.trim()).filter(Boolean);
         const linkEnabled = document.getElementById('areaCheckpointLinkEnabled')?.checked === true;
         const linkTarget = document.getElementById('areaCheckpointLinkTarget')?.value || '';
-        const linkSteps = document.getElementById('areaCheckpointLinkSteps')?.value || '';
         const linkDistance = document.getElementById('areaCheckpointLinkDistance')?.value || '';
+        const linkBearing = document.getElementById('areaCheckpointLinkBearing')?.value || '';
+        const linkTargetTotem = document.getElementById('areaCheckpointLinkTotem')?.value || '';
+        const linkBidirectional = document.getElementById('areaCheckpointLinkBidirectional')?.checked !== false;
         const physicalAnchorControlPresent = Boolean(document.getElementById('areaPhysicalAnchorEnabled'));
         const physicalAnchor = physicalAnchorControlPresent ? physicalAnchorFromTotemForm() : undefined;
         const reassignPhysicalMarker = Boolean(document.getElementById('areaPhysicalMarkerReassign')?.checked);
@@ -1122,8 +1127,15 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
         }
         if (linkEnabled && linkTarget) {
             try {
-                const route = { target_area_id: linkTarget, steps: linkSteps === '' ? '' : Number(linkSteps), distance_m: linkDistance === '' ? '' : Number(linkDistance) };
-                const links = Array.isArray(context.area.totem_links) ? context.area.totem_links.filter(link => link.target_area_id !== linkTarget) : [];
+                const route = createAreaLink(areaId, linkTarget, {
+                    id: `${areaId}-to-${linkTarget}`,
+                    targetTotemId: linkTargetTotem,
+                    distanceMetres: linkDistance === '' ? null : Number(linkDistance),
+                    bearingDegrees: linkBearing === '' ? null : Number(linkBearing),
+                    bidirectional: linkBidirectional,
+                    enabled: true
+                });
+                const links = existingLinks.filter(link => link.toAreaId !== linkTarget);
                 links.push(route);
                 await updateSitePlace(projectId, context.site.id, areaId, { totem_links: links });
                 // A Totem route is a transition in both directions. Keep the
@@ -1132,27 +1144,32 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 const targetArea = context.places.find(place => place.id === linkTarget);
                 if (targetArea) {
                     const reverseLinks = Array.isArray(targetArea.totem_links)
-                        ? targetArea.totem_links.filter(link => link.target_area_id !== areaId)
+                        ? normalizeAreaLinks(targetArea, context.places).filter(link => link.toAreaId !== areaId)
                         : [];
-                    reverseLinks.push({
-                        target_area_id: areaId,
-                        steps: route.steps,
-                        distance_m: route.distance_m
-                    });
+                    if (linkBidirectional) {
+                        reverseLinks.push(createAreaLink(targetArea.id, areaId, {
+                            id: `${targetArea.id}-to-${areaId}`,
+                            targetTotemId: existing?.marker.id || '',
+                            distanceMetres: route.distanceMetres,
+                            bearingDegrees: route.bearingDegrees === null ? null : (route.bearingDegrees + 180) % 360,
+                            bidirectional: true,
+                            enabled: true
+                        }));
+                    }
                     await updateSitePlace(projectId, context.site.id, targetArea.id, { totem_links: reverseLinks });
                 }
             } catch (error) {
                 optionalWarnings.push(`Area link: ${error.message}`);
             }
-        } else if (!linkEnabled && Array.isArray(context.area.totem_links) && context.area.totem_links.length) {
+        } else if (!linkEnabled && existingLinks.length) {
             try {
-                const linkedAreaIds = new Set(context.area.totem_links.map(link => link.target_area_id).filter(Boolean));
+                const linkedAreaIds = new Set(existingLinks.map(link => link.toAreaId).filter(Boolean));
                 await updateSitePlace(projectId, context.site.id, areaId, { totem_links: [] });
                 await Promise.all([...linkedAreaIds].map(async targetAreaId => {
                     const targetArea = context.places.find(place => place.id === targetAreaId);
                     if (!targetArea) return;
                     const reverseLinks = Array.isArray(targetArea.totem_links)
-                        ? targetArea.totem_links.filter(link => link.target_area_id !== areaId)
+                        ? normalizeAreaLinks(targetArea, context.places).filter(link => link.toAreaId !== areaId)
                         : [];
                     await updateSitePlace(projectId, context.site.id, targetArea.id, { totem_links: reverseLinks });
                 }));
