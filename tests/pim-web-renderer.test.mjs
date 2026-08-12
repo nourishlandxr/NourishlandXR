@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createPimDocument, pimNodeById } from '../app/services/pimModel.js';
 import {
     applyPlantInformationWebEdit,
+    createPlantInformationWebNodeId,
     createPlantInformationWebState,
     plantInformationWebMarkup,
     searchPlantInformationWeb,
@@ -288,6 +289,40 @@ test('Historical Data and Food Forest expose focused parent-specific starters', 
     assert.match(foodForest, /data-pim-template-id="function"/);
     assert.match(foodForest, />Function</);
     assert.match(foodForest, />Custom</);
+});
+
+test('PIM starter cells remain repeatable and receive unique ids', () => {
+    const document = referenceDocument();
+    const firstId = createPlantInformationWebNodeId(document, 'scientific-information', 'Taxonomy');
+    const first = applyPlantInformationWebEdit(document, 'add', '', {
+        id: firstId,
+        parentId: 'scientific-information',
+        informationType: 'fact',
+        title: 'Taxonomy',
+        preview: 'Scientific classification',
+        body: 'Fabaceae.',
+        evidenceStatus: 'draft',
+        status: 'draft',
+        provenance: []
+    });
+    const secondId = createPlantInformationWebNodeId(first, 'scientific-information', 'Taxonomy');
+    const second = applyPlantInformationWebEdit(first, 'add', '', {
+        id: secondId,
+        parentId: 'scientific-information',
+        informationType: 'fact',
+        title: 'Taxonomy',
+        preview: 'Updated classification',
+        body: 'A second reviewed classification note.',
+        evidenceStatus: 'draft',
+        status: 'draft',
+        provenance: []
+    });
+    assert.equal(firstId, 'scientific-information-taxonomy');
+    assert.equal(secondId, 'scientific-information-taxonomy-2');
+    assert.equal(pimNodeById(second, firstId).title, 'Taxonomy');
+    assert.equal(pimNodeById(second, secondId).title, 'Taxonomy');
+    const palette = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'scientific-information' }), { editable: true, showSearch: false, showIdentity: false });
+    assert.match(palette, /data-pim-template-id="taxonomy"/);
 });
 
 test('Web PIM save action stays available while the compact editor scrolls', () => {

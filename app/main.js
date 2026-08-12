@@ -71,11 +71,18 @@ function placeGlobalNavigationAtBottom() {
         buttons.forEach(button => navigation.append(button));
     });
 }
+let observedScreen = app.querySelector('.screen');
 new MutationObserver(() => {
     requestAnimationFrame(() => {
+        const currentScreen = app.querySelector('.screen');
+        const screenChanged = currentScreen !== observedScreen;
+        observedScreen = currentScreen;
         placeGlobalNavigationAtBottom();
         translateApp(app);
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        // PIM edits redraw inside the same screen. Do not reset the user's
+        // reading position for those local updates; only a real screen
+        // navigation should begin at the top.
+        if (screenChanged) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     });
 }).observe(app, { childList: true });
 const siteManager = new SiteManager();

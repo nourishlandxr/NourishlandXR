@@ -435,7 +435,11 @@ function selectMarkup(name, label, values, selected, required = false) {
 
 function informationTemplateMarkup(parent, state, document) {
     if (state.editorMode !== 'add') return '';
-    const templates = templatesForParent(parent?.id).filter(([id]) => !document || !nodeById(document, parent?.id ? `${parent.id}-${id}` : id));
+    // Starters are suggestions, not one-time slots. A parent may contain
+    // several cells with the same template (for example, two medicinal
+    // entries about different preparations), so keep the palette available
+    // and let the save path allocate a collision-safe id.
+    const templates = templatesForParent(parent?.id);
     const heading = templates.length ? 'Suggested child cells' : 'New child cell';
     return `<section class="pim-web-template-palette" aria-labelledby="pim-web-template-title">
         <div><strong id="pim-web-template-title">${heading}</strong><small>Choose a starter or create a custom information block.</small></div>
@@ -541,9 +545,23 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     </article>`;
 }
 
+export function createPlantInformationWebNodeId(document, parentId, title) {
+    const safeId = value => String(value || 'information').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'information';
+    const parent = String(parentId || '');
+    const baseId = parent && parent !== '__top_level__' ? `${safeId(parent)}-${safeId(title)}` : safeId(title);
+    const existingIds = new Set(normalizeDocument(document).nodes.map(node => node.id));
+    let id = baseId;
+    let suffix = 2;
+    while (existingIds.has(id) || PIM_COMPASS_BY_ID[id]) id = `${baseId}-${suffix++}`;
+    return id;
+}
+
 function editorPayload(form, document) {
     const values = Object.fromEntries(new FormData(form).entries());
     const split = value => String(value || '').split(',').map(item => item.trim()).filter(Boolean);
+    const parentId = String(values.parentId || '');
+    const title = String(values.title || '').trim();
+    const newId = createPlantInformationWebNodeId(document, parentId, title);
     const countryOfOrigin = String(values.countryOfOrigin || '').trim();
     const body = String(values.body || '').trim() || (countryOfOrigin ? `Country of origin: ${countryOfOrigin}.` : '');
     const provenance = values.sourceDatabase || values.sourceRecordId || values.sourceUrl || values.licence || values.authorOrganisation || values.publicationDate || values.retrievalDate
@@ -559,13 +577,13 @@ function editorPayload(form, document) {
         }]
         : [];
     return {
-        id: form.dataset.pimEditorMode === 'edit' ? form.dataset.pimEditorNodeId : values.parentId && values.parentId !== '__top_level__' ? `${String(values.parentId).replace(/[^a-z0-9-]+/gi, '-')}-${String(values.title || 'information').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}` : String(values.title || 'information').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        id: form.dataset.pimEditorMode === 'edit' ? form.dataset.pimEditorNodeId : newId,
         plantId: document.plantId,
-        parentId: values.parentId,
+        parentId,
         primaryCategory: values.primaryCategory,
         knowledgeMode: values.knowledgeMode,
         informationType: values.informationType,
-        title: String(values.title || '').trim(),
+        title,
         preview: String(values.preview || '').trim(),
         body,
         ...(countryOfOrigin ? { countryOfOrigin } : {}),
@@ -616,12 +634,21 @@ export function mountPlantInformationWeb(container, options = {}) {
         if (!nodeId) return;
         requestAnimationFrame(() => {
             const candidates = container.querySelectorAll('[data-pim-node-id]');
-            [...candidates].find(button => button.dataset.pimNodeId === nodeId && !button.closest('[hidden]'))?.focus();
+            const target = [...candidates].find(button => button.dataset.pimNodeId === nodeId && !button.closest('[hidden]'));
+            if (!target) return;
+            try { target.focus({ preventScroll: true }); }
+            catch { target.focus(); }
         });
     };
     const render = focusId => {
+        const previousScroll = typeof window !== 'undefined' && typeof window.scrollY === 'number'
+            ? { left: window.scrollX, top: window.scrollY }
+            : null;
         container.innerHTML = plantInformationWebMarkup(document, state, { ...options, editable, importReview });
         focusNode(focusId);
+        if (previousScroll && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.scrollTo({ ...previousScroll, behavior: 'instant' }));
+        }
     };
     const commit = (nextState, focusId = '', route = true) => {
         state = normalizedState(nextState);
@@ -779,7 +806,7 @@ export function mountPlantInformationWeb(container, options = {}) {
             document = normalizeDocument(saved?.nodes ? saved : nextDocument);
             const nodeId = form.dataset.pimEditorMode === 'edit'
                 ? form.dataset.pimEditorNodeId
-                : document.nodes.find(node => (payload.parentId === '__top_level__' ? node.parentId === null : node.parentId === payload.parentId) && node.title === payload.title)?.id;
+                : payload.id;
             const focusId = nodeId || (payload.parentId === '__top_level__' ? '' : payload.parentId);
             commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null, editorMessage: '', openNodeIds: focusId ? unique([...state.openNodeIds, focusId]) : state.openNodeIds, highlightedNodeId: nodeId || '' }, focusId);
         } catch (error) {
