@@ -2890,7 +2890,7 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     </details>`;
 }
 
-function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
+function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '', projectId = '', returnToAr = false, returnContext = '') {
     const layerOptions = ['Emergent', 'Canopy', 'Understory', 'Shrub', 'Herbaceous', 'Groundcover', 'Root / rhizosphere', 'Climber / vine', 'Aquatic'].map(layer => `<option value="${layer}" ${profile.layer === layer ? 'selected' : ''}>${layer}</option>`).join('');
     const photo = profile.photo || profile.image || '';
     const spmEnabled = profile.spm_enabled === true || profile.profile_enabled === true;
@@ -2921,11 +2921,9 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
             </div>
         </div>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
-        <section class="plant-profile-pim-web-section" aria-label="Plant Information Mesh">
-            <div data-plant-pim-web-mount></div>
-        </section>
         <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><div class="plant-live-tag-heading"><strong>PLANT LIVE TAG</strong><button type="button" class="plant-profile-info-bubble" data-info-trigger data-info-source="plantLiveTagHelp" aria-expanded="false" aria-controls="plantLiveTagHelp" aria-label="About Plant Live Tags" onclick="window.toggleInfoOverlay(this)">i</button></div><p id="plantLiveTagHelp" data-info-title="Plant Live Tag" hidden>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label>${physicalAnchorMarkup}</div></section>
         </div>
+        <div class="plant-profile-pim-cta"><div><strong>Plant Information Mesh</strong><small>Open the expandable plant knowledge workspace shared by Web Mode and AR.</small></div><button type="button" class="plant-profile-pim-open" onclick="window.openProjectPim('${encoded(projectId)}','${encoded(entry.marker.id)}',${Boolean(returnToAr)},'${encoded(returnContext)}')">Open Info Mesh</button></div>
     </section>`;
 }
 
@@ -2974,6 +2972,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const markerAnchor = plant ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null;
     const plantQrCode = plant ? visibleQrCode(entry.marker.qr_reference || markerAnchor?.qr_code) : '';
     const profile = plant ? await loadPlantProfile(project.id, site.id, entry.place.id, entry.marker.id).catch(() => entry.marker.plant_profile || {}) : {};
+    const routeFromUrl = plant && typeof location !== 'undefined' ? pimRouteFromUrl(location.href) : {};
+    const pimWorkspace = plant && (pimInitialState?.workspace === 'pim' || (routeFromUrl.path && (!routeFromUrl.markerId || routeFromUrl.markerId === entry.marker.id)));
     const pimIdentity = plant ? {
         plantId: entry.marker.plantId || entry.marker.id,
         commonName: profile.common_name || entry.marker.name || 'Unnamed plant',
@@ -2986,7 +2986,6 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     } : null;
     let activePimDocument = plant ? initialPlantPimDocument(profile, pimIdentity) : null;
     let activePimImportReview = plant ? profile.pim_import_review || profile.pim_import_staging || null : null;
-    const plantProfileReady = plant && isPlantProfileUpgraded(entry.marker, profile);
     const plantPhysicalAnchorMarkup = plant ? plantPhysicalAnchorCardMarkup(entry, profile, entries) : '';
     const areaOptions = places.map(place => `<option value="${escapeHtml(place.id)}" ${place.id === entry.place.id ? 'selected' : ''}>${escapeHtml(place.name)}</option>`).join('');
     const returnArLabel = 'AR';
@@ -3008,7 +3007,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const plantPrintAction = plant && profile.virtual_tag_enabled === true && entry.marker.physicalAnchor?.enabled
         ? `<button type="button" class="plant-print-action" onclick="window.printPlantVirtualTag('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')">PRINT PLANT LIVE TAG</button>`
         : '';
-    const plantEditorFields = `<input id="projectEntryName" type="hidden" value="${escapeHtml(profile.common_name || entry.marker.name)}" /><input id="projectEntryArea" type="hidden" value="${escapeHtml(entry.place.id)}" />${plantProfileEditorMarkup(entry, profile, plantPhysicalAnchorMarkup)}<details class="plant-qr-anchor-card plant-profile-link-card"><summary><span aria-hidden="true">▦</span><span><strong>Physical label link</strong><small>Optional QR code for this Plant</small></span></summary><div><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" />${plantPrintAction}</div></details>`;
+    const plantEditorFields = `<input id="projectEntryName" type="hidden" value="${escapeHtml(profile.common_name || entry.marker.name)}" /><input id="projectEntryArea" type="hidden" value="${escapeHtml(entry.place.id)}" />${plantProfileEditorMarkup(entry, profile, plantPhysicalAnchorMarkup, project.id, returnToAr, returnContext)}<details class="plant-qr-anchor-card plant-profile-link-card"><summary><span aria-hidden="true">▦</span><span><strong>Physical label link</strong><small>Optional QR code for this Plant</small></span></summary><div><label for="projectEntryQrCode">Plant QR code</label><input id="projectEntryQrCode" value="${escapeHtml(plantQrCode)}" placeholder="Scan or enter the code on this Plant label" />${plantPrintAction}</div></details>`;
     const standardEditorFields = quickArPlantEdit ? '' : plant ? plantEditorFields : `<div class="field"><label for="projectEntryName">${entry.marker.type === 'note' ? 'Title' : 'Rename'}</label><input id="projectEntryName" value="${escapeHtml(entry.marker.name)}" required /></div><div class="field"><label for="projectEntryArea">Move to Area</label><select id="projectEntryArea">${areaOptions}</select></div>${specialMarkerEditor}${noteAppearanceEditor}<div class="field"><label for="projectEntryDescription">${entry.marker.type === 'note' ? 'Information' : 'Description'}</label><textarea id="projectEntryDescription" rows="4">${escapeHtml(entry.marker.description || entry.marker.notes || '')}</textarea></div>`;
     const entryContextName = displayAreaName(entry.place);
     const entryIsHome = isDefaultHomeArea(entry.place);
@@ -3019,12 +3018,16 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             : `window.renderProjectAreaDashboard('${encoded(project.id)}','${encoded(entry.place.id)}')`;
     const webReturnLabel = plant ? 'BACK' : entryIsHome ? 'Back to Home' : `Back to ${escapeHtml(entryContextName)}`;
     const plantProfileBackButton = plant ? `<button class="ghost project-entry-back-button" type="button" onclick="${webReturnAction}">${webReturnLabel}</button>` : '';
+    const pimBackButton = plant ? `<button class="ghost project-entry-back-button" type="button" onclick="window.openProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}',${Boolean(returnToAr)},'${encoded(returnContext)}')">Back to Plant Profile</button>` : '';
     const entryHeader = plant
-        ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile, !quickArPlantEdit)}`
+        ? `${plantProfileHeaderMarkup(project, { ...entry, site }, placement, profile)}${plantProfileStatsMarkup(project, entry, profile, !quickArPlantEdit && !pimWorkspace)}`
         : `<div class="web-context-beacon ${entryIsHome ? 'is-home' : 'is-area'}"><span>${entryIsHome ? 'UNASSIGNED WORKSPACE' : 'WORKING IN AREA'}</span><strong>${escapeHtml(entryContextName)}</strong></div><div class="page-header"><p class="welcome-label">${markerTypeLabel(entry.marker.type)} · Web Mode</p><h1>${escapeHtml(entry.marker.name)}</h1><p class="subtitle">${escapeHtml(entryContextName)} · ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>${projectBreadcrumbMarkup(project, entry.place, entry.marker.name)}</div>`;
     const placementStatus = plant ? '' : `<p class="placement-status ${placement.isPlaced ? 'is-placed' : 'is-unplaced'}">Placement: ${placement.isPlaced ? 'Placed' : 'Not placed'}</p>`;
     const placeButton = !plant && !quickArPlantEdit && !placement.isPlaced ? `<button class="global-ar-action ar-square-action" type="button" aria-label="Place ${escapeHtml(entry.marker.name)} in AR" onclick="window.renderArPreparation('${encoded(project.id)}', 'existing-placement', '${encoded(entry.marker.id)}', '${encoded(entry.place.id)}', '${encoded(site?.id || '')}')">AR</button>` : '';
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}">${entryHeader}${arHandoff}<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save' : plant ? 'Save' : 'Save changes'}</button>${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>${plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
+    const profileScreen = `<form class="panel" onsubmit="window.saveProjectEntryChanges(event, '${encoded(project.id)}', '${encoded(entry.marker.id)}', ${returnToAr}, '${encoded(returnContext)}')">${quickPlantFields}${standardEditorFields}${placementStatus}<p id="projectEntryEditStatus" class="meta"></p><div class="button-row${plant ? ' plant-profile-action-row' : ''}">${placeButton}<button class="primary" type="submit">${quickArPlantEdit ? 'Save' : plant ? 'Save' : 'Save changes'}</button>${plantProfileBackButton}${quickArPlantEdit ? '' : `<button class="danger" type="button" onclick="window.deleteProjectEntry('${encoded(project.id)}','${encoded(entry.marker.id)}')">Delete</button>`}</div></form>`;
+    const pimScreen = `<section class="plant-pim-workspace" aria-label="Plant Information Mesh workspace"><header class="plant-pim-workspace-header"><div><p class="welcome-label">PLANT KNOWLEDGE</p><h2>Plant Information Mesh</h2><p>Explore, edit and connect the same plant knowledge used by Web Mode and AR.</p></div><div class="plant-pim-workspace-actions">${pimBackButton}${returnToAr ? returnArAction : ''}</div></header><div class="plant-pim-workspace-mount" data-plant-pim-web-mount></div></section>`;
+    const entryWorkspace = pimWorkspace ? pimScreen : profileScreen;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}${pimWorkspace ? ' is-pim-workspace' : ''}">${entryHeader}${arHandoff}${entryWorkspace}${plant && pimWorkspace ? '' : plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
     if (quickArPlantEdit) {
         const quickSaveButton = app.querySelector('.project-entry-editor button.primary');
         const quickReturnButton = app.querySelector('.project-entry-back-button') || app.querySelector('.project-entry-editor .bottom-navigation .ghost');
@@ -3057,7 +3060,6 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         const spmFields = app.querySelector('#projectEntrySpmFields');
         const profileEnabledField = app.querySelector('#projectEntryProfileEnabled');
         let pimWebController = null;
-        const routeFromUrl = typeof location !== 'undefined' ? pimRouteFromUrl(location.href) : {};
         const pimInitialRouteState = pimInitialState || (routeFromUrl.path && (!routeFromUrl.markerId || routeFromUrl.markerId === entry.marker.id) ? { path: routeFromUrl.path } : {});
         const savePimDocument = async nextDocument => {
             activePimDocument = normalizePimDocument(nextDocument);
@@ -3071,14 +3073,14 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         };
         const mountInfoMesh = () => {
             const mount = app.querySelector('[data-plant-pim-web-mount]');
-            if (!mount || !activePimDocument || !spmToggle?.checked) return;
+            if (!mount || !activePimDocument || (!pimWorkspace && !spmToggle?.checked)) return;
             pimWebController?.destroy();
             mount.hidden = false;
             pimWebController = mountPlantInformationWeb(mount, {
                 document: activePimDocument,
                 editable: true,
                 showSearch: false,
-                showIdentity: false,
+                showIdentity: pimWorkspace,
                 importReview: activePimImportReview,
                 initialState: pimInitialRouteState,
                 onRouteChange: (state, node) => {
@@ -3111,7 +3113,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             });
         };
         const updateSpmFields = () => {
-            const enabled = Boolean(spmToggle?.checked);
+            const enabled = pimWorkspace || Boolean(spmToggle?.checked);
             spmFields?.toggleAttribute('hidden', !enabled);
             if (profileEnabledField) profileEnabledField.value = enabled ? 'true' : 'false';
             if (enabled) mountInfoMesh();
@@ -3145,7 +3147,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         plantPhysicalToggle?.addEventListener('change', updatePlantPhysicalFields);
         plantPhysicalSelect?.addEventListener('change', updatePlantPhysicalAssignment);
         spmToggle?.addEventListener('change', updateSpmFields);
-        updateSpmFields();
+        if (pimWorkspace) mountInfoMesh();
+        else updateSpmFields();
         updatePlantPhysicalFields();
         const spmInfo = app.querySelector('[data-spm-info]');
         spmInfo?.addEventListener('click', () => window.toggleInfoOverlay?.(spmInfo));

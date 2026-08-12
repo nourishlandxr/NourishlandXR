@@ -16,11 +16,12 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8933';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8934';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
+import { plantInformationMeshMarkup } from '../services/plantInformationMeshView.js';
 
 let appRoot = null;
 let session = null;
@@ -1677,7 +1678,7 @@ function bindSimulatedInformationPanels(layer) {
 
 const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
-function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
+function legacyPlantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
     const expanded = new Set(expandedPaths);
     const focus = pimFocusedView(knowledge, expandedPaths);
     const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
@@ -1698,6 +1699,10 @@ function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths
         ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>SELECTED TOPIC</small><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
         : `<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(knowledge.title)}</strong></span>`;
     return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
+}
+
+function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
+    return plantInformationMeshMarkup(knowledge, expandedPaths);
 }
 
 function refreshDemoRecord(record) {

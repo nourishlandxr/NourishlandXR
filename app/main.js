@@ -495,15 +495,16 @@ window.saveProjectStartingPoint = (event, projectId, flow = '') => saveProjectSt
 window.captureStartingPointLocation = captureStartingPointLocation;
 window.focusStartingPointMapFields = focusStartingPointMapFields;
 window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
-window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContext = '') => {
+window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContext = '', initialState = null) => {
     if (window.__nourishlandSpatialWindow?.openProjectEntry) {
-        return window.__nourishlandSpatialWindow.openProjectEntry(projectId, markerId, returnToAr, returnContext);
+        return window.__nourishlandSpatialWindow.openProjectEntry(projectId, markerId, returnToAr, returnContext, initialState);
     }
-    const args = [projectId, markerId, returnToAr, returnContext];
+    const args = [projectId, markerId, returnToAr, returnContext, initialState];
     rememberCurrentView('entry', args);
     pushViewHistory('entry', args);
-    return openProjectEntry(app, projectId, markerId, returnToAr, returnContext).catch(error => window.alert(error.message));
+    return openProjectEntry(app, projectId, markerId, returnToAr, returnContext, initialState).catch(error => window.alert(error.message));
 };
+window.openProjectPim = (projectId, markerId, returnToAr = false, returnContext = '') => window.openProjectEntry(projectId, markerId, returnToAr, returnContext, { workspace: 'pim' });
 window.saveProjectEntryChanges = saveProjectEntryChanges;
 window.deleteProjectEntry = (projectId, markerId) => deleteProjectEntry(projectId, markerId).catch(error => window.alert(`Delete failed: ${error.message}`));
 window.renderFirstSteps = () => renderFirstSteps(app);

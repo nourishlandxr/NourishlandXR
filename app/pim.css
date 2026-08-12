@@ -1156,6 +1156,131 @@
     display: none;
 }
 
+/* The Outline is the default editing workspace. The rail makes the six
+   stable destinations visible without making the user decode a diagram. */
+.pim-web-outline-intro {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.pim-web-outline-intro h2,
+.pim-web-outline-intro p {
+    margin: 0;
+}
+
+.pim-web-outline-intro h2 {
+    font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+}
+
+.pim-web-outline-intro p,
+.pim-web-outline-selection {
+    color: var(--pim-muted);
+    font-size: max(11px, .78rem);
+    line-height: 1.4;
+}
+
+.pim-web-outline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 6px;
+}
+
+.pim-web-outline-actions button {
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid rgba(57, 104, 67, .32);
+    border-radius: 9px;
+    background: #fffdf1;
+    color: #315e45;
+    font-size: max(11px, .7rem);
+    font-weight: 800;
+}
+
+.pim-web-outline-layout {
+    display: grid;
+    grid-template-columns: minmax(170px, .32fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.pim-web-outline-rail {
+    display: grid;
+    gap: 7px;
+    position: sticky;
+    top: 12px;
+}
+
+.pim-web-outline-branch {
+    display: grid;
+    grid-template-columns: 5px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid rgba(37, 76, 53, .16);
+    border-radius: 10px;
+    background: rgba(255, 255, 250, .72);
+    color: var(--pim-ink);
+    text-align: left;
+}
+
+.pim-web-outline-branch .pim-web-category-marker {
+    width: 5px;
+    min-height: 34px;
+    background: var(--pim-category);
+}
+
+.pim-web-outline-branch span:last-child {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.pim-web-outline-branch strong {
+    font-size: max(11px, .76rem);
+    line-height: 1.2;
+}
+
+.pim-web-outline-branch small {
+    color: var(--pim-muted);
+    font-size: max(11px, .66rem);
+}
+
+.pim-web-outline-branch.is-selected,
+.pim-web-outline-branch:hover {
+    border-color: #315e45;
+    background: #edf5e8;
+    box-shadow: 0 5px 14px rgba(29, 67, 43, .08);
+}
+
+.pim-web-outline-content {
+    min-width: 0;
+}
+
+.pim-web-outline-selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 4px solid #315e45;
+    border-radius: 5px;
+    background: #f1f6ec;
+}
+
+.pim-web-outline-selection strong {
+    color: var(--pim-ink);
+}
+
+.pim-web-outline-content .pim-web-tree {
+    margin-top: 9px;
+}
+
 @keyframes pim-web-reveal {
     from { opacity: 0; transform: translateY(-7px); }
     to { opacity: 1; transform: translateY(0); }
@@ -1175,6 +1300,30 @@
     .pim-web-heading {
         align-items: start;
         flex-direction: column;
+    }
+
+    .pim-web-outline-intro {
+        align-items: start;
+        flex-direction: column;
+    }
+
+    .pim-web-outline-actions {
+        justify-content: start;
+    }
+
+    .pim-web-outline-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .pim-web-outline-rail {
+        display: flex;
+        position: static;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+    .pim-web-outline-branch {
+        flex: 0 0 145px;
     }
 
     .pim-web-compass-shell {

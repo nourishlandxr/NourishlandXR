@@ -146,7 +146,7 @@ function concisePreview(node, isRoot = false) {
     const words = raw.split(/\s+/).filter(Boolean).slice(0, 5);
     const preview = words.join(' ').replace(/[.,;:!?]+$/, '');
     if (preview && preview.toLocaleLowerCase() !== title) return preview;
-    return isRoot ? 'Information growing' : 'Open this topic';
+    return isRoot ? 'Select to explore' : 'Open this topic';
 }
 
 function evidenceLabel(value) {
@@ -167,6 +167,7 @@ function normalizedState(state = {}) {
         searchMessage: String(state.searchMessage || ''),
         searchPath: String(state.searchPath || ''),
         visitedNodeIds: unique(state.visitedNodeIds),
+        outlineBranchId: String(state.outlineBranchId || 'scientific-information'),
         // The readable hierarchy is the safe first view. Diagram mode remains
         // an intentional visual exploration mode selected by the user.
         viewMode: state.viewMode === 'compass' ? 'compass' : 'list',
@@ -190,6 +191,7 @@ export function createPlantInformationWebState(document, initialState = {}) {
         centerOpen: true,
         openNodeIds: unique([...state.openNodeIds, ...ancestorsOf(source, requestedNode.id).map(node => node.id), requestedNode.id]),
         highlightedNodeId: requestedNode.id,
+        outlineBranchId: requestedNode.parentId ? (ancestorsOf(source, requestedNode.id)[0]?.id || state.outlineBranchId) : requestedNode.id,
         detailNodeId: requestedNode.body ? requestedNode.id : state.detailNodeId,
         searchPath: plantInformationWebPath(source, requestedNode.id)
     };
@@ -256,6 +258,7 @@ export function togglePlantInformationWebNode(document, state, nodeId) {
         openNodeIds,
         detailNodeId: closedDetails ? '' : current.detailNodeId,
         highlightedNodeId: node.id,
+        outlineBranchId: ancestorsOf(source, node.id)[0]?.id || node.id,
         visitedNodeIds,
         searchPath: plantInformationWebPath(source, node.id)
     };
@@ -304,7 +307,7 @@ function nodeButtonMarkup(document, node, state, options, suffix = 'visual', dep
         : ' aria-haspopup="dialog"';
     return `<button class="pim-web-node-button${open ? ' is-open' : ''}${highlighted ? ' is-highlighted' : ''}" type="button" data-pim-node-id="${attribute(node.id)}" data-pim-node-path="${attribute(node.path)}" data-pim-depth="${depth}"${expansion} style="--pim-category:${attribute(category.color)}">
         <span class="pim-web-category-marker" aria-hidden="true"></span>
-        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small class="pim-web-ar-mini-info"><span>AR PIM</span>${escapeHtml(preview)}</small>${cellStats}</span>
+        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small class="pim-web-ar-mini-info">${escapeHtml(preview)}</small>${cellStats}</span>
         <span class="pim-web-node-kind">${escapeHtml(category.title)}</span>
         <span class="pim-web-expansion-indicator" aria-hidden="true">${expandable ? open ? '−' : '+' : '→'}</span>
     </button>`;
@@ -402,7 +405,15 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
 function accessibleListMarkup(document, state, options) {
     const customRoots = typeof PimModel.pimChildren === 'function' ? PimModel.pimChildren(document, null).filter(node => !PIM_COMPASS_BY_ID[node.id]) : [];
     const roots = [...ACCESSIBLE_ROOT_ORDER.map(id => nodeById(document, id)).filter(Boolean), ...customRoots];
-    return `<section id="pim-web-sectors-${domToken(document.plantId)}-list" class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
+    const activeRoot = roots.find(root => root.id === state.outlineBranchId) || roots[0];
+    const rail = roots.map(root => {
+        const cells = descendantsOf(document, root.id).size + 1;
+        return `<button type="button" class="pim-web-outline-branch${activeRoot?.id === root.id ? ' is-selected' : ''}" data-pim-outline-branch="${attribute(root.id)}" aria-pressed="${activeRoot?.id === root.id}"><span class="pim-web-category-marker" aria-hidden="true" style="--pim-category:${attribute(categoryFor(root).color)}"></span><span><strong>${escapeHtml(root.title)}</strong><small>${cells} cell${cells === 1 ? '' : 's'}</small></span></button>`;
+    }).join('');
+    const addActions = activeRoot && options.editable
+        ? `<div class="pim-web-outline-actions"><button type="button" data-pim-add-parent-id="${attribute(activeRoot.id)}">Add submenu</button><button type="button" data-pim-add-parent-id="${attribute(activeRoot.id)}">Add cell</button></div>`
+        : '';
+    return `<section id="pim-web-sectors-${domToken(document.plantId)}-list" class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><div class="pim-web-outline-intro"><div><h2 id="pim-web-list-title">Plant knowledge outline</h2><p>Complete Plant Information Mesh · choose a branch, then open its cells.</p></div>${addActions}</div><div class="pim-web-outline-layout"><nav class="pim-web-outline-rail" aria-label="Main plant knowledge branches">${rail}</nav><div class="pim-web-outline-content"><p class="pim-web-outline-selection">${activeRoot ? `<strong>${escapeHtml(activeRoot.title)}</strong><span>${escapeHtml(activeRoot.preview || 'Information branch')}</span>` : 'Plant knowledge'}</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></div></div></section>`;
 }
 
 function detailMarkup(document, state, options) {
@@ -553,7 +564,7 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
         ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
+        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
         ${compassView}
         ${listView}
         ${detailMarkup(source, current, renderOptions)}
@@ -687,6 +698,14 @@ export function mountPlantInformationWeb(container, options = {}) {
         if (button.matches('[data-pim-node-id]')) {
             const next = togglePlantInformationWebNode(document, state, button.dataset.pimNodeId);
             commit(next, button.dataset.pimNodeId);
+            return;
+        }
+        if (button.matches('[data-pim-outline-branch]')) {
+            const branchId = button.dataset.pimOutlineBranch;
+            const next = typeof PimModel.pimOpenAncestors === 'function'
+                ? { ...state, outlineBranchId: branchId, highlightedNodeId: branchId, openNodeIds: PimModel.pimOpenAncestors(document, state.openNodeIds, branchId) }
+                : { ...state, outlineBranchId: branchId, highlightedNodeId: branchId };
+            commit(next, branchId, false);
             return;
         }
         if (button.matches('[data-pim-centre]')) {

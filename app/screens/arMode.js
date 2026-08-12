@@ -26,13 +26,14 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8933';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8934';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
+import { plantInformationMeshMarkup } from '../services/plantInformationMeshView.js';
 
 let session = null;
 let sessionMode = 'immersive-ar';
@@ -615,7 +616,7 @@ function creatorPlantKnowledge(record) {
     return pimToArKnowledge(document);
 }
 
-function creatorPlantKnowledgeMarkup(record) {
+function legacyCreatorPlantKnowledgeMarkup(record) {
     const knowledge = creatorPlantKnowledge(record);
     const compactLabel = label => ({ RELATIONSHIPS: 'LINKS' })[String(label).toUpperCase()] || label;
     const expandedPaths = record.pimExpandedPaths || [];
@@ -639,6 +640,10 @@ function creatorPlantKnowledgeMarkup(record) {
         ? `<span class="plant-knowledge-core is-fractal-focus"><strong>${escapeHtml(compactLabel(focus.focusNode.label))}</strong><i>${escapeHtml(focus.focusNode.value)}</i></span>`
         : `<span class="plant-knowledge-core"><strong>${escapeHtml(knowledge.title)}</strong></span>`;
     return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
+}
+
+function creatorPlantKnowledgeMarkup(record) {
+    return plantInformationMeshMarkup(creatorPlantKnowledge(record), record.pimExpandedPaths || []);
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -3809,9 +3814,9 @@ function renderSessionMarkers() {
         profilePanel?.addEventListener('pointerdown', event => {
             event.stopPropagation();
         });
-        profilePanel?.querySelector('[data-ar-pim-back]')?.addEventListener('click', event => {
+        profilePanel?.querySelector('[data-pim-back]')?.addEventListener('click', event => {
             event.stopPropagation();
-            const focusPath = event.currentTarget.dataset.arPimBack;
+            const focusPath = event.currentTarget.dataset.pimBack;
             record.pimExpandedPaths = pimToggleExpandedPaths(record.pimExpandedPaths, focusPath);
             record.pimBloomStarted = performance.now();
             invalidateSpatialPimTexture(record);
