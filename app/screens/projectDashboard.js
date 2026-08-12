@@ -2850,16 +2850,16 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
                 <div class="field"><label for="projectEntryScientificName">Scientific name</label><input id="projectEntryScientificName" value="${escapeHtml(profile.scientific_name || '')}" /></div>
                 <div class="field"><label for="projectEntryLayer">Forest layer</label><select id="projectEntryLayer"><option value="">Choose layer</option>${layerOptions}</select></div>
                 <div class="field"><label for="projectEntryClimate">Climate</label><input id="projectEntryClimate" value="${escapeHtml(profile.climate || '')}" placeholder="Warm temperate, tropical…" /></div>
-                <div class="field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
+                <section class="plant-profile-spm-toggle plant-profile-spm-toggle--inline" aria-labelledby="plantSpmTitle">
+                    <div class="plant-spm-toggle-line">
+                        <label class="plant-spm-toggle-label" for="projectEntrySpmEnabled"><strong id="plantSpmTitle">ACTIVATE INFO MESH</strong><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
+                        <button class="plant-profile-info-bubble" type="button" data-spm-info data-info-trigger data-info-source="plantSpmHelp" aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button>
+                    </div>
+                    <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh opens an expandable information diagram shared by Web Mode and AR.</p>
+                </section>
+                <div class="field plant-area-field"><label for="projectEntryAreaOverview">Area</label><select id="projectEntryAreaOverview" onchange="document.getElementById('projectEntryArea').value=this.value"></select></div>
             </div>
         </div>
-        <section class="plant-profile-spm-toggle" aria-labelledby="plantSpmTitle">
-            <div class="plant-spm-toggle-line">
-                <label class="plant-spm-toggle-label" for="projectEntrySpmEnabled"><strong id="plantSpmTitle">ACTIVATE INFO MESH</strong><input id="projectEntrySpmEnabled" type="checkbox" ${spmEnabled ? 'checked' : ''} /></label>
-                <button class="plant-profile-info-bubble" type="button" data-spm-info data-info-trigger data-info-source="plantSpmHelp" aria-expanded="false" aria-controls="plantSpmHelp" aria-label="About Info Mesh">i</button>
-            </div>
-            <p id="plantSpmHelp" class="plant-spm-help" hidden>Info Mesh opens an expandable information diagram shared by Web Mode and AR.</p>
-        </section>
         <div id="projectEntrySpmFields" class="plant-profile-spm-fields" ${spmEnabled ? '' : 'hidden'}>
         <section class="plant-profile-pim-web-section" aria-label="Plant Information Mesh">
             <div data-plant-pim-web-mount></div>
