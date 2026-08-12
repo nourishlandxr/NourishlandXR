@@ -315,8 +315,8 @@ function addInformationMarkup(parent, options, suffix) {
     return `<button class="pim-web-add-information" type="button" data-pim-add-parent-id="${attribute(parent.id)}" data-pim-add-parent-path="${attribute(parent.path)}" data-pim-surface="${attribute(suffix)}"><span aria-hidden="true">+</span> Add information</button>`;
 }
 
-function nodeActionsMarkup(node, options) {
-    if (!options.editable) return '';
+function nodeActionsMarkup(node, options, selected = true) {
+    if (!options.editable || !selected) return '';
     const archived = node.status === 'archived';
     return `<div class="pim-web-node-actions" aria-label="Manage ${attribute(node.title)}"><button type="button" data-pim-edit-node-id="${attribute(node.id)}" aria-label="Rename or edit ${attribute(node.title)}">Edit</button><button type="button" data-pim-move-node="up" data-pim-move-node-id="${attribute(node.id)}" aria-label="Move ${attribute(node.title)} up">↑</button><button type="button" data-pim-move-node="down" data-pim-move-node-id="${attribute(node.id)}" aria-label="Move ${attribute(node.title)} down">↓</button><button type="button" data-pim-${archived ? 'restore' : 'archive'}-node-id="${attribute(node.id)}">${archived ? 'Restore' : 'Remove'}</button></div>`;
 }
@@ -348,7 +348,7 @@ function groupMarkup(document, group, state, options) {
 
 function customRootsMarkup(document, state, options) {
     const roots = typeof PimModel.pimChildren === 'function'
-        ? PimModel.pimChildren(document, null).filter(node => !PimModel.PIM_COMPASS_BY_ID?.[node.id])
+        ? PimModel.pimChildren(document, null).filter(node => !PIM_COMPASS_BY_ID[node.id])
         : [];
     if (!roots.length) return '';
     return `<section class="pim-web-sector pim-web-sector--custom" data-pim-group="custom" aria-label="Custom main cells"><header class="pim-web-sector-heading"><p><strong>Custom cells</strong><span> — User-defined knowledge branches</span><small>${roots.length} main cell${roots.length === 1 ? '' : 's'}</small></p></header><div class="pim-web-sector-branches">${roots.map(root => visualNodeMarkup(document, root, state, options)).join('')}</div></section>`;
@@ -396,13 +396,13 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
     const open = state.openNodeIds.includes(node.id);
     const expandable = primary || children.length > 0;
     const panelId = `pim-web-children-${domToken(document.plantId)}-${domToken(node.id)}-list`;
-    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${nodeActionsMarkup(node, options)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
+    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${nodeActionsMarkup(node, options, state.highlightedNodeId === node.id)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
 }
 
 function accessibleListMarkup(document, state, options) {
-    const customRoots = typeof PimModel.pimChildren === 'function' ? PimModel.pimChildren(document, null).filter(node => !PimModel.PIM_COMPASS_BY_ID?.[node.id]) : [];
+    const customRoots = typeof PimModel.pimChildren === 'function' ? PimModel.pimChildren(document, null).filter(node => !PIM_COMPASS_BY_ID[node.id]) : [];
     const roots = [...ACCESSIBLE_ROOT_ORDER.map(id => nodeById(document, id)).filter(Boolean), ...customRoots];
-    return `<section class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
+    return `<section id="pim-web-sectors-${domToken(document.plantId)}-list" class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><h2 id="pim-web-list-title">Complete Plant Information Mesh</h2><p>Explore the same knowledge in a structured expandable list.</p><ul class="pim-web-tree">${roots.map(root => accessibleNodeMarkup(document, root, state, options)).join('')}</ul></section>`;
 }
 
 function detailMarkup(document, state, options) {
@@ -545,11 +545,16 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
     const standaloneDirections = directionsInfoMarkup(source);
     const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
+    const compassView = current.viewMode === 'compass'
+        ? `<div class="pim-web-compass-shell" data-pim-compass-view>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}${customRootsMarkup(source, current, renderOptions)}</div></div>`
+        : '';
+    const listView = current.viewMode === 'list'
+        ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${accessibleListMarkup(source, current, renderOptions)}`
+        : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
         <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram view</button><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Accessible list</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
-        <div class="pim-web-compass-shell" data-pim-compass-view${current.viewMode === 'compass' ? '' : ' hidden'}>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}${customRootsMarkup(source, current, renderOptions)}</div></div>
-        ${showIdentity && current.viewMode === 'list' ? `<div class="pim-web-list-identity">${listIdentity}<span id="pim-web-sectors-${domToken(source.plantId)}-list"${current.centerOpen ? '' : ' hidden'}></span></div>` : ''}
-        ${accessibleListMarkup(source, current, renderOptions)}
+        ${compassView}
+        ${listView}
         ${detailMarkup(source, current, renderOptions)}
         ${editorMarkup(source, current, renderOptions)}
         ${importReviewMarkup(source, current, renderOptions)}

@@ -94,6 +94,9 @@ test('Web PIM renders the six stable categories as a rectangular plant knowledge
     assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
     assert.doesNotMatch(markup, /Knowledge Compass/);
     assert.doesNotMatch(`${rendererSource}\n${styles}`, /hexagon|honeycomb|clip-path:\s*polygon/i);
+    for (const id of ['food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data', 'cultivation']) {
+        assert.equal((markup.match(new RegExp(`data-pim-node-id="${id}"`, 'g')) || []).length, 1);
+    }
 });
 
 test('Plant Profile can use a compact PIM surface without the Web search field', () => {
@@ -127,8 +130,8 @@ test('Diagram view remains an explicit compact overview mode', () => {
 test('Plant Profile can omit the repeated PIM identity card while retaining the mesh', () => {
     const document = referenceDocument();
     const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document), { showSearch: false, showIdentity: false });
-    assert.match(markup, /class="pim-web-compass-shell"/);
-    assert.match(markup, /data-pim-group="certainty"/);
+    assert.match(markup, /class="pim-web-accessible-list"/);
+    assert.match(markup, /data-pim-list-item-id="scientific-information"/);
     assert.match(markup, /data-pim-directions-info/);
     assert.doesNotMatch(markup, /pim-web-plant-visual|<em>Cajanus cajan<\/em>/);
 });

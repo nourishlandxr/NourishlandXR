@@ -264,7 +264,7 @@ test('Physical Marker prototype is feature-flagged and exposes saved and unsaved
     assert.match(scanner, /js-aruco2@2\.0\.0/);
     assert.ok(scanner.indexOf('getUserMedia') < scanner.indexOf('new window.AR.Detector'));
     assert.match(dashboard, /physicalAnchorControlPresent \? physicalAnchor : existing\?\.marker\.physicalAnchor/);
-    assert.match(dashboard, /ArUco Plant Live Tag/);
+    assert.match(dashboard, /Physical marker link/);
     assert.match(dashboard, /physicalAnchorFromPlantProfileForm/);
     assert.match(scanner, /resolvePhysicalAnchorEntry/);
     assert.match(server, /type !== 'area_checkpoint' && type !== 'plant'/);

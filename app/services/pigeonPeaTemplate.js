@@ -21,6 +21,8 @@ export function createPigeonPeaTemplateProfile(plantId = PIGEON_PEA_PIM.plantId)
         scientific_name: PIGEON_PEA_EXAMPLE.scientificName,
         family: PIGEON_PEA_EXAMPLE.family,
         plant_type: PIGEON_PEA_EXAMPLE.plantType,
+        layer: 'Shrub',
+        climate: 'Tropical and subtropical',
         overview: PIGEON_PEA_EXAMPLE.shortProfile,
         identification: 'Upright branching legume shrub with trifoliate leaves, yellow flowers and edible pods. Confirm identification locally before use.',
         edible_uses: 'Green peas and mature dried seeds are used as food. Mature dry peas should be cooked before eating.',
@@ -36,4 +38,3 @@ export function createPigeonPeaTemplateProfile(plantId = PIGEON_PEA_PIM.plantId)
         pim_document: document
     };
 }
-

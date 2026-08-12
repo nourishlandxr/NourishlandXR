@@ -298,7 +298,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
     assert.match(fieldGuideSource, /physicalAnchor\?\.enabled/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
-    assert.match(dashboardSource, /ArUco Plant Live Tag/);
+    assert.match(dashboardSource, /Physical marker link/);
     assert.match(dashboardSource, /PRINT PLANT LIVE TAG/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
@@ -553,6 +553,15 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(dashboard, /type="file" accept="image\/\*"/);
     assert.match(dashboard, /projectEntryPhotoData/);
     assert.match(dashboard, /showIdentity: false/);
+    assert.doesNotMatch(dashboard, /areaMarkerLayerFilter/);
+    assert.match(dashboard, /data-area-marker-filter-toggle/);
+    assert.match(dashboard, /areaFilterFieldset\('layer'/);
+    assert.match(dashboard, /areaFilterFieldset\('climate'/);
+    assert.match(dashboard, /areaFilterFieldset\('type'/);
+    assert.match(dashboard, /plantProfile\?\.photo/);
+    assert.match(dashboard, /isAreaTotemMarker\(entry\.marker, entry\.place\?\.name\)/);
+    assert.match(dashboard, /plantPhysicalMarkerHelp/);
+    assert.match(dashboard, /plantLiveTagHelp/);
 });
 
 test('new projects separate guided tutorial choice from advanced controls', () => {

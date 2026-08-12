@@ -71,6 +71,8 @@ const PLANT_LAYER_COLORS = Object.freeze({
     default: '#5e7956'
 });
 const plantLayerKey = value => String(value || '').toLocaleLowerCase().replace(/[^a-z]/g, '');
+const areaFilterKey = value => String(value || '').trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'not-set';
+const plantProfileClimate = profile => String(profile?.climate || profile?.climateContext || profile?.climate_context || '').trim();
 function areaEntryPresentation(markerType, plantProfile = {}) {
     if (markerType === 'plant') {
         const layer = String(plantProfile.layer || '').trim();
@@ -78,7 +80,7 @@ function areaEntryPresentation(markerType, plantProfile = {}) {
             className: 'is-plant',
             icon: '🌱',
             accent: PLANT_LAYER_COLORS[plantLayerKey(layer)] || PLANT_LAYER_COLORS.default,
-            kind: `Plant · ${layer || 'Layer not set'}`
+            kind: 'Plant'
         };
     }
     if (markerType === 'note') return { className: 'is-note', icon: '✎', accent: '#b47560', kind: 'Note · Information record' };
@@ -1321,7 +1323,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const projectEntries = entries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)));
         const placedProjectEntries = placedEntries.filter(entry => ['plant', 'note', 'sub_checkpoint'].includes(effectiveMarkerType(entry.marker)) && entry.isPlaced);
         const placedTotemAreaIds = new Set(placedEntries
-            .filter(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint' && entry.isPlaced)
+            .filter(entry => isAreaTotemMarker(entry.marker, entry.place?.name) && entry.isPlaced)
             .map(entry => entry.place.id));
         const missingTotemArea = areas.find(area => !placedTotemAreaIds.has(area.id)) || null;
         const allAreasHavePlacedTotems = areas.length > 0 && !missingTotemArea;
@@ -1472,7 +1474,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
         const areaLinks = layoutAreas.map(area => {
             const areaEntries = entries.filter(entry => entry.place.id === area.id);
             const areaPlants = areaEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant');
-            const areaTotem = areaEntries.find(entry => effectiveMarkerType(entry.marker) === 'area_checkpoint');
+            const areaTotem = areaEntries.find(entry => isAreaTotemMarker(entry.marker, area.name));
             const totemColor = /^#[0-9a-f]{6}$/i.test(areaTotem?.marker.appearance?.color || '')
                 ? areaTotem.marker.appearance.color
                 : '';
@@ -1814,16 +1816,19 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
         const checkpoint = areaEntries.find(entry => isAreaTotemMarker(entry.marker, context.area.name));
         const areaMarkerLocated = Boolean(checkpoint?.isPlaced);
         const canonicalAreaEntries = areaEntries.filter(entry => !isAreaTotemMarker(entry.marker, context.area.name));
-        const areaPlantLayers = [...new Set(areaEntries
-            .filter(entry => effectiveMarkerType(entry.marker) === 'plant')
-            .map(entry => String(entry.plantProfile?.layer || '').trim())
-            .filter(Boolean))].sort((left, right) => left.localeCompare(right));
-        const orderedEntries = [...canonicalAreaEntries].sort((left, right) => {
-            const leftTotem = isAreaTotemMarker(left.marker, context.area.name) ? 0 : 1;
-            const rightTotem = isAreaTotemMarker(right.marker, context.area.name) ? 0 : 1;
-            return leftTotem - rightTotem;
-        });
-        const rows = orderedEntries.map(({ marker, isPlaced, plantProfile }) => {
+        const plantAreaEntries = areaEntries.filter(entry => effectiveMarkerType(entry.marker) === 'plant');
+        const areaPlantLayers = [...new Set(plantAreaEntries
+            .map(entry => String(entry.plantProfile?.layer || '').trim()))]
+            .sort((left, right) => left.localeCompare(right));
+        const areaPlantClimates = [...new Set(plantAreaEntries
+            .map(entry => plantProfileClimate(entry.plantProfile)))].sort((left, right) => left.localeCompare(right));
+        const areaMarkerTypes = [...new Set(canonicalAreaEntries
+            .map(entry => effectiveMarkerType(entry.marker)))].sort((left, right) => left.localeCompare(right));
+        const areaFilterFieldset = (group, label, values, valueLabel = value => value || 'Not set') => values.length
+            ? `<fieldset class="area-marker-filter-group"><legend>${escapeHtml(label)}</legend><div class="area-marker-filter-options">${values.map(value => `<label class="area-marker-filter-option"><input type="checkbox" data-area-marker-filter-group="${escapeHtml(group)}" value="${escapeHtml(areaFilterKey(value))}"><span>${escapeHtml(valueLabel(value))}</span></label>`).join('')}</div></fieldset>`
+            : '';
+        const areaMarkerTypeLabel = type => type === 'plant' ? 'Plant' : markerTypeLabel(type);
+        const rows = canonicalAreaEntries.map(({ marker, isPlaced, plantProfile }) => {
             const markerType = isAreaTotemMarker(marker, context.area.name) ? 'area_checkpoint' : effectiveMarkerType(marker);
             const status = entryStatus(marker);
             const placementLabel = isPlaced ? 'Placed' : 'Not yet placed';
@@ -1833,14 +1838,29 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 : markerType === 'intro_checkpoint'
                     ? `window.openProjectStartingPoint('${encoded(context.project.id)}', '${encoded(context.area.id)}')`
                     : `window.openProjectEntry('${encoded(context.project.id)}', '${encoded(marker.id)}', false, 'area-dashboard')`;
-            const layerKey = markerType === 'plant' ? plantLayerKey(plantProfile?.layer || '') : 'other';
-            return `<article class="area-content-entry area-content-card ${presentation.className}" style="--area-entry-accent:${presentation.accent}" data-area-marker-entry data-marker-type="${escapeHtml(markerType)}" data-marker-layer="${escapeHtml(layerKey)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(marker.name)} · ${escapeHtml(presentation.kind)}" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
-                <span class="area-entry-icon" aria-hidden="true"><span>${presentation.icon}</span></span>
+            const photo = markerType === 'plant'
+                ? String(plantProfile?.photo || plantProfile?.image || marker.photo || marker.image || '').trim()
+                : '';
+            const layerKey = markerType === 'plant' ? areaFilterKey(plantProfile?.layer || '') : 'other';
+            const climateKey = markerType === 'plant' ? areaFilterKey(plantProfileClimate(plantProfile)) : 'other';
+            const typeKey = areaFilterKey(markerType);
+            const iconMarkup = photo
+                ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`
+                : `<span>${presentation.icon}</span>`;
+            return `<article class="area-content-entry area-content-card ${presentation.className}" style="--area-entry-accent:${presentation.accent}" data-area-marker-entry data-marker-type="${escapeHtml(markerType)}" data-marker-filter-type="${escapeHtml(typeKey)}" data-marker-layer="${escapeHtml(layerKey)}" data-marker-climate="${escapeHtml(climateKey)}" role="button" tabindex="0" aria-label="Open ${escapeHtml(marker.name)} · ${escapeHtml(presentation.kind)}" onclick="${webAction}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${webAction}}">
+                <span class="area-entry-icon${photo ? ' has-photo' : ''}" aria-hidden="true">${iconMarkup}</span>
                 <span class="area-entry-copy"><strong>${escapeHtml(marker.name)}</strong><small class="area-entry-kind">${escapeHtml(presentation.kind)}</small><span class="placement-status ${markerType === 'area_checkpoint' || isPlaced ? 'is-placed' : 'is-unplaced'}">${placementLabel} · ${escapeHtml(editedLabel(marker.modified || marker.created))}</span></span>
                 <span class="area-entry-status entry-status-${status.tone}">${status.label}</span>
             </article>`;
         }).join('');
-        const areaMarkerFilter = `<div class="area-marker-filter"><label for="areaMarkerLayerFilter">Plant layer</label><select id="areaMarkerLayerFilter" data-area-marker-layer-filter><option value="">All plant layers</option>${areaPlantLayers.map(layer => `<option value="${escapeHtml(plantLayerKey(layer))}">${escapeHtml(layer)}</option>`).join('')}</select><span id="areaMarkerFilterStatus" class="meta" aria-live="polite">${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</span></div>`;
+        const areaMarkerFilter = `<div class="area-marker-filter" data-area-marker-filter-panel>
+            <div class="area-marker-filter-heading"><strong>Filter markers</strong><button type="button" class="ghost" data-area-marker-filter-toggle aria-controls="areaMarkerFilterOptions" aria-expanded="false">Filters</button><span id="areaMarkerFilterStatus" class="meta" aria-live="polite">${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}</span></div>
+            <div id="areaMarkerFilterOptions" class="area-marker-filter-options-panel" data-area-marker-filter-options hidden>
+                ${areaFilterFieldset('layer', 'Layer', areaPlantLayers)}
+                ${areaFilterFieldset('climate', 'Climate', areaPlantClimates)}
+                ${areaFilterFieldset('type', 'Type', areaMarkerTypes, areaMarkerTypeLabel)}
+            </div>
+        </div>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
         const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
                 <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
@@ -1941,18 +1961,30 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             app.querySelector('[data-save-area-description]')?.removeAttribute('hidden');
             app.querySelector('#areaIcon')?.focus();
         });
-        app.querySelector('[data-area-marker-layer-filter]')?.addEventListener('change', event => {
-            const selectedLayer = event.currentTarget.value;
+        const areaMarkerFilterToggle = app.querySelector('[data-area-marker-filter-toggle]');
+        const areaMarkerFilterOptions = app.querySelector('[data-area-marker-filter-options]');
+        areaMarkerFilterToggle?.addEventListener('click', () => {
+            const isOpen = areaMarkerFilterOptions?.hasAttribute('hidden');
+            if (isOpen) areaMarkerFilterOptions.removeAttribute('hidden');
+            else areaMarkerFilterOptions?.setAttribute('hidden', '');
+            areaMarkerFilterToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+        });
+        const applyAreaMarkerFilters = () => {
+            const selected = Object.fromEntries(['layer', 'climate', 'type'].map(group => [group, new Set([...app.querySelectorAll(`[data-area-marker-filter-group="${group}"]:checked`)].map(input => input.value))]));
             const entries = [...app.querySelectorAll('[data-area-marker-entry]')];
             let visible = 0;
             entries.forEach(entry => {
-                const show = !selectedLayer || entry.dataset.markerLayer === selectedLayer || entry.dataset.markerType !== 'plant';
+                const show = (!selected.layer.size || (entry.dataset.markerType === 'plant' && selected.layer.has(entry.dataset.markerLayer)))
+                    && (!selected.climate.size || (entry.dataset.markerType === 'plant' && selected.climate.has(entry.dataset.markerClimate)))
+                    && (!selected.type.size || selected.type.has(entry.dataset.markerFilterType));
                 entry.hidden = !show;
                 if (show) visible += 1;
             });
             const status = app.querySelector('#areaMarkerFilterStatus');
-            if (status) status.textContent = `${visible} marker${visible === 1 ? '' : 's'} shown`;
-        });
+            const active = Object.values(selected).some(values => values.size);
+            if (status) status.textContent = active ? `${visible} marker${visible === 1 ? '' : 's'} shown` : `${canonicalAreaEntries.length} marker${canonicalAreaEntries.length === 1 ? '' : 's'}`;
+        };
+        app.querySelectorAll('[data-area-marker-filter-group]').forEach(input => input.addEventListener('change', applyAreaMarkerFilters));
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>Area unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -2801,7 +2833,7 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 
 function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     if (readPlatformSettings().physicalAnchors !== true) {
-        return '<p class="meta plant-physical-anchor-unavailable"><span class="plant-profile-info-bubble" role="img" aria-label="Enable Physical Marker prototype in Settings to connect an ArUco marker to this Plant Live Tag.">i</span> Enable Physical Marker prototype in Settings to connect an ArUco marker to this Plant Live Tag.</p>';
+        return '<p class="meta plant-physical-anchor-unavailable"><button type="button" class="plant-profile-info-bubble" data-info-trigger data-info-source="plantPhysicalMarkerHelp" aria-expanded="false" aria-controls="plantPhysicalMarkerHelp" aria-label="About physical marker links" onclick="window.toggleInfoOverlay(this)">i</button><span id="plantPhysicalMarkerHelp" data-info-title="Physical marker link" hidden>Enable the Physical Marker prototype in Settings to connect a printed ArUco marker to this Plant Live Tag.</span></p>';
     }
     let savedPhysicalAnchor = null;
     try {
@@ -2822,7 +2854,7 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     }).join('');
     const selectedAssignment = assignments.get(Number(physicalValues.markerId));
     return `<details class="plant-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
-        <summary><span><strong>ArUco Plant Live Tag</strong><small>Connect this Plant profile to a printed marker</small></span><b aria-hidden="true">⌗</b></summary>
+        <summary><span><strong>Physical marker link</strong><small>Optional printed marker for this Plant Live Tag</small></span><b aria-hidden="true">⌗</b></summary>
         <div class="plant-physical-anchor-body">
             <p>When the Plant Live Tag is enabled, assign an ArUco marker here. Scanning it will show this Plant profile as a live tag.</p>
             <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Link ArUco marker</strong><small>Requires Plant Live Tag to be enabled.</small></span><input id="projectEntryPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
@@ -2875,8 +2907,7 @@ function plantProfileEditorMarkup(entry, profile, physicalAnchorMarkup = '') {
         <section class="plant-profile-pim-web-section" aria-label="Plant Information Mesh">
             <div data-plant-pim-web-mount></div>
         </section>
-        <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><strong>PLANT LIVE TAG</strong><p>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label></div></section>
-        ${physicalAnchorMarkup}
+        <section class="plant-qr-anchor-card plant-virtual-tag-card"><span aria-hidden="true">▦</span><div><div class="plant-live-tag-heading"><strong>PLANT LIVE TAG</strong><button type="button" class="plant-profile-info-bubble" data-info-trigger data-info-source="plantLiveTagHelp" aria-expanded="false" aria-controls="plantLiveTagHelp" aria-label="About Plant Live Tags" onclick="window.toggleInfoOverlay(this)">i</button></div><p id="plantLiveTagHelp" data-info-title="Plant Live Tag" hidden>Prepare this Plant profile to become a scannable garden tag that opens its Web Hub profile.</p><label class="ar-inline-checkbox" for="projectEntryVirtualTag"><input id="projectEntryVirtualTag" type="checkbox" ${profile.virtual_tag_enabled === true ? 'checked' : ''} /> <span>Make this Plant a Plant Live Tag</span></label>${physicalAnchorMarkup}</div></section>
         </div>
     </section>`;
 }
