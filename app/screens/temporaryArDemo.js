@@ -16,7 +16,7 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8929';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8931';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -426,9 +426,17 @@ function openDemoVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-        showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to Open the plant profile.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
+    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to Open the plant profile.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
         if (choice === 'virtual-tag') openDemoVirtualTag(record);
     }, { persistent: true });
+}
+
+function continueAfterDemoPim(record) {
+    if (!record || record.demoProfileInteracted) return false;
+    record.demoProfileInteracted = true;
+    if (record.tutorialStage === 'plant2') showDemoAction('note');
+    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+    return true;
 }
 
 function demoContentFor(record) {
@@ -699,6 +707,10 @@ function showPersistentPimPrompt(record) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
+    if (record?.demoProfileInteracted) {
+        setGuide(`${record.name || 'Plant'} Plant Information Mesh is ready. Continue with the next demo step.`);
+        return;
+    }
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Plant Information Mesh');
     const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Press Continue after you have explored the Plant Information Mesh.`);
@@ -717,12 +729,11 @@ function showPersistentPimPrompt(record) {
     continueButton.onclick = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         continueButton.hidden = true;
-        setGuide(`${plantName} Plant Information Mesh remains open. Select another cell to continue exploring.`);
+        continueAfterDemoPim(record);
     };
     continueButton.hidden = false;
     skipDemoNarration = () => {
-        continueButton.hidden = false;
-        continueButton.focus?.();
+        continueButton.click();
     };
     setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh.`);
 }
@@ -1298,10 +1309,26 @@ function advanceAfterDemoProfileInteraction(record) {
     if (opened) record.demoProfileInteractionCount = (Number(record.demoProfileInteractionCount) || 0) + 1;
     const remaining = Math.max(0, explorationGoal - (Number(record.demoProfileInteractionCount) || 0));
     if (remaining) return remaining;
-    record.demoProfileInteracted = true;
-    if (record.tutorialStage === 'plant2') showDemoAction('note');
-    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+    continueAfterDemoPim(record);
     return 0;
+}
+
+function orientDemoPimPoseToViewer(pose) {
+    if (!pose?.position || !pose?.normal || !pose?.right || !viewerMatrix) return pose;
+    const towardViewer = {
+        x: Number(viewerMatrix[12]) - pose.position.x,
+        z: Number(viewerMatrix[14]) - pose.position.z
+    };
+    const facing = pose.normal.x * towardViewer.x + pose.normal.z * towardViewer.z;
+    const normal = facing >= 0
+        ? { ...pose.normal }
+        : { x: -pose.normal.x, y: -pose.normal.y, z: -pose.normal.z };
+    const expectedRight = { x: normal.z, y: 0, z: -normal.x };
+    const rightDot = pose.right.x * expectedRight.x + pose.right.z * expectedRight.z;
+    const right = rightDot >= 0
+        ? { ...pose.right }
+        : { x: -pose.right.x, y: -pose.right.y, z: -pose.right.z };
+    return { ...pose, normal, right };
 }
 
 function demoPimPointerTarget(record) {
@@ -1309,7 +1336,7 @@ function demoPimPointerTarget(record) {
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
     record.informationPose ||= plantInformationPose(record);
-    const panel = pimSpatialPanel(record.informationPose);
+    const panel = pimSpatialPanel(orientDemoPimPoseToViewer(record.informationPose));
     if (!panel) return null;
     record.informationPosition = panel.center;
     const numerator = (panel.center.x - origin.x) * panel.normal.x
@@ -2132,6 +2159,7 @@ function demoControllerInputSource() {
         || trackedControllers.find(source => source.handedness === 'right')
         || trackedControllers.find(source => source.gamepad)
         || trackedControllers[0]
+        || sources.find(source => source.targetRayMode === 'screen' && source.targetRaySpace)
         || null;
 }
 
@@ -2858,7 +2886,7 @@ function drawMarker(view) {
             : record.position;
         const noteScale = noteSign ? DEMO_NOTE_IMMERSIVE_SCALE : null;
         const model = plantProfile
-            ? fixedPimPanelMatrix(record.informationPose)
+            ? fixedPimPanelMatrix(orientDemoPimPoseToViewer(record.informationPose))
             : billboardMatrix(
                 displayPosition,
                 totem ? 1.9 : noteScale?.x || (compact ? .38 : 2.35),

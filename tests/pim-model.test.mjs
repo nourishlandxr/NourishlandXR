@@ -329,6 +329,25 @@ test('import review can acknowledge duplicates, reject conflicts, or modify an a
     assert.equal(validatePimDocument(normalizePimDocument(staged.document)).valid, true);
 });
 
+test('import review reuses a legacy pre-seeded candidate instead of throwing a duplicate ID error', () => {
+    let base = createPimDocument({ plantId: 'legacy-import-plant', now: NOW });
+    base = pimAddNode(base, {
+        id: 'taxonomy', parentId: 'scientific-information', title: 'Taxonomy', informationType: 'category', status: 'published'
+    }, { now: NOW });
+    let staged = stagePimImport(base, {
+        sourceDatabase: 'Atlas of Living Australia', sourceRecordId: 'https://id.biodiversity.org.au/node/apni/2901312',
+        fields: { accepted_scientific_name: 'Artocarpus heterophyllus' }
+    }, { now: NOW });
+    const item = staged.items[0];
+    // This is the shape left behind by the older extraction flow: the
+    // proposed import node was saved before the editor reviewed it.
+    staged.document = pimAddNode(staged.document, item.proposedNode, { now: NOW });
+    staged = reviewPimImport(staged, item.id, { decision: 'approve', reviewedAt: NOW });
+    assert.equal(staged.items[0].reviewStatus, 'approved');
+    assert.equal(staged.document.nodes.filter(node => node.id === item.proposedNode.id).length, 1);
+    assert.equal(pimNodeById(staged.document, item.proposedNode.id).body, 'Artocarpus heterophyllus');
+});
+
 test('custom PIM cells are visible, reorderable and recoverable without losing content', () => {
     let document = createPimDocument({ plantId: 'custom-plant', now: NOW });
     document = pimAddTopLevelNode(document, { title: 'Garden experiments', preview: 'Local observations', body: '', status: 'published' }, { now: NOW });

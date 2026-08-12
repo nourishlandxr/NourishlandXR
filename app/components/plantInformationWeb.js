@@ -522,9 +522,10 @@ function importItems(document, options) {
 
 function importReviewMarkup(document, state, options) {
     if (!options.editable) return '';
-    const { items } = importItems(document, options);
+    const { items: allItems } = importItems(document, options);
+    const items = allItems.filter(item => !item.reviewStatus || item.reviewStatus === 'pending');
     if (!items.length) return '';
-    return `<section class="pim-web-import-review" aria-labelledby="pim-web-import-title"><header><div><span>Editor review</span><h2 id="pim-web-import-title">Staged plant data</h2><p>Imported information remains unpublished until it is reviewed.</p></div><strong>${items.length}</strong></header><div class="pim-web-import-list">${items.map((item, index) => {
+    return `<section class="pim-web-import-review" aria-labelledby="pim-web-import-title"><header><div><span>Editor review</span><h2 id="pim-web-import-title">Staged plant data</h2><p>Imported information remains unpublished until it is reviewed.</p></div><strong class="pim-web-import-count" aria-label="${items.length} item${items.length === 1 ? '' : 's'} awaiting review">${items.length}</strong></header><div class="pim-web-import-list">${items.map((item, index) => {
         const id = item.id || item.itemId || `import-${index + 1}`;
         const node = item.node || item.mappedNode || item.proposedNode || {};
         const rawDestination = item.destination || node.path || node.primaryCategory || item.primaryCategory || 'Needs mapping';
@@ -532,8 +533,8 @@ function importReviewMarkup(document, state, options) {
             ? [rawDestination.primaryCategory, ...asList(rawDestination.parentChain).map(segment => segment?.title || segment?.id)].filter(Boolean).join(' → ')
             : String(rawDestination);
         const status = item.reviewStatus || item.status || 'pending';
-        return `<article data-pim-import-id="${attribute(id)}" data-pim-import-destination="${attribute(destination)}"><div><span>${escapeHtml(item.sourceDatabase || item.source?.name || 'External source')}</span><h3>${escapeHtml(node.title || item.title || 'Imported information')}</h3><p>${escapeHtml(node.preview || item.normalizedValue || item.originalValue || 'Review this proposed block.')}</p><small>${escapeHtml(destination)} · ${escapeHtml(titleCase(status))}${item.conflict ? ' · Conflict detected' : ''}</small></div><footer><button type="button" data-pim-import-decision="approve" data-pim-import-id="${attribute(id)}">Approve</button><button type="button" data-pim-import-decision="reject" data-pim-import-id="${attribute(id)}">Reject</button><button type="button" data-pim-import-decision="modify" data-pim-import-id="${attribute(id)}">Modify</button></footer></article>`;
-    }).join('')}</div><p role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>`;
+        return `<article data-pim-import-id="${attribute(id)}" data-pim-import-destination="${attribute(destination)}"><div class="pim-web-import-copy"><span>${escapeHtml(item.sourceDatabase || item.source?.name || 'External source')}</span><h3>${escapeHtml(node.title || item.title || 'Imported information')}</h3><p>${escapeHtml(node.preview || item.normalizedValue || item.originalValue || 'Review this proposed block.')}</p><small>${escapeHtml(destination)} · ${escapeHtml(titleCase(status))}${item.conflict ? ' · Conflict detected' : ''}</small></div><footer><button class="pim-web-import-approve" type="button" data-pim-import-decision="approve" data-pim-import-id="${attribute(id)}">Approve</button><button type="button" data-pim-import-decision="reject" data-pim-import-id="${attribute(id)}">Reject</button><button type="button" data-pim-import-decision="modify" data-pim-import-id="${attribute(id)}">Modify</button></footer></article>`;
+    }).join('')}</div><p class="pim-web-import-message" role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>`;
 }
 
 export function plantInformationWebMarkup(document, state = {}, options = {}) {

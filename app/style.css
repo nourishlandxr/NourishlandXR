@@ -6009,10 +6009,12 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-global-profile-extract .field-guide-extract-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,.55fr); gap:.5rem; align-items:center; }
 .field-guide-extract-fact { display:flex; align-items:flex-start; gap:.4rem; min-width:0; }
 .field-guide-extract-fact input { flex:0 0 auto; margin-top:.18rem; accent-color:#39764a; }
+.field-guide-extract-fact span { min-width:0; overflow-wrap:anywhere; }
+.field-guide-extract-fact strong { display:block; color:#315c3e; font-size:.72rem; line-height:1.25; }
+.field-guide-extract-fact small { display:block; overflow-wrap:anywhere; color:#748078; font-size:.64rem; line-height:1.35; }
 .field-guide-extract-suggestion { display:grid; gap:.08rem; min-width:0; padding:.4rem .5rem; border-left:3px solid #9abf88; border-radius:0 8px 8px 0; background:#f3f7ef; color:#4d6652; }
 .field-guide-extract-suggestion small { color:#718073; font-size:.57rem; }
-.field-guide-extract-suggestion strong { overflow:hidden; font-size:.67rem; text-overflow:ellipsis; white-space:nowrap; }
-.field-guide-extract-row span small:first-of-type { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-extract-suggestion strong { overflow-wrap:anywhere; font-size:.67rem; line-height:1.3; }
 .field-guide-allocation-intro { display:grid; gap:.2rem; padding:.7rem .8rem; border:1px solid rgba(55,104,68,.16); border-radius:12px; background:#f3f7ef; color:#3e5d47; }
 .field-guide-allocation-intro strong { font-size:.78rem; }
 .field-guide-allocation-intro p { margin:0; color:#66746a; font-size:.68rem; line-height:1.4; }
@@ -6034,8 +6036,13 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-allocation-actions { display:flex; flex-wrap:wrap; gap:.45rem; }
 .field-guide-allocation-actions button { min-height:34px; font-size:.67rem; }
 @media (max-width:700px) {
+    .field-guide-global-profile-extract { padding:.6rem; }
+    .field-guide-global-profile-extract fieldset { grid-template-columns:1fr !important; }
+    .field-guide-global-profile-extract label { align-items:flex-start; min-width:0; font-size:.72rem; }
+    .field-guide-global-profile-extract input[type="checkbox"] { appearance:none; width:1rem; height:1rem; min-width:1rem; margin:.12rem 0 0; border:1px solid #73907a; border-radius:4px; background:#fff; }
+    .field-guide-global-profile-extract input[type="checkbox"]:checked { border-color:#39764a; background:#39764a; box-shadow:inset 0 0 0 3px #fff; }
     .field-guide-global-profile-extract .field-guide-extract-row { grid-template-columns:1fr; }
-    .field-guide-extract-suggestion { margin-left:1.5rem; }
+    .field-guide-extract-suggestion { margin-left:1.4rem; }
     .field-guide-allocation-row { grid-template-columns:1fr; }
     .field-guide-allocation-smart { justify-self:start; }
     .field-guide-extract-heading { display:grid; }

@@ -1257,10 +1257,15 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /persistent: true/);
     assert.match(source, /if \(options\.persistent\) panel\.classList\.add\('is-persistent-demo-board'\)/);
     const persistentPimPrompt = source.slice(source.indexOf('function showPersistentPimPrompt'), source.indexOf('function runArWelcomeTutorial'));
-    assert.doesNotMatch(persistentPimPrompt, /inviteVirtualTag/);
-    assert.match(persistentPimPrompt, /Plant Information Mesh remains open/);
+    assert.match(persistentPimPrompt, /continueAfterDemoPim\(record\)/);
+    assert.match(persistentPimPrompt, /continueButton\.click\(\)/);
+    assert.match(source, /function continueAfterDemoPim\(record\)/);
     assert.ok(source.includes('record.demoProfileInteracted = true;'));
     assert.match(source, /inviteVirtualTag\(record\)/);
+    assert.match(source, /function orientDemoPimPoseToViewer\(pose\)/);
+    assert.match(source, /fixedPimPanelMatrix\(orientDemoPimPoseToViewer\(record\.informationPose\)\)/);
+    assert.match(source, /pimSpatialPanel\(orientDemoPimPoseToViewer\(record\.informationPose\)\)/);
+    assert.match(source, /targetRayMode === 'screen' && source\.targetRaySpace/);
     assert.doesNotMatch(source, /board\?\.classList\.contains\('is-typing'\)/);
     assert.doesNotMatch(source, /board\.click\(\);/);
     assert.match(source, /export function demoPointerScreenPoint\(rect/);

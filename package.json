@@ -1,7 +1,7 @@
 {
   "name": "nourishlandxrv0.8",
   "private": true,
-  "version": "0.8930.0",
+  "version": "0.8931.0",
   "type": "module",
   "scripts": {
     "start": "node tools/persistence-server.mjs",

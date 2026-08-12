@@ -1,7 +1,7 @@
 import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces, savePlantProfile } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { createPlantProvenance, PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
-import { createPimDocument, pimAddNode, pimNodeById } from '../services/pimModel.js';
+import { createPimDocument } from '../services/pimModel.js';
 import { stagePimImport } from '../services/pimImportReview.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
@@ -32,27 +32,6 @@ const initialPimCells = () => [];
 // existing saved records remain available through the separate local workflow.
 // Legacy placement copy “Not yet placed · can be placed later” is intentionally
 // omitted here; placement belongs to the post-creation flow.
-const pimSafeId = value => String(value || 'information').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'information';
-const addExtractedDrafts = (document, facts) => (facts || []).reduce((current, fact) => {
-    const destinations = Array.isArray(fact.confirmedDestinations) ? fact.confirmedDestinations : [];
-    return destinations.reduce((next, [categoryId, childTitle]) => {
-        if (!['uses', 'food-forest', 'cultivation', 'propagation', 'scientific-information', 'historical-data'].includes(categoryId) || !childTitle || categoryId === 'unassigned') return next;
-        const root = pimNodeById(next, categoryId);
-        if (!root) return next;
-        const childId = `${categoryId}-${pimSafeId(childTitle)}`;
-        let result = next;
-        if (!pimNodeById(result, childId)) result = pimAddNode(result, { id: childId, parentId: categoryId, title: childTitle, preview: 'Imported destination', body: '', informationType: 'category', evidenceStatus: 'draft', status: 'published' });
-        const factId = `${childId}-${pimSafeId(fact.key)}`;
-        if (pimNodeById(result, factId)) return result;
-        return pimAddNode(result, {
-            id: factId, parentId: childId, title: fact.label, preview: fact.value.slice(0, 80), body: fact.value,
-            informationType: 'fact', evidenceStatus: 'needs_review', status: 'draft',
-            sourceIds: [fact.sourceRecordId].filter(Boolean),
-            provenance: [{ sourceDatabase: fact.sourceDatabase, sourceRecordId: fact.sourceRecordId, sourceUrl: fact.sourceUrl, retrievalDate: fact.retrievalDate, originalValue: fact.value, normalizedValue: fact.value, suggestedDestination: fact.destination, confirmedDestinations: fact.confirmedDestinations, confidence: fact.confidence, reviewStatus: fact.reviewStatus }]
-        });
-    }, current);
-}, document);
-
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 function alaResultMarkup(result, index) {
@@ -314,8 +293,12 @@ async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId
             identity: { commonName, scientificName: profile.scientific_name, image: profile.image },
             nodes: initialPimCells()
         });
-        const importedDocument = addExtractedDrafts(document, extractedFacts);
-        const staging = stagePimImport(importedDocument, {
+        // Keep extracted facts in the review queue only.  Adding them to the
+        // document before staging made the same fact exist twice: once as an
+        // unpublished draft and again as the deterministic import candidate.
+        // The review service creates the parent chain and PIM node only after
+        // the editor approves it.
+        const staging = stagePimImport(document, {
             ...importFields,
             sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL,
             sourceRecordId: selectedGlobalPlant.externalId || selectedGlobalPlant.sourceId || '',

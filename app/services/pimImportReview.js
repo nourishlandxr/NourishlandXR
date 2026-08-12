@@ -1,4 +1,4 @@
-import { normalizePimDocument, pimAddNode, pimNodeById } from './pimModel.js';
+import { normalizePimDocument, pimAddNode, pimNodeById, pimUpdateNode } from './pimModel.js';
 
 const clone = value => {
     if (value === undefined) return undefined;
@@ -337,7 +337,15 @@ export function reviewPimImport(staging, itemId, review, patch = {}) {
                 reviewedAt: now
             }))
         };
-        source.document = pimAddNode(prepared.document, proposedNode, { now });
+        // Older staged records could already contain their proposed node
+        // because the extraction screen pre-seeded the document. Reuse that
+        // node instead of throwing a duplicate-ID error, while still applying
+        // the editor's approval or modification decision.
+        if (pimNodeById(prepared.document, proposedNode.id)) {
+            source.document = pimUpdateNode(prepared.document, proposedNode.id, proposedNode, { now });
+        } else {
+            source.document = pimAddNode(prepared.document, proposedNode, { now });
+        }
         item.proposedNode = proposedNode;
         item.normalizedValue = proposedNode.body;
         item.reviewStatus = decision.decision === 'modify' ? 'modified' : 'approved';

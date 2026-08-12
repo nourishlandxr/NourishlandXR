@@ -268,6 +268,8 @@ test('editing and import review controls appear only for editable Creator profil
         assert.match(creator, new RegExp(`name="${field}"`));
     }
     assert.match(creator, /Staged plant data/);
+    assert.match(creator, /pim-web-import-count/);
+    assert.match(creator, /pim-web-import-message/);
     assert.match(creator, /data-pim-import-decision="approve"/);
     assert.match(creator, /data-pim-import-decision="reject"/);
     assert.match(creator, /data-pim-import-decision="modify"/);
