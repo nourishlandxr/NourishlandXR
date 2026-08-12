@@ -201,11 +201,24 @@ test('specific topics open a non-destructive detail surface with evidence and sa
     const markup = plantInformationWebMarkup(document, state);
     assert.match(markup, /class="pim-web-detail" role="dialog" aria-modal="false"/);
     assert.match(markup, /data-pim-detail-id="direct-sowing"/);
+    assert.match(markup, /AR PIM mini info/);
+    assert.match(markup, /Connected cells/);
+    assert.match(markup, /data-pim-related-node-id="propagation"/);
     assert.match(markup, /Evidence/);
     assert.match(markup, /Safety note/);
-    assert.match(markup, /Save to Field Notes/);
-    assert.match(markup, /Compare with another plant/);
+    assert.doesNotMatch(markup, /Save to Field Notes/);
+    assert.doesNotMatch(markup, /Compare with another plant/);
     assert.equal(state.openNodeIds.includes('propagation'), true);
+});
+
+test('adding a child cell starts with a compact template or custom choice', () => {
+    const document = referenceDocument();
+    const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'uses' }), { editable: true, showSearch: false });
+    assert.match(markup, /Add new cell/);
+    assert.match(markup, /data-pim-template-id="food"/);
+    assert.match(markup, /data-pim-template-id="custom"/);
+    assert.match(markup, /Choose a template above/);
+    assert.match(markup, /is-awaiting-template/);
 });
 
 test('editing adds a structured child without mutating or deleting legacy document content', () => {

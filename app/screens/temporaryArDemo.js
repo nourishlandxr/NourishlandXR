@@ -16,7 +16,7 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8921';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8929';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -1257,12 +1257,12 @@ function selectDemoProfileCell() {
     if (!selection) return false;
     const { record, target } = selection;
     const node = target.node || (target.pimBack ? target : null);
-    // Consume every selection that lands on the open PIM surface. A hit in a
-    // transparent gap must never fall through to the Live Tag/Web Mode
-    // action underneath it; the user can simply aim at a visible cell next.
+    // Only consume a selection when it lands on an actual cell. Transparent
+    // space must fall through so the orb can still close the PIM or open the
+    // Live Tag action at any stage of the demo.
     if (!node) {
         setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
-        return true;
+        return false;
     }
     if (node.pimBack) {
         record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
@@ -2223,7 +2223,7 @@ function createSpatialKnowledgeTexture(record) {
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
         drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || [], { bloomProgress });
-        return canvasTexture(label);
+        return canvasTexture(label, null, true);
     }
     if (record.demoType === 'zone') {
         drawTotemKnowledgeTexture(ctx, label, content);
@@ -2310,10 +2310,13 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
     });
 }
 
-function canvasTexture(label, texture = null) {
+function canvasTexture(label, texture = null, flipY = false) {
     texture ||= gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    // The PIM quad uses V=0 at its physical top edge. Flip canvas uploads for
+    // that shared AR panel convention so visual cells and ray-hit cells use
+    // the same top-to-bottom coordinates.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, Boolean(flipY));
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

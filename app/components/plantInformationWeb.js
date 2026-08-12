@@ -304,7 +304,7 @@ function nodeButtonMarkup(document, node, state, options, suffix = 'visual', dep
         : ' aria-haspopup="dialog"';
     return `<button class="pim-web-node-button${open ? ' is-open' : ''}${highlighted ? ' is-highlighted' : ''}" type="button" data-pim-node-id="${attribute(node.id)}" data-pim-node-path="${attribute(node.path)}" data-pim-depth="${depth}"${expansion} style="--pim-category:${attribute(category.color)}">
         <span class="pim-web-category-marker" aria-hidden="true"></span>
-        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small>${escapeHtml(preview)}</small>${cellStats}</span>
+        <span class="pim-web-node-copy"><strong>${escapeHtml(node.title)}</strong><small class="pim-web-ar-mini-info"><span>AR PIM</span>${escapeHtml(preview)}</small>${cellStats}</span>
         <span class="pim-web-node-kind">${escapeHtml(category.title)}</span>
         <span class="pim-web-expansion-indicator" aria-hidden="true">${expandable ? open ? '−' : '+' : '→'}</span>
     </button>`;
@@ -412,16 +412,25 @@ function detailMarkup(document, state, options) {
     const sources = unique(node.sourceIds);
     const provenance = asList(node.provenance).filter(Boolean);
     const media = asList(node.media).filter(Boolean);
+    const parent = node.parentId ? nodeById(document, node.parentId) : null;
+    const children = childrenOf(document, node.id);
+    const parentMarkup = parent
+        ? `<button type="button" data-pim-related-node-id="${attribute(parent.id)}"><span>From</span>${escapeHtml(parent.title)}</button>`
+        : '<span class="pim-web-related-root"><span>From</span>Plant identity</span>';
+    const childrenMarkup = children.length
+        ? children.map(child => `<button type="button" data-pim-related-node-id="${attribute(child.id)}"><span>Expands to</span>${escapeHtml(child.title)}</button>`).join('')
+        : '<span class="pim-web-related-empty">No connected child cells yet.</span>';
     return `<aside class="pim-web-detail" role="dialog" aria-modal="false" aria-labelledby="pim-web-detail-title-${attribute(node.id)}" data-pim-detail-id="${attribute(node.id)}" data-pim-detail-path="${attribute(node.path)}" style="--pim-category:${attribute(category.color)}">
         <header><div><span>${escapeHtml(category.title)} · ${escapeHtml(evidenceLabel(node.evidenceStatus))}</span><h2 id="pim-web-detail-title-${attribute(node.id)}">${escapeHtml(node.title)}</h2><p>${escapeHtml(plantInformationWebPath(document, node.id))}</p></div><button type="button" data-pim-close-detail aria-label="Close ${attribute(node.title)} details">×</button></header>
-        <div class="pim-web-detail-body">${node.body ? `<p>${escapeHtml(node.body).replace(/\n/g, '<br />')}</p>` : '<p>Detailed information is still growing.</p>'}
+        <div class="pim-web-detail-body"><section class="pim-web-ar-mini-card" aria-label="AR PIM mini information"><span>AR PIM mini info</span><strong>${escapeHtml(node.title)}</strong><p>${escapeHtml(concisePreview(node))}</p></section>${node.body ? `<p>${escapeHtml(node.body).replace(/\n/g, '<br />')}</p>` : '<p class="pim-web-optional-description">Description can be added when this cell needs more detail.</p>'}
+            <section class="pim-web-related-cells" aria-label="Connected information cells"><h3>Connected cells</h3><div class="pim-web-related-parent">${parentMarkup}</div><div class="pim-web-related-children">${childrenMarkup}</div></section>
             <dl><div><dt>Information type</dt><dd>${escapeHtml(titleCase(node.informationType))}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(evidenceLabel(node.evidenceStatus))}</dd></div>${node.countryOfOrigin ? `<div><dt>Country of origin</dt><dd>${escapeHtml(node.countryOfOrigin)}</dd></div>` : ''}${node.region ? `<div><dt>Region</dt><dd>${escapeHtml(node.region)}</dd></div>` : ''}${node.climateContext ? `<div><dt>Climate context</dt><dd>${escapeHtml(node.climateContext)}</dd></div>` : ''}${node.attribution ? `<div><dt>Attribution</dt><dd>${escapeHtml(node.attribution)}</dd></div>` : ''}</dl>
             ${node.safetyNote ? `<section class="pim-web-safety-note" aria-label="Safety note"><strong>Safety note</strong><p>${escapeHtml(node.safetyNote)}</p></section>` : ''}
             ${sources.length ? `<section><h3>Sources</h3><ul>${sources.map(source => `<li>${escapeHtml(source)}</li>`).join('')}</ul></section>` : ''}
             ${provenance.length ? `<section><h3>Provenance</h3><ul>${provenance.map(item => `<li>${escapeHtml(item.sourceDatabase || item.source || 'Source')}${item.licence ? ` · ${escapeHtml(item.licence)}` : ''}${item.retrievalDate ? ` · ${escapeHtml(item.retrievalDate)}` : ''}</li>`).join('')}</ul></section>` : ''}
             ${media.length ? `<section><h3>Media</h3><ul>${media.map(item => `<li>${escapeHtml(typeof item === 'string' ? item : item.alt || item.url || 'Media item')}</li>`).join('')}</ul></section>` : ''}
         </div>
-        <footer><button type="button" data-pim-save-field-note="${attribute(node.id)}">Save to Field Notes</button><button type="button" data-pim-compare="${attribute(node.id)}">Compare with another plant</button>${options.editable ? `<button type="button" data-pim-edit-node-id="${attribute(node.id)}" data-pim-edit-node-path="${attribute(node.path)}">Edit information</button>` : ''}</footer>
+        ${options.editable ? `<footer><button type="button" data-pim-edit-node-id="${attribute(node.id)}" data-pim-edit-node-path="${attribute(node.path)}">Edit information</button></footer>` : ''}
     </aside>`;
 }
 
@@ -440,9 +449,9 @@ function informationTemplateMarkup(parent, state, document) {
     // entries about different preparations), so keep the palette available
     // and let the save path allocate a collision-safe id.
     const templates = templatesForParent(parent?.id);
-    const heading = templates.length ? 'Suggested child cells' : 'New child cell';
+    const heading = templates.length ? 'Add new cell' : 'Add new custom cell';
     return `<section class="pim-web-template-palette" aria-labelledby="pim-web-template-title">
-        <div><strong id="pim-web-template-title">${heading}</strong><small>Choose a starter or create a custom information block.</small></div>
+        <div><strong id="pim-web-template-title">${heading}</strong><small>Choose a template or add a custom information block.</small></div>
         <div class="pim-web-template-options">${templates.map(([id, title, preview]) => `<button type="button" data-pim-template-id="${attribute(id)}" data-pim-template-title="${attribute(title)}" data-pim-template-preview="${attribute(preview)}">${escapeHtml(title)}</button>`).join('')}<button type="button" class="is-custom" data-pim-template-id="custom">Custom</button></div>
     </section>`;
 }
@@ -463,10 +472,12 @@ function editorMarkup(document, state, options) {
     const category = editing || parent || { id: 'custom', title: 'Custom main cell', knowledgeMode: 'agency', color: '#4e7d62' };
     const title = editing ? `Edit ${editing.title}` : topLevel ? 'Add a custom main cell' : `Add information to ${parent.title}`;
     const provenance = asList(seed.provenance)[0] || {};
-    return `<aside class="pim-web-editor" role="dialog" aria-modal="true" aria-labelledby="pim-web-editor-title">
+    const editorReady = state.editorMode === 'edit' || Boolean(state.editorSeed?.templateId);
+    return `<aside class="pim-web-editor${editorReady ? '' : ' is-awaiting-template'}" role="dialog" aria-modal="true" aria-labelledby="pim-web-editor-title">
         <form data-pim-editor-form data-pim-editor-mode="${attribute(state.editorMode)}" data-pim-editor-node-id="${attribute(editing?.id || '')}" data-pim-editor-parent-id="${attribute(parent?.id || '')}">
             <header><div><span>Structured PIM editor</span><h2 id="pim-web-editor-title">${escapeHtml(title)}</h2></div><button type="button" data-pim-cancel-editor aria-label="Close information editor">×</button></header>
             ${informationTemplateMarkup(parent, state, document)}
+            ${editorReady ? '' : '<p class="pim-web-editor-empty">Choose a template above, or choose <strong>Custom</strong>, to open the fields for one new information cell.</p>'}
             <div class="pim-web-editor-context" aria-label="Information location"><span>Plant <strong>${escapeHtml(document.identity?.commonName || document.plantId)}</strong></span><span>Parent <strong>${escapeHtml(parent?.title || (topLevel ? 'Mesh root' : editing?.parentId || ''))}</strong></span><span>Category <strong>${escapeHtml(category.title)}</strong></span></div>
             <input type="hidden" name="plantId" value="${inputValue(document.plantId)}" readonly />
             <input type="hidden" name="parentId" value="${inputValue(parent?.id || editing?.parentId || (topLevel ? '__top_level__' : ''))}" readonly />
@@ -685,6 +696,12 @@ export function mountPlantInformationWeb(container, options = {}) {
             if (!expanded) panel?.querySelector('[data-pim-directions-close]')?.focus();
             return;
         }
+        if (button.matches('[data-pim-related-node-id]')) {
+            const relatedId = button.dataset.pimRelatedNodeId;
+            const next = togglePlantInformationWebNode(document, state, relatedId);
+            commit({ ...next, detailNodeId: relatedId }, relatedId);
+            return;
+        }
         if (button.matches('[data-pim-view]')) {
             commit({ ...state, viewMode: button.dataset.pimView === 'list' ? 'list' : 'compass' }, '', false);
             return;
@@ -733,7 +750,7 @@ export function mountPlantInformationWeb(container, options = {}) {
                         : 'practice';
             const editorSeed = template
                 ? { ...existingSeed, templateId, informationType, title: template[1], preview: template[2], body: templateId.includes('country') || templateId.includes('origin') ? '' : existingSeed.body || '', countryOfOrigin: templateId.includes('country') || templateId.includes('origin') ? existingSeed.countryOfOrigin || '' : '' }
-                : { ...existingSeed, templateId: '', title: '', preview: '', body: '', countryOfOrigin: '' };
+                : { ...existingSeed, templateId: 'custom', title: '', preview: '', body: '', countryOfOrigin: '' };
             commit({ ...state, editorSeed, editorMessage: template ? `${template[1]} template selected. Add the detail for this plant.` : 'Custom information block selected.' }, '', false);
             return;
         }

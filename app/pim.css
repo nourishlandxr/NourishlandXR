@@ -780,6 +780,62 @@
     line-height: 1.55;
 }
 
+.pim-web-ar-mini-card {
+    display: grid;
+    gap: 3px;
+    padding: 11px 12px;
+    border-left: 4px solid var(--pim-category, #315e45);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--pim-category, #315e45) 9%, #fff);
+}
+
+.pim-web-ar-mini-card > span,
+.pim-web-related-cells h3 {
+    color: var(--pim-category, #315e45);
+    font-size: max(11px, .68rem);
+    font-weight: 850;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.pim-web-ar-mini-card strong { font-size: 1rem; }
+.pim-web-ar-mini-card p,
+.pim-web-optional-description { margin: 0; color: var(--pim-muted); }
+
+.pim-web-related-cells {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--pim-line);
+    border-radius: 10px;
+    background: #fbfcf8;
+}
+
+.pim-web-related-cells h3 { margin: 0; }
+.pim-web-related-parent,
+.pim-web-related-children { display: grid; gap: 6px; }
+.pim-web-related-parent::before { content: 'Parent cell'; color: var(--pim-muted); font-size: max(11px, .68rem); font-weight: 800; }
+.pim-web-related-children::before { content: 'Child cells'; color: var(--pim-muted); font-size: max(11px, .68rem); font-weight: 800; }
+.pim-web-related-cells button,
+.pim-web-related-root,
+.pim-web-related-empty {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--pim-line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--pim-ink);
+    text-align: left;
+}
+.pim-web-related-cells button { cursor: pointer; }
+.pim-web-related-cells button:hover,
+.pim-web-related-cells button:focus-visible { border-color: var(--pim-category, #315e45); }
+.pim-web-related-cells button span,
+.pim-web-related-root span { color: var(--pim-muted); font-size: max(11px, .66rem); font-weight: 800; text-transform: uppercase; }
+.pim-web-related-empty { color: var(--pim-muted); font-size: max(11px, .74rem); }
+
 .pim-web-detail-body > p,
 .pim-web-detail-body h3,
 .pim-web-detail-body ul {
@@ -846,6 +902,23 @@
     --pim-category: #315e45;
     z-index: 1010;
     width: min(680px, calc(100vw - 24px));
+}
+
+.pim-web-editor.is-awaiting-template .pim-web-editor-context,
+.pim-web-editor.is-awaiting-template > form > input,
+.pim-web-editor.is-awaiting-template .pim-web-editor-fields,
+.pim-web-editor.is-awaiting-template .pim-web-editor-advanced,
+.pim-web-editor.is-awaiting-template .pim-web-editor-status,
+.pim-web-editor.is-awaiting-template > form > footer { display: none; }
+
+.pim-web-editor-empty {
+    margin: 0 16px 16px;
+    padding: 13px;
+    border: 1px dashed var(--pim-line);
+    border-radius: 10px;
+    color: var(--pim-muted);
+    font-size: max(11px, .78rem);
+    line-height: 1.45;
 }
 
 .pim-web-editor form {

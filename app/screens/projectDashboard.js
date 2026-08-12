@@ -1796,9 +1796,8 @@ export async function openProjectAreaAr(app, encodedProjectId, encodedAreaId, en
 }
 
 export async function renderProjectAreaDashboard(app, encodedProjectId, encodedAreaId, options = {}) {
-    // The former <section class="area-totem-section"/> and totem-stat-grid identity summary
-    // (AREA ANCHOR, One Totem gives this Area its identity, TEXT BALLOONS, COLOR, LINKED, ANCHORED)
-    // are intentionally omitted from the Area dashboard.
+    // Keep the Area Totem summary immediately below the basic Area stats so
+    // its information and edit link are visible before the marker list.
     const projectId = decodeURIComponent(encodedProjectId);
     const areaId = decodeURIComponent(encodedAreaId);
     try {
@@ -1871,6 +1870,18 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <button class="danger" type="button" onclick="window.deleteProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Delete Area</button>
                 <p id="deleteProjectAreaStatus" class="meta"></p>
             </section>`;
+        const totemMarker = checkpoint?.marker || null;
+        const totemBoard = totemMarker?.area_information_board || {};
+        const totemBubbles = Array.isArray(totemBoard.information_bubbles) ? totemBoard.information_bubbles.filter(Boolean) : [];
+        const totemStyleLabel = String(totemMarker?.appearance?.totemStyle || totemMarker?.appearance?.style || 'Basic').replace(/[-_]/g, ' ');
+        const areaTotemSection = `<section class="area-totem-section" aria-labelledby="areaTotemInformationTitle">
+            <header class="section-heading-row"><div><p class="welcome-label">TOTEM INFORMATION</p><h2 id="areaTotemInformationTitle">${escapeHtml(totemMarker?.name || `${context.area.name} Totem`)}</h2><p>${checkpoint ? 'The Totem is this Area’s information centre.' : 'Add a Totem to give this Area a clear information centre.'}</p></div><button type="button" class="primary" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">${checkpoint ? 'View / edit Totem' : 'Add Totem'}</button></header>
+            ${checkpoint ? `<div class="totem-stat-grid"><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">⌖</span><small>ANCHORED</small><strong>${checkpoint.isPlaced ? 'Yes' : 'Not placed'}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">◈</span><small>COLOR</small><strong>${escapeHtml(totemMarker?.appearance?.color || 'Default')}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">✦</span><small>TEXT BALLOONS</small><strong>${totemBubbles.length + (totemBoard.introduction ? 1 : 0)}</strong></div><div class="totem-stat"><span class="totem-stat-icon" aria-hidden="true">↗</span><small>LINKED</small><strong>${linkedTotems.length ? `${linkedTotems.length} Area${linkedTotems.length === 1 ? '' : 's'}` : 'None yet'}</strong></div></div>
+                ${totemMarker.description ? `<p class="area-totem-description">${escapeHtml(totemMarker.description)}</p>` : ''}
+                ${totemBoard.introduction ? `<div class="area-totem-introduction"><strong>Main welcome text</strong><p>${escapeHtml(totemBoard.introduction)}</p></div>` : ''}
+                ${totemBubbles.length ? `<div class="area-totem-bubbles"><strong>Additional information</strong><div>${totemBubbles.map((bubble, index) => `<span><b>${index + 1}</b>${escapeHtml(bubble)}</span>`).join('')}</div></div>` : ''}
+                ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : '<p class="area-totem-empty">No linked Area Totem yet. Add another Area, then connect them from the Totem editor.</p>'}` : '<p class="area-totem-empty">This Area has no Totem yet. A Totem can carry welcome text, information balloons and links to neighbouring Areas.</p>'}
+        </section>`;
         app.innerHTML = `<div class="screen area-dashboard database-record-page">
             <header class="page-header area-dashboard-header">
                 <div class="area-dashboard-title-row"><div><p class="welcome-label">Area dashboard</p><h1>${escapeHtml(context.area.name)}</h1></div><button class="global-ar-action area-go-ar-compact" type="button" aria-label="Open ${escapeHtml(context.area.name)} in AR" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">AR</button></div>
@@ -1894,8 +1905,8 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                     <p id="areaInformationStatus" class="meta" aria-live="polite"></p>
                     <button type="submit" data-save-area-description hidden>Save Area information</button>
                 </form>
-                ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : ''}
             </section>
+            ${areaTotemSection}
             ${pigeonPeaTemplateCard}
             <p id="projectAreaArStatus" class="meta" aria-live="polite"></p>
             ${advancedAreaActions}

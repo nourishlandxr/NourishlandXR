@@ -1297,7 +1297,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pimFocusedView/);
     assert.match(source, /pimToggleExpandedPaths/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
-    assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return true;/);
+    assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
+    assert.match(source, /function canvasTexture\(label, texture = null, flipY = false\)[\s\S]*UNPACK_FLIP_Y_WEBGL, Boolean\(flipY\)/);
+    assert.match(source, /return canvasTexture\(label, null, true\);/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
     assert.match(source, /is-parent-link/);
