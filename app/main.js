@@ -229,6 +229,20 @@ async function bootstrap() {
         else if (params.get('project')) openHostedProject(app, params.get('project'));
         else renderLaunchScreen(app);
     } catch (error) {
+        // The bare /xr/ entry point is also the public demo entry point. If a
+        // remembered creator view can no longer be restored (for example when
+        // the API session has expired or the hosted persistence service is
+        // restarting), do not strand the user on the local-development error
+        // screen. Clear the stale route and return to the welcome screen so
+        // the demo remains available. Explicit deep links still show the
+        // diagnostic because they need their requested data source.
+        if (!new URLSearchParams(window.location.search).size) {
+            forgetCurrentView();
+            replaceViewHistory('welcome');
+            setExperienceRole('launch');
+            renderLaunchScreen(app);
+            return;
+        }
         app.innerHTML = `
         <div class="screen">
             <div class="page-header">
@@ -237,7 +251,8 @@ async function bootstrap() {
             </div>
             <div class="panel">
                 <p>Start the Studio with <code>node tools/persistence-server.mjs</code> from the repository root, then open <code>http://127.0.0.1:8000/app/</code>.</p>
-                <p class="meta">${error.message}</p>
+                <p class="meta">${escapeMainHtml(error.message)}</p>
+                <button type="button" onclick="window.renderLaunchScreen()">Return to welcome</button>
             </div>
         </div>`;
     }
