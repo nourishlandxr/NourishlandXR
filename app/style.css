@@ -5953,6 +5953,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-global-profile-extract h4 { color:#315c3e; font-size:.84rem; }
 .field-guide-global-profile-extract > div p { margin-top:.15rem; color:#66746a; font-size:.67rem; line-height:1.35; }
 .field-guide-global-profile-extract fieldset { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; margin:0; padding:0; border:0; }
+.field-guide-global-profile-extract fieldset:not(.field-guide-allocation-list) { grid-template-columns:1fr; }
 .field-guide-global-profile-extract legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 .field-guide-global-profile-extract label { display:flex; align-items:flex-start; gap:.4rem; min-width:0; padding:.4rem .45rem; border:1px solid rgba(55,104,68,.13); border-radius:9px; background:#fff; color:#3e5d47; font-size:.67rem; line-height:1.25; }
 .field-guide-global-profile-extract label span { display:grid; gap:.08rem; min-width:0; }
@@ -5971,17 +5972,38 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-research-sections dd { margin:.08rem 0 0; overflow-wrap:anywhere; color:#304e39; font-size:.68rem; line-height:1.35; }
 .field-guide-extract-heading { display:flex; justify-content:space-between; gap:.7rem; align-items:start; }
 .field-guide-extract-heading > div:last-child { display:flex; gap:.35rem; flex:0 0 auto; }
-.field-guide-global-profile-extract .field-guide-extract-row { display:grid; grid-template-columns:auto minmax(0,1fr) minmax(150px,.75fr); align-items:center; }
+.field-guide-global-profile-extract .field-guide-extract-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,.55fr); gap:.5rem; align-items:center; }
 .field-guide-extract-fact { display:flex; align-items:flex-start; gap:.4rem; min-width:0; }
 .field-guide-extract-fact input { flex:0 0 auto; margin-top:.18rem; accent-color:#39764a; }
-.field-guide-extract-destinations { min-width:0; color:#405947; font-size:.62rem; }
-.field-guide-extract-destinations summary { cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.field-guide-extract-destinations label { display:flex; gap:.3rem; align-items:flex-start; margin-top:.25rem; line-height:1.25; }
-.field-guide-extract-destinations input { flex:0 0 auto; margin-top:.08rem; accent-color:#39764a; }
+.field-guide-extract-suggestion { display:grid; gap:.08rem; min-width:0; padding:.4rem .5rem; border-left:3px solid #9abf88; border-radius:0 8px 8px 0; background:#f3f7ef; color:#4d6652; }
+.field-guide-extract-suggestion small { color:#718073; font-size:.57rem; }
+.field-guide-extract-suggestion strong { overflow:hidden; font-size:.67rem; text-overflow:ellipsis; white-space:nowrap; }
 .field-guide-extract-row span small:first-of-type { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-allocation-intro { display:grid; gap:.2rem; padding:.7rem .8rem; border:1px solid rgba(55,104,68,.16); border-radius:12px; background:#f3f7ef; color:#3e5d47; }
+.field-guide-allocation-intro strong { font-size:.78rem; }
+.field-guide-allocation-intro p { margin:0; color:#66746a; font-size:.68rem; line-height:1.4; }
+.field-guide-allocation-group { display:grid; gap:.45rem; margin:0; padding:.7rem; border:1px solid rgba(55,104,68,.15); border-radius:12px; background:rgba(255,255,252,.78); }
+.field-guide-allocation-group h4,.field-guide-allocation-group p { margin:0; }
+.field-guide-allocation-group h4 { color:#315c3e; font-size:.8rem; }
+.field-guide-allocation-fixed { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.2rem .6rem; align-items:center; padding:.45rem .5rem; border-radius:9px; background:#f7faf5; color:#405947; font-size:.67rem; }
+.field-guide-allocation-fixed span { grid-column:1; overflow:hidden; color:#66746a; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-allocation-fixed em { grid-column:2; grid-row:1 / span 2; color:#708c72; font-size:.6rem; font-style:normal; font-weight:800; }
+.field-guide-allocation-list { grid-template-columns:1fr; }
+.field-guide-allocation-list > legend { position:static; width:auto; height:auto; overflow:visible; clip:auto; color:#315c3e; font-size:.8rem; font-weight:850; }
+.field-guide-allocation-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(170px,.58fr) auto; gap:.5rem; align-items:center; padding:.45rem .5rem; border:1px solid rgba(55,104,68,.12); border-radius:9px; background:#fff; }
+.field-guide-allocation-fact { display:grid; gap:.12rem; min-width:0; }
+.field-guide-allocation-fact strong { overflow:hidden; color:#3e5d47; font-size:.68rem; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-allocation-fact small { overflow:hidden; color:#748078; font-size:.6rem; text-overflow:ellipsis; white-space:nowrap; }
+.field-guide-allocation-row label { display:grid; gap:.14rem; min-width:0; padding:0; border:0; background:transparent; color:#6b786d; font-size:.58rem; font-weight:800; text-transform:uppercase; }
+.field-guide-allocation-row select { width:100%; min-height:30px; padding:.25rem .4rem; border:1px solid rgba(55,104,68,.24); border-radius:7px; background:#f8fbf6; color:#304e39; font-size:.65rem; text-transform:none; }
+.field-guide-allocation-smart { padding:.24rem .38rem; border-radius:999px; background:#e5f0e1; color:#4b744e; font-size:.56rem; font-weight:850; white-space:nowrap; }
+.field-guide-allocation-actions { display:flex; flex-wrap:wrap; gap:.45rem; }
+.field-guide-allocation-actions button { min-height:34px; font-size:.67rem; }
 @media (max-width:700px) {
-    .field-guide-global-profile-extract .field-guide-extract-row { grid-template-columns:auto minmax(0,1fr); }
-    .field-guide-extract-destinations { grid-column:2; }
+    .field-guide-global-profile-extract .field-guide-extract-row { grid-template-columns:1fr; }
+    .field-guide-extract-suggestion { margin-left:1.5rem; }
+    .field-guide-allocation-row { grid-template-columns:1fr; }
+    .field-guide-allocation-smart { justify-self:start; }
     .field-guide-extract-heading { display:grid; }
 }
 .field-guide-tool .field-guide-search-deck { padding:.6rem; }

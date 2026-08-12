@@ -35,7 +35,34 @@ const GLOBAL_FACT_SECONDARY_DESTINATIONS = Object.freeze({
 });
 const factDestinations = key => [GLOBAL_FACT_DESTINATIONS[key] || ['Unassigned', 'Review and choose destination'], ...(GLOBAL_FACT_SECONDARY_DESTINATIONS[key] ? [GLOBAL_FACT_SECONDARY_DESTINATIONS[key]] : [])];
 const destinationCategoryId = value => ({ 'Plant identity': 'plant-identity', 'Scientific Information': 'scientific-information', Uses: 'uses', 'Food Forest': 'food-forest', Cultivation: 'cultivation', Propagation: 'propagation', 'Historical Data': 'historical-data', Unassigned: 'unassigned' }[value] || String(value || '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-'));
-const destinationValue = pair => [destinationCategoryId(pair[0]), pair[1]].join('|');
+const PIM_ALLOCATION_CATEGORIES = Object.freeze([
+    { id: 'scientific-information', label: 'Scientific Information', fallbackCell: 'Imported facts' },
+    { id: 'uses', label: 'Uses', fallbackCell: 'Imported uses' },
+    { id: 'food-forest', label: 'Food Forest', fallbackCell: 'Imported ecological information' },
+    { id: 'cultivation', label: 'Cultivation', fallbackCell: 'Imported growing information' },
+    { id: 'propagation', label: 'Propagation', fallbackCell: 'Imported propagation information' },
+    { id: 'historical-data', label: 'Historical Data', fallbackCell: 'Imported history' }
+]);
+const PIM_ALLOCATION_CATEGORY_IDS = new Set(PIM_ALLOCATION_CATEGORIES.map(category => category.id));
+const PROFILE_ONLY_FACTS = new Set(['common_name', 'image']);
+const pimAllocationCategory = fact => {
+    const suggested = destinationCategoryId(fact?.destination?.[0]);
+    if (PIM_ALLOCATION_CATEGORY_IDS.has(suggested)) return suggested;
+    const key = String(fact?.key || '').toLocaleLowerCase();
+    if (/(origin|native|distribution|range|history|traditional|heritage)/.test(key)) return 'historical-data';
+    if (/(climate|sun|light|water|soil|cultivat|grow|height|temperature|hardiness)/.test(key)) return 'cultivation';
+    if (/(propagat|seed|flower|reproduct|pollinat)/.test(key)) return 'propagation';
+    if (/(use|edible|culinary|medicin|craft|toxic|warning)/.test(key)) return 'uses';
+    if (/(ecolog|nitrogen|guild|function|relationship|habitat|layer)/.test(key)) return 'food-forest';
+    return 'scientific-information';
+};
+const pimAllocationCategoryById = id => PIM_ALLOCATION_CATEGORIES.find(category => category.id === id) || PIM_ALLOCATION_CATEGORIES[0];
+const pimAllocationCell = (fact, categoryId) => {
+    const suggested = pimAllocationCategory(fact);
+    return suggested.id === categoryId && fact?.destination?.[1]
+        ? fact.destination[1]
+        : pimAllocationCategoryById(categoryId).fallbackCell;
+};
 
 const humanFactLabel = key => String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 const usefulFactValue = value => {
@@ -233,12 +260,23 @@ function applyCreatorWebHubCopy(app) {
             (groups[heading] ||= []).push(fact);
             return groups;
         }, {});
-        const destinations = fact => [...(fact.destinations || [fact.destination]), ['scientific-information', 'Other discovered information'], ['uses', 'Other useful information'], ['food-forest', 'Other ecological information'], ['cultivation', 'Other growing information'], ['propagation', 'Other propagation information'], ['historical-data', 'Other historical information'], ['unassigned', 'Review later']];
         return `<article class="field-guide-global-profile field-guide-research-workspace" aria-labelledby="fieldGuideGlobalProfileTitle">
             <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL SOURCE PROFILE</span><h3 id="fieldGuideGlobalProfileTitle">${escapeHtml(displayName)}</h3><em title="${escapeHtml(result.scientificName || '')}">${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em></div><button type="button" class="ghost" data-global-profile-back>Back to results</button></header>
             <div class="field-guide-global-profile-body">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="${escapeHtml(displayName)} reference" loading="lazy" />` : '<span class="field-guide-global-profile-placeholder" aria-hidden="true">🌿</span>'}<dl><div><dt>Source</dt><dd title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</dd></div><div><dt>Source record</dt><dd title="${escapeHtml(result.externalId || '')}">${escapeHtml(result.externalId || 'Not supplied')}</dd></div></dl></div>
             <div class="field-guide-research-sections">${Object.entries(sections).map(([title, items]) => `<section><h4>${escapeHtml(title)}</h4><dl>${items.map(fact => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')}</dl></section>`).join('')}</div>
-            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Extraction tray</h4><p>Select facts and accept, change or add destinations. Suggested secondary cells are optional.</p></div><div><button type="button" class="ghost" data-global-select-all>Select all</button><button type="button" class="ghost" data-global-clear-all>Clear</button></div></div><fieldset><legend>Content to bring into NLXR</legend>${facts.map(fact => `<div class="field-guide-extract-row"><label class="field-guide-extract-fact"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong><small title="${escapeHtml(fact.value)}">${escapeHtml(fact.value)}</small><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${fact.destination[0] === 'Unassigned' ? 'Needs review' : 'Suggested destination'}</small></span></label><details class="field-guide-extract-destinations"><summary>Assign destination</summary>${destinations(fact).map((destination, index) => `<label><input type="checkbox" data-global-extract-destination="${escapeHtml(fact.key)}" value="${escapeHtml(destinationValue(destination))}" ${index === 0 && fact.destination[0] !== 'Unassigned' ? 'checked' : ''} />${escapeHtml(destination.join(' → '))}</label>`).join('')}</details></div>`).join('')}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Continue with selected facts</button></section>
+            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Choose facts to extract</h4><p>Select the source facts you want to bring into NLXR. Their smart category suggestions can be changed on the next step.</p></div><div><button type="button" class="ghost" data-global-select-all>Select all</button><button type="button" class="ghost" data-global-clear-all>Clear</button></div></div><fieldset><legend>Content to bring into NLXR</legend>${facts.map(fact => `<div class="field-guide-extract-row"><label class="field-guide-extract-fact"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong><small title="${escapeHtml(fact.value)}">${escapeHtml(fact.value)}</small></span></label><span class="field-guide-extract-suggestion"><small>Smart suggestion</small><strong>${escapeHtml(PROFILE_ONLY_FACTS.has(fact.key) ? 'Plant profile' : pimAllocationCategoryById(pimAllocationCategory(fact)).label)}</strong></span></div>`).join('')}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Review allocation</button></section>
+        </article>`;
+    };
+    const allocationReviewMarkup = (result, facts) => {
+        const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
+        const profileFacts = facts.filter(fact => PROFILE_ONLY_FACTS.has(fact.key));
+        const pimFacts = facts.filter(fact => !PROFILE_ONLY_FACTS.has(fact.key));
+        return `<article class="field-guide-global-profile field-guide-research-workspace" aria-labelledby="fieldGuideAllocationTitle">
+            <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">PIM ALLOCATION PREVIEW</span><h3 id="fieldGuideAllocationTitle">Where should this information go?</h3><em>${escapeHtml(displayName)}</em></div><button type="button" class="ghost" data-global-profile-back>Back to results</button></header>
+            <section class="field-guide-allocation-intro"><strong>${facts.length} source fact${facts.length === 1 ? '' : 's'} selected</strong><p>NLXR has made a first-pass allocation from the field meaning. Review the six main categories below and change any destination before creating the plant.</p></section>
+            ${profileFacts.length ? `<section class="field-guide-allocation-group"><h4>Plant profile</h4><p class="meta">Identity and image stay with the profile automatically.</p>${profileFacts.map(fact => `<div class="field-guide-allocation-fixed"><strong>${escapeHtml(fact.label)}</strong><span>${escapeHtml(fact.value)}</span><em>Plant profile</em></div>`).join('')}</section>` : ''}
+            <fieldset class="field-guide-allocation-group field-guide-allocation-list"><legend>Six PIM categories</legend>${pimFacts.length ? pimFacts.map(fact => `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label)}</strong><small title="${escapeHtml(fact.value)}">${escapeHtml(fact.value)}</small></div><label>Destination<select data-global-allocation="${escapeHtml(fact.key)}">${PIM_ALLOCATION_CATEGORIES.map(category => `<option value="${category.id}" ${pimAllocationCategory(fact) === category.id ? 'selected' : ''}>${category.label}</option>`).join('')}</select></label><span class="field-guide-allocation-smart">Suggested</span></div>`).join('') : '<p class="meta">No PIM facts selected yet. Go back and select at least one category fact.</p>'}</fieldset>
+            <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><div class="field-guide-allocation-actions"><button type="button" class="ghost" data-global-allocation-back>Back to fact selection</button><button type="button" class="primary" data-global-allocation-continue>Continue to plant setup</button></div>
         </article>`;
     };
     const renderGlobalResults = results => {
@@ -248,44 +286,61 @@ function applyCreatorWebHubCopy(app) {
             const result = results[Number(button.dataset.globalPlantIndex)];
             if (!result) return;
             openGlobalProfile = result;
-            globalResults.innerHTML = researchProfileMarkup(result);
-            globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
-                openGlobalProfile = null;
-                renderGlobalResults(results);
-                if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
-            });
-            const profileStatus = globalResults.querySelector('[data-global-profile-status]');
-            globalResults.querySelector('[data-global-select-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = true; }));
-            globalResults.querySelector('[data-global-clear-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = false; }));
-            globalResults.querySelector('[data-global-profile-convert]')?.addEventListener('click', async event => {
-                const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
-                if (!selectedFields.length) {
-                    if (profileStatus) profileStatus.textContent = 'Select at least one fact to continue.';
-                    return;
-                }
-                const factsByKey = new Map(sourceFacts(result).map(fact => [fact.key, fact]));
-                const extractedFacts = selectedFields.map(key => {
-                    const fact = factsByKey.get(key);
-                    const selectedDestinations = [...globalResults.querySelectorAll(`[data-global-extract-destination="${CSS.escape(key)}"]:checked`)].map(input => input.value.split('|'));
-                    return { ...fact, destination: selectedDestinations[0] || ['unassigned', 'Review later'], confirmedDestinations: selectedDestinations.length ? selectedDestinations : [['unassigned', 'Review later']], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: selectedDestinations.length ? 'suggested' : 'needs_review', reviewStatus: 'pending' };
-                }).filter(fact => fact.key);
-                const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
-                if (!siteGroup?.site?.id || !currentGuide?.creator) return;
-                event.currentTarget.disabled = true;
-                event.currentTarget.textContent = 'Opening NLXR profile';
-                try {
-                    await openGlobalPlantProfile(app, {
-                        project: currentGuide.project.id,
-                        site: siteGroup.site.id,
-                        place: currentGuidePlaceId || '__unassigned__',
-                        globalPlant: { ...result, extractionFields: selectedFields, extractedFacts }
+            const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
+            const renderExtractionStep = () => {
+                globalResults.innerHTML = researchProfileMarkup(result);
+                globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
+                    openGlobalProfile = null;
+                    renderGlobalResults(results);
+                    if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
+                });
+                const profileStatus = globalResults.querySelector('[data-global-profile-status]');
+                globalResults.querySelector('[data-global-select-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = true; }));
+                globalResults.querySelector('[data-global-clear-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = false; }));
+                globalResults.querySelector('[data-global-profile-convert]')?.addEventListener('click', () => {
+                    const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
+                    if (!selectedFields.length) {
+                        if (profileStatus) profileStatus.textContent = 'Select at least one fact to continue.';
+                        return;
+                    }
+                    const factsByKey = new Map(sourceFacts(result).map(fact => [fact.key, fact]));
+                    const selectedFacts = selectedFields.map(key => factsByKey.get(key)).filter(Boolean);
+                    globalResults.innerHTML = allocationReviewMarkup(result, selectedFacts);
+                    const allocationStatus = globalResults.querySelector('[data-global-profile-status]');
+                    globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', renderExtractionStep);
+                    globalResults.querySelector('[data-global-allocation-back]')?.addEventListener('click', renderExtractionStep);
+                    globalResults.querySelector('[data-global-allocation-continue]')?.addEventListener('click', async event => {
+                        if (!siteGroup?.site?.id || !currentGuide?.creator) {
+                            if (allocationStatus) allocationStatus.textContent = 'Open this from a Creator Web Hub to create an NLXR plant profile.';
+                            return;
+                        }
+                        const extractedFacts = selectedFacts.map(fact => {
+                            if (PROFILE_ONLY_FACTS.has(fact.key)) {
+                                return { ...fact, confirmedDestinations: [], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: 'profile', reviewStatus: 'pending' };
+                            }
+                            const categoryId = globalResults.querySelector(`[data-global-allocation="${CSS.escape(fact.key)}"]`)?.value || pimAllocationCategory(fact);
+                            const category = pimAllocationCategoryById(categoryId);
+                            const cell = pimAllocationCell(fact, categoryId);
+                            return { ...fact, destination: [category.label, cell], confirmedDestinations: [[categoryId, cell]], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: categoryId === pimAllocationCategory(fact) ? 'suggested' : 'confirmed', reviewStatus: 'pending' };
+                        }).filter(fact => fact.key);
+                        event.currentTarget.disabled = true;
+                        event.currentTarget.textContent = 'Opening plant setup';
+                        try {
+                            await openGlobalPlantProfile(app, {
+                                project: currentGuide.project.id,
+                                site: siteGroup.site.id,
+                                place: currentGuidePlaceId || '__unassigned__',
+                                globalPlant: { ...result, extractionFields: selectedFacts.map(fact => fact.key), extractedFacts }
+                            });
+                        } catch (error) {
+                            event.currentTarget.disabled = false;
+                            event.currentTarget.textContent = 'Continue to plant setup';
+                            if (allocationStatus) allocationStatus.textContent = `Could not open the NLXR profile: ${error.message}`;
+                        }
                     });
-                } catch (error) {
-                    event.currentTarget.disabled = false;
-                    event.currentTarget.textContent = 'Convert selected content';
-                    if (profileStatus) profileStatus.textContent = `Could not open the NLXR profile: ${error.message}`;
-                }
-            });
+                });
+            };
+            renderExtractionStep();
             return;
             /* Legacy direct conversion flow retained below for compatibility. */
             if (false) {

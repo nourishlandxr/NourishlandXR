@@ -1503,6 +1503,10 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(providerService, /searchINaturalistPlants/);
     assert.match(fieldGuide, /Open profile/);
     assert.match(fieldGuide, /data-global-extract-field/);
+    assert.match(fieldGuide, /Review allocation/);
+    assert.match(fieldGuide, /PIM_ALLOCATION_CATEGORIES/);
+    assert.match(fieldGuide, /Smart suggestion/);
+    assert.match(fieldGuide, /data-global-allocation/);
     assert.match(fieldGuide, /Convert selected content/);
     assert.match(fieldGuide, /openGlobalPlantProfile/);
     assert.match(fieldMarker, /stagePimImport/);
