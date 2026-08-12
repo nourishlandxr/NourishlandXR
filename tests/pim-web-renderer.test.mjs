@@ -77,7 +77,7 @@ function referenceDocument() {
 
 test('Web PIM renders the six stable categories as a rectangular plant knowledge diagram', () => {
     const document = referenceDocument();
-    const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document));
+    const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document, { viewMode: 'compass' }));
     assert.match(markup, /class="pim-web-compass-shell"/);
     assert.match(markup, /data-pim-group="relationship"/);
     assert.match(markup, /data-pim-group="agency"/);
@@ -101,6 +101,26 @@ test('Plant Profile can use a compact PIM surface without the Web search field',
     assert.doesNotMatch(markup, /data-pim-search-form/);
     assert.match(markup, /data-pim-directions-info/);
     assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
+});
+
+test('Plant Information Mesh opens in the accessible list by default', () => {
+    const document = referenceDocument();
+    const state = createPlantInformationWebState(document);
+    const markup = plantInformationWebMarkup(document, state, { showSearch: false });
+    assert.equal(state.viewMode, 'list');
+    assert.match(markup, /data-pim-list-view[^>]*>/);
+    assert.doesNotMatch(markup, /data-pim-list-view[^>]* hidden/);
+    assert.match(markup, /data-pim-view="list"[^>]*aria-pressed="true"/);
+    assert.match(markup, /data-pim-view="compass"[^>]*aria-pressed="false"/);
+});
+
+test('Diagram view remains an explicit compact overview mode', () => {
+    const document = referenceDocument();
+    const state = createPlantInformationWebState(document, { viewMode: 'compass' });
+    const markup = plantInformationWebMarkup(document, state, { showSearch: false });
+    assert.doesNotMatch(markup, /data-pim-compass-view[^>]* hidden/);
+    assert.match(styles, /grid-template-areas:\s*"identity identity"/);
+    assert.match(styles, /\.pim-web-sector \{[\s\S]*border: 1px solid/);
 });
 
 test('Plant Profile can omit the repeated PIM identity card while retaining the mesh', () => {
@@ -277,7 +297,7 @@ test('Web PIM save action stays available while the compact editor scrolls', () 
 });
 
 test('Web PIM CSS reflows to ordered mobile groups without horizontal scrolling', () => {
-    assert.match(styles, /grid-template-areas:\s*"\. relationship \."[\s\S]*"agency identity certainty"[\s\S]*"\. process \."/);
+    assert.match(styles, /grid-template-areas:\s*"identity identity"[\s\S]*"relationship agency"[\s\S]*"certainty process"/);
     assert.match(styles, /@media \(max-width: 760px\)/);
     assert.match(styles, /\.pim-web-identity \{ order: 1;/);
     assert.match(styles, /\.pim-web-sector--relationship \{ order: 2;/);

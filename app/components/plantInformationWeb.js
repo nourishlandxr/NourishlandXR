@@ -167,7 +167,9 @@ function normalizedState(state = {}) {
         searchMessage: String(state.searchMessage || ''),
         searchPath: String(state.searchPath || ''),
         visitedNodeIds: unique(state.visitedNodeIds),
-        viewMode: state.viewMode === 'list' ? 'list' : 'compass',
+        // The readable hierarchy is the safe first view. Diagram mode remains
+        // an intentional visual exploration mode selected by the user.
+        viewMode: state.viewMode === 'compass' ? 'compass' : 'list',
         editorMode: state.editorMode === 'edit' ? 'edit' : state.editorMode === 'add' ? 'add' : '',
         editorParentId: String(state.editorParentId || ''),
         editorNodeId: String(state.editorNodeId || ''),

@@ -156,16 +156,16 @@
 
 .pim-web-compass-shell {
     display: grid;
-    grid-template-columns: minmax(210px, 1fr) minmax(280px, 1.22fr) minmax(210px, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-        ". relationship ."
-        "agency identity certainty"
-        ". process .";
-    gap: 28px clamp(20px, 4vw, 48px);
+        "identity identity"
+        "relationship agency"
+        "certainty process";
+    gap: 16px;
     align-items: start;
     width: 100%;
-    min-width: 760px;
-    padding: 10px 4px 28px;
+    min-width: 0;
+    padding: 10px 4px 22px;
 }
 
 [data-pim-compass-view] { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
@@ -176,7 +176,9 @@
 
 .pim-web-identity {
     grid-area: identity;
-    align-self: center;
+    justify-self: center;
+    width: min(100%, 560px);
+    align-self: start;
     min-width: 0;
 }
 
@@ -421,17 +423,12 @@
 
 .pim-web-sector--relationship,
 .pim-web-sector--process {
-    width: min(100%, 360px);
-    justify-self: center;
+    width: 100%;
+    justify-self: stretch;
 }
 
 .pim-web-sector--relationship .pim-web-node--primary {
-    display: flex;
-    flex-direction: column-reverse;
-}
-
-.pim-web-sector--relationship .pim-web-node--primary > .pim-web-node-children {
-    margin: 0 0 12px;
+    display: block;
 }
 
 .pim-web-sector--relationship .pim-web-sector-heading {
@@ -444,29 +441,37 @@
 
 .pim-web-sector--agency .pim-web-sector-heading,
 .pim-web-sector--agency .pim-web-node-button {
-    text-align: right;
+    text-align: left;
 }
 
 .pim-web-sector--agency .pim-web-node-button {
-    grid-template-columns: auto auto minmax(0, 1fr) 8px;
+    grid-template-columns: 8px minmax(0, 1fr) auto auto;
 }
 
-.pim-web-sector--agency .pim-web-category-marker { grid-column: 4; }
-.pim-web-sector--agency .pim-web-node-copy { grid-column: 3; }
-.pim-web-sector--agency .pim-web-node-kind { grid-column: 2; }
-.pim-web-sector--agency .pim-web-expansion-indicator { grid-column: 1; }
+.pim-web-sector--agency .pim-web-category-marker { grid-column: 1; }
+.pim-web-sector--agency .pim-web-node-copy { grid-column: 2; }
+.pim-web-sector--agency .pim-web-node-kind { grid-column: 3; }
+.pim-web-sector--agency .pim-web-expansion-indicator { grid-column: 4; }
 
 .pim-web-sector--agency .pim-web-node-children {
-    margin-right: 14px;
-    padding-right: 14px;
-    border-right: 2px solid color-mix(in srgb, var(--pim-category) 52%, transparent);
+    margin-left: 14px;
+    padding-left: 14px;
+    border-left: 2px solid color-mix(in srgb, var(--pim-category) 52%, transparent);
 }
 
+.pim-web-sector--relationship .pim-web-node-children,
 .pim-web-sector--certainty .pim-web-node-children,
 .pim-web-sector--process .pim-web-node-children {
     margin-left: 14px;
     padding-left: 14px;
     border-left: 2px solid color-mix(in srgb, var(--pim-category) 52%, transparent);
+}
+
+.pim-web-sector {
+    padding: 12px;
+    border: 1px solid rgba(37, 76, 53, .12);
+    border-radius: 14px;
+    background: rgba(255, 255, 250, .52);
 }
 
 .pim-web-sector-branches,
