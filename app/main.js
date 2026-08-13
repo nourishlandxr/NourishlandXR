@@ -842,7 +842,9 @@ window.createProjectFromForm = async () => {
             restartProjectTutorial(created.id);
             setProjectTutorialMode(created.id, tutorialEnabled && !expertMode);
             await siteManager.loadSitesFromDisk();
-            window.renderProjectDashboard(encodeURIComponent(created.id));
+            // A new project always opens at its protected Home workspace so
+            // the seeded template marker is immediately visible and usable.
+            window.renderProjectHome(encodeURIComponent(created.id));
         }
     }
 };

@@ -2,6 +2,7 @@ import {
     PIM_SPATIAL_CONFIG,
     pimFocusedView,
     pimNodeHue,
+    pimNodeVisualPosition,
     pimVisibleNodes
 } from './plantInformationMesh.js';
 
@@ -66,7 +67,10 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     const bloom = reducedMotion ? 1 : Math.max(0, Math.min(1, Number(options.bloomProgress ?? 1)));
     const hoverPath = String(options.hoverPath || '');
-    const position = node => ({ x: node.position.x / 100 * width, y: node.position.y / 100 * height });
+    const position = node => {
+        const point = pimNodeVisualPosition(node, node.depth > 0 ? bloom : 1);
+        return { x: point.x / 100 * width, y: point.y / 100 * height };
+    };
 
     context.clearRect(0, 0, width, height);
     const halo = context.createRadialGradient(center.x, center.y, 50, center.x, center.y, height * .46);
@@ -80,14 +84,10 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.lineJoin = 'round';
 
     nodes.forEach(node => {
-        const target = position(node);
         const nodeBloom = node.depth > 0 ? bloom : 1;
-        const point = node.depth > 0
-            ? {
-                x: node.parentPosition.x / 100 * width + (target.x - node.parentPosition.x / 100 * width) * nodeBloom,
-                y: node.parentPosition.y / 100 * height + (target.y - node.parentPosition.y / 100 * height) * nodeBloom
-            }
-            : target;
+        // position() already applies the single shared parent-to-child bloom
+        // interpolation used by hit-testing; do not interpolate it again.
+        const point = position(node);
         const open = expanded.has(node.path);
         const hovered = hoverPath === node.path;
         const active = open || hovered;
@@ -163,13 +163,17 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.fillText('↓', center.x, height * .94 + 2);
 }
 
-export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent) {
+export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
     const focus = pimFocusedView(knowledge, expandedPaths);
     if (focus && Math.hypot(xPercent - 50, yPercent - 50) <= 10) return { ...focus.focusNode, pimBack: true };
     const hitRadius = PIM_SPATIAL_CONFIG.cellWidthMetres / PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * 50 * PIM_SPATIAL_CONFIG.colliderScale;
+    const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
     return (focus?.nodes || pimVisibleNodes(knowledge, expandedPaths))
-        .map(node => ({ node, distance: Math.hypot(xPercent - node.position.x, yPercent - node.position.y) }))
+        .map(node => {
+            const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
+            return { node, distance: Math.hypot(xPercent - point.x, yPercent - point.y) };
+        })
         .sort((left, right) => left.distance - right.distance)
         .find(candidate => candidate.distance <= hitRadius)?.node || null;
 }

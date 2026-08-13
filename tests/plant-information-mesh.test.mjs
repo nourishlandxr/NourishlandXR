@@ -8,6 +8,7 @@ import {
     pimKnowledgeNodes,
     pimNodeChildren,
     pimNodeHue,
+    pimNodeVisualPosition,
     pimRootPosition,
     pimSpatialPanel,
     pimSpatialPoseAboveAnchor,
@@ -105,6 +106,23 @@ test('PIM grows child cells outward from the selected category with stable famil
     assert.equal(pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []).length, 6);
 });
 
+test('PIM spatial bloom and hit-testing share the same parent-relative cell position', () => {
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest']);
+    const parent = nodes.find(node => node.path === 'food-forest');
+    const child = nodes.find(node => node.parentPath === 'food-forest');
+    const start = pimNodeVisualPosition(child, 0);
+    const end = pimNodeVisualPosition(child, 1);
+    assert.deepEqual(start, { x: parent.position.x, y: parent.position.y });
+    assert.deepEqual(end, { x: child.position.x, y: child.position.y });
+    assert.equal(pimHoneycombTargetAtPercent(
+        PIGEON_PEA_AR_KNOWLEDGE,
+        ['food-forest'],
+        end.x,
+        end.y,
+        { bloomProgress: 1 }
+    ).path, child.path);
+});
+
 test('PIM treats explicit empty child lists as leaves', () => {
     const uses = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE).find(node => node.id === 'uses');
     const animalFodder = pimNodeChildren(uses).find(node => node.id === 'animal-fodder');
@@ -173,6 +191,13 @@ test('PIM spatial pose is captured once, world-sized and JSON serializable', () 
     const panel = pimSpatialPanel(pose);
     assert.equal(panel.width, PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres);
     assert.equal(panel.height, PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres);
+    const repairedPanel = pimSpatialPanel({
+        ...pose,
+        right: { x: -pose.right.x, y: 0, z: -pose.right.z }
+    });
+    assert.equal(repairedPanel.right.x, 1, 'render basis stays left-to-right for legacy poses');
+    assert.equal(repairedPanel.right.y, 0);
+    assert.equal(Math.abs(repairedPanel.right.z), 0);
     assert.equal(PIM_SPATIAL_CONFIG.cellWidthMetres, .24);
     assert.equal(PIM_SPATIAL_CONFIG.colliderScale, 1.2);
 

@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8934';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8935';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -72,6 +72,7 @@ let markerHoldGesture = null;
 let readyPlacementType = '';
 let readySpecialMarker = null;
 let pendingPlacementAppearance = null;
+let pendingPlacementDetails = null;
 let contextToolbarRecord = null;
 let pendingPlacedRecord = null;
 let hitTestSource = null;
@@ -327,6 +328,7 @@ function appearancePayload(appearance = {}) {
         color: appearance.color,
         size: appearance.size,
         opacity: appearance.opacity,
+        ...(appearance.surface === 'outline' ? { surface: 'outline' } : appearance.surface === 'filled' ? { surface: 'filled' } : {}),
         ...(MARKER_APPEARANCE_SHAPES.includes(appearance.shape) ? { shape: appearance.shape } : {})
     };
 }
@@ -334,14 +336,23 @@ function appearancePayload(appearance = {}) {
 function preparePlacementAppearance(type, marker = null) {
     if (!['plant', 'note'].includes(type)) {
         pendingPlacementAppearance = null;
+        pendingPlacementDetails = null;
         return null;
     }
+    const defaultName = type === 'plant' ? 'New plant' : 'New note';
     pendingPlacementAppearance = {
         type,
         color: markerAppearanceColor(marker || { type }),
         size: TASKBAR_V2_SIZES.includes(markerAppearanceSize(marker)) ? markerAppearanceSize(marker) : 'medium',
-        opacity: type === 'plant' ? markerAppearanceOpacity(marker) : 1,
+        opacity: markerAppearanceOpacity(marker),
+        ...(type === 'note' ? { surface: markerNoteSurface(marker || { type }) } : {}),
         ...(type === 'plant' ? { shape: markerAppearanceShape(marker) } : {})
+    };
+    pendingPlacementDetails = {
+        type,
+        name: String(marker?.name || defaultName).trim() || defaultName,
+        description: String(marker?.description || marker?.notes || '').trim(),
+        surface: type === 'note' ? markerNoteSurface(marker || { type }) : undefined
     };
     return pendingPlacementAppearance;
 }
@@ -356,10 +367,25 @@ function currentPlacementAppearance(type = readyPlacementType) {
 
 function placementPreviewMarker(type = readyPlacementType) {
     const appearance = currentPlacementAppearance(type);
+    const details = pendingPlacementDetails?.type === type ? pendingPlacementDetails : null;
     return {
         ...(pendingBagRecord?.marker || {}),
         type,
+        name: details?.name || pendingBagRecord?.marker?.name || (type === 'plant' ? 'New plant' : 'New note'),
+        description: details ? details.description : (pendingBagRecord?.marker?.description || pendingBagRecord?.marker?.notes || ''),
         appearance: appearance ? appearancePayload(appearance) : pendingBagRecord?.marker?.appearance
+    };
+}
+
+function placementEditorRecord(type = readyPlacementType) {
+    if (!['plant', 'note'].includes(type)) return null;
+    const marker = placementPreviewMarker(type);
+    return {
+        marker,
+        siteId: pendingBagRecord?.siteId || activeSiteId,
+        areaId: pendingBagRecord?.areaId || activeAreaId,
+        areaName: pendingBagRecord?.areaName || activeAreaName,
+        pendingPlacement: true
     };
 }
 
@@ -554,8 +580,7 @@ function alignActiveAreaToCalibrationTarget(targetPosition) {
 }
 
 function hasRenderableSpatialPosition(record) {
-    return record?.unplaced !== true
-        && record?.position
+    return record?.position
         && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(record.position[axis])));
 }
 
@@ -688,7 +713,7 @@ function contextAppearanceButtons(type, appearance) {
     return `${type === 'plant' ? `<button type="button" data-ar-cycle-shape aria-label="Cycle Plant Live Tag shape. Current ${escapeHtml(shape)}"><b aria-hidden="true">△</b><span>SHAPE</span><small>${escapeHtml(shape)}</small></button>` : ''}
         <button type="button" data-ar-cycle-color aria-label="Cycle ${readyPlacementLabel(type)} color. Current ${escapeHtml(color.name)}"><b class="creator-ar-color-cycle" style="--cycle-color:${escapeHtml(color.value)}" aria-hidden="true"></b><span>COLOR</span><small>${escapeHtml(color.name)}</small></button>
         <button type="button" data-ar-cycle-size aria-label="Cycle ${readyPlacementLabel(type)} size. Current ${escapeHtml(size)}"><b aria-hidden="true">&#9670;</b><span>SIZE</span><small>${escapeHtml(size)}</small></button>
-        ${type === 'plant' ? `<button type="button" data-ar-cycle-opacity aria-label="Cycle Plant opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>` : ''}
+        <button type="button" data-ar-cycle-opacity aria-label="Cycle ${readyPlacementLabel(type)} opacity. Current ${opacity} percent"><b aria-hidden="true">&#9680;</b><span>OPACITY</span><small>${opacity}%</small></button>
         <button type="button" data-ar-context-edit aria-label="Open quick edit"><b aria-hidden="true">&#9998;</b><span>EDIT</span><small>QUICK EDIT</small></button>`;
 }
 
@@ -740,7 +765,11 @@ function updateContextToolbar() {
     bindContextToolbarAction(toolbar, '[data-ar-cycle-shape]', () => cycleContextAppearance('shape'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-size]', () => cycleContextAppearance('size'));
     bindContextToolbarAction(toolbar, '[data-ar-cycle-opacity]', () => cycleContextAppearance('opacity'));
-    bindContextToolbarAction(toolbar, '[data-ar-context-edit]', () => selectedRecord && openInlineEditor(selectedRecord, true));
+    bindContextToolbarAction(toolbar, '[data-ar-context-edit]', () => selectedRecord
+        ? openInlineEditor(selectedRecord, true)
+        : placementType
+        ? openInlineEditor(placementEditorRecord(placementType), true)
+        : null);
     bindContextToolbarAction(toolbar, '[data-ar-context-location-note]', () => toggleLocationNoteVisibility(selectedRecord));
 }
 
@@ -763,7 +792,7 @@ function cycleContextAppearance(property) {
         appearance.shape = nextCycleValue(markerAppearanceShape({ appearance }), MARKER_APPEARANCE_SHAPES);
     } else if (property === 'size') {
         appearance.size = nextCycleValue(appearance.size, TASKBAR_V2_SIZES);
-    } else if (property === 'opacity' && type === 'plant') {
+    } else if (property === 'opacity') {
         appearance.opacity = nextCycleValue(Number(appearance.opacity), TASKBAR_V2_OPACITIES);
     } else {
         return;
@@ -779,8 +808,7 @@ function cycleContextAppearance(property) {
     const previousAppearance = record.marker.appearance || {};
     const nextAppearance = {
         ...previousAppearance,
-        ...appearancePayload(appearance),
-        ...(type === 'note' ? { opacity: previousAppearance.opacity } : {})
+        ...appearancePayload(appearance)
     };
     record.marker = { ...record.marker, appearance: nextAppearance };
     renderSessionMarkers();
@@ -844,16 +872,19 @@ async function openContextInWebMode() {
         const operation = captureArOperationContext();
         if (!isArOperationCurrent(operation)) return;
         const appearance = appearancePayload(currentPlacementAppearance(type));
+        const details = pendingPlacementDetails?.type === type ? pendingPlacementDetails : null;
         let marker;
         if (pendingBagRecord) {
             const bagRecord = pendingBagRecord;
             marker = await updatePlaceMarker(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, {
                 ...bagRecord.marker,
+                ...(details ? { name: details.name, description: details.description, notes: type === 'note' ? details.description : bagRecord.marker.notes || '' } : {}),
                 appearance: { ...(bagRecord.marker.appearance || {}), ...appearance }
             });
         } else {
             const draft = createMinimalMarkerDraft(type, {
-                name: type === 'plant' ? 'New plant' : 'New note'
+                name: details?.name || (type === 'plant' ? 'New plant' : 'New note'),
+                description: details?.description || ''
             });
             draft.appearance = appearance;
             const response = await createPlaceMarker(operation.projectId, operation.siteId, operation.areaId, draft);
@@ -1990,6 +2021,7 @@ function setInteractionMode(mode) {
         readySpecialMarker = null;
         pendingBagRecord = null;
         pendingPlacementAppearance = null;
+        pendingPlacementDetails = null;
         updateReadyPlacementControl();
     }
     interactionMode = interactionMode === mode && ['grab', 'select'].includes(mode) ? 'neutral' : mode;
@@ -2074,21 +2106,26 @@ async function openUnplacedBag() {
     pendingBagRecord = null;
     updateReadyPlacementControl();
     bag.hidden = false;
-    bag.innerHTML = '<p>Loading Home…</p>';
+    bag.innerHTML = '<p>Loading Areas…</p>';
     try {
         await loadPlacementAreas();
         const areas = await loadSitePlaces(activeProjectId, activeSiteId);
         const homeAreas = areas.filter(isDefaultHomeArea);
-        const groups = await Promise.all(homeAreas.map(async area => {
+        // The Web Hub can save an unplaced plant in any Area, not only Home.
+        // Previously this was Promise.all(homeAreas.map(async area => { ... }); retain Home as
+        // the named compatibility concept while scanning the full Area list.
+        // Load every Area here so content created by global search remains
+        // placeable after leaving and re-entering AR.
+        const groups = await Promise.all(areas.map(async area => {
             const markers = await loadPlaceMarkers(activeProjectId, activeSiteId, area.id).catch(() => []);
             const entries = await Promise.all(markers.map(normalizeSpatialMarker).filter(marker => ['plant', 'note', 'sub_checkpoint'].includes(marker.type)).map(async marker => {
                 const anchor = await loadMarkerAnchor(activeProjectId, activeSiteId, area.id, marker.id).catch(() => null);
-                return anchor?.type === 'spatial' ? null : { marker, areaId: area.id, areaName: area.name };
+                return anchor?.type === 'spatial' ? null : { marker, areaId: area.id, areaName: area.name, isHome: isDefaultHomeArea(area) };
             }));
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${DEFAULT_HOME_AREA_NAME}</small></span></button>`).join('')}</div>` : '<p>Home is empty. Save information here when you want to organise or place it later.</p>'}`;
+        bag.innerHTML = `<div><strong>Unplaced content</strong><button type="button" data-ar-close-bag aria-label="Close unplaced content">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.isHome ? DEFAULT_HOME_AREA_NAME : item.areaName || 'Area')}</small></span></button>`).join('')}</div>` : '<p>No unplaced content. Save a Plant or Note in Web Hub, then return here to position it.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];
@@ -2102,7 +2139,7 @@ async function openUnplacedBag() {
             setPlacementStatus(`${item.marker.name} selected from your Bag. Aim the breathing circle, then tap to place it.`);
         }));
     } catch (error) {
-        bag.innerHTML = `<div><strong>Home</strong><button type="button" data-ar-close-bag aria-label="Close Home">&times;</button></div><p>Could not load Home: ${escapeHtml(error.message)}</p>`;
+        bag.innerHTML = `<div><strong>Unplaced content</strong><button type="button" data-ar-close-bag aria-label="Close unplaced content">&times;</button></div><p>Could not load unplaced content: ${escapeHtml(error.message)}</p>`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
     }
 }
@@ -2457,6 +2494,7 @@ async function openSpecialMarkerPicker() {
         readyPlacementType = '';
         readySpecialMarker = null;
         pendingPlacementAppearance = null;
+        pendingPlacementDetails = null;
         questSpecialPaletteVisible = true;
         questSpecialPaletteLayout = questSpatialPaletteLayout(questBeltViewerMatrix || latestViewerMatrix, visibleQuestSpecialPaletteActions(), {
             distance: .82,
@@ -2487,6 +2525,7 @@ async function openSpecialMarkerPicker() {
     closeUnplacedBag();
     readyPlacementType = '';
     pendingPlacementAppearance = null;
+    pendingPlacementDetails = null;
     updateReadyPlacementControl();
     picker.hidden = false;
     picker.dataset.panel = panelId;
@@ -2507,6 +2546,7 @@ function resetArControls() {
     readyPlacementType = '';
     pendingBagRecord = null;
     pendingPlacementAppearance = null;
+    pendingPlacementDetails = null;
     updateReadyPlacementControl();
     updateInteractionControls();
     setPlacementStatus('AR controls reset. The aim dot is ready; press plus when you want to place a Marker.');
@@ -2758,7 +2798,7 @@ function homeSignAnchorFromViewer() {
 
 function setupHomeSignRenderer() {
     const vertex = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=mvp*vec4(p,0.,1.);}');
+    gl.shaderSource(vertex, 'attribute vec2 p;uniform mat4 mvp;uniform float pimTexture;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,pimTexture>.5?.5-p.y*.5:p.y*.5+.5);gl_Position=mvp*vec4(p,0.,1.);}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragment, 'precision mediump float;varying vec2 uv;uniform sampler2D artwork;void main(){vec4 pixel=texture2D(artwork,uv);if(pixel.a<.04)discard;gl_FragColor=pixel;}');
@@ -2788,6 +2828,7 @@ function drawSpatialHomeSign(view) {
     const model = markerBillboardMatrix(homeSignAnchor, 1.15, .43);
     const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
     gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, homeSignTexture);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
@@ -2823,12 +2864,12 @@ function createQuestNoteTexture(marker) {
     textureCanvas.height = 384;
     const context = textureCanvas.getContext('2d');
     if (!context) return null;
+    const opacity = markerAppearanceOpacity(marker);
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
     roundedCanvasRectangle(context, 12, 12, 1000, 360, 58);
     context.fillStyle = markerAppearanceColor(marker);
-    context.globalAlpha = Math.max(.58, markerAppearanceOpacity(marker));
+    context.globalAlpha = opacity;
     context.fill();
-    context.globalAlpha = 1;
     context.lineWidth = markerNoteSurface(marker) === 'outline' ? 9 : 3;
     context.strokeStyle = 'rgba(239, 255, 235, .88)';
     context.stroke();
@@ -2842,6 +2883,7 @@ function createQuestNoteTexture(marker) {
     context.fillStyle = 'rgba(255, 255, 255, .92)';
     context.font = '500 34px system-ui, sans-serif';
     drawWrappedCanvasText(context, information, 68, 192, 888, 43, 3);
+    context.globalAlpha = 1;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -2880,6 +2922,7 @@ function drawQuestSpatialNote(view, record) {
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     const model = markerBillboardMatrix(record.position, halfWidth, halfHeight);
     const mvp = multiplyMatrices(view.projectionMatrix, multiplyMatrices(view.transform.inverse.matrix, model));
     gl.uniformMatrix4fv(gl.getUniformLocation(homeSignProgram, 'mvp'), false, mvp);
@@ -2946,7 +2989,9 @@ function createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress) {
     });
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    // PIM uses an explicit top-to-bottom shader coordinate below. Do not
+    // depend on the browser/WebGL canvas upload flip state here.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -2978,14 +3023,18 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
         .filter(record => record.marker.type === 'plant' && record.profileExpanded)
         .map(record => {
             const pose = ensureSpatialPimPose(record);
-            const panel = pimSpatialPanel(pose);
+            const panel = pimSpatialPanel(pose, { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
             const hit = spatialDashboardRayHit(latestControllerRay, panel, PIM_TEXTURE_SIZE);
             if (!hit) return null;
+            const bloomProgress = record.pimBloomStarted
+                ? Math.max(0, Math.min(1, (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS))
+                : 1;
             const target = pimHoneycombTargetAtPercent(
                 creatorPlantKnowledge(record),
                 record.pimExpandedPaths || [],
                 hit.u * 100,
-                hit.v * 100
+                hit.v * 100,
+                { bloomProgress }
             );
             return target ? { record, target, hit, panel } : null;
         })
@@ -3042,7 +3091,7 @@ function drawSpatialPlantProfiles(view) {
     gl.depthMask(false);
     const pulse = .5 + Math.sin(performance.now() / 380) * .5;
     records.forEach(record => {
-        const panel = pimSpatialPanel(ensureSpatialPimPose(record));
+        const panel = pimSpatialPanel(ensureSpatialPimPose(record), { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
         if (!panel || !controllerPointerRenderer) return;
         drawSpatialTether(
             gl,
@@ -3060,8 +3109,9 @@ function drawSpatialPlantProfiles(view) {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 1);
     records.forEach(record => {
-        const panel = pimSpatialPanel(ensureSpatialPimPose(record));
+        const panel = pimSpatialPanel(ensureSpatialPimPose(record), { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
         const texture = ensureSpatialPimTexture(record);
         const model = spatialDashboardPanelMatrix(panel);
         if (!texture || !model) return;
@@ -3237,6 +3287,7 @@ function drawQuestSpatialBelt(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     gl.useProgram(homeSignProgram);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
@@ -3265,6 +3316,7 @@ function drawQuestSpatialSpecialPalette(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     gl.useProgram(homeSignProgram);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
@@ -3290,6 +3342,7 @@ function drawQuestSpatialWebPanel(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
     gl.useProgram(homeSignProgram);
+    gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
     gl.enableVertexAttribArray(positionLocation);
@@ -3875,6 +3928,7 @@ function openInlineEditor(record, force = false) {
     if (!force && interactionMode !== 'select') return;
     const editor = overlayRoot?.querySelector('[data-ar-inline-editor]');
     if (!editor) return;
+    const isPendingPlacement = record.pendingPlacement === true;
     const plant = record.marker.type === 'plant';
     const fixedType = true;
     const startingPoint = record.marker.type === 'intro_checkpoint';
@@ -3892,6 +3946,26 @@ function openInlineEditor(record, force = false) {
         ? `<p class="creator-ar-profile-note">${hasPlantProfile(record) ? 'Plant Profile enabled. Use View mode to reveal it, or Web Mode to extend its knowledge.' : 'Upgrade this Plant in Web Mode to unlock its interactive AR information tree.'}</p>`
         : '';
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${profileNote}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
+    const editorForm = editor.querySelector('[data-ar-editor-form]');
+    const appearanceFieldset = editor.querySelector('.creator-ar-appearance');
+    if (appearanceFieldset) {
+        const opacityField = document.createElement('label');
+        opacityField.textContent = 'Opacity';
+        opacityField.innerHTML += `<select name="markerOpacity"><option value="1">100% · Solid</option><option value="0.8">80%</option><option value="0.6">60%</option><option value="0.4">40%</option></select>`;
+        opacityField.querySelector('select').value = String(markerAppearanceOpacity(record.marker));
+        appearanceFieldset.append(opacityField);
+    }
+    if (record.marker.type === 'note' && editorForm) {
+        const informationField = document.createElement('label');
+        informationField.textContent = 'Information';
+        const information = document.createElement('textarea');
+        information.name = 'description';
+        information.rows = 4;
+        information.placeholder = 'Write what this Note should say.';
+        information.value = record.marker.description || record.marker.notes || '';
+        informationField.append(information);
+        editorForm.insertBefore(informationField, appearanceFieldset);
+    }
     if (plant) {
         const shapeField = document.createElement('label');
         shapeField.innerHTML = `Marker form<select name="markerShape"><option value="orb" ${markerAppearanceShape(record.marker) === 'orb' ? 'selected' : ''}>Orb</option><option value="plate" ${markerAppearanceShape(record.marker) === 'plate' ? 'selected' : ''}>Square number plate</option><option value="triangle" ${markerAppearanceShape(record.marker) === 'triangle' ? 'selected' : ''}>3D triangle</option></select>`;
@@ -3899,12 +3973,26 @@ function openInlineEditor(record, force = false) {
     }
     editor.querySelector('[data-ar-editor-cancel]').addEventListener('click', closeInlineEditor);
     editor.querySelector('[data-ar-edit-in-web]').addEventListener('click', () => {
+        if (isPendingPlacement) {
+            void openContextInWebMode();
+            return;
+        }
         arReturnContext = areaCheckpoint ? `web-totem:${record.areaId}` : `web-marker:${record.marker.id}`;
         exitArMode();
     });
     editor.querySelector('[data-ar-delete-marker]').addEventListener('click', async event => {
         const button = event.currentTarget;
         const status = editor.querySelector('[data-ar-editor-status]');
+        if (isPendingPlacement) {
+            readyPlacementType = '';
+            pendingBagRecord = null;
+            pendingPlacementAppearance = null;
+            pendingPlacementDetails = null;
+            updateReadyPlacementControl();
+            closeInlineEditor();
+            setPlacementStatus('Note placement draft discarded.');
+            return;
+        }
         if (button.dataset.confirmDelete !== 'true') {
             button.dataset.confirmDelete = 'true';
             button.textContent = 'Confirm delete';
@@ -3929,7 +4017,9 @@ function openInlineEditor(record, force = false) {
         const form = event.currentTarget;
         const status = form.querySelector('[data-ar-editor-status]');
         const name = form.elements.name.value.trim();
-        const description = record.marker.description || record.marker.notes || '';
+        const description = form.elements.description
+            ? form.elements.description.value.trim()
+            : (record.marker.description || record.marker.notes || '');
         const type = record.marker.type;
         if (!name) {
             status.textContent = 'A name is required.';
@@ -3946,6 +4036,7 @@ function openInlineEditor(record, force = false) {
                     ...appearance,
                     color: form.elements.markerColor.value,
                     size: form.elements.markerSize.value,
+                    opacity: Number(form.elements.markerOpacity?.value ?? markerAppearanceOpacity(record.marker)),
                     ...(type === 'note' ? { surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled' } : {})
                 },
                 plant_profile: type === 'plant' ? {
@@ -3968,6 +4059,29 @@ function openInlineEditor(record, force = false) {
                     title: form.elements.noticeBoardTitle?.value.trim() || name,
                     message
                 } : undefined;
+            }
+            if (isPendingPlacement) {
+                pendingPlacementAppearance = { type, ...update.appearance };
+                pendingPlacementDetails = {
+                    type,
+                    name,
+                    description,
+                    surface: type === 'note' ? update.appearance.surface : undefined
+                };
+                if (pendingBagRecord) {
+                    pendingBagRecord.marker = {
+                        ...pendingBagRecord.marker,
+                        name,
+                        description,
+                        notes: type === 'note' ? description : pendingBagRecord.marker.notes || '',
+                        appearance: { ...(pendingBagRecord.marker.appearance || {}), ...update.appearance }
+                    };
+                }
+                updateNotePlacementPreview();
+                updateContextToolbar();
+                closeInlineEditor();
+                setPlacementStatus(`${name} draft updated. Tap the centre circle to place it.`);
+                return;
             }
             const updated = type === 'area_checkpoint' && record.marker.type !== 'area_checkpoint'
                 ? await convertRecordToAreaCheckpoint(record, update)
@@ -4245,10 +4359,10 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
         const hasPosition = anchor?.type === 'spatial'
             && position
             && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(position[axis])));
-        // Keep an existing Totem visible to the placement controls even when
-        // its anchor was lost or was never captured. Otherwise placement sees
-        // the saved marker as a duplicate and offers no way to recover it.
-        if (!hasPosition && !isAreaCheckpointMarker(marker)) return null;
+        // Keep unplaced analog entries in the session. They are given a
+        // temporary Area-relative position below and rendered as a ring around
+        // the Totem, but their unplaced flag prevents them being treated as a
+        // saved spatial anchor.
         return {
             marker,
             plantProfile,
@@ -4256,7 +4370,7 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             pimExpandedPaths: [],
             pimSpatialPose: null,
             pimStoredPose: anchor?.pim_pose || null,
-            position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: 0 },
+            position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: -1 },
             anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             siteId,
             areaId: area.id,
@@ -4270,6 +4384,19 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
         };
     }));
     if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
+    const unplaced = restored.filter(record => record?.unplaced && !isAreaCheckpointMarker(record.marker));
+    const ringTotem = restored.find(record => isAreaCheckpointMarker(record.marker) && hasSavedSpatialPosition(record))
+        || sessionMarkers.find(record => record.areaId === restoreOperation.areaId && isAreaCheckpointMarker(record.marker) && hasSavedSpatialPosition(record));
+    const ringCentre = ringTotem?.position || { x: 0, y: 0, z: -1 };
+    const ringRadius = .28;
+    unplaced.forEach((record, index) => {
+        const angle = -Math.PI / 2 + (index / Math.max(unplaced.length, 1)) * Math.PI * 2;
+        record.position = {
+            x: ringCentre.x + Math.cos(angle) * ringRadius,
+            y: ringCentre.y + .06,
+            z: ringCentre.z + Math.sin(angle) * ringRadius
+        };
+    });
     sessionMarkers = sessionMarkers.filter(record => record.areaId === restoreOperation.areaId);
     const existingIds = new Set(sessionMarkers.map(record => record.marker.id));
     sessionMarkers.push(...restored.filter(record => record && !existingIds.has(record.marker.id)));
@@ -4528,6 +4655,7 @@ async function quickPlace(type) {
     placementInProgress = true;
     const loadingOperation = captureArOperationContext();
     let placementAppearance = null;
+    let placementDetails = null;
     const releasePlacement = () => {
         if (activePlacementOperation !== placementToken) return;
         activePlacementOperation = null;
@@ -4541,6 +4669,9 @@ async function quickPlace(type) {
         const operation = captureArOperationContext();
         const operationIsCurrent = () => activePlacementOperation === placementToken && isArOperationCurrent(operation);
         if (!operationIsCurrent()) return;
+        placementDetails = ['plant', 'note'].includes(type) && pendingPlacementDetails?.type === type
+            ? { ...pendingPlacementDetails }
+            : null;
         const placementPosition = type === 'note'
             ? notePlacementTarget()
             : placementPoint(type);
@@ -4559,12 +4690,14 @@ async function quickPlace(type) {
             readyPlacementType = '';
             pendingBagRecord = null;
             pendingPlacementAppearance = null;
+            pendingPlacementDetails = null;
             updateReadyPlacementControl();
             setPlacementStatus(`Updating ${bagRecord.marker.name}…`);
             try {
                 const updatedBagMarker = placementAppearance
                     ? await updatePlaceMarker(operation.projectId, bagRecord.siteId, bagRecord.areaId, bagRecord.marker.id, {
                         ...bagRecord.marker,
+                        ...(placementDetails ? { name: placementDetails.name, description: placementDetails.description, notes: type === 'note' ? placementDetails.description : bagRecord.marker.notes || '' } : {}),
                         appearance: { ...(bagRecord.marker.appearance || {}), ...placementAppearance }
                     })
                     : bagRecord.marker;
@@ -4585,6 +4718,7 @@ async function quickPlace(type) {
                 pendingBagRecord = bagRecord;
                 readyPlacementType = bagRecord.marker.type;
                 preparePlacementAppearance(bagRecord.marker.type, { ...bagRecord.marker, appearance: placementAppearance });
+                if (placementDetails) pendingPlacementDetails = placementDetails;
                 updateReadyPlacementControl();
                 setPlacementStatus(`Could not place ${bagRecord.marker.name}: ${error.message}`);
             }
@@ -4601,6 +4735,7 @@ async function quickPlace(type) {
         const label = markerLabel(type);
         readyPlacementType = '';
         pendingPlacementAppearance = null;
+        pendingPlacementDetails = null;
         updateReadyPlacementControl();
         setPlacementStatus(`Placing ${label}...`);
         const existingMarkers = await loadPlaceMarkers(operation.projectId, operation.siteId, operation.areaId).catch(() => []);
@@ -4635,8 +4770,8 @@ async function quickPlace(type) {
         const specialMarker = type === 'sub_checkpoint' ? readySpecialMarker : null;
         readySpecialMarker = null;
         const draft = createMinimalMarkerDraft(type, {
-            name: specialMarker?.name || draftName,
-            description: type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : ''
+            name: specialMarker?.name || placementDetails?.name || draftName,
+            description: placementDetails?.description || (type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : '')
         });
         if (placementAppearance) draft.appearance = { ...(draft.appearance || {}), ...placementAppearance };
         if (specialMarker) Object.assign(draft, specialMarker);
@@ -4668,6 +4803,7 @@ async function quickPlace(type) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
         readyPlacementType = type;
         if (placementAppearance) pendingPlacementAppearance = { type, ...placementAppearance };
+        if (placementDetails) pendingPlacementDetails = placementDetails;
         updateReadyPlacementControl();
         setPlacementStatus(`Could not place ${markerLabel(type)}: ${error.message}`);
     } finally {
@@ -4749,6 +4885,7 @@ function createOverlay() {
             readySpecialMarker = null;
             pendingBagRecord = null;
             pendingPlacementAppearance = null;
+            pendingPlacementDetails = null;
             updateReadyPlacementControl();
             setPlacementStatus('Placement cancelled.');
             return;
@@ -4845,6 +4982,7 @@ function cleanup() {
     readyPlacementType = '';
     readySpecialMarker = null;
     pendingPlacementAppearance = null;
+    pendingPlacementDetails = null;
     contextToolbarRecord = null;
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);

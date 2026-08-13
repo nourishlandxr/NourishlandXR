@@ -194,6 +194,20 @@ export function pimConnectorPath(node) {
     return `M${curve.start.x} ${curve.start.y} C${curve.control1.x} ${curve.control1.y} ${curve.control2.x} ${curve.control2.y} ${curve.end.x} ${curve.end.y}`;
 }
 
+// The spatial canvas and its ray-hit map must use the same position while a
+// child generation blooms out of its parent. Keeping this calculation here
+// prevents the renderer and the interaction layer from drifting apart.
+export function pimNodeVisualPosition(node, bloomProgress = 1) {
+    const target = node?.position || { x: 50, y: 50 };
+    if (Number(node?.depth) <= 0) return { x: Number(target.x), y: Number(target.y) };
+    const parent = node?.parentPosition || { x: 50, y: 50 };
+    const progress = Math.max(0, Math.min(1, Number(bloomProgress)));
+    return {
+        x: Number(parent.x) + (Number(target.x) - Number(parent.x)) * progress,
+        y: Number(parent.y) + (Number(target.y) - Number(parent.y)) * progress
+    };
+}
+
 export function pimNodeAtPath(knowledge = {}, path = '') {
     const targetPath = String(path || '');
     if (!targetPath) return null;
@@ -406,11 +420,36 @@ export function pimSpatialPoseFromStored(storedPose, markerPosition = null) {
 export function pimSpatialPanel(pose, options = {}) {
     if (!pose?.position || !pose?.right || !pose?.up || !pose?.normal) return null;
     const scale = Number(pose.scale) || 1;
+    // The PIM texture and its ray-hit map must share one deterministic basis.
+    // Rebuild the upright horizontal basis from the panel normal instead of
+    // trusting a stale persisted right vector.
+    const normalLength = Math.hypot(Number(pose.normal.x) || 0, Number(pose.normal.z) || 0);
+    if (normalLength < .0001) return null;
+    const normal = {
+        x: Number(pose.normal.x) / normalLength,
+        y: 0,
+        z: Number(pose.normal.z) / normalLength
+    };
+    let right = { x: normal.z, y: 0, z: -normal.x };
+    const viewerPosition = options.viewerPosition;
+    if (viewerPosition && Number.isFinite(Number(viewerPosition.x)) && Number.isFinite(Number(viewerPosition.z))) {
+        const towardViewer = {
+            x: Number(viewerPosition.x) - Number(pose.position.x),
+            y: Number(viewerPosition.y || 0) - Number(pose.position.y || 0),
+            z: Number(viewerPosition.z) - Number(pose.position.z)
+        };
+        const facing = normal.x * towardViewer.x + normal.y * towardViewer.y + normal.z * towardViewer.z;
+        if (facing < 0) {
+            normal.x *= -1;
+            normal.z *= -1;
+            right = { x: normal.z, y: 0, z: -normal.x };
+        }
+    }
     return {
         center: { ...pose.position },
-        right: { ...pose.right },
-        up: { ...pose.up },
-        normal: { ...pose.normal },
+        right,
+        up: { x: 0, y: 1, z: 0 },
+        normal,
         width: (Number(options.width) || PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres) * scale,
         height: (Number(options.height) || PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres) * scale
     };

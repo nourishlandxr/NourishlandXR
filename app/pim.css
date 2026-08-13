@@ -1262,6 +1262,144 @@
     min-width: 0;
 }
 
+.pim-web-selected-branch {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--pim-category, #315e45) 30%, var(--pim-line));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--pim-category, #315e45) 3%, var(--pim-paper));
+    box-shadow: 0 7px 18px rgba(29, 67, 43, .07);
+}
+
+.pim-web-selected-branch-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px 14px;
+    align-items: start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--pim-category, #315e45) 18%, var(--pim-line));
+}
+
+.pim-web-selected-branch-header > div:first-child {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.pim-web-selected-branch-header > div:first-child > span {
+    color: color-mix(in srgb, var(--pim-category, #315e45) 82%, var(--pim-ink));
+    font-size: max(10px, .62rem);
+    font-weight: 900;
+    letter-spacing: .1em;
+}
+
+.pim-web-selected-branch-header h3,
+.pim-web-selected-branch-header p,
+.pim-web-selected-branch-header small {
+    margin: 0;
+}
+
+.pim-web-selected-branch-header h3 {
+    color: var(--pim-ink);
+    font-size: clamp(1.05rem, 2.5vw, 1.4rem);
+    line-height: 1.1;
+}
+
+.pim-web-selected-branch-header p,
+.pim-web-selected-branch-header small {
+    color: var(--pim-muted);
+    font-size: max(11px, .72rem);
+    line-height: 1.3;
+}
+
+.pim-web-selected-branch-header > .pim-web-node-actions {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+}
+
+.pim-web-selected-branch-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pim-web-selected-branch-actions button,
+.pim-web-outline-submenu header button {
+    min-height: 32px;
+    padding: 6px 9px;
+    border: 1px solid color-mix(in srgb, var(--pim-category, #315e45) 36%, var(--pim-line));
+    border-radius: 8px;
+    background: #fffdf1;
+    color: color-mix(in srgb, var(--pim-category, #315e45) 82%, var(--pim-ink));
+    font-size: max(11px, .68rem);
+    font-weight: 850;
+}
+
+.pim-web-selected-branch-actions button:hover,
+.pim-web-selected-branch-actions button:focus-visible,
+.pim-web-outline-submenu header button:hover,
+.pim-web-outline-submenu header button:focus-visible {
+    border-color: var(--pim-category, #315e45);
+    background: color-mix(in srgb, var(--pim-category, #315e45) 10%, #fff);
+}
+
+.pim-web-selected-branch-content {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding-top: 12px;
+}
+
+.pim-web-outline-submenu,
+.pim-web-outline-uncategorised {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid color-mix(in srgb, var(--pim-category, #315e45) 22%, var(--pim-line));
+    border-radius: 10px;
+    background: rgba(255, 255, 250, .68);
+}
+
+.pim-web-outline-submenu > header,
+.pim-web-outline-uncategorised > header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 9px;
+}
+
+.pim-web-outline-submenu > header > div,
+.pim-web-outline-uncategorised > header > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pim-web-outline-submenu h4,
+.pim-web-outline-uncategorised h4,
+.pim-web-outline-submenu small,
+.pim-web-outline-uncategorised small {
+    margin: 0;
+}
+
+.pim-web-outline-submenu h4,
+.pim-web-outline-uncategorised h4 {
+    color: var(--pim-ink);
+    font-size: max(12px, .82rem);
+}
+
+.pim-web-outline-submenu small,
+.pim-web-outline-uncategorised small {
+    color: var(--pim-muted);
+    font-size: max(11px, .68rem);
+}
+
+.pim-web-outline-submenu .pim-web-tree,
+.pim-web-outline-uncategorised .pim-web-tree {
+    margin-top: 9px;
+}
+
 .pim-web-outline-selection {
     display: flex;
     flex-wrap: wrap;
@@ -1324,6 +1462,20 @@
 
     .pim-web-outline-branch {
         flex: 0 0 145px;
+    }
+
+    .pim-web-selected-branch {
+        padding: 11px;
+    }
+
+    .pim-web-selected-branch-header {
+        grid-template-columns: 1fr;
+    }
+
+    .pim-web-selected-branch-header > .pim-web-node-actions {
+        grid-column: 1;
+        grid-row: auto;
+        justify-content: start;
     }
 
     .pim-web-compass-shell {

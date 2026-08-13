@@ -329,7 +329,7 @@ test('Home owns no-Area experiments while named Areas remain isolated', () => {
 test('fresh projects begin with a simple Area and can place its Totem now or later', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
-    assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
+    assert.match(mainSource, /window\.renderProjectHome\(encodeURIComponent\(created\.id\)\)/);
     assert.match(dashboardSource, /Your space is ready/);
     assert.match(dashboardSource, /CREATE YOUR FIRST AREA/);
     assert.match(dashboardSource, /Name your Area/);

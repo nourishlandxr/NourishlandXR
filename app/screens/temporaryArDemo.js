@@ -15,8 +15,8 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8934';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8935';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -1324,11 +1324,10 @@ function orientDemoPimPoseToViewer(pose) {
     const normal = facing >= 0
         ? { ...pose.normal }
         : { x: -pose.normal.x, y: -pose.normal.y, z: -pose.normal.z };
-    const expectedRight = { x: normal.z, y: 0, z: -normal.x };
-    const rightDot = pose.right.x * expectedRight.x + pose.right.z * expectedRight.z;
-    const right = rightDot >= 0
-        ? { ...pose.right }
-        : { x: -pose.right.x, y: -pose.right.y, z: -pose.right.z };
+    // Rebuild the horizontal axis from the viewer-facing normal. A stale
+    // stored right vector can otherwise show the whole canvas from its back,
+    // mirroring the PIM labels and reversing touch targets.
+    const right = { x: normal.z, y: 0, z: -normal.x };
     return { ...pose, normal, right };
 }
 
@@ -1359,11 +1358,14 @@ function demoPimPointerTarget(record) {
     const yPercent = (.5 - localY / panel.height) * 100;
     if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
     const knowledge = knowledgeFor(record);
+    const bloomProgress = record.pimBloomStarted
+        ? Math.max(0, Math.min(1, (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS))
+        : 1;
     return {
         panelHit: true,
         xPercent,
         yPercent,
-        node: pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent)
+        node: pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent, { bloomProgress })
     };
 }
 
@@ -2256,7 +2258,9 @@ function createSpatialKnowledgeTexture(record) {
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
         drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || [], { bloomProgress });
-        return canvasTexture(label, null, true);
+        // The demo quad already maps V=0 to the physical top edge. Uploading
+        // with UNPACK_FLIP_Y_WEBGL here inverted the PIM a second time.
+        return canvasTexture(label);
     }
     if (record.demoType === 'zone') {
         drawTotemKnowledgeTexture(ctx, label, content);
@@ -2346,9 +2350,8 @@ function drawTotemKnowledgeTexture(ctx, label, content) {
 function canvasTexture(label, texture = null, flipY = false) {
     texture ||= gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    // The PIM quad uses V=0 at its physical top edge. Flip canvas uploads for
-    // that shared AR panel convention so visual cells and ray-hit cells use
-    // the same top-to-bottom coordinates.
+    // The PIM and other demo boards use explicit top-left UVs in the quad.
+    // Callers opt into upload flipping only when a texture needs it.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, Boolean(flipY));
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -2613,7 +2616,7 @@ function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], op
     ctx.lineCap = 'round';
     children.forEach(node => {
         const parent = node.parentPosition || { x: 50, y: 50 };
-        const point = node.position || parent;
+        const point = pimNodeVisualPosition(node, options.bloomProgress ?? 1);
         const start = { x: parent.x / 100 * label.width, y: parent.y / 100 * label.height };
         const end = { x: point.x / 100 * label.width, y: point.y / 100 * label.height };
         const hue = pimNodeHue(node);

@@ -1307,7 +1307,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
     assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
     assert.match(source, /function canvasTexture\(label, texture = null, flipY = false\)[\s\S]*UNPACK_FLIP_Y_WEBGL, Boolean\(flipY\)/);
-    assert.match(source, /return canvasTexture\(label, null, true\);/);
+    assert.match(source, /return canvasTexture\(label\);/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
     assert.match(source, /is-parent-link/);
@@ -1477,7 +1477,7 @@ test('dashboard focuses on Open AR while the Organizer Folder stays secondary', 
     assert.match(configSource, /name: DEFAULT_HOME_AREA_NAME/);
     assert.match(dashboardSource, /'intro_checkpoint'/);
     assert.match(arSource, /Aim the centre circle, then tap it to place/);
-    assert.match(arSource, /readyPlacementType = '';\s*pendingPlacementAppearance = null;\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
+    assert.match(arSource, /readyPlacementType = '';\s*pendingPlacementAppearance = null;\s*pendingPlacementDetails = null;\s*updateReadyPlacementControl\(\);\s*setPlacementStatus\(`Placing/);
     assert.match(mainSource, /window\.startArMode = \(projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = ''\)/);
     assert.match(mainSource, /const decodeArArgument = value =>/);
     assert.match(mainSource, /window\.openProjectArMode = async \(projectId, areaId = ''\)/);
@@ -1798,7 +1798,13 @@ test('Notes stay simple and return to AR after contextual web editing', () => {
     assert.match(dashboardSource, /entry\.marker\.type === 'note' \? 'Information' : 'Description'/);
     assert.match(dashboardSource, /Transparent with color outline/);
     assert.match(dashboardSource, /surface: noteSurface === 'outline' \? 'outline' : 'filled'/);
+    assert.match(dashboardSource, /projectEntryNoteOpacity/);
     assert.match(arSource, /is-note-outline/);
+    assert.match(arSource, /placementEditorRecord\(placementType\)/);
+    assert.match(arSource, /pendingPlacementDetails/);
+    assert.match(arSource, /name="markerOpacity"/);
+    assert.match(arSource, /opacity: Number\(form\.elements\.markerOpacity/);
+    assert.match(arSource, /Cycle \$\{readyPlacementLabel\(type\)\} opacity/);
     assert.match(demoSource, /function createDemoNoteTexture\(record\)/);
     assert.match(demoSource, /label\.width = 1024;[\s\S]*label\.height = 384/);
     assert.match(demoSource, /record\.demoExpanded = false/);

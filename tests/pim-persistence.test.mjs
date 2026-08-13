@@ -143,3 +143,20 @@ test('new projects seed a complete Pigeon Pea template in Home', async () => {
     assert.equal(profile.spm_enabled, true);
     assert.equal(profile.pim_document.nodes.length, PIGEON_PEA_PIM.nodes.length);
 });
+
+test('new projects fall back to Main Location when site suggestions are unusable', async () => {
+    const response = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Fallback Home Project', siteSuggestions: ['', '!!!'] })
+    });
+    const project = await response.json();
+    assert.equal(response.status, 201);
+    const sites = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites`)).json();
+    assert.equal(sites.length, 1);
+    const places = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places`)).json();
+    assert.ok(places.some(place => place.systemKey === 'home'));
+    const home = places.find(place => place.systemKey === 'home');
+    const markers = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers`)).json();
+    assert.ok(markers.some(marker => marker.name === 'Pigeon Pea' && marker.template_id === 'pigeon-pea-reference'));
+});

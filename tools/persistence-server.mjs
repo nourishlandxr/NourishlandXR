@@ -537,9 +537,10 @@ function createProject(projectData) {
         spatialData: createProjectSpatialData(projectData.spatialData || {})
     };
     writeJson(path.join(projectDir, 'project.json'), project);
-    const siteSuggestions = Array.isArray(projectData.siteSuggestions) && projectData.siteSuggestions.length
-        ? projectData.siteSuggestions
-        : ['Main Location'];
+    const requestedSiteNames = Array.isArray(projectData.siteSuggestions)
+        ? [...new Set(projectData.siteSuggestions.map(value => String(value || '').trim()).filter(name => toProjectId(name)))]
+        : [];
+    const siteSuggestions = requestedSiteNames.length ? requestedSiteNames : ['Main Location'];
     let seededPigeonPea = false;
     for (const siteName of siteSuggestions) {
         const siteId = toProjectId(siteName);
