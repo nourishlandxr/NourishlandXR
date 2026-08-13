@@ -133,9 +133,12 @@ const sourceFacts = result => {
         if (!normalizedValue || normalizedValue.length > 1200) return;
         const destinations = factDestinations(normalizedKey);
         const existing = facts.get(normalizedKey);
-        const mergedValue = normalizedKey === 'alternative_names'
-            ? usefulFactValue([existing?.value || '', normalizedValue])
+        const displayValue = ['common_name', 'alternative_names'].includes(normalizedKey)
+            ? usefulFactValue([normalizedValue])
             : normalizedValue;
+        const mergedValue = normalizedKey === 'alternative_names'
+            ? usefulFactValue([existing?.value || '', displayValue])
+            : displayValue;
         facts.set(normalizedKey, {
             key: normalizedKey,
             label: normalizedKey === 'alternative_names' ? 'Alternative names' : humanFactLabel(normalizedKey),
@@ -427,6 +430,7 @@ function applyCreatorWebHubCopy(app) {
                         globalResults.querySelectorAll('[data-global-allocation-group]').forEach(group => {
                             if (!group.querySelector('[data-global-allocation-fact]')) group.remove();
                         });
+                        result.extractionFields = [...globalResults.querySelectorAll('[data-global-allocation-fact]')].map(row => row.dataset.globalAllocationFact).filter(Boolean);
                     }));
                     globalResults.querySelector('[data-global-allocation-continue]')?.addEventListener('click', async event => {
                         if (!siteGroup?.site?.id || !currentGuide?.creator) {
