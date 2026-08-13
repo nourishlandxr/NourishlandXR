@@ -62,6 +62,20 @@ function alaPreviewMarkup(result) {
     </section>`;
 }
 
+function globalImportSetupMarkup(result) {
+    const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
+    const facts = Array.isArray(result.extractedFacts) ? result.extractedFacts : [];
+    const thumbnail = result.thumbnailUrl
+        ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
+        : '<span aria-hidden="true">&#127793;</span>';
+    return `<section class="field-guide-global-setup" aria-labelledby="globalImportSetupTitle">
+        <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review</span><span class="is-active">3 Plant setup</span></div>
+        <p class="field-guide-import-step">Step 3 of 3 · Plant setup</p>
+        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
+        <p class="meta">Choose an Area and confirm the editable NLXR Plant Profile. The selected source facts will remain available for review.</p>
+    </section>`;
+}
+
 function draw() {
     const plant = markerType === 'plant';
     const globalConversion = plant && Boolean(selectedGlobalPlant);
@@ -72,9 +86,10 @@ function draw() {
         <div class="screen">
             <div class="page-header">
                 <p class="welcome-label">Organizer Folder</p>
-                <h1>Add ${typeLabel}</h1>
-                <p class="subtitle">${plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
+                <h1>${globalConversion ? 'Plant setup' : `Add ${typeLabel}`}</h1>
+                <p class="subtitle">${globalConversion ? 'Step 3 of 3 · Confirm the plant profile and Area.' : plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
             </div>
+            ${globalConversion ? globalImportSetupMarkup(selectedGlobalPlant) : ''}
             <form class="panel minimal-creation-form" onsubmit="window.saveFieldMarker(event)">
                 <div class="field compact-area-field">
                     <label for="fieldArea">Area</label>

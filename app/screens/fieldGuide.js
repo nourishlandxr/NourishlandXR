@@ -8,6 +8,17 @@ import { physicalMarkerLabel } from '../services/physicalAnchor.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value));
+const webHubIcon = name => {
+    const paths = {
+        leaf: '<path d="M19.5 4.5C10 4.7 5.2 8.2 5.2 14.1c0 3.2 2.2 5.4 5.4 5.4 5.9 0 8.4-4.8 8.9-15Z"/><path d="M4.5 20.5c2.9-3.8 6.4-6.2 10.7-8.2"/>',
+        area: '<path d="M4 5.5h6l2 2h8v11H4z"/><path d="M4 9h16"/>',
+        map: '<path d="m4 5 5-2 6 2 5-2v16l-5 2-6-2-5 2z"/><path d="M9 3v16M15 5v16"/>',
+        layers: '<path d="m12 4 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 16l8 4 8-4"/>',
+        anchor: '<path d="M12 4v12M8 8h8M7 16a5 5 0 0 0 10 0"/><path d="M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>',
+        chevron: '<path d="m8 5 7 7-7 7"/>'
+    };
+    return `<svg class="webhub-icon webhub-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.leaf}</svg>`;
+};
 let currentGuide = null;
 let currentGuidePlaceId = '';
 let globalGuideSearchTimer = null;
@@ -44,7 +55,7 @@ const PIM_ALLOCATION_CATEGORIES = Object.freeze([
     { id: 'historical-data', label: 'Historical Data', fallbackCell: 'Imported history' }
 ]);
 const PIM_ALLOCATION_CATEGORY_IDS = new Set(PIM_ALLOCATION_CATEGORIES.map(category => category.id));
-const PROFILE_ONLY_FACTS = new Set(['common_name', 'image']);
+const PROFILE_ONLY_FACTS = new Set(['common_name', 'alternative_names', 'image']);
 const pimAllocationCategory = fact => {
     const suggested = destinationCategoryId(fact?.destination?.[0]);
     if (PIM_ALLOCATION_CATEGORY_IDS.has(suggested)) return suggested;
@@ -59,36 +70,89 @@ const pimAllocationCategory = fact => {
 const pimAllocationCategoryById = id => PIM_ALLOCATION_CATEGORIES.find(category => category.id === id) || PIM_ALLOCATION_CATEGORIES[0];
 const pimAllocationCell = (fact, categoryId) => {
     const suggested = pimAllocationCategory(fact);
-    return suggested.id === categoryId && fact?.destination?.[1]
+    return suggested === categoryId && fact?.destination?.[1]
         ? fact.destination[1]
         : pimAllocationCategoryById(categoryId).fallbackCell;
 };
 
 const humanFactLabel = key => String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+const decodeSourceMarkup = value => String(value ?? '')
+    .replace(/<br\s*\/?>/gi, ' · ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&middot;|&#183;|&bull;|&#8226;/gi, ' · ')
+    .replace(/&amp;|&#38;/gi, '&')
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;|&#60;/gi, '<')
+    .replace(/&gt;|&#62;/gi, '>')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/\s+/g, ' ')
+    .trim();
+const TECHNICAL_SOURCE_KEY = /(?:^|_)(?:id|ids|key|guid|url|uri|flag|flags|score|scores|active|level|ancestor|ancestors|iconic_taxon|taxon_id|georeferenced_count|occurrence_count|match|matches|api|raw|metadata|dataset)(?:$|_)/i;
+const SOURCE_FIELD_ALIASES = Object.freeze({
+    name: 'scientific_name', scientific_name: 'scientific_name', canonical_name: 'scientific_name',
+    vernacular_name: 'common_name', preferred_common_name: 'common_name', common_name: 'common_name',
+    matched_names: 'alternative_names', common_name_matches: 'alternative_names',
+    taxonomic_rank: 'rank', rank_string: 'rank', image_url: 'image', thumbnail_url: 'image',
+    image_attribution: 'attribution', image_license: 'attribution'
+});
+const factGroup = key => {
+    if (['common_name', 'alternative_names', 'description', 'image'].includes(key)) return 'Essential';
+    if (['distribution', 'origin', 'native_range', 'range'].includes(key)) return 'Distribution';
+    if (['source', 'attribution'].includes(key)) return 'Sources';
+    return 'Taxonomy';
+};
+const recommendedFact = key => new Set([
+    'common_name', 'scientific_name', 'alternative_names', 'rank', 'family', 'genus', 'species',
+    'description', 'distribution', 'image', 'source', 'attribution'
+]).has(key);
 const usefulFactValue = value => {
     if (value === null || value === undefined || value === '') return '';
-    if (Array.isArray(value)) return value.map(usefulFactValue).filter(Boolean).join('; ');
-    if (typeof value === 'object') {
-        try { return JSON.stringify(value); } catch { return ''; }
+    if (Array.isArray(value)) {
+        const values = value.map(usefulFactValue).filter(Boolean);
+        return [...new Map(values.flatMap(item => item.split(/\s*(?:;|\||•)\s*/).filter(Boolean).map(part => [part.toLocaleLowerCase(), part]))).values()].join(' · ');
     }
-    return String(value).trim();
+    if (typeof value === 'object') return '';
+    return decodeSourceMarkup(value);
 };
+const isTechnicalSourceKey = key => TECHNICAL_SOURCE_KEY.test(String(key || '').replace(/([a-z])([A-Z])/g, '$1_$2').toLocaleLowerCase());
 const sourceFacts = result => {
     const raw = result?.rawSourceData && typeof result.rawSourceData === 'object' ? result.rawSourceData : {};
     const preferred = {
         common_name: result?.commonName, scientific_name: result?.scientificName, canonical_name: result?.canonicalName,
-        family: result?.family, kingdom: result?.kingdom, rank: result?.rank, image: result?.thumbnailUrl
+        family: result?.family, kingdom: result?.kingdom, rank: result?.rank, image: result?.thumbnailUrl ? 'Reference image available' : '',
+        source: result?.sourceLabel, attribution: result?.imageAttribution
     };
-    const ignored = new Set(['id', 'key', 'guid', 'url', 'thumbnailUrl', 'imageUrl', 'default_photo', 'ancestors']);
     const facts = new Map();
     Object.entries({ ...raw, ...preferred }).forEach(([key, value]) => {
-        const normalizedKey = String(key).replace(/([a-z])([A-Z])/g, '$1_$2').toLocaleLowerCase();
+        const rawKey = String(key).replace(/([a-z])([A-Z])/g, '$1_$2').toLocaleLowerCase();
+        const normalizedKey = SOURCE_FIELD_ALIASES[rawKey] || rawKey;
+        if (isTechnicalSourceKey(rawKey) || ['kingdom', 'source_url', 'source_id'].includes(rawKey)) return;
         const normalizedValue = usefulFactValue(value);
-        if (!normalizedValue || ignored.has(key) || ignored.has(normalizedKey) || normalizedValue.length > 1200) return;
+        if (!normalizedValue || normalizedValue.length > 1200) return;
         const destinations = factDestinations(normalizedKey);
-        facts.set(normalizedKey, { key: normalizedKey, label: humanFactLabel(normalizedKey), value: normalizedValue, destination: destinations[0], destinations });
+        const existing = facts.get(normalizedKey);
+        const mergedValue = normalizedKey === 'alternative_names'
+            ? usefulFactValue([existing?.value || '', normalizedValue])
+            : normalizedValue;
+        facts.set(normalizedKey, {
+            key: normalizedKey,
+            label: normalizedKey === 'alternative_names' ? 'Alternative names' : humanFactLabel(normalizedKey),
+            value: mergedValue,
+            group: factGroup(normalizedKey),
+            recommended: recommendedFact(normalizedKey),
+            destination: destinations[0],
+            destinations
+        });
     });
     return [...facts.values()];
+};
+const technicalSourceFacts = result => {
+    const raw = result?.rawSourceData && typeof result.rawSourceData === 'object' ? result.rawSourceData : {};
+    return Object.entries(raw).filter(([key, value]) => isTechnicalSourceKey(key) && usefulFactValue(value)).slice(0, 14).map(([key, value]) => ({
+        key, label: humanFactLabel(key), value: usefulFactValue(value)
+    }));
 };
 
 async function loadAreaPlants(projectId, siteId, placeId, visitor) {
@@ -181,11 +245,11 @@ function applyCreatorWebHubCopy(app) {
     if (title) title.textContent = 'Web Hub';
     header?.querySelector('.field-guide-header-subtitle')?.remove();
     const snapshotTitle = app.querySelector('#fieldGuideEssentialsTitle');
-    if (snapshotTitle) snapshotTitle.textContent = 'Project overview';
+    if (snapshotTitle) snapshotTitle.textContent = 'Project Home';
     const areasTitle = app.querySelector('#fieldGuideAreasTitle');
     if (areasTitle) areasTitle.textContent = 'Areas';
     const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
-    if (searchTitle) searchTitle.textContent = 'Search plants';
+    if (searchTitle) searchTitle.textContent = 'Plants';
     const searchLabel = app.querySelector('label[for="fieldGuideSearch"]');
     if (searchLabel) searchLabel.textContent = 'Search';
     const creativeTitle = app.querySelector('#fieldGuideCreativeToolsTitle');
@@ -206,7 +270,8 @@ function applyCreatorWebHubCopy(app) {
         const details = document.createElement('details');
         details.className = 'field-guide-all-plants';
         const summary = document.createElement('summary');
-        summary.innerHTML = '<strong>All plants</strong><span class="field-guide-all-plants-count"></span><span class="field-guide-details-chevron" aria-hidden="true">⌄</span>';
+        summary.innerHTML = '<strong>Results</strong><span class="field-guide-all-plants-count"></span><span class="field-guide-details-chevron" aria-hidden="true">⌄</span>';
+        details.open = true;
         plantList.parentNode.insertBefore(details, plantList);
         details.append(summary, plantList);
     }
@@ -225,7 +290,7 @@ function applyCreatorWebHubCopy(app) {
     scope.dataset.fieldGuideScope = '';
     scope.setAttribute('role', 'group');
     scope.setAttribute('aria-label', 'Plant search scope');
-    scope.innerHTML = '<button type="button" data-field-guide-scope-button="global" aria-pressed="false">GLOBAL</button><button type="button" data-field-guide-scope-button="local" class="is-active" aria-pressed="true">LOCAL</button>';
+    scope.innerHTML = '<button type="button" data-field-guide-scope-button="global" aria-pressed="false">Global</button><button type="button" data-field-guide-scope-button="local" class="is-active" aria-pressed="true">Local</button>';
     searchHeading.append(scope);
 
     const globalPanel = document.createElement('div');
@@ -238,10 +303,24 @@ function applyCreatorWebHubCopy(app) {
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
     let searchScope = 'local';
     let openGlobalProfile = null;
+    let globalImportStep = 'select';
     const globalExtractionFields = result => new Set(Array.isArray(result?.extractionFields) && result.extractionFields.length
         ? result.extractionFields
-        : sourceFacts(result).filter(fact => fact.destination[0] !== 'Unassigned').map(fact => fact.key));
-    const referenceProfileMarkup = result => {
+        : sourceFacts(result).filter(fact => fact.recommended).map(fact => fact.key));
+    const importProgress = (step, title) => `<div class="field-guide-import-progress" aria-label="Import progress"><span class="${step === 'select' || step === 'review' || step === 'setup' ? 'is-active' : ''}">1 Select facts</span><span class="${step === 'review' || step === 'setup' ? 'is-active' : ''}">2 Review</span><span class="${step === 'setup' ? 'is-active' : ''}">3 Plant setup</span></div><p class="field-guide-import-step">Step ${step === 'select' ? 1 : step === 'review' ? 2 : 3} of 3 · ${escapeHtml(title)}</p>`;
+    const importIdentityMarkup = (result, label = 'External source') => {
+        const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
+        return `<div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span aria-hidden="true">🌿</span>'}</span><span><strong>${escapeHtml(displayName)}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(label)} · ${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span></div>`;
+    };
+    const valueMarkup = fact => fact.value.length > 110
+        ? `<details class="field-guide-fact-value"><summary>${escapeHtml(fact.value.slice(0, 104))}…</summary><span>${escapeHtml(fact.value)}</span></details>`
+        : `<small>${escapeHtml(fact.value)}</small>`;
+    const focusImportPanel = heading => {
+        globalResults?.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+        heading?.setAttribute('tabindex', '-1');
+        requestAnimationFrame(() => heading?.focus());
+    };
+    const legacyReferenceProfileMarkup = result => {
         const extraction = globalExtractionFields(result);
         const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
         return `<article class="field-guide-global-profile" aria-labelledby="fieldGuideGlobalProfileTitle">
@@ -249,6 +328,20 @@ function applyCreatorWebHubCopy(app) {
             <div class="field-guide-global-profile-body">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-profile-placeholder" aria-hidden="true">🌿</span>'}<dl><div><dt>Scientific name</dt><dd><i>${escapeHtml(result.scientificName || 'Not supplied')}</i></dd></div><div><dt>Family</dt><dd>${escapeHtml(result.family || 'Not supplied')}</dd></div><div><dt>Rank</dt><dd>${escapeHtml(result.rank || 'Taxon')}</dd></div><div><dt>Source</dt><dd>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</dd></div></dl></div>
             <p class="field-guide-global-profile-note">This is the source record as returned by the global plant databases. It is not added to your project until you choose what to extract.</p>
             <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div><h4 id="fieldGuideGlobalExtractTitle">Convert selected content</h4><p>Choose only the facts that belong in your NLXR Plant Profile and PIM. The source citation is kept automatically.</p></div><fieldset><legend>Content to bring into NLXR</legend><label><input type="checkbox" data-global-extract-field="common_name" ${extraction.has('common_name') ? 'checked' : ''} /> <span><strong>Display name</strong><small>Plant identity</small></span></label><label><input type="checkbox" data-global-extract-field="scientific_name" ${extraction.has('scientific_name') ? 'checked' : ''} /> <span><strong>Accepted scientific name</strong><small>Scientific Information · taxonomy</small></span></label>${result.family ? `<label><input type="checkbox" data-global-extract-field="family" ${extraction.has('family') ? 'checked' : ''} /> <span><strong>Family</strong><small>Scientific Information · classification</small></span></label>` : ''}${result.thumbnailUrl ? `<label><input type="checkbox" data-global-extract-field="image" ${extraction.has('image') ? 'checked' : ''} /> <span><strong>Reference image</strong><small>Plant profile image</small></span></label>` : ''}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Convert selected content</button></section>
+        </article>`;
+    };
+    const referenceProfileMarkup = result => {
+        const extraction = globalExtractionFields(result);
+        const facts = sourceFacts(result);
+        const groupedFacts = facts.reduce((groups, fact) => ((groups[fact.group] ||= []).push(fact), groups), {});
+        return `<article class="field-guide-global-profile field-guide-import-view" aria-labelledby="fieldGuideGlobalProfileTitle">
+            ${importProgress('select', 'Select facts')}
+            <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL PLANT IMPORT</span><h3 id="fieldGuideGlobalProfileTitle" tabindex="-1">Select facts</h3><p>Choose useful plant information to bring into NLXR.</p></div></header>
+            ${importIdentityMarkup(result)}
+            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Facts to import</h4><p>Recommended facts are selected. Technical database fields stay out of the PIM.</p></div><button type="button" class="ghost" data-global-select-recommended>Select recommended</button></div><div class="field-guide-fact-groups">${['Essential', 'Taxonomy', 'Distribution', 'Sources'].map(group => groupedFacts[group]?.length ? `<section class="field-guide-fact-group"><h4>${group}</h4><div>${groupedFacts[group].map(fact => `<label class="field-guide-extract-row"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong>${valueMarkup(fact)}${fact.recommended ? '<em class="field-guide-recommended">Recommended</em>' : ''}</span></label>`).join('')}</div></section>` : '').join('')}</div></section>
+            <details class="field-guide-technical-source"><summary>Technical source data</summary><p>Kept as private import metadata for attribution, deduplication and future syncing.</p><dl>${technicalSourceFacts(result).map(fact => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('') || '<p class="meta">No technical fields supplied.</p>'}</dl></details>
+            <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p>
+            <nav class="field-guide-import-actions" aria-label="Import navigation"><button type="button" class="ghost" data-global-profile-back>Back</button><button type="button" class="primary" data-global-profile-review>Review</button></nav>
         </article>`;
     };
     const researchProfileMarkup = result => {
@@ -267,7 +360,7 @@ function applyCreatorWebHubCopy(app) {
             <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Choose facts to extract</h4><p>Select the source facts you want to bring into NLXR. Their smart category suggestions can be changed on the next step.</p></div><div><button type="button" class="ghost" data-global-select-all>Select all</button><button type="button" class="ghost" data-global-clear-all>Clear</button></div></div><fieldset><legend>Content to bring into NLXR</legend>${facts.map(fact => `<div class="field-guide-extract-row"><label class="field-guide-extract-fact"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong><small title="${escapeHtml(fact.value)}">${escapeHtml(fact.value)}</small></span></label><span class="field-guide-extract-suggestion"><small>Smart suggestion</small><strong>${escapeHtml(PROFILE_ONLY_FACTS.has(fact.key) ? 'Plant profile' : pimAllocationCategoryById(pimAllocationCategory(fact)).label)}</strong></span></div>`).join('')}</fieldset><p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><button type="button" class="primary" data-global-profile-convert>Review allocation</button></section>
         </article>`;
     };
-    const allocationReviewMarkup = (result, facts) => {
+    const legacyAllocationReviewMarkup = (result, facts) => {
         const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
         const profileFacts = facts.filter(fact => PROFILE_ONLY_FACTS.has(fact.key));
         const pimFacts = facts.filter(fact => !PROFILE_ONLY_FACTS.has(fact.key));
@@ -279,6 +372,20 @@ function applyCreatorWebHubCopy(app) {
             <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><div class="field-guide-allocation-actions"><button type="button" class="ghost" data-global-allocation-back>Back to fact selection</button><button type="button" class="primary" data-global-allocation-continue>Continue to plant setup</button></div>
         </article>`;
     };
+    const allocationReviewMarkup = (result, facts) => {
+        const profileFacts = facts.filter(fact => PROFILE_ONLY_FACTS.has(fact.key));
+        const pimFacts = facts.filter(fact => !PROFILE_ONLY_FACTS.has(fact.key));
+        const groups = [...new Set(pimFacts.map(fact => pimAllocationCategory(fact)))].map(categoryId => ({ categoryId, facts: pimFacts.filter(fact => pimAllocationCategory(fact) === categoryId) }));
+        return `<article class="field-guide-global-profile field-guide-research-workspace field-guide-import-view" aria-labelledby="fieldGuideAllocationTitle">
+            ${importProgress('review', 'Review')}
+            <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL PLANT IMPORT</span><h3 id="fieldGuideAllocationTitle" tabindex="-1">Review</h3><p>Confirm the proposed PIM destinations before plant setup.</p></div></header>
+            ${importIdentityMarkup(result)}
+            <section class="field-guide-allocation-intro"><strong>${facts.length} selected fact${facts.length === 1 ? '' : 's'}</strong><p>Facts are grouped by destination. Change a complete group once, or open one fact for an individual override.</p></section>
+            ${profileFacts.length ? `<section class="field-guide-allocation-group" data-global-allocation-group="profile"><div class="field-guide-allocation-group-heading"><div><h4>Plant profile · ${profileFacts.length} fact${profileFacts.length === 1 ? '' : 's'}</h4><span>Suggested mapping · Plant profile</span></div></div>${profileFacts.map(fact => `<div class="field-guide-allocation-row" data-global-allocation-fact="${escapeHtml(fact.key)}"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label)}</strong>${valueMarkup(fact)}</div><button type="button" class="ghost" data-global-remove-fact>Remove</button></div>`).join('')}</section>` : ''}
+            ${groups.map(group => { const category = pimAllocationCategoryById(group.categoryId); return `<section class="field-guide-allocation-group" data-global-allocation-group="${group.categoryId}"><div class="field-guide-allocation-group-heading"><div><h4>${escapeHtml(category.label)} · ${group.facts.length} fact${group.facts.length === 1 ? '' : 's'}</h4><span>Suggested mapping</span></div><label>Change category<select data-global-group-category="${group.categoryId}">${PIM_ALLOCATION_CATEGORIES.map(option => `<option value="${option.id}" ${option.id === group.categoryId ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div>${group.facts.map(fact => `<div class="field-guide-allocation-row" data-global-allocation-fact="${escapeHtml(fact.key)}"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label)}</strong>${valueMarkup(fact)}</div><details class="field-guide-allocation-options"><summary>Options</summary><label>Individual override<select data-global-allocation="${escapeHtml(fact.key)}"><option value="">Use group category</option>${PIM_ALLOCATION_CATEGORIES.map(option => `<option value="${option.id}">${option.label}</option>`).join('')}</select></label></details><button type="button" class="ghost" data-global-remove-fact>Remove</button></div>`).join('')}</section>`; }).join('')}
+            <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p><nav class="field-guide-import-actions" aria-label="Import navigation"><button type="button" class="ghost" data-global-allocation-back>Back</button><button type="button" class="primary" data-global-allocation-continue>Continue to plant setup</button></nav>
+        </article>`;
+    };
     const renderGlobalResults = results => {
         if (!globalResults) return;
         globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
@@ -288,41 +395,66 @@ function applyCreatorWebHubCopy(app) {
             openGlobalProfile = result;
             const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
             const renderExtractionStep = () => {
-                globalResults.innerHTML = researchProfileMarkup(result);
+                globalImportStep = 'select';
+                globalResults.innerHTML = referenceProfileMarkup(result);
+                focusImportPanel(globalResults.querySelector('#fieldGuideGlobalProfileTitle'));
                 globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
                     openGlobalProfile = null;
                     renderGlobalResults(results);
                     if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
                 });
                 const profileStatus = globalResults.querySelector('[data-global-profile-status]');
-                globalResults.querySelector('[data-global-select-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = true; }));
-                globalResults.querySelector('[data-global-clear-all]')?.addEventListener('click', () => globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = false; }));
-                globalResults.querySelector('[data-global-profile-convert]')?.addEventListener('click', () => {
+                globalResults.querySelector('[data-global-select-recommended]')?.addEventListener('click', () => {
+                    const recommended = new Set(sourceFacts(result).filter(fact => fact.recommended).map(fact => fact.key));
+                    globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = recommended.has(input.dataset.globalExtractField); });
+                });
+                globalResults.querySelector('[data-global-profile-review]')?.addEventListener('click', () => {
                     const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
                     if (!selectedFields.length) {
                         if (profileStatus) profileStatus.textContent = 'Select at least one fact to continue.';
                         return;
                     }
+                    result.extractionFields = selectedFields;
                     const factsByKey = new Map(sourceFacts(result).map(fact => [fact.key, fact]));
                     const selectedFacts = selectedFields.map(key => factsByKey.get(key)).filter(Boolean);
+                    globalImportStep = 'review';
                     globalResults.innerHTML = allocationReviewMarkup(result, selectedFacts);
+                    focusImportPanel(globalResults.querySelector('#fieldGuideAllocationTitle'));
                     const allocationStatus = globalResults.querySelector('[data-global-profile-status]');
-                    globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', renderExtractionStep);
                     globalResults.querySelector('[data-global-allocation-back]')?.addEventListener('click', renderExtractionStep);
+                    globalResults.querySelectorAll('[data-global-remove-fact]').forEach(removeButton => removeButton.addEventListener('click', () => {
+                        removeButton.closest('[data-global-allocation-fact]')?.remove();
+                        globalResults.querySelectorAll('[data-global-allocation-group]').forEach(group => {
+                            if (!group.querySelector('[data-global-allocation-fact]')) group.remove();
+                        });
+                    }));
                     globalResults.querySelector('[data-global-allocation-continue]')?.addEventListener('click', async event => {
                         if (!siteGroup?.site?.id || !currentGuide?.creator) {
                             if (allocationStatus) allocationStatus.textContent = 'Open this from a Creator Web Hub to create an NLXR plant profile.';
                             return;
                         }
-                        const extractedFacts = selectedFacts.map(fact => {
+                        const visibleRows = [...globalResults.querySelectorAll('[data-global-allocation-fact]')];
+                        const visibleFacts = visibleRows.map(row => factsByKey.get(row.dataset.globalAllocationFact)).filter(Boolean);
+                        const extractedFacts = visibleRows.map(row => {
+                            const fact = factsByKey.get(row.dataset.globalAllocationFact);
+                            if (!fact) return null;
                             if (PROFILE_ONLY_FACTS.has(fact.key)) {
                                 return { ...fact, confirmedDestinations: [], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: 'profile', reviewStatus: 'pending' };
                             }
-                            const categoryId = globalResults.querySelector(`[data-global-allocation="${CSS.escape(fact.key)}"]`)?.value || pimAllocationCategory(fact);
+                            const group = row.closest('[data-global-allocation-group]');
+                            const groupCategory = group?.querySelector('[data-global-group-category]')?.value;
+                            const individualCategory = row.querySelector('[data-global-allocation]')?.value;
+                            const categoryId = individualCategory || groupCategory || pimAllocationCategory(fact);
                             const category = pimAllocationCategoryById(categoryId);
                             const cell = pimAllocationCell(fact, categoryId);
                             return { ...fact, destination: [category.label, cell], confirmedDestinations: [[categoryId, cell]], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: categoryId === pimAllocationCategory(fact) ? 'suggested' : 'confirmed', reviewStatus: 'pending' };
-                        }).filter(fact => fact.key);
+                        }).filter(Boolean);
+                        result.extractionFields = visibleFacts.map(fact => fact.key);
+                        if (!extractedFacts.length) {
+                            if (allocationStatus) allocationStatus.textContent = 'Keep at least one fact before continuing.';
+                            return;
+                        }
+                        globalImportStep = 'setup';
                         event.currentTarget.disabled = true;
                         event.currentTarget.textContent = 'Opening plant setup';
                         try {
@@ -458,9 +590,9 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             } catch {}
             return `<button type="button" class="field-guide-virtual-tag-row${plant.physicalAnchor?.enabled ? ' is-live' : ''}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-virtual-tag-symbol" aria-hidden="true">▦</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small>${escapeHtml(plant.placeName || plant.placeId)} · ${escapeHtml(markerLabel)}</small></span><b>${plant.physicalAnchor?.enabled ? 'LIVE' : 'Open'}</b></button>`;
         }).join('');
-        const virtualTagsSection = creator ? `<details class="field-guide-preparation field-guide-virtual-tags"><summary><span><strong>Plant Live Tags</strong><small>${virtualTags.length} selected · ${virtualTags.filter(plant => plant.physicalAnchor?.enabled).length} live</small></span><span aria-hidden="true">▾</span></summary><div class="field-guide-virtual-tags-body"><p>Plant Live Tags become live when an ArUco marker is linked from the Plant profile.</p><p>Scan a Plant Live Tag to discover the plant, its stories and its relationships with the surrounding ecosystem.</p>${virtualTagRows || '<p class="meta">No Plant profiles are selected yet.</p>'}</div></details>` : '';
+        const virtualTagsSection = creator ? `<details class="field-guide-preparation field-guide-virtual-tags field-guide-management-row"><summary><span><strong>Plant Live Tags</strong><small>${virtualTags.length} selected · ${virtualTags.filter(plant => plant.physicalAnchor?.enabled).length} live</small></span><b>Manage</b><span aria-hidden="true">▾</span></summary><div class="field-guide-virtual-tags-body"><p>Plant Live Tags become live when an ArUco marker is linked from the Plant profile.</p><p>Scan a Plant Live Tag to discover the plant, its stories and its relationships with the surrounding ecosystem.</p>${virtualTagRows || '<p class="meta">No Plant profiles are selected yet.</p>'}</div></details>` : '';
         currentGuidePlaceId = '';
-        const creationBoard = creator ? `<section class="field-guide-creation-board" aria-label="Add information"><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section>` : '';
+        const creationBoard = creator ? `<div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)">${webHubIcon('leaf')}<strong>Add plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')">${webHubIcon('area')}<strong>Add area</strong></button></div>` : '';
         const placedCount = allPlaces.reduce((sum, place) => sum + place.placedCount, 0);
         const placedByArea = allPlaces.filter(place => place.placedCount > 0).map(place => `<span class="field-guide-element-chip"><strong>${place.placedCount}</strong> ${escapeHtml(place.name)}</span>`).join('');
         const elementSummary = creator ? `<section class="field-guide-preparation field-guide-elements-summary" aria-labelledby="fieldGuideElementsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideElementsTitle">Elements</h2><p>Global summary of placed items, grouped by Area.</p></div></div><details class="field-guide-anchor-readiness" open><summary><span aria-hidden="true">⌖</span><div><strong>${placedCount} placed element${placedCount === 1 ? '' : 's'}</strong><p>Plant records remain in the list below.</p></div></summary><div class="field-guide-element-chips">${placedByArea || '<p>No placed elements yet.</p>'}</div></details></section>` : '';
@@ -487,15 +619,44 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
                 const totemMarkup = place.hasTotem
                     ? `<span class="field-guide-area-totem" style="--area-totem-color:${totemColor}" aria-label="Totem Marker" title="Totem Marker">&#x2316;</span>`
                     : '<span class="field-guide-area-totem is-empty" aria-label="No Totem Marker">&#x25CB;</span>';
-                const areaMeta = isDefaultHomeArea(place)
-                    ? `<b>${place.count}</b> plant${place.count === 1 ? '' : 's'} &#x00B7; Unassigned`
-                    : `<b>${place.count}</b> plant${place.count === 1 ? '' : 's'}`;
+                const areaMeta = `<b>${place.count}</b> plant${place.count === 1 ? '' : 's'}${isDefaultHomeArea(place) ? ' &#x00B7; Home workspace' : place.hasTotem ? ' &#x00B7; Totem' : ''}`;
                 const areaLabel = isDefaultHomeArea(place) ? DEFAULT_HOME_AREA_NAME : place.name;
-                return `<button class="field-guide-area-card is-creator-area${isDefaultHomeArea(place) ? ' is-home-area' : ''}" data-field-guide-area data-place="${escapeHtml(place.id)}" data-search="${escapeHtml(searchText)}" type="button" aria-label="${escapeHtml(`${areaLabel}${place.siteName ? `, ${place.siteName}` : ''}`)}" onclick="${action}"><span class="field-guide-area-icon" aria-hidden="true">${areaIcon(place)}</span><span class="field-guide-area-copy"><strong>${escapeHtml(areaLabel)}</strong><small>${areaMeta}</small></span><span class="field-guide-area-totem-slot">${totemMarkup}</span></button>`;
+                return `<button class="field-guide-area-card is-creator-area${isDefaultHomeArea(place) ? ' is-home-area' : ''}" data-field-guide-area data-place="${escapeHtml(place.id)}" data-search="${escapeHtml(searchText)}" type="button" aria-label="${escapeHtml(`${areaLabel}${place.siteName ? `, ${place.siteName}` : ''}`)}" onclick="${action}"><span class="field-guide-area-icon" aria-hidden="true">${areaIcon(place)}</span><span class="field-guide-area-copy"><strong>${escapeHtml(areaLabel)}</strong><small>${areaMeta}</small></span><span class="field-guide-area-arrow" aria-hidden="true">${webHubIcon('chevron')}</span></button>`;
             }).join('');
             const plantRows = guide.plants.map(plant => `<button class="analog-plant-row field-guide-plant-card" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-layer="${escapeHtml(String(plant.layer || '').toLowerCase())}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.origin, plant.plantType, plant.layer, Array.isArray(plant.uses) ? plant.uses.join(' ') : plant.uses, plant.propagation, plant.localNotes, plant.summary, plant.placeId, plant.placeName].join(' ').toLowerCase())}" type="button" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-card-icon" aria-hidden="true">&#x1F33F;</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em></small><small>${escapeHtml(isDefaultHomeArea(plant.placeName) ? DEFAULT_HOME_AREA_NAME : plant.placeName || plant.placeId)}${plant.layer ? ` &#x00B7; ${escapeHtml(plant.layer)}` : ''}</small></span></button>`).join('') || '<div class="panel"><p>No plants yet.</p></div>';
             const creatorPreparationTools = `<section class="field-guide-preparation field-guide-creative-tools" aria-labelledby="fieldGuideCreativeToolsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideCreativeToolsTitle">Creative Features</h2></div></div><div class="field-guide-preparation-grid"><button type="button" onclick="window.renderStartingPoints('${encoded(guide.project.id)}')"><strong>Visitor Entrances</strong><span>Guided beginning.</span></button><details class="field-guide-special-elements"><summary><strong>Special Elements</strong><span>Future V2 features.</span></summary><div class="field-guide-special-copy"><p>Planned place-based tools.</p><ul><li>Videos and moving image</li><li>3D models and spatial objects</li><li>Voice guidance and sound</li><li>More interactive visitor features</li></ul></div></details></div></section><section class="field-guide-preparation" aria-labelledby="fieldGuideAnchorsTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAnchorsTitle">Anchored Elements</h2></div></div><details class="field-guide-anchor-readiness"><summary><span aria-hidden="true">&#x2316;</span><div><strong>${anchoredCount} anchored element${anchoredCount === 1 ? '' : 's'}</strong><p>Only successful physical-space connections.</p></div></summary><div class="field-guide-anchored-list">${anchoredRows || '<p>No elements are anchored yet.</p>'}</div></details></section>`;
             app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div><section class="field-guide-essentials" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading"><h2 id="fieldGuideEssentialsTitle">Project overview</h2><button class="field-guide-map-action" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">Map</button></div><div class="field-guide-summary"><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${guide.totems.length}</strong> Totems</span><span><strong>${placedCount}</strong> Elements</span><span><strong>${anchoredCount}</strong> Anchored</span></div><div class="field-guide-creation-actions"><button type="button" onclick="window.renderLocationFieldMarker('${encoded(guide.project.id)}','plant','without-ar',true)"><strong>+ Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${encoded(guide.project.id)}','field-guide')"><strong>+ Area</strong></button></div></section><section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div><button type="button" onclick="${locationResetAction}">All</button></div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section><section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuidePlantSearchTitle">Search</h2></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div><details class="field-guide-advanced-search"><summary>More filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>${creatorPreparationTools}${virtualTagsSection}<details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
+            const creatorSpatialSetup = `<section class="field-guide-spatial-setup" aria-labelledby="fieldGuideSpatialSetupTitle">
+                <div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Spatial workspace</p><h2 id="fieldGuideSpatialSetupTitle">Spatial setup</h2><p>Map · ${placedCount} elements · ${guide.totems.length} totems · ${anchoredCount} anchors</p></div><button class="field-guide-manage-link" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">${webHubIcon('map')}<span>Manage</span></button></div>
+                <div class="field-guide-spatial-summary"><span>${webHubIcon('map')}<strong>Map</strong></span><span>${webHubIcon('layers')}<strong>${placedCount}</strong> elements</span><span>${webHubIcon('area')}<strong>${guide.totems.length}</strong> totems</span><span>${webHubIcon('anchor')}<strong>${anchoredCount}</strong> anchors</span></div>
+                <div class="field-guide-spatial-list">
+                    <button class="field-guide-spatial-row" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')"><span class="field-guide-spatial-row-icon">${webHubIcon('map')}</span><span><strong>Map</strong><small>View Areas, placed elements and Totem positions.</small></span><b>Manage</b></button>
+                    <details class="field-guide-spatial-row"><summary><span class="field-guide-spatial-row-icon">${webHubIcon('layers')}</span><span><strong>Elements</strong><small>${placedCount} placed across the project</small></span><b>Manage</b></summary><div class="field-guide-element-chips">${placedByArea || '<p class="meta">No placed elements yet.</p>'}</div></details>
+                    <details class="field-guide-spatial-row"><summary><span class="field-guide-spatial-row-icon">${webHubIcon('area')}</span><span><strong>Totems</strong><small>${guide.totems.length} Area information centre${guide.totems.length === 1 ? '' : 's'}</small></span><b>Manage</b></summary><div class="field-guide-totem-list">${totemCards || '<p class="meta">No Totem Markers yet.</p>'}</div></details>
+                    <details class="field-guide-spatial-row"><summary><span class="field-guide-spatial-row-icon">${webHubIcon('anchor')}</span><span><strong>Anchors</strong><small>${anchoredCount} connected to physical space</small></span><b>Manage</b></summary><div class="field-guide-anchored-list">${anchoredRows || '<p class="meta">No physical anchors yet.</p>'}</div></details>
+                </div>
+            </section>`;
+            const creatorCreativeSetup = `<section class="field-guide-secondary-tools" aria-labelledby="fieldGuideCreativeToolsTitle">
+                <div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Optional tools</p><h2 id="fieldGuideCreativeToolsTitle">Creative features</h2><p>Prepare how visitors discover and experience this place.</p></div></div>
+                <div class="field-guide-secondary-tool-list field-guide-management-list">
+                    <button class="field-guide-management-row" type="button" onclick="window.renderStartingPoints('${encoded(guide.project.id)}')"><span class="field-guide-management-row-icon">${webHubIcon('area')}</span><span><strong>Visitor Entrances</strong><small>Guided beginning for visitors.</small></span><b>Manage</b><span class="field-guide-management-row-chevron" aria-hidden="true">${webHubIcon('chevron')}</span></button>
+                    <details class="field-guide-management-row field-guide-special-elements"><summary><span class="field-guide-management-row-icon">${webHubIcon('layers')}</span><span><strong>Special Elements</strong><small>Additional creative content.</small></span><em>Coming in V2</em><span class="field-guide-management-row-chevron" aria-hidden="true">${webHubIcon('chevron')}</span></summary><div class="field-guide-special-copy"><p>Special Elements are planned for a future V2 release.</p><ul><li>Videos and moving image</li><li>3D models and spatial objects</li><li>Voice guidance and sound</li><li>More interactive visitor features</li></ul></div></details>
+                </div>
+            </section>`;
+            app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool field-guide-hub-redesign analog-print-page">
+                <header class="page-header field-guide-header"><div><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div><button class="field-guide-map-action" type="button" aria-label="Open project Map" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">${webHubIcon('map')}<span class="sr-only">Map</span></button></header>
+                <main class="field-guide-workspace">
+                    <section class="field-guide-essentials field-guide-project-home" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading"><div><p class="field-guide-section-kicker">Workspace</p><h2 id="fieldGuideEssentialsTitle">Project Home</h2></div></div><p class="field-guide-project-summary"><strong>${places.length}</strong> area${places.length === 1 ? '' : 's'} <span aria-hidden="true">·</span> <strong>${guide.plants.length}</strong> plant${guide.plants.length === 1 ? '' : 's'}</p></section>
+                    <section class="field-guide-primary-actions" aria-label="Add to project">${creationBoard}</section>
+                    <section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Workspace structure</p><h2 id="fieldGuideAreasTitle">Areas</h2></div>${places.length > 1 ? `<button class="field-guide-view-all" type="button" onclick="window.filterFieldGuidePlace('')">View all</button>` : ''}</div><p class="field-guide-section-intro">Home is the default workspace. Open an Area to work in its saved layout.</p><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>
+                    <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Knowledge records</p><h2 id="fieldGuidePlantSearchTitle">Plants</h2><p>Search saved plants, then switch to Global for reference records.</p></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div><details class="field-guide-advanced-search"><summary>Filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
+                    ${creatorSpatialSetup}
+                    ${creatorCreativeSetup}
+                    ${virtualTagsSection}
+                    <details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details>
+                </main>
+                <footer class="analog-print-footer field-guide-redesign-footer"><button class="ghost analog-navigation" type="button" onclick="${backAction}">Back to Dashboard</button></footer>
+            </div>`;
             // Keep the footer navigation in the Web Hub. Only the print action
             // is removed from the live screen; removing its parent footer
             // leaves users with no route back to the project dashboard.

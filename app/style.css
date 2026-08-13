@@ -8526,3 +8526,554 @@ button.ar-square-action::before { display: none !important; }
 .tryit-demo .plant-knowledge-core strong { font-size:clamp(1rem,1.8vw,1.3rem); }
 .tryit-demo .plant-knowledge-core i,
 .tryit-demo .plant-knowledge-core em { font-size:clamp(.68rem,1.1vw,.86rem); }
+
+/* Web Hub redesign -------------------------------------------------------
+   The creator Web Hub has its own composition so the visitor Field Guide,
+   project dashboard and AR surfaces keep their existing visual contracts. */
+body:has(.field-guide-hub-redesign) {
+    overflow-x: hidden;
+    background: #f5f3eb;
+    color: #23382a;
+}
+
+.field-guide-hub-redesign,
+.field-guide-hub-redesign * {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.field-guide-hub-redesign {
+    --webhub-ink: #23382a;
+    --webhub-muted: #66766a;
+    --webhub-green: #2e7046;
+    --webhub-green-deep: #225b39;
+    --webhub-green-soft: #e6f1e4;
+    --webhub-line: rgba(45, 88, 56, .16);
+    --webhub-surface: rgba(255, 255, 252, .9);
+    width: calc(100% + 32px);
+    max-width: 1192px;
+    margin: 0 -16px;
+    padding: 0 16px calc(36px + env(safe-area-inset-bottom));
+    gap: 0;
+    background: transparent;
+}
+
+.field-guide-hub-redesign .field-guide-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 112px;
+    padding: max(16px, env(safe-area-inset-top)) 0 15px;
+    overflow: hidden;
+    border: 0;
+    border-bottom: 1px solid rgba(47, 91, 57, .12);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.field-guide-hub-redesign .field-guide-header::before {
+    content: "";
+    position: absolute;
+    inset: 0 -20px 0 34%;
+    z-index: 0;
+    background: radial-gradient(circle at 65% 45%, rgba(137, 181, 105, .16), transparent 38%), repeating-linear-gradient(148deg, transparent 0 37px, rgba(83, 132, 85, .08) 38px 39px, transparent 40px 72px);
+    opacity: .75;
+    pointer-events: none;
+}
+
+.field-guide-hub-redesign .field-guide-header > * {
+    position: relative;
+    z-index: 1;
+}
+
+.field-guide-hub-redesign .field-guide-header > div {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.field-guide-hub-redesign .field-guide-header .print-kicker,
+.field-guide-hub-redesign .field-guide-section-kicker {
+    margin: 0 0 5px;
+    color: var(--webhub-muted);
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .12em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.field-guide-hub-redesign .field-guide-header .print-kicker {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.field-guide-hub-redesign .field-guide-header h1 {
+    margin: 0;
+    color: var(--webhub-ink);
+    font-size: clamp(1.8rem, 7vw, 2.15rem);
+    letter-spacing: -.035em;
+    line-height: 1.04;
+}
+
+.field-guide-hub-redesign .field-guide-map-action,
+.field-guide-hub-redesign .field-guide-header .field-guide-map-action {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 1px solid rgba(46, 112, 70, .25);
+    border-radius: 14px;
+    background: rgba(255, 255, 252, .78);
+    color: var(--webhub-green-deep);
+    box-shadow: 0 4px 12px rgba(43, 82, 51, .08);
+}
+
+.field-guide-hub-redesign .field-guide-map-action:hover,
+.field-guide-hub-redesign .field-guide-map-action:focus-visible {
+    border-color: var(--webhub-green);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(46, 112, 70, .12);
+}
+
+.field-guide-hub-redesign .field-guide-map-action::before { content: none !important; }
+
+.field-guide-hub-redesign .webhub-icon {
+    display: block;
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+.field-guide-hub-redesign .field-guide-workspace {
+    display: grid;
+    gap: 26px;
+    padding-top: 24px;
+}
+
+.field-guide-hub-redesign .field-guide-essentials,
+.field-guide-hub-redesign .field-guide-primary-actions,
+.field-guide-hub-redesign .field-guide-areas-board,
+.field-guide-hub-redesign .field-guide-plant-search,
+.field-guide-hub-redesign .field-guide-spatial-setup,
+.field-guide-hub-redesign .field-guide-secondary-tools,
+.field-guide-hub-redesign .field-guide-virtual-tags {
+    width: 100%;
+    min-width: 0;
+}
+
+.field-guide-hub-redesign .field-guide-essentials {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    padding: 16px;
+    border: 1px solid var(--webhub-line);
+    border-radius: 16px;
+    background: var(--webhub-surface);
+    box-shadow: 0 8px 22px rgba(42, 76, 47, .05);
+}
+
+.field-guide-hub-redesign .field-guide-essentials-heading,
+.field-guide-hub-redesign .field-guide-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+}
+
+.field-guide-hub-redesign .field-guide-essentials-heading h2,
+.field-guide-hub-redesign .field-guide-section-heading h2 {
+    margin: 0;
+    color: var(--webhub-ink);
+    font-size: clamp(1.28rem, 5vw, 1.48rem);
+    letter-spacing: -.02em;
+    line-height: 1.12;
+}
+
+.field-guide-hub-redesign .field-guide-project-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+    margin: 0;
+    color: var(--webhub-muted);
+    font-size: .92rem;
+}
+
+.field-guide-hub-redesign .field-guide-project-summary strong {
+    color: var(--webhub-green-deep);
+    font-size: 1.08rem;
+}
+
+.field-guide-hub-redesign .field-guide-primary-actions {
+    display: block;
+    width: 100%;
+    margin-top: -12px;
+}
+
+.field-guide-hub-redesign .field-guide-creation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.field-guide-hub-redesign .field-guide-primary-actions .field-guide-creation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.field-guide-hub-redesign .field-guide-creation-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid var(--webhub-green);
+    border-radius: 14px;
+    background: var(--webhub-green);
+    color: #fff;
+    font-size: .86rem;
+    font-weight: 850;
+    text-align: center;
+    box-shadow: 0 6px 14px rgba(46, 112, 70, .14);
+}
+
+.field-guide-hub-redesign .field-guide-creation-actions button:last-child {
+    border-color: rgba(46, 112, 70, .34);
+    background: rgba(255, 255, 252, .8);
+    color: var(--webhub-green-deep);
+    box-shadow: none;
+}
+
+.field-guide-hub-redesign .field-guide-creation-actions button::before { content: none !important; }
+.field-guide-hub-redesign .field-guide-creation-actions .webhub-icon { width: 18px; height: 18px; }
+.field-guide-hub-redesign .field-guide-creation-actions button:last-child .webhub-icon { color: var(--webhub-green); }
+
+.field-guide-hub-redesign .field-guide-areas-board,
+.field-guide-hub-redesign .field-guide-plant-search,
+.field-guide-hub-redesign .field-guide-spatial-setup,
+.field-guide-hub-redesign .field-guide-secondary-tools {
+    display: grid;
+    gap: 12px;
+}
+
+.field-guide-hub-redesign .field-guide-section-intro,
+.field-guide-hub-redesign .field-guide-section-heading p:not(.field-guide-section-kicker) {
+    margin: 0;
+    color: var(--webhub-muted);
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+.field-guide-hub-redesign .field-guide-section-heading > div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.field-guide-hub-redesign .field-guide-view-all,
+.field-guide-hub-redesign .field-guide-manage-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 5px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid rgba(46, 112, 70, .24);
+    border-radius: 12px;
+    background: rgba(255, 255, 252, .72);
+    color: var(--webhub-green-deep);
+    font-size: .75rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.field-guide-hub-redesign .field-guide-manage-link .webhub-icon { width: 15px; height: 15px; }
+.field-guide-hub-redesign .field-guide-view-all:hover,
+.field-guide-hub-redesign .field-guide-view-all:focus-visible,
+.field-guide-hub-redesign .field-guide-manage-link:hover,
+.field-guide-hub-redesign .field-guide-manage-link:focus-visible { border-color: var(--webhub-green); background: #fff; }
+
+.field-guide-hub-redesign .field-guide-area-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin: 0;
+}
+
+.field-guide-hub-redesign .field-guide-area-grid .field-guide-area-card {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 20px;
+    align-items: center;
+    width: 100%;
+    min-height: 70px;
+    gap: 11px;
+    padding: 12px 13px;
+    overflow: hidden;
+    border: 1px solid var(--webhub-line);
+    border-radius: 14px;
+    background: var(--webhub-surface);
+    color: var(--webhub-ink);
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(42, 76, 47, .04);
+}
+
+.field-guide-hub-redesign .field-guide-area-grid .field-guide-area-card:hover,
+.field-guide-hub-redesign .field-guide-area-grid .field-guide-area-card:focus-visible {
+    border-color: rgba(46, 112, 70, .45);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(46, 112, 70, .1);
+}
+
+.field-guide-hub-redesign .field-guide-area-grid .field-guide-area-card.is-home-area { background: #f1f7ed; }
+.field-guide-hub-redesign .field-guide-area-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--webhub-green-soft); font-size: 1.08rem; }
+.field-guide-hub-redesign .field-guide-area-copy { display: grid; min-width: 0; gap: 4px; }
+.field-guide-hub-redesign .field-guide-area-copy strong { overflow-wrap: anywhere; color: var(--webhub-ink); font-size: .95rem; line-height: 1.2; }
+.field-guide-hub-redesign .field-guide-area-copy small { overflow-wrap: anywhere; color: var(--webhub-muted); font-size: .78rem; line-height: 1.3; white-space: normal; }
+.field-guide-hub-redesign .field-guide-area-copy small b { color: var(--webhub-green-deep); font-size: .86rem; }
+.field-guide-hub-redesign .field-guide-area-arrow { display: grid; place-items: center; color: var(--webhub-green); }
+.field-guide-hub-redesign .field-guide-area-arrow .webhub-icon { width: 17px; height: 17px; }
+
+.field-guide-hub-redesign .field-guide-plant-search > .field-guide-section-heading { align-items: flex-end; flex-wrap: wrap; }
+.field-guide-hub-redesign .field-guide-search-deck { display: grid; gap: 10px; padding: 0; border: 0; background: transparent; }
+.field-guide-hub-redesign .field-guide-search-deck .field { display: grid; gap: 6px; }
+.field-guide-hub-redesign .field-guide-search-deck label { color: var(--webhub-muted); font-size: .72rem; font-weight: 800; }
+.field-guide-hub-redesign .field-guide-search-deck input,
+.field-guide-hub-redesign .field-guide-search-deck select { width: 100%; min-height: 46px; border: 1px solid rgba(45, 88, 56, .22); border-radius: 12px; background: #fff; color: var(--webhub-ink); font-size: 1rem; }
+.field-guide-hub-redesign .field-guide-search-deck input:focus,
+.field-guide-hub-redesign .field-guide-search-deck select:focus { border-color: var(--webhub-green); box-shadow: 0 0 0 3px rgba(46, 112, 70, .12); outline: 0; }
+.field-guide-hub-redesign .field-guide-advanced-search { border: 1px solid var(--webhub-line); border-radius: 12px; background: rgba(255, 255, 252, .68); }
+.field-guide-hub-redesign .field-guide-advanced-search > summary { display: flex; align-items: center; min-height: 44px; padding: 9px 12px; cursor: pointer; color: var(--webhub-green-deep); font-size: .78rem; font-weight: 850; list-style: none; }
+.field-guide-hub-redesign .field-guide-advanced-search > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign .field-guide-advanced-search > summary::after { content: "⌄"; margin-left: auto; font-size: 1rem; }
+.field-guide-hub-redesign .field-guide-advanced-search[open] > summary::after { transform: rotate(180deg); }
+.field-guide-hub-redesign .field-guide-advanced-search > .field { padding: 0 12px 12px; }
+.field-guide-hub-redesign .field-guide-plant-search > #fieldGuideCount { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
+
+.field-guide-hub-redesign .field-guide-plant-scope {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid rgba(46, 112, 70, .2);
+    border-radius: 999px;
+    background: rgba(230, 241, 228, .72);
+}
+
+.field-guide-hub-redesign .field-guide-plant-scope button { min-height: 38px; padding: 7px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--webhub-muted); font-size: .72rem; font-weight: 850; }
+.field-guide-hub-redesign .field-guide-plant-scope button.is-active { background: var(--webhub-green-deep); color: #fff; box-shadow: 0 3px 8px rgba(34, 91, 57, .18); }
+.field-guide-hub-redesign .field-guide-section-heading > .field-guide-plant-scope { display: inline-flex; min-width: 0; gap: 2px; }
+.field-guide-hub-redesign .field-guide-global-search { padding: 0; }
+.field-guide-hub-redesign .field-guide-global-search > .meta { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
+
+.field-guide-hub-redesign .field-guide-all-plants {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--webhub-line);
+    border-radius: 14px;
+    background: rgba(255, 255, 252, .72);
+}
+
+.field-guide-hub-redesign .field-guide-all-plants > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 13px; cursor: pointer; color: var(--webhub-ink); list-style: none; }
+.field-guide-hub-redesign .field-guide-all-plants > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign .field-guide-all-plants > summary strong { font-size: .82rem; }
+.field-guide-hub-redesign .field-guide-all-plants-count { color: var(--webhub-muted); font-size: .76rem; }
+.field-guide-hub-redesign .field-guide-details-chevron { margin-left: auto; color: var(--webhub-green); }
+.field-guide-hub-redesign .field-guide-all-plants[open] .field-guide-details-chevron { transform: rotate(180deg); }
+.field-guide-hub-redesign .field-guide-all-plants > .field-guide-plant-grid { padding: 0 10px 10px; }
+.field-guide-hub-redesign .field-guide-plant-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.field-guide-hub-redesign .field-guide-plant-card { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; width: 100%; min-height: 66px; gap: 10px; padding: 10px 11px; border: 1px solid var(--webhub-line); border-radius: 13px; background: #fff; color: var(--webhub-ink); text-align: left; }
+.field-guide-hub-redesign .field-guide-plant-card:hover,
+.field-guide-hub-redesign .field-guide-plant-card:focus-visible { border-color: rgba(46, 112, 70, .4); background: #fbfffa; box-shadow: 0 0 0 3px rgba(46, 112, 70, .1); }
+.field-guide-hub-redesign .field-guide-card-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--webhub-green-soft); font-size: 1.05rem; }
+.field-guide-hub-redesign .field-guide-plant-card > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-plant-card strong,
+.field-guide-hub-redesign .field-guide-plant-card small { overflow-wrap: anywhere; }
+.field-guide-hub-redesign .field-guide-plant-card strong { font-size: .9rem; }
+.field-guide-hub-redesign .field-guide-plant-card small { color: var(--webhub-muted); font-size: .75rem; line-height: 1.25; }
+
+.field-guide-hub-redesign .field-guide-spatial-setup {
+    padding: 16px;
+    border: 1px solid var(--webhub-line);
+    border-radius: 16px;
+    background: rgba(239, 247, 237, .72);
+}
+
+.field-guide-hub-redesign .field-guide-spatial-summary { display: flex; flex-wrap: wrap; gap: 8px 13px; color: var(--webhub-muted); font-size: .76rem; }
+.field-guide-hub-redesign .field-guide-spatial-summary span { display: inline-flex; align-items: center; gap: 5px; }
+.field-guide-hub-redesign .field-guide-spatial-summary .webhub-icon { width: 14px; height: 14px; color: var(--webhub-green); }
+.field-guide-hub-redesign .field-guide-spatial-summary strong { color: var(--webhub-green-deep); }
+.field-guide-hub-redesign .field-guide-spatial-list { display: grid; gap: 8px; }
+.field-guide-hub-redesign .field-guide-spatial-row { width: 100%; overflow: hidden; border: 1px solid rgba(45, 88, 56, .14); border-radius: 13px; background: rgba(255, 255, 252, .82); }
+.field-guide-hub-redesign .field-guide-spatial-row > summary,
+.field-guide-hub-redesign .field-guide-spatial-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; min-height: 64px; gap: 10px; padding: 10px 12px; color: var(--webhub-ink); text-align: left; }
+.field-guide-hub-redesign .field-guide-spatial-row > summary { cursor: pointer; list-style: none; }
+.field-guide-hub-redesign .field-guide-spatial-row > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign .field-guide-spatial-row > span:nth-child(2) { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-spatial-row strong { font-size: .86rem; }
+.field-guide-hub-redesign .field-guide-spatial-row small { color: var(--webhub-muted); font-size: .74rem; line-height: 1.3; }
+.field-guide-hub-redesign .field-guide-spatial-row > b { color: var(--webhub-green-deep); font-size: .7rem; font-weight: 850; }
+.field-guide-hub-redesign .field-guide-spatial-row-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--webhub-green-soft); color: var(--webhub-green-deep); }
+.field-guide-hub-redesign .field-guide-spatial-row-icon .webhub-icon { width: 17px; height: 17px; }
+.field-guide-hub-redesign .field-guide-spatial-row > div { grid-column: 1 / -1; padding: 0 0 2px 40px; }
+.field-guide-hub-redesign .field-guide-element-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.field-guide-hub-redesign .field-guide-element-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border-radius: 999px; background: var(--webhub-green-soft); color: var(--webhub-green-deep); font-size: .7rem; }
+.field-guide-hub-redesign .field-guide-totem-list,
+.field-guide-hub-redesign .field-guide-anchored-list { display: grid; gap: 6px; }
+.field-guide-hub-redesign .field-guide-totem-list .field-guide-totem-card,
+.field-guide-hub-redesign .field-guide-anchored-list button { width: 100%; min-height: 48px; padding: 8px 10px; border: 1px solid rgba(45, 88, 56, .12); border-radius: 10px; background: #fff; color: var(--webhub-ink); text-align: left; }
+.field-guide-hub-redesign .field-guide-totem-list .field-guide-totem-card { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; }
+.field-guide-hub-redesign .field-guide-totem-list .field-guide-totem-card > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-totem-list .field-guide-totem-card small { overflow-wrap: anywhere; }
+.field-guide-hub-redesign .field-guide-anchored-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.field-guide-hub-redesign .field-guide-anchored-list button > span { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-anchored-list button small { overflow-wrap: anywhere; }
+
+.field-guide-hub-redesign .field-guide-secondary-tools { padding-top: 2px; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list { display: grid; gap: 8px; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list > button,
+.field-guide-hub-redesign .field-guide-secondary-tool-list > details { display: grid; gap: 4px; min-height: 58px; padding: 12px 13px; border: 1px solid var(--webhub-line); border-radius: 13px; background: rgba(255, 255, 252, .72); color: var(--webhub-ink); text-align: left; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list > button span,
+.field-guide-hub-redesign .field-guide-secondary-tool-list > details summary span { color: var(--webhub-muted); font-size: .76rem; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list > details > summary { display: flex; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list > details > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list .field-guide-special-copy { color: var(--webhub-muted); font-size: .76rem; line-height: 1.4; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list .field-guide-special-copy p { margin: 8px 0; }
+.field-guide-hub-redesign .field-guide-secondary-tool-list .field-guide-special-copy ul { margin: 0; padding-left: 18px; }
+.field-guide-hub-redesign .field-guide-virtual-tags { margin-top: 0; }
+.field-guide-hub-redesign .field-guide-area-help { justify-self: start; }
+.field-guide-hub-redesign .field-guide-redesign-footer { display: flex; justify-content: flex-start; width: 100%; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--webhub-line); }
+.field-guide-hub-redesign .field-guide-redesign-footer .analog-navigation { min-height: 44px; }
+
+/* Global plant import: compact, three-step mobile workspace. */
+.field-guide-import-view,
+.field-guide-global-setup { box-sizing: border-box; min-width: 0; }
+.field-guide-import-progress { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--webhub-muted, #66766a); font-size: .68rem; font-weight: 800; }
+.field-guide-import-progress span { padding: 5px 8px; border: 1px solid rgba(46, 112, 70, .14); border-radius: 999px; background: rgba(255, 255, 252, .72); }
+.field-guide-import-progress span.is-active { border-color: rgba(46, 112, 70, .28); background: #e8f2e4; color: #28613b; }
+.field-guide-import-step { margin: -4px 0 0; color: var(--webhub-muted, #66766a); font-size: .72rem; }
+.field-guide-import-identity { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 11px; align-items: center; min-width: 0; padding: 12px; border: 1px solid rgba(46, 112, 70, .14); border-radius: 14px; background: rgba(255, 255, 252, .78); }
+.field-guide-import-thumbnail { display: grid; place-items: center; width: 52px; height: 52px; overflow: hidden; border-radius: 12px; background: #e7f0e3; color: #39764a; font-size: 1.45rem; }
+.field-guide-import-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.field-guide-import-identity > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.field-guide-import-identity strong { overflow-wrap: anywhere; color: var(--webhub-ink, #23382a); font-size: .98rem; line-height: 1.2; }
+.field-guide-import-identity em { overflow-wrap: anywhere; color: var(--webhub-muted, #66766a); font-size: .75rem; }
+.field-guide-import-identity small { color: var(--webhub-muted, #66766a); font-size: .68rem; line-height: 1.3; }
+.field-guide-import-view .field-guide-global-profile-heading { display: block; }
+.field-guide-import-view .field-guide-global-profile-heading h3 { font-size: 1.35rem; }
+.field-guide-import-view .field-guide-global-profile-heading p { margin: 5px 0 0; color: var(--webhub-muted, #66766a); font-size: .78rem; line-height: 1.4; }
+.field-guide-import-view .field-guide-global-profile-extract { padding: 0; border: 0; background: transparent; }
+.field-guide-import-view .field-guide-extract-heading { align-items: center; }
+.field-guide-import-view .field-guide-extract-heading h4 { font-size: .95rem; }
+.field-guide-import-view .field-guide-extract-heading p { max-width: 520px; }
+.field-guide-fact-groups { display: grid; gap: 10px; }
+.field-guide-fact-group { display: grid; gap: 5px; min-width: 0; }
+.field-guide-fact-group h4 { margin: 0; color: var(--webhub-green-deep, #28613b); font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; }
+.field-guide-fact-group > div { display: grid; gap: 5px; }
+.field-guide-import-view .field-guide-extract-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px; align-items: start; min-width: 0; min-height: 44px; padding: 9px 10px; border: 1px solid var(--webhub-line, rgba(45, 88, 56, .16)); border-radius: 11px; background: #fff; }
+.field-guide-import-view .field-guide-extract-row input[type="checkbox"] { width: 22px !important; min-width: 22px !important; max-width: 22px !important; height: 22px; min-height: 22px; max-height: 22px; margin: 1px 0 0; }
+.field-guide-import-view .field-guide-extract-row > span { display: grid; min-width: 0; gap: 2px; }
+.field-guide-import-view .field-guide-extract-row strong { color: var(--webhub-ink, #23382a); font-size: .8rem; line-height: 1.25; }
+.field-guide-import-view .field-guide-extract-row small { overflow-wrap: anywhere; color: var(--webhub-muted, #66766a); font-size: .72rem; line-height: 1.35; }
+.field-guide-recommended { color: #39764a; font-size: .64rem; font-style: normal; font-weight: 850; }
+.field-guide-fact-value { min-width: 0; color: var(--webhub-muted, #66766a); font-size: .72rem; }
+.field-guide-fact-value summary { overflow-wrap: anywhere; cursor: pointer; }
+.field-guide-fact-value span { display: block; margin-top: 3px; overflow-wrap: anywhere; line-height: 1.35; }
+.field-guide-technical-source { border-top: 1px solid var(--webhub-line, rgba(45, 88, 56, .16)); }
+.field-guide-technical-source > summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--webhub-green-deep, #28613b); font-size: .76rem; font-weight: 850; list-style: none; }
+.field-guide-technical-source > summary::-webkit-details-marker { display: none; }
+.field-guide-technical-source > summary::after { content: '⌄'; float: right; }
+.field-guide-technical-source[open] > summary::after { transform: rotate(180deg); }
+.field-guide-technical-source p { color: var(--webhub-muted, #66766a); font-size: .7rem; }
+.field-guide-technical-source dl { display: grid; gap: 5px; margin: 0 0 8px; }
+.field-guide-technical-source dl div { display: grid; grid-template-columns: minmax(0, .45fr) minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid rgba(45, 88, 56, .09); }
+.field-guide-technical-source dt,.field-guide-technical-source dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: .68rem; }
+.field-guide-technical-source dt { color: var(--webhub-muted, #66766a); }
+.field-guide-technical-source dd { color: var(--webhub-ink, #23382a); }
+.field-guide-import-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: space-between; gap: 10px; min-height: 58px; margin: 4px -1px -1px; padding: 10px 0 0; border-top: 1px solid var(--webhub-line, rgba(45, 88, 56, .16)); background: linear-gradient(180deg, rgba(255, 253, 244, 0), rgba(255, 253, 244, .98) 28%); }
+.field-guide-import-actions button { min-width: 88px; min-height: 44px; }
+.field-guide-allocation-group { min-width: 0; }
+.field-guide-allocation-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.field-guide-allocation-group-heading > div { display: grid; min-width: 0; gap: 3px; }
+.field-guide-allocation-group-heading h4 { overflow-wrap: anywhere; }
+.field-guide-allocation-group-heading span { color: var(--webhub-muted, #66766a); font-size: .68rem; }
+.field-guide-allocation-group-heading label { display: grid; flex: 0 1 180px; gap: 3px; min-width: 120px; color: var(--webhub-muted, #66766a); font-size: .62rem; font-weight: 850; }
+.field-guide-allocation-group-heading select { width: 100%; min-height: 38px; padding: 6px 8px; border: 1px solid rgba(45, 88, 56, .22); border-radius: 9px; background: #fff; color: var(--webhub-ink, #23382a); font-size: .72rem; }
+.field-guide-import-view .field-guide-allocation-row { grid-template-columns: minmax(0, 1fr) auto auto; min-width: 0; min-height: 54px; padding: 8px 10px; }
+.field-guide-import-view .field-guide-allocation-fact { min-width: 0; }
+.field-guide-import-view .field-guide-allocation-fact strong { overflow-wrap: anywhere; white-space: normal; }
+.field-guide-import-view .field-guide-allocation-fact small { overflow-wrap: anywhere; white-space: normal; }
+.field-guide-allocation-options { position: relative; }
+.field-guide-allocation-options summary { min-height: 32px; padding: 7px 8px; border: 1px solid rgba(45, 88, 56, .16); border-radius: 8px; cursor: pointer; color: var(--webhub-green-deep, #28613b); font-size: .68rem; font-weight: 800; list-style: none; }
+.field-guide-allocation-options summary::-webkit-details-marker { display: none; }
+.field-guide-allocation-options[open] { min-width: 140px; }
+.field-guide-allocation-options label { display: grid; gap: 3px; margin-top: 5px; color: var(--webhub-muted, #66766a); font-size: .62rem; }
+.field-guide-allocation-options select { min-height: 34px; padding: 5px; border: 1px solid rgba(45, 88, 56, .2); border-radius: 8px; background: #fff; color: var(--webhub-ink, #23382a); font-size: .68rem; }
+.field-guide-import-view [data-global-remove-fact] { min-height: 36px; padding: 6px 8px; color: #7a594d; font-size: .66rem; }
+.field-guide-global-setup { display: grid; gap: 10px; margin-bottom: 12px; padding: 14px; border: 1px solid var(--webhub-line, rgba(45, 88, 56, .16)); border-radius: 16px; background: rgba(239, 247, 237, .72); }
+.field-guide-global-setup .field-guide-import-identity { background: #fff; }
+.field-guide-management-list { display: grid; gap: 8px; }
+.field-guide-hub-redesign .field-guide-management-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 18px; align-items: center; min-width: 0; min-height: 64px; gap: 10px; padding: 10px 12px; border: 1px solid var(--webhub-line); border-radius: 13px; background: rgba(255, 255, 252, .78); color: var(--webhub-ink); text-align: left; }
+.field-guide-hub-redesign button.field-guide-management-row { width: 100%; cursor: pointer; }
+.field-guide-hub-redesign .field-guide-management-row > span:nth-child(2) { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-management-row strong { font-size: .86rem; }
+.field-guide-hub-redesign .field-guide-management-row small { overflow-wrap: anywhere; color: var(--webhub-muted); font-size: .74rem; line-height: 1.3; }
+.field-guide-hub-redesign .field-guide-management-row > b { color: var(--webhub-green-deep); font-size: .7rem; font-weight: 850; }
+.field-guide-hub-redesign .field-guide-management-row > em { color: var(--webhub-muted); font-size: .66rem; font-style: normal; font-weight: 850; white-space: nowrap; }
+.field-guide-management-row-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--webhub-green-soft); color: var(--webhub-green-deep); }
+.field-guide-management-row-icon .webhub-icon,.field-guide-management-row-chevron .webhub-icon { width: 17px; height: 17px; }
+.field-guide-management-row-chevron { display: grid; place-items: center; color: var(--webhub-green); }
+.field-guide-hub-redesign details.field-guide-management-row { padding: 0; }
+.field-guide-hub-redesign details.field-guide-management-row > summary { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 18px; align-items: center; min-height: 64px; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.field-guide-hub-redesign details.field-guide-management-row > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign details.field-guide-management-row > div { grid-column: 1 / -1; padding: 0 12px 12px; }
+
+@media (max-width: 480px) {
+    .field-guide-import-view .field-guide-extract-heading { align-items: stretch; }
+    .field-guide-import-view .field-guide-extract-heading > button { justify-self: start; min-height: 44px; }
+    .field-guide-allocation-group-heading { align-items: stretch; flex-direction: column; }
+    .field-guide-allocation-group-heading label { flex-basis: auto; width: 100%; }
+    .field-guide-import-view .field-guide-allocation-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .field-guide-import-view .field-guide-allocation-options { grid-column: 1 / -1; }
+    .field-guide-import-view [data-global-remove-fact] { grid-column: 2; grid-row: 1; }
+    .field-guide-hub-redesign .field-guide-management-row > em { max-width: 86px; overflow-wrap: anywhere; text-align: right; white-space: normal; }
+}
+
+@media (max-width: 370px) {
+    .field-guide-hub-redesign .field-guide-plant-search > .field-guide-section-heading { align-items: flex-start; }
+    .field-guide-hub-redesign .field-guide-plant-scope { flex-basis: 100%; justify-content: flex-start; margin-top: 2px; }
+}
+
+@media (min-width: 760px) {
+    .field-guide-hub-redesign { padding-right: 24px; padding-left: 24px; }
+    .field-guide-hub-redesign .field-guide-workspace { grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); align-items: start; }
+    .field-guide-hub-redesign .field-guide-essentials,
+    .field-guide-hub-redesign .field-guide-primary-actions,
+    .field-guide-hub-redesign .field-guide-areas-board,
+    .field-guide-hub-redesign .field-guide-secondary-tools,
+    .field-guide-hub-redesign .field-guide-virtual-tags,
+    .field-guide-hub-redesign .field-guide-area-help { grid-column: 1 / -1; }
+    .field-guide-hub-redesign .field-guide-plant-search { grid-column: 1; }
+    .field-guide-hub-redesign .field-guide-spatial-setup { grid-column: 2; }
+    .field-guide-hub-redesign .field-guide-area-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .field-guide-hub-redesign .field-guide-creation-actions { max-width: 560px; }
+    .field-guide-hub-redesign .field-guide-secondary-tool-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

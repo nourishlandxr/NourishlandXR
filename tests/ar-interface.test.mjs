@@ -1302,8 +1302,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /data-pim-layout="honeycomb"/);
     assert.match(source, /pimConnectorPath/);
     assert.match(source, /pimNodeHue/);
-    assert.match(source, /pimFocusedView/);
-    assert.match(source, /pimToggleExpandedPaths/);
+    assert.doesNotMatch(source, /pimFocusedView\(/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
     assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
     assert.match(source, /function canvasTexture\(label, texture = null, flipY = false\)[\s\S]*UNPACK_FLIP_Y_WEBGL, Boolean\(flipY\)/);
@@ -1320,7 +1319,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(source, /pimVisibleNodes/);
     assert.match(source, /pimToggleExpandedPaths/);
-    assert.match(read('app/screens/arMode.js'), /pimToggleExpandedPaths/);
+    assert.match(read('app/screens/arMode.js'), /pimToggleNodeState/);
     assert.match(source, /data-pim-node/);
     assert.match(source, /pimHoneycombTargetAtPercent/);
     assert.match(source, /fixedPimPanelMatrix/);
@@ -1522,6 +1521,13 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldGuide, /data-global-allocation/);
     assert.match(fieldGuide, /Convert selected content/);
     assert.match(fieldGuide, /openGlobalPlantProfile/);
+    assert.match(fieldGuide, /field-guide-import-progress/);
+    assert.match(fieldGuide, /Select recommended/);
+    assert.match(fieldGuide, /Technical source data/);
+    assert.match(fieldGuide, /data-global-group-category/);
+    assert.match(fieldGuide, /Individual override/);
+    assert.match(fieldGuide, /data-global-remove-fact/);
+    assert.match(fieldMarker, /Step 3 of 3/);
     assert.match(fieldMarker, /stagePimImport/);
     assert.match(fieldMarker, /Content selected for NLXR/);
     assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);
@@ -1593,8 +1599,9 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /scientificName: profile\.scientific_name \|\| ''/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
-    assert.match(arSource, /const wasOpen = record\.pimExpandedPaths\?\.includes\(nodePath\)/);
-    assert.match(arSource, /record\.pimExpandedPaths = pimToggleExpandedPaths/);
+    assert.match(arSource, /const wasOpen = creatorPimState\(record\)\.expandedNodeIds\.has\(nodePath\)/);
+    assert.match(arSource, /record\.pimSelectedNodeId = state\.selectedNodeId/);
+    assert.match(arSource, /record\.pimExpandedNodeIds = pimExpandedNodeIds\(state\)/);
     assert.match(arSource, /drawSpatialPlantProfiles\(view\)/);
     assert.match(arSource, /spatialPimTargetAtAim/);
     assert.match(arSource, /drawPlantInformationHoneycomb/);
@@ -1764,6 +1771,8 @@ test('Field Guide separates visual guidance, optional creative tools and physica
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
     assert.match(fieldGuideSource, /Visitor Entrances/);
+    assert.match(fieldGuideSource, /field-guide-management-row/);
+    assert.match(fieldGuideSource, /Coming in V2/);
     assert.match(fieldGuideSource, /anchored element/);
     assert.doesNotMatch(fieldGuideSource, /of \$\{markerCount\} records anchored/);
     assert.match(fieldGuideSource, /renderProjectAreaForm/);

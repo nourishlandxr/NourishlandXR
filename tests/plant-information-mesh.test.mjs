@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
     PIM_SPATIAL_CONFIG,
+    pimCreateInteractionState,
+    pimExpandedNodeIds,
     pimEnsureExpandedPaths,
     pimFocusedView,
     pimKnowledgeNodes,
@@ -15,6 +17,7 @@ import {
     pimSpatialPoseFromStored,
     pimSpatialPoseFromViewer,
     pimToggleExpandedPaths,
+    pimToggleNodeState,
     pimVisibleNodes
 } from '../app/services/plantInformationMesh.js';
 import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
@@ -70,17 +73,70 @@ test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable direction
     );
 });
 
-test('PIM keeps one main category open at a time and closes it on a second press', () => {
+test('PIM preserves sibling primary branches and closes only the selected branch', () => {
     let expanded = pimToggleExpandedPaths([], 'food-forest');
     assert.deepEqual(expanded, ['food-forest']);
     expanded = pimToggleExpandedPaths(expanded, 'uses');
-    assert.deepEqual(expanded, ['uses']);
+    assert.deepEqual(expanded, ['food-forest', 'uses']);
     expanded = pimToggleExpandedPaths(expanded, 'uses/culinary');
-    assert.deepEqual(expanded, ['uses', 'uses/culinary']);
+    assert.deepEqual(expanded, ['food-forest', 'uses', 'uses/culinary']);
     expanded = pimToggleExpandedPaths(expanded, 'uses/culinary/dried-pulse');
-    assert.deepEqual(expanded, ['uses', 'uses/culinary', 'uses/culinary/dried-pulse']);
+    assert.deepEqual(expanded, ['food-forest', 'uses', 'uses/culinary', 'uses/culinary/dried-pulse']);
     expanded = pimToggleExpandedPaths(expanded, 'uses');
-    assert.deepEqual(expanded, []);
+    assert.deepEqual(expanded, ['food-forest']);
+});
+
+test('AR PIM child expansion keeps the complete Pigeon Pea mesh and stable positions', () => {
+    const knowledge = PIGEON_PEA_AR_KNOWLEDGE;
+    let state = pimCreateInteractionState();
+    const visibleIds = () => pimVisibleNodes(knowledge, state.expandedNodeIds, {
+        selectedNodeId: state.selectedNodeId
+    }).map(node => node.path);
+    const positions = () => new Map(pimVisibleNodes(knowledge, state.expandedNodeIds, {
+        selectedNodeId: state.selectedNodeId
+    }).map(node => [node.path, { ...node.position }]));
+
+    assert.deepEqual(visibleIds(), [
+        'food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data', 'cultivation'
+    ]);
+
+    state = pimToggleNodeState(knowledge, state, 'historical-data');
+    assert.equal(state.selectedNodeId, 'historical-data');
+    assert.deepEqual(visibleIds(), [
+        'food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data',
+        'historical-data/cultural-history', 'historical-data/range-and-movement', 'cultivation'
+    ]);
+    const afterHistorical = positions();
+
+    state = pimToggleNodeState(knowledge, state, 'historical-data/cultural-history');
+    assert.equal(state.selectedNodeId, 'historical-data/cultural-history');
+    assert.deepEqual(visibleIds(), [
+        'food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data',
+        'historical-data/cultural-history',
+        'historical-data/cultural-history/attributed-traditional-knowledge',
+        'historical-data/range-and-movement', 'cultivation'
+    ]);
+    for (const [path, position] of afterHistorical) {
+        assert.deepEqual(positions().get(path), position, `${path} keeps its position`);
+    }
+
+    state = pimToggleNodeState(knowledge, state, 'historical-data/cultural-history');
+    assert.deepEqual(visibleIds(), [
+        'food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data',
+        'historical-data/cultural-history', 'historical-data/range-and-movement', 'cultivation'
+    ]);
+    assert.equal(pimExpandedNodeIds(state).includes('historical-data/cultural-history'), false);
+
+    const reopenedPositions = new Map();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        state = pimToggleNodeState(knowledge, state, 'historical-data/cultural-history');
+        const current = positions();
+        const child = current.get('historical-data/cultural-history/attributed-traditional-knowledge');
+        if (!reopenedPositions.size) reopenedPositions.set('child', child);
+        else assert.deepEqual(child, reopenedPositions.get('child'));
+        state = pimToggleNodeState(knowledge, state, 'historical-data/cultural-history');
+    }
+    assert.equal(new Set(visibleIds()).size, visibleIds().length, 'repeated expansion has no duplicate node IDs');
 });
 
 test('PIM cell opening keeps the mesh open and follows the selected submenu path', () => {

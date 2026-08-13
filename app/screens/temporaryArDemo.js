@@ -15,7 +15,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimFocusedView, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8935';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -1682,8 +1682,8 @@ const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, chara
 
 function legacyPlantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
     const expanded = new Set(expandedPaths);
-    const focus = pimFocusedView(knowledge, expandedPaths);
-    const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
+    const focus = null;
+    const nodes = pimVisibleNodes(knowledge, expandedPaths);
     const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}${node.depth > 0 ? ' is-parent-link' : ' is-core-link'}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
     const cells = nodes.map(node => {
         const hasChildren = pimNodeChildren(node).length > 0;
@@ -2605,8 +2605,7 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
 
 function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], options = {}) {
     drawPlantInformationHoneycomb(ctx, label, knowledge, expandedPaths, options);
-    const focus = pimFocusedView(knowledge, expandedPaths);
-    const children = (focus?.nodes || pimVisibleNodes(knowledge, expandedPaths)).filter(node => node.depth > 0);
+    const children = pimVisibleNodes(knowledge, expandedPaths).filter(node => node.depth > 0);
     if (!children.length) return;
     // The shared renderer owns the cells. Add only their parent links behind
     // the rendered pixels so every new bloom is visibly connected to the

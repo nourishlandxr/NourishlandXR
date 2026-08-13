@@ -1,6 +1,5 @@
 import {
     PIM_SPATIAL_CONFIG,
-    pimFocusedView,
     pimNodeHue,
     pimNodeVisualPosition,
     pimVisibleNodes
@@ -61,8 +60,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const height = canvas.height;
     const center = { x: width / 2, y: height / 2 };
     const expanded = new Set(expandedPaths);
-    const focus = pimFocusedView(knowledge, expandedPaths);
-    const nodes = focus?.nodes || pimVisibleNodes(knowledge, expandedPaths);
+    const nodes = pimVisibleNodes(knowledge, expandedPaths, {
+        selectedNodeId: options.selectedNodeId
+    });
     const reducedMotion = options.reducedMotion ?? (typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     const bloom = reducedMotion ? 1 : Math.max(0, Math.min(1, Number(options.bloomProgress ?? 1)));
@@ -90,7 +90,8 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const point = position(node);
         const open = expanded.has(node.path);
         const hovered = hoverPath === node.path;
-        const active = open || hovered;
+        const selected = String(options.selectedNodeId || '') === node.path;
+        const active = open || hovered || selected;
         const hue = pimNodeHue(node);
         const radius = (active ? 104 : 100) * (node.depth > 0 ? Math.max(.12, nodeBloom) : 1);
         context.save();
@@ -136,15 +137,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     context.lineWidth = 8;
     context.font = '850 36px system-ui, sans-serif';
-    const coreTitle = focus?.focusNode.label || knowledge.title || knowledge.name || 'Plant';
+    const coreTitle = knowledge.title || knowledge.name || 'Plant';
     const coreLines = wrapLines(context, coreTitle, 154).slice(0, 3);
     drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * 18, 36);
-    if (focus?.focusNode.value) {
-        context.font = '650 18px system-ui, sans-serif';
-        context.fillStyle = 'rgba(255, 255, 255, .94)';
-        drawWrappedText(context, focus.focusNode.value, center.x, center.y + 52, 150, 18, 2);
-    }
-
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.
     return;
@@ -165,11 +160,11 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
 
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
-    const focus = pimFocusedView(knowledge, expandedPaths);
-    if (focus && Math.hypot(xPercent - 50, yPercent - 50) <= 10) return { ...focus.focusNode, pimBack: true };
     const hitRadius = PIM_SPATIAL_CONFIG.cellWidthMetres / PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * 50 * PIM_SPATIAL_CONFIG.colliderScale;
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
-    return (focus?.nodes || pimVisibleNodes(knowledge, expandedPaths))
+    return pimVisibleNodes(knowledge, expandedPaths, {
+        selectedNodeId: options.selectedNodeId
+    })
         .map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
             return { node, distance: Math.hypot(xPercent - point.x, yPercent - point.y) };

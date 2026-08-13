@@ -275,9 +275,9 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(styles, /\.field-guide-tool \.field-guide-map-action \{[\s\S]*min-height:32px/);
     assert.match(fieldGuideSource, /field-guide-primary-actions/);
     assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
-    assert.match(fieldGuideSource, /Project overview/);
+    assert.match(fieldGuideSource, /Project Home/);
     assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
-    assert.match(fieldGuideSource, /All plants/);
+    assert.match(fieldGuideSource, /Results/);
     assert.match(fieldGuideSource, /field-guide-all-plants-count/);
     assert.match(fieldGuideSource, /app\.querySelector\('#fieldGuideCount'\)\?\.remove\(\)/);
     assert.match(fieldGuideSource, /searchGlobalPlants/);
@@ -292,8 +292,12 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /field-guide-plant-search/);
     assert.match(fieldGuideSource, /field-guide-area-help/);
     assert.match(fieldGuideSource, /is-search-match/);
-    assert.match(fieldGuideSource, /<strong>\+ Plant<\/strong>/);
-    assert.match(fieldGuideSource, /<strong>\+ Area<\/strong>/);
+    assert.match(fieldGuideSource, /<strong>Add plant<\/strong>/);
+    assert.match(fieldGuideSource, /<strong>Add area<\/strong>/);
+    assert.match(fieldGuideSource, /field-guide-hub-redesign/);
+    assert.match(fieldGuideSource, /field-guide-spatial-setup/);
+    assert.match(fieldGuideSource, /field-guide-spatial-summary/);
+    assert.match(fieldGuideSource, /field-guide-view-all/);
     assert.match(fieldGuideSource, /Plant Live Tags/);
     assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
     assert.match(fieldGuideSource, /physicalAnchor\?\.enabled/);
@@ -307,6 +311,21 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
     assert.match(fieldGuideSource, /<strong>\$\{places\.length\}<\/strong> Areas/);
     assert.match(fieldGuideSource, /<strong>\$\{guide\.totems\.length\}<\/strong> Totems/);
+});
+
+test('Web Hub redesign keeps a compact mobile grid and expands into desktop columns', () => {
+    const source = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
+    assert.match(source, /field-guide-hub-redesign/);
+    assert.match(source, /Project Home/);
+    assert.match(source, /<strong>Add plant<\/strong>/);
+    assert.match(source, /<strong>Add area<\/strong>/);
+    assert.match(source, /Spatial setup/);
+    assert.match(source, /Map · \$\{placedCount\} elements · \$\{guide\.totems\.length\} totems · \$\{anchoredCount\} anchors/);
+    assert.match(styles, /\.field-guide-hub-redesign \{[\s\S]*width: calc\(100% \+ 32px\)/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-primary-actions \.field-guide-creation-actions[\s\S]*display: grid/);
+    assert.match(styles, /@media \(min-width: 760px\)[\s\S]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(300px, \.85fr\)/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-map-action::before[\s\S]*content: none/);
 });
 
 test('creator dashboard frame stays inside the viewport with a simple border', () => {

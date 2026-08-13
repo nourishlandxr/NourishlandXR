@@ -94,6 +94,13 @@ function normalizeNode(item, path, parentPath = 'core', defaults = {}) {
         path: String(item?.path || path),
         id: String(item?.id || defaults.id || path),
         parentPath: String(item?.parentPath || parentPath),
+        // `path` is the stable, document-wide node key used by the AR
+        // interaction state. Keep an explicit parentId relationship beside
+        // the legacy parentPath field so renderers never need to infer a
+        // focused subtree from the clicked node.
+        parentId: item?.parentId === null || item?.parentId === undefined || item?.parentId === ''
+            ? (String(item?.parentPath || parentPath) === 'core' ? null : String(item?.parentPath || parentPath))
+            : String(item.parentId),
         label: String(label || 'Information'),
         value: String(value || ''),
         direction: String(item?.direction || defaults.direction || ''),
@@ -226,6 +233,53 @@ export function pimNodeAtPath(knowledge = {}, path = '') {
     return null;
 }
 
+function expandedIdSet(expandedNodeIds = []) {
+    if (expandedNodeIds instanceof Set) return new Set([...expandedNodeIds].map(String).filter(Boolean));
+    return new Set((Array.isArray(expandedNodeIds) ? expandedNodeIds : []).map(String).filter(Boolean));
+}
+
+function ancestorPaths(path) {
+    const target = String(path || '');
+    if (!target) return [];
+    const separator = target.includes('/') ? '/' : '.';
+    const segments = target.split(separator).filter(Boolean);
+    return segments.map((_, index) => segments.slice(0, index + 1).join(separator));
+}
+
+/**
+ * The AR PIM keeps selection and expansion as two different pieces of state.
+ * `selectedNodeId` is only for highlighting/status; `expandedNodeIds` controls
+ * which descendants are present in the complete mesh.
+ */
+export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '') {
+    return {
+        selectedNodeId: String(selectedNodeId || ''),
+        expandedNodeIds: expandedIdSet(expandedNodeIds)
+    };
+}
+
+export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
+    const targetId = String(nodeId || '');
+    const node = pimNodeAtPath(knowledge, targetId);
+    const next = pimCreateInteractionState(state?.expandedNodeIds, targetId || state?.selectedNodeId);
+    if (!node) return next;
+    const children = pimNodeChildren(node);
+    if (!children.length) return next;
+    if (next.expandedNodeIds.has(targetId)) {
+        next.expandedNodeIds = new Set([...next.expandedNodeIds]
+            .filter(candidate => candidate !== targetId
+                && !candidate.startsWith(`${targetId}.`)
+                && !candidate.startsWith(`${targetId}/`)));
+        return next;
+    }
+    ancestorPaths(targetId).forEach(ancestor => next.expandedNodeIds.add(ancestor));
+    return next;
+}
+
+export function pimExpandedNodeIds(state = {}) {
+    return [...expandedIdSet(state?.expandedNodeIds)];
+}
+
 // Deeper selections become the centre of the next connected honeycomb. This
 // keeps the information graph effectively unbounded while showing only one
 // clean generation at a time.
@@ -260,55 +314,62 @@ export function pimFocusedView(knowledge = {}, expandedPaths = []) {
     return { focusNode, nodes, trail };
 }
 
-export function pimVisibleNodes(knowledge = {}, expandedPaths = []) {
-    const expanded = new Set(Array.isArray(expandedPaths) ? expandedPaths : []);
-    const roots = pimKnowledgeNodes(knowledge).map(node => {
-        const position = pimRootPosition(node);
-        return {
+export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}) {
+    const expanded = expandedIdSet(expandedPaths);
+    const selectedNodeId = String(options.selectedNodeId || '');
+    // The selected node itself is visible as a node, but selection alone must
+    // not open its children. Only its complete ancestor path is implicit.
+    const selectedPathParts = ancestorPaths(selectedNodeId);
+    const selectedAncestors = new Set(selectedPathParts.slice(0, -1));
+    const visible = [];
+    const corePosition = positionedAxial({ q: 0, r: 0 });
+
+    const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
+        const position = depth === 0
+            ? pimRootPosition(node)
+            : pimChildPosition(parentRecord, childIndex, childCount);
+        const record = {
             ...node,
-            depth: 0,
-            rootDirection: node.direction,
+            nodeId: node.path,
+            parentId: node.parentPath === 'core' ? null : node.parentPath,
+            depth,
+            rootDirection,
             position,
-            parentPosition: positionedAxial({ q: 0, r: 0 }),
-            childIndex: 0,
-            childCount: 1
+            parentPosition: parentRecord?.position || corePosition,
+            childIndex,
+            childCount
         };
-    });
-    const activeRoot = roots.find(node => expanded.has(node.path));
-    if (!activeRoot) return roots;
-    const children = pimNodeChildren(activeRoot).slice(0, 8);
-    return [
-        ...roots,
-        ...children.map((child, index) => ({
-            ...child,
-            depth: 1,
-            rootDirection: activeRoot.direction,
-            position: pimChildPosition(activeRoot, index, children.length),
-            parentPosition: activeRoot.position,
-            childIndex: index,
-            childCount: children.length
-        }))
-    ];
+        visible.push(record);
+
+        const children = pimNodeChildren(node);
+        const open = expanded.has(node.path) || selectedAncestors.has(node.path);
+        if (!open || !children.length) return;
+        children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));
+    };
+
+    pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
+    return visible;
 }
 
 export function pimToggleExpandedPaths(expandedPaths, path) {
     const target = String(path || '');
     if (!target) return [];
-    const current = Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
-    const isOpen = current.includes(target);
-    if (isOpen) return current.filter(candidate => candidate !== target && !candidate.startsWith(`${target}.`) && !candidate.startsWith(`${target}/`));
-    return pimEnsureExpandedPaths(current, target);
+    const current = expandedIdSet(expandedPaths);
+    if (current.has(target)) {
+        return [...current].filter(candidate => candidate !== target
+            && !candidate.startsWith(`${target}.`)
+            && !candidate.startsWith(`${target}/`));
+    }
+    ancestorPaths(target).forEach(ancestor => current.add(ancestor));
+    return [...current];
 }
 
 export function pimEnsureExpandedPaths(expandedPaths, path) {
     const target = String(path || '');
-    if (!target) return Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
-    const current = Array.isArray(expandedPaths) ? expandedPaths.map(String) : [];
-    if (current.includes(target)) return current;
-    const separator = target.includes('/') ? '/' : '.';
-    const segments = target.split(separator);
-    const ancestors = segments.map((_, index) => segments.slice(0, index + 1).join(separator));
-    return ancestors;
+    const current = expandedIdSet(expandedPaths);
+    if (!target) return [...current];
+    ancestorPaths(target).forEach(ancestor => current.add(ancestor));
+    return [...current];
 }
 
 function normalizedHorizontal(vector, fallback) {
