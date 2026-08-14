@@ -15,14 +15,16 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8949';
+import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8950';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
-import { plantInformationMeshMarkup } from '../services/plantInformationMeshView.js';
+import { plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
+import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
+import { plantInformationMeshSurfaceLayout } from '../services/plantInformationMeshSurfaceLayout.js';
 
 let appRoot = null;
 let session = null;
@@ -84,6 +86,7 @@ let demoPimWebController = null;
 let demoHoldButtonCleanup = null;
 let demoViewportCleanup = null;
 let groundYEstimate = null;
+let demoTutorialStep = DEMO_TUTORIAL_STEPS.WELCOME;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
@@ -238,6 +241,16 @@ const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA
     scientificName: 'Moringa oleifera'
 })));
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
+const demoSpatialPimLayoutOptions = () => ({
+    safeArea: {
+        left: 5,
+        right: 95,
+        top: [DEMO_TUTORIAL_STEPS.PIM, DEMO_TUTORIAL_STEPS.LIVE_TAG].includes(demoTutorialStep) ? 12 : 6,
+        bottom: 84
+    },
+    layoutWidth: PIM_TEXTURE_SIZE.width,
+    layoutHeight: PIM_TEXTURE_SIZE.height
+});
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
@@ -261,6 +274,7 @@ function clearSessionState() {
     demoHeldIndex = -1;
     suppressSessionSelectUntil = 0;
     demoWebModeOpen = false;
+    demoTutorialStep = DEMO_TUTORIAL_STEPS.WELCOME;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
     skipDemoNarration = null;
@@ -336,6 +350,21 @@ function returnToWelcome() {
 function setGuide(message) {
     const guide = appRoot?.querySelector('[data-tryit-guide]');
     if (guide) guide.textContent = message;
+}
+
+function setDemoTutorialStep(step) {
+    const controls = demoTutorialControlsForStep(step);
+    demoTutorialStep = controls.step;
+    const root = appRoot?.querySelector('.tryit-demo');
+    if (root) root.dataset.demoTutorialStep = controls.step;
+    const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]');
+    if (liveTagButton) {
+        liveTagButton.hidden = !controls.showOpenPlantLiveTag;
+        if (!controls.showOpenPlantLiveTag) liveTagButton.onclick = null;
+    }
+    const footer = appRoot?.querySelector('.tryit-demo-footer');
+    if (footer) footer.hidden = !controls.showPersistentControls;
+    return controls;
 }
 
 function nextDemoTextLength(text, currentLength) {
@@ -416,6 +445,7 @@ function openDemoVirtualTag(record) {
     placementReady = false;
     suppressSessionSelectUntil = Number.POSITIVE_INFINITY;
     hideGuidedChoice({ hideBoard: true });
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.WEB_MODE);
     appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
     appRoot?.querySelector('.tryit-demo')?.classList.add('is-web-mode');
     const stage = appRoot?.querySelector('.tryit-stage');
@@ -433,13 +463,33 @@ function openDemoVirtualTag(record) {
     setGuide('Web Mode is showing the complete Pigeon Pea Plant Profile.');
 }
 
+function advancePastVirtualTag(record) {
+    if (!record) return;
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PLACEMENT);
+    record.demoExpanded = false;
+    refreshDemoRecord(record);
+    if (record.tutorialStage === 'plant2') showDemoAction('note');
+    else armDemoPlacement('plant2');
+}
+
 function inviteVirtualTag(record) {
-    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to open the plant profile.</p>', () => {}, { persistent: true });
+    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to open the plant profile.</p>', () => {}, {
+        persistent: true,
+        tutorialStep: DEMO_TUTORIAL_STEPS.LIVE_TAG
+    });
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.LIVE_TAG);
+    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+    if (continueButton) {
+        continueButton.textContent = demoLocalizedText('Continue');
+        continueButton.hidden = false;
+        continueButton.onclick = () => {
+            suppressSessionSelectUntil = performance.now() + 700;
+            advancePastVirtualTag(record);
+        };
+    }
     const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]');
     if (!liveTagButton) return;
-    liveTagButton.hidden = false;
     liveTagButton.onclick = () => {
-        liveTagButton.hidden = true;
         openDemoVirtualTag(record);
     };
 }
@@ -470,7 +520,7 @@ function hideGuidedChoice({ hideBoard = false } = {}) {
     }
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
-    if (hideBoard) appRoot?.querySelector('[data-tryit-open-live-tag]')?.setAttribute('hidden', '');
+    setDemoTutorialStep(hideBoard ? DEMO_TUTORIAL_STEPS.HIDDEN : DEMO_TUTORIAL_STEPS.GUIDED);
     introBoardVisible = !hideBoard;
 }
 
@@ -515,6 +565,7 @@ function prepareTutorialBoard(panel) {
 function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
+    setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     panel.innerHTML = html;
     panel.classList.remove('is-persistent-demo-board');
     const title = panel.querySelector('h2');
@@ -618,6 +669,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
     const paragraphs = (Array.isArray(body) ? body : [body])
         .map(value => demoLocalizedText(String(value || '').trim()))
@@ -720,9 +772,11 @@ function finishIntroBoard() {
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
     introBoardVisible = true;
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PLACEMENT);
 }
 
 function showPersistentPimPrompt(record) {
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
@@ -769,7 +823,8 @@ function runArWelcomeTutorial() {
             // through into placement. The next deliberate aim press places it.
             suppressSessionSelectUntil = performance.now() + 700;
             armDemoPlacement('plant');
-        }
+        },
+        { tutorialStep: DEMO_TUTORIAL_STEPS.WELCOME }
     );
 }
 
@@ -1143,14 +1198,13 @@ function applySimulatedMarkerAnchor(layer, index, anchor) {
 
 function clampPlantPanelOffset(anchor, offset) {
     const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
-    const profileWidth = Math.min(viewportWidth - 24, 960);
-    const profileHeight = Math.min(viewportHeight * 0.62, 620);
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
-    const minimumX = 12 + profileWidth / 2 - anchorX;
-    const maximumX = viewportWidth - 12 - profileWidth / 2 - anchorX;
-    const minimumY = 12 + profileHeight / 2 - anchorY;
-    const maximumY = viewportHeight - 12 - profileHeight / 2 - anchorY;
+    const surface = demoPimSurfaceLayout(anchor);
+    const minimumX = 12 + surface.panelWidth / 2 - anchorX;
+    const maximumX = viewportWidth - 12 - surface.panelWidth / 2 - anchorX;
+    const minimumY = surface.topInset + surface.panelHeight / 2 - anchorY;
+    const maximumY = viewportHeight - surface.bottomInset - surface.panelHeight / 2 - anchorY;
     return {
         x: Math.min(maximumX, Math.max(minimumX, offset.x)),
         y: Math.min(maximumY, Math.max(minimumY, offset.y))
@@ -1159,17 +1213,12 @@ function clampPlantPanelOffset(anchor, offset) {
 
 function defaultPlantPanelOffset(anchor) {
     const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
-    const profileHeight = Math.min(viewportHeight * 0.62, 620);
+    const surface = demoPimSurfaceLayout(anchor);
+    const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
-    const margin = 28;
-    const aboveOffset = -(profileHeight / 2 + margin);
-    const belowOffset = profileHeight / 2 + margin;
-    const belowBottom = anchorY + belowOffset + profileHeight / 2;
-    const fitsBelow = belowBottom <= viewportHeight - 12;
-    const preferAbove = anchorY >= viewportHeight * .42 || !fitsBelow;
     return clampPlantPanelOffset(anchor, {
-        x: 0,
-        y: preferAbove ? aboveOffset : belowOffset
+        x: surface.panelX - anchorX,
+        y: surface.panelY - anchorY
     });
 }
 
@@ -1179,6 +1228,38 @@ function demoViewportDimensions() {
         width: Math.max(320, Number(visualViewport?.width) || window.innerWidth || 320),
         height: Math.max(320, Number(visualViewport?.height) || window.innerHeight || 640)
     };
+}
+
+function demoPimViewportInsets() {
+    const { height } = demoViewportDimensions();
+    const visualViewport = window.visualViewport;
+    const viewportTop = Number(visualViewport?.offsetTop) || 0;
+    const footer = appRoot?.querySelector('.tryit-demo-footer:not([hidden])');
+    const footerRect = footer?.getBoundingClientRect();
+    const board = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden])');
+    const boardRect = board?.getBoundingClientRect();
+    const compactTutorial = [DEMO_TUTORIAL_STEPS.PIM, DEMO_TUTORIAL_STEPS.LIVE_TAG].includes(demoTutorialStep);
+    const measuredTop = compactTutorial && boardRect
+        ? boardRect.bottom - viewportTop + 10
+        : 0;
+    return {
+        topInset: compactTutorial
+            ? Math.max(80, Math.min(height * .21, measuredTop || height * .18))
+            : 12,
+        bottomInset: Math.max(12, (footerRect?.height || 104) + 16)
+    };
+}
+
+function demoPimSurfaceLayout(anchor = { x: 50, y: 50 }) {
+    const { width, height } = demoViewportDimensions();
+    const insets = demoPimViewportInsets();
+    return plantInformationMeshSurfaceLayout(
+        width,
+        height,
+        width * Number(anchor.x || 50) / 100,
+        height * Number(anchor.y || 50) / 100,
+        insets
+    );
 }
 
 function capturedSimulatedAnchor() {
@@ -1195,14 +1276,37 @@ function demoOrbStyle(record) {
     return DEMO_ORB_MATERIALS[record?.demoOrbColor]?.style || '';
 }
 
+function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { x: 50, y: 50 }) {
+    const viewport = demoViewportDimensions();
+    const surface = demoPimSurfaceLayout(anchor);
+    const markerY = viewport.height * Number(anchor.y || 50) / 100;
+    const markerClearance = 24;
+    const markerReservedInset = surface.profileAbove
+        ? Math.max(8, surface.panelTop + surface.panelHeight - (markerY - markerClearance))
+        : 8;
+    return plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), {
+        selectedNodeId: record.demoSelectedNodeId,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        layoutWidth: surface.panelWidth,
+        layoutHeight: surface.panelHeight,
+        safeArea: pimViewportSafeArea(surface.panelWidth, surface.panelHeight, {
+            horizontalInset: 8,
+            topInset: 8,
+            bottomInset: markerReservedInset
+        })
+    });
+}
+
 function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbAppearance = demoOrbStyle(record);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
     const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
-    const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
+    const surface = demoPimSurfaceLayout(anchor);
+    const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px;width:${surface.panelWidth}px;height:${surface.panelHeight}px`;
+    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${demoPlantKnowledgeMarkup(record, anchor)}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -1224,6 +1328,7 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
+        setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
         record.profileRevealStarted = performance.now();
         const firstOpen = !record.demoProfileOpened;
@@ -1236,14 +1341,19 @@ function toggleDemoPlantProfile(record) {
         }
         record.informationPose = plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition || null;
+        // Establish the compact tutorial board before sizing the canonical
+        // mesh so its first frame already respects the true top safe inset.
+        showPersistentPimPrompt(record);
     }
     refreshDemoRecord(record);
     if (record.demoExpanded && record.awaitingProfileReveal) {
         record.awaitingProfileReveal = false;
         navigator.vibrate?.([45, 40, 75]);
     }
-    if (record.demoExpanded) showPersistentPimPrompt(record);
-    else setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
+    if (!record.demoExpanded) {
+        setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
+        setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
+    }
 }
 
 export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantProfile) {
@@ -1296,11 +1406,13 @@ function selectDemoProfileCell() {
     if (node.pimBack) {
         setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
         record.demoActiveBranch = node.parentPath === 'core' ? '' : node.parentPath;
-        refreshDemoRecord(record);
+        refreshDemoPimProfile(record);
         setGuide(`Returned to the previous ${node.label} bloom.`);
         return true;
     }
     if (!pimNodeChildren(node).length) {
+        setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
+        refreshDemoPimProfile(record);
         setGuide(`${node.label}: ${node.value || 'Information cell'}`);
         return true;
     }
@@ -1310,8 +1422,7 @@ function selectDemoProfileCell() {
         ? (node.parentPath === 'core' ? '' : node.parentPath)
         : node.path;
     record.pimBloomStarted = performance.now();
-    if (record.texture) gl?.deleteTexture(record.texture);
-    record.texture = createMarkerTexture(record);
+    refreshDemoPimProfile(record);
     const opened = demoPimState(record).expandedNodeIds.has(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
     setGuide(opened
@@ -1382,7 +1493,11 @@ function demoPimPointerTarget(record) {
         panelHit: true,
         xPercent,
         yPercent,
-        node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, { bloomProgress })
+        node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, {
+            ...demoSpatialPimLayoutOptions(),
+            bloomProgress,
+            selectedNodeId: record.demoSelectedNodeId
+        })
     };
 }
 
@@ -1601,55 +1716,55 @@ function bindSimulatedInformationPanels(layer) {
         const record = markers[index];
         const handle = profile.querySelector('[data-plant-profile-handle]');
         if (!record || !handle) return;
-        const back = profile.querySelector('[data-pim-back]');
-        back?.addEventListener('pointerdown', event => {
+        const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back]');
+        profile.addEventListener('pointerdown', event => {
+            if (!pimTarget(event)) return;
             event.stopPropagation();
             suppressSessionSelectUntil = performance.now() + 500;
         });
-        back?.addEventListener('pointerup', event => event.stopPropagation());
-        back?.addEventListener('pointercancel', event => event.stopPropagation());
-        back?.addEventListener('click', event => {
-            event.stopPropagation();
-            const focusPath = back.dataset.pimBack;
-            setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), focusPath));
-            const separator = focusPath.includes('/') ? '/' : '.';
-            record.demoActiveBranch = focusPath.split(separator).slice(0, -1).join(separator);
-            refreshDemoRecord(record);
-            setGuide('Returned to the previous PIM bloom.');
+        profile.addEventListener('pointerup', event => {
+            // Keep a cell tap inside the mesh. If this reaches the draggable
+            // profile surface it is mistaken for a blank tap and closes PIM.
+            if (pimTarget(event)) event.stopPropagation();
         });
-        const cells = [...profile.querySelectorAll('[data-pim-node]')];
-        cells.forEach(cell => {
-            cell.addEventListener('pointerdown', event => {
+        profile.addEventListener('pointercancel', event => {
+            if (pimTarget(event)) event.stopPropagation();
+        });
+        profile.addEventListener('click', event => {
+            const back = event.target.closest?.('[data-pim-back]');
+            if (back) {
                 event.stopPropagation();
-                suppressSessionSelectUntil = performance.now() + 500;
-            });
-            cell.addEventListener('pointerup', event => {
-                // Keep a cell tap inside the cell. If this reaches the
-                // draggable profile surface it is mistaken for a blank
-                // profile tap and closes the PIM before click can expand it.
-                event.stopPropagation();
-            });
-            cell.addEventListener('pointercancel', event => event.stopPropagation());
-            cell.addEventListener('click', event => {
-                event.stopPropagation();
-                const nodePath = cell.dataset.pimNode;
-                const node = pimNodeAtPath(knowledgeFor(record), nodePath);
-                if (!node || !pimNodeChildren(node).length) {
-                    setGuide(`${cell.querySelector('b')?.textContent || 'Cell'}: ${node?.value || 'Information cell'}`);
-                    return;
-                }
-                const wasOpen = demoPimState(record).expandedNodeIds.has(nodePath);
+                const focusPath = back.dataset.pimBack;
+                setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), focusPath));
+                const separator = focusPath.includes('/') ? '/' : '.';
+                record.demoActiveBranch = focusPath.split(separator).slice(0, -1).join(separator);
+                refreshDemoPimProfile(record, profile);
+                setGuide('Returned to the previous PIM bloom.');
+                return;
+            }
+            const cell = event.target.closest?.('[data-pim-node]');
+            if (!cell || !profile.contains(cell)) return;
+            event.stopPropagation();
+            const nodePath = cell.dataset.pimNode;
+            const node = pimNodeAtPath(knowledgeFor(record), nodePath);
+            const cellLabel = cell.querySelector('b')?.textContent || 'Cell';
+            if (!node || !pimNodeChildren(node).length) {
                 setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), nodePath));
-                record.demoActiveBranch = wasOpen
-                    ? (node.parentPath === 'core' ? '' : node.parentPath)
-                    : nodePath;
-                record.pimBloomStarted = performance.now();
-                const remaining = advanceAfterDemoProfileInteraction(record);
-                refreshDemoRecord(record);
-                setGuide(wasOpen
-                    ? `${cell.querySelector('b')?.textContent || 'Cell'} remains open.`
-                    : `${cell.querySelector('b')?.textContent || 'Cell'} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`);
-            });
+                refreshDemoPimProfile(record, profile);
+                setGuide(`${cellLabel}: ${node?.value || 'Information cell'}`);
+                return;
+            }
+            const wasOpen = demoPimState(record).expandedNodeIds.has(nodePath);
+            setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), nodePath));
+            record.demoActiveBranch = wasOpen
+                ? (node.parentPath === 'core' ? '' : node.parentPath)
+                : nodePath;
+            record.pimBloomStarted = performance.now();
+            const remaining = advanceAfterDemoProfileInteraction(record);
+            refreshDemoPimProfile(record, profile);
+            setGuide(wasOpen
+                ? `${cellLabel} remains open.`
+                : `${cellLabel} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`);
         });
         let start = null;
         handle.addEventListener('pointerdown', event => {
@@ -1716,6 +1831,17 @@ function refreshDemoRecord(record) {
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
     updateSimulatedMarkers();
+}
+
+function refreshDemoPimProfile(record, profile = null) {
+    if (!record) return null;
+    if (record.texture) gl?.deleteTexture(record.texture);
+    record.texture = createMarkerTexture(record);
+    const recordIndex = markers.indexOf(record);
+    const liveProfile = profile
+        || appRoot?.querySelector(`[data-demo-plant-profile="${recordIndex}"]`);
+    if (!liveProfile) return null;
+    return reconcilePlantInformationMesh(liveProfile, demoPlantKnowledgeMarkup(record));
 }
 
 export function demoPointerScreenPoint(rect, viewportWidth = globalThis.innerWidth, viewportHeight = globalThis.innerHeight) {
@@ -2036,22 +2162,18 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip to Continue</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
-    const introContinue = document.createElement('button');
-    introContinue.className = 'tryit-intro-continue';
-    introContinue.dataset.tryitIntroContinue = '';
-    introContinue.type = 'button';
-    introContinue.hidden = true;
-    appRoot.querySelector('.tryit-demo')?.append(introContinue);
+    const introContinue = appRoot.querySelector('[data-tryit-intro-continue]');
+    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.WELCOME);
     appRoot.querySelector('[data-tryit-intro]')?.removeAttribute('hidden');
     appRoot.querySelector('.tryit-drag-hint')?.remove();
     const exitButton = appRoot.querySelector('[data-tryit-exit]');
     exitButton.textContent = 'Close';
     exitButton.setAttribute('aria-label', 'Close demo');
     const skipButton = appRoot.querySelector('[data-tryit-skip]');
-    skipButton.setAttribute('aria-label', 'Show the current Continue action');
+    skipButton.setAttribute('aria-label', 'Skip the current narration');
     const liveTagButton = appRoot.querySelector('[data-tryit-open-live-tag]');
     liveTagButton.setAttribute('aria-label', 'Open Plant Live Tag');
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
@@ -2277,6 +2399,7 @@ function createSpatialKnowledgeTexture(record) {
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
         return createPlantInformationHoneycombTexture(gl, knowledgeFor(record), demoPimExpandedNodeIds(record), {
+            ...demoSpatialPimLayoutOptions(),
             width: PIM_TEXTURE_SIZE.width,
             height: PIM_TEXTURE_SIZE.height,
             bloomProgress,

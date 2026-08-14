@@ -7,12 +7,14 @@ import {
     pimExpandedNodeIds,
     pimEnsureExpandedPaths,
     pimKnowledgeNodes,
+    pimLayoutMetrics,
     pimNodeChildren,
     pimNodeAtPath,
     pimNodeHue,
     pimNodeVisualPosition,
     pimRootPosition,
     pimVisibleNodeBounds,
+    pimVisibleCellBounds,
     pimCorrectVisibleNodeBounds,
     pimViewportSafeArea,
     pimSpatialPanel,
@@ -26,6 +28,8 @@ import {
 import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
 import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
 import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
+import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../app/services/demoTutorialControls.js';
+import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
 import { PIM_COMPASS } from '../app/services/pimCompass.js';
 import { PIGEON_PEA_AR_KNOWLEDGE } from '../app/services/pigeonPeaExample.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
@@ -34,6 +38,13 @@ import { pimToArKnowledge } from '../app/services/pimModel.js';
 
 function flattenedArNodes(nodes) {
     return (Array.isArray(nodes) ? nodes : []).flatMap(node => [node, ...flattenedArNodes(node.children)]);
+}
+
+function rectanglesOverlap(left, right) {
+    return left.left < right.right - 1e-6
+        && left.right > right.left + 1e-6
+        && left.top < right.bottom - 1e-6
+        && left.bottom > right.top + 1e-6;
 }
 
 test('Demo and Creator consume one canonical PIM renderer, geometry and interaction contract', async () => {
@@ -53,6 +64,10 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
         assert.doesNotMatch(source, /pimFocusedView\(/);
     }
     assert.match(viewSource, /data-pim-renderer="canonical"/);
+    assert.match(viewSource, /data-pim-density="\$\{density\}"/);
+    assert.match(viewSource, /export function reconcilePlantInformationMesh/);
+    assert.match(viewSource, /currentByKey = new Map/);
+    assert.match(viewSource, /currentMap\.append\(resolved\)/);
     assert.match(viewSource, /data-pim-role="center"/);
     assert.match(viewSource, /data-pim-role="\$\{role\}"/);
     assert.match(canvasSource, /pimVisibleNodes/);
@@ -65,6 +80,19 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.doesNotMatch(styles, /\.tryit-demo \.plant-knowledge-/);
     assert.doesNotMatch(styles, /\.creator-ar-plant-profile \.plant-knowledge-map\s*\{/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)/);
+    assert.match(demoSource, /plantInformationMeshSurfaceLayout/);
+    assert.match(creatorSource, /plantInformationMeshSurfaceLayout/);
+    assert.match(demoSource, /refreshDemoPimProfile\(record, profile\)/);
+    assert.match(creatorSource, /refreshCreatorPimProfile\(record, profilePanel\)/);
+    assert.doesNotMatch(creatorSource, /creatorPlantProfileLayout|creatorPlantProfileLayout\.js/);
+    assert.match(demoSource, /tryit-demo-taskbar[\s\S]*data-tryit-intro-continue[\s\S]*data-tryit-open-live-tag hidden[\s\S]*data-tryit-skip>Skip<[\s\S]*data-tryit-exit>Close</);
+    assert.doesNotMatch(demoSource, /Skip to Continue/);
+    assert.match(styles, /\.tryit-demo-taskbar \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)[^}]*grid-auto-rows:minmax\(48px,auto\)/);
+    assert.doesNotMatch(styles, /tryit-demo-taskbar:has\([^}]*grid-template-columns:repeat\(3/);
+    assert.doesNotMatch(styles, /\.tryit-intro-continue \{[^}]*position:fixed/);
+    assert.match(styles, /\[data-pim-density="compact"\] \.plant-knowledge-cell small \{\s*display: none;/);
+    const fs = await import('node:fs/promises');
+    await assert.rejects(() => fs.access(new URL('../app/services/creatorPlantProfileLayout.js', import.meta.url)));
 });
 
 test('canonical AR PIM markup always exposes one center and six primary cells', () => {
@@ -75,6 +103,23 @@ test('canonical AR PIM markup always exposes one center and six primary cells', 
         assert.match(markup, new RegExp(`data-pim-node-id="${compass.id}"`));
     }
     assert.match(markup, /data-pim-role="center"[^>]*>.*Pigeon Pea/s);
+});
+
+test('phone PIM markup uses the shared name-first density without a second renderer', () => {
+    const phoneMarkup = plantInformationMeshMarkup(
+        PIGEON_PEA_AR_KNOWLEDGE,
+        ['historical-data', 'historical-data/cultural-history'],
+        { viewportWidth: 390, viewportHeight: 844 }
+    );
+    const desktopMarkup = plantInformationMeshMarkup(
+        PIGEON_PEA_AR_KNOWLEDGE,
+        ['historical-data', 'historical-data/cultural-history'],
+        { viewportWidth: 1280, viewportHeight: 800 }
+    );
+    assert.match(phoneMarkup, /data-pim-density="compact"/);
+    assert.match(desktopMarkup, /data-pim-density="comfortable"/);
+    assert.equal((phoneMarkup.match(/data-pim-renderer="canonical"/g) || []).length, 1);
+    assert.equal((desktopMarkup.match(/data-pim-renderer="canonical"/g) || []).length, 1);
 });
 
 test('dynamic plants retain the same six empty-visible primary positions', () => {
@@ -375,6 +420,91 @@ test('viewport safe area recalculates on a resized visual viewport', () => {
         minimumScale: .72
     });
     assert.ok(pimVisibleNodeBounds(corrected).bottom <= phone.bottom);
+});
+
+test('the canonical PIM packs every expanded primary branch without overlap in phone safe viewports', () => {
+    const expanded = PIM_COMPASS.map(entry => entry.id);
+    const viewports = [
+        [320, 568],
+        [360, 800],
+        [384, 854],
+        [390, 844],
+        [412, 915],
+        [430, 932],
+        [844, 390]
+    ];
+    viewports.forEach(([width, height]) => {
+        const portrait = height >= width;
+        const surface = plantInformationMeshSurfaceLayout(width, height, width / 2, height * .68, {
+            topInset: portrait ? Math.max(80, height * .21) : 54,
+            bottomInset: portrait ? 120 : 76
+        });
+        const safeArea = pimViewportSafeArea(surface.panelWidth, surface.panelHeight, {
+            horizontalInset: 8,
+            topInset: 8,
+            bottomInset: 8
+        });
+        const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, expanded, {
+            selectedNodeId: 'cultivation',
+            viewportWidth: width,
+            viewportHeight: height,
+            layoutWidth: surface.panelWidth,
+            layoutHeight: surface.panelHeight,
+            safeArea
+        });
+        const rectangles = pimVisibleCellBounds(nodes);
+        assert.equal(rectangles.length, 27, `${width}x${height} includes the core, six roots and twenty children`);
+        for (let leftIndex = 0; leftIndex < rectangles.length; leftIndex += 1) {
+            for (let rightIndex = leftIndex + 1; rightIndex < rectangles.length; rightIndex += 1) {
+                assert.equal(
+                    rectanglesOverlap(rectangles[leftIndex], rectangles[rightIndex]),
+                    false,
+                    `${width}x${height}: ${rectangles[leftIndex].id} overlaps ${rectangles[rightIndex].id}`
+                );
+            }
+        }
+        const bounds = pimVisibleNodeBounds(nodes);
+        assert.ok(bounds.left >= safeArea.left - 1e-6, `${width}x${height} left bound`);
+        assert.ok(bounds.right <= safeArea.right + 1e-6, `${width}x${height} right bound`);
+        assert.ok(bounds.top >= safeArea.top - 1e-6, `${width}x${height} top bound`);
+        assert.ok(bounds.bottom <= safeArea.bottom + 1e-6, `${width}x${height} bottom bound`);
+        if (portrait) assert.ok(nodes[0].layoutCellWidthPixels >= 44, `${width}x${height} keeps a readable cell`);
+    });
+});
+
+test('identical mode inputs resolve identical canonical PIM geometry', () => {
+    const metrics = pimLayoutMetrics({ viewportWidth: 390, viewportHeight: 844 });
+    const options = {
+        selectedNodeId: 'historical-data/cultural-history',
+        viewportWidth: 390,
+        viewportHeight: 844,
+        layoutWidth: metrics.layoutWidth,
+        layoutHeight: metrics.layoutHeight,
+        safeArea: pimViewportSafeArea(metrics.layoutWidth, metrics.layoutHeight, {
+            horizontalInset: 8,
+            topInset: 8,
+            bottomInset: 8
+        })
+    };
+    const expanded = ['historical-data', 'historical-data/cultural-history'];
+    const demoGeometry = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, expanded, options)
+        .map(node => [node.nodeId, node.parentId, node.position, node.layoutCellWidthPercent]);
+    const creatorGeometry = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, expanded, { ...options })
+        .map(node => [node.nodeId, node.parentId, node.position, node.layoutCellWidthPercent]);
+    assert.deepEqual(creatorGeometry, demoGeometry);
+});
+
+test('Plant Live Tag visibility is controlled only by the explicit tutorial step', () => {
+    for (const step of [
+        DEMO_TUTORIAL_STEPS.WELCOME,
+        DEMO_TUTORIAL_STEPS.GUIDED,
+        DEMO_TUTORIAL_STEPS.PLACEMENT,
+        DEMO_TUTORIAL_STEPS.PIM
+    ]) {
+        assert.equal(demoTutorialControlsForStep(step).showOpenPlantLiveTag, false, step);
+    }
+    assert.equal(demoTutorialControlsForStep(DEMO_TUTORIAL_STEPS.LIVE_TAG).showOpenPlantLiveTag, true);
+    assert.equal(demoTutorialControlsForStep(DEMO_TUTORIAL_STEPS.PIM).showOpenPlantLiveTag, false, 'returning to PIM hides it again');
 });
 
 test('hold-to-confirm completes once, cancels early, and resets progress', () => {

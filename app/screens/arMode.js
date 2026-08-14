@@ -15,7 +15,7 @@ import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { alignAreaToCheckpoint } from '../services/areaSpatialAlignment.js';
 import { normalizeAreaLink, normalizeAreaLinks } from '../services/areaLinks.js';
-import { creatorPlantProfileLayout } from '../services/creatorPlantProfileLayout.js';
+import { plantInformationMeshSurfaceLayout } from '../services/plantInformationMeshSurfaceLayout.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -25,15 +25,15 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8949';
+import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8950';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
-import { plantInformationMeshMarkup } from '../services/plantInformationMeshView.js';
+import { plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 
 let session = null;
 let sessionMode = 'immersive-ar';
@@ -46,6 +46,11 @@ let latestControllerRay = null;
 let latestHandState = null;
 let hoveredMarkerId = '';
 let handPinchActive = false;
+const CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS = Object.freeze({
+    safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
+    layoutWidth: PIM_TEXTURE_SIZE.width,
+    layoutHeight: PIM_TEXTURE_SIZE.height
+});
 let controllerPressState = null;
 let spatialWebWindow = null;
 let gl = null;
@@ -676,13 +681,38 @@ function creatorPlantKnowledgeMarkup(record) {
     const viewportHeight = Number(visualViewport?.height) || window.innerHeight;
     const dock = overlayRoot?.querySelector('.creator-ar-control-dock');
     const dockRect = dock?.getBoundingClientRect();
+    const topInset = Math.max(24, Number(visualViewport?.offsetTop) || 0);
+    const bottomInset = Math.max(80, (dockRect?.height || 0) + 16);
+    const surface = plantInformationMeshSurfaceLayout(
+        viewportWidth,
+        viewportHeight,
+        viewportWidth / 2,
+        viewportHeight / 2,
+        { topInset, bottomInset }
+    );
     return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
         selectedNodeId: record.pimSelectedNodeId,
         viewportWidth,
         viewportHeight,
-        topInset: Math.max(24, Number(visualViewport?.offsetTop) || 0),
-        bottomInset: Math.max(80, (dockRect?.height || 0) + 16)
+        layoutWidth: surface.panelWidth,
+        layoutHeight: surface.panelHeight,
+        safeArea: pimViewportSafeArea(surface.panelWidth, surface.panelHeight, {
+            horizontalInset: 8,
+            topInset: 8,
+            bottomInset: 8
+        })
     });
+}
+
+function refreshCreatorPimProfile(record, profile = null) {
+    if (!record) return null;
+    invalidateSpatialPimTexture(record);
+    const liveProfile = profile
+        || overlayRoot?.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
+    if (!liveProfile) return null;
+    const mesh = reconcilePlantInformationMesh(liveProfile, creatorPlantKnowledgeMarkup(record));
+    positionSessionMarkers();
+    return mesh;
 }
 
 function creatorTotemInformationMarkup(record) {
@@ -3004,6 +3034,7 @@ function ensureSpatialPimTexture(record) {
     if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
         width: PIM_TEXTURE_SIZE.width,
         height: PIM_TEXTURE_SIZE.height,
         hoverPath,
@@ -3031,7 +3062,11 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
                 creatorPimExpandedNodeIds(record),
                 hit.u * 100,
                 hit.v * 100,
-                { bloomProgress, selectedNodeId: record.pimSelectedNodeId }
+                {
+                    ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+                    bloomProgress,
+                    selectedNodeId: record.pimSelectedNodeId
+                }
             );
             return target ? { record, target, hit, panel } : null;
         })
@@ -3760,7 +3795,7 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
         : 0;
     const anchorX = markerX - offsetX;
     const anchorY = markerY - offsetY;
-    const layout = creatorPlantProfileLayout(viewportWidth, viewportHeight, anchorX, anchorY, {
+    const layout = plantInformationMeshSurfaceLayout(viewportWidth, viewportHeight, anchorX, anchorY, {
         topInset: Math.max(12, offsetY + 8),
         bottomInset: toolbarInset + 12
     });
@@ -3847,7 +3882,7 @@ function renderSessionMarkers() {
             ? ''
             : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            ? `<aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
              : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
                  ? creatorTotemInformationMarkup(record)
                 : '';
@@ -3874,16 +3909,37 @@ function renderSessionMarkers() {
         });
         const profilePanel = layer.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
         profilePanel?.addEventListener('pointerdown', event => {
+            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.preventDefault();
             event.stopPropagation();
         });
-        profilePanel?.querySelector('[data-pim-back]')?.addEventListener('click', event => {
+        profilePanel?.addEventListener('click', event => {
+            const back = event.target.closest?.('[data-pim-back]');
+            if (back) {
+                event.stopPropagation();
+                toggleCreatorPimNode(record, back.dataset.pimBack);
+                record.pimBloomStarted = performance.now();
+                refreshCreatorPimProfile(record, profilePanel);
+                setPlacementStatus('Returned to the previous PIM bloom.');
+                return;
+            }
+            const cell = event.target.closest?.('[data-pim-node]');
+            if (!cell || !profilePanel.contains(cell)) return;
             event.stopPropagation();
-            const focusPath = event.currentTarget.dataset.pimBack;
-            toggleCreatorPimNode(record, focusPath);
+            const nodePath = cell.dataset.pimNode;
+            const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
+            if (!node) return;
+            const label = cell.querySelector('b')?.textContent || 'Cell';
+            if (!pimNodeChildren(node).length) {
+                setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), nodePath));
+                refreshCreatorPimProfile(record, profilePanel);
+                setPlacementStatus(`${node.label}: ${node.value || 'Information cell'}`);
+                return;
+            }
+            const wasOpen = creatorPimState(record).expandedNodeIds.has(nodePath);
+            toggleCreatorPimNode(record, nodePath);
             record.pimBloomStarted = performance.now();
-            invalidateSpatialPimTexture(record);
-            renderSessionMarkers();
-            setPlacementStatus('Returned to the previous PIM bloom.');
+            refreshCreatorPimProfile(record, profilePanel);
+            setPlacementStatus(wasOpen ? `${label} remains open.` : `${label} opened into its information petals.`);
         });
         const totemInformation = layer.querySelector(`[data-ar-totem-information="${CSS.escape(record.marker.id)}"]`);
         totemInformation?.querySelectorAll('[data-ar-totem-link-area]').forEach(sign => {
@@ -3895,32 +3951,6 @@ function renderSessionMarkers() {
                 event.preventDefault();
                 event.stopPropagation();
                 void transitionToLinkedArea(sign.dataset.arTotemLinkArea);
-            });
-        });
-        layer.querySelectorAll(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"] [data-pim-node]`).forEach(cell => {
-            cell.addEventListener('pointerdown', event => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            cell.addEventListener('click', event => {
-                event.stopPropagation();
-                const nodePath = cell.dataset.pimNode;
-                const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
-                if (!node) return;
-                if (node && !pimNodeChildren(node).length) {
-                    setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), nodePath));
-                    invalidateSpatialPimTexture(record);
-                    renderSessionMarkers();
-                    setPlacementStatus(`${node.label}: ${node.value || 'Information cell'}`);
-                    return;
-                }
-                const wasOpen = creatorPimState(record).expandedNodeIds.has(nodePath);
-                const label = cell.querySelector('b')?.textContent || 'Cell';
-                toggleCreatorPimNode(record, nodePath);
-                record.pimBloomStarted = performance.now();
-                invalidateSpatialPimTexture(record);
-                renderSessionMarkers();
-                setPlacementStatus(wasOpen ? `${label} remains open.` : `${label} opened into its information petals.`);
             });
         });
     });

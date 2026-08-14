@@ -18,6 +18,19 @@ const DIRECTION_AXIAL = Object.freeze({
     'upper-left': Object.freeze({ q: -1, r: 0 })
 });
 
+// The canonical responsive renderer uses a rectangular collision lattice.
+// These six cells still form the approved radial honeycomb, while one full
+// rendered cell plus a gap separates adjacent lattice positions on every
+// aspect ratio. Axial coordinates above remain the stable public compass.
+const DIRECTION_LAYOUT = Object.freeze({
+    top: Object.freeze({ x: 0, y: -1, tangentX: 1, tangentY: 0 }),
+    'upper-right': Object.freeze({ x: 1, y: -1, tangentX: 1, tangentY: 1 }),
+    'lower-right': Object.freeze({ x: 1, y: 0, tangentX: 0, tangentY: 1 }),
+    bottom: Object.freeze({ x: 0, y: 1, tangentX: 1, tangentY: 0 }),
+    'lower-left': Object.freeze({ x: -1, y: 0, tangentX: 0, tangentY: 1 }),
+    'upper-left': Object.freeze({ x: -1, y: -1, tangentX: -1, tangentY: 1 })
+});
+
 const ROOT_HUES = Object.freeze({
     top: 132,
     'upper-left': 42,
@@ -45,6 +58,8 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
 
 const PIM_DEFAULT_SAFE_AREA = Object.freeze({ left: 6, right: 94, top: 6, bottom: 94 });
 const PIM_DEFAULT_NODE_RADIUS_PERCENT = 12;
+const PIM_DEFAULT_VIEWPORT = Object.freeze({ width: 390, height: 844 });
+const PIM_MINIMUM_READABLE_CELL_PIXELS = 44;
 const addAxial = (left, right) => ({ q: left.q + right.q, r: left.r + right.r });
 const scaleAxial = (point, amount) => ({ q: point.q * amount, r: point.r * amount });
 
@@ -295,6 +310,49 @@ function safeNumber(value, fallback) {
     return Number.isFinite(Number(value)) ? Number(value) : fallback;
 }
 
+function clampNumber(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, Number(value)));
+}
+
+/**
+ * Pixel-aware geometry shared by the DOM, WebGL texture and hit-test paths.
+ * Percentages are derived from the actual surface dimensions instead of from
+ * hard-coded viewport percentages, which is what previously collapsed cells
+ * together on narrow portrait phones.
+ */
+export function pimLayoutMetrics(options = {}) {
+    const viewportWidth = Math.max(240, safeNumber(options.viewportWidth, PIM_DEFAULT_VIEWPORT.width));
+    const viewportHeight = Math.max(240, safeNumber(options.viewportHeight, PIM_DEFAULT_VIEWPORT.height));
+    const layoutWidth = Math.max(220, safeNumber(
+        options.layoutWidth,
+        Math.min(Math.max(240, viewportWidth - 24), 960)
+    ));
+    const layoutHeight = Math.max(220, safeNumber(
+        options.layoutHeight,
+        Math.min(viewportHeight * .62, 620)
+    ));
+    const responsiveCellWidth = viewportWidth <= 430
+        ? clampNumber(viewportWidth * .2, 64, 86)
+        : clampNumber(viewportWidth * .11, 76, 124);
+    const cellWidthPixels = Math.max(44, safeNumber(options.cellWidthPixels, responsiveCellWidth));
+    const cellHeightPixels = Math.max(38, safeNumber(options.cellHeightPixels, cellWidthPixels * .8660254));
+    const gapPixels = Math.max(4, safeNumber(options.gapPixels, clampNumber(cellWidthPixels * .1, 6, 12)));
+    return {
+        viewportWidth,
+        viewportHeight,
+        layoutWidth,
+        layoutHeight,
+        cellWidthPixels,
+        cellHeightPixels,
+        gapPixels,
+        cellWidthPercent: cellWidthPixels / layoutWidth * 100,
+        cellHeightPercent: cellHeightPixels / layoutHeight * 100,
+        stepXPercent: (cellWidthPixels + gapPixels) / layoutWidth * 100,
+        stepYPercent: (cellHeightPixels + gapPixels) / layoutHeight * 100,
+        minimumReadableScale: Math.min(1, PIM_MINIMUM_READABLE_CELL_PIXELS / cellWidthPixels)
+    };
+}
+
 function normalizeSafeArea(area = PIM_DEFAULT_SAFE_AREA) {
     const left = Math.max(0, Math.min(45, safeNumber(area.left, PIM_DEFAULT_SAFE_AREA.left)));
     const right = Math.max(left + 10, Math.min(100, safeNumber(area.right, PIM_DEFAULT_SAFE_AREA.right)));
@@ -330,27 +388,63 @@ function pimSafeAreaFromOptions(options = {}) {
     return PIM_DEFAULT_SAFE_AREA;
 }
 
-function rawBounds(nodes, radius) {
-    const points = [
-        { x: 50, y: 50 },
-        ...(Array.isArray(nodes) ? nodes : []).map(node => node.position || { x: 50, y: 50 })
+function pimCellDimensions(node, options = {}) {
+    const fallbackRadius = Math.max(0, safeNumber(options.nodeRadiusPercent, PIM_DEFAULT_NODE_RADIUS_PERCENT));
+    if (Number.isFinite(Number(node?.layoutCellWidthPercent)) && Number.isFinite(Number(node?.layoutCellHeightPercent))) {
+        return {
+            width: Number(node.layoutCellWidthPercent),
+            height: Number(node.layoutCellHeightPercent)
+        };
+    }
+    const scale = options.nodeRadiusPercent === undefined
+        ? Math.max(.01, safeNumber(node?.layoutScale, 1))
+        : 1;
+    return { width: fallbackRadius * 2 * scale, height: fallbackRadius * 2 * scale };
+}
+
+function pimCellRectangle(id, point, dimensions, role = 'node') {
+    const halfWidth = dimensions.width / 2;
+    const halfHeight = dimensions.height / 2;
+    return {
+        id,
+        role,
+        left: Number(point.x) - halfWidth,
+        right: Number(point.x) + halfWidth,
+        top: Number(point.y) - halfHeight,
+        bottom: Number(point.y) + halfHeight,
+        width: dimensions.width,
+        height: dimensions.height
+    };
+}
+
+/** Return axis-aligned rendered cell rectangles, including the plant core. */
+export function pimVisibleCellBounds(nodes = [], options = {}) {
+    const source = Array.isArray(nodes) ? nodes : [];
+    const reference = source[0];
+    const dimensions = pimCellDimensions(reference, options);
+    const center = reference?.layoutCenterPosition || { x: 50, y: 50 };
+    return [
+        pimCellRectangle('core', center, dimensions, 'center'),
+        ...source.map(node => pimCellRectangle(
+            node.nodeId || node.path,
+            node.position || center,
+            pimCellDimensions(node, options)
+        ))
     ];
-    return points.reduce((bounds, point) => ({
-        left: Math.min(bounds.left, Number(point.x) - radius),
-        right: Math.max(bounds.right, Number(point.x) + radius),
-        top: Math.min(bounds.top, Number(point.y) - radius),
-        bottom: Math.max(bounds.bottom, Number(point.y) + radius)
+}
+
+function rawBounds(nodes, options = {}) {
+    return pimVisibleCellBounds(nodes, options).reduce((bounds, rectangle) => ({
+        left: Math.min(bounds.left, rectangle.left),
+        right: Math.max(bounds.right, rectangle.right),
+        top: Math.min(bounds.top, rectangle.top),
+        bottom: Math.max(bounds.bottom, rectangle.bottom)
     }), { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
 }
 
 /** Return the complete visible mesh bounds, including the central plant cell. */
 export function pimVisibleNodeBounds(nodes = [], options = {}) {
-    const baseRadius = Math.max(0, safeNumber(options.nodeRadiusPercent, PIM_DEFAULT_NODE_RADIUS_PERCENT));
-    const layoutScale = options.nodeRadiusPercent === undefined
-        ? Math.max(.01, safeNumber(nodes?.[0]?.layoutScale, 1))
-        : 1;
-    const radius = baseRadius * layoutScale;
-    return rawBounds(nodes, radius);
+    return rawBounds(nodes, options);
 }
 
 function transformPimPoint(point, scale, translation) {
@@ -370,14 +464,19 @@ function transformPimPoint(point, scale, translation) {
 export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
     const source = Array.isArray(nodes) ? nodes : [];
     const safeArea = pimSafeAreaFromOptions(options);
-    const radius = Math.max(0, safeNumber(options.nodeRadiusPercent, PIM_DEFAULT_NODE_RADIUS_PERCENT));
-    const minimumScale = Math.max(.62, Math.min(1, safeNumber(options.minimumScale, .72)));
-    const sourceBounds = rawBounds(source, radius);
+    const preferredMinimumScale = Math.max(.4, Math.min(1, safeNumber(
+        options.minimumScale,
+        source[0]?.layoutMinimumReadableScale || .56
+    )));
+    const sourceBounds = rawBounds(source, options);
     const availableWidth = Math.max(1, safeArea.right - safeArea.left);
     const availableHeight = Math.max(1, safeArea.bottom - safeArea.top);
     const sourceWidth = Math.max(1, sourceBounds.right - sourceBounds.left);
     const sourceHeight = Math.max(1, sourceBounds.bottom - sourceBounds.top);
-    const scale = Math.max(minimumScale, Math.min(1, availableWidth / sourceWidth, availableHeight / sourceHeight));
+    // Fitting the complete mesh is mandatory. `preferredMinimumScale` remains
+    // diagnostic metadata; text is protected separately by CSS/canvas font
+    // floors when an unusually dense tree needs a smaller geometric scale.
+    const scale = Math.max(.05, Math.min(1, availableWidth / sourceWidth, availableHeight / sourceHeight));
     const scaledBounds = {
         left: 50 + (sourceBounds.left - 50) * scale,
         right: 50 + (sourceBounds.right - 50) * scale,
@@ -389,54 +488,227 @@ export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
     if (scaledBounds.right + translation.x > safeArea.right) translation.x = safeArea.right - scaledBounds.right;
     if (scaledBounds.top < safeArea.top) translation.y = safeArea.top - scaledBounds.top;
     if (scaledBounds.bottom + translation.y > safeArea.bottom) translation.y = safeArea.bottom - scaledBounds.bottom;
-    const positionById = new Map(source.map(node => [node.nodeId || node.path, transformPimPoint(node.position, scale, translation)]));
+    const centerPosition = transformPimPoint(source[0]?.layoutCenterPosition || { x: 50, y: 50 }, scale, translation);
     return source.map(node => ({
         ...node,
-        position: positionById.get(node.nodeId || node.path),
+        position: transformPimPoint(node.position, scale, translation),
         parentPosition: node.parentPosition
             ? transformPimPoint(node.parentPosition, scale, translation)
             : node.parentPosition,
-        layoutScale: scale,
+        layoutScale: Math.max(.01, safeNumber(node.layoutScale, 1)) * scale,
+        layoutCellWidthPercent: pimCellDimensions(node, options).width * scale,
+        layoutCellHeightPercent: pimCellDimensions(node, options).height * scale,
+        layoutCellWidthPixels: Math.max(1, safeNumber(node.layoutCellWidthPixels, 0) * scale),
+        layoutCellHeightPixels: Math.max(1, safeNumber(node.layoutCellHeightPixels, 0) * scale),
+        layoutCenterPosition: centerPosition,
         layoutTranslation: { ...translation },
-        layoutSafeArea: { ...safeArea }
+        layoutSafeArea: { ...safeArea },
+        layoutPreferredMinimumScale: preferredMinimumScale,
+        layoutBelowPreferredScale: scale < preferredMinimumScale
     }));
 }
 
+function layoutPosition(grid, metrics) {
+    return {
+        x: 50 + Number(grid.x) * metrics.stepXPercent,
+        y: 50 + Number(grid.y) * metrics.stepYPercent,
+        gridX: Number(grid.x),
+        gridY: Number(grid.y),
+        axial: { q: Number(grid.x), r: Number(grid.y) }
+    };
+}
+
+function rectanglesOverlap(left, right, epsilon = .0001) {
+    return left.left < right.right - epsilon
+        && left.right > right.left + epsilon
+        && left.top < right.bottom - epsilon
+        && left.bottom > right.top + epsilon;
+}
+
+function siblingTarget(childIndex, childCount) {
+    const count = Math.max(1, Number(childCount) || 1);
+    const index = Math.max(0, Number(childIndex) || 0);
+    if (count === 1) return { radial: 1, tangent: 0 };
+    const rowStart = Math.floor(index / 3) * 3;
+    const rowCount = Math.min(3, count - rowStart);
+    const indexInRow = index - rowStart;
+    return {
+        radial: 1 + Math.floor(index / 3),
+        tangent: indexInRow - (rowCount - 1) / 2
+    };
+}
+
+function placePimRecord(record, parent, occupied, metrics) {
+    const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
+    const sibling = siblingTarget(record.childIndex, record.childCount);
+    const target = {
+        x: parent.layoutGrid.x + direction.x * sibling.radial + direction.tangentX * sibling.tangent,
+        y: parent.layoutGrid.y + direction.y * sibling.radial + direction.tangentY * sibling.tangent
+    };
+    const directionLength = Math.max(.001, Math.hypot(direction.x, direction.y));
+    const candidates = [];
+    for (let radius = 1; radius <= 12; radius += 1) {
+        for (let y = -radius; y <= radius; y += 1) {
+            for (let x = -radius; x <= radius; x += 1) {
+                if (Math.max(Math.abs(x), Math.abs(y)) !== radius) continue;
+                const fromParent = { x: x - parent.layoutGrid.x, y: y - parent.layoutGrid.y };
+                const outward = (fromParent.x * direction.x + fromParent.y * direction.y) / directionLength;
+                // First-generation petals preserve the branch's authored
+                // radial direction. Deeper generations may turn along that
+                // branch's tangent when the straight continuation would
+                // force the entire phone mesh to shrink below readable size.
+                // They still attach to their real parent and never fold back
+                // toward the plant core.
+                const minimumOutward = record.depth > 1 ? -.05 : .45;
+                if (outward < minimumOutward) continue;
+                const point = layoutPosition({ x, y }, metrics);
+                const rectangle = pimCellRectangle(record.path, point, {
+                    width: metrics.cellWidthPercent,
+                    height: metrics.cellHeightPercent
+                });
+                if (occupied.some(candidate => rectanglesOverlap(rectangle, candidate.rectangle))) continue;
+                const distanceToTarget = Math.hypot(x - target.x, y - target.y);
+                const distanceToParent = Math.hypot(fromParent.x, fromParent.y);
+                const portraitPackingPenalty = metrics.viewportWidth < metrics.viewportHeight
+                    ? Math.max(0, Math.abs(x) - 2) * 300
+                        + Math.max(0, Math.abs(y) - 3) * 300
+                    : 0;
+                candidates.push({
+                    grid: { x, y },
+                    point,
+                    rectangle,
+                    score: distanceToTarget * 100 + distanceToParent * 4 + portraitPackingPenalty + radius * .01
+                });
+            }
+        }
+        if (candidates.length) break;
+    }
+    candidates.sort((left, right) => left.score - right.score
+        || Math.abs(left.grid.x) - Math.abs(right.grid.x)
+        || Math.abs(left.grid.y) - Math.abs(right.grid.y)
+        || left.grid.y - right.grid.y
+        || left.grid.x - right.grid.x);
+    const chosen = candidates[0] || (() => {
+        const grid = { x: Math.round(target.x), y: Math.round(target.y) };
+        const point = layoutPosition(grid, metrics);
+        return {
+            grid,
+            point,
+            rectangle: pimCellRectangle(record.path, point, {
+                width: metrics.cellWidthPercent,
+                height: metrics.cellHeightPercent
+            })
+        };
+    })();
+    occupied.push({ id: record.path, rectangle: chosen.rectangle });
+    record.layoutGrid = chosen.grid;
+    record.position = chosen.point;
+}
+
+/**
+ * Rebuild the complete visible tree on a single collision lattice. Existing
+ * generations are placed before new descendants, so a deeper expansion can
+ * never replace or push an already-rendered sibling into a duplicate slot.
+ */
 export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}) {
     const expanded = expandedIdSet(expandedPaths);
     const selectedNodeId = String(options.selectedNodeId || '');
-    // The selected node itself is visible as a node, but selection alone must
-    // not open its children. Only its complete ancestor path is implicit.
     const selectedPathParts = ancestorPaths(selectedNodeId);
     const selectedAncestors = new Set(selectedPathParts.slice(0, -1));
-    const visible = [];
-    const corePosition = positionedAxial({ q: 0, r: 0 });
+    const reservationRoot = selectedNodeId;
+    const metrics = pimLayoutMetrics(options);
+    const layoutRecords = [];
+    let order = 0;
 
-    const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
-        const position = depth === 0
-            ? pimRootPosition(node)
-            : pimChildPosition(parentRecord, childIndex, childCount);
+    const makeRecord = (node, depth, rootDirection, parentRecord, childIndex, childCount, visible) => {
         const record = {
             ...node,
             nodeId: node.path,
             parentId: node.parentId === 'core' ? null : node.parentId,
             depth,
             rootDirection,
-            position,
-            parentPosition: parentRecord?.position || corePosition,
             childIndex,
-            childCount
+            childCount,
+            layoutCellWidthPercent: metrics.cellWidthPercent,
+            layoutCellHeightPercent: metrics.cellHeightPercent,
+            layoutCellWidthPixels: metrics.cellWidthPixels,
+            layoutCellHeightPixels: metrics.cellHeightPixels,
+            layoutMinimumReadableScale: metrics.minimumReadableScale,
+            _pimVisible: visible,
+            _pimOrder: order++,
+            _pimParentPath: parentRecord?.path || ''
         };
-        visible.push(record);
+        layoutRecords.push(record);
+        return record;
+    };
 
-        const children = pimNodeChildren(node);
+    const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
+        const record = makeRecord(node, depth, rootDirection, parentRecord, childIndex, childCount, true);
+        const children = pimNodeChildren({ ...node, depth });
         const open = expanded.has(node.path) || selectedAncestors.has(node.path);
-        if (!open || !children.length) return;
-        children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));
+        if (open && children.length) {
+            children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));
+            return;
+        }
+        const reserveNextGeneration = Boolean(reservationRoot) && node.path === reservationRoot;
+        if (reserveNextGeneration) {
+            children.forEach((child, index) => makeRecord(child, depth + 1, rootDirection, record, index, children.length, false));
+        }
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
-    return pimCorrectVisibleNodeBounds(visible, options);
+
+    // Reserving the next small generation keeps a selected branch perfectly
+    // still when it opens. Large hidden generations must not shrink the live
+    // mesh, so dense branches are laid out only when they actually become
+    // visible.
+    if (layoutRecords.filter(record => !record._pimVisible).length > 3) {
+        for (let index = layoutRecords.length - 1; index >= 0; index -= 1) {
+            if (!layoutRecords[index]._pimVisible) layoutRecords.splice(index, 1);
+        }
+    }
+
+    const occupied = [];
+    const byPath = new Map(layoutRecords.map(record => [record.path, record]));
+    const corePosition = layoutPosition({ x: 0, y: 0 }, metrics);
+    occupied.push({
+        id: 'core',
+        rectangle: pimCellRectangle('core', corePosition, {
+            width: metrics.cellWidthPercent,
+            height: metrics.cellHeightPercent
+        }, 'center')
+    });
+    layoutRecords.filter(record => record.depth === 0).forEach(record => {
+        const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
+        record.layoutGrid = { x: direction.x, y: direction.y };
+        record.position = layoutPosition(record.layoutGrid, metrics);
+        occupied.push({
+            id: record.path,
+            rectangle: pimCellRectangle(record.path, record.position, {
+                width: metrics.cellWidthPercent,
+                height: metrics.cellHeightPercent
+            })
+        });
+    });
+    layoutRecords
+        .filter(record => record.depth > 0)
+        .sort((left, right) => left.depth - right.depth || left._pimOrder - right._pimOrder)
+        .forEach(record => {
+            const parent = byPath.get(record._pimParentPath);
+            placePimRecord(record, parent, occupied, metrics);
+        });
+    layoutRecords.forEach(record => {
+        const parent = byPath.get(record._pimParentPath);
+        record.parentPosition = parent?.position || corePosition;
+    });
+
+    return pimCorrectVisibleNodeBounds(layoutRecords, options)
+        .filter(record => record._pimVisible)
+        .sort((left, right) => left._pimOrder - right._pimOrder)
+        .map(record => {
+            const { _pimVisible, _pimOrder, _pimParentPath, ...publicRecord } = record;
+            return publicRecord;
+        });
 }
 
 export function pimToggleExpandedPaths(expandedPaths, path) {

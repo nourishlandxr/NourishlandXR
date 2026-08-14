@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>NourishlandXR global PIM visual regression</title>
+  <link rel="stylesheet" href="../../app/style.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; }
+    body {
+      display: grid;
+      min-height: 100dvh;
+      padding: 12px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(142, 194, 150, .72), transparent 42%),
+        linear-gradient(#668e72 0 48%, #1d3b27 49% 100%);
+      color: #fff;
+      font-family: Montserrat, system-ui, sans-serif;
+    }
+    .fixture-shell { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; min-width: 0; }
+    .fixture-label {
+      position: relative;
+      z-index: 2;
+      width: fit-content;
+      margin: 0;
+      padding: 7px 10px;
+      border: 1px solid rgba(255,255,255,.42);
+      border-radius: 999px;
+      background: rgba(16, 54, 34, .76);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .fixture-surface,
+    .fixture-surface.tryit-sim-plant-profile,
+    .fixture-surface.creator-ar-plant-profile {
+      position: relative;
+      inset: auto;
+      left: auto;
+      top: auto;
+      align-self: start;
+      width: 100%;
+      height: min(62dvh, 620px);
+      transform: none;
+      opacity: 1;
+      animation: none;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="fixture-shell">
+    <h1 class="fixture-label" data-fixture-label>Global PIM master</h1>
+    <section class="fixture-surface" data-fixture-surface aria-label="Global PIM visual regression surface"></section>
+  </main>
+  <script type="module">
+    import { PIGEON_PEA_AR_KNOWLEDGE } from '../../app/services/pigeonPeaExample.js';
+    import { pimViewportSafeArea } from '../../app/services/plantInformationMesh.js';
+    import { plantInformationMeshMarkup } from '../../app/services/plantInformationMeshView.js';
+
+    const mode = new URLSearchParams(location.search).get('mode') === 'creator' ? 'creator' : 'demo';
+    const surface = document.querySelector('[data-fixture-surface]');
+    const label = document.querySelector('[data-fixture-label]');
+    const width = Math.max(240, innerWidth - 24);
+    const height = Math.max(240, Math.min(innerHeight * .62, 620));
+    surface.classList.add(mode === 'creator' ? 'creator-ar-plant-profile' : 'tryit-sim-plant-profile');
+    surface.style.width = `${width}px`;
+    surface.style.height = `${height}px`;
+    label.textContent = `${mode === 'creator' ? 'Creator' : 'Demo'} · one global PIM master`;
+    surface.innerHTML = plantInformationMeshMarkup(
+      PIGEON_PEA_AR_KNOWLEDGE,
+      ['historical-data', 'historical-data/cultural-history'],
+      {
+        selectedNodeId: 'historical-data/cultural-history',
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+        layoutWidth: width,
+        layoutHeight: height,
+        safeArea: pimViewportSafeArea(width, height, {
+          horizontalInset: 8,
+          topInset: 8,
+          bottomInset: 8
+        })
+      }
+    );
+  </script>
+</body>
+</html>

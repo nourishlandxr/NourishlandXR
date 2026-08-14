@@ -7,6 +7,7 @@ import {
 
 export const PIM_TEXTURE_SIZE = Object.freeze({ width: 1440, height: 1080 });
 export const PIM_BLOOM_DURATION_MS = 220;
+export const PIM_TEXTURE_CELL_WIDTH = 200;
 
 function wrapLines(context, text, maxWidth) {
     const words = String(text || '').trim().split(/\s+/).filter(Boolean);
@@ -58,16 +59,22 @@ function drawOutlinedLines(context, lines, x, startY, lineHeight) {
 export function drawPlantInformationHoneycomb(context, canvas, knowledge, expandedPaths = [], options = {}) {
     const width = canvas.width;
     const height = canvas.height;
-    const center = { x: width / 2, y: height / 2 };
     const expanded = new Set(expandedPaths);
     const nodes = pimVisibleNodes(knowledge, expandedPaths, {
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
         viewportHeight: options.viewportHeight,
+        layoutWidth: options.layoutWidth || width,
+        layoutHeight: options.layoutHeight || height,
+        cellWidthPixels: options.cellWidthPixels || PIM_TEXTURE_CELL_WIDTH,
+        cellHeightPixels: options.cellHeightPixels,
+        gapPixels: options.gapPixels,
         topInset: options.topInset,
         bottomInset: options.bottomInset
     });
+    const centerPercent = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
+    const center = { x: centerPercent.x / 100 * width, y: centerPercent.y / 100 * height };
     const reducedMotion = options.reducedMotion ?? (typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     const bloom = reducedMotion ? 1 : Math.max(0, Math.min(1, Number(options.bloomProgress ?? 1)));
@@ -98,7 +105,8 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const selected = String(options.selectedNodeId || '') === node.path;
         const active = open || hovered || selected;
         const hue = pimNodeHue(node);
-        const radius = (active ? 104 : 100) * (node.depth > 0 ? Math.max(.12, nodeBloom) : 1);
+        const renderedRadius = Math.max(22, Number(node.layoutCellWidthPercent) / 100 * width / 2);
+        const radius = renderedRadius * (active ? 1.035 : 1) * (node.depth > 0 ? Math.max(.12, nodeBloom) : 1);
         context.save();
         if (active) {
             context.shadowColor = `hsla(${hue}, 70%, 68%, .46)`;
@@ -118,33 +126,40 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         context.fillStyle = '#fff';
         context.strokeStyle = 'rgba(0, 0, 0, .94)';
         context.lineWidth = 7;
-        context.font = `850 ${node.depth ? 23 : 29}px system-ui, sans-serif`;
-        const titleLines = wrapLines(context, node.label, 148).slice(0, 3);
+        const titleFontSize = Math.max(18, Math.min(node.depth ? 23 : 29, radius * (node.depth ? .25 : .31)));
+        const titleLineHeight = Math.round(titleFontSize * 1.08);
+        context.font = `850 ${titleFontSize}px system-ui, sans-serif`;
+        const textWidth = Math.max(54, radius * 1.5);
+        const titleLines = wrapLines(context, node.label, textWidth).slice(0, 3);
         const hasDescription = node.depth > 0 && Boolean(node.value);
-        const startY = point.y + (hasDescription ? -28 : 0) - (titleLines.length - 1) * 14;
-        drawOutlinedLines(context, titleLines, point.x, startY, 28);
+        const startY = point.y + (hasDescription ? -titleLineHeight : 0) - (titleLines.length - 1) * titleLineHeight / 2;
+        drawOutlinedLines(context, titleLines, point.x, startY, titleLineHeight);
         if (hasDescription) {
-            context.font = '700 19px system-ui, sans-serif';
+            const detailFontSize = Math.max(15, Math.min(19, radius * .2));
+            const detailLineHeight = Math.round(detailFontSize * 1.06);
+            context.font = `700 ${detailFontSize}px system-ui, sans-serif`;
             context.fillStyle = 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'rgba(0, 0, 0, .98)';
             context.shadowBlur = 7;
-            drawWrappedText(context, node.value, point.x, startY + titleLines.length * 27 + 4, 150, 19, 3);
+            drawWrappedText(context, node.value, point.x, startY + titleLines.length * titleLineHeight + 4, textWidth, detailLineHeight, 3);
             context.shadowBlur = 0;
         }
     });
 
+    const coreRadius = Math.max(22, Number(nodes[0]?.layoutCellWidthPercent || 13.9) / 100 * width / 2);
     context.save();
     context.shadowColor = 'rgba(76, 108, 166, .34)';
     context.shadowBlur = 18;
-    drawHexagon(context, center.x, center.y, 100, 'rgba(39, 58, 92, .78)', 'rgba(137, 165, 213, .82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, 'rgba(39, 58, 92, .78)', 'rgba(137, 165, 213, .82)', 4);
     context.restore();
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     context.lineWidth = 8;
-    context.font = '850 36px system-ui, sans-serif';
+    const coreFontSize = Math.max(20, Math.min(36, coreRadius * .36));
+    context.font = `850 ${coreFontSize}px system-ui, sans-serif`;
     const coreTitle = knowledge.title || knowledge.name || 'Plant';
-    const coreLines = wrapLines(context, coreTitle, 154).slice(0, 3);
-    drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * 18, 36);
+    const coreLines = wrapLines(context, coreTitle, coreRadius * 1.54).slice(0, 3);
+    drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * coreFontSize / 2, coreFontSize);
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.
     return;
@@ -176,20 +191,30 @@ export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPa
 
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
-    const hitRadius = PIM_SPATIAL_CONFIG.cellWidthMetres / PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * 50 * PIM_SPATIAL_CONFIG.colliderScale;
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
     return pimVisibleNodes(knowledge, expandedPaths, {
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
         viewportHeight: options.viewportHeight,
+        layoutWidth: options.layoutWidth || PIM_TEXTURE_SIZE.width,
+        layoutHeight: options.layoutHeight || PIM_TEXTURE_SIZE.height,
+        cellWidthPixels: options.cellWidthPixels || PIM_TEXTURE_CELL_WIDTH,
+        cellHeightPixels: options.cellHeightPixels,
+        gapPixels: options.gapPixels,
         topInset: options.topInset,
         bottomInset: options.bottomInset
     })
         .map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
-            return { node, distance: Math.hypot(xPercent - point.x, yPercent - point.y) };
+            const halfWidth = Math.max(.1, Number(node.layoutCellWidthPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+            const halfHeight = Math.max(.1, Number(node.layoutCellHeightPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+            const normalizedDistance = Math.hypot(
+                (xPercent - point.x) / halfWidth,
+                (yPercent - point.y) / halfHeight
+            );
+            return { node, distance: normalizedDistance };
         })
         .sort((left, right) => left.distance - right.distance)
-        .find(candidate => candidate.distance <= hitRadius)?.node || null;
+        .find(candidate => candidate.distance <= 1)?.node || null;
 }

@@ -14,7 +14,7 @@ import {
     selectDemoPlantRecord,
     selectGuidedDemoOrb
 } from '../app/screens/temporaryArDemo.js';
-import { creatorPlantProfileLayout } from '../app/services/creatorPlantProfileLayout.js';
+import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
 import { normalizeTotemHeightPreset, normalizeTotemStyle, totemHeightPreset, totemHeightScale, totemStylePreset } from '../app/services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../app/services/totemLinkCalibration.js';
@@ -80,17 +80,17 @@ test('both demo Plants remain alive, interactive and independently selectable af
     assert.equal(selectDemoPlantRecord({ record: note }, () => {}), false);
 });
 
-test('Creator AR positions the enlarged profile without an orb tether', () => {
-    const phone = creatorPlantProfileLayout(390, 844, 195, 300);
+test('the shared PIM surface stays inside mobile viewport controls without an orb tether', () => {
+    const phone = plantInformationMeshSurfaceLayout(390, 844, 195, 300);
     assert.equal(phone.panelX, 195);
     assert.ok(phone.panelTop < 300);
     assert.ok(phone.panelWidth > 340);
     assert.ok(phone.panelHeight > 500);
     assert.equal(phone.panelY, phone.panelTop + phone.panelHeight / 2);
-    assert.equal(phone.profileAbove, false);
+    assert.equal(phone.profileAbove, true);
     assert.equal('tetherEndY' in phone, false);
 
-    const edge = creatorPlantProfileLayout(390, 844, 12, 300);
+    const edge = plantInformationMeshSurfaceLayout(390, 844, 12, 300);
     assert.ok(edge.panelX - edge.panelWidth / 2 >= 8);
 });
 
@@ -1128,7 +1128,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /session && !domOverlayEnabled && continueButton/);
     assert.match(source, /introTextureFrameToken !== introFrameToken/);
     assert.match(source, /introFrameToken = _time/);
-    assert.match(styles, /\.tryit-demo\.uses-webgl-controls > \.tryit-intro-continue \{ display:none !important; \}/);
+    assert.match(styles, /\.tryit-demo\.uses-webgl-controls \.tryit-demo-footer \{ display:none !important; \}/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
     const immersiveSelectStartHandler = source.slice(
@@ -1156,8 +1156,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-virtual-tag-mode \{[^}]*position:fixed;[^}]*z-index:12100;[^}]*background:#f2f4ec;/);
     assert.match(styles, /\.tryit-virtual-tag-close,body\[data-project-theme\] \.tryit-virtual-tag-close/);
     assert.match(source, /data-tryit-intro-continue/);
-    assert.match(styles, /\.tryit-intro-continue \{[^}]*min-width:184px;[^}]*min-height:62px;[^}]*font-size:clamp\(1\.05rem,3\.8vw,1\.25rem\)/);
-    assert.match(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
+    assert.match(styles, /\.tryit-demo-taskbar \.tryit-intro-continue \{[^}]*border-color:rgba\(220,239,149,\.62\)/);
+    assert.doesNotMatch(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
@@ -1175,7 +1175,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /function createIntroControlTexture\(labelText/);
     assert.match(source, /function createIntroPointerTexture\(/);
-    assert.match(source, /appRoot\.querySelector\('\.tryit-demo'\)\?\.append\(introContinue\)/);
+    assert.match(source, /const introContinue = appRoot\.querySelector\('\[data-tryit-intro-continue\]'\)/);
+    assert.doesNotMatch(source, /createElement\('button'\)[\s\S]{0,180}tryit-intro-continue/);
     assert.match(source, /appRoot\.querySelector\('\.tryit-demo'\)\?\.append\(placementPointer\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
     assert.match(source, /boardPosition: \[0, 0\.82, -2\.8\]/);
@@ -1212,12 +1213,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /top:max\(4px,env\(safe-area-inset-top\)\)/);
     assert.match(styles, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/);
     assert.match(styles, /max-height:none/);
-    assert.match(styles, /\.tryit-intro-continue \{[\s\S]*\+ 44px\)/);
+    assert.match(styles, /\.tryit-demo-taskbar \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
     assert.match(source, /pointerOffsetCss: '3\.5cm'/);
     assert.match(source, /pointerOffsetPixels: 132\.3/);
     assert.match(styles, /top:calc\(50% \+ 3\.5cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 3\.5cm\)/);
-    assert.match(styles, /\.tryit-intro-continue \{[\s\S]*border-radius:999px/);
+    assert.doesNotMatch(styles, /\.tryit-intro-continue \{[^}]*border-radius:999px/);
     assert.match(source, /exitButton\.textContent = 'Close'/);
     assert.doesNotMatch(styles, /tryit-board-text-scroll/);
     assert.match(styles, /\.tryit-board-text-window \{ display:grid; align-content:start;/);
@@ -1243,9 +1244,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /data-demo-plant-tether/);
     assert.match(source, /PIM_BLOOM_DURATION_MS/);
     assert.match(source, /bindSimulatedInformationPanels/);
-    const cellBindings = source.slice(source.indexOf('const cells = [...profile.querySelectorAll'), source.indexOf('let start = null;', source.indexOf('const cells =')));
-    assert.match(cellBindings, /cell.addEventListener\('pointerup', event => \{[\s\S]*event.stopPropagation\(\)/);
-    assert.doesNotMatch(cellBindings, /cell.addEventListener\('pointerdown', event => \{[\s\S]*event.preventDefault\(\)/);
+    const cellBindings = source.slice(source.indexOf('const pimTarget = event =>'), source.indexOf('let start = null;', source.indexOf('const pimTarget = event =>')));
+    assert.match(cellBindings, /profile.addEventListener\('pointerup', event => \{[\s\S]*if \(pimTarget\(event\)\) event.stopPropagation\(\)/);
+    assert.doesNotMatch(cellBindings, /profile.addEventListener\('pointerdown', event => \{[\s\S]*event.preventDefault\(\)/);
+    assert.match(cellBindings, /refreshDemoPimProfile\(record, profile\)/);
     assert.match(source, /demoPanelOffset/);
     assert.match(source, /record\.informationPosition = plantInformationPosition\(record\)/);
     assert.match(source, /const eyeLevelY = Number\.isFinite\(cameraY\) \? cameraY - \.12 : position\.y \+ \.45/);
@@ -1590,15 +1592,15 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /setPlacementStatus\(''\)/);
     assert.match(arSource, /creator-ar-plant-profile/);
     assert.match(arSource, /function positionCreatorPlantProfile\(record, markerX, markerY\)/);
-    assert.match(arSource, /creatorPlantProfileLayout\(viewportWidth, viewportHeight, anchorX, anchorY, \{/);
+    assert.match(arSource, /plantInformationMeshSurfaceLayout\(viewportWidth, viewportHeight, anchorX, anchorY, \{/);
     assert.match(arSource, /visualViewport/);
     assert.match(arSource, /bottomInset/);
-    assert.match(arSource, /creatorPlantProfileLayout/);
+    assert.match(arSource, /plantInformationMeshSurfaceLayout/);
     assert.doesNotMatch(arSource, /tetherEndY|data-ar-plant-tether/);
     assert.match(arSource, /creator-ar-plant-profile is-anchored-profile/);
     assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
     assert.match(arSource, /scientificName: profile\.scientific_name \|\| ''/);
-    assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
+    assert.doesNotMatch(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.doesNotMatch(arSource, /creator-ar-plant-tether[\s\S]*<path/);
     assert.match(arSource, /const wasOpen = creatorPimState\(record\)\.expandedNodeIds\.has\(nodePath\)/);
     assert.match(arSource, /record\.pimSelectedNodeId = state\.selectedNodeId/);
