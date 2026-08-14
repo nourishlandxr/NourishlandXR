@@ -364,6 +364,11 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     assert.match(persistenceSource, /export async function ensureDefaultHomeArea\(projectId, siteId\)/);
     assert.match(persistenceSource, /places\.find\(isDefaultHomeArea\)/);
     assert.match(persistenceSource, /name: DEFAULT_HOME_AREA_NAME/);
+    assert.match(persistenceSource, /if \(!sites\.length\)/);
+    assert.match(persistenceSource, /createProjectSite\(projectId, AR_EXPERIENCE_CONFIG\.defaultSite\)/);
+    assert.match(persistenceSource, /ensureDefaultPigeonPea\(projectId, sites\[0\]\.id, homes\[0\]\)/);
+    assert.match(persistenceSource, /PIGEON_PEA_TEMPLATE_ID/);
+    assert.match(persistenceSource, /createPigeonPeaTemplateProfile/);
     assert.match(dashboardSource, /Your space is ready/);
     assert.match(dashboardSource, /CREATE YOUR FIRST AREA/);
     assert.match(dashboardSource, /Name your Area/);

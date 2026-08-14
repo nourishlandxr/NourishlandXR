@@ -1,5 +1,7 @@
 import { API_BASE, apiFetch } from './apiClient.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from './arExperienceConfig.js';
+import { PIGEON_PEA_EXAMPLE } from './pigeonPeaExample.js';
+import { createPigeonPeaTemplateProfile, PIGEON_PEA_TEMPLATE_ID } from './pigeonPeaTemplate.js';
 
 async function requestJson(url, options = {}) {
     let response;
@@ -95,9 +97,56 @@ export async function ensureDefaultHomeArea(projectId, siteId) {
     });
 }
 
+async function ensureDefaultPigeonPea(projectId, siteId, home) {
+    const markers = await loadPlaceMarkers(projectId, siteId, home.id);
+    const pigeonPea = markers.find(marker => marker?.template_id === PIGEON_PEA_TEMPLATE_ID
+        || marker?.plantId === 'cajanus-cajan'
+        || String(marker?.name || '').trim().toLocaleLowerCase() === PIGEON_PEA_EXAMPLE.commonName.toLocaleLowerCase());
+    if (pigeonPea) return pigeonPea;
+
+    // The API seeds this record for current deployments. This client-side
+    // reconciliation keeps the invariant true when a hosted API predates
+    // project seeding or returns an empty site list during creation.
+    const created = await createSpatialPlant(projectId, siteId, home.id, {
+        commonName: PIGEON_PEA_EXAMPLE.commonName,
+        scientificName: PIGEON_PEA_EXAMPLE.scientificName,
+        family: PIGEON_PEA_EXAMPLE.family,
+        description: PIGEON_PEA_EXAMPLE.shortProfile,
+        visibility: 'draft',
+        status: 'ready'
+    });
+    const marker = created?.marker || created;
+    if (!marker?.id) throw new Error('The default Pigeon Pea marker could not be created.');
+
+    await updatePlaceMarker(projectId, siteId, home.id, marker.id, {
+        description: PIGEON_PEA_EXAMPLE.shortProfile,
+        template_id: PIGEON_PEA_TEMPLATE_ID,
+        is_template: true
+    });
+    await savePlantProfile(projectId, siteId, home.id, marker.id, createPigeonPeaTemplateProfile(
+        created?.plant?.id || marker.plantId || 'cajanus-cajan'
+    ));
+    return marker;
+}
+
 export async function ensureDefaultHomeAreas(projectId) {
-    const sites = await loadProjectSites(projectId);
-    return Promise.all(sites.map(site => ensureDefaultHomeArea(projectId, site.id)));
+    let sites = await loadProjectSites(projectId);
+    if (!sites.length) {
+        try {
+            const createdSite = await createProjectSite(projectId, AR_EXPERIENCE_CONFIG.defaultSite);
+            sites = createdSite?.id ? [createdSite] : await loadProjectSites(projectId);
+        } catch (error) {
+            // A concurrent/current API may have created the fallback site after
+            // the initial read. Re-read only for that expected race.
+            if (!/already exists/i.test(error.message || '')) throw error;
+            sites = await loadProjectSites(projectId);
+        }
+    }
+    if (!sites.length) throw new Error('The new project has no Location to hold Home.');
+
+    const homes = await Promise.all(sites.map(site => ensureDefaultHomeArea(projectId, site.id)));
+    await ensureDefaultPigeonPea(projectId, sites[0].id, homes[0]);
+    return homes;
 }
 
 export async function updateProjectSite(projectId, siteId, siteData) {
