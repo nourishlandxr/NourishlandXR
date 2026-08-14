@@ -11,8 +11,10 @@ import {
     togglePlantInformationWebCentre,
     togglePlantInformationWebNode
 } from '../app/components/plantInformationWeb.js';
+import { reviewPimImport, stagePimImport } from '../app/services/pimImportReview.js';
 
 const rendererSource = readFileSync(new URL('../app/components/plantInformationWeb.js', import.meta.url), 'utf8');
+const dashboardSource = readFileSync(new URL('../app/screens/projectDashboard.js', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('../app/pim.css', import.meta.url), 'utf8');
 
 function referenceDocument() {
@@ -278,6 +280,24 @@ test('editing and import review controls appear only for editable Creator profil
     assert.doesNotMatch(visitor, /Structured PIM editor|Add information|Staged plant data|Edit information/);
 });
 
+test('approved staged imports leave the pending review surface while remaining in the PIM document', () => {
+    const document = referenceDocument();
+    const staging = stagePimImport(document, {
+        sourceDatabase: 'Trusted Plant Database',
+        sourceRecordId: 'TPD-1',
+        licence: 'CC0',
+        retrievalDate: '2026-08-13',
+        fields: { family: 'Fabaceae' }
+    }, { now: '2026-08-13T00:00:00.000Z' });
+    const item = staging.items[0];
+    const reviewed = reviewPimImport(staging, item.id, { decision: 'approve', reviewedAt: '2026-08-13T00:00:00.000Z' });
+    const markup = plantInformationWebMarkup(reviewed.document, createPlantInformationWebState(reviewed.document), { editable: true, importReview: reviewed });
+    assert.equal(reviewed.status, 'reviewed');
+    assert.equal(reviewed.items[0].reviewStatus, 'approved');
+    assert.equal(pimNodeById(reviewed.document, item.proposedNode.id).status, 'draft');
+    assert.doesNotMatch(markup, /Staged plant data|data-pim-import-decision=/);
+});
+
 test('Uses children use compact plant-part templates without rendering empty information boxes', () => {
     const document = referenceDocument();
     const state = createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'culinary' });
@@ -374,4 +394,10 @@ test('mount contract keeps explicit state and exposes routing, persistence and i
     assert.match(rendererSource, /openNodeIds/);
     assert.match(rendererSource, /data-pim-node-id/);
     assert.match(rendererSource, /data-pim-node-path/);
+});
+
+test('project entry import callbacks return and persist the updated review state', () => {
+    assert.match(dashboardSource, /pim_import_review:\s*activePimImportReview/);
+    assert.match(dashboardSource, /activePimImportReview = nextReview;[\s\S]*return nextReview;/);
+    assert.match(dashboardSource, /onRejectImport:[\s\S]*await savePimDocument\(activePimDocument\);[\s\S]*return activePimImportReview/);
 });

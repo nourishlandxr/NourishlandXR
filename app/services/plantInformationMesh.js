@@ -1,3 +1,5 @@
+import { PIM_COMPASS } from './pimCompass.js';
+
 const HONEYCOMB_DIRECTIONS = Object.freeze([
     'top',
     'upper-right',
@@ -120,15 +122,34 @@ function legacyCategories(knowledge = {}) {
 }
 
 export function pimKnowledgeNodes(knowledge = {}) {
-    const categories = Array.isArray(knowledge.categories)
-        ? knowledge.categories.slice(0, 6).map((item, index) => ({
-            item,
-            direction: HONEYCOMB_DIRECTIONS.includes(item?.direction) ? item.direction : HONEYCOMB_DIRECTIONS[index]
-        }))
-        : legacyCategories(knowledge);
-    return categories.map(({ item, direction }, index) => {
-        const id = slug(item?.id || (Array.isArray(item) ? item[0] : item?.label), `category-${index + 1}`);
-        return normalizeNode(item, id, 'core', { id, direction });
+    const supplied = Array.isArray(knowledge.categories)
+        ? knowledge.categories
+        : legacyCategories(knowledge).map(({ item, direction }) => ({ item, direction }));
+    const byId = new Map();
+    supplied.forEach(entry => {
+        const item = entry.item || entry;
+        const id = slug(item?.id || item?.primaryCategory || (Array.isArray(item) ? item[0] : item?.label));
+        if (id) byId.set(id, { item, direction: entry.direction });
+    });
+    return PIM_COMPASS.map(compass => {
+        const match = byId.get(compass.id)
+            || [...byId.values()].find(entry => entry.direction === compass.direction)
+            || { item: null, direction: compass.direction };
+        const item = match.item || {
+            id: compass.id,
+            label: compass.title,
+            description: '',
+            value: '',
+            children: []
+        };
+        const node = normalizeNode(item, compass.id, 'core', { id: compass.id, direction: compass.direction });
+        return {
+            ...node,
+            id: compass.id,
+            path: String(node.path || compass.id),
+            parentId: null,
+            direction: compass.direction
+        };
     });
 }
 
@@ -251,17 +272,22 @@ function ancestorPaths(path) {
  * `selectedNodeId` is only for highlighting/status; `expandedNodeIds` controls
  * which descendants are present in the complete mesh.
  */
-export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '') {
+export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '', focusedPlantId = '') {
     return {
         selectedNodeId: String(selectedNodeId || ''),
-        expandedNodeIds: expandedIdSet(expandedNodeIds)
+        expandedNodeIds: expandedIdSet(expandedNodeIds),
+        focusedPlantId: String(focusedPlantId || '')
     };
 }
 
 export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
     const targetId = String(nodeId || '');
     const node = pimNodeAtPath(knowledge, targetId);
-    const next = pimCreateInteractionState(state?.expandedNodeIds, targetId || state?.selectedNodeId);
+    const next = pimCreateInteractionState(
+        state?.expandedNodeIds,
+        targetId || state?.selectedNodeId,
+        state?.focusedPlantId
+    );
     if (!node) return next;
     const children = pimNodeChildren(node);
     if (!children.length) return next;
@@ -278,40 +304,6 @@ export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
 
 export function pimExpandedNodeIds(state = {}) {
     return [...expandedIdSet(state?.expandedNodeIds)];
-}
-
-// Deeper selections become the centre of the next connected honeycomb. This
-// keeps the information graph effectively unbounded while showing only one
-// clean generation at a time.
-export function pimFocusedView(knowledge = {}, expandedPaths = []) {
-    const candidates = (Array.isArray(expandedPaths) ? expandedPaths : [])
-        .filter(path => /[./]/.test(String(path)))
-        .reverse();
-    const focusNode = candidates.map(path => pimNodeAtPath(knowledge, path)).find(node => node && pimNodeChildren(node).length);
-    if (!focusNode) return null;
-    const children = pimNodeChildren(focusNode).slice(0, 6);
-    const nodes = children.map((node, index) => {
-        const direction = HONEYCOMB_DIRECTIONS[index];
-        return {
-            ...node,
-            direction,
-            rootDirection: focusNode.rootDirection || focusNode.direction,
-            depth: focusNode.depth + 1,
-            position: positionedAxial(DIRECTION_AXIAL[direction]),
-            parentPosition: positionedAxial({ q: 0, r: 0 }),
-            childIndex: index,
-            childCount: children.length
-        };
-    });
-    const trail = [focusNode];
-    let parentPath = focusNode.parentPath;
-    while (parentPath && parentPath !== 'core') {
-        const ancestor = pimNodeAtPath(knowledge, parentPath);
-        if (!ancestor || trail.some(node => node.path === ancestor.path)) break;
-        trail.unshift(ancestor);
-        parentPath = ancestor.parentPath;
-    }
-    return { focusNode, nodes, trail };
 }
 
 export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}) {
@@ -331,7 +323,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         const record = {
             ...node,
             nodeId: node.path,
-            parentId: node.parentPath === 'core' ? null : node.parentPath,
+            parentId: node.parentId === 'core' ? null : node.parentId,
             depth,
             rootDirection,
             position,

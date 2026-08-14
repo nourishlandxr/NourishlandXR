@@ -296,7 +296,10 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /<strong>Add area<\/strong>/);
     assert.match(fieldGuideSource, /field-guide-hub-redesign/);
     assert.match(fieldGuideSource, /field-guide-spatial-setup/);
-    assert.match(fieldGuideSource, /field-guide-spatial-summary/);
+    assert.match(fieldGuideSource, /project-overview-header/);
+    assert.match(fieldGuideSource, /map-button/);
+    assert.match(fieldGuideSource, /field-guide-management-row/);
+    assert.doesNotMatch(fieldGuideSource, /Map · \$\{placedCount\} elements · \$\{guide\.totems\.length\} totems · \$\{anchoredCount\} anchors/);
     assert.match(fieldGuideSource, /field-guide-view-all/);
     assert.match(fieldGuideSource, /Plant Live Tags/);
     assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
@@ -321,11 +324,17 @@ test('Web Hub redesign keeps a compact mobile grid and expands into desktop colu
     assert.match(source, /<strong>Add plant<\/strong>/);
     assert.match(source, /<strong>Add area<\/strong>/);
     assert.match(source, /Spatial setup/);
-    assert.match(source, /Map · \$\{placedCount\} elements · \$\{guide\.totems\.length\} totems · \$\{anchoredCount\} anchors/);
+    assert.match(source, /field-guide-management-row-content/);
+    assert.match(source, /Coming in V2/);
+    assert.doesNotMatch(source, /field-guide-spatial-summary/);
     assert.match(styles, /\.field-guide-hub-redesign \{[\s\S]*width: calc\(100% \+ 32px\)/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-primary-actions \.field-guide-creation-actions[\s\S]*display: grid/);
     assert.match(styles, /@media \(min-width: 760px\)[\s\S]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(300px, \.85fr\)/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-map-action::before[\s\S]*content: none/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-all-plants\[hidden\][\s\S]*display: none !important/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
+    assert.match(styles, /@media \(max-width: 380px\)[\s\S]*\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\)/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-plant-scope button \{ min-height: 44px;/);
 });
 
 test('creator dashboard frame stays inside the viewport with a simple border', () => {
@@ -348,7 +357,13 @@ test('Home owns no-Area experiments while named Areas remain isolated', () => {
 test('fresh projects begin with a simple Area and can place its Totem now or later', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+    const siteManagerSource = fs.readFileSync(path.join(root, 'app/managers/siteManager.js'), 'utf8');
+    const persistenceSource = fs.readFileSync(path.join(root, 'app/services/persistence.js'), 'utf8');
     assert.match(mainSource, /window\.renderProjectHome\(encodeURIComponent\(created\.id\)\)/);
+    assert.match(siteManagerSource, /await ensureDefaultHomeAreas\(createdProject\.id\)/);
+    assert.match(persistenceSource, /export async function ensureDefaultHomeArea\(projectId, siteId\)/);
+    assert.match(persistenceSource, /places\.find\(isDefaultHomeArea\)/);
+    assert.match(persistenceSource, /name: DEFAULT_HOME_AREA_NAME/);
     assert.match(dashboardSource, /Your space is ready/);
     assert.match(dashboardSource, /CREATE YOUR FIRST AREA/);
     assert.match(dashboardSource, /Name your Area/);

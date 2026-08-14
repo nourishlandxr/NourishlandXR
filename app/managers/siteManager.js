@@ -1,5 +1,5 @@
 import { createSite } from '../models/site.js';
-import { createProjectOnDisk, deleteProjectOnDisk, loadProjects, renameProjectOnDisk } from '../services/persistence.js';
+import { createProjectOnDisk, deleteProjectOnDisk, ensureDefaultHomeAreas, loadProjects, renameProjectOnDisk } from '../services/persistence.js';
 
 export class SiteManager {
     constructor() {
@@ -22,6 +22,7 @@ export class SiteManager {
 
     async createProject(project) {
         const createdProject = await createProjectOnDisk(project);
+        await ensureDefaultHomeAreas(createdProject.id);
         const newProject = createSite(createdProject);
         this.sites.push(newProject);
         return newProject;

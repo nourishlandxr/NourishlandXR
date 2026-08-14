@@ -25,8 +25,8 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimConnectorPath, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8936';
+import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8945';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -644,7 +644,8 @@ function creatorPlantKnowledge(record) {
 function creatorPimState(record) {
     return pimCreateInteractionState(
         record?.pimExpandedNodeIds || record?.pimExpandedPaths || [],
-        record?.pimSelectedNodeId || ''
+        record?.pimSelectedNodeId || '',
+        record?.pimFocusedPlantId || record?.marker?.plantId || record?.marker?.id || ''
     );
 }
 
@@ -652,10 +653,15 @@ function setCreatorPimState(record, state) {
     if (!record) return state;
     record.pimSelectedNodeId = state.selectedNodeId;
     record.pimExpandedNodeIds = pimExpandedNodeIds(state);
+    record.pimFocusedPlantId = state.focusedPlantId || record.marker?.plantId || record.marker?.id || '';
     // Keep the existing field for saved/session compatibility while the
     // interaction model uses explicit selectedNodeId/expandedNodeIds state.
     record.pimExpandedPaths = [...record.pimExpandedNodeIds];
     return state;
+}
+
+function creatorPimExpandedNodeIds(record) {
+    return record?.pimExpandedNodeIds || record?.pimExpandedPaths || [];
 }
 
 function toggleCreatorPimNode(record, nodePath) {
@@ -664,38 +670,8 @@ function toggleCreatorPimNode(record, nodePath) {
     return next;
 }
 
-function legacyCreatorPlantKnowledgeMarkup(record) {
-    const knowledge = creatorPlantKnowledge(record);
-    const compactLabel = label => ({ RELATIONSHIPS: 'LINKS' })[String(label).toUpperCase()] || label;
-    const expandedPaths = record.pimExpandedPaths || [];
-    const expanded = new Set(expandedPaths);
-    // This legacy markup path is retained for compatibility, but it must use
-    // the same complete-tree renderer semantics as the active AR surface.
-    const focus = null;
-    const nodes = pimVisibleNodes(knowledge, expandedPaths, {
-        selectedNodeId: record.pimSelectedNodeId
-    });
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
-    const cells = nodes.map(node => {
-        const hasChildren = pimNodeChildren(node).length > 0;
-        const open = expanded.has(node.path);
-        const detailsVisible = node.depth > 0;
-        const visualDepth = focus ? 1 : node.depth;
-        const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
-        const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-parent-grid-x:${parentPosition.gridX || 0};--pim-parent-grid-y:${parentPosition.gridY || 0};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${escapeHtml(node.path)}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(compactLabel(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${escapeHtml(compactLabel(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
-    }).join('');
-    const focusTrail = focus?.trail.map(node => compactLabel(node.label)).join(' › ') || '';
-    const back = focus ? `<button type="button" class="plant-knowledge-back" data-ar-pim-back="${escapeHtml(focus.focusNode.path)}" aria-label="Return from ${escapeHtml(compactLabel(focus.focusNode.label))} to the previous PIM bloom">← ${escapeHtml(knowledge.title)} · ${escapeHtml(focusTrail)}</button>` : '';
-    const core = focus
-        ? `<span class="plant-knowledge-core is-fractal-focus"><strong>${escapeHtml(compactLabel(focus.focusNode.label))}</strong><i>${escapeHtml(focus.focusNode.value)}</i></span>`
-        : `<span class="plant-knowledge-core"><strong>${escapeHtml(knowledge.title)}</strong></span>`;
-    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
-}
-
 function creatorPlantKnowledgeMarkup(record) {
-    return plantInformationMeshMarkup(creatorPlantKnowledge(record), record.pimExpandedPaths || [], {
+    return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
         selectedNodeId: record.pimSelectedNodeId
     });
 }
@@ -3012,7 +2988,7 @@ function createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress) {
     textureCanvas.height = PIM_TEXTURE_SIZE.height;
     const context = textureCanvas.getContext('2d', { alpha: true });
     if (!context) return null;
-    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, record.pimExpandedPaths || [], {
+    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, creatorPimExpandedNodeIds(record), {
         hoverPath,
         selectedNodeId: record.pimSelectedNodeId,
         bloomProgress
@@ -3038,7 +3014,7 @@ function ensureSpatialPimTexture(record) {
     if (bloomProgress >= 1) record.pimBloomStarted = 0;
     const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
     const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
-    const key = JSON.stringify([record.pimExpandedPaths || [], record.pimSelectedNodeId || '', hoverPath, animationFrame, knowledge.categories]);
+    const key = JSON.stringify([creatorPimExpandedNodeIds(record), record.pimSelectedNodeId || '', hoverPath, animationFrame, knowledge.categories]);
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
@@ -3061,7 +3037,7 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
                 : 1;
             const target = pimHoneycombTargetAtPercent(
                 creatorPlantKnowledge(record),
-                record.pimExpandedPaths || [],
+                creatorPimExpandedNodeIds(record),
                 hit.u * 100,
                 hit.v * 100,
                 { bloomProgress, selectedNodeId: record.pimSelectedNodeId }
@@ -3779,7 +3755,22 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
     if (!profile || !tether) return;
-    const layout = creatorPlantProfileLayout(window.innerWidth, window.innerHeight, markerX, markerY);
+    const visualViewport = window.visualViewport;
+    const viewportWidth = Number(visualViewport?.width) || window.innerWidth;
+    const viewportHeight = Number(visualViewport?.height) || window.innerHeight;
+    const offsetX = Number(visualViewport?.offsetLeft) || 0;
+    const offsetY = Number(visualViewport?.offsetTop) || 0;
+    const dock = overlayRoot.querySelector('.creator-ar-control-dock');
+    const dockRect = dock?.getBoundingClientRect();
+    const toolbarInset = dockRect && dockRect.bottom >= viewportHeight - 96
+        ? dockRect.height + 10
+        : 0;
+    const anchorX = markerX - offsetX;
+    const anchorY = markerY - offsetY;
+    const layout = creatorPlantProfileLayout(viewportWidth, viewportHeight, anchorX, anchorY, {
+        topInset: Math.max(12, offsetY + 8),
+        bottomInset: toolbarInset + 12
+    });
     const { panelWidth, panelHeight, panelX, panelY, tetherStartY, tetherEndY } = layout;
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
@@ -3787,9 +3778,9 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     profile.style.height = `${panelHeight}px`;
     const diagramAnchorX = panelX;
     const diagramAnchorY = tetherEndY;
-    const dx = diagramAnchorX - markerX;
+    const dx = diagramAnchorX - anchorX;
     const dy = diagramAnchorY - tetherStartY;
-    tether.style.left = `${markerX}px`;
+    tether.style.left = `${anchorX}px`;
     tether.style.top = `${tetherStartY - 9}px`;
     tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
     tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
@@ -4147,7 +4138,8 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
         record.infoVisible = record.profileExpanded;
         if (opening) {
             ensureSpatialPimPose(record, true);
-            record.pimExpandedPaths ||= [];
+            record.pimExpandedNodeIds ||= [...(record.pimExpandedPaths || [])];
+            record.pimExpandedPaths ||= [...record.pimExpandedNodeIds];
             record.pimBloomStarted = performance.now();
         } else {
             invalidateSpatialPimTexture(record);

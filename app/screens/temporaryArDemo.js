@@ -15,8 +15,8 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimConnectorPath, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleExpandedPaths, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8936';
+import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8945';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -770,6 +770,7 @@ function guidePlantConversion(record) {
         }
         record.demoExpanded = false;
         record.demoActiveBranch = '';
+        record.demoExpandedNodeIds = [];
         record.demoExpandedBranches = [];
         record.informationPosition = plantInformationPosition(record);
         record.demoAlive = true;
@@ -1186,7 +1187,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     if (!record.demoExpanded) return anchoredOrb;
     const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), record.demoExpandedBranches)}</span>`;
+    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -1208,6 +1209,7 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
+        setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
         record.profileRevealStarted = performance.now();
         const firstOpen = !record.demoProfileOpened;
         record.demoProfileOpened = true;
@@ -1277,7 +1279,7 @@ function selectDemoProfileCell() {
         return false;
     }
     if (node.pimBack) {
-        record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+        setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
         record.demoActiveBranch = node.parentPath === 'core' ? '' : node.parentPath;
         refreshDemoRecord(record);
         setGuide(`Returned to the previous ${node.label} bloom.`);
@@ -1287,15 +1289,15 @@ function selectDemoProfileCell() {
         setGuide(`${node.label}: ${node.value || 'Information cell'}`);
         return true;
     }
-    const wasOpen = record.demoExpandedBranches?.includes(node.path);
-    record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, node.path);
+    const wasOpen = demoPimState(record).expandedNodeIds.has(node.path);
+    setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
     record.demoActiveBranch = wasOpen
         ? (node.parentPath === 'core' ? '' : node.parentPath)
         : node.path;
     record.pimBloomStarted = performance.now();
     if (record.texture) gl?.deleteTexture(record.texture);
     record.texture = createMarkerTexture(record);
-    const opened = record.demoExpandedBranches.includes(node.path);
+    const opened = demoPimState(record).expandedNodeIds.has(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
     setGuide(opened
         ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'}${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`
@@ -1305,7 +1307,7 @@ function selectDemoProfileCell() {
 
 function advanceAfterDemoProfileInteraction(record) {
     if (!record || record.demoProfileInteracted) return 0;
-    const opened = record.demoExpandedBranches?.includes(record.demoActiveBranch);
+    const opened = demoPimState(record).expandedNodeIds.has(record.demoActiveBranch);
     const explorationGoal = record.tutorialStage === 'plant' ? 3 : 2;
     if (opened) record.demoProfileInteractionCount = (Number(record.demoProfileInteractionCount) || 0) + 1;
     const remaining = Math.max(0, explorationGoal - (Number(record.demoProfileInteractionCount) || 0));
@@ -1365,7 +1367,7 @@ function demoPimPointerTarget(record) {
         panelHit: true,
         xPercent,
         yPercent,
-        node: pimHoneycombTargetAtPercent(knowledge, record.demoExpandedBranches || [], xPercent, yPercent, { bloomProgress })
+        node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, { bloomProgress })
     };
 }
 
@@ -1598,7 +1600,7 @@ function bindSimulatedInformationPanels(layer) {
         back?.addEventListener('click', event => {
             event.stopPropagation();
             const focusPath = back.dataset.pimBack;
-            record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, focusPath);
+            setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), focusPath));
             const separator = focusPath.includes('/') ? '/' : '.';
             record.demoActiveBranch = focusPath.split(separator).slice(0, -1).join(separator);
             refreshDemoRecord(record);
@@ -1625,8 +1627,8 @@ function bindSimulatedInformationPanels(layer) {
                     setGuide(`${cell.querySelector('b')?.textContent || 'Cell'}: ${node?.value || 'Information cell'}`);
                     return;
                 }
-                const wasOpen = record.demoExpandedBranches?.includes(nodePath);
-                record.demoExpandedBranches = pimToggleExpandedPaths(record.demoExpandedBranches, nodePath);
+                const wasOpen = demoPimState(record).expandedNodeIds.has(nodePath);
+                setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), nodePath));
                 record.demoActiveBranch = wasOpen
                     ? (node.parentPath === 'core' ? '' : node.parentPath)
                     : nodePath;
@@ -1678,33 +1680,29 @@ function bindSimulatedInformationPanels(layer) {
     });
 }
 
-const demoProfileEscape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-
-function legacyPlantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
-    const expanded = new Set(expandedPaths);
-    const focus = null;
-    const nodes = pimVisibleNodes(knowledge, expandedPaths);
-    const connectors = nodes.map(node => `<path class="plant-knowledge-connector plant-knowledge-connector-depth-${node.depth}${node.depth > 0 ? ' is-parent-link' : ' is-core-link'}" d="${pimConnectorPath(node)}" pathLength="1" style="--pim-hue:${pimNodeHue(node)}"/>`).join('');
-    const cells = nodes.map(node => {
-        const hasChildren = pimNodeChildren(node).length > 0;
-        const open = expanded.has(node.path);
-        const detailsVisible = node.depth > 0;
-        const visualDepth = focus ? 1 : node.depth;
-        const depthClass = visualDepth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(visualDepth, 3)}` : '';
-        const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
-        const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-grid-x:${node.position.gridX};--pim-grid-y:${node.position.gridY};--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-parent-grid-x:${parentPosition.gridX || 0};--pim-parent-grid-y:${parentPosition.gridY || 0};--pim-node-scale:1;--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-node="${node.path}" data-pim-direction="${demoProfileEscape(node.rootDirection || node.direction)}" data-plant-branch="${node.path}" style="${style}" aria-label="${demoProfileEscape(node.label)}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}"><b>${demoProfileEscape(node.label)}</b><small aria-hidden="${!detailsVisible}">${demoProfileEscape(node.value)}</small></button>`;
-    }).join('');
-    const focusTrail = focus?.trail.map(node => node.label).join(' › ') || '';
-    const back = focus ? `<button type="button" class="plant-knowledge-back" data-pim-back="${demoProfileEscape(focus.focusNode.path)}" aria-label="Return from ${demoProfileEscape(focus.focusNode.label)} to the previous PIM bloom">← ${demoProfileEscape(knowledge.title)} · ${demoProfileEscape(focusTrail)}</button>` : '';
-    const core = focus
-        ? `<span class="plant-knowledge-core is-fractal-focus" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><small>SELECTED TOPIC</small><strong>${demoProfileEscape(focus.focusNode.label)}</strong><i>${demoProfileEscape(focus.focusNode.value)}</i></span>`
-        : `<span class="plant-knowledge-core" data-plant-profile-handle tabindex="0" aria-label="Drag the ${demoProfileEscape(knowledge.title)} Plant Information Mesh"><strong>${demoProfileEscape(knowledge.title)}</strong></span>`;
-    return `<span class="plant-knowledge-map${focus ? ' is-fractal-focus' : ''}${expandedPaths.length ? ' is-expanded' : ''}" data-pim-layout="honeycomb" aria-label="Plant Information Mesh">${back}<svg class="plant-knowledge-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${connectors}</svg>${cells}${core}</span>`;
+function demoPimState(record) {
+    return pimCreateInteractionState(
+        record?.demoExpandedNodeIds || record?.demoExpandedBranches || [],
+        record?.demoSelectedNodeId || '',
+        record?.demoFocusedPlantId || record?.id || record?.name || ''
+    );
 }
 
-function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = []) {
-    return plantInformationMeshMarkup(knowledge, expandedPaths);
+function demoPimExpandedNodeIds(record) {
+    return record?.demoExpandedNodeIds || record?.demoExpandedBranches || [];
+}
+
+function setDemoPimState(record, state) {
+    if (!record) return state;
+    record.demoSelectedNodeId = state.selectedNodeId;
+    record.demoExpandedNodeIds = pimExpandedNodeIds(state);
+    record.demoExpandedBranches = [...record.demoExpandedNodeIds];
+    record.demoFocusedPlantId = state.focusedPlantId || record.id || record.name || '';
+    return state;
+}
+
+function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = [], options = {}) {
+    return plantInformationMeshMarkup(knowledge, expandedPaths, options);
 }
 
 function refreshDemoRecord(record) {
@@ -2257,7 +2255,7 @@ function createSpatialKnowledgeTexture(record) {
         const bloomProgress = record.pimBloomStarted
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
-        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), record.demoExpandedBranches || [], { bloomProgress });
+        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), demoPimExpandedNodeIds(record), { bloomProgress, selectedNodeId: record.demoSelectedNodeId });
         // The demo quad already maps V=0 to the physical top edge. Uploading
         // with UNPACK_FLIP_Y_WEBGL here inverted the PIM a second time.
         return canvasTexture(label);

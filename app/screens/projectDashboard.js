@@ -3068,7 +3068,8 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
                 ...profile,
                 profile_enabled: true,
                 spm_enabled: true,
-                pim_document: activePimDocument
+                pim_document: activePimDocument,
+                pim_import_review: activePimImportReview
             });
             return activePimDocument;
         };
@@ -3104,11 +3105,12 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
                         activePimDocument = normalizePimDocument(nextReview.document);
                         await savePimDocument(activePimDocument);
                     }
-                    return activePimDocument;
+                    return nextReview;
                 },
                 onRejectImport: async item => {
                     activePimImportReview = reviewPimImport(activePimImportReview, item?.id || item?.itemId, 'reject');
-                    return activePimDocument;
+                    await savePimDocument(activePimDocument);
+                    return activePimImportReview;
                 },
                 onModifyImport: () => undefined
             });

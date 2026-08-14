@@ -6,7 +6,6 @@ import {
     pimCreateInteractionState,
     pimExpandedNodeIds,
     pimEnsureExpandedPaths,
-    pimFocusedView,
     pimKnowledgeNodes,
     pimNodeChildren,
     pimNodeHue,
@@ -21,6 +20,8 @@ import {
     pimVisibleNodes
 } from '../app/services/plantInformationMesh.js';
 import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
+import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
+import { PIM_COMPASS } from '../app/services/pimCompass.js';
 import { PIGEON_PEA_AR_KNOWLEDGE } from '../app/services/pigeonPeaExample.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 import { resolvePlantPim } from '../app/services/pimLegacyAdapter.js';
@@ -29,6 +30,53 @@ import { pimToArKnowledge } from '../app/services/pimModel.js';
 function flattenedArNodes(nodes) {
     return (Array.isArray(nodes) ? nodes : []).flatMap(node => [node, ...flattenedArNodes(node.children)]);
 }
+
+test('Demo and Creator consume one canonical PIM renderer, geometry and interaction contract', async () => {
+    const [demoSource, creatorSource, viewSource, canvasSource, styles] = await Promise.all([
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8')),
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/screens/arMode.js', import.meta.url), 'utf8')),
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/services/plantInformationMeshView.js', import.meta.url), 'utf8')),
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/services/plantInformationMeshCanvas.js', import.meta.url), 'utf8')),
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/style.css', import.meta.url), 'utf8'))
+    ]);
+    for (const source of [demoSource, creatorSource]) {
+        assert.match(source, /plantInformationMeshMarkup/);
+        assert.match(source, /drawPlantInformationHoneycomb/);
+        assert.match(source, /pimCreateInteractionState/);
+        assert.match(source, /pimToggleNodeState/);
+        assert.doesNotMatch(source, /legacy(?:Creator|Plant)PlantKnowledgeMarkup/);
+        assert.doesNotMatch(source, /pimFocusedView\(/);
+    }
+    assert.match(viewSource, /data-pim-renderer="canonical"/);
+    assert.match(viewSource, /data-pim-role="center"/);
+    assert.match(viewSource, /data-pim-role="\$\{role\}"/);
+    assert.match(canvasSource, /pimVisibleNodes/);
+    assert.match(canvasSource, /pimNodeVisualPosition/);
+    assert.doesNotMatch(styles, /\.creator-ar-plant-profile \.plant-knowledge-map\s*\{/);
+    assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)/);
+});
+
+test('canonical AR PIM markup always exposes one center and six primary cells', () => {
+    const markup = plantInformationMeshMarkup(PIGEON_PEA_AR_KNOWLEDGE);
+    assert.equal((markup.match(/data-pim-role="center"/g) || []).length, 1);
+    assert.equal((markup.match(/data-pim-role="primary"/g) || []).length, 6);
+    for (const compass of PIM_COMPASS) {
+        assert.match(markup, new RegExp(`data-pim-node-id="${compass.id}"`));
+    }
+    assert.match(markup, /data-pim-role="center"[^>]*>.*Pigeon Pea/s);
+});
+
+test('dynamic plants retain the same six empty-visible primary positions', () => {
+    const markup = plantInformationMeshMarkup({
+        title: 'Tapioca',
+        categories: [{ id: 'historical-data', label: 'Historical Data', description: 'A dynamic record' }]
+    });
+    assert.match(markup, /data-pim-role="center"[^>]*>.*Tapioca/s);
+    assert.equal((markup.match(/data-pim-role="primary"/g) || []).length, 6);
+    assert.equal((markup.match(/data-pim-node-id="historical-data"/g) || []).length, 1);
+    assert.match(markup, /data-pim-node-id="food-forest"[^>]*>.*Food Forest/s);
+    assert.match(markup, /data-pim-node-id="cultivation"[^>]*>.*Cultivation/s);
+});
 
 test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable directions', () => {
     const roots = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE);
@@ -183,15 +231,6 @@ test('PIM treats explicit empty child lists as leaves', () => {
     const uses = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE).find(node => node.id === 'uses');
     const animalFodder = pimNodeChildren(uses).find(node => node.id === 'animal-fodder');
     assert.equal(pimNodeChildren(animalFodder).length, 0);
-});
-
-test('PIM recentres each deeper generation as a clean recursive honeycomb', () => {
-    const focus = pimFocusedView(PIGEON_PEA_AR_KNOWLEDGE, ['uses', 'uses/culinary']);
-    assert.equal(focus.focusNode.label, 'Culinary');
-    assert.deepEqual(focus.nodes.map(node => node.label), ['Dried pulse', 'Fresh peas', 'Young pods']);
-    assert.ok(focus.nodes.every(node => node.parentPosition.x === 50 && node.parentPosition.y === 50));
-    assert.ok(focus.nodes.every(node => pimNodeHue(node) === pimNodeHue(focus.focusNode)));
-    assert.deepEqual(focus.trail.map(node => node.label), ['Uses', 'Culinary']);
 });
 
 test('AR projection preserves every canonical Pigeon Pea node ID and stable path', () => {

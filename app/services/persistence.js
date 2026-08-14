@@ -1,4 +1,5 @@
 import { API_BASE, apiFetch } from './apiClient.js';
+import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from './arExperienceConfig.js';
 
 async function requestJson(url, options = {}) {
     let response;
@@ -79,6 +80,24 @@ export async function loadProjectSites(projectId, visitor = false) {
 
 export async function createProjectSite(projectId, siteData) {
     return requestJson(`${API_BASE}/projects/${encodeURIComponent(projectId)}/sites`, { method: 'POST', body: JSON.stringify(siteData) });
+}
+
+// Keep project creation safe when the API is older than the current creator
+// UI. The server also enforces this invariant, but reconciling here means a
+// freshly created project has Home before the first dashboard or AR render.
+export async function ensureDefaultHomeArea(projectId, siteId) {
+    const places = await loadSitePlaces(projectId, siteId);
+    const existingHome = places.find(isDefaultHomeArea);
+    if (existingHome) return existingHome;
+    return createSitePlace(projectId, siteId, {
+        ...AR_EXPERIENCE_CONFIG.fallbackArea,
+        name: DEFAULT_HOME_AREA_NAME
+    });
+}
+
+export async function ensureDefaultHomeAreas(projectId) {
+    const sites = await loadProjectSites(projectId);
+    return Promise.all(sites.map(site => ensureDefaultHomeArea(projectId, site.id)));
 }
 
 export async function updateProjectSite(projectId, siteId, siteData) {
