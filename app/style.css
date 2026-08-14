@@ -6827,6 +6827,79 @@ body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-li
     body.creator-ar-quest-headset .creator-ar-quest-link-bar .creator-ar-taskbar > button { width: 42px; min-width: 42px; }
 }
 
+/* Phone AR landscape: keep the shared controls in a reachable bottom dock.
+   This is deliberately orientation- and pointer-based so desktop and Quest
+   layouts keep their own contracts without user-agent branches. */
+@media screen and (orientation: landscape) and (max-height: 620px) and (pointer: coarse) {
+    .creator-ar-control-dock {
+        width: min(calc(100vw - 24px), 760px);
+        bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    .creator-ar-taskbar {
+        align-items: stretch;
+        justify-content: center;
+        gap: 5px;
+        overflow: visible;
+    }
+    .creator-ar-taskbar > button,
+    body[data-project-theme] .creator-ar-taskbar > button {
+        flex: 1 1 0;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 6px 5px;
+        justify-content: center;
+        overflow: hidden;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.05;
+    }
+    .creator-ar-taskbar > button strong,
+    .creator-ar-taskbar > button span:not(.sr-only) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    .creator-ar-context-toolbar {
+        align-items: stretch;
+        flex-wrap: wrap;
+        max-height: min(38dvh, 190px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .creator-ar-context-toolbar button,
+    body[data-project-theme] .creator-ar-context-toolbar button {
+        flex: 1 1 44px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .creator-ar-status {
+        max-width: min(56vw, 520px);
+    }
+    .creator-ar-inline-editor,
+    .creator-ar-area-chooser,
+    .creator-ar-unplaced-bag {
+        max-height: min(64dvh, 320px);
+    }
+    .tryit-demo-footer {
+        width: min(calc(100vw - 24px), 760px);
+        bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    .tryit-demo-taskbar {
+        display: flex;
+        align-items: stretch;
+        gap: 6px;
+        overflow: visible;
+    }
+    .tryit-demo-taskbar > button {
+        flex: 1 1 0;
+        min-width: 44px;
+        min-height: 48px;
+        white-space: normal;
+    }
+    .tryit-demo:is([data-demo-tutorial-step="pim"],[data-demo-tutorial-step="live-tag"]) .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+        max-width: min(72vw, 620px);
+    }
+}
+
 /* The WEB link opens a real app surface without ending the Quest session. */
 .creator-ar-spatial-web-window {
     position: fixed;

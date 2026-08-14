@@ -505,6 +505,18 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /opacity: arrivalEase \* markerAppearanceOpacity\(record\.marker\)/);
 });
 
+test('Creator and Demo AR taskbars reflow into a touch-safe landscape bottom dock', () => {
+    const arSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
+    assert.match(arSource, /window\.addEventListener\('orientationchange', reflow, \{ passive: true \}\)/);
+    assert.match(arSource, /window\.screen\?\.orientation\?\.addEventListener\('change', reflow, \{ passive: true \}\)/);
+    assert.match(styles, /@media screen and \(orientation: landscape\) and \(max-height: 620px\) and \(pointer: coarse\)/);
+    assert.match(styles, /\.creator-ar-control-dock \{[\s\S]*width: min\(calc\(100vw - 24px\), 760px\);[\s\S]*bottom: max\(10px, env\(safe-area-inset-bottom\)\);/);
+    assert.match(styles, /\.creator-ar-taskbar > button,[\s\S]*min-width: 44px;[\s\S]*min-height: 44px;/);
+    assert.match(styles, /\.tryit-demo-footer \{[\s\S]*width: min\(calc\(100vw - 24px\), 760px\);/);
+    assert.match(styles, /\.tryit-demo-taskbar \{[\s\S]*display: flex;[\s\S]*overflow: visible;/);
+});
+
 test('Creator AR keeps the editable Location Note hidden until it is opened from its Totem', () => {
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
