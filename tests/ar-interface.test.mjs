@@ -173,6 +173,15 @@ test('the demo keeps the original three simple Totem forms', () => {
     assert.doesNotMatch(demoSource, /drawSpatialTotem/);
 });
 
+test('Creator PIM preserves Android touch clicks while isolating pointer events', () => {
+    const source = read('app/screens/arMode.js');
+    const handler = source.match(/profilePanel\?\.addEventListener\('pointerdown',[\s\S]*?profilePanel\?\.addEventListener\('click'/)?.[0] || '';
+    assert.match(handler, /event\.stopPropagation\(\);/);
+    assert.doesNotMatch(handler, /event\.preventDefault\(\);/);
+    assert.match(source, /profilePanel\?\.addEventListener\('pointerup'/);
+    assert.match(source, /profilePanel\?\.addEventListener\('pointercancel'/);
+});
+
 test('Physical Marker IDs use the exact original ArUco 5x5 encoding and NL labels', () => {
     assert.equal(physicalMarkerLabel(1), 'NL-001');
     assert.equal(physicalMarkerLabel(10), 'NL-010');

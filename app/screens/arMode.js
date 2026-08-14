@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8955';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8956';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -3960,9 +3960,18 @@ function renderSessionMarkers() {
             beginMarkerInteraction(record, event);
         });
         const profilePanel = layer.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
+        // Keep the PIM tap inside the profile without cancelling the browser's
+        // native click synthesis. Android Chrome/PWA can drop that click when
+        // preventDefault() is called during pointerdown, leaving Creator's
+        // otherwise-correct PIM looking inert while Demo still works.
         profilePanel?.addEventListener('pointerdown', event => {
-            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.preventDefault();
             event.stopPropagation();
+        });
+        profilePanel?.addEventListener('pointerup', event => {
+            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
+        });
+        profilePanel?.addEventListener('pointercancel', event => {
+            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
         });
         profilePanel?.addEventListener('click', event => {
             const core = event.target.closest?.('[data-pim-role="center"]');
