@@ -359,7 +359,8 @@ test('fresh projects begin with a simple Area and can place its Totem now or lat
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     const siteManagerSource = fs.readFileSync(path.join(root, 'app/managers/siteManager.js'), 'utf8');
     const persistenceSource = fs.readFileSync(path.join(root, 'app/services/persistence.js'), 'utf8');
-    assert.match(mainSource, /window\.renderProjectHome\(encodeURIComponent\(created\.id\)\)/);
+    assert.match(mainSource, /window\.renderProjectDashboard\(encodeURIComponent\(created\.id\)\)/);
+    assert.doesNotMatch(mainSource, /window\.renderProjectHome\(encodeURIComponent\(created\.id\)\)/);
     assert.match(siteManagerSource, /await ensureDefaultHomeAreas\(createdProject\.id\)/);
     assert.match(persistenceSource, /export async function ensureDefaultHomeArea\(projectId, siteId\)/);
     assert.match(persistenceSource, /places\.find\(isDefaultHomeArea\)/);
