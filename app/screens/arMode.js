@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8956';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8957';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -672,6 +672,20 @@ function toggleCreatorPimNode(record, nodePath) {
 }
 
 function creatorPlantKnowledgeMarkup(record) {
+    if (usesSpatialPimRenderer()) {
+        const size = spatialPimSurfaceSize(record);
+        return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
+            ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+            selectedNodeId: record.pimSelectedNodeId,
+            viewportWidth: size.layoutWidth,
+            viewportHeight: size.layoutHeight,
+            layoutWidth: size.layoutWidth,
+            layoutHeight: size.layoutHeight,
+            cellWidthPixels: PIM_TEXTURE_CELL_WIDTH,
+            cellHeightPixels: PIM_TEXTURE_CELL_WIDTH * .8660254,
+            safeArea: CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS.safeArea
+        });
+    }
     const visualViewport = window.visualViewport;
     const viewportWidth = Number(visualViewport?.width) || window.innerWidth;
     const viewportHeight = Number(visualViewport?.height) || window.innerHeight;
@@ -3832,18 +3846,51 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const toolbarInset = dockRect && dockRect.bottom >= viewportHeight - 96
         ? dockRect.height + 10
         : 0;
+    const spatialHitLayer = usesSpatialPimRenderer();
+    profile.classList.toggle('is-spatial-pim-hit-layer', spatialHitLayer);
     // The profile is a spatial surface, not a HUD card. Project the fixed PIM
     // pose captured when the Plant was opened; using the marker's current
     // screen point made Creator appear glued to the centre/marker overlay and
     // drifted from Demo's world-locked panel.
     const pose = ensureSpatialPimPose(record);
     const panel = pimSpatialPanel(pose, {
+        ...(spatialHitLayer ? (() => {
+            const size = spatialPimSurfaceSize(record);
+            return { width: size.panelWidth, height: size.panelHeight };
+        })() : {}),
         viewerPosition: latestViewerMatrix && {
             x: latestViewerMatrix[12],
             y: latestViewerMatrix[13],
             z: latestViewerMatrix[14]
         }
     });
+    if (spatialHitLayer && panel && latestView) {
+        const size = spatialPimSurfaceSize(record);
+        const halfWidth = panel.width * .5;
+        const halfHeight = panel.height * .5;
+        const projected = [
+            { x: panel.center.x - panel.right.x * halfWidth - panel.up.x * halfHeight, y: panel.center.y - panel.right.y * halfWidth - panel.up.y * halfHeight, z: panel.center.z - panel.right.z * halfWidth - panel.up.z * halfHeight },
+            { x: panel.center.x + panel.right.x * halfWidth - panel.up.x * halfHeight, y: panel.center.y + panel.right.y * halfWidth - panel.up.y * halfHeight, z: panel.center.z + panel.right.z * halfWidth - panel.up.z * halfHeight },
+            { x: panel.center.x + panel.right.x * halfWidth + panel.up.x * halfHeight, y: panel.center.y + panel.right.y * halfWidth + panel.up.y * halfHeight, z: panel.center.z + panel.right.z * halfWidth + panel.up.z * halfHeight },
+            { x: panel.center.x - panel.right.x * halfWidth + panel.up.x * halfHeight, y: panel.center.y - panel.right.y * halfWidth + panel.up.y * halfHeight, z: panel.center.z - panel.right.z * halfWidth + panel.up.z * halfHeight }
+        ].map(point => projectWorldPoint(latestView, point)).filter(Boolean);
+        if (projected.length === 4) {
+            const left = Math.min(...projected.map(point => point.x)) - offsetX;
+            const right = Math.max(...projected.map(point => point.x)) - offsetX;
+            const top = Math.min(...projected.map(point => point.y)) - offsetY;
+            const bottom = Math.max(...projected.map(point => point.y)) - offsetY;
+            const panelWidth = Math.max(1, right - left);
+            const panelHeight = Math.max(1, bottom - top);
+            profile.style.left = `${left + panelWidth / 2}px`;
+            profile.style.top = `${top + panelHeight / 2}px`;
+            profile.style.width = `${panelWidth}px`;
+            profile.style.height = `${panelHeight}px`;
+            const map = profile.querySelector('[data-pim-renderer="canonical"]');
+            map?.style.setProperty('--pim-cell-size', `${panelWidth * PIM_TEXTURE_CELL_WIDTH / size.width}px`);
+            map?.style.setProperty('--pim-cell-height', `${panelHeight * PIM_TEXTURE_CELL_WIDTH * .8660254 / size.height}px`);
+            return;
+        }
+    }
     const panelPoint = panel && projectWorldPoint(latestView, panel.center);
     const anchorX = (panelPoint?.x ?? markerX) - offsetX;
     const anchorY = (panelPoint?.y ?? markerY) - offsetY;
@@ -3974,9 +4021,13 @@ function renderSessionMarkers() {
             if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
         });
         profilePanel?.addEventListener('click', event => {
+            const clearPimFocus = target => {
+                if (target && profilePanel.contains(target)) target.blur?.();
+            };
             const core = event.target.closest?.('[data-pim-role="center"]');
             if (core && profilePanel.contains(core)) {
                 event.stopPropagation();
+                clearPimFocus(core);
                 setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
                 record.pimBloomStarted = 0;
                 refreshCreatorPimProfile(record, profilePanel);
@@ -3986,6 +4037,7 @@ function renderSessionMarkers() {
             const back = event.target.closest?.('[data-pim-back]');
             if (back) {
                 event.stopPropagation();
+                clearPimFocus(back);
                 toggleCreatorPimNode(record, back.dataset.pimBack);
                 record.pimBloomStarted = performance.now();
                 refreshCreatorPimProfile(record, profilePanel);
@@ -3996,6 +4048,7 @@ function renderSessionMarkers() {
             if (!cell || !profilePanel.contains(cell)) return;
             event.stopPropagation();
             const nodePath = cell.dataset.pimNode;
+            clearPimFocus(cell);
             const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
             if (!node) return;
             const label = cell.querySelector('b')?.textContent || 'Cell';

@@ -182,6 +182,16 @@ test('Creator PIM preserves Android touch clicks while isolating pointer events'
     assert.match(source, /profilePanel\?\.addEventListener\('pointercancel'/);
 });
 
+test('Creator PIM touch geometry follows the same world panel and clears focus glow', () => {
+    const creatorSource = read('app/screens/arMode.js');
+    const styles = read('app/style.css');
+    assert.match(creatorSource, /cellWidthPixels: PIM_TEXTURE_CELL_WIDTH/);
+    assert.match(creatorSource, /width: size\.panelWidth, height: size\.panelHeight/);
+    assert.match(creatorSource, /projected\.length === 4/);
+    assert.match(creatorSource, /clearPimFocus\(cell\)/);
+    assert.match(styles, /is-spatial-pim-hit-layer \.plant-knowledge-cell[\s\S]*outline: 0 !important/);
+});
+
 test('Physical Marker IDs use the exact original ArUco 5x5 encoding and NL labels', () => {
     assert.equal(physicalMarkerLabel(1), 'NL-001');
     assert.equal(physicalMarkerLabel(10), 'NL-010');

@@ -1128,6 +1128,19 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
     pointer-events: auto;
     touch-action: manipulation;
 }
+.creator-ar-plant-profile.is-spatial-pim-hit-layer .plant-knowledge-cell,
+.creator-ar-plant-profile.is-spatial-pim-hit-layer .plant-knowledge-core {
+    outline: 0 !important;
+    box-shadow: none !important;
+    filter: none !important;
+    -webkit-tap-highlight-color: transparent;
+}
+.creator-ar-plant-profile.is-spatial-pim-hit-layer .plant-knowledge-cell:is(:focus, :focus-visible),
+.creator-ar-plant-profile.is-spatial-pim-hit-layer .plant-knowledge-core:is(:focus, :focus-visible) {
+    outline: 0 !important;
+    box-shadow: none !important;
+    filter: none !important;
+}
 @keyframes creator-ar-profile-arrive { from { opacity: 0; transform: translate(-50%, -46%) scale(.93); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes creator-ar-profile-fade { to { opacity: .82; } }
 .creator-ar-marker-hit-target-intro_checkpoint .creator-ar-spatial-name,
