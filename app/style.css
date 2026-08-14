@@ -8141,9 +8141,6 @@ button.ar-square-action::before { display: none !important; }
     height: 100%;
     overflow: visible;
 }
-.plant-knowledge-map[data-pim-layout="honeycomb"].is-expanded {
-    --pim-cell-size: clamp(72px, 14vw, 132px);
-}
 .plant-knowledge-map[data-pim-layout="honeycomb"].is-fractal-focus {
     --pim-cell-size: clamp(82px, 18vw, 180px);
 }
@@ -8341,7 +8338,7 @@ button.ar-square-action::before { display: none !important; }
     max-width: 72%;
 }
 @keyframes pim-honeycomb-grow {
-    from { opacity: 0; transform: translate(-50%,-50%) scale(.24); }
+    from { opacity: 0; transform: translate(-50%,-50%) scale(.85); }
     to { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 }
 @keyframes pim-demo-attached-grow {
@@ -8349,7 +8346,7 @@ button.ar-square-action::before { display: none !important; }
         left: var(--pim-parent-x, 50%);
         top: var(--pim-parent-y, 50%);
         opacity: 0;
-        transform: translate(-50%,-50%) scale(.24);
+        transform: translate(-50%,-50%) scale(.85);
     }
     to {
         left: var(--pim-node-x, 50%);

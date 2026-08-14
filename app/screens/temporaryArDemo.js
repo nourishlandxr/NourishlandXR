@@ -15,8 +15,8 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8951';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8952';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -241,16 +241,7 @@ const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA
     scientificName: 'Moringa oleifera'
 })));
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
-const demoSpatialPimLayoutOptions = () => ({
-    safeArea: {
-        left: 5,
-        right: 95,
-        top: [DEMO_TUTORIAL_STEPS.PIM, DEMO_TUTORIAL_STEPS.LIVE_TAG].includes(demoTutorialStep) ? 12 : 6,
-        bottom: 84
-    },
-    layoutWidth: PIM_TEXTURE_SIZE.width,
-    layoutHeight: PIM_TEXTURE_SIZE.height
-});
+const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
@@ -1403,6 +1394,14 @@ function selectDemoProfileCell() {
         setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
         return false;
     }
+    if (node.pimCore) {
+        setDemoPimState(record, pimResetInteractionState(demoPimState(record)));
+        record.demoActiveBranch = '';
+        record.pimBloomStarted = 0;
+        refreshDemoPimProfile(record);
+        setGuide('Pigeon Pea flower reset.');
+        return true;
+    }
     if (node.pimBack) {
         setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
         record.demoActiveBranch = node.parentPath === 'core' ? '' : node.parentPath;
@@ -1731,6 +1730,16 @@ function bindSimulatedInformationPanels(layer) {
             if (pimTarget(event)) event.stopPropagation();
         });
         profile.addEventListener('click', event => {
+            const core = event.target.closest?.('[data-pim-role="center"]');
+            if (core && profile.contains(core)) {
+                event.stopPropagation();
+                setDemoPimState(record, pimResetInteractionState(demoPimState(record)));
+                record.demoActiveBranch = '';
+                record.pimBloomStarted = 0;
+                refreshDemoPimProfile(record, profile);
+                setGuide('Pigeon Pea flower reset.');
+                return;
+            }
             const back = event.target.closest?.('[data-pim-back]');
             if (back) {
                 event.stopPropagation();

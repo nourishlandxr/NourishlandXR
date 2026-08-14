@@ -106,8 +106,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const active = open || hovered || selected;
         const hue = pimNodeHue(node);
         const renderedRadius = Math.max(22, Number(node.layoutCellWidthPercent) / 100 * width / 2);
-        const radius = renderedRadius * (active ? 1.035 : 1) * (node.depth > 0 ? Math.max(.12, nodeBloom) : 1);
+        const radius = renderedRadius * (active ? 1.035 : 1) * (node.depth > 0 ? (.85 + .15 * nodeBloom) : 1);
         context.save();
+        context.globalAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         if (active) {
             context.shadowColor = `hsla(${hue}, 70%, 68%, .46)`;
             context.shadowBlur = 22;
@@ -192,7 +193,7 @@ export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPa
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
-    return pimVisibleNodes(knowledge, expandedPaths, {
+    const nodes = pimVisibleNodes(knowledge, expandedPaths, {
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
@@ -204,7 +205,23 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
         gapPixels: options.gapPixels,
         topInset: options.topInset,
         bottomInset: options.bottomInset
-    })
+    });
+    const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
+    const coreWidth = Math.max(.1, Number(nodes[0]?.layoutCellWidthPercent || 0) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+    const coreHeight = Math.max(.1, Number(nodes[0]?.layoutCellHeightPercent || 0) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+    const coreDistance = Math.hypot(
+        (xPercent - center.x) / coreWidth,
+        (yPercent - center.y) / coreHeight
+    );
+    if (coreDistance <= 1) {
+        return {
+            pimCore: true,
+            path: '',
+            label: knowledge?.title || knowledge?.name || 'Plant',
+            position: center
+        };
+    }
+    return nodes
         .map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
             const halfWidth = Math.max(.1, Number(node.layoutCellWidthPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);

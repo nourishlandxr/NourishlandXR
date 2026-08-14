@@ -57,6 +57,16 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
     colliderScale: 1.2
 });
 
+// AR deliberately shows a compact, readable projection of the full PIM. The
+// complete hierarchy remains in the shared document model and Web Hub; this
+// limit only controls what blooms into the spatial surface.
+export const AR_PIM_MAX_VISIBLE_CHILDREN = 3;
+export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
+    safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
+    layoutWidth: 1440,
+    layoutHeight: 1080
+});
+
 const PIM_DEFAULT_SAFE_AREA = Object.freeze({ left: 6, right: 94, top: 6, bottom: 94 });
 const PIM_DEFAULT_NODE_RADIUS_PERCENT = 12;
 const PIM_DEFAULT_VIEWPORT = Object.freeze({ width: 390, height: 844 });
@@ -188,6 +198,10 @@ export function pimNodeChildren(node) {
     });
 }
 
+export function pimArVisibleChildren(node) {
+    return pimNodeChildren(node).slice(0, AR_PIM_MAX_VISIBLE_CHILDREN);
+}
+
 export function pimRootPosition(node, options = {}) {
     return positionedAxial(
         DIRECTION_AXIAL[node?.direction] || { q: 0, r: 0 },
@@ -282,11 +296,24 @@ function ancestorPaths(path) {
  * which descendants are present in the complete mesh.
  */
 export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '', focusedPlantId = '') {
+    const selected = String(selectedNodeId || '');
+    const expanded = expandedIdSet(expandedNodeIds);
+    const activeBranch = primaryPath(selected) || primaryPath([...expanded][0]);
     return {
-        selectedNodeId: String(selectedNodeId || ''),
-        expandedNodeIds: expandedIdSet(expandedNodeIds),
+        selectedNodeId: selected,
+        expandedNodeIds: new Set([...expanded].filter(path => !activeBranch || primaryPath(path) === activeBranch)),
         focusedPlantId: String(focusedPlantId || '')
     };
+}
+
+function primaryPath(path) {
+    return ancestorPaths(path)[0] || String(path || '');
+}
+
+function removePathAndDescendants(paths, targetPath) {
+    return new Set([...paths].filter(candidate => candidate !== targetPath
+        && !candidate.startsWith(`${targetPath}.`)
+        && !candidate.startsWith(`${targetPath}/`)));
 }
 
 export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
@@ -301,14 +328,21 @@ export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
     const children = pimNodeChildren(node);
     if (!children.length) return next;
     if (next.expandedNodeIds.has(targetId)) {
-        next.expandedNodeIds = new Set([...next.expandedNodeIds]
-            .filter(candidate => candidate !== targetId
-                && !candidate.startsWith(`${targetId}.`)
-                && !candidate.startsWith(`${targetId}/`)));
+        next.expandedNodeIds = removePathAndDescendants(next.expandedNodeIds, targetId);
         return next;
     }
+    // AR has one open branch at a time. Switching to another primary parent
+    // closes only the old bloom; the source document and Web Hub hierarchy are
+    // never mutated or filtered.
+    const branch = primaryPath(targetId);
+    next.expandedNodeIds = new Set([...next.expandedNodeIds]
+        .filter(candidate => primaryPath(candidate) === branch));
     ancestorPaths(targetId).forEach(ancestor => next.expandedNodeIds.add(ancestor));
     return next;
+}
+
+export function pimResetInteractionState(state = {}) {
+    return pimCreateInteractionState([], '', state?.focusedPlantId || '');
 }
 
 export function pimExpandedNodeIds(state = {}) {
@@ -481,7 +515,10 @@ export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
         options.minimumScale,
         source[0]?.layoutMinimumReadableScale || .56
     )));
-    const sourceBounds = rawBounds(source, options);
+    // `fixedLayoutBounds` is the closed seven-cell flower measured before a
+    // bloom. Expansion uses this same reference forever, so adding children
+    // can never zoom, recenter, or resize the existing flower.
+    const sourceBounds = options.fixedLayoutBounds || rawBounds(source, options);
     const availableWidth = Math.max(1, safeArea.right - safeArea.left);
     const availableHeight = Math.max(1, safeArea.bottom - safeArea.top);
     const sourceWidth = Math.max(1, sourceBounds.right - sourceBounds.left);
@@ -559,6 +596,17 @@ function placePimRecord(record, parent, occupied, metrics) {
         x: parent.layoutGrid.x + direction.x * sibling.radial + direction.tangentX * sibling.tangent,
         y: parent.layoutGrid.y + direction.y * sibling.radial + direction.tangentY * sibling.tangent
     };
+    // Prefer the authored three-cell outward cluster around the real parent.
+    // The fallback below is only for an actual collision with another branch.
+    const preferred = pimChildPosition(parent, record.childIndex, record.childCount, metrics);
+    const preferredGrid = { x: preferred.axial.q, y: preferred.axial.r };
+    const preferredKey = `${preferredGrid.x}:${preferredGrid.y}`;
+    if (!occupied.has(preferredKey)) {
+        occupied.add(preferredKey);
+        record.layoutGrid = preferredGrid;
+        record.position = layoutPosition(preferredGrid, metrics);
+        return;
+    }
     const directionLength = Math.max(.001, Math.hypot(direction.x, direction.y));
     const candidates = [];
     for (let radius = 1; radius <= 12; radius += 1) {
@@ -633,12 +681,11 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     const selectedNodeId = String(options.selectedNodeId || '');
     const selectedPathParts = ancestorPaths(selectedNodeId);
     const selectedAncestors = new Set(selectedPathParts.slice(0, -1));
-    const reservationRoot = selectedNodeId;
     const metrics = pimLayoutMetrics(options);
     const layoutRecords = [];
     let order = 0;
 
-    const makeRecord = (node, depth, rootDirection, parentRecord, childIndex, childCount, visible) => {
+    const makeRecord = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
         const record = {
             ...node,
             nodeId: node.path,
@@ -652,7 +699,6 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
             layoutCellWidthPixels: metrics.cellWidthPixels,
             layoutCellHeightPixels: metrics.cellHeightPixels,
             layoutMinimumReadableScale: metrics.minimumReadableScale,
-            _pimVisible: visible,
             _pimOrder: order++,
             _pimParentPath: parentRecord?.path || ''
         };
@@ -661,30 +707,15 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     };
 
     const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
-        const record = makeRecord(node, depth, rootDirection, parentRecord, childIndex, childCount, true);
-        const children = pimNodeChildren({ ...node, depth });
+        const record = makeRecord(node, depth, rootDirection, parentRecord, childIndex, childCount);
+        const children = pimArVisibleChildren({ ...node, depth });
         const open = expanded.has(node.path) || selectedAncestors.has(node.path);
         if (open && children.length) {
             children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));
-            return;
-        }
-        const reserveNextGeneration = Boolean(reservationRoot) && node.path === reservationRoot;
-        if (reserveNextGeneration) {
-            children.forEach((child, index) => makeRecord(child, depth + 1, rootDirection, record, index, children.length, false));
         }
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
-
-    // Reserving the next small generation keeps a selected branch perfectly
-    // still when it opens. Large hidden generations must not shrink the live
-    // mesh, so dense branches are laid out only when they actually become
-    // visible.
-    if (layoutRecords.filter(record => !record._pimVisible).length > 3) {
-        for (let index = layoutRecords.length - 1; index >= 0; index -= 1) {
-            if (!layoutRecords[index]._pimVisible) layoutRecords.splice(index, 1);
-        }
-    }
 
     const occupied = new Set();
     const byPath = new Map(layoutRecords.map(record => [record.path, record]));
@@ -696,6 +727,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         record.position = layoutPosition(record.layoutGrid, metrics);
         occupied.add(`${record.layoutGrid.x}:${record.layoutGrid.y}`);
     });
+    const closedFlowerBounds = rawBounds(layoutRecords.filter(record => record.depth === 0), options);
     layoutRecords
         .filter(record => record.depth > 0)
         .sort((left, right) => left.depth - right.depth || left._pimOrder - right._pimOrder)
@@ -708,11 +740,13 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         record.parentPosition = parent?.position || corePosition;
     });
 
-    return pimCorrectVisibleNodeBounds(layoutRecords, options)
-        .filter(record => record._pimVisible)
+    return pimCorrectVisibleNodeBounds(layoutRecords, {
+        ...options,
+        fixedLayoutBounds: closedFlowerBounds
+    })
         .sort((left, right) => left._pimOrder - right._pimOrder)
         .map(record => {
-            const { _pimVisible, _pimOrder, _pimParentPath, ...publicRecord } = record;
+            const { _pimOrder, _pimParentPath, ...publicRecord } = record;
             return publicRecord;
         });
 }

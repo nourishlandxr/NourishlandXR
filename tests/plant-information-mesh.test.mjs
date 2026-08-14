@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+    AR_PIM_MAX_VISIBLE_CHILDREN,
     PIM_SPATIAL_CONFIG,
     pimCreateInteractionState,
     pimExpandedNodeIds,
@@ -13,6 +14,7 @@ import {
     pimNodeHue,
     pimNodeVisualPosition,
     pimRootPosition,
+    pimResetInteractionState,
     pimVisibleNodeBounds,
     pimVisibleCellBounds,
     pimCorrectVisibleNodeBounds,
@@ -60,6 +62,8 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
         assert.match(source, /createPlantInformationHoneycombTexture/);
         assert.match(source, /pimCreateInteractionState/);
         assert.match(source, /pimToggleNodeState/);
+        assert.match(source, /PIM_SPATIAL_LAYOUT_OPTIONS/);
+        assert.match(source, /pimResetInteractionState/);
         assert.doesNotMatch(source, /legacy(?:Creator|Plant)PlantKnowledgeMarkup/);
         assert.doesNotMatch(source, /pimFocusedView\(/);
     }
@@ -73,6 +77,7 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.match(canvasSource, /pimVisibleNodes/);
     assert.match(canvasSource, /pimNodeVisualPosition/);
     assert.match(canvasSource, /export function createPlantInformationHoneycombTexture/);
+    assert.match(canvasSource, /context\.clearRect\(0, 0, width, height\)/);
     assert.doesNotMatch(creatorSource, /function createSpatialPimTexture/);
     assert.doesNotMatch(demoSource, /function drawPlantKnowledgeTexture/);
     assert.doesNotMatch(demoSource, /data-demo-plant-tether/);
@@ -80,6 +85,7 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.doesNotMatch(styles, /\.tryit-demo \.plant-knowledge-/);
     assert.doesNotMatch(styles, /\.creator-ar-plant-profile \.plant-knowledge-map\s*\{/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)/);
+    assert.match(styles, /\.tryit-sim-plant-profile,[\s\S]*\.creator-ar-plant-profile\s*\{[\s\S]*background: transparent;/);
     assert.match(demoSource, /plantInformationMeshSurfaceLayout/);
     assert.match(creatorSource, /plantInformationMeshSurfaceLayout/);
     assert.match(demoSource, /refreshDemoPimProfile\(record, profile\)/);
@@ -216,6 +222,18 @@ test('PIM preserves sibling primary branches and closes only the selected branch
     assert.deepEqual(expanded, ['food-forest', 'uses', 'uses/culinary', 'uses/culinary/dried-pulse']);
     expanded = pimToggleExpandedPaths(expanded, 'uses');
     assert.deepEqual(expanded, ['food-forest']);
+});
+
+test('AR interaction state keeps one primary bloom and resets to the same flower', () => {
+    const knowledge = PIGEON_PEA_AR_KNOWLEDGE;
+    let state = pimCreateInteractionState(['cultivation', 'historical-data'], 'historical-data', 'pigeon-pea');
+    assert.deepEqual(pimExpandedNodeIds(state), ['historical-data']);
+    state = pimToggleNodeState(knowledge, state, 'cultivation');
+    assert.deepEqual(pimExpandedNodeIds(state), ['cultivation']);
+    const reset = pimResetInteractionState(state);
+    assert.deepEqual(pimExpandedNodeIds(reset), []);
+    assert.equal(reset.selectedNodeId, '');
+    assert.equal(reset.focusedPlantId, 'pigeon-pea');
 });
 
 test('AR PIM child expansion keeps the complete Pigeon Pea mesh and stable positions', () => {
@@ -421,21 +439,31 @@ test('PIM shared hit testing exposes large cells without a floating recenter con
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 2, 2), null);
 });
 
-test('expanded PIM bounds are corrected as one mesh without early cell clamping', () => {
+test('expanded PIM keeps the closed flower scale and position without fitting the bloom', () => {
+    const closed = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []);
     const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, [
         'cultivation',
         'cultivation/climate',
         'food-forest',
         'food-forest/ecological-functions'
     ]);
-    const bounds = pimVisibleNodeBounds(nodes);
-    assert.ok(bounds.left >= 5.99 && bounds.right <= 94.01, JSON.stringify(bounds));
-    assert.ok(bounds.top >= 5.99 && bounds.bottom <= 94.01, JSON.stringify(bounds));
-    assert.ok(nodes.every(node => node.layoutScale >= .4 && node.layoutScale <= 1));
+    const closedByPath = new Map(closed.map(node => [node.path, node]));
+    const expandedByPath = new Map(nodes.map(node => [node.path, node]));
+    closed.forEach(node => {
+        const expanded = expandedByPath.get(node.path);
+        assert.deepEqual(expanded.position, node.position, `${node.path} keeps its closed position`);
+        assert.equal(expanded.layoutScale, node.layoutScale, `${node.path} keeps its closed scale`);
+        assert.equal(expanded.layoutCellWidthPercent, node.layoutCellWidthPercent, `${node.path} keeps its cell size`);
+    });
     assert.equal(new Set(nodes.map(node => node.layoutScale.toFixed(8))).size, 1, 'the visible mesh uses one rigid scale');
+    const expandedBounds = pimVisibleNodeBounds(nodes);
+    assert.ok(expandedBounds.left < 6 || expandedBounds.right > 94 || expandedBounds.top < 6 || expandedBounds.bottom > 94,
+        'expanded children are not used to trigger a zoom or recenter');
     const rawDeepChild = pimNodeAtPath(PIGEON_PEA_AR_KNOWLEDGE, 'cultivation/climate/warm-growing-conditions');
     assert.ok(rawDeepChild, 'the third-level test node exists');
     assert.ok(rawDeepChild.path.includes('/'));
+    assert.equal(pimNodeChildren(closedByPath.get('cultivation')).length > AR_PIM_MAX_VISIBLE_CHILDREN, true,
+        'the complete source hierarchy remains larger than the AR projection');
 });
 
 test('viewport safe area recalculates on a resized visual viewport', () => {
@@ -450,8 +478,7 @@ test('viewport safe area recalculates on a resized visual viewport', () => {
     assert.ok(pimVisibleNodeBounds(corrected).bottom <= phone.bottom);
 });
 
-test('the canonical PIM packs every expanded primary branch without overlap in phone safe viewports', () => {
-    const expanded = PIM_COMPASS.map(entry => entry.id);
+test('the AR PIM blooms three connected children at a time at a fixed scale', () => {
     const viewports = [
         [320, 568],
         [360, 800],
@@ -472,7 +499,16 @@ test('the canonical PIM packs every expanded primary branch without overlap in p
             topInset: 8,
             bottomInset: 8
         });
-        const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, expanded, {
+        const closed = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, [], {
+            viewportWidth: width,
+            viewportHeight: height,
+            layoutWidth: surface.panelWidth,
+            layoutHeight: surface.panelHeight,
+            safeArea
+        });
+        let state = pimCreateInteractionState();
+        state = pimToggleNodeState(PIGEON_PEA_AR_KNOWLEDGE, state, 'cultivation');
+        const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, state.expandedNodeIds, {
             selectedNodeId: 'cultivation',
             viewportWidth: width,
             viewportHeight: height,
@@ -481,16 +517,38 @@ test('the canonical PIM packs every expanded primary branch without overlap in p
             safeArea
         });
         const rectangles = pimVisibleCellBounds(nodes);
-        assert.equal(rectangles.length, 27, `${width}x${height} includes the core, six roots and twenty children`);
+        assert.equal(rectangles.length, 10, `${width}x${height} includes the core, six roots and three children`);
         const axialCells = new Set(['0:0', ...nodes.map(node => `${node.position.axial.q}:${node.position.axial.r}`)]);
         assert.equal(axialCells.size, rectangles.length, `${width}x${height}: every rendered cell occupies a unique axial slot`);
-        assert.ok(nodes.every(node => Math.abs(node.position.x - 50) <= 46 && Math.abs(node.position.y - 50) <= 46), `${width}x${height}: packed mesh remains inside the surface`);
-        const bounds = pimVisibleNodeBounds(nodes);
-        assert.ok(bounds.left >= safeArea.left - 1e-6, `${width}x${height} left bound`);
-        assert.ok(bounds.right <= safeArea.right + 1e-6, `${width}x${height} right bound`);
-        assert.ok(bounds.top >= safeArea.top - 1e-6, `${width}x${height} top bound`);
-        assert.ok(bounds.bottom <= safeArea.bottom + 1e-6, `${width}x${height} bottom bound`);
+        const closedByPath = new Map(closed.map(node => [node.path, node]));
+        nodes.filter(node => node.depth === 0).forEach(node => {
+            assert.deepEqual(node.position, closedByPath.get(node.path).position, `${width}x${height}: primary position is fixed`);
+            assert.equal(node.layoutScale, closedByPath.get(node.path).layoutScale, `${width}x${height}: primary scale is fixed`);
+        });
+        const cultivation = nodes.find(node => node.path === 'cultivation');
+        const children = nodes.filter(node => node.parentPath === 'cultivation');
+        assert.ok(children.length <= AR_PIM_MAX_VISIBLE_CHILDREN);
+        assert.ok(children.every(child => {
+            const dq = child.position.axial.q - cultivation.position.axial.q;
+            const dr = child.position.axial.r - cultivation.position.axial.r;
+            return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) <= 1 && (dq || dr);
+        }), `${width}x${height}: children share an edge with their parent`);
         if (portrait) assert.ok(nodes[0].layoutCellWidthPixels >= 44, `${width}x${height} keeps a readable cell`);
+
+        state = pimToggleNodeState(PIGEON_PEA_AR_KNOWLEDGE, state, 'historical-data');
+        const switched = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, state.expandedNodeIds, {
+            selectedNodeId: state.selectedNodeId,
+            viewportWidth: width,
+            viewportHeight: height,
+            layoutWidth: surface.panelWidth,
+            layoutHeight: surface.panelHeight,
+            safeArea
+        });
+        assert.equal(switched.filter(node => node.parentPath === 'cultivation').length, 0, `${width}x${height}: old bloom closes`);
+        assert.ok(switched.filter(node => node.parentPath === 'historical-data').length <= AR_PIM_MAX_VISIBLE_CHILDREN);
+        assert.deepEqual(switched.filter(node => node.depth === 0).map(node => [node.path, node.position, node.layoutScale]),
+            nodes.filter(node => node.depth === 0).map(node => [node.path, node.position, node.layoutScale]),
+            `${width}x${height}: switching branch does not move the flower`);
     });
 });
 

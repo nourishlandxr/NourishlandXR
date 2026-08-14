@@ -25,8 +25,8 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8951';
+import { PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8952';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -46,11 +46,7 @@ let latestControllerRay = null;
 let latestHandState = null;
 let hoveredMarkerId = '';
 let handPinchActive = false;
-const CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS = Object.freeze({
-    safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
-    layoutWidth: PIM_TEXTURE_SIZE.width,
-    layoutHeight: PIM_TEXTURE_SIZE.height
-});
+const CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS = PIM_SPATIAL_LAYOUT_OPTIONS;
 let controllerPressState = null;
 let spatialWebWindow = null;
 let gl = null;
@@ -3090,6 +3086,14 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
 function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
     if (!candidate) return false;
     const { record, target } = candidate;
+    if (target.pimCore) {
+        setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
+        record.pimBloomStarted = 0;
+        invalidateSpatialPimTexture(record);
+        renderSessionMarkers();
+        setPlacementStatus('Plant flower reset.');
+        return true;
+    }
     if (target.pimBack) {
         toggleCreatorPimNode(record, target.path);
         record.pimBloomStarted = performance.now();
@@ -3913,6 +3917,15 @@ function renderSessionMarkers() {
             event.stopPropagation();
         });
         profilePanel?.addEventListener('click', event => {
+            const core = event.target.closest?.('[data-pim-role="center"]');
+            if (core && profilePanel.contains(core)) {
+                event.stopPropagation();
+                setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
+                record.pimBloomStarted = 0;
+                refreshCreatorPimProfile(record, profilePanel);
+                setPlacementStatus('Plant flower reset.');
+                return;
+            }
             const back = event.target.closest?.('[data-pim-back]');
             if (back) {
                 event.stopPropagation();
