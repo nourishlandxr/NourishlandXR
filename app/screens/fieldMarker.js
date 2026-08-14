@@ -21,6 +21,8 @@ let globalSearchTimer = null;
 let globalSearchQuery = '';
 let alaImportPreview = false;
 let alaImportConfirmed = false;
+let globalImportStep = 1;
+let globalImportReturnAction = '';
 let nonPlantMode = false;
 
 // New profiles begin with the six roots. The branch library is offered by the
@@ -33,6 +35,53 @@ const initialPimCells = () => [];
 // Legacy placement copy “Not yet placed · can be placed later” is intentionally
 // omitted here; placement belongs to the post-creation flow.
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+const GLOBAL_IMPORT_CATEGORIES = Object.freeze([
+    { id: 'scientific-information', label: 'Scientific Information', fallbackCell: 'Imported facts' },
+    { id: 'uses', label: 'Uses', fallbackCell: 'Imported uses' },
+    { id: 'food-forest', label: 'Food Forest', fallbackCell: 'Imported ecological information' },
+    { id: 'cultivation', label: 'Cultivation', fallbackCell: 'Imported growing information' },
+    { id: 'propagation', label: 'Propagation', fallbackCell: 'Imported propagation information' },
+    { id: 'historical-data', label: 'Historical Data', fallbackCell: 'Imported history' }
+]);
+const GLOBAL_IMPORT_PROFILE_FACTS = new Set(['common_name', 'alternative_names', 'image']);
+const globalImportCategoryId = value => ({
+    'Scientific Information': 'scientific-information', Uses: 'uses', 'Food Forest': 'food-forest',
+    Cultivation: 'cultivation', Propagation: 'propagation', 'Historical Data': 'historical-data'
+}[String(value || '')] || String(value || '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-'));
+const globalImportCategory = id => GLOBAL_IMPORT_CATEGORIES.find(category => category.id === id) || GLOBAL_IMPORT_CATEGORIES[0];
+const globalImportSuggestedCategory = fact => {
+    const suggested = globalImportCategoryId(fact?.destination?.[0]);
+    if (GLOBAL_IMPORT_CATEGORIES.some(category => category.id === suggested)) return suggested;
+    const key = String(fact?.key || '').toLocaleLowerCase();
+    if (/(origin|native|distribution|range|history|traditional|heritage)/.test(key)) return 'historical-data';
+    if (/(climate|sun|light|water|soil|cultivat|grow|height|temperature|hardiness)/.test(key)) return 'cultivation';
+    if (/(propagat|seed|flower|reproduct|pollinat)/.test(key)) return 'propagation';
+    if (/(use|edible|culinary|medicin|craft|toxic|warning)/.test(key)) return 'uses';
+    if (/(ecolog|nitrogen|guild|function|relationship|habitat|layer)/.test(key)) return 'food-forest';
+    return 'scientific-information';
+};
+const globalImportCell = (fact, categoryId) => {
+    const suggested = globalImportSuggestedCategory(fact);
+    return suggested === categoryId && fact?.destination?.[1]
+        ? fact.destination[1]
+        : globalImportCategory(categoryId).fallbackCell;
+};
+const globalImportFacts = result => {
+    const supplied = Array.isArray(result?.importFacts) ? result.importFacts.filter(fact => fact?.key && fact.value !== undefined) : [];
+    if (supplied.length) return supplied;
+    return [
+        { key: 'common_name', label: 'Display name', value: result?.commonName || result?.canonicalName || result?.scientificName || '', group: 'Essential', recommended: true, destination: ['Plant identity', 'Identity & taxonomy'] },
+        { key: 'scientific_name', label: 'Scientific name', value: result?.scientificName || result?.canonicalName || '', group: 'Taxonomy', recommended: true, destination: ['Scientific Information', 'Taxonomy'] },
+        ...(result?.family ? [{ key: 'family', label: 'Family', value: result.family, group: 'Taxonomy', recommended: true, destination: ['Scientific Information', 'Classification'] }] : []),
+        ...(result?.thumbnailUrl ? [{ key: 'image', label: 'Reference image', value: 'Reference image available', group: 'Essential', recommended: true, destination: ['Plant profile', 'Reference image'] }] : [])
+    ].filter(fact => fact.value);
+};
+const globalImportDisplayName = result => result?.commonName || result?.canonicalName || result?.scientificName || 'Unnamed plant';
+const globalImportReturn = () => globalImportReturnAction || `window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')`;
+const globalImportValueMarkup = fact => String(fact?.value || '').length > 150
+    ? `<details class="field-guide-fact-value"><summary>${escapeHtml(String(fact.value).slice(0, 144))}…</summary><span>${escapeHtml(fact.value)}</span></details>`
+    : `<small>${escapeHtml(fact?.value || 'Not supplied')}</small>`;
 
 function alaResultMarkup(result, index) {
     const thumbnail = result.thumbnailUrl
@@ -62,6 +111,26 @@ function alaPreviewMarkup(result) {
     </section>`;
 }
 
+function globalImportFactsMarkup(result) {
+    const facts = globalImportFacts(result);
+    const extraction = new Set(Array.isArray(result.extractionFields) && result.extractionFields.length
+        ? result.extractionFields
+        : facts.filter(fact => fact.recommended).map(fact => fact.key));
+    const groupedFacts = facts.reduce((groups, fact) => ((groups[fact.group || 'Essential'] ||= []).push(fact), groups), {});
+    const thumbnail = result.thumbnailUrl
+        ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
+        : '<span aria-hidden="true">&#127793;</span>';
+    return `<article class="field-guide-global-profile field-guide-import-view" aria-labelledby="globalImportFactsTitle">
+        <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span>2 Review + plant setup</span></div>
+        <p class="field-guide-import-step">Step 1 of 2 · Select facts</p>
+        <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL PLANT IMPORT</span><h2 id="globalImportFactsTitle" tabindex="-1">Select facts</h2><p>Choose the source information you want to bring into this project.</p></div></header>
+        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(globalImportDisplayName(result))}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · Source attribution is kept automatically.</small></span></div>
+        <section class="field-guide-global-profile-extract" aria-labelledby="globalImportFactsListTitle"><div class="field-guide-extract-heading"><div><h3 id="globalImportFactsListTitle">Facts to import</h3><p>Recommended facts are selected. You can change this before reviewing the plant setup.</p></div><button type="button" class="ghost" onclick="window.selectGlobalImportRecommended()">Select recommended</button></div><div class="field-guide-fact-groups">${['Essential', 'Taxonomy', 'Distribution', 'Sources'].map(group => groupedFacts[group]?.length ? `<section class="field-guide-fact-group"><h4>${group}</h4><div>${groupedFacts[group].map(fact => `<label class="field-guide-extract-row"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}${fact.recommended ? '<em class="field-guide-recommended">Recommended</em>' : ''}</span></label>`).join('')}</div></section>` : '').join('')}</div></section>
+        <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p>
+        <nav class="field-guide-import-actions" aria-label="Import navigation"><button type="button" class="ghost" onclick="${escapeHtml(globalImportReturn())}">Back</button><button type="button" class="primary" onclick="window.reviewGlobalPlantImport()">Review + plant setup</button></nav>
+    </article>`;
+}
+
 function globalImportSetupMarkup(result) {
     const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
     const facts = Array.isArray(result.extractedFacts) ? result.extractedFacts : [];
@@ -69,16 +138,22 @@ function globalImportSetupMarkup(result) {
         ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
         : '<span aria-hidden="true">&#127793;</span>';
     return `<section class="field-guide-global-setup" aria-labelledby="globalImportSetupTitle">
-        <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review</span><span class="is-active">3 Plant setup</span></div>
-        <p class="field-guide-import-step">Step 3 of 3 · Plant setup</p>
+        <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review + plant setup</span></div>
+        <p class="field-guide-import-step">Step 2 of 2 · Review + plant setup</p>
         <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
-        <p class="meta">Choose an Area and confirm the editable NLXR Plant Profile. The selected source facts will remain available for review.</p>
+        <section class="field-guide-allocation-group" aria-labelledby="globalImportSetupFactsTitle"><div class="field-guide-allocation-group-heading"><div><h2 id="globalImportSetupFactsTitle">Review imported facts</h2><span>Confirm where each selected fact belongs before saving.</span></div></div><div class="field-guide-global-setup-facts">${facts.map(fact => {
+            if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) return `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</div><span class="field-guide-allocation-smart">Plant profile</span></div>`;
+            const categoryId = fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
+            return `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</div><label class="field-guide-global-setup-destination">Destination<select data-global-setup-category="${escapeHtml(fact.key)}">${GLOBAL_IMPORT_CATEGORIES.map(category => `<option value="${category.id}" ${category.id === categoryId ? 'selected' : ''}>${category.label}</option>`).join('')}</select></label></div>`;
+        }).join('') || '<p class="meta">No facts selected. Go back and select at least one fact.</p>'}</div></section>
+        <p class="meta">The Area and display name are confirmed below on this same page. Nothing is saved until you create the NLXR Plant Profile.</p>
     </section>`;
 }
 
 function draw() {
     const plant = markerType === 'plant';
     const globalConversion = plant && Boolean(selectedGlobalPlant);
+    const globalImportStepOne = globalConversion && globalImportStep === 1;
     const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
     const identityLabel = plant ? 'Display / common name' : markerType === 'note' ? 'Title' : 'Name';
     const areaOptions = places.filter(place => !isDefaultHomeArea(place)).map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
@@ -86,11 +161,11 @@ function draw() {
         <div class="screen">
             <div class="page-header">
                 <p class="welcome-label">Organizer Folder</p>
-                <h1>${globalConversion ? 'Plant setup' : `Add ${typeLabel}`}</h1>
-                <p class="subtitle">${globalConversion ? 'Step 3 of 3 · Confirm the plant profile and Area.' : plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
+                <h1>${globalConversion ? (globalImportStepOne ? 'Import plant' : 'Review plant') : `Add ${typeLabel}`}</h1>
+                <p class="subtitle">${globalConversion ? (globalImportStepOne ? 'Step 1 of 2 · Select facts.' : 'Step 2 of 2 · Review and set up the plant.') : plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
             </div>
-            ${globalConversion ? globalImportSetupMarkup(selectedGlobalPlant) : ''}
-            <form class="panel minimal-creation-form" onsubmit="window.saveFieldMarker(event)">
+            ${globalConversion ? (globalImportStepOne ? globalImportFactsMarkup(selectedGlobalPlant) : globalImportSetupMarkup(selectedGlobalPlant)) : ''}
+            <form class="panel minimal-creation-form" ${globalImportStepOne ? 'hidden' : ''} onsubmit="window.saveFieldMarker(event)">
                 <div class="field compact-area-field">
                     <label for="fieldArea">Area</label>
                     <div class="compact-inline-control"><select id="fieldArea" onchange="window.selectFieldPlace(this.value)">
@@ -107,7 +182,7 @@ function draw() {
                 </div>
                 <p id="fieldError" class="meta"></p>
             </form>
-            <nav class="bottom-navigation"><button class="ghost" type="button" onclick="window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')">Back</button><button type="button" onclick="window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')">Return to Dashboard</button></nav>
+            <nav class="bottom-navigation" ${globalImportStepOne ? 'hidden' : ''}><button class="ghost" type="button" onclick="${globalConversion ? escapeHtml(globalImportReturn()) : `window.renderPlacementChoice('${encodeURIComponent(dashboardProjectId)}', '${markerType === 'sub_checkpoint' ? 'checkpoint' : markerType}')`}">${globalImportStepOne ? 'Return to Web Hub' : 'Back'}</button><button type="button" onclick="window.renderProjectDashboard('${encodeURIComponent(dashboardProjectId)}')">Return to Dashboard</button></nav>
         </div>
     `;
 }
@@ -125,7 +200,9 @@ export async function renderFieldMarker(target, defaults = null) {
     selectedGlobalPlant = initialGlobalPlant;
     globalSearchQuery = initialGlobalPlant ? String(initialGlobalPlant.commonName || initialGlobalPlant.scientificName || '').trim() : '';
     alaImportPreview = Boolean(initialGlobalPlant);
-    alaImportConfirmed = Boolean(initialGlobalPlant);
+    globalImportStep = initialGlobalPlant ? 1 : 1;
+    globalImportReturnAction = initialGlobalPlant && defaults?.returnAction ? String(defaults.returnAction) : '';
+    alaImportConfirmed = false;
     if (defaults) {
         dashboardProjectId = defaults.dashboardProjectId || '';
         selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
@@ -238,6 +315,66 @@ export function continueManualPlantCreation() {
     document.getElementById('fieldName')?.focus();
 }
 
+export function selectGlobalImportRecommended() {
+    if (!selectedGlobalPlant) return;
+    const recommended = new Set(globalImportFacts(selectedGlobalPlant).filter(fact => fact.recommended).map(fact => fact.key));
+    document.querySelectorAll('[data-global-extract-field]').forEach(input => {
+        input.checked = recommended.has(input.dataset.globalExtractField);
+    });
+}
+
+export function reviewGlobalPlantImport() {
+    if (!selectedGlobalPlant) return;
+    const selectedFields = [...document.querySelectorAll('[data-global-extract-field]:checked')]
+        .map(input => input.dataset.globalExtractField)
+        .filter(Boolean);
+    const status = document.querySelector('[data-global-profile-status]');
+    if (!selectedFields.length) {
+        if (status) status.textContent = 'Select at least one fact to continue.';
+        return;
+    }
+    const factsByKey = new Map(globalImportFacts(selectedGlobalPlant).map(fact => [fact.key, fact]));
+    const extractedFacts = selectedFields.map(key => factsByKey.get(key)).filter(Boolean).map(fact => {
+        if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) {
+            return { ...fact, confirmedDestinations: [], reviewStatus: 'pending' };
+        }
+        const categoryId = globalImportSuggestedCategory(fact);
+        const category = globalImportCategory(categoryId);
+        const cell = globalImportCell(fact, categoryId);
+        return {
+            ...fact,
+            destination: [category.label, cell],
+            confirmedDestinations: [[categoryId, cell]],
+            reviewStatus: 'pending',
+            confidence: 'suggested'
+        };
+    });
+    selectedGlobalPlant = { ...selectedGlobalPlant, extractionFields: selectedFields, extractedFacts };
+    alaImportConfirmed = true;
+    globalImportStep = 2;
+    draw();
+    document.getElementById('globalImportSetupTitle')?.focus();
+}
+
+function syncGlobalImportSetupDestinations() {
+    if (!selectedGlobalPlant || !Array.isArray(selectedGlobalPlant.extractedFacts)) return;
+    const extractedFacts = selectedGlobalPlant.extractedFacts.map(fact => {
+        if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) return fact;
+        const select = [...document.querySelectorAll('[data-global-setup-category]')].find(item => item.dataset.globalSetupCategory === fact.key);
+        const categoryId = select?.value || fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
+        const category = globalImportCategory(categoryId);
+        const cell = globalImportCell(fact, categoryId);
+        return {
+            ...fact,
+            destination: [category.label, cell],
+            confirmedDestinations: [[categoryId, cell]],
+            confidence: categoryId === globalImportSuggestedCategory(fact) ? 'suggested' : 'confirmed',
+            reviewStatus: 'pending'
+        };
+    });
+    selectedGlobalPlant = { ...selectedGlobalPlant, extractedFacts, extractionFields: extractedFacts.map(fact => fact.key) };
+}
+
 export async function confirmGlobalPlantImport() {
     if (!selectedGlobalPlant) return;
     const commonName = document.getElementById('alaImportCommonName')?.value.trim();
@@ -275,6 +412,7 @@ export async function openGlobalPlantProfile(target, defaults = {}) {
         type: 'plant',
         placementMode: 'without-ar',
         dashboardProjectId: defaults.project,
+        returnAction: defaults.returnAction || '',
         globalPlant
     });
 }
@@ -377,6 +515,7 @@ export async function saveFieldMarker(event) {
                 ...(nonPlantMode && type === 'sub_checkpoint' ? { content_domain: 'nonplant', marker_kind: 'np_marker', dynamic_marker: true } : {})
             });
         if (type === 'plant' && selectedGlobalPlant && alaImportConfirmed) {
+            syncGlobalImportSetupDestinations();
             await saveSelectedGlobalPimContent(selected.project, selected.site, place.id, marker.id, name);
         }
         recordTutorialEvent(selected.project, 'first_item_created');

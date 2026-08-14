@@ -310,7 +310,7 @@ function applyCreatorWebHubCopy(app) {
     const globalExtractionFields = result => new Set(Array.isArray(result?.extractionFields) && result.extractionFields.length
         ? result.extractionFields
         : sourceFacts(result).filter(fact => fact.recommended).map(fact => fact.key));
-    const importProgress = (step, title) => `<div class="field-guide-import-progress" aria-label="Import progress"><span class="${step === 'select' || step === 'review' || step === 'setup' ? 'is-active' : ''}">1 Select facts</span><span class="${step === 'review' || step === 'setup' ? 'is-active' : ''}">2 Review</span><span class="${step === 'setup' ? 'is-active' : ''}">3 Plant setup</span></div><p class="field-guide-import-step">Step ${step === 'select' ? 1 : step === 'review' ? 2 : 3} of 3 · ${escapeHtml(title)}</p>`;
+    const importProgress = (step, title) => `<div class="field-guide-import-progress" aria-label="Import progress"><span class="${step === 'select' || step === 'review' || step === 'setup' ? 'is-active' : ''}">1 Select facts</span><span class="${step === 'review' || step === 'setup' ? 'is-active' : ''}">2 Review + plant setup</span></div><p class="field-guide-import-step">Step ${step === 'select' ? 1 : 2} of 2 · ${escapeHtml(title)}</p>`;
     const importIdentityMarkup = (result, label = 'External source') => {
         const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
         return `<div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span aria-hidden="true">🌿</span>'}</span><span><strong>${escapeHtml(displayName)}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(label)} · ${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span></div>`;
@@ -397,6 +397,31 @@ function applyCreatorWebHubCopy(app) {
             if (!result) return;
             openGlobalProfile = result;
             const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
+            if (!siteGroup?.site?.id || !currentGuide?.creator) {
+                if (globalStatus) globalStatus.textContent = 'Open this from a Creator Web Hub to create an NLXR plant profile.';
+                return;
+            }
+            button.textContent = 'Opening import page…';
+            button.disabled = true;
+            try {
+                const facts = sourceFacts(result);
+                await openGlobalPlantProfile(app, {
+                    project: currentGuide.project.id,
+                    site: siteGroup.site.id,
+                    place: currentGuidePlaceId || '__unassigned__',
+                    returnAction: `window.renderFieldGuide('${encoded(currentGuide.project.id)}', true)`,
+                    globalPlant: {
+                        ...result,
+                        importFacts: facts,
+                        extractionFields: facts.filter(fact => fact.recommended).map(fact => fact.key)
+                    }
+                });
+            } catch (error) {
+                button.disabled = false;
+                button.textContent = 'Open profile';
+                if (globalStatus) globalStatus.textContent = `Could not open the plant import page: ${error.message}`;
+            }
+            return;
             const renderExtractionStep = () => {
                 globalImportStep = 'select';
                 globalResults.innerHTML = referenceProfileMarkup(result);

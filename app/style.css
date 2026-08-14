@@ -8902,7 +8902,7 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-redesign-footer { display: flex; justify-content: flex-start; width: 100%; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--webhub-line); }
 .field-guide-hub-redesign .field-guide-redesign-footer .analog-navigation { min-height: 44px; }
 
-/* Global plant import: compact, three-step mobile workspace. */
+/* Global plant import: compact, two-step dedicated workspace. */
 .field-guide-import-view,
 .field-guide-global-setup { box-sizing: border-box; min-width: 0; }
 .field-guide-import-progress { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--webhub-muted, #66766a); font-size: .68rem; font-weight: 800; }
@@ -8969,6 +8969,10 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-import-view [data-global-remove-fact] { min-height: 36px; padding: 6px 8px; color: #7a594d; font-size: .66rem; }
 .field-guide-global-setup { display: grid; gap: 10px; margin-bottom: 12px; padding: 14px; border: 1px solid var(--webhub-line, rgba(45, 88, 56, .16)); border-radius: 16px; background: rgba(239, 247, 237, .72); }
 .field-guide-global-setup .field-guide-import-identity { background: #fff; }
+.field-guide-global-setup-facts { display: grid; gap: 6px; min-width: 0; }
+.field-guide-global-setup-facts .field-guide-allocation-row { grid-template-columns: minmax(0, 1fr) minmax(132px, .5fr); align-items: center; }
+.field-guide-global-setup-destination { display: grid; gap: 3px; min-width: 0; color: var(--webhub-muted, #66766a); font-size: .62rem; font-weight: 850; }
+.field-guide-global-setup-destination select { min-height: 38px; padding: 6px 8px; border: 1px solid rgba(45, 88, 56, .22); border-radius: 9px; background: #fff; color: var(--webhub-ink, #23382a); font-size: .72rem; }
 .field-guide-management-list { display: grid; gap: 8px; }
 .field-guide-hub-redesign .field-guide-management-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 18px; align-items: center; min-width: 0; min-height: 64px; gap: 10px; padding: 10px 12px; border: 1px solid var(--webhub-line); border-radius: 13px; background: rgba(255, 255, 252, .78); color: var(--webhub-ink); text-align: left; }
 .field-guide-hub-redesign button.field-guide-management-row { width: 100%; cursor: pointer; }
@@ -8993,6 +8997,7 @@ body:has(.field-guide-hub-redesign) {
     .field-guide-import-view .field-guide-allocation-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
     .field-guide-import-view .field-guide-allocation-options { grid-column: 1 / -1; }
     .field-guide-import-view [data-global-remove-fact] { grid-column: 2; grid-row: 1; }
+    .field-guide-global-setup-facts .field-guide-allocation-row { grid-template-columns: minmax(0, 1fr); }
     .field-guide-hub-redesign .field-guide-management-row > em { max-width: 86px; overflow-wrap: anywhere; text-align: right; white-space: normal; }
 }
 

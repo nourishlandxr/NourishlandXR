@@ -1529,7 +1529,9 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldGuide, /data-global-group-category/);
     assert.match(fieldGuide, /Individual override/);
     assert.match(fieldGuide, /data-global-remove-fact/);
-    assert.match(fieldMarker, /Step 3 of 3/);
+    assert.match(fieldMarker, /Step 2 of 2/);
+    assert.match(fieldMarker, /reviewGlobalPlantImport/);
+    assert.match(fieldMarker, /data-global-setup-category/);
     assert.match(fieldMarker, /stagePimImport/);
     assert.match(fieldMarker, /Content selected for NLXR/);
     assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);
