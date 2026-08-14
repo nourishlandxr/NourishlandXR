@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8947';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8949';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -128,6 +128,7 @@ let sessionGroundY = null;
 let locationNoteConfig = null;
 let locationNoteVisible = false;
 let latestNotePlacementPoint = null;
+let creatorViewportCleanup = null;
 const hiddenStructuralMarkerIds = new Set();
 
 const markerLabel = type => ({ plant: 'plant live tag', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'totem marker' })[type] || 'item';
@@ -670,8 +671,17 @@ function toggleCreatorPimNode(record, nodePath) {
 }
 
 function creatorPlantKnowledgeMarkup(record) {
+    const visualViewport = window.visualViewport;
+    const viewportWidth = Number(visualViewport?.width) || window.innerWidth;
+    const viewportHeight = Number(visualViewport?.height) || window.innerHeight;
+    const dock = overlayRoot?.querySelector('.creator-ar-control-dock');
+    const dockRect = dock?.getBoundingClientRect();
     return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
-        selectedNodeId: record.pimSelectedNodeId
+        selectedNodeId: record.pimSelectedNodeId,
+        viewportWidth,
+        viewportHeight,
+        topInset: Math.max(24, Number(visualViewport?.offsetTop) || 0),
+        bottomInset: Math.max(80, (dockRect?.height || 0) + 16)
     });
 }
 
@@ -2981,30 +2991,6 @@ function spatialAnchorForRecord(record, context = null) {
     return pimPose ? { ...anchor, pim_pose: pimPose } : anchor;
 }
 
-function createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress) {
-    const textureCanvas = document.createElement('canvas');
-    textureCanvas.width = PIM_TEXTURE_SIZE.width;
-    textureCanvas.height = PIM_TEXTURE_SIZE.height;
-    const context = textureCanvas.getContext('2d', { alpha: true });
-    if (!context) return null;
-    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, creatorPimExpandedNodeIds(record), {
-        hoverPath,
-        selectedNodeId: record.pimSelectedNodeId,
-        bloomProgress
-    });
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    // PIM uses an explicit top-to-bottom shader coordinate below. Do not
-    // depend on the browser/WebGL canvas upload flip state here.
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
-    return texture;
-}
-
 function ensureSpatialPimTexture(record) {
     if (!gl || !record?.profileExpanded) return null;
     const knowledge = creatorPlantKnowledge(record);
@@ -3017,7 +3003,13 @@ function ensureSpatialPimTexture(record) {
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
-    const texture = createSpatialPimTexture(record, knowledge, hoverPath, bloomProgress);
+    const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
+        width: PIM_TEXTURE_SIZE.width,
+        height: PIM_TEXTURE_SIZE.height,
+        hoverPath,
+        selectedNodeId: record.pimSelectedNodeId,
+        bloomProgress
+    });
     if (texture) spatialPimTextures.set(record.marker.id, { key, texture });
     return texture;
 }
@@ -3667,6 +3659,22 @@ function drawSpatialMarkers(view) {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
     }
+}
+
+function bindCreatorViewportReflow() {
+    creatorViewportCleanup?.();
+    const reflow = () => {
+        if (!overlayRoot) return;
+        if (activeAreaMarkers().some(record => record.profileExpanded)) renderSessionMarkers();
+        positionSessionMarkers();
+    };
+    window.addEventListener('resize', reflow, { passive: true });
+    window.visualViewport?.addEventListener('resize', reflow, { passive: true });
+    creatorViewportCleanup = () => {
+        window.removeEventListener('resize', reflow);
+        window.visualViewport?.removeEventListener('resize', reflow);
+        creatorViewportCleanup = null;
+    };
 }
 
 function positionSessionMarkers(view = latestView) {
@@ -4942,10 +4950,12 @@ function createOverlay() {
     updateReadyPlacementControl();
     updateInteractionControls();
     document.body.append(overlayRoot);
+    bindCreatorViewportReflow();
     updateLocationNote();
 }
 
 function cleanup() {
+    creatorViewportCleanup?.();
     clearControllerMarkerPress();
     cleanupDrag();
     closeAreaLens();

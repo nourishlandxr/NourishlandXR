@@ -849,50 +849,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-plant-profile { position: fixed; left: var(--marker-x, 50%); top: var(--marker-y, 50%); z-index: 12001; width: min(calc(100vw - 24px), 960px); height: min(62vh, 620px); height: min(62dvh, 620px); transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))); overflow:visible; border:1px solid rgba(214,242,191,.14); border-radius:clamp(24px,4vw,42px); background:radial-gradient(ellipse at center,rgba(19,66,40,.28),rgba(7,26,17,.08) 58%,transparent 78%); color: rgba(255,255,255,.92); box-shadow:inset 0 0 70px rgba(150,213,117,.05); filter: drop-shadow(0 12px 28px rgba(0,0,0,.16)); pointer-events: auto; animation: tryit-profile-arrive 1.15s cubic-bezier(.18,.78,.28,1) both; }
 .tryit-sim-plant-profile.is-dragging { filter: drop-shadow(0 11px 24px rgba(0,0,0,.16)); }
 @keyframes tryit-profile-arrive { from { opacity: 0; transform: translate(calc(-50% + var(--panel-x)), calc(-46% + var(--panel-y))) scale(.94); } to { opacity: 1; transform: translate(calc(-50% + var(--panel-x)), calc(-50% + var(--panel-y))) scale(1); } }
-.plant-knowledge-map { --pim-cell-size:clamp(96px,14vw,164px); --pim-cell-height:calc(var(--pim-cell-size) * .8); --pim-x-step:clamp(63px,17.25vw,84px); --pim-x-half:clamp(31.5px,8.625vw,42px); --pim-y-step:clamp(55px,14.9vw,73px); position:relative; isolation:isolate; display:block; width:100%; height:100%; overflow:visible; }
-.plant-knowledge-map::before { content:""; position:absolute; z-index:0; left:50%; top:50%; width:min(58%,480px); height:78%; transform:translate(-50%,-50%); border:1px dashed rgba(214,242,191,.16); border-radius:50%; box-shadow:0 0 48px rgba(137,205,102,.08),inset 0 0 42px rgba(137,205,102,.05); pointer-events:none; animation:pim-orbit-breathe 6s ease-in-out infinite alternate; }
-.plant-knowledge-map::after { content:""; position:absolute; z-index:0; inset:4%; border:1px solid rgba(214,242,191,.08); border-radius:32px; mask-image:linear-gradient(90deg,transparent,black 18%,black 82%,transparent); pointer-events:none; }
-.plant-knowledge-core { --pim-hue:112; position:absolute; z-index:4; left:50%; top:50%; display:grid; place-items:center; align-content:center; gap:5px; width:calc(var(--pim-cell-size) * 1.08); height:calc(var(--pim-cell-height) * 1.08); min-height:0; padding:12px; box-sizing:border-box; overflow:hidden; transform:translate(-50%,-50%); border:2px solid hsl(var(--pim-hue) 64% 86% / .9); clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); background:radial-gradient(circle at 32% 18%,rgba(183,232,149,.22),transparent 38%),linear-gradient(145deg,rgba(22,73,43,.98),rgba(7,34,21,.98)); color:#fff; filter:drop-shadow(0 6px 12px rgba(0,0,0,.28)) drop-shadow(0 0 16px rgba(153,220,116,.25)); text-align:center; text-shadow:0 1px 2px rgba(0,0,0,.98),0 0 7px rgba(0,0,0,.9); cursor:grab; touch-action:none; pointer-events:auto; }
-.plant-knowledge-core:focus-visible { filter: drop-shadow(0 0 5px rgba(232,245,221,.42)); }
-.tryit-sim-plant-profile.is-dragging .plant-knowledge-core { cursor: grabbing; }
-.plant-knowledge-core small { color:#fff; font-size:clamp(.68rem,1vw,.78rem); font-weight:800; letter-spacing:.11em; }
-.plant-knowledge-core strong { color:#fff; font-size:clamp(.9rem,1.45vw,1.12rem); font-weight:850; line-height:1.1; text-wrap:balance; }
-.plant-knowledge-core i,.plant-knowledge-core em { display:block; max-width:94%; overflow:hidden; color:rgba(236,250,228,.84); font-size:clamp(.54rem,.9vw,.7rem); font-style:normal; font-weight:650; line-height:1.12; text-overflow:ellipsis; white-space:nowrap; }
-.plant-knowledge-core.is-fractal-focus { width:calc(var(--pim-cell-size) * 1.42); height:calc(var(--pim-cell-height) * 1.42); }
-.plant-knowledge-core.is-fractal-focus i { display:-webkit-box; max-height:2.45em; overflow:hidden; line-height:1.18; text-overflow:clip; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.plant-knowledge-map.is-fractal-focus::before { width:min(66%,560px); height:82%; border-style:solid; border-color:rgba(214,242,191,.2); }
-.plant-knowledge-back { position:absolute; z-index:7; left:16px; top:14px; display:block; max-width:62%; min-height:32px; padding:6px 11px; overflow:hidden; border:1px solid rgba(224,245,207,.3); border-radius:999px; background:rgba(8,35,21,.72); color:rgba(246,253,240,.9); box-shadow:0 4px 14px rgba(0,0,0,.16); font-size:clamp(.58rem,.85vw,.7rem); font-weight:780; letter-spacing:.02em; line-height:1.15; text-align:left; text-overflow:ellipsis; white-space:nowrap; backdrop-filter:blur(8px); pointer-events:auto; }
-.plant-knowledge-back:is(:hover,:focus-visible) { border-color:rgba(220,244,200,.72); background:rgba(21,69,40,.9); color:#fff; }
-.plant-knowledge-branch { position: absolute; inset: 0; }
-.plant-knowledge-cell { --pim-hue:112; position:absolute; z-index:2; left:var(--pim-node-x); top:var(--pim-node-y); display:grid; place-items:center; align-content:center; gap:5px; width:var(--pim-cell-size); height:var(--pim-cell-height); min-height:0; padding:12px; box-sizing:border-box; overflow:hidden; transform:translate(-50%,-50%) scale(var(--pim-node-scale,1)); transform-origin:center; border:2px solid hsl(var(--pim-hue) 70% 82% / .88); clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); background:radial-gradient(circle at 28% 18%,hsl(var(--pim-hue) 74% 70% / .24),transparent 40%),linear-gradient(145deg,hsl(var(--pim-hue) 35% 27% / .97),hsl(var(--pim-hue) 34% 13% / .96)); color:#fff; filter:drop-shadow(0 5px 9px rgba(0,0,0,.24)) drop-shadow(0 0 8px hsl(var(--pim-hue) 65% 64% / .16)); text-align:center; text-shadow:0 1px 2px rgba(0,0,0,.98),0 0 7px rgba(0,0,0,.9); transition:background .24s ease,filter .24s ease,transform .28s ease; pointer-events:auto; touch-action:manipulation; }
-.plant-knowledge-cell b { color:#fff; font-size:clamp(.7rem,1.05vw,.9rem); font-weight:850; letter-spacing:.03em; line-height:1.08; text-wrap:balance; }
-.plant-knowledge-cell small { display:-webkit-box; max-height:0; overflow:hidden; color:#fff; font-size:clamp(.66rem,.95vw,.82rem); font-weight:700; line-height:1.18; opacity:0; -webkit-box-orient:vertical; -webkit-line-clamp:3; transition:max-height .24s ease,opacity .24s ease; text-wrap:pretty; }
-.plant-knowledge-cell.is-detail-visible small { max-height: 3.6em; opacity: 1; }
-.plant-knowledge-cell:is(:focus-visible, .is-open) { z-index:5; transform:translate(-50%,-50%) scale(calc(var(--pim-node-scale,1) + .04)); background:radial-gradient(circle at 30% 16%,hsl(var(--pim-hue) 80% 76% / .32),transparent 43%),linear-gradient(145deg,hsl(var(--pim-hue) 38% 32% / .98),hsl(var(--pim-hue) 36% 16% / .98)); filter:drop-shadow(0 7px 12px rgba(0,0,0,.24)) drop-shadow(0 0 14px hsl(var(--pim-hue) 74% 68% / .54)); }
-.plant-knowledge-child { width:calc(var(--pim-cell-size) * .9); height:calc(var(--pim-cell-height) * .9); border:2px solid hsl(var(--pim-hue) 72% 82% / .88); border-radius:48% 52% 45% 55% / 58% 42% 58% 42%; clip-path:none; animation:pim-cell-bloom .58s cubic-bezier(.16,.82,.22,1.16) both; }
-.plant-knowledge-map.is-fractal-focus .plant-knowledge-child { width:calc(var(--pim-cell-size) * 1.12); height:calc(var(--pim-cell-height) * 1.12); }
-.plant-knowledge-child-depth-2 { width:calc(var(--pim-cell-size) * .82); height:calc(var(--pim-cell-height) * .82); }
-.plant-knowledge-child-depth-3 { width:calc(var(--pim-cell-size) * .74); height:calc(var(--pim-cell-height) * .74); }
-.plant-knowledge-cell.is-guided-highlight { border-color: rgba(222,247,157,.88); background: linear-gradient(145deg, rgba(129,178,91,.68), rgba(44,102,64,.58)); box-shadow: 0 0 22px rgba(203,239,126,.32); animation: tryit-knowledge-react .55s ease-in-out infinite alternate; }
-@keyframes tryit-knowledge-react { from { filter: drop-shadow(0 0 2px rgba(220,244,168,.45)); } to { filter: drop-shadow(0 0 10px rgba(220,244,168,.8)); } }
-.plant-knowledge-cell.is-open small { max-height: 3.6em; opacity: 1; }
-@keyframes pim-cell-bloom { from { opacity:0; transform:translate(-50%,-50%) scale(.28); filter:blur(3px) drop-shadow(0 0 0 transparent); } to { opacity:1; transform:translate(-50%,-50%) scale(var(--pim-node-scale,1)); } }
-@keyframes pim-orbit-breathe { from { opacity:.48; transform:translate(-50%,-50%) scale(.97); } to { opacity:.92; transform:translate(-50%,-50%) scale(1.025); } }
-@media (prefers-reduced-motion:reduce) {
-    .plant-knowledge-map::before,.plant-knowledge-child { animation:none; }
-}
-.plant-knowledge-left .plant-knowledge-cell:nth-child(1) { left:calc(50% - var(--pim-x-half)); top:calc(50% - var(--pim-y-step)); }
-.plant-knowledge-left .plant-knowledge-cell:nth-child(2) { left:calc(50% - var(--pim-x-step)); top:50%; }
-.plant-knowledge-left .plant-knowledge-cell:nth-child(3) { left:calc(50% - var(--pim-x-half)); top:calc(50% + var(--pim-y-step)); }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(1) { left:calc(50% + var(--pim-x-half)); top:calc(50% - var(--pim-y-step)); }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(2) { left:calc(50% + var(--pim-x-step)); top:50%; }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(3) { left:calc(50% + var(--pim-x-half)); top:calc(50% + var(--pim-y-step)); }
-.plant-knowledge-left .plant-knowledge-cell:nth-child(4) { left:calc(50% - var(--pim-x-step) - var(--pim-x-half)); top:calc(50% - var(--pim-y-step)); }
-.plant-knowledge-left .plant-knowledge-cell:nth-child(5) { left:calc(50% - var(--pim-x-step) - var(--pim-x-half)); top:calc(50% + var(--pim-y-step)); }
-.plant-knowledge-left .plant-knowledge-cell:nth-child(6) { left:calc(50% - var(--pim-x-step) - var(--pim-x-step)); top:50%; }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(4) { left:calc(50% + var(--pim-x-step) + var(--pim-x-half)); top:calc(50% - var(--pim-y-step)); }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(5) { left:calc(50% + var(--pim-x-step) + var(--pim-x-half)); top:calc(50% + var(--pim-y-step)); }
-.plant-knowledge-right .plant-knowledge-cell:nth-child(6) { left:calc(50% + var(--pim-x-step) + var(--pim-x-step)); top:50%; }
+/* Legacy fixed-position PIM layout removed; the shared honeycomb rules below own every Demo and Creator PIM surface. */
 
 .tryit-sim-marker-note.is-expanded,
 .tryit-sim-marker-note:not(.is-expanded) { width:min(78vw,248px); height:102px; min-height:102px; padding:15px 19px; }
@@ -4454,17 +4411,6 @@ body[data-project-theme] button:hover {
     border-color: var(--theme-accent);
     background-color: var(--theme-button-hover);
     color: var(--theme-button-text);
-}
-
-body[data-project-theme] .tryit-demo .plant-knowledge-cell {
-    border: 2px solid hsl(var(--pim-hue,112) 70% 82% / .76);
-    background: radial-gradient(circle at 28% 18%,hsl(var(--pim-hue,112) 74% 70% / .24),transparent 40%),linear-gradient(145deg,hsl(var(--pim-hue,112) 35% 27% / .92),hsl(var(--pim-hue,112) 34% 13% / .9));
-    color: #fff;
-}
-
-body[data-project-theme] .tryit-demo .plant-knowledge-cell:is(:focus-visible, .is-open) {
-    background: radial-gradient(circle at 30% 16%,hsl(var(--pim-hue,112) 80% 76% / .32),transparent 43%),linear-gradient(145deg,hsl(var(--pim-hue,112) 38% 32% / .96),hsl(var(--pim-hue,112) 36% 16% / .94));
-    color: #fff;
 }
 
 body[data-project-theme] input,
@@ -8169,6 +8115,11 @@ button.ar-square-action::before { display: none !important; }
    Try It Now, Creator AR and every responsive fallback. */
 .tryit-sim-plant-profile,
 .creator-ar-plant-profile {
+    width: min(calc(100vw - 24px), 960px);
+    height: min(62dvh, 620px);
+    box-sizing: border-box;
+    min-width: 0;
+    animation-duration: 1.15s;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -8454,12 +8405,6 @@ button.ar-square-action::before { display: none !important; }
     .tryit-demo .tryit-demo-taskbar button { font-size:.72rem; padding-inline:8px; }
 }
 .tryit-demo .tryit-demo-taskbar button:focus-visible { outline:2px solid #dcef95; outline-offset:2px; }
-.tryit-demo .plant-knowledge-cell b { font-size:clamp(.9rem,1.4vw,1.12rem); }
-.tryit-demo .plant-knowledge-cell small { font-size:clamp(.78rem,1.25vw,.98rem); }
-.tryit-demo .plant-knowledge-core strong { font-size:clamp(1rem,1.8vw,1.3rem); }
-.tryit-demo .plant-knowledge-core i,
-.tryit-demo .plant-knowledge-core em { font-size:clamp(.68rem,1.1vw,.86rem); }
-
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,
    project dashboard and AR surfaces keep their existing visual contracts. */

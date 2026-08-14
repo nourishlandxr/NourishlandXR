@@ -46,7 +46,7 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     ]);
     for (const source of [demoSource, creatorSource]) {
         assert.match(source, /plantInformationMeshMarkup/);
-        assert.match(source, /drawPlantInformationHoneycomb/);
+        assert.match(source, /createPlantInformationHoneycombTexture/);
         assert.match(source, /pimCreateInteractionState/);
         assert.match(source, /pimToggleNodeState/);
         assert.doesNotMatch(source, /legacy(?:Creator|Plant)PlantKnowledgeMarkup/);
@@ -57,6 +57,12 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.match(viewSource, /data-pim-role="\$\{role\}"/);
     assert.match(canvasSource, /pimVisibleNodes/);
     assert.match(canvasSource, /pimNodeVisualPosition/);
+    assert.match(canvasSource, /export function createPlantInformationHoneycombTexture/);
+    assert.doesNotMatch(creatorSource, /function createSpatialPimTexture/);
+    assert.doesNotMatch(demoSource, /function drawPlantKnowledgeTexture/);
+    assert.doesNotMatch(demoSource, /data-demo-plant-tether/);
+    assert.doesNotMatch(styles, /plant-knowledge-(?:left|right)/);
+    assert.doesNotMatch(styles, /\.tryit-demo \.plant-knowledge-/);
     assert.doesNotMatch(styles, /\.creator-ar-plant-profile \.plant-knowledge-map\s*\{/);
     assert.doesNotMatch(styles, /body\[data-project-theme\] \.creator-ar-plant-profile :is\(\.plant-knowledge-core,\.plant-knowledge-cell\)/);
 });

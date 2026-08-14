@@ -16,7 +16,7 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8947';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8949';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -1135,7 +1135,7 @@ function simulatedAnchorFromPointer(startAnchor, startX, startY, event) {
 function applySimulatedMarkerAnchor(layer, index, anchor) {
     const markerX = `${Number(anchor.x).toFixed(2)}%`;
     const markerY = `${Number(anchor.y).toFixed(2)}%`;
-    layer.querySelectorAll(`[data-demo-marker-index="${index}"], [data-demo-plant-tether="${index}"], [data-demo-plant-profile="${index}"]`).forEach(element => {
+    layer.querySelectorAll(`[data-demo-marker-index="${index}"], [data-demo-plant-profile="${index}"]`).forEach(element => {
         element.style.setProperty('--marker-x', markerX);
         element.style.setProperty('--marker-y', markerY);
     });
@@ -1202,7 +1202,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
+    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -1710,10 +1710,6 @@ function setDemoPimState(record, state) {
     record.demoExpandedBranches = [...record.demoExpandedNodeIds];
     record.demoFocusedPlantId = state.focusedPlantId || record.id || record.name || '';
     return state;
-}
-
-function plantKnowledgeMarkup(knowledge = PIGEON_PEA_AR_KNOWLEDGE, expandedPaths = [], options = {}) {
-    return plantInformationMeshMarkup(knowledge, expandedPaths, options);
 }
 
 function refreshDemoRecord(record) {
@@ -2280,10 +2276,12 @@ function createSpatialKnowledgeTexture(record) {
         const bloomProgress = record.pimBloomStarted
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
-        drawPlantKnowledgeTexture(ctx, label, knowledgeFor(record), demoPimExpandedNodeIds(record), { bloomProgress, selectedNodeId: record.demoSelectedNodeId });
-        // The demo quad already maps V=0 to the physical top edge. Uploading
-        // with UNPACK_FLIP_Y_WEBGL here inverted the PIM a second time.
-        return canvasTexture(label);
+        return createPlantInformationHoneycombTexture(gl, knowledgeFor(record), demoPimExpandedNodeIds(record), {
+            width: PIM_TEXTURE_SIZE.width,
+            height: PIM_TEXTURE_SIZE.height,
+            bloomProgress,
+            selectedNodeId: record.demoSelectedNodeId
+        });
     }
     if (record.demoType === 'zone') {
         drawTotemKnowledgeTexture(ctx, label, content);
@@ -2626,10 +2624,6 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
     ctx.stroke();
 }
 
-function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], options = {}) {
-    drawPlantInformationHoneycomb(ctx, label, knowledge, expandedPaths, options);
-}
-
 function createBoundaryTexture() {
     if (!gl) return null;
     const label = document.createElement('canvas');
@@ -2841,20 +2835,6 @@ function drawMarker(view) {
             { width: .012, color: [.4, .9, .72, .82], curve: .02, lift: .04 }
         );
     }
-
-    markers.forEach(record => {
-        if (record.demoType !== 'plant' || !record.demoExpanded) return;
-        const informationPosition = record.informationPosition || (record.informationPosition = plantInformationPosition(record));
-        const pulse = .5 + Math.sin(performance.now() / 380) * .5;
-        drawSpatialTether(
-            gl,
-            tetherRenderer,
-            view,
-            { ...record.position, y: record.position.y + 0.07 },
-            { ...informationPosition, y: informationPosition.y - 0.22 },
-            { width: 0.0028 + pulse * .0022, color: [0.84, 0.93, 0.76, 0.22 + pulse * .34], curve: 0.035, lift: 0.05 }
-        );
-    });
 
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);

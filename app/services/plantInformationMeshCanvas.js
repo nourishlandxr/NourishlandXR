@@ -61,7 +61,12 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const center = { x: width / 2, y: height / 2 };
     const expanded = new Set(expandedPaths);
     const nodes = pimVisibleNodes(knowledge, expandedPaths, {
-        selectedNodeId: options.selectedNodeId
+        selectedNodeId: options.selectedNodeId,
+        safeArea: options.safeArea,
+        viewportWidth: options.viewportWidth,
+        viewportHeight: options.viewportHeight,
+        topInset: options.topInset,
+        bottomInset: options.bottomInset
     });
     const reducedMotion = options.reducedMotion ?? (typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
@@ -143,19 +148,30 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.
     return;
-    context.beginPath();
-    context.arc(center.x, height * .94, 34, 0, Math.PI * 2);
-    context.fillStyle = 'rgba(24, 29, 27, .68)';
-    context.fill();
-    context.strokeStyle = 'rgba(240, 246, 242, .46)';
-    context.lineWidth = 3;
-    context.stroke();
-    context.fillStyle = '#fff';
-    context.strokeStyle = 'rgba(0, 0, 0, .9)';
-    context.lineWidth = 6;
-    context.font = '700 44px system-ui, sans-serif';
-    context.strokeText('↓', center.x, height * .94 + 2);
-    context.fillText('↓', center.x, height * .94 + 2);
+}
+
+/**
+ * Create the spatial PIM texture through the same renderer used by Demo AR.
+ * Keeping canvas creation and WebGL upload here prevents Creator from drifting
+ * into a second presentation path when the mesh changes.
+ */
+export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPaths = [], options = {}) {
+    if (!gl || typeof document === 'undefined') return null;
+    const textureCanvas = document.createElement('canvas');
+    textureCanvas.width = Number(options.width) || PIM_TEXTURE_SIZE.width;
+    textureCanvas.height = Number(options.height) || PIM_TEXTURE_SIZE.height;
+    const context = textureCanvas.getContext('2d', { alpha: true });
+    if (!context) return null;
+    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, expandedPaths, options);
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+    return texture;
 }
 
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
@@ -164,7 +180,11 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
     return pimVisibleNodes(knowledge, expandedPaths, {
         selectedNodeId: options.selectedNodeId,
-        safeArea: options.safeArea
+        safeArea: options.safeArea,
+        viewportWidth: options.viewportWidth,
+        viewportHeight: options.viewportHeight,
+        topInset: options.topInset,
+        bottomInset: options.bottomInset
     })
         .map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);

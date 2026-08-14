@@ -1172,7 +1172,6 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /runKnowledgeTour/);
     assert.match(source, /record\.demoActiveBranch = ''/);
     assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
-    assert.match(styles, /\.plant-knowledge-cell\.is-guided-highlight/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /function createIntroControlTexture\(labelText/);
     assert.match(source, /function createIntroPointerTexture\(/);
@@ -1237,9 +1236,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /\{ id: 'craft', parentId: 'uses'/);
     assert.match(source, /parentId: 'propagation'/);
     assert.match(source, /parentId: 'cultivation'/);
-    assert.match(source, /plantKnowledgeMarkup/);
-    assert.match(source, /drawPlantKnowledgeTexture/);
-    assert.match(source, /drawPlantInformationHoneycomb/);
+    assert.match(source, /plantInformationMeshMarkup/);
+    assert.match(source, /createPlantInformationHoneycombTexture/);
+    assert.doesNotMatch(source, /function plantKnowledgeMarkup/);
+    assert.doesNotMatch(source, /function drawPlantKnowledgeTexture/);
+    assert.doesNotMatch(source, /data-demo-plant-tether/);
     assert.match(source, /PIM_BLOOM_DURATION_MS/);
     assert.match(source, /bindSimulatedInformationPanels/);
     const cellBindings = source.slice(source.indexOf('const cells = [...profile.querySelectorAll'), source.indexOf('let start = null;', source.indexOf('const cells =')));
@@ -1300,7 +1301,6 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(styles, /\.plant-knowledge-connectors path/);
     assert.match(styles, /--pim-cell-size: clamp\(76px, 14vw, 132px\)/);
     assert.match(styles, /height: min\(62dvh, 620px\)/);
-    assert.match(styles, /@keyframes pim-cell-bloom/);
     assert.match(styles, /data-pim-layout="honeycomb"/);
     assert.doesNotMatch(pimViewSource, /pimConnectorPath/);
     assert.doesNotMatch(source, /pimFocusedView\(/);
@@ -1338,13 +1338,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(sessionSelect, /toggleDemoPlantProfile/);
     assert.match(styles, /\.plant-knowledge-core/);
     assert.match(styles, /\.plant-knowledge-cell/);
-    assert.match(styles, /\.plant-knowledge-cell:is\(:focus-visible, \.is-open\)/);
     assert.doesNotMatch(styles, /\.plant-knowledge-cell:is\(:hover, :focus-visible, \.is-open\)/);
-    assert.match(styles, /body\[data-project-theme\] \.tryit-demo \.plant-knowledge-cell/);
-    assert.match(styles, /\.plant-knowledge-core strong \{\s*color:#fff;[\s\S]*font-weight:850;/);
     assert.match(pimViewSource, /source\.title/);
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
-    assert.match(styles, /\.plant-knowledge-cell b \{\s*color:#fff;[\s\S]*font-weight:850;/);
+    assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /tryit-sim-totem-branches/);
     assert.match(source, /function drawTotemKnowledgeTexture/);
@@ -1608,7 +1605,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /record\.pimExpandedNodeIds = pimExpandedNodeIds\(state\)/);
     assert.match(arSource, /drawSpatialPlantProfiles\(view\)/);
     assert.match(arSource, /spatialPimTargetAtAim/);
-    assert.match(arSource, /drawPlantInformationHoneycomb/);
+    assert.match(arSource, /createPlantInformationHoneycombTexture/);
     assert.match(arSource, /pim_pose/);
     assert.match(arSource, /pimSpatialPoseFromViewer/);
     assert.match(arSource, /pimSpatialPoseAboveAnchor/);
