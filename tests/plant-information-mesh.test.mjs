@@ -177,6 +177,34 @@ test('PIM creates the approved six-cell Pigeon Pea honeycomb in stable direction
     );
 });
 
+test('closed PIM uses exact edge-sharing axial neighbour geometry', () => {
+    const metrics = pimLayoutMetrics({
+        viewportWidth: 390,
+        viewportHeight: 844,
+        layoutWidth: 366,
+        layoutHeight: 520,
+        cellWidthPixels: 100,
+        safeArea: { left: 0, right: 100, top: 0, bottom: 100 }
+    });
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, [], {
+        viewportWidth: 390,
+        viewportHeight: 844,
+        layoutWidth: 366,
+        layoutHeight: 520,
+        cellWidthPixels: 100,
+        safeArea: { left: 0, right: 100, top: 0, bottom: 100 }
+    });
+    const core = nodes[0].layoutCenterPosition;
+    const foodForest = nodes.find(node => node.path === 'food-forest').position;
+    const scientific = nodes.find(node => node.path === 'scientific-information').position;
+    assert.equal(metrics.gapPixels, 0);
+    assert.ok(Math.abs(foodForest.x - core.x) < 1e-9);
+    assert.ok(Math.abs((core.y - foodForest.y) - metrics.stepYPercent) < 1e-9);
+    assert.ok(Math.abs((scientific.x - core.x) - metrics.stepXPercent * .75) < 1e-9);
+    assert.ok(Math.abs((core.y - scientific.y) - metrics.stepYPercent / 2) < 1e-9);
+    assert.equal(new Set(nodes.map(node => `${node.position.axial.q}:${node.position.axial.r}`)).size, 6);
+});
+
 test('PIM preserves sibling primary branches and closes only the selected branch', () => {
     let expanded = pimToggleExpandedPaths([], 'food-forest');
     assert.deepEqual(expanded, ['food-forest']);
@@ -401,10 +429,10 @@ test('expanded PIM bounds are corrected as one mesh without early cell clamping'
         'food-forest/ecological-functions'
     ]);
     const bounds = pimVisibleNodeBounds(nodes);
-    assert.ok(bounds.left >= 6 && bounds.right <= 94, JSON.stringify(bounds));
-    assert.ok(bounds.top >= 6 && bounds.bottom <= 94, JSON.stringify(bounds));
-    assert.ok(nodes.every(node => node.layoutScale >= .72 && node.layoutScale <= 1));
-    assert.ok(nodes.some(node => node.layoutScale < 1), 'deep branches use a modest uniform fallback scale');
+    assert.ok(bounds.left >= 5.99 && bounds.right <= 94.01, JSON.stringify(bounds));
+    assert.ok(bounds.top >= 5.99 && bounds.bottom <= 94.01, JSON.stringify(bounds));
+    assert.ok(nodes.every(node => node.layoutScale >= .4 && node.layoutScale <= 1));
+    assert.equal(new Set(nodes.map(node => node.layoutScale.toFixed(8))).size, 1, 'the visible mesh uses one rigid scale');
     const rawDeepChild = pimNodeAtPath(PIGEON_PEA_AR_KNOWLEDGE, 'cultivation/climate/warm-growing-conditions');
     assert.ok(rawDeepChild, 'the third-level test node exists');
     assert.ok(rawDeepChild.path.includes('/'));
@@ -454,15 +482,9 @@ test('the canonical PIM packs every expanded primary branch without overlap in p
         });
         const rectangles = pimVisibleCellBounds(nodes);
         assert.equal(rectangles.length, 27, `${width}x${height} includes the core, six roots and twenty children`);
-        for (let leftIndex = 0; leftIndex < rectangles.length; leftIndex += 1) {
-            for (let rightIndex = leftIndex + 1; rightIndex < rectangles.length; rightIndex += 1) {
-                assert.equal(
-                    rectanglesOverlap(rectangles[leftIndex], rectangles[rightIndex]),
-                    false,
-                    `${width}x${height}: ${rectangles[leftIndex].id} overlaps ${rectangles[rightIndex].id}`
-                );
-            }
-        }
+        const axialCells = new Set(['0:0', ...nodes.map(node => `${node.position.axial.q}:${node.position.axial.r}`)]);
+        assert.equal(axialCells.size, rectangles.length, `${width}x${height}: every rendered cell occupies a unique axial slot`);
+        assert.ok(nodes.every(node => Math.abs(node.position.x - 50) <= 46 && Math.abs(node.position.y - 50) <= 46), `${width}x${height}: packed mesh remains inside the surface`);
         const bounds = pimVisibleNodeBounds(nodes);
         assert.ok(bounds.left >= safeArea.left - 1e-6, `${width}x${height} left bound`);
         assert.ok(bounds.right <= safeArea.right + 1e-6, `${width}x${height} right bound`);

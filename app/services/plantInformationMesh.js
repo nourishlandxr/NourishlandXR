@@ -18,17 +18,18 @@ const DIRECTION_AXIAL = Object.freeze({
     'upper-left': Object.freeze({ q: -1, r: 0 })
 });
 
-// The canonical responsive renderer uses a rectangular collision lattice.
-// These six cells still form the approved radial honeycomb, while one full
-// rendered cell plus a gap separates adjacent lattice positions on every
-// aspect ratio. Axial coordinates above remain the stable public compass.
+// The canonical renderer uses one true axial hex lattice. The six primary
+// cells are the six neighbours of the core; their centres are calculated from
+// the same cell dimensions that the DOM and canvas renderers draw. Keeping
+// this in axial coordinates is what makes neighbouring hexagons share edges
+// instead of drifting apart as the surface is resized.
 const DIRECTION_LAYOUT = Object.freeze({
     top: Object.freeze({ x: 0, y: -1, tangentX: 1, tangentY: 0 }),
     'upper-right': Object.freeze({ x: 1, y: -1, tangentX: 1, tangentY: 1 }),
     'lower-right': Object.freeze({ x: 1, y: 0, tangentX: 0, tangentY: 1 }),
     bottom: Object.freeze({ x: 0, y: 1, tangentX: 1, tangentY: 0 }),
-    'lower-left': Object.freeze({ x: -1, y: 0, tangentX: 0, tangentY: 1 }),
-    'upper-left': Object.freeze({ x: -1, y: -1, tangentX: -1, tangentY: 1 })
+    'lower-left': Object.freeze({ x: -1, y: 1, tangentX: 0, tangentY: 1 }),
+    'upper-left': Object.freeze({ x: -1, y: 0, tangentX: -1, tangentY: 1 })
 });
 
 const ROOT_HUES = Object.freeze({
@@ -70,14 +71,16 @@ function axialVisual(point = { q: 0, r: 0 }) {
     };
 }
 
-function positionedAxial(point) {
+function positionedAxial(point, metrics = null) {
     const visual = axialVisual(point);
+    const stepXPercent = metrics?.stepXPercent ?? 13.9;
+    const stepYPercent = metrics?.stepYPercent ?? 16.04;
     return {
         // Keep the authored radial position intact until the complete visible
         // mesh is known. Clamping each cell here created the invisible
         // rectangular boundary that made deep branches overlap at the edge.
-        x: 50 + visual.x * 13.9,
-        y: 50 + visual.y * 16.04,
+        x: 50 + visual.x * stepXPercent,
+        y: 50 + visual.y * stepYPercent,
         gridX: visual.x,
         gridY: visual.y,
         axial: { q: point.q, r: point.r }
@@ -185,8 +188,11 @@ export function pimNodeChildren(node) {
     });
 }
 
-export function pimRootPosition(node) {
-    return positionedAxial(DIRECTION_AXIAL[node?.direction] || { q: 0, r: 0 });
+export function pimRootPosition(node, options = {}) {
+    return positionedAxial(
+        DIRECTION_AXIAL[node?.direction] || { q: 0, r: 0 },
+        pimLayoutMetrics(options)
+    );
 }
 
 export function pimNodeHue(node) {
@@ -217,9 +223,12 @@ function outwardChildAxials(parent, childCount) {
     return offsets.slice(0, childCount).map(offset => addAxial(parent.position.axial, offset));
 }
 
-export function pimChildPosition(parent, childIndex, childCount) {
+export function pimChildPosition(parent, childIndex, childCount, options = {}) {
     const axials = outwardChildAxials(parent, childCount);
-    return positionedAxial(axials[childIndex] || parent?.position?.axial || { q: 0, r: 0 });
+    return positionedAxial(
+        axials[childIndex] || parent?.position?.axial || { q: 0, r: 0 },
+        pimLayoutMetrics(options)
+    );
 }
 
 // The spatial canvas and its ray-hit map must use the same position while a
@@ -332,11 +341,15 @@ export function pimLayoutMetrics(options = {}) {
         Math.min(viewportHeight * .62, 620)
     ));
     const responsiveCellWidth = viewportWidth <= 430
-        ? clampNumber(viewportWidth * .2, 64, 86)
+        ? clampNumber(viewportWidth * .25, 84, 108)
         : clampNumber(viewportWidth * .11, 76, 124);
     const cellWidthPixels = Math.max(44, safeNumber(options.cellWidthPixels, responsiveCellWidth));
     const cellHeightPixels = Math.max(38, safeNumber(options.cellHeightPixels, cellWidthPixels * .8660254));
-    const gapPixels = Math.max(4, safeNumber(options.gapPixels, clampNumber(cellWidthPixels * .1, 6, 12)));
+    // `axialVisual` converts q into .75 cell widths and r into one cell
+    // height. A non-zero gap here turns the flower into a disconnected set of
+    // cards, so keep the value as metadata only and never add it to a lattice
+    // step.
+    const gapPixels = Math.max(0, safeNumber(options.gapPixels, 0));
     return {
         viewportWidth,
         viewportHeight,
@@ -347,8 +360,8 @@ export function pimLayoutMetrics(options = {}) {
         gapPixels,
         cellWidthPercent: cellWidthPixels / layoutWidth * 100,
         cellHeightPercent: cellHeightPixels / layoutHeight * 100,
-        stepXPercent: (cellWidthPixels + gapPixels) / layoutWidth * 100,
-        stepYPercent: (cellHeightPixels + gapPixels) / layoutHeight * 100,
+        stepXPercent: cellWidthPixels / layoutWidth * 100,
+        stepYPercent: cellHeightPixels / layoutHeight * 100,
         minimumReadableScale: Math.min(1, PIM_MINIMUM_READABLE_CELL_PIXELS / cellWidthPixels)
     };
 }
@@ -509,9 +522,10 @@ export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
 }
 
 function layoutPosition(grid, metrics) {
+    const point = positionedAxial({ q: Number(grid.x), r: Number(grid.y) }, metrics);
     return {
-        x: 50 + Number(grid.x) * metrics.stepXPercent,
-        y: 50 + Number(grid.y) * metrics.stepYPercent,
+        x: point.x,
+        y: point.y,
         gridX: Number(grid.x),
         gridY: Number(grid.y),
         axial: { q: Number(grid.x), r: Number(grid.y) }
@@ -561,12 +575,16 @@ function placePimRecord(record, parent, occupied, metrics) {
                 // toward the plant core.
                 const minimumOutward = record.depth > 1 ? -.05 : .45;
                 if (outward < minimumOutward) continue;
+                const gridKey = `${x}:${y}`;
+                // AABB rectangles overlap for every pair of neighbouring
+                // regular hexagons, including the intended shared edge. The
+                // axial cell itself is therefore the collision primitive.
+                if (occupied.has(gridKey)) continue;
                 const point = layoutPosition({ x, y }, metrics);
                 const rectangle = pimCellRectangle(record.path, point, {
                     width: metrics.cellWidthPercent,
                     height: metrics.cellHeightPercent
                 });
-                if (occupied.some(candidate => rectanglesOverlap(rectangle, candidate.rectangle))) continue;
                 const distanceToTarget = Math.hypot(x - target.x, y - target.y);
                 const distanceToParent = Math.hypot(fromParent.x, fromParent.y);
                 const portraitPackingPenalty = metrics.viewportWidth < metrics.viewportHeight
@@ -600,7 +618,7 @@ function placePimRecord(record, parent, occupied, metrics) {
             })
         };
     })();
-    occupied.push({ id: record.path, rectangle: chosen.rectangle });
+    occupied.add(`${chosen.grid.x}:${chosen.grid.y}`);
     record.layoutGrid = chosen.grid;
     record.position = chosen.point;
 }
@@ -668,27 +686,15 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         }
     }
 
-    const occupied = [];
+    const occupied = new Set();
     const byPath = new Map(layoutRecords.map(record => [record.path, record]));
     const corePosition = layoutPosition({ x: 0, y: 0 }, metrics);
-    occupied.push({
-        id: 'core',
-        rectangle: pimCellRectangle('core', corePosition, {
-            width: metrics.cellWidthPercent,
-            height: metrics.cellHeightPercent
-        }, 'center')
-    });
+    occupied.add('0:0');
     layoutRecords.filter(record => record.depth === 0).forEach(record => {
         const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
         record.layoutGrid = { x: direction.x, y: direction.y };
         record.position = layoutPosition(record.layoutGrid, metrics);
-        occupied.push({
-            id: record.path,
-            rectangle: pimCellRectangle(record.path, record.position, {
-                width: metrics.cellWidthPercent,
-                height: metrics.cellHeightPercent
-            })
-        });
+        occupied.add(`${record.layoutGrid.x}:${record.layoutGrid.y}`);
     });
     layoutRecords
         .filter(record => record.depth > 0)
