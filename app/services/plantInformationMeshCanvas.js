@@ -2,12 +2,55 @@ import {
     PIM_SPATIAL_CONFIG,
     pimNodeHue,
     pimNodeVisualPosition,
+    pimVisibleNodeBounds,
     pimVisibleNodes
 } from './plantInformationMesh.js';
 
 export const PIM_TEXTURE_SIZE = Object.freeze({ width: 1440, height: 1080 });
 export const PIM_BLOOM_DURATION_MS = 220;
 export const PIM_TEXTURE_CELL_WIDTH = 200;
+const PIM_TEXTURE_RENDER_PADDING = 84;
+
+/**
+ * Return the smallest padded texture that contains every currently visible
+ * cell. The authored cell pixels remain fixed; when a deep branch needs more
+ * room, the world panel grows with the texture instead of shrinking the
+ * cells or clipping them against the original flower-sized canvas.
+ */
+export function pimHoneycombTextureSize(knowledge, expandedPaths = [], options = {}) {
+    const baseWidth = Math.max(320, Number(options.baseWidth ?? options.width) || PIM_TEXTURE_SIZE.width);
+    const baseHeight = Math.max(240, Number(options.baseHeight ?? options.height) || PIM_TEXTURE_SIZE.height);
+    const layoutOptions = {
+        ...options,
+        layoutWidth: Number(options.layoutWidth) || baseWidth,
+        layoutHeight: Number(options.layoutHeight) || baseHeight,
+        cellWidthPixels: Number(options.cellWidthPixels) || PIM_TEXTURE_CELL_WIDTH
+    };
+    const nodes = pimVisibleNodes(knowledge, expandedPaths, layoutOptions);
+    const bounds = pimVisibleNodeBounds(nodes);
+    if (![bounds.left, bounds.right, bounds.top, bounds.bottom].every(Number.isFinite)) {
+        return { width: baseWidth, height: baseHeight, layoutWidth: baseWidth, layoutHeight: baseHeight };
+    }
+    const centerX = layoutOptions.layoutWidth / 2;
+    const centerY = layoutOptions.layoutHeight / 2;
+    const left = bounds.left / 100 * layoutOptions.layoutWidth;
+    const right = bounds.right / 100 * layoutOptions.layoutWidth;
+    const top = bounds.top / 100 * layoutOptions.layoutHeight;
+    const bottom = bounds.bottom / 100 * layoutOptions.layoutHeight;
+    // The panel pose maps the texture centre to the world-space PIM centre.
+    // Expand symmetrically around that centre so existing cells keep their
+    // relative transforms while the new branch has real pixels to render.
+    const visibleWidth = Math.max(1, Math.max(centerX - left, right - centerX) * 2);
+    const visibleHeight = Math.max(1, Math.max(centerY - top, bottom - centerY) * 2);
+    const padding = Math.max(24, Number(options.renderPaddingPixels) || PIM_TEXTURE_RENDER_PADDING);
+    return {
+        width: Math.max(baseWidth, Math.ceil(visibleWidth + padding * 2)),
+        height: Math.max(baseHeight, Math.ceil(visibleHeight + padding * 2)),
+        layoutWidth: Math.max(baseWidth, Math.ceil(visibleWidth + padding * 2)),
+        layoutHeight: Math.max(baseHeight, Math.ceil(visibleHeight + padding * 2)),
+        padding
+    };
+}
 
 function wrapLines(context, text, maxWidth) {
     const words = String(text || '').trim().split(/\s+/).filter(Boolean);
@@ -173,12 +216,17 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
  */
 export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPaths = [], options = {}) {
     if (!gl || typeof document === 'undefined') return null;
+    const size = pimHoneycombTextureSize(knowledge, expandedPaths, options);
     const textureCanvas = document.createElement('canvas');
-    textureCanvas.width = Number(options.width) || PIM_TEXTURE_SIZE.width;
-    textureCanvas.height = Number(options.height) || PIM_TEXTURE_SIZE.height;
+    textureCanvas.width = size.width;
+    textureCanvas.height = size.height;
     const context = textureCanvas.getContext('2d', { alpha: true });
     if (!context) return null;
-    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, expandedPaths, options);
+    drawPlantInformationHoneycomb(context, textureCanvas, knowledge, expandedPaths, {
+        ...options,
+        layoutWidth: size.layoutWidth,
+        layoutHeight: size.layoutHeight
+    });
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);

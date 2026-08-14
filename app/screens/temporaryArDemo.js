@@ -16,7 +16,7 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8954';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8955';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -242,6 +242,21 @@ const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA
 })));
 const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
 const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
+function demoPimSurfaceSize(record) {
+    return pimHoneycombTextureSize(knowledgeFor(record), demoPimExpandedNodeIds(record), {
+        ...demoSpatialPimLayoutOptions(),
+        width: PIM_TEXTURE_SIZE.width,
+        height: PIM_TEXTURE_SIZE.height
+    });
+}
+
+function demoPimPanel(record, pose = record?.informationPose) {
+    const size = record?.pimTextureSize || demoPimSurfaceSize(record);
+    return pimSpatialPanel(orientDemoPimPoseToViewer(pose), {
+        width: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * size.width / PIM_TEXTURE_SIZE.width,
+        height: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
+    });
+}
 const NOTE_TEMPLATES = Object.freeze({
     poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
@@ -1463,7 +1478,8 @@ function demoPimPointerTarget(record) {
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
     record.informationPose ||= plantInformationPose(record);
-    const panel = pimSpatialPanel(orientDemoPimPoseToViewer(record.informationPose));
+    const defaultPimPanel = pimSpatialPanel(orientDemoPimPoseToViewer(record.informationPose));
+    const panel = demoPimPanel(record) || defaultPimPanel;
     if (!panel) return null;
     record.informationPosition = panel.center;
     const numerator = (panel.center.x - origin.x) * panel.normal.x
@@ -1488,12 +1504,15 @@ function demoPimPointerTarget(record) {
     const bloomProgress = record.pimBloomStarted
         ? Math.max(0, Math.min(1, (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS))
         : 1;
+    const size = record.pimTextureSize || demoPimSurfaceSize(record);
     return {
         panelHit: true,
         xPercent,
         yPercent,
         node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, {
             ...demoSpatialPimLayoutOptions(),
+            layoutWidth: size.layoutWidth,
+            layoutHeight: size.layoutHeight,
             bloomProgress,
             selectedNodeId: record.demoSelectedNodeId
         })
@@ -2196,8 +2215,8 @@ function renderInterface(simulated) {
     });
     liveTagButton.addEventListener('click', event => event.stopPropagation());
     const holdCleanups = [
-        bindHoldToConfirmButton(skipButton, { onComplete: () => skipDemoNarration?.() }),
-        bindHoldToConfirmButton(exitButton, { onComplete: returnToWelcome })
+        bindHoldToConfirmButton(skipButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => skipDemoNarration?.() }),
+        bindHoldToConfirmButton(exitButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: returnToWelcome })
     ];
     demoHoldButtonCleanup = () => holdCleanups.forEach(cleanup => cleanup());
     const reflowDemoViewport = () => {
@@ -2407,10 +2426,14 @@ function createSpatialKnowledgeTexture(record) {
         const bloomProgress = record.pimBloomStarted
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
+        const size = demoPimSurfaceSize(record);
+        record.pimTextureSize = size;
         return createPlantInformationHoneycombTexture(gl, knowledgeFor(record), demoPimExpandedNodeIds(record), {
             ...demoSpatialPimLayoutOptions(),
-            width: PIM_TEXTURE_SIZE.width,
-            height: PIM_TEXTURE_SIZE.height,
+            width: size.width,
+            height: size.height,
+            layoutWidth: size.layoutWidth,
+            layoutHeight: size.layoutHeight,
             bloomProgress,
             selectedNodeId: record.demoSelectedNodeId
         });
@@ -2668,9 +2691,27 @@ function introLocalPosition(matrix, [x, y, z]) {
     };
 }
 
+function introWorldAnchorFromViewer(matrix) {
+    if (!matrix || matrix.length < 16) return null;
+    const forwardLength = Math.hypot(Number(matrix[8]) || 0, Number(matrix[10]) || 0);
+    const forward = forwardLength > .0001
+        ? { x: -(Number(matrix[8]) || 0) / forwardLength, z: -(Number(matrix[10]) || 0) / forwardLength }
+        : { x: 0, z: -1 };
+    const right = { x: -forward.z, z: forward.x };
+    // Lock the welcome surface to horizontal heading and world-up. If the
+    // phone starts pointed at the floor, its pitch must not rotate the board
+    // out of view or pin it to the camera's screen plane.
+    return new Float32Array([
+        right.x, 0, right.z, 0,
+        0, 1, 0, 0,
+        -forward.x, 0, -forward.z, 0,
+        Number(matrix[12]) || 0, Number(matrix[13]) || 0, Number(matrix[14]) || 0, 1
+    ]);
+}
+
 function drawIntroSpatial(view) {
     if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
-    introWorldAnchor ||= Float32Array.from(viewerMatrix);
+    introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
     const now = performance.now();
     if (introBoardVisible && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
@@ -2998,8 +3039,17 @@ function drawMarker(view) {
             ? { ...record.position, y: record.position.y + 1 }
             : record.position;
         const noteScale = noteSign ? DEMO_NOTE_IMMERSIVE_SCALE : null;
+        const defaultPimModel = fixedPimPanelMatrix(orientDemoPimPoseToViewer(record.informationPose));
         const model = plantProfile
-            ? fixedPimPanelMatrix(orientDemoPimPoseToViewer(record.informationPose))
+            ? (() => {
+                const size = record.pimTextureSize || demoPimSurfaceSize(record);
+                if (size.width === PIM_TEXTURE_SIZE.width && size.height === PIM_TEXTURE_SIZE.height) return defaultPimModel;
+                return fixedPimPanelMatrix(
+                    orientDemoPimPoseToViewer(record.informationPose),
+                    DEMO_PIM_IMMERSIVE_SCALE.x * size.width / PIM_TEXTURE_SIZE.width,
+                    DEMO_PIM_IMMERSIVE_SCALE.y * size.height / PIM_TEXTURE_SIZE.height
+                );
+            })()
             : billboardMatrix(
                 displayPosition,
                 totem ? 1.9 : noteScale?.x || (compact ? .38 : 2.35),

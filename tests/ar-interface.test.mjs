@@ -1931,3 +1931,21 @@ test('web quick entry can save an untitled draft for later editing', () => {
     assert.match(source, /Untitled marker/);
     assert.doesNotMatch(source, /id="fieldName" required/);
 });
+
+test('Creator phone AR uses the Demo transparent PIM surface and short demo holds', () => {
+    const creatorSource = read('app/screens/arMode.js');
+    const demoSource = read('app/screens/temporaryArDemo.js');
+    const canvasSource = read('app/services/plantInformationMeshCanvas.js');
+    const styles = read('app/style.css');
+    assert.match(creatorSource, /function usesSpatialPimRenderer\(\)/);
+    assert.match(creatorSource, /if \(!usesSpatialPimRenderer\(\) \|\| !homeSignProgram/);
+    assert.match(creatorSource, /is-spatial-pim-hit-layer/);
+    assert.match(creatorSource, /pimHoneycombTextureSize/);
+    assert.match(demoSource, /function introWorldAnchorFromViewer\(matrix\)/);
+    assert.match(demoSource, /introWorldAnchor \|\|= introWorldAnchorFromViewer\(viewerMatrix\)/);
+    assert.match(demoSource, /duration: DEMO_PLANT_ORB_HOLD_DELAY_MS/);
+    assert.match(styles, /\.creator-ar-overlay \{[^}]*overflow: visible;[^}]*contain: none/);
+    assert.match(styles, /\.creator-ar-plant-profile\.is-spatial-pim-hit-layer \{[\s\S]*pointer-events: auto/);
+    assert.match(canvasSource, /export function pimHoneycombTextureSize/);
+    assert.match(canvasSource, /PIM_TEXTURE_RENDER_PADDING/);
+});

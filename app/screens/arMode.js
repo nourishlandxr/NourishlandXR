@@ -25,8 +25,8 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8954';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8955';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -1534,6 +1534,13 @@ function questBeltUsesSpatialRenderer() {
     return questHeadsetSession;
 }
 
+function usesSpatialPimRenderer() {
+    // Demo and Creator must use the same transparent, world-locked PIM on
+    // phones as well as headsets. The DOM profile remains only as an invisible
+    // touch/accessibility hit layer for phone input.
+    return Boolean(session && (sessionMode === 'immersive-ar' || questBeltUsesSpatialRenderer()));
+}
+
 function questBeltActionElements() {
     const buttons = new Map(
         [...(overlayRoot?.querySelectorAll('.creator-ar-taskbar > button:not([disabled])') || [])]
@@ -2994,6 +3001,19 @@ function ensureSpatialPimPose(record, force = false) {
     return record.pimSpatialPose;
 }
 
+function spatialPimSurfaceSize(record) {
+    const size = pimHoneycombTextureSize(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+        width: PIM_TEXTURE_SIZE.width,
+        height: PIM_TEXTURE_SIZE.height
+    });
+    return {
+        ...size,
+        panelWidth: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * size.width / PIM_TEXTURE_SIZE.width,
+        panelHeight: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
+    };
+}
+
 function pimPoseAnchorPayload(record) {
     if (!record?.pimSpatialPose) return record?.pimStoredPose || null;
     const markerPosition = record.position || { x: 0, y: 0, z: 0 };
@@ -3029,10 +3049,13 @@ function ensureSpatialPimTexture(record) {
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
+    const size = spatialPimSurfaceSize(record);
     const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
         ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
-        width: PIM_TEXTURE_SIZE.width,
-        height: PIM_TEXTURE_SIZE.height,
+        width: size.width,
+        height: size.height,
+        layoutWidth: size.layoutWidth,
+        layoutHeight: size.layoutHeight,
         hoverPath,
         selectedNodeId: record.pimSelectedNodeId,
         bloomProgress
@@ -3047,8 +3070,13 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
         .filter(record => record.marker.type === 'plant' && record.profileExpanded)
         .map(record => {
             const pose = ensureSpatialPimPose(record);
-            const panel = pimSpatialPanel(pose, { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
-            const hit = spatialDashboardRayHit(latestControllerRay, panel, PIM_TEXTURE_SIZE);
+            const size = spatialPimSurfaceSize(record);
+            const panel = pimSpatialPanel(pose, {
+                width: size.panelWidth,
+                height: size.panelHeight,
+                viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
+            });
+            const hit = spatialDashboardRayHit(latestControllerRay, panel, size);
             if (!hit) return null;
             const bloomProgress = record.pimBloomStarted
                 ? Math.max(0, Math.min(1, (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS))
@@ -3060,6 +3088,8 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
                 hit.v * 100,
                 {
                     ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+                    layoutWidth: size.layoutWidth,
+                    layoutHeight: size.layoutHeight,
                     bloomProgress,
                     selectedNodeId: record.pimSelectedNodeId
                 }
@@ -3120,7 +3150,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
 }
 
 function drawSpatialPlantProfiles(view) {
-    if (!questBeltUsesSpatialRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    if (!usesSpatialPimRenderer() || !homeSignProgram || !homeSignBuffer) return;
     const records = renderableAreaMarkers().filter(record => record.marker.type === 'plant' && record.profileExpanded);
     if (!records.length) return;
     gl.enable(gl.DEPTH_TEST);
@@ -3137,7 +3167,12 @@ function drawSpatialPlantProfiles(view) {
     gl.uniform1i(gl.getUniformLocation(homeSignProgram, 'artwork'), 0);
     gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 1);
     records.forEach(record => {
-        const panel = pimSpatialPanel(ensureSpatialPimPose(record), { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
+        const size = spatialPimSurfaceSize(record);
+        const panel = pimSpatialPanel(ensureSpatialPimPose(record), {
+            width: size.panelWidth,
+            height: size.panelHeight,
+            viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
+        });
         const texture = ensureSpatialPimTexture(record);
         const model = spatialDashboardPanelMatrix(panel);
         if (!texture || !model) return;
@@ -3899,7 +3934,7 @@ function renderSessionMarkers() {
             ? ''
             : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            ? `<aside class="creator-ar-plant-profile is-anchored-profile${usesSpatialPimRenderer() ? ' is-spatial-pim-hit-layer' : ''}" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
              : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
                  ? creatorTotemInformationMarkup(record)
                 : '';

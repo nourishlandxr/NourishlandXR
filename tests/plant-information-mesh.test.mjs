@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
     AR_PIM_MAX_VISIBLE_CHILDREN,
     PIM_SPATIAL_CONFIG,
+    PIM_SPATIAL_LAYOUT_OPTIONS,
     pimCreateInteractionState,
     pimExpandedNodeIds,
     pimEnsureExpandedPaths,
@@ -27,7 +28,7 @@ import {
     pimToggleNodeState,
     pimVisibleNodes
 } from '../app/services/plantInformationMesh.js';
-import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
+import { pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../app/services/plantInformationMeshCanvas.js';
 import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
 import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../app/services/demoTutorialControls.js';
@@ -464,6 +465,37 @@ test('expanded PIM keeps the closed flower scale and position without fitting th
     assert.ok(rawDeepChild.path.includes('/'));
     assert.equal(pimNodeChildren(closedByPath.get('cultivation')).length > AR_PIM_MAX_VISIBLE_CHILDREN, true,
         'the complete source hierarchy remains larger than the AR projection');
+});
+
+test('the spatial PIM surface grows around deep visible bounds without shrinking cells', () => {
+    const closed = pimHoneycombTextureSize(PIGEON_PEA_AR_KNOWLEDGE, [], {
+        ...PIM_SPATIAL_LAYOUT_OPTIONS,
+        width: 1440,
+        height: 1080
+    });
+    const expandedPaths = ['cultivation', 'cultivation/climate', 'cultivation/climate/warm-growing-conditions'];
+    const expanded = pimHoneycombTextureSize(PIGEON_PEA_AR_KNOWLEDGE, expandedPaths, {
+        ...PIM_SPATIAL_LAYOUT_OPTIONS,
+        width: 1440,
+        height: 1080
+    });
+    assert.equal(closed.width, 1440);
+    assert.equal(closed.height, 1080);
+    assert.ok(expanded.height > closed.height, 'the render surface includes the deep branch');
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, expandedPaths, {
+        ...PIM_SPATIAL_LAYOUT_OPTIONS,
+        cellWidthPixels: 200,
+        layoutWidth: expanded.layoutWidth,
+        layoutHeight: expanded.layoutHeight
+    });
+    const bounds = pimVisibleNodeBounds(nodes);
+    assert.ok(bounds.top / 100 * expanded.height >= 0);
+    assert.ok(bounds.bottom / 100 * expanded.height <= expanded.height,
+        'the padded texture contains the complete lower cell');
+    assert.equal(nodes.find(node => node.path === 'cultivation').layoutCellWidthPixels,
+        pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, [], { ...PIM_SPATIAL_LAYOUT_OPTIONS, cellWidthPixels: 200 })
+            .find(node => node.path === 'cultivation').layoutCellWidthPixels,
+        'cell pixel width stays fixed while the surface grows');
 });
 
 test('viewport safe area recalculates on a resized visual viewport', () => {
