@@ -43,8 +43,8 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
     colliderScale: 1.2
 });
 
-const clampHorizontalPercentage = value => Math.max(4, Math.min(96, value));
-const clampVerticalPercentage = value => Math.max(4, Math.min(96, value));
+const PIM_DEFAULT_SAFE_AREA = Object.freeze({ left: 6, right: 94, top: 6, bottom: 94 });
+const PIM_DEFAULT_NODE_RADIUS_PERCENT = 12;
 const addAxial = (left, right) => ({ q: left.q + right.q, r: left.r + right.r });
 const scaleAxial = (point, amount) => ({ q: point.q * amount, r: point.r * amount });
 
@@ -58,8 +58,11 @@ function axialVisual(point = { q: 0, r: 0 }) {
 function positionedAxial(point) {
     const visual = axialVisual(point);
     return {
-        x: clampHorizontalPercentage(50 + visual.x * 13.9),
-        y: clampVerticalPercentage(50 + visual.y * 16.04),
+        // Keep the authored radial position intact until the complete visible
+        // mesh is known. Clamping each cell here created the invisible
+        // rectangular boundary that made deep branches overlap at the edge.
+        x: 50 + visual.x * 13.9,
+        y: 50 + visual.y * 16.04,
         gridX: visual.x,
         gridY: visual.y,
         axial: { q: point.q, r: point.r }
@@ -204,24 +207,6 @@ export function pimChildPosition(parent, childIndex, childCount) {
     return positionedAxial(axials[childIndex] || parent?.position?.axial || { q: 0, r: 0 });
 }
 
-export function pimConnectorCurve(node) {
-    const parent = node?.parentPosition || { x: 50, y: 50 };
-    const point = node?.position || parent;
-    const dx = point.x - parent.x;
-    const dy = point.y - parent.y;
-    return {
-        start: parent,
-        control1: { x: parent.x + dx * .36, y: parent.y + dy * .36 },
-        control2: { x: parent.x + dx * .72, y: parent.y + dy * .72 },
-        end: point
-    };
-}
-
-export function pimConnectorPath(node) {
-    const curve = pimConnectorCurve(node);
-    return `M${curve.start.x} ${curve.start.y} C${curve.control1.x} ${curve.control1.y} ${curve.control2.x} ${curve.control2.y} ${curve.end.x} ${curve.end.y}`;
-}
-
 // The spatial canvas and its ray-hit map must use the same position while a
 // child generation blooms out of its parent. Keeping this calculation here
 // prevents the renderer and the interaction layer from drifting apart.
@@ -306,6 +291,117 @@ export function pimExpandedNodeIds(state = {}) {
     return [...expandedIdSet(state?.expandedNodeIds)];
 }
 
+function safeNumber(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+function normalizeSafeArea(area = PIM_DEFAULT_SAFE_AREA) {
+    const left = Math.max(0, Math.min(45, safeNumber(area.left, PIM_DEFAULT_SAFE_AREA.left)));
+    const right = Math.max(left + 10, Math.min(100, safeNumber(area.right, PIM_DEFAULT_SAFE_AREA.right)));
+    const top = Math.max(0, Math.min(45, safeNumber(area.top, PIM_DEFAULT_SAFE_AREA.top)));
+    const bottom = Math.max(top + 10, Math.min(100, safeNumber(area.bottom, PIM_DEFAULT_SAFE_AREA.bottom)));
+    return { left, right, top, bottom };
+}
+
+/**
+ * Convert real viewport insets into the percentage coordinate space shared by
+ * the DOM and texture renderers. Callers can pass the visual viewport and the
+ * bottom action/dock inset after a resize or orientation change.
+ */
+export function pimViewportSafeArea(width, height, options = {}) {
+    const viewportWidth = Math.max(1, safeNumber(width, 390));
+    const viewportHeight = Math.max(1, safeNumber(height, 844));
+    const horizontalInset = Math.max(0, safeNumber(options.horizontalInset, 24));
+    const topInset = Math.max(0, safeNumber(options.topInset, 24));
+    const bottomInset = Math.max(0, safeNumber(options.bottomInset, 24));
+    return normalizeSafeArea({
+        left: horizontalInset / viewportWidth * 100,
+        right: 100 - horizontalInset / viewportWidth * 100,
+        top: topInset / viewportHeight * 100,
+        bottom: 100 - bottomInset / viewportHeight * 100
+    });
+}
+
+function pimSafeAreaFromOptions(options = {}) {
+    if (options.safeArea) return normalizeSafeArea(options.safeArea);
+    if (Number.isFinite(Number(options.viewportWidth)) && Number.isFinite(Number(options.viewportHeight))) {
+        return pimViewportSafeArea(options.viewportWidth, options.viewportHeight, options);
+    }
+    return PIM_DEFAULT_SAFE_AREA;
+}
+
+function rawBounds(nodes, radius) {
+    const points = [
+        { x: 50, y: 50 },
+        ...(Array.isArray(nodes) ? nodes : []).map(node => node.position || { x: 50, y: 50 })
+    ];
+    return points.reduce((bounds, point) => ({
+        left: Math.min(bounds.left, Number(point.x) - radius),
+        right: Math.max(bounds.right, Number(point.x) + radius),
+        top: Math.min(bounds.top, Number(point.y) - radius),
+        bottom: Math.max(bounds.bottom, Number(point.y) + radius)
+    }), { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
+}
+
+/** Return the complete visible mesh bounds, including the central plant cell. */
+export function pimVisibleNodeBounds(nodes = [], options = {}) {
+    const baseRadius = Math.max(0, safeNumber(options.nodeRadiusPercent, PIM_DEFAULT_NODE_RADIUS_PERCENT));
+    const layoutScale = options.nodeRadiusPercent === undefined
+        ? Math.max(.01, safeNumber(nodes?.[0]?.layoutScale, 1))
+        : 1;
+    const radius = baseRadius * layoutScale;
+    return rawBounds(nodes, radius);
+}
+
+function transformPimPoint(point, scale, translation) {
+    if (!point) return point;
+    return {
+        ...point,
+        x: 50 + (Number(point.x) - 50) * scale + translation.x,
+        y: 50 + (Number(point.y) - 50) * scale + translation.y
+    };
+}
+
+/**
+ * Fit the complete visible tree as one rigid mesh. The authored axial layout
+ * is scaled uniformly only when required; translation is then applied to the
+ * whole mesh, so parent/child direction and spacing remain intact.
+ */
+export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
+    const source = Array.isArray(nodes) ? nodes : [];
+    const safeArea = pimSafeAreaFromOptions(options);
+    const radius = Math.max(0, safeNumber(options.nodeRadiusPercent, PIM_DEFAULT_NODE_RADIUS_PERCENT));
+    const minimumScale = Math.max(.62, Math.min(1, safeNumber(options.minimumScale, .72)));
+    const sourceBounds = rawBounds(source, radius);
+    const availableWidth = Math.max(1, safeArea.right - safeArea.left);
+    const availableHeight = Math.max(1, safeArea.bottom - safeArea.top);
+    const sourceWidth = Math.max(1, sourceBounds.right - sourceBounds.left);
+    const sourceHeight = Math.max(1, sourceBounds.bottom - sourceBounds.top);
+    const scale = Math.max(minimumScale, Math.min(1, availableWidth / sourceWidth, availableHeight / sourceHeight));
+    const scaledBounds = {
+        left: 50 + (sourceBounds.left - 50) * scale,
+        right: 50 + (sourceBounds.right - 50) * scale,
+        top: 50 + (sourceBounds.top - 50) * scale,
+        bottom: 50 + (sourceBounds.bottom - 50) * scale
+    };
+    const translation = { x: 0, y: 0 };
+    if (scaledBounds.left < safeArea.left) translation.x = safeArea.left - scaledBounds.left;
+    if (scaledBounds.right + translation.x > safeArea.right) translation.x = safeArea.right - scaledBounds.right;
+    if (scaledBounds.top < safeArea.top) translation.y = safeArea.top - scaledBounds.top;
+    if (scaledBounds.bottom + translation.y > safeArea.bottom) translation.y = safeArea.bottom - scaledBounds.bottom;
+    const positionById = new Map(source.map(node => [node.nodeId || node.path, transformPimPoint(node.position, scale, translation)]));
+    return source.map(node => ({
+        ...node,
+        position: positionById.get(node.nodeId || node.path),
+        parentPosition: node.parentPosition
+            ? transformPimPoint(node.parentPosition, scale, translation)
+            : node.parentPosition,
+        layoutScale: scale,
+        layoutTranslation: { ...translation },
+        layoutSafeArea: { ...safeArea }
+    }));
+}
+
 export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}) {
     const expanded = expandedIdSet(expandedPaths);
     const selectedNodeId = String(options.selectedNodeId || '');
@@ -340,7 +436,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
-    return visible;
+    return pimCorrectVisibleNodeBounds(visible, options);
 }
 
 export function pimToggleExpandedPaths(expandedPaths, path) {

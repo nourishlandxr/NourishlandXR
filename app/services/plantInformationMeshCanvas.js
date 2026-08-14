@@ -163,7 +163,8 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
     const hitRadius = PIM_SPATIAL_CONFIG.cellWidthMetres / PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * 50 * PIM_SPATIAL_CONFIG.colliderScale;
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
     return pimVisibleNodes(knowledge, expandedPaths, {
-        selectedNodeId: options.selectedNodeId
+        selectedNodeId: options.selectedNodeId,
+        safeArea: options.safeArea
     })
         .map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);

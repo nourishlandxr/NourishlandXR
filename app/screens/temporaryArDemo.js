@@ -15,13 +15,14 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimNodeHue, pimNodeVisualPosition, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimVisibleNodes } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8945';
+import { PIM_SPATIAL_CONFIG, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8947';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { plantInformationMeshMarkup } from '../services/plantInformationMeshView.js';
+import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 
 let appRoot = null;
 let session = null;
@@ -80,6 +81,8 @@ let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 let demoWebModeOpen = false;
 let demoPimWebController = null;
+let demoHoldButtonCleanup = null;
+let demoViewportCleanup = null;
 let groundYEstimate = null;
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
@@ -293,6 +296,10 @@ function clearSessionState() {
     introPointerTexture = null;
     demoPimWebController?.destroy();
     demoPimWebController = null;
+    demoHoldButtonCleanup?.();
+    demoHoldButtonCleanup = null;
+    demoViewportCleanup?.();
+    demoViewportCleanup = null;
     introTaglineVisible = true;
     introKnowledgeVisible = false;
     markers.forEach(record => {
@@ -427,9 +434,14 @@ function openDemoVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to Open the plant profile.</p><button type="button" data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG</button>', choice => {
-        if (choice === 'virtual-tag') openDemoVirtualTag(record);
-    }, { persistent: true });
+    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to open the plant profile.</p>', () => {}, { persistent: true });
+    const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]');
+    if (!liveTagButton) return;
+    liveTagButton.hidden = false;
+    liveTagButton.onclick = () => {
+        liveTagButton.hidden = true;
+        openDemoVirtualTag(record);
+    };
 }
 
 function continueAfterDemoPim(record) {
@@ -458,6 +470,7 @@ function hideGuidedChoice({ hideBoard = false } = {}) {
     }
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden', '');
     appRoot?.querySelector('[data-tryit-final-actions]')?.setAttribute('hidden', '');
+    if (hideBoard) appRoot?.querySelector('[data-tryit-open-live-tag]')?.setAttribute('hidden', '');
     introBoardVisible = !hideBoard;
 }
 
@@ -470,6 +483,11 @@ function activateImmersiveDemoControl() {
     const choiceButton = appRoot?.querySelector('[data-tryit-guided-choice]:not([hidden]) [data-demo-choice]:not([hidden])');
     if (choiceButton) {
         choiceButton.click();
+        return true;
+    }
+    const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])');
+    if (liveTagButton) {
+        liveTagButton.click();
         return true;
     }
     // Never let a controller select finish narration or steal a marker grab.
@@ -1107,8 +1125,7 @@ function simulatedAnchorStyle(anchor) {
 }
 
 function simulatedAnchorFromPointer(startAnchor, startX, startY, event) {
-    const viewportWidth = Math.max(320, window.innerWidth || 320);
-    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
     return {
         x: Math.max(8, Math.min(92, Number(startAnchor?.x) + ((event.clientX - startX) / viewportWidth) * 100)),
         y: Math.max(12, Math.min(88, Number(startAnchor?.y) + ((event.clientY - startY) / viewportHeight) * 100))
@@ -1124,16 +1141,8 @@ function applySimulatedMarkerAnchor(layer, index, anchor) {
     });
 }
 
-function tetherMetrics(offset) {
-    return {
-        length: Math.max(8, Math.hypot(offset.x, offset.y)),
-        angle: Math.atan2(offset.y, offset.x) * 180 / Math.PI
-    };
-}
-
 function clampPlantPanelOffset(anchor, offset) {
-    const viewportWidth = Math.max(320, window.innerWidth || 320);
-    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
     const profileWidth = Math.min(viewportWidth - 24, 960);
     const profileHeight = Math.min(viewportHeight * 0.62, 620);
     const anchorX = viewportWidth * anchor.x / 100;
@@ -1149,8 +1158,7 @@ function clampPlantPanelOffset(anchor, offset) {
 }
 
 function defaultPlantPanelOffset(anchor) {
-    const viewportWidth = Math.max(320, window.innerWidth || 320);
-    const viewportHeight = Math.max(320, window.innerHeight || 640);
+    const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
     const profileHeight = Math.min(viewportHeight * 0.62, 620);
     const anchorY = viewportHeight * anchor.y / 100;
     const margin = 28;
@@ -1163,6 +1171,14 @@ function defaultPlantPanelOffset(anchor) {
         x: 0,
         y: preferAbove ? aboveOffset : belowOffset
     });
+}
+
+function demoViewportDimensions() {
+    const visualViewport = window.visualViewport;
+    return {
+        width: Math.max(320, Number(visualViewport?.width) || window.innerWidth || 320),
+        height: Math.max(320, Number(visualViewport?.height) || window.innerHeight || 640)
+    };
 }
 
 function capturedSimulatedAnchor() {
@@ -1185,9 +1201,8 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
     const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
-    const tether = tetherMetrics(offset);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px`;
-    return `${anchoredOrb}<svg class="tryit-sim-plant-tether" data-demo-plant-tether="${index}" style="${anchorVariables};--tether-length:${tether.length.toFixed(2)}px;--tether-angle:${tether.angle.toFixed(2)}deg" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 9 C 28 2, 70 16, 100 9"></path></svg><span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
+    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${plantKnowledgeMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), { selectedNodeId: record.demoSelectedNodeId })}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -1413,12 +1428,9 @@ function updateSimulatedMarkers() {
     bindSimulatedInformationPanels(layer);
 }
 
-function applyPlantPanelOffset(profile, tether, offset) {
-    const metrics = tetherMetrics(offset);
+function applyPlantPanelOffset(profile, offset) {
     profile.style.setProperty('--panel-x', `${offset.x}px`);
     profile.style.setProperty('--panel-y', `${offset.y}px`);
-    tether?.style.setProperty('--tether-length', `${metrics.length}px`);
-    tether?.style.setProperty('--tether-angle', `${metrics.angle}deg`);
 }
 
 function bindSimulatedInformationPanels(layer) {
@@ -1587,7 +1599,6 @@ function bindSimulatedInformationPanels(layer) {
     layer.querySelectorAll('[data-demo-plant-profile]').forEach(profile => {
         const index = Number(profile.dataset.demoPlantProfile);
         const record = markers[index];
-        const tether = layer.querySelector(`[data-demo-plant-tether="${index}"]`);
         const handle = profile.querySelector('[data-plant-profile-handle]');
         if (!record || !handle) return;
         const back = profile.querySelector('[data-pim-back]');
@@ -1653,7 +1664,7 @@ function bindSimulatedInformationPanels(layer) {
                 x: start.offset.x + event.clientX - start.x,
                 y: start.offset.y + event.clientY - start.y
             });
-            applyPlantPanelOffset(profile, tether, record.demoPanelOffset);
+            applyPlantPanelOffset(profile, record.demoPanelOffset);
         });
         const finish = () => {
             start = null;
@@ -1675,7 +1686,7 @@ function bindSimulatedInformationPanels(layer) {
                 x: offset.x + movement.x,
                 y: offset.y + movement.y
             });
-            applyPlantPanelOffset(profile, tether, record.demoPanelOffset);
+            applyPlantPanelOffset(profile, record.demoPanelOffset);
         });
     });
 }
@@ -2029,7 +2040,7 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-exit><strong>CLOSE DEMO</strong></button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip to Continue</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = document.createElement('button');
@@ -2043,12 +2054,10 @@ function renderInterface(simulated) {
     const exitButton = appRoot.querySelector('[data-tryit-exit]');
     exitButton.textContent = 'Close';
     exitButton.setAttribute('aria-label', 'Close demo');
-    const skipButton = document.createElement('button');
-    skipButton.type = 'button';
-    skipButton.dataset.tryitSkip = '';
-    skipButton.textContent = 'Skip to Continue';
+    const skipButton = appRoot.querySelector('[data-tryit-skip]');
     skipButton.setAttribute('aria-label', 'Show the current Continue action');
-    exitButton.before(skipButton);
+    const liveTagButton = appRoot.querySelector('[data-tryit-open-live-tag]');
+    liveTagButton.setAttribute('aria-label', 'Open Plant Live Tag');
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');
@@ -2058,8 +2067,24 @@ function renderInterface(simulated) {
         button.addEventListener('focus', expand);
         button.addEventListener('click', expand);
     });
-    exitButton.addEventListener('click', returnToWelcome);
-    skipButton.addEventListener('click', () => skipDemoNarration?.());
+    liveTagButton.addEventListener('click', event => event.stopPropagation());
+    const holdCleanups = [
+        bindHoldToConfirmButton(skipButton, { onComplete: () => skipDemoNarration?.() }),
+        bindHoldToConfirmButton(exitButton, { onComplete: returnToWelcome })
+    ];
+    demoHoldButtonCleanup = () => holdCleanups.forEach(cleanup => cleanup());
+    const reflowDemoViewport = () => {
+        markers.filter(record => record.demoType === 'plant' && record.demoExpanded).forEach(record => {
+            record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, record.demoPanelOffset || { x: 0, y: 0 });
+        });
+        updateSimulatedMarkers();
+    };
+    window.addEventListener('resize', reflowDemoViewport, { passive: true });
+    window.visualViewport?.addEventListener('resize', reflowDemoViewport, { passive: true });
+    demoViewportCleanup = () => {
+        window.removeEventListener('resize', reflowDemoViewport);
+        window.visualViewport?.removeEventListener('resize', reflowDemoViewport);
+    };
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
     appRoot.querySelector('.tryit-demo')?.append(placementPointer);
     introContinue.addEventListener('beforexrselect', event => event.preventDefault());
@@ -2603,35 +2628,6 @@ function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
 
 function drawPlantKnowledgeTexture(ctx, label, knowledge, expandedPaths = [], options = {}) {
     drawPlantInformationHoneycomb(ctx, label, knowledge, expandedPaths, options);
-    const children = pimVisibleNodes(knowledge, expandedPaths).filter(node => node.depth > 0);
-    if (!children.length) return;
-    // The shared renderer owns the cells. Add only their parent links behind
-    // the rendered pixels so every new bloom is visibly connected to the
-    // topic that produced it in immersive AR as well as the DOM fallback.
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.lineCap = 'round';
-    children.forEach(node => {
-        const parent = node.parentPosition || { x: 50, y: 50 };
-        const point = pimNodeVisualPosition(node, options.bloomProgress ?? 1);
-        const start = { x: parent.x / 100 * label.width, y: parent.y / 100 * label.height };
-        const end = { x: point.x / 100 * label.width, y: point.y / 100 * label.height };
-        const hue = pimNodeHue(node);
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.bezierCurveTo(
-            start.x + (end.x - start.x) * .36,
-            start.y + (end.y - start.y) * .36,
-            start.x + (end.x - start.x) * .72,
-            start.y + (end.y - start.y) * .72,
-            end.x,
-            end.y
-        );
-        ctx.strokeStyle = `hsla(${hue}, 68%, 78%, .82)`;
-        ctx.lineWidth = 7;
-        ctx.stroke();
-    });
-    ctx.restore();
 }
 
 function createBoundaryTexture() {

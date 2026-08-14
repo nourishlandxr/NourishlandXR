@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8945';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, drawPlantInformationHoneycomb, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8947';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -593,7 +593,6 @@ function setMarkerAncillaryVisibility(record, hidden) {
     const selector = CSS.escape(record.marker.id);
     [
         overlayRoot.querySelector(`[data-ar-plant-profile="${selector}"]`),
-        overlayRoot.querySelector(`[data-ar-plant-tether="${selector}"]`),
         overlayRoot.querySelector(`[data-ar-totem-information="${selector}"]`)
     ].filter(Boolean).forEach(element => { element.hidden = hidden; });
 }
@@ -3098,19 +3097,6 @@ function drawSpatialPlantProfiles(view) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
-    const pulse = .5 + Math.sin(performance.now() / 380) * .5;
-    records.forEach(record => {
-        const panel = pimSpatialPanel(ensureSpatialPimPose(record), { viewerPosition: latestViewerMatrix && { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] } });
-        if (!panel || !controllerPointerRenderer) return;
-        drawSpatialTether(
-            gl,
-            controllerPointerRenderer,
-            view,
-            { ...record.position, y: record.position.y + .07 },
-            { ...panel.center, y: panel.center.y - Math.min(.22, panel.height * .2) },
-            { width: .0028 + pulse * .0022, color: [.84, .93, .76, .22 + pulse * .34], curve: .035, lift: .05 }
-        );
-    });
     gl.useProgram(homeSignProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
     const positionLocation = gl.getAttribLocation(homeSignProgram, 'p');
@@ -3691,7 +3677,7 @@ function positionSessionMarkers(view = latestView) {
     const inverse = view.transform?.inverse?.matrix;
     if (!inverse || !view.projectionMatrix) {
         // A Web -> AR handoff can render the DOM marker layer before the first
-        // valid XR view arrives. Keep profiles, tethers and Totem boards
+        // valid XR view arrives. Keep profiles and Totem boards
         // hidden instead of letting fixed-position elements fall back to
         // (0, 0) in the top-left corner.
         const currentRecords = activeAreaMarkers();
@@ -3753,8 +3739,7 @@ function positionSessionMarkers(view = latestView) {
 function positionCreatorPlantProfile(record, markerX, markerY) {
     if (!record.profileExpanded || !overlayRoot) return;
     const profile = overlayRoot.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
-    const tether = overlayRoot.querySelector(`[data-ar-plant-tether="${CSS.escape(record.marker.id)}"]`);
-    if (!profile || !tether) return;
+    if (!profile) return;
     const visualViewport = window.visualViewport;
     const viewportWidth = Number(visualViewport?.width) || window.innerWidth;
     const viewportHeight = Number(visualViewport?.height) || window.innerHeight;
@@ -3771,19 +3756,11 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
         topInset: Math.max(12, offsetY + 8),
         bottomInset: toolbarInset + 12
     });
-    const { panelWidth, panelHeight, panelX, panelY, tetherStartY, tetherEndY } = layout;
+    const { panelWidth, panelHeight, panelX, panelY } = layout;
     profile.style.left = `${panelX}px`;
     profile.style.top = `${panelY}px`;
     profile.style.width = `${panelWidth}px`;
     profile.style.height = `${panelHeight}px`;
-    const diagramAnchorX = panelX;
-    const diagramAnchorY = tetherEndY;
-    const dx = diagramAnchorX - anchorX;
-    const dy = diagramAnchorY - tetherStartY;
-    tether.style.left = `${anchorX}px`;
-    tether.style.top = `${tetherStartY - 9}px`;
-    tether.style.width = `${Math.max(8, Math.hypot(dx, dy))}px`;
-    tether.style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
 }
 
 function positionCreatorTotemInformation(record, markerX, markerY, view = latestView) {
@@ -3862,7 +3839,7 @@ function renderSessionMarkers() {
             ? ''
             : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
-            ? `<svg class="creator-ar-plant-tether" data-ar-plant-tether="${escapeHtml(record.marker.id)}" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C28 2 70 16 100 9"></path></svg><aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
+            ? `<aside class="creator-ar-plant-profile is-anchored-profile" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile" style="--profile-accent:${markerAppearanceColor(record.marker)}">${creatorPlantKnowledgeMarkup(record)}</aside>`
              : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
                  ? creatorTotemInformationMarkup(record)
                 : '';

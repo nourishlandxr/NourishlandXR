@@ -80,15 +80,15 @@ test('both demo Plants remain alive, interactive and independently selectable af
     assert.equal(selectDemoPlantRecord({ record: note }, () => {}), false);
 });
 
-test('Creator AR keeps the Plant orb tethered to its enlarged profile diagram', () => {
+test('Creator AR positions the enlarged profile without an orb tether', () => {
     const phone = creatorPlantProfileLayout(390, 844, 195, 300);
     assert.equal(phone.panelX, 195);
     assert.ok(phone.panelTop < 300);
     assert.ok(phone.panelWidth > 340);
     assert.ok(phone.panelHeight > 500);
     assert.equal(phone.panelY, phone.panelTop + phone.panelHeight / 2);
-    assert.ok(phone.tetherEndY > phone.panelTop);
     assert.equal(phone.profileAbove, false);
+    assert.equal('tetherEndY' in phone, false);
 
     const edge = creatorPlantProfileLayout(390, 844, 12, 300);
     assert.ok(edge.panelX - edge.panelWidth / 2 >= 8);
@@ -1139,7 +1139,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
     assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
-    assert.match(source, /data-demo-choice="virtual-tag">OPEN PLANT LIVE TAG/);
+    assert.match(source, /data-tryit-open-live-tag hidden/);
+    assert.match(source, /data-tryit-skip/);
+    assert.match(source, /bindHoldToConfirmButton/);
     assert.match(source, /WEB MODE · PLANT LIVE TAG/);
     assert.match(source, /FULL PLANT PROFILE/);
     assert.match(source, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
@@ -1251,8 +1253,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Math\.max\(record\.position\.y \+ 1\.35, 1\.35\)/);
     assert.doesNotMatch(styles, /--marker-index/);
     assert.doesNotMatch(styles, /\+ 230px/);
-    assert.match(styles, /\.tryit-sim-plant-tether/);
-    assert.match(styles, /\.tryit-sim-plant-tether path \{ fill: none;/);
+    assert.doesNotMatch(styles, /\.tryit-sim-plant-tether/);
     assert.match(styles, /\.tryit-sim-plant-profile/);
     assert.match(styles, /\.tryit-sim-plant-profile \{[\s\S]*pointer-events: auto;/);
     assert.match(source, /record\.demoExpanded = false/);
@@ -1295,14 +1296,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
-    assert.match(pimViewSource, /plant-knowledge-connectors/);
-    assert.match(styles, /\.plant-knowledge-connectors path/);
+    assert.doesNotMatch(pimViewSource, /plant-knowledge-connectors/);
+    assert.doesNotMatch(styles, /\.plant-knowledge-connectors path/);
     assert.match(styles, /--pim-cell-size: clamp\(76px, 14vw, 132px\)/);
     assert.match(styles, /height: min\(62dvh, 620px\)/);
     assert.match(styles, /@keyframes pim-cell-bloom/);
     assert.match(styles, /data-pim-layout="honeycomb"/);
-    assert.match(pimViewSource, /pimConnectorPath/);
-    assert.match(source, /pimNodeHue/);
+    assert.doesNotMatch(pimViewSource, /pimConnectorPath/);
     assert.doesNotMatch(source, /pimFocusedView\(/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
     assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
@@ -1310,15 +1310,15 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /return canvasTexture\(label\);/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
-    assert.match(pimViewSource, /is-parent-link/);
+    assert.doesNotMatch(pimViewSource, /is-parent-link/);
     assert.match(styles, /@keyframes pim-demo-attached-grow/);
-    assert.match(styles, /--pim-parent-grid-x/);
-    assert.match(source, /globalCompositeOperation = 'destination-over'/);
+    assert.doesNotMatch(styles, /--pim-parent-grid-x/);
+    assert.doesNotMatch(source, /globalCompositeOperation = 'destination-over'/);
     assert.match(source, /explorationGoal = record\.tutorialStage === 'plant' \? 3 : 2/);
     assert.match(source, /PIM_SPATIAL_CONFIG\.expandedSurfaceWidthMetres \/ \.4/);
-    assert.match(styles, /left: calc\(50% \+ var\(--pim-grid-x, 0\) \* var\(--pim-cell-size\)\)/);
+    assert.match(styles, /left: var\(--pim-node-x, 50%\)/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
-    assert.match(source, /pimVisibleNodes/);
+    assert.match(pimCanvasSource, /pimVisibleNodes/);
     assert.match(source, /pimCreateInteractionState/);
     assert.match(source, /pimToggleNodeState/);
     assert.match(source, /pimExpandedNodeIds/);
@@ -1597,12 +1597,12 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /visualViewport/);
     assert.match(arSource, /bottomInset/);
     assert.match(arSource, /creatorPlantProfileLayout/);
-    assert.match(arSource, /const diagramAnchorY = tetherEndY/);
+    assert.doesNotMatch(arSource, /tetherEndY|data-ar-plant-tether/);
     assert.match(arSource, /creator-ar-plant-profile is-anchored-profile/);
     assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
     assert.match(arSource, /scientificName: profile\.scientific_name \|\| ''/);
     assert.match(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
-    assert.match(arSource, /creator-ar-plant-tether[\s\S]*<path d="M0 9 C28 2 70 16 100 9"/);
+    assert.doesNotMatch(arSource, /creator-ar-plant-tether[\s\S]*<path/);
     assert.match(arSource, /const wasOpen = creatorPimState\(record\)\.expandedNodeIds\.has\(nodePath\)/);
     assert.match(arSource, /record\.pimSelectedNodeId = state\.selectedNodeId/);
     assert.match(arSource, /record\.pimExpandedNodeIds = pimExpandedNodeIds\(state\)/);
@@ -1620,7 +1620,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(styles, /@keyframes creator-ar-profile-arrive/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.has-plant-profile/);
     assert.match(styles, /\.plant-virtual-tag-card/);
-    assert.match(styles, /\.creator-ar-plant-tether path/);
+    assert.doesNotMatch(styles, /\.creator-ar-plant-tether path/);
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\]/);
     assert.match(styles, /--pim-cell-size: clamp\(76px, 14vw, 132px\)/);
     assert.match(styles, /overflow-wrap: normal;\s*word-break: normal/);

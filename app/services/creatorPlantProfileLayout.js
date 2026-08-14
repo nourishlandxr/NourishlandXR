@@ -24,8 +24,6 @@ export function creatorPlantProfileLayout(viewportWidth, viewportHeight, markerX
         panelX,
         panelTop,
         panelY: panelTop + panelHeight / 2,
-        profileAbove,
-        tetherStartY: markerY + (profileAbove ? -24 : 24),
-        tetherEndY: profileAbove ? panelTop + panelHeight - 4 : panelTop + 4
+        profileAbove
     };
 }

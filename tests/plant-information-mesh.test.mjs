@@ -8,9 +8,13 @@ import {
     pimEnsureExpandedPaths,
     pimKnowledgeNodes,
     pimNodeChildren,
+    pimNodeAtPath,
     pimNodeHue,
     pimNodeVisualPosition,
     pimRootPosition,
+    pimVisibleNodeBounds,
+    pimCorrectVisibleNodeBounds,
+    pimViewportSafeArea,
     pimSpatialPanel,
     pimSpatialPoseAboveAnchor,
     pimSpatialPoseFromStored,
@@ -21,6 +25,7 @@ import {
 } from '../app/services/plantInformationMesh.js';
 import { pimHoneycombTargetAtPercent } from '../app/services/plantInformationMeshCanvas.js';
 import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
+import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
 import { PIM_COMPASS } from '../app/services/pimCompass.js';
 import { PIGEON_PEA_AR_KNOWLEDGE } from '../app/services/pigeonPeaExample.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
@@ -335,4 +340,54 @@ test('PIM shared hit testing exposes large cells without a floating recenter con
     ).path, 'food-forest');
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 50, 94), null);
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 2, 2), null);
+});
+
+test('expanded PIM bounds are corrected as one mesh without early cell clamping', () => {
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, [
+        'cultivation',
+        'cultivation/climate',
+        'food-forest',
+        'food-forest/ecological-functions'
+    ]);
+    const bounds = pimVisibleNodeBounds(nodes);
+    assert.ok(bounds.left >= 6 && bounds.right <= 94, JSON.stringify(bounds));
+    assert.ok(bounds.top >= 6 && bounds.bottom <= 94, JSON.stringify(bounds));
+    assert.ok(nodes.every(node => node.layoutScale >= .72 && node.layoutScale <= 1));
+    assert.ok(nodes.some(node => node.layoutScale < 1), 'deep branches use a modest uniform fallback scale');
+    const rawDeepChild = pimNodeAtPath(PIGEON_PEA_AR_KNOWLEDGE, 'cultivation/climate/warm-growing-conditions');
+    assert.ok(rawDeepChild, 'the third-level test node exists');
+    assert.ok(rawDeepChild.path.includes('/'));
+});
+
+test('viewport safe area recalculates on a resized visual viewport', () => {
+    const phone = pimViewportSafeArea(320, 568, { topInset: 24, bottomInset: 96 });
+    const widePhone = pimViewportSafeArea(430, 932, { topInset: 24, bottomInset: 96 });
+    assert.ok(phone.left > widePhone.left, 'the same pixel edge inset occupies more narrow-screen space');
+    assert.ok(phone.bottom < widePhone.bottom, 'the same bottom controls reserve the correct resized percentage');
+    const corrected = pimCorrectVisibleNodeBounds(pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['cultivation']), {
+        safeArea: phone,
+        minimumScale: .72
+    });
+    assert.ok(pimVisibleNodeBounds(corrected).bottom <= phone.bottom);
+});
+
+test('hold-to-confirm completes once, cancels early, and resets progress', () => {
+    let completed = 0;
+    const progress = [];
+    const hold = createHoldToConfirmController({
+        duration: 2000,
+        onProgress: value => progress.push(value),
+        onComplete: () => { completed += 1; }
+    });
+    hold.start(100);
+    assert.equal(hold.tick(2099), false);
+    assert.equal(completed, 0);
+    hold.cancel();
+    assert.equal(hold.progress, 0);
+    hold.start(3000);
+    assert.equal(hold.tick(4999), false);
+    assert.equal(hold.tick(5000), true);
+    assert.equal(hold.tick(6000), true);
+    assert.equal(completed, 1);
+    assert.equal(progress.at(-1), 1);
 });

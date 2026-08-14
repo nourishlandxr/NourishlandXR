@@ -541,7 +541,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /Select a cell to expand its connected knowledge/);
     assert.match(source, /navigator\.vibrate/);
     assert.doesNotMatch(source, /tryit-panel/);
-    assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-sim-marker,[\s\S]*\.tryit-demo\.is-immersive \.tryit-sim-plant-tether \{ display: none !important;/);
+    assert.doesNotMatch(styles, /\.tryit-sim-plant-tether/);
     assert.match(source, /function placeMarker/);
     assert.match(source, /function createMarkerTexture/);
     assert.doesNotMatch(source, /Loading Dashboard|Place Your Dashboard|draggable-window/);
