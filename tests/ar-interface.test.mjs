@@ -1592,6 +1592,8 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(arSource, /setPlacementStatus\(''\)/);
     assert.match(arSource, /creator-ar-plant-profile/);
     assert.match(arSource, /function positionCreatorPlantProfile\(record, markerX, markerY\)/);
+    assert.match(arSource, /const panel = pimSpatialPanel\(pose/);
+    assert.match(arSource, /projectWorldPoint\(latestView, panel\.center\)/);
     assert.match(arSource, /plantInformationMeshSurfaceLayout\(viewportWidth, viewportHeight, anchorX, anchorY, \{/);
     assert.match(arSource, /visualViewport/);
     assert.match(arSource, /bottomInset/);

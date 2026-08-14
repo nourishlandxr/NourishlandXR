@@ -26,7 +26,7 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8952';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent } from '../services/plantInformationMeshCanvas.js?v=0.8953';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -3797,8 +3797,21 @@ function positionCreatorPlantProfile(record, markerX, markerY) {
     const toolbarInset = dockRect && dockRect.bottom >= viewportHeight - 96
         ? dockRect.height + 10
         : 0;
-    const anchorX = markerX - offsetX;
-    const anchorY = markerY - offsetY;
+    // The profile is a spatial surface, not a HUD card. Project the fixed PIM
+    // pose captured when the Plant was opened; using the marker's current
+    // screen point made Creator appear glued to the centre/marker overlay and
+    // drifted from Demo's world-locked panel.
+    const pose = ensureSpatialPimPose(record);
+    const panel = pimSpatialPanel(pose, {
+        viewerPosition: latestViewerMatrix && {
+            x: latestViewerMatrix[12],
+            y: latestViewerMatrix[13],
+            z: latestViewerMatrix[14]
+        }
+    });
+    const panelPoint = panel && projectWorldPoint(latestView, panel.center);
+    const anchorX = (panelPoint?.x ?? markerX) - offsetX;
+    const anchorY = (panelPoint?.y ?? markerY) - offsetY;
     const layout = plantInformationMeshSurfaceLayout(viewportWidth, viewportHeight, anchorX, anchorY, {
         topInset: Math.max(12, offsetY + 8),
         bottomInset: toolbarInset + 12
