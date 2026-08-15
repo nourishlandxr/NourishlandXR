@@ -9447,3 +9447,384 @@ body:has(.field-guide-hub-redesign) {
     .field-guide-hub-redesign .field-guide-management-row-badge { grid-column: 2; justify-self: start; padding-left: 0; }
     .field-guide-hub-redesign details.field-guide-management-row > div { padding-left: 62px; }
 }
+
+/* Project dashboard mobile system: one aligned card language for every
+   project action, with responsive density instead of fixed empty space. */
+body:has(.project-entry) #app {
+    width: min(100%, 1120px);
+    max-width: 1120px;
+    padding: 16px 16px max(32px, env(safe-area-inset-bottom));
+}
+
+.project-entry {
+    --project-page-gap: 16px;
+    --project-card-padding: 16px;
+    --project-card-radius: 18px;
+    gap: var(--project-page-gap);
+    min-width: 0;
+}
+
+.project-entry .dashboard-frame {
+    display: grid;
+    gap: var(--project-page-gap);
+    width: 100%;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding: var(--project-card-padding);
+    overflow: visible;
+    border-radius: 24px;
+}
+
+.project-entry .dashboard-frame > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.project-entry .location-dashboard-header {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    min-height: 96px;
+    padding: 16px;
+    border-radius: var(--project-card-radius);
+    text-align: left;
+}
+
+.project-entry .dashboard-frame-kicker {
+    font-size: clamp(.62rem, 1.8vw, .72rem);
+}
+
+.project-entry .location-dashboard-header h1 {
+    min-width: 0;
+    max-width: 100%;
+    margin: 4px 0 0;
+    font-size: clamp(1.65rem, 5vw, 2.4rem);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+}
+
+.project-entry .project-dashboard-card {
+    min-width: 0;
+    padding: var(--project-card-padding);
+    border-radius: var(--project-card-radius);
+}
+
+.project-entry .dashboard-ar-path {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--project-page-gap);
+    width: 100%;
+    max-width: none;
+    margin: 0;
+}
+
+.project-entry .dashboard-ar-path > button.dashboard-open-ar,
+.project-entry .dashboard-ar-path > button.dashboard-field-guide {
+    display: grid !important;
+    place-items: center;
+    align-content: center;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none;
+    height: auto !important;
+    min-height: clamp(132px, 36vw, 150px) !important;
+    max-height: none;
+    padding: var(--project-card-padding) !important;
+    border-radius: var(--project-card-radius) !important;
+    text-align: center;
+}
+
+.project-entry .dashboard-open-ar strong,
+.project-entry .dashboard-field-guide strong {
+    min-width: 0;
+    font-size: clamp(1rem, 3.5vw, 1.25rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.project-entry .dashboard-field-guide {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px;
+}
+
+.project-entry .dashboard-field-guide > span {
+    display: grid;
+    place-items: center;
+    grid-row: auto;
+    font-size: 1rem;
+}
+
+.project-entry .dashboard-inline-icon {
+    display: block;
+    width: 32px;
+    height: 32px;
+}
+
+.project-entry .project-areas-section,
+.project-entry .project-search-section,
+.project-entry .project-status,
+.project-entry .latest-entries-section {
+    margin: 0;
+    min-width: 0;
+    padding: var(--project-card-padding);
+    border-radius: var(--project-card-radius);
+}
+
+.project-entry .section-heading-row {
+    min-width: 0;
+    margin-bottom: 12px;
+}
+
+.project-entry .section-heading-row > * {
+    min-width: 0;
+}
+
+.project-entry .section-heading-row h2,
+.project-entry .project-areas-section .section-heading-row h2,
+.project-entry .project-status .section-heading-row h2 {
+    font-size: clamp(1.1rem, 5vw, 1.45rem);
+    line-height: 1.15;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.project-entry .section-heading-row p {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.project-entry .project-area-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--project-page-gap);
+    min-width: 0;
+}
+
+.project-entry .project-area-overview-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 110px;
+    height: auto;
+    gap: 12px;
+    padding: var(--project-card-padding);
+    border-radius: var(--project-card-radius);
+}
+
+.project-entry .project-area-overview-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(47, 109, 66, .17);
+    border-radius: 14px;
+    background: rgba(238, 246, 232, .86);
+    color: var(--leaf-deep);
+}
+
+.project-entry .project-area-overview-icon .dashboard-inline-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.project-entry .project-area-overview-copy,
+.project-entry .project-area-overview-copy > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.project-entry .project-area-overview-copy strong,
+.project-entry .project-area-overview-copy span {
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.project-entry .project-area-overview-totem {
+    min-width: 52px;
+    max-width: 76px;
+}
+
+.project-entry .project-area-overview-totem small {
+    white-space: normal;
+    text-align: center;
+}
+
+.project-entry .project-status {
+    min-width: 0;
+}
+
+.project-entry .experience-status-grid {
+    min-width: 0;
+    min-height: 90px;
+    height: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-radius: 14px;
+}
+
+.project-entry .experience-status-item {
+    min-width: 0;
+    min-height: 88px;
+    padding: 12px 10px;
+    align-content: center;
+    text-align: center;
+}
+
+.project-entry .experience-status-item span,
+.project-entry .experience-status-item strong {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.project-entry .experience-status-item span {
+    white-space: nowrap;
+}
+
+.project-entry .experience-status-item span { font-size: .66rem; }
+.project-entry .experience-status-item strong { font-size: .88rem; line-height: 1.25; }
+
+.project-entry .location-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--project-page-gap);
+    min-width: 0;
+}
+
+.project-entry .location-tool-card {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 84px;
+    height: auto;
+    padding: var(--project-card-padding);
+    border-radius: var(--project-card-radius);
+    text-align: left;
+}
+
+.project-entry .location-tool-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(47, 109, 66, .16);
+    border-radius: 50%;
+    background: rgba(238, 246, 232, .9);
+    color: var(--leaf-deep);
+}
+
+.project-entry .location-tool-icon .dashboard-inline-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.project-entry .location-tool-copy {
+    display: grid;
+    align-content: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.project-entry .location-tool-copy strong,
+.project-entry .location-tool-copy span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.project-entry .location-tool-copy strong { font-size: .9rem; line-height: 1.2; }
+.project-entry .location-tool-copy span { font-size: .72rem; line-height: 1.3; }
+
+@media (max-width: 380px) {
+    .project-entry .project-area-overview-card {
+        grid-template-columns: 48px minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .project-entry .project-area-overview-copy {
+        grid-column: 2;
+        grid-row: 1;
+        padding-top: 1px;
+    }
+
+    .project-entry .project-area-overview-totem {
+        grid-column: 2;
+        grid-row: 2;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .project-entry .project-area-overview-totem small { text-align: left; }
+
+    .project-entry .experience-status-grid {
+        min-height: 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .project-entry .experience-status-item {
+        min-height: 68px;
+        padding: 10px 8px;
+    }
+
+    .project-entry .location-tool-grid { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 381px) and (max-width: 430px) {
+    .project-entry .location-tool-card {
+        grid-template-columns: 32px minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .project-entry .location-tool-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .project-entry .location-tool-icon .dashboard-inline-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .project-entry .location-tool-copy strong { font-size: .84rem; }
+    .project-entry .location-tool-copy span { font-size: .68rem; }
+    .project-entry .experience-status-item span {
+        font-size: .6rem;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 760px) {
+    .project-entry .project-area-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .project-entry .location-tool-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 980px) {
+    .project-entry .dashboard-frame {
+        grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+        align-items: start;
+    }
+
+    .project-entry .dashboard-frame > .location-dashboard-header,
+    .project-entry .dashboard-frame > .living-map-progress,
+    .project-entry .dashboard-frame > .dashboard-ar-path,
+    .project-entry .dashboard-frame > .dashboard-location-footer,
+    .project-entry .dashboard-frame > .latest-entries-section,
+    .project-entry .dashboard-frame > .location-tool-grid,
+    .project-entry .dashboard-frame > .tutorial-spotlight-callout,
+    .project-entry .dashboard-frame > .tutorial-spotlight-shield {
+        grid-column: 1 / -1;
+    }
+
+    .project-entry .dashboard-ar-path { max-width: 640px; }
+}

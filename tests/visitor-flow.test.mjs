@@ -461,15 +461,20 @@ test('Area dashboards use selectable icons and keep summary counts in the profil
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const configSource = fs.readFileSync(path.join(root, 'app/services/arExperienceConfig.js'), 'utf8');
     const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
+    const entrySource = fs.readFileSync(path.join(root, 'app/components/projectEntry.js'), 'utf8');
     assert.match(configSource, /AREA_ICON_OPTIONS/);
-    assert.match(configSource, /value: '🌿'/);
-    assert.match(configSource, /value: '🌳'/);
-    assert.match(configSource, /value: '💧'/);
+    assert.match(configSource, /value: '▧'/);
+    assert.match(configSource, /label: 'Zone'/);
+    assert.doesNotMatch(configSource, /label: 'Leaves'/);
+    assert.doesNotMatch(configSource, /label: 'Tree'/);
     assert.match(dashboardSource, /data-edit-area-icon/);
     assert.match(dashboardSource, /id="areaIcon"/);
     assert.match(dashboardSource, /icon\n?\s*\}/);
     assert.doesNotMatch(dashboardSource, /OPEN AREA IN AR<\/button><span>\$\{plantCount\}/);
     assert.match(fieldGuideSource, /areaIcon\(place\)/);
+    assert.match(entrySource, /dashboardIcon\('area'\)/);
+    assert.match(dashboardSource, /icon: 'settings'/);
+    assert.match(dashboardSource, /icon: 'adjustments'/);
 });
 
 test('Organizer Folder excludes compatibility Area Totems by semantic type', () => {

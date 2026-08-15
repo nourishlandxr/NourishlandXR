@@ -1502,7 +1502,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 : '';
             return {
                 label: escapeHtml(displayAreaName(area)),
-                icon: areaIcon(area),
+                icon: 'area',
                 contentCount: areaEntries.filter(entry => effectiveMarkerType(entry.marker) !== 'area_checkpoint').length,
                 plantCount: areaPlants.length,
                 totemPlaced: placedTotemAreaIds.has(area.id),
@@ -1541,10 +1541,10 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             storiesAction: `window.renderStoriesAndFocus('${encoded(project.id)}')`,
             unplacedAction: `window.renderUnplacedContent('${encoded(project.id)}')`,
             tools: [
-                { label: 'Project Settings', action: `window.renderProjectSettings('${encoded(project.id)}')` },
-                { label: 'NourishlandXR Settings', action: `window.renderPlatformComingSoon('Settings', 'creator')` },
-                { label: 'Help Guide', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` },
-                { label: 'Printing options', description: 'Tags, lists, profiles and Map.', action: `window.renderPrintCenter('${encoded(project.id)}')` }
+                { icon: 'settings', label: 'Project Settings', action: `window.renderProjectSettings('${encoded(project.id)}')` },
+                { icon: 'adjustments', label: 'NourishlandXR Settings', action: `window.renderPlatformComingSoon('Settings', 'creator')` },
+                { icon: 'help', label: 'Help Guide', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` },
+                { icon: 'print', label: 'Printing options', description: 'Tags, lists, profiles and Map.', action: `window.renderPrintCenter('${encoded(project.id)}')` }
             ],
             latestEntries,
             viewAllAction: `window.renderAllProjectEntries('${encoded(project.id)}')`

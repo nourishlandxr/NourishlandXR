@@ -1,5 +1,19 @@
+const DASHBOARD_ICON_PATHS = Object.freeze({
+    area: '<path d="M4 5.5 10 3l4 2 6-2v15.5L14 21l-4-2-6 2V5.5Z"/><path d="M10 3v16M14 5v16"/>',
+    webhub: '<path d="M4 19.5c2.4-2.2 5.1-2.7 8-1.5 2.9-1.2 5.6-.7 8 1.5"/><path d="M12 18V6"/><path d="M12 10c-3.4 0-5.7-1.5-6.8-4.5C8.6 5.1 10.9 6.6 12 10Zm0 2c3.4 0 5.7-1.5 6.8-4.5C15.4 7.1 13.1 8.6 12 12Z"/>',
+    settings: '<path d="m12 3 1.2 2.4 2.6.6 2.2-1.4 1.4 1.4-1.4 2.2.6 2.6L21 12l-2.4 1.2-.6 2.6 1.4 2.2-1.4 1.4-2.2-1.4-2.6.6L12 21l-1.2-2.4-2.6-.6L6 19.4l-1.4-1.4L6 15.8l-.6-2.6L3 12l2.4-1.2L6 8.2 4.6 6l1.4-1.4 2.2 1.4 2.6-.6L12 3Z"/><circle cx="12" cy="12" r="3"/>',
+    adjustments: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>',
+    help: '<path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5v-17Z"/><path d="M5 4.5A2.5 2.5 0 0 0 2.5 7v12A2.5 2.5 0 0 1 5 21.5M9 7h7M9 11h7"/>',
+    print: '<path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/><path d="M18 12h.01"/>'
+});
+
+function dashboardIcon(name) {
+    return `<svg class="dashboard-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">${DASHBOARD_ICON_PATHS[name] || DASHBOARD_ICON_PATHS.area}</svg>`;
+}
+
 function actionCard(item, className = '') {
-    return `<button class="${className}" type="button" onclick="${item.action}"><strong>${item.label}</strong>${item.description ? `<span>${item.description}</span>` : ''}</button>`;
+    const icon = item.icon ? `<span class="location-tool-icon" aria-hidden="true">${dashboardIcon(item.icon)}</span>` : '';
+    return `<button class="${className} project-dashboard-card" type="button" onclick="${item.action}">${icon}<span class="location-tool-copy"><strong>${item.label}</strong>${item.description ? `<span>${item.description}</span>` : ''}</span></button>`;
 }
 
 function statusItem(label, value) {
@@ -47,12 +61,12 @@ export function renderProjectEntry(config) {
         : '<p class="project-empty-state">No entries have been added yet.</p>';
     const areaListHtml = areas.length
         ? areas.map(area => `<button class="project-area-overview-card" type="button" data-home-area="${area.isHome ? 'true' : 'false'}" data-current-area="${area.isCurrent ? 'true' : 'false'}"${area.isCurrent ? ' aria-current="location"' : ''} aria-label="Open ${area.label}" onclick="${area.action}">
-            <span class="project-area-overview-icon" aria-hidden="true">${area.icon || '▧'}</span>
+            <span class="project-area-overview-icon" aria-hidden="true">${dashboardIcon('area')}</span>
             <span class="project-area-overview-copy"><strong>${area.label}</strong>${area.isHome ? '<small class="project-area-overview-home-badge">HOME</small>' : ''}${area.isCurrent ? '<small class="project-area-overview-current-badge">YOU ARE HERE</small>' : ''}<span>${area.plantCount ?? 0} plant${area.plantCount === 1 ? '' : 's'} · ${area.contentCount} entr${area.contentCount === 1 ? 'y' : 'ies'}</span></span>
             <span class="project-area-overview-totem"><i style="--area-totem-color:${area.totemColor || 'transparent'}" aria-hidden="true">⌖</i><small>${area.totemPlaced ? 'Totem' : 'No Totem'}</small></span>
         </button>`).join('')
         : '<p class="project-empty-state">No Areas yet. Create one when you are ready to organise content.</p>';
-    const areaOverviewHtml = `<section class="project-areas-section project-layout-section${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
+    const areaOverviewHtml = `<section class="project-areas-section project-layout-section project-dashboard-card${spotlightTarget === 'areas' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="projectAreasTitle" data-areas-expanded="true">
         <div class="section-heading-row areas-heading-row"><div><small class="dashboard-section-kicker">PROJECT OVERVIEW</small><h2 id="projectAreasTitle">Areas</h2></div><div class="areas-heading-actions"><span class="areas-toggle-right"><span class="project-area-count">${areas.length}</span></span><button class="project-layout-info" type="button" data-info-trigger data-info-source="projectLayoutInfo" aria-expanded="false" aria-controls="projectLayoutInfo" onclick="window.toggleProjectLayoutInfo(this)"><span aria-hidden="true">i</span><span class="sr-only">About Project Overview</span></button></div></div>
         <p id="projectLayoutInfo" class="project-layout-intro" hidden>Each Area is a focused part of the project. Open a card to see its dashboard and information.</p>
         ${contextualGuidance(config.guidance, 'areas')}
@@ -110,14 +124,14 @@ export function renderProjectEntry(config) {
             <button class="global-ar-action dashboard-open-ar ar-square-action" type="button" aria-label="Open project in AR" onclick="${config.openArAction}">
                 <strong id="openArTitle">AR</strong>
             </button>
-            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Web Hub'}"><span aria-hidden="true">🌿</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong></button>
+            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Web Hub'}"><span aria-hidden="true">${dashboardIcon('webhub')}</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong></button>
         </section>
 
         <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>
 
         ${areaOverviewHtml}
 
-        <section class="project-search-section" aria-labelledby="projectSearchTitle">
+        <section class="project-search-section project-dashboard-card" aria-labelledby="projectSearchTitle">
             <div class="section-heading-row">
                 <div><h2 id="projectSearchTitle">Search</h2><p>${config.nonPlantMode ? 'Find a Location, Dynamic Marker, Totem, Note or collection record.' : 'Find an Area, Plant, Note, checkpoint or saved information.'}</p></div>
             </div>
@@ -130,7 +144,7 @@ export function renderProjectEntry(config) {
             <p id="projectSearchEmpty" class="project-empty-state" hidden>No matches found. Try a ${config.nonPlantMode ? 'Marker, Location, Totem or record description' : 'Plant name, Area, Note text or description'}.</p>
         </section>
 
-        <section class="experience-status project-status" aria-labelledby="projectStatusTitle">
+        <section class="experience-status project-status project-dashboard-card" aria-labelledby="projectStatusTitle">
             <div class="section-heading-row"><h2 id="projectStatusTitle">Project Status</h2></div>
             <div class="experience-status-grid">
                 ${statusItem('Entries', config.status.entries)}
@@ -144,7 +158,7 @@ export function renderProjectEntry(config) {
             ${config.tools.map(item => actionCard(item, 'location-tool-card')).join('')}
         </nav>
 
-        <section class="latest-entries-section">
+        <section class="latest-entries-section project-dashboard-card">
             <div class="section-heading-row"><div><h2>Recent record files</h2><p>Plants, Totems, Notes and other saved database records.</p></div><button class="view-all-entries" type="button" onclick="${config.viewAllAction}">See all</button></div>
             <div class="latest-entry-list">${latestEntriesHtml}</div>
         </section>

@@ -6,15 +6,15 @@ export const DEFAULT_HOME_AREA_NAME = 'Home';
 export const isDefaultHomeArea = area => area?.systemKey === 'home'
     || ['home', 'unassigned'].includes(String(area?.name || area || '').trim().toLocaleLowerCase());
 export const AREA_ICON_OPTIONS = Object.freeze([
-    { value: '🌿', label: 'Leaves' },
-    { value: '🌳', label: 'Tree' },
-    { value: '🪴', label: 'Potted plant' },
-    { value: '🍎', label: 'Fruit' },
-    { value: '🌻', label: 'Flower' },
-    { value: '💧', label: 'Water' },
-    { value: '🪨', label: 'Stone' },
-    { value: '🐝', label: 'Pollinators' },
-    { value: '🧭', label: 'Explore' }
+    { value: '▧', label: 'Zone' },
+    { value: '⌖', label: 'Place' },
+    { value: '⌂', label: 'Home' },
+    { value: '▦', label: 'Grid' },
+    { value: '⬡', label: 'Boundary' },
+    { value: '◌', label: 'Circle' },
+    { value: '◇', label: 'Marker' },
+    { value: '↔', label: 'Path' },
+    { value: '✧', label: 'Explore' }
 ]);
 export const areaIcon = area => AREA_ICON_OPTIONS.some(option => option.value === area?.icon) ? area.icon : AREA_ICON_OPTIONS[0].value;
 
