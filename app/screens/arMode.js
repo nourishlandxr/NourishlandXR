@@ -23,10 +23,11 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
+import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8958';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8959';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -5113,6 +5114,7 @@ function createOverlay() {
 
 function cleanup() {
     creatorViewportCleanup?.();
+    releaseArScreenRotation();
     clearControllerMarkerPress();
     cleanupDrag();
     closeAreaLens();
@@ -5375,6 +5377,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         document.body.dataset.arDevice = 'quest';
     }
     readyPlacementType = pendingExistingMarkerId ? '' : AR_EXPERIENCE_CONFIG.markerTypes.includes(initialPlacementType) ? initialPlacementType : '';
+    allowArScreenRotation();
     createOverlay();
 
     try {
@@ -5385,6 +5388,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // startup requirement across Quest Browser and future glasses runtimes.
         const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
         session = arSession.session;
+        // WebXR may enter its immersive display after the initial request. Ask
+        // again once that display exists so Android can honour a later rotate.
+        allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
         const launchedSession = session;

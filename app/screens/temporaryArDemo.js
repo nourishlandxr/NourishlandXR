@@ -14,9 +14,10 @@ import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
+import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8958';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8959';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -265,6 +266,7 @@ const NOTE_TEMPLATES = Object.freeze({
 const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
+    releaseArScreenRotation();
     hitTestSource?.cancel?.();
     hitTestSource = null;
     referenceSpace = null;
@@ -3126,8 +3128,10 @@ function drawDemoControllerPointer(view) {
 async function startImmersive() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
+        allowArScreenRotation();
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
+        allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
         domOverlayEnabled = Boolean(arSession.domOverlay);
         const transparentSession = arSession.passthrough !== false;

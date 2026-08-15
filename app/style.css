@@ -6830,7 +6830,7 @@ body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-li
 /* Phone AR landscape: keep the shared controls in a reachable bottom dock.
    This is deliberately orientation- and pointer-based so desktop and Quest
    layouts keep their own contracts without user-agent branches. */
-@media screen and (orientation: landscape) and (max-height: 620px) and (pointer: coarse) {
+@media screen and (orientation: landscape) and (max-height: 620px) and (max-width: 1023px) {
     .creator-ar-control-dock {
         width: min(calc(100vw - 24px), 760px);
         bottom: max(10px, env(safe-area-inset-bottom));
