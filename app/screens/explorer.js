@@ -4,7 +4,8 @@ import { disableTargetReticle, enableTargetReticle } from '../services/targetRet
 import { getHillyardsExplorerContext } from './v1Navigation.js';
 import { getPlantById, getResolvedPlantInstance } from '../services/plantDataService.js';
 import { reconstructGpsMarker, requestAbsoluteHeading, requestCurrentGps } from '../services/spatialPositioning.js';
-import { getTutorialStage, recordTutorialEvent } from '../services/tutorialProgress.js';
+import { getTutorialStage, isProjectTutorialEnabled, recordTutorialEvent } from '../services/tutorialProgress.js';
+import { acknowledgeArCameraSafety, hasArCameraSafetyAcknowledgement, renderArSafetyScreen } from '../services/arOnboarding.js';
 
 let gpsWatchId = null;
 let gpsProject = null;
@@ -99,6 +100,7 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
 
 export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '', encodedPlaceId = '', encodedSiteId = '') {
     const projectId = decodeURIComponent(encodedProjectId);
+    const firstTimeSafety = isProjectTutorialEnabled(projectId) && !hasArCameraSafetyAcknowledgement();
     const creatorDashboardMode = returnContext === 'creator';
     const arStage = creatorDashboardMode ? getTutorialStage(projectId, 'arMode') : 'understood';
     const backAction = returnContext === 'creator'
@@ -124,11 +126,27 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
         : creatorDashboardMode && arStage === 'learning'
             ? '<div class="panel contextual-reminder"><p>Camera and location access begins only after you choose Start AR Mode.</p></div>'
             : '';
+    if (firstTimeSafety) {
+        const goBack = () => {
+            if (returnContext === 'creator') return window.renderProjectDashboard?.(encodedProjectId);
+            if (returnContext === 'placement') return window.renderPlacementChoice?.(encodedProjectId, placementType === 'sub_checkpoint' ? 'checkpoint' : placementType);
+            if (returnContext === 'area-navigation') return window.renderProjectAreaDashboard?.(encodedProjectId, encodedPlaceId);
+            if (returnContext === 'existing-placement') return window.renderUnplacedContent?.(encodedProjectId);
+            return window.renderVisitorLocationIntro?.(encodedProjectId, returnContext === 'creator-preview');
+        };
+        renderArSafetyScreen(app, {
+            onContinue: () => startArWithSkipCheck(app, encodedProjectId, returnContext, placementType, encodedPlaceId, encodedSiteId),
+            onCancel: goBack
+        });
+        if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
+        return;
+    }
     app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section><label class="ar-preparation-skip-toggle"><input type="checkbox" id="arSkipWarning" /> <span>Don't show this message again</span></label><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="global-ar-action primary" type="button" onclick="window.startArWithSkipCheck('${encodedProjectId}', '${returnContext}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')">START AR MODE</button></div></div>`;
     if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
 }
 
 export function startArWithSkipCheck(_app, encodedProjectId, returnContext, placementType, encodedPlaceId, encodedSiteId) {
+    acknowledgeArCameraSafety();
     const skip = document.getElementById('arSkipWarning')?.checked;
     if (skip) {
         try { localStorage.setItem('nxr-skip-ar-warning', 'true'); } catch {}
@@ -155,7 +173,7 @@ export function renderArFailure(app, encodedProjectId, returnContext, error) {
     const creator = returnContext === 'creator';
     const userMessage = /Starting Point|Trail Entrance/i.test(error?.message || '')
         ? 'Add a GPS position to this project’s Trail Entrance, then try AR Mode again.'
-        : `AR could not start: ${error?.message || 'Unknown error'}. Check that camera access is allowed and try again.`;
+        : `AR could not start: ${error?.message || 'Unknown error'}. If camera access was denied, open your browser or site settings, allow camera access for nourishland.org, then use Try Again.`;
     const retryAction = creator
         ? `window.startCreatorLocationAr('${encoded(projectId)}')`
         : `window.startLocationAr('${encoded(projectId)}')`;

@@ -6931,6 +6931,98 @@ body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-li
 .creator-ar-spatial-web-nav button:is(:hover,:focus-visible) { border-color:#dcef95; background:rgba(220,239,149,.18); }
 .creator-ar-spatial-web-content { min-height:0; overflow:auto; padding:12px; overscroll-behavior:contain; }
 .creator-ar-spatial-web-content .screen { min-height:0; padding:0; background:transparent; color:#f5faee; }
+
+/* Shared Android AR chrome guidance and safe-area contract. Browser-owned
+   fullscreen notices are not observable by JavaScript; this only reserves
+   space while our short-lived instruction is visible. */
+:root { --ar-bottom-clearance: 0px; }
+body.ar-browser-overlay-clearance { --ar-bottom-clearance: clamp(92px, 18dvh, 132px); }
+.creator-ar-control-dock,
+.tryit-demo-footer {
+    bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px));
+}
+.nxr-ar-fullscreen-guidance {
+    position: fixed;
+    left: calc(env(safe-area-inset-left, 0px) + 12px);
+    right: calc(env(safe-area-inset-right, 0px) + 12px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px) + 78px);
+    z-index: 13020;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(calc(100% - 24px), 390px);
+    box-sizing: border-box;
+    margin-inline: auto;
+    padding: 10px 12px;
+    border: 1px solid rgba(220, 239, 149, .64);
+    border-radius: 14px;
+    background: rgba(15, 43, 26, .94);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .12);
+    backdrop-filter: blur(12px);
+    font-size: .72rem;
+    line-height: 1.22;
+    pointer-events: auto;
+    animation: nxr-ar-guidance-in .22s ease-out both;
+}
+.nxr-ar-fullscreen-guidance.is-dismissing { animation: nxr-ar-guidance-out .22s ease-in both; pointer-events: none; }
+.nxr-ar-fullscreen-guidance > span:not(.nxr-ar-guidance-arrow) { display: grid; gap: 2px; min-width: 0; }
+.nxr-ar-fullscreen-guidance strong { font-size: .75rem; }
+.nxr-ar-fullscreen-guidance small { color: rgba(255, 255, 255, .76); font-size: .66rem; }
+.nxr-ar-fullscreen-guidance button { flex: 0 0 auto; width: 30px; min-width: 30px; min-height: 30px; padding: 0; border: 0; background: transparent; color: #fff; font-size: 1.2rem; line-height: 1; }
+.nxr-ar-guidance-arrow { flex: 0 0 auto; color: #dcef95; font-size: 1.65rem; font-weight: 800; animation: nxr-ar-guidance-swipe 1.25s ease-in-out infinite; }
+@keyframes nxr-ar-guidance-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nxr-ar-guidance-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(8px); } }
+@keyframes nxr-ar-guidance-swipe { 0%, 100% { transform: translateX(0); opacity: .65; } 50% { transform: translateX(7px); opacity: 1; } }
+.creator-ar-utility-controls { position: fixed; top: calc(max(12px, env(safe-area-inset-top, 0px)) + 8px); right: calc(env(safe-area-inset-right, 0px) + 12px); z-index: 12030; display: flex; gap: 6px; pointer-events: auto; }
+.creator-ar-utility-controls button,
+.tryit-ar-utility-control { min-width: 40px; min-height: 40px; padding: 7px 10px; border: 1px solid rgba(255, 255, 255, .34); border-radius: 999px; background: rgba(9, 27, 17, .76); color: #fff; font-size: .68rem; font-weight: 800; box-shadow: 0 5px 14px rgba(0, 0, 0, .2); backdrop-filter: blur(8px); pointer-events: auto; touch-action: manipulation; }
+.creator-ar-utility-controls button:first-child,
+.tryit-ar-utility-control:first-of-type { min-width: 40px; padding-inline: 0; font-size: 1rem; }
+.tryit-ar-utility-control { position: fixed; top: calc(max(12px, env(safe-area-inset-top, 0px)) + 8px); right: calc(env(safe-area-inset-right, 0px) + 12px); z-index: 12030; }
+.tryit-ar-safety-control { right: calc(env(safe-area-inset-right, 0px) + 60px); }
+.creator-ar-utility-controls button:is(:hover, :focus-visible),
+.tryit-ar-utility-control:is(:hover, :focus-visible) { border-color: #dcef95; outline: 2px solid rgba(220, 239, 149, .24); outline-offset: 2px; }
+.nxr-ar-safety-dialog { position: fixed; inset: 0; z-index: 13030; display: grid; place-items: center; box-sizing: border-box; padding: max(18px, env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) max(18px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); background: rgba(3, 14, 8, .58); pointer-events: auto; }
+.nxr-ar-safety-dialog-card { width: min(92vw, 430px); max-height: min(82dvh, 620px); overflow: auto; padding: 22px; border: 1px solid rgba(220, 239, 149, .48); border-radius: 20px; background: linear-gradient(145deg, rgba(32, 76, 43, .98), rgba(11, 34, 20, .98)); color: #fff; box-shadow: 0 18px 60px rgba(0, 0, 0, .42); }
+.nxr-ar-safety-dialog-card h2 { margin: 14px 0 8px; color: #fff; font-size: 1.35rem; }
+.nxr-ar-safety-dialog-card p { margin: 0 0 16px; color: rgba(255, 255, 255, .86); font-size: .88rem; line-height: 1.5; }
+.nxr-ar-safety-dialog-card > button { min-height: 44px; padding: 9px 16px; border: 1px solid rgba(220, 239, 149, .6); border-radius: 11px; background: rgba(220, 239, 149, .2); color: #fff; font-weight: 800; }
+.ar-safety-screen { min-height: 100dvh; padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+.ar-safety-card { display: grid; gap: 14px; width: min(100%, 620px); margin-inline: auto; }
+.ar-safety-card p { margin: 0; line-height: 1.55; }
+.ar-safety-card .meta { color: var(--muted, #64746a); font-size: .82rem; }
+.ar-safety-icon-row { display: flex; align-items: center; gap: 10px; }
+.ar-safety-icon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(85, 141, 83, .48); border-radius: 14px; background: rgba(220, 239, 149, .18); color: #2f7545; font-size: 1.42rem; }
+.ar-safety-actions { width: min(100%, 620px); margin-inline: auto; }
+.ar-safety-actions button { min-height: 48px; flex: 1 1 220px; }
+@media screen and (orientation: landscape) and (max-height: 720px) {
+    .creator-ar-overlay, .tryit-demo, .creator-ar-canvas, .tryit-xr-canvas { width: 100dvw; height: 100dvh; min-width: 100dvw; min-height: 100dvh; }
+    .creator-ar-control-dock,
+    .tryit-demo-footer {
+        left: 50%;
+        right: auto;
+        width: min(calc(100dvw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px), 760px);
+        bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px));
+    }
+    .creator-ar-taskbar { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .creator-ar-taskbar::-webkit-scrollbar, .tryit-demo-taskbar::-webkit-scrollbar { display: none; }
+    .creator-ar-taskbar > button,
+    body[data-project-theme] .creator-ar-taskbar > button { flex: 0 1 auto; min-width: 44px; min-height: 44px; padding: 6px 7px; overflow-wrap: normal; white-space: normal; }
+    .creator-ar-context-toolbar { max-height: min(38dvh, 190px); overflow-y: auto; overflow-x: hidden; }
+    .creator-ar-context-toolbar button,
+    body[data-project-theme] .creator-ar-context-toolbar button { min-width: 44px; min-height: 44px; }
+    .tryit-demo-taskbar { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 6px; width: 100%; overflow-x: auto; overflow-y: hidden; }
+    .tryit-demo-taskbar > button { flex: 0 1 auto; min-width: 44px; min-height: 48px; white-space: normal; }
+    .creator-ar-overlay .creator-ar-mode-pointer,
+    .creator-ar-overlay .creator-ar-placement-guide,
+    .tryit-demo .tryit-place.creator-ar-placement-guide { top: calc(50% - 1cm); }
+    .creator-ar-controller-hud { bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px) + 76px); }
+    .creator-ar-recenter-prompt { bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px) + 66px); }
+    .tryit-demo:has(.tryit-demo-taskbar) .tryit-guided-choice,
+    .tryit-demo:has(.tryit-demo-taskbar) .tryit-demo-action,
+    .tryit-demo:has(.tryit-demo-taskbar) .tryit-final-actions { bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + var(--ar-bottom-clearance, 0px) + 116px); }
+}
 .creator-ar-spatial-web-content .page-header { margin:0 0 12px; padding:0; }
 .creator-ar-spatial-web-content .page-header h1,
 .creator-ar-spatial-web-content .page-header h2,

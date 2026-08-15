@@ -24,10 +24,11 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialG
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
+import { dismissArFullscreenGuidance, showArFullscreenGuidance, showArSafetyDialog } from '../services/arOnboarding.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8959';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.8961';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -3752,20 +3753,37 @@ function drawSpatialMarkers(view) {
 
 function bindCreatorViewportReflow() {
     creatorViewportCleanup?.();
+    let frameId = 0;
+    let settleTimer = 0;
     const reflow = () => {
         if (!overlayRoot) return;
         if (activeAreaMarkers().some(record => record.profileExpanded)) renderSessionMarkers();
         positionSessionMarkers();
     };
-    window.addEventListener('resize', reflow, { passive: true });
-    window.visualViewport?.addEventListener('resize', reflow, { passive: true });
-    window.addEventListener('orientationchange', reflow, { passive: true });
-    window.screen?.orientation?.addEventListener('change', reflow, { passive: true });
+    const scheduleReflow = () => {
+        cancelAnimationFrame(frameId);
+        clearTimeout(settleTimer);
+        frameId = requestAnimationFrame(reflow);
+        // Android can emit several resize events while the browser chrome and
+        // visual viewport settle after a rotation or fullscreen transition.
+        settleTimer = setTimeout(() => {
+            cancelAnimationFrame(frameId);
+            reflow();
+        }, 140);
+    };
+    window.addEventListener('resize', scheduleReflow, { passive: true });
+    window.visualViewport?.addEventListener('resize', scheduleReflow, { passive: true });
+    window.visualViewport?.addEventListener('scroll', scheduleReflow, { passive: true });
+    window.addEventListener('orientationchange', scheduleReflow, { passive: true });
+    window.screen?.orientation?.addEventListener('change', scheduleReflow, { passive: true });
     creatorViewportCleanup = () => {
-        window.removeEventListener('resize', reflow);
-        window.visualViewport?.removeEventListener('resize', reflow);
-        window.removeEventListener('orientationchange', reflow);
-        window.screen?.orientation?.removeEventListener('change', reflow);
+        cancelAnimationFrame(frameId);
+        clearTimeout(settleTimer);
+        window.removeEventListener('resize', scheduleReflow);
+        window.visualViewport?.removeEventListener('resize', scheduleReflow);
+        window.visualViewport?.removeEventListener('scroll', scheduleReflow);
+        window.removeEventListener('orientationchange', scheduleReflow);
+        window.screen?.orientation?.removeEventListener('change', scheduleReflow);
         creatorViewportCleanup = null;
     };
 }
@@ -5005,6 +5023,10 @@ function createOverlay() {
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
+        <div class="creator-ar-utility-controls" aria-label="AR help">
+          <button type="button" data-ar-fullscreen-help aria-label="Show fullscreen guidance">?</button>
+          <button type="button" data-ar-safety-help aria-label="Show AR safety">Safety</button>
+        </div>
         <section class="creator-ar-controller-hud" data-ar-controller-hud hidden aria-live="polite">
           <strong>QUEST CONTROLS</strong>
           <span data-ar-controller-action>ADD PLANT</span>
@@ -5082,6 +5104,8 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
+    overlayRoot.querySelector('[data-ar-fullscreen-help]')?.addEventListener('click', () => showArFullscreenGuidance(overlayRoot, { force: true }));
+    overlayRoot.querySelector('[data-ar-safety-help]')?.addEventListener('click', () => showArSafetyDialog(overlayRoot));
     overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {
         event.preventDefault();
         event.stopPropagation();
@@ -5114,6 +5138,7 @@ function createOverlay() {
 
 function cleanup() {
     creatorViewportCleanup?.();
+    dismissArFullscreenGuidance();
     releaseArScreenRotation();
     clearControllerMarkerPress();
     cleanupDrag();
@@ -5350,7 +5375,15 @@ export async function startArMode(projectId, areaId = '', checkpointId = '', ini
 }
 
 async function launchArMode(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId) {
-    if (!projectId || !navigator.xr || !window.isSecureContext) return false;
+    window.__nxrArStartError = null;
+    if (!projectId) {
+        window.__nxrArStartError = new Error('A project is required before opening AR.');
+        return false;
+    }
+    if (!navigator.xr || !window.isSecureContext) {
+        window.__nxrArStartError = new Error('WebXR or a secure camera context is unavailable.');
+        return false;
+    }
     activeProjectId = projectId;
     activeProjectName = String(projectId).replace(/[-_]+/g, ' ').trim();
     activeSiteId = preferredSiteId || '';
@@ -5407,6 +5440,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         } else if (!arSession.passthrough) {
             setPlacementStatus(`WebXR opened AR mode but reports an opaque blend (${arSession.blendMode || 'unknown'}). Camera passthrough is unavailable in this runtime.`);
         }
+        showArFullscreenGuidance(overlayRoot);
         const restoringOverlay = overlayRoot;
         const requestedExistingMarkerId = pendingExistingMarkerId;
         const loadingOperation = captureArOperationContext();
@@ -5559,6 +5593,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         launchedSession.requestAnimationFrame(draw);
         return true;
     } catch (error) {
+        window.__nxrArStartError = error;
         console.error('[Creator AR]', error);
         const activeSession = session;
         session = null;

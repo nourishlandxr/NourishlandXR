@@ -773,6 +773,8 @@ export async function renderArAreaPicker(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const context = await projectContent(projectId);
+        const arStartError = window.__nxrArStartError;
+        window.__nxrArStartError = null;
         const areas = context.places.filter(area => !isDefaultHomeArea(area));
         const cards = areas.map(area => {
             const checkpoint = context.entries.find(entry => entry.place.id === area.id && effectiveMarkerType(entry.marker) === 'area_checkpoint');
@@ -782,7 +784,10 @@ export async function renderArAreaPicker(app, encodedProjectId) {
             }
             return `<section class="panel ar-area-card"><h2>${escapeHtml(area.name)}</h2><p>No Area Marker yet. You can test AR now and add a temporary marker when you are ready.</p><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}', '${encoded(area.id)}')">Add Area Marker</button></section>`;
         }).join('');
-        app.innerHTML = `<div class="screen ar-area-picker"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button><p class="welcome-label">Creator AR</p><h1>AR setup guide</h1><p class="subtitle">Test with no physical code, then add checkpoints when they are installed.</p></div><section class="panel guide"><h2>Set up a small Area</h2><ol><li><strong>Totem Marker</strong> — create the Area’s clear information centre.</li><li><strong>Plants, Markers and Notes</strong> — add discoveries to that Area.</li><li><strong>Optional Trail Entrance</strong> — add one only if visitors need a guided beginning.</li></ol><div class="button-row"><button type="button" onclick="window.renderStartingPoints('${encoded(context.project.id)}')">Visitor Entrances</button><button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}')">Open Test AR</button></div></section>${cards || `<section class="panel"><p>Create an Area before placing its Totem Marker and ordinary Markers.</p><div class="button-row"><button class="primary" type="button" onclick="window.renderProjectAreaForm('${encoded(context.project.id)}', 'dashboard')">Create Area</button></div></section>`}</div>`;
+        const arFailureNotice = arStartError
+            ? `<section class="panel ar-start-failure" role="alert"><h2>Camera access needed</h2><p>${escapeHtml(arStartError.message || 'AR could not start.')} If camera access was denied, open your browser or site settings, allow camera access for nourishland.org, then try again.</p><button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}')">Try AR again</button></section>`
+            : '';
+        app.innerHTML = `<div class="screen ar-area-picker"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Back to Dashboard</button><p class="welcome-label">Creator AR</p><h1>AR setup guide</h1><p class="subtitle">Test with no physical code, then add checkpoints when they are installed.</p></div>${arFailureNotice}<section class="panel guide"><h2>Set up a small Area</h2><ol><li><strong>Totem Marker</strong> — create the Area’s clear information centre.</li><li><strong>Plants, Markers and Notes</strong> — add discoveries to that Area.</li><li><strong>Optional Trail Entrance</strong> — add one only if visitors need a guided beginning.</li></ol><div class="button-row"><button type="button" onclick="window.renderStartingPoints('${encoded(context.project.id)}')">Visitor Entrances</button><button class="primary" type="button" onclick="window.startArMode('${encoded(context.project.id)}')">Open Test AR</button></div></section>${cards || `<section class="panel"><p>Create an Area before placing its Totem Marker and ordinary Markers.</p><div class="button-row"><button class="primary" type="button" onclick="window.renderProjectAreaForm('${encoded(context.project.id)}', 'dashboard')">Create Area</button></div></section>`}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back to Dashboard</button><h1>AR setup unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1810,7 +1815,7 @@ export async function openProjectAreaAr(app, encodedProjectId, encodedAreaId, en
     if (started) return true;
     await renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId));
     const status = document.getElementById('projectAreaArStatus');
-    if (status) status.textContent = 'AR could not start. Check camera permission and WebXR support, then try again on site.';
+    if (status) status.textContent = 'AR could not start. If camera access was denied, allow it in your browser or site settings, then try again on site.';
     return false;
 }
 

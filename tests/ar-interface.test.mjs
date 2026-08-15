@@ -509,20 +509,27 @@ test('Creator and Demo AR taskbars reflow into a touch-safe landscape bottom doc
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
     const orientationSource = read('app/services/arScreenOrientation.js');
+    const onboardingSource = read('app/services/arOnboarding.js');
     const styles = read('app/style.css');
-    assert.match(arSource, /window\.addEventListener\('orientationchange', reflow, \{ passive: true \}\)/);
-    assert.match(arSource, /window\.screen\?\.orientation\?\.addEventListener\('change', reflow, \{ passive: true \}\)/);
-    assert.match(styles, /@media screen and \(orientation: landscape\) and \(max-height: 620px\) and \(max-width: 1023px\)/);
-    assert.match(styles, /\.creator-ar-control-dock \{[\s\S]*width: min\(calc\(100vw - 24px\), 760px\);[\s\S]*bottom: max\(10px, env\(safe-area-inset-bottom\)\);/);
+    assert.match(arSource, /window\.addEventListener\('orientationchange', scheduleReflow, \{ passive: true \}\)/);
+    assert.match(arSource, /window\.screen\?\.orientation\?\.addEventListener\('change', scheduleReflow, \{ passive: true \}\)/);
+    assert.match(arSource, /setTimeout\(\(\) => \{[\s\S]*reflow\(\);[\s\S]*\}, 140\)/);
+    assert.match(styles, /@media screen and \(orientation: landscape\) and \(max-height: 720px\)/);
+    assert.match(styles, /\.creator-ar-control-dock,[\s\S]*width: min\(calc\(100dvw - env\(safe-area-inset-left/);
     assert.match(styles, /\.creator-ar-taskbar > button,[\s\S]*min-width: 44px;[\s\S]*min-height: 44px;/);
-    assert.match(styles, /\.tryit-demo-footer \{[\s\S]*width: min\(calc\(100vw - 24px\), 760px\);/);
-    assert.match(styles, /\.tryit-demo-taskbar \{[\s\S]*display: flex;[\s\S]*overflow: visible;/);
+    assert.match(styles, /\.tryit-demo-footer[\s\S]*width: min\(calc\(100dvw - env\(safe-area-inset-left/);
+    assert.match(styles, /\.tryit-demo-taskbar \{[\s\S]*display: flex;[\s\S]*overflow-x: auto;/);
+    assert.match(styles, /body\.ar-browser-overlay-clearance \{ --ar-bottom-clearance/);
     assert.match(orientationSource, /orientation\.lock\('any'\)/);
     assert.match(orientationSource, /orientation\.unlock/);
     assert.match(arSource, /allowArScreenRotation\(\);/);
     assert.match(arSource, /releaseArScreenRotation\(\);/);
     assert.match(demoSource, /allowArScreenRotation\(\);/);
     assert.match(demoSource, /releaseArScreenRotation\(\);/);
+    assert.match(onboardingSource, /localStorage/);
+    assert.match(onboardingSource, /Swipe the browser message right/);
+    assert.match(arSource, /data-ar-fullscreen-help/);
+    assert.match(demoSource, /data-tryit-fullscreen-help/);
 });
 
 test('Creator AR keeps the editable Location Note hidden until it is opened from its Totem', () => {
@@ -1423,7 +1430,8 @@ test('Creator project AR is a no-code placement session without a dashboard over
     const webxrSource = read('app/services/webxrSession.js');
     const styles = read('app/style.css');
     assert.doesNotMatch(source, /drawDashboard|captureDashboardSnapshot|dashboardVisible|Grab dashboard/);
-    assert.match(source, /if \(!projectId \|\| !navigator\.xr \|\| !window\.isSecureContext\) return false/);
+    assert.match(source, /if \(!navigator\.xr \|\| !window\.isSecureContext\) \{/);
+    assert.match(source, /__nxrArStartError/);
     assert.match(source, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /requestOptions\.domOverlay = \{ root: domOverlayRoot \}/);
     assert.match(webxrSource, /requiredFeatures: \['hit-test'\], optionalFeatures: \['dom-overlay', 'local-floor'\]/);

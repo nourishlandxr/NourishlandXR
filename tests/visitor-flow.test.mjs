@@ -423,7 +423,7 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
         dashboardSource.indexOf('export async function renderProjectAreaLocationForm')
     );
     assert.match(helperSource, /started = await window\.startArMode\?\.\(projectId, areaId, checkpointId, initialPlacementType, '', 'dashboard'\)/);
-    assert.match(helperSource, /if \(started\) return true;\s*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. Check camera permission and WebXR support[\s\S]*return false;/);
+    assert.match(helperSource, /if \(started\) return true;\s*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. If camera access was denied[\s\S]*return false;/);
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);

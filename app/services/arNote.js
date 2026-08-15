@@ -2,6 +2,8 @@
 
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from './spatialSphereRenderer.js';
 import { requestImmersiveArSession } from './webxrSession.js';
+import { allowArScreenRotation, releaseArScreenRotation } from './arScreenOrientation.js';
+import { dismissArFullscreenGuidance, showArFullscreenGuidance } from './arOnboarding.js';
 
 let session;
 let gl;
@@ -60,8 +62,11 @@ export async function startArNote(marker, profile) {
     if (!window.isSecureContext) { alert('AR requires HTTPS.'); return; }
     if (!navigator.xr) { alert('WebXR unavailable.'); return; }
     try {
+        allowArScreenRotation();
         const arSession = await requestImmersiveArSession(document.body);
         session = arSession.session;
+        allowArScreenRotation();
+        showArFullscreenGuidance(document.body);
         const transparentSession = arSession.passthrough !== false;
 
         const canvas = document.createElement('canvas');
@@ -87,6 +92,8 @@ export async function startArNote(marker, profile) {
         panelTex = createPanelTexture(gl, drawMenuPanel);
 
         session.addEventListener('end', () => {
+            dismissArFullscreenGuidance();
+            releaseArScreenRotation();
             document.getElementById('arCanvas')?.remove();
             destroySpatialSphereRenderer(gl, sphereRenderer);
             session = null; gl = null; renderer = null; panelTex = null; sphereRenderer = null; activeMarker = null;
@@ -119,6 +126,8 @@ export async function startArNote(marker, profile) {
 
     } catch (error) {
         console.error('[AR] error:', error);
+        dismissArFullscreenGuidance();
+        releaseArScreenRotation();
         const activeSession = session;
         session = null;
         document.getElementById('arCanvas')?.remove();

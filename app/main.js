@@ -26,7 +26,8 @@ import { startAreaNavigationAr } from './screens/explorer.js';
 import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectHome, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
-import { recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from './services/tutorialProgress.js';
+import { isProjectTutorialEnabled, recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from './services/tutorialProgress.js';
+import { acknowledgeArCameraSafety, hasArCameraSafetyAcknowledgement, renderArSafetyScreen } from './services/arOnboarding.js';
 import { projectTemplates } from './templates/projectTemplates.js';
 import { isDefaultHomeArea } from './services/arExperienceConfig.js';
 import { applyNxrLanguage, translateApp } from './services/i18n.js';
@@ -691,15 +692,30 @@ const decodeArArgument = value => {
     const text = String(value ?? '');
     try { return decodeURIComponent(text); } catch { return text; }
 };
-window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => startArMode(
-    decodeArArgument(projectId),
-    decodeArArgument(areaId),
-    decodeArArgument(checkpointId),
-    decodeArArgument(initialPlacementType),
-    decodeArArgument(existingMarkerId),
-    decodeArArgument(returnContext),
-    decodeArArgument(preferredSiteId)
-);
+window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => (async () => {
+    const decodedProjectId = decodeArArgument(projectId);
+    const decodedAreaId = decodeArArgument(areaId);
+    const decodedCheckpointId = decodeArArgument(checkpointId);
+    const decodedInitialPlacementType = decodeArArgument(initialPlacementType);
+    const decodedExistingMarkerId = decodeArArgument(existingMarkerId);
+    const decodedReturnContext = decodeArArgument(returnContext);
+    const decodedPreferredSiteId = decodeArArgument(preferredSiteId);
+    if (isProjectTutorialEnabled(decodedProjectId) && !hasArCameraSafetyAcknowledgement()) {
+        renderArSafetyScreen(app, {
+            onContinue: () => startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId),
+            onCancel: () => decodedReturnContext === 'dashboard' && decodedAreaId
+                ? renderProjectAreaDashboard(app, encodeURIComponent(decodedProjectId), encodeURIComponent(decodedAreaId))
+                : renderProjectDashboard(app, encodeURIComponent(decodedProjectId))
+        });
+        return true;
+    }
+    const started = await startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId);
+    if (started && isProjectTutorialEnabled(decodedProjectId)) {
+        acknowledgeArCameraSafety();
+        recordTutorialEvent(decodedProjectId, 'ar_mode_launched');
+    }
+    return started;
+})();
 window.startExistingMarkerPlacement = async (projectId, siteId, areaId, markerId, markerType = 'sub_checkpoint') => {
     const started = await startArMode(
         decodeURIComponent(projectId),
