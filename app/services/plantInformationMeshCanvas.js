@@ -149,7 +149,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const active = open || hovered || selected;
         const hue = pimNodeHue(node);
         const renderedRadius = Math.max(22, Number(node.layoutCellWidthPercent) / 100 * width / 2);
-        const radius = renderedRadius * (active ? 1.035 : 1) * (node.depth > 0 ? (.85 + .15 * nodeBloom) : 1);
+        // A hover/selection state changes only emphasis. Cell scale stays
+        // authored so opening a branch never makes the existing flower jump.
+        const radius = renderedRadius;
         context.save();
         context.globalAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         if (active) {
@@ -170,22 +172,22 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         context.fillStyle = '#fff';
         context.strokeStyle = 'rgba(0, 0, 0, .94)';
         context.lineWidth = 7;
-        const titleFontSize = Math.max(18, Math.min(node.depth ? 23 : 29, radius * (node.depth ? .25 : .31)));
+        const titleFontSize = Math.max(node.depth ? 13 : 18, Math.min(node.depth ? 23 : 29, radius * (node.depth ? .25 : .31)));
         const titleLineHeight = Math.round(titleFontSize * 1.08);
-        context.font = `850 ${titleFontSize}px system-ui, sans-serif`;
+        context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
         const textWidth = Math.max(54, radius * 1.5);
-        const titleLines = wrapLines(context, node.label, textWidth).slice(0, 3);
+        const titleLines = wrapLines(context, node.label, textWidth).slice(0, 2);
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const startY = point.y + (hasDescription ? -titleLineHeight : 0) - (titleLines.length - 1) * titleLineHeight / 2;
         drawOutlinedLines(context, titleLines, point.x, startY, titleLineHeight);
         if (hasDescription) {
-            const detailFontSize = Math.max(15, Math.min(19, radius * .2));
-            const detailLineHeight = Math.round(detailFontSize * 1.06);
-            context.font = `700 ${detailFontSize}px system-ui, sans-serif`;
+            const detailFontSize = Math.max(10, Math.min(19, titleFontSize * .66));
+            const detailLineHeight = Math.round(detailFontSize * 1.2);
+            context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
             context.fillStyle = 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'rgba(0, 0, 0, .98)';
             context.shadowBlur = 7;
-            drawWrappedText(context, node.value, point.x, startY + titleLines.length * titleLineHeight + 4, textWidth, detailLineHeight, 3);
+            drawWrappedText(context, node.value, point.x, startY + titleLines.length * titleLineHeight + detailFontSize * .35, textWidth, detailLineHeight, 2);
             context.shadowBlur = 0;
         }
     });
@@ -200,9 +202,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     context.lineWidth = 8;
     const coreFontSize = Math.max(20, Math.min(36, coreRadius * .36));
-    context.font = `850 ${coreFontSize}px system-ui, sans-serif`;
+    context.font = `650 ${coreFontSize}px system-ui, sans-serif`;
     const coreTitle = knowledge.title || knowledge.name || 'Plant';
-    const coreLines = wrapLines(context, coreTitle, coreRadius * 1.54).slice(0, 3);
+    const coreLines = wrapLines(context, coreTitle, coreRadius * 1.54).slice(0, 2);
     drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * coreFontSize / 2, coreFontSize);
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.

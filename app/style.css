@@ -8372,7 +8372,7 @@ button.ar-square-action::before { display: none !important; }
     max-width: 78%;
     color: #fff;
     font-size: clamp(.8rem, 2.4vw, 1.18rem);
-    font-weight: 850;
+    font-weight: 650;
     line-height: 1.14;
     overflow-wrap: normal;
     word-break: normal;
@@ -8394,6 +8394,7 @@ button.ar-square-action::before { display: none !important; }
     word-break: normal;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell {
+    --pim-text-cell-size: var(--pim-render-cell-size);
     position: absolute;
     z-index: 3;
     left: var(--pim-node-x, 50%);
@@ -8418,9 +8419,10 @@ button.ar-square-action::before { display: none !important; }
     filter: none;
     text-align: center;
     text-shadow: 0 1px 2px rgba(0,0,0,.98), 0 0 7px rgba(0,0,0,.94);
-    transition: transform 220ms ease, filter 220ms ease;
+    transition: filter 180ms ease;
     pointer-events: auto;
-    touch-action: manipulation;
+    touch-action: none;
+    user-select: none;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::before,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after {
@@ -8440,16 +8442,43 @@ button.ar-square-action::before { display: none !important; }
     background: hsl(var(--pim-hue,112) 31% 19% / .14);
     backdrop-filter: blur(3px);
 }
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-press-fill {
+    position: absolute;
+    z-index: 0 !important;
+    inset: 2px;
+    display: block;
+    clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+    background: hsl(var(--pim-hue,112) 62% 65% / .72);
+    opacity: 0;
+    transform: scale(var(--pim-press-progress, 0));
+    transform-origin: center;
+    pointer-events: none;
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-pressing .plant-knowledge-press-fill {
+    opacity: 1;
+    transition: none;
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-press-draining .plant-knowledge-press-fill {
+    opacity: 1;
+    transition: transform .12s ease-out, opacity .12s ease-out;
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-press-complete .plant-knowledge-press-fill {
+    opacity: .82;
+    transform: scale(1);
+}
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell > * {
     position: relative;
-    z-index: 1;
+    z-index: 2;
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell > .plant-knowledge-press-fill {
+    z-index: 0 !important;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell b {
     display: block;
     max-width: 100%;
     color: #fff;
-    font-size: clamp(.7rem, 2vw, 1rem);
-    font-weight: 850;
+    font-size: clamp(10px, calc(var(--pim-text-cell-size) * .14), 1rem);
+    font-weight: 650;
     letter-spacing: 0;
     line-height: 1.12;
     overflow-wrap: normal;
@@ -8459,25 +8488,25 @@ button.ar-square-action::before { display: none !important; }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell small {
     display: -webkit-box;
     max-width: 92%;
-    max-height: 0;
+    max-height: 2.5em;
     overflow: hidden;
     color: #fff;
-    font-size: clamp(.68rem, 1.7vw, .86rem);
-    font-weight: 650;
-    line-height: 1.16;
-    opacity: 0;
+    font-size: clamp(8px, calc(var(--pim-text-cell-size) * .092), .76rem);
+    font-weight: 500;
+    line-height: 1.2;
+    opacity: .78;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     overflow-wrap: normal;
     word-break: normal;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-detail-visible small {
-    max-height: 3.5em;
+    max-height: 2.5em;
     opacity: 1;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child-depth-2 small,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child-depth-3 small {
-    display: none;
+    opacity: .72;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"][data-pim-density="compact"] .plant-knowledge-cell,
 .plant-knowledge-map[data-pim-layout="honeycomb"][data-pim-density="compact"] .plant-knowledge-core {
@@ -8488,35 +8517,48 @@ button.ar-square-action::before { display: none !important; }
 .plant-knowledge-map[data-pim-layout="honeycomb"][data-pim-density="compact"] .plant-knowledge-core strong {
     width: 100%;
     max-width: 100%;
-    font-size: clamp(9.5px, calc(var(--pim-render-cell-size) * .135), 11px);
+    font-size: clamp(9.5px, calc(var(--pim-text-cell-size) * .135), 11px);
     letter-spacing: -.35px;
     line-height: 1.02;
     overflow-wrap: anywhere;
     text-wrap: wrap;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"][data-pim-density="compact"] .plant-knowledge-cell small {
-    display: none;
+    display: -webkit-box;
+    max-height: 2.4em;
+    font-size: clamp(8px, calc(var(--pim-text-cell-size) * .09), 10px);
 }
-.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(:focus-visible,.is-open) {
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-open {
     z-index: 6;
-    transform: translate(-50%, -50%);
-    filter: drop-shadow(0 0 13px hsl(var(--pim-hue,112) 72% 67% / .48));
+    filter: drop-shadow(0 0 9px hsl(var(--pim-hue,112) 72% 67% / .3));
 }
-.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(:focus-visible,.is-open)::before {
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-selected {
+    z-index: 7;
+    filter: drop-shadow(0 0 14px hsl(var(--pim-hue,112) 78% 72% / .68));
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-selected::before {
     background: hsl(var(--pim-hue,112) 65% 84% / .9);
 }
-.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(:focus-visible,.is-open)::after {
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-selected::after {
     background: hsl(var(--pim-hue,112) 34% 23% / .24);
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:focus-visible {
+    z-index: 8;
+    outline: 2px solid hsl(var(--pim-hue,112) 78% 82% / .9);
+    outline-offset: 3px;
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child-depth-2,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child-depth-3 {
-    width: var(--pim-render-cell-size);
-    height: var(--pim-render-cell-height);
+    --pim-text-cell-size: calc(var(--pim-render-cell-size) * .7);
+    width: calc(var(--pim-render-cell-size) * .7);
+    height: calc(var(--pim-render-cell-height) * .7);
     animation: pim-honeycomb-grow 220ms cubic-bezier(.2,.72,.3,1) both;
+    animation-delay: calc(var(--pim-child-index, 0) * 40ms);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-child {
     animation: pim-demo-attached-grow 260ms cubic-bezier(.2,.72,.3,1) both;
+    animation-delay: calc(var(--pim-child-index, 0) * 40ms);
 }
 .tryit-sim-marker-plant.has-information,
 .creator-ar-marker-hit-target-plant.is-info-open {
@@ -8555,8 +8597,8 @@ button.ar-square-action::before { display: none !important; }
 @media (max-width: 430px) {
     .plant-knowledge-map[data-pim-layout="honeycomb"] { --pim-cell-size: clamp(84px, 25vw, 108px); }
     .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell b,
-    .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-core strong { font-size: max(11px, .72rem); }
-    .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell small { font-size: max(11px, .68rem); }
+    .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-core strong { font-size: max(11px, calc(var(--pim-text-cell-size) * .135)); }
+    .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell small { font-size: max(8px, calc(var(--pim-text-cell-size) * .09)); }
 }
 .plant-print-action { min-height: 36px; margin-top: 8px; }
 

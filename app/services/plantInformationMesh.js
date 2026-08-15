@@ -61,6 +61,7 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
 // complete hierarchy remains in the shared document model and Web Hub; this
 // limit only controls what blooms into the spatial surface.
 export const AR_PIM_MAX_VISIBLE_CHILDREN = 3;
+export const PIM_CHILD_SCALE = .7;
 export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
     safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
     layoutWidth: 1440,
@@ -298,10 +299,11 @@ function ancestorPaths(path) {
 export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '', focusedPlantId = '') {
     const selected = String(selectedNodeId || '');
     const expanded = expandedIdSet(expandedNodeIds);
-    const activeBranch = primaryPath(selected) || primaryPath([...expanded][0]);
     return {
         selectedNodeId: selected,
-        expandedNodeIds: new Set([...expanded].filter(path => !activeBranch || primaryPath(path) === activeBranch)),
+        // Selection is only a highlight. Every explicitly opened branch stays
+        // in the state so expanding one parent never hides another branch.
+        expandedNodeIds: expanded,
         focusedPlantId: String(focusedPlantId || '')
     };
 }
@@ -331,12 +333,8 @@ export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
         next.expandedNodeIds = removePathAndDescendants(next.expandedNodeIds, targetId);
         return next;
     }
-    // AR has one open branch at a time. Switching to another primary parent
-    // closes only the old bloom; the source document and Web Hub hierarchy are
-    // never mutated or filtered.
-    const branch = primaryPath(targetId);
-    next.expandedNodeIds = new Set([...next.expandedNodeIds]
-        .filter(candidate => primaryPath(candidate) === branch));
+    // Keep unrelated open branches. Only the selected node and its ancestors
+    // are added to the complete visible tree.
     ancestorPaths(targetId).forEach(ancestor => next.expandedNodeIds.add(ancestor));
     return next;
 }
@@ -686,18 +684,19 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     let order = 0;
 
     const makeRecord = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
+        const cellScale = depth > 0 ? PIM_CHILD_SCALE : 1;
         const record = {
             ...node,
-            nodeId: node.path,
-            parentId: node.parentId === 'core' ? null : node.parentId,
+            nodeId: String(node.id || node.path),
+            parentId: parentRecord?.nodeId || null,
             depth,
             rootDirection,
             childIndex,
             childCount,
-            layoutCellWidthPercent: metrics.cellWidthPercent,
-            layoutCellHeightPercent: metrics.cellHeightPercent,
-            layoutCellWidthPixels: metrics.cellWidthPixels,
-            layoutCellHeightPixels: metrics.cellHeightPixels,
+            layoutCellWidthPercent: metrics.cellWidthPercent * cellScale,
+            layoutCellHeightPercent: metrics.cellHeightPercent * cellScale,
+            layoutCellWidthPixels: metrics.cellWidthPixels * cellScale,
+            layoutCellHeightPixels: metrics.cellHeightPixels * cellScale,
             layoutMinimumReadableScale: metrics.minimumReadableScale,
             _pimOrder: order++,
             _pimParentPath: parentRecord?.path || ''

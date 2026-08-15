@@ -97,7 +97,9 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.match(styles, /\.tryit-demo-taskbar \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)[^}]*grid-auto-rows:minmax\(48px,auto\)/);
     assert.doesNotMatch(styles, /tryit-demo-taskbar:has\([^}]*grid-template-columns:repeat\(3/);
     assert.doesNotMatch(styles, /\.tryit-intro-continue \{[^}]*position:fixed/);
-    assert.match(styles, /\[data-pim-density="compact"\] \.plant-knowledge-cell small \{\s*display: none;/);
+    assert.match(styles, /plant-knowledge-press-fill/);
+    assert.match(viewSource, /PIM_PRESS_DURATION_MS = 500/);
+    assert.match(viewSource, /export function bindPlantInformationMeshPress/);
     const fs = await import('node:fs/promises');
     await assert.rejects(() => fs.access(new URL('../app/services/creatorPlantProfileLayout.js', import.meta.url)));
 });
@@ -225,12 +227,12 @@ test('PIM preserves sibling primary branches and closes only the selected branch
     assert.deepEqual(expanded, ['food-forest']);
 });
 
-test('AR interaction state keeps one primary bloom and resets to the same flower', () => {
+test('AR interaction state keeps every open branch and resets to the same flower', () => {
     const knowledge = PIGEON_PEA_AR_KNOWLEDGE;
     let state = pimCreateInteractionState(['cultivation', 'historical-data'], 'historical-data', 'pigeon-pea');
-    assert.deepEqual(pimExpandedNodeIds(state), ['historical-data']);
+    assert.deepEqual(pimExpandedNodeIds(state), ['cultivation', 'historical-data']);
     state = pimToggleNodeState(knowledge, state, 'cultivation');
-    assert.deepEqual(pimExpandedNodeIds(state), ['cultivation']);
+    assert.deepEqual(pimExpandedNodeIds(state), ['historical-data']);
     const reset = pimResetInteractionState(state);
     assert.deepEqual(pimExpandedNodeIds(reset), []);
     assert.equal(reset.selectedNodeId, '');
@@ -576,7 +578,7 @@ test('the AR PIM blooms three connected children at a time at a fixed scale', ()
             layoutHeight: surface.panelHeight,
             safeArea
         });
-        assert.equal(switched.filter(node => node.parentPath === 'cultivation').length, 0, `${width}x${height}: old bloom closes`);
+        assert.equal(switched.filter(node => node.parentPath === 'cultivation').length, 3, `${width}x${height}: existing bloom remains open`);
         assert.ok(switched.filter(node => node.parentPath === 'historical-data').length <= AR_PIM_MAX_VISIBLE_CHILDREN);
         assert.deepEqual(switched.filter(node => node.depth === 0).map(node => [node.path, node.position, node.layoutScale]),
             nodes.filter(node => node.depth === 0).map(node => [node.path, node.position, node.layoutScale]),
