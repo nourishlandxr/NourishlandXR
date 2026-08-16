@@ -27,8 +27,8 @@ import { allowArScreenRotation, releaseArScreenRotation } from '../services/arSc
 import { dismissArFullscreenGuidance, showArFullscreenGuidance, showArSafetyDialog } from '../services/arOnboarding.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.90';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
@@ -648,7 +648,8 @@ function creatorPimState(record) {
     return pimCreateInteractionState(
         record?.pimExpandedNodeIds || record?.pimExpandedPaths || [],
         record?.pimSelectedNodeId || '',
-        record?.pimFocusedPlantId || record?.marker?.plantId || record?.marker?.id || ''
+        record?.pimFocusedPlantId || record?.marker?.plantId || record?.marker?.id || '',
+        record?.pimClosingNodePaths || []
     );
 }
 
@@ -656,6 +657,7 @@ function setCreatorPimState(record, state) {
     if (!record) return state;
     record.pimSelectedNodeId = state.selectedNodeId;
     record.pimExpandedNodeIds = pimExpandedNodeIds(state);
+    record.pimClosingNodePaths = pimClosingNodePaths(state);
     record.pimFocusedPlantId = state.focusedPlantId || record.marker?.plantId || record.marker?.id || '';
     // Keep the existing field for saved/session compatibility while the
     // interaction model uses explicit selectedNodeId/expandedNodeIds state.
@@ -3058,10 +3060,14 @@ function ensureSpatialPimTexture(record) {
     const knowledge = creatorPlantKnowledge(record);
     const elapsed = record.pimBloomStarted ? performance.now() - record.pimBloomStarted : PIM_BLOOM_DURATION_MS;
     const bloomProgress = Math.max(0, Math.min(1, elapsed / PIM_BLOOM_DURATION_MS));
-    if (bloomProgress >= 1) record.pimBloomStarted = 0;
+    if (bloomProgress >= 1) {
+        record.pimBloomStarted = 0;
+        record.pimClosingNodePaths = [];
+    }
+    const closingPaths = record.pimClosingNodePaths || [];
     const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
     const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
-    const key = JSON.stringify([creatorPimExpandedNodeIds(record), record.pimSelectedNodeId || '', hoverPath, animationFrame, knowledge.categories]);
+    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame, knowledge.categories]);
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
@@ -3074,7 +3080,8 @@ function ensureSpatialPimTexture(record) {
         layoutHeight: size.layoutHeight,
         hoverPath,
         selectedNodeId: record.pimSelectedNodeId,
-        bloomProgress
+        bloomProgress,
+        closingPaths
     });
     if (texture) spatialPimTextures.set(record.marker.id, { key, texture });
     return texture;

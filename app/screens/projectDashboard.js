@@ -1533,7 +1533,6 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 notice: ''
             },
             openArAction: `window.openProjectArMode('${encoded(project.id)}','${encoded(activeAreaId)}')`,
-            livingAction: `window.renderLivingDashboard('${encoded(project.id)}')`,
             projectGuideAction: `window.renderProjectGuide('${encoded(project.id)}')`,
             createAreaAction: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`,
             growthJourney,
@@ -2216,7 +2215,7 @@ export async function renderPigeonPeaExample(app, encodedProjectId) {
 
 export async function renderStoriesAndFocus(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
-    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Stories &amp; Checkpoints</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><nav class="content-mode-tool-grid" aria-label="Stories and checkpoints tools"><button type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Visitor Entrances</strong><span>Manage the optional Trail Entrance for guided visitors.</span></button><button type="button" onclick="window.renderUnplacedContent('${encoded(project.id)}')"><strong>Home</strong><span>Review Plants, Notes and Markers waiting for an Area or physical position.</span></button></nav><div class="panel guide"><h2>Story tools are growing</h2><p>Guided narratives, focused moments and richer Area stories are planned for V2. Existing checkpoints remain available now.</p></div></div>`;
+    app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><h1>Stories &amp; Checkpoints</h1><p class="subtitle">${escapeHtml(project.name)}</p></div><nav class="content-mode-tool-grid" aria-label="Stories and checkpoints tools"><button type="button" onclick="window.renderStartingPoints('${encoded(project.id)}')"><strong>Visitor Entrances</strong><span>Manage the optional Trail Entrance for guided visitors.</span></button><button type="button" onclick="window.renderUnplacedContent('${encoded(project.id)}')"><strong>Home</strong><span>Review Plants, Notes and Markers waiting for an Area or physical position.</span></button></nav><div class="panel guide"><h2>Story tools are growing</h2><p>Guided narratives, focused moments and richer Area stories are planned for a future release. Existing checkpoints remain available now.</p></div></div>`;
 }
 
 export async function renderProjectSettings(app, encodedProjectId) {
@@ -2243,10 +2242,6 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <h1>Project Settings</h1>
             <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
         </div>
-        <section class="panel dashboard-mode-setting" aria-labelledby="dashboardModeTitle">
-            <div class="section-heading-row"><div><h2 id="dashboardModeTitle">Dashboard preference</h2><p>Choose the calm spatial Living Dashboard or keep using the established Classic Dashboard. Both read the same project data.</p></div></div>
-            <div class="button-row"><button class="primary" type="button" onclick="window.renderLivingDashboard('${encoded(project.id)}')">Use Living Dashboard</button><button type="button" onclick="window.renderClassicDashboard('${encoded(project.id)}')">Open Classic Dashboard</button></div>
-        </section>
         <details class="panel project-name-setting settings-collapsible" open aria-labelledby="projectNameTitle">
             <summary>
                 <div class="section-heading-row">

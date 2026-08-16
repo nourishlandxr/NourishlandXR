@@ -17,8 +17,8 @@ import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { dismissArFullscreenGuidance, showArFullscreenGuidance, showArSafetyDialog } from '../services/arOnboarding.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
-import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.90';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
+import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -1843,7 +1843,8 @@ function demoPimState(record) {
     return pimCreateInteractionState(
         record?.demoExpandedNodeIds || record?.demoExpandedBranches || [],
         record?.demoSelectedNodeId || '',
-        record?.demoFocusedPlantId || record?.id || record?.name || ''
+        record?.demoFocusedPlantId || record?.id || record?.name || '',
+        record?.pimClosingNodePaths || []
     );
 }
 
@@ -1855,6 +1856,7 @@ function setDemoPimState(record, state) {
     if (!record) return state;
     record.demoSelectedNodeId = state.selectedNodeId;
     record.demoExpandedNodeIds = pimExpandedNodeIds(state);
+    record.pimClosingNodePaths = pimClosingNodePaths(state);
     record.demoExpandedBranches = [...record.demoExpandedNodeIds];
     record.demoFocusedPlantId = state.focusedPlantId || record.id || record.name || '';
     return state;
@@ -2433,6 +2435,8 @@ function createSpatialKnowledgeTexture(record) {
         const bloomProgress = record.pimBloomStarted
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
+        if (bloomProgress >= 1) record.pimClosingNodePaths = [];
+        const closingPaths = record.pimClosingNodePaths || [];
         const size = demoPimSurfaceSize(record);
         record.pimTextureSize = size;
         return createPlantInformationHoneycombTexture(gl, knowledgeFor(record), demoPimExpandedNodeIds(record), {
@@ -2442,7 +2446,8 @@ function createSpatialKnowledgeTexture(record) {
             layoutWidth: size.layoutWidth,
             layoutHeight: size.layoutHeight,
             bloomProgress,
-            selectedNodeId: record.demoSelectedNodeId
+            selectedNodeId: record.demoSelectedNodeId,
+            closingPaths
         });
     }
     if (record.demoType === 'zone') {

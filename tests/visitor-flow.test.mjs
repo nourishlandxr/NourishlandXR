@@ -325,7 +325,7 @@ test('Web Hub redesign keeps a compact mobile grid and expands into desktop colu
     assert.match(source, /<strong>Add area<\/strong>/);
     assert.match(source, /Spatial setup/);
     assert.match(source, /field-guide-management-row-content/);
-    assert.match(source, /Coming in V2/);
+    assert.match(source, /Coming later/);
     assert.doesNotMatch(source, /field-guide-spatial-summary/);
     assert.match(styles, /\.field-guide-hub-redesign \{[\s\S]*width: calc\(100% \+ 32px\)/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-primary-actions \.field-guide-creation-actions[\s\S]*display: grid/);

@@ -5,6 +5,13 @@ import {
     pimViewportSafeArea,
     pimVisibleNodes
 } from './plantInformationMesh.js';
+import {
+    pimConnectionCurve,
+    pimConnectionCurveSign,
+    pimConnectionPathIsSelected,
+    pimConnectionPairs,
+    pimHexEdgePoint
+} from './plantInformationMeshConnections.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -26,6 +33,209 @@ function pimElementKey(element) {
     return '';
 }
 
+const PIM_CONNECTION_ANIMATION_MS = 260;
+const PIM_CONNECTION_SVG_NS = 'http://www.w3.org/2000/svg';
+
+function readCssNumber(element, property, fallback = 0) {
+    const inline = element?.style?.getPropertyValue?.(property);
+    const computed = typeof globalThis.getComputedStyle === 'function' && element
+        ? globalThis.getComputedStyle(element).getPropertyValue(property)
+        : '';
+    const value = Number.parseFloat(inline || computed || '');
+    return Number.isFinite(value) ? value : fallback;
+}
+
+function pimMapGeometry(map) {
+    const mapRect = map?.getBoundingClientRect?.() || {};
+    const width = Math.max(1, Number(mapRect.width) || Number(map?.clientWidth) || 1);
+    const height = Math.max(1, Number(mapRect.height) || Number(map?.clientHeight) || 1);
+    const mapLeft = Number(mapRect.left) || 0;
+    const mapTop = Number(mapRect.top) || 0;
+    const position = (element, xProperty, yProperty) => {
+        const rect = element?.getBoundingClientRect?.() || {};
+        const measuredWidth = Number(rect.width) || readCssNumber(element, 'width');
+        const measuredHeight = Number(rect.height) || readCssNumber(element, 'height');
+        const widthPixels = Math.max(1, measuredWidth || readCssNumber(map, '--pim-cell-size', 76));
+        const heightPixels = Math.max(1, measuredHeight || readCssNumber(map, '--pim-cell-height', widthPixels * .8660254));
+        const measuredCenterX = Number(rect.left) + Number(rect.width) / 2 - mapLeft;
+        const measuredCenterY = Number(rect.top) + Number(rect.height) / 2 - mapTop;
+        const xPercent = readCssNumber(element, xProperty, 50);
+        const yPercent = readCssNumber(element, yProperty, 50);
+        const center = {
+            x: Number(rect.width) > 0 ? measuredCenterX : width * xPercent / 100,
+            y: Number(rect.height) > 0 ? measuredCenterY : height * yPercent / 100
+        };
+        return {
+            center,
+            bounds: {
+                left: center.x - widthPixels / 2,
+                top: center.y - heightPixels / 2,
+                width: widthPixels,
+                height: heightPixels
+            }
+        };
+    };
+    return { width, height, position };
+}
+
+function ensurePimConnectionLayer(map) {
+    if (!map || typeof document === 'undefined') return null;
+    let layer = [...map.children].find(element => element.matches?.('.plant-knowledge-connections'));
+    if (!layer) {
+        layer = document.createElementNS(PIM_CONNECTION_SVG_NS, 'svg');
+        layer.classList.add('plant-knowledge-connections');
+        layer.setAttribute('aria-hidden', 'true');
+        layer.setAttribute('focusable', 'false');
+        map.prepend(layer);
+    }
+    return layer;
+}
+
+function pimDomConnectionNodes(map) {
+    const geometry = pimMapGeometry(map);
+    const elements = new Map();
+    const cells = [...map.querySelectorAll('[data-pim-node-id]')];
+    cells.forEach(element => elements.set(String(element.dataset.pimNodeId), element));
+    const nodes = cells.map(element => {
+        const position = geometry.position(element, '--pim-node-x', '--pim-node-y');
+        return {
+            nodeId: String(element.dataset.pimNodeId || element.dataset.pimNode || ''),
+            path: String(element.dataset.pimNode || ''),
+            parentId: String(element.dataset.pimParentId || ''),
+            depth: Number(element.dataset.pimDepth) || (element.dataset.pimRole === 'child' ? 1 : 0),
+            hue: readCssNumber(element, '--pim-hue', 112),
+            position,
+            element
+        };
+    });
+    const core = map.querySelector('[data-pim-role="center"]');
+    return { geometry, elements, nodes, core, corePosition: core ? geometry.position(core, '--pim-core-x', '--pim-core-y') : null };
+}
+
+function connectionIsActive(pair, nodesById, core, selectedPath = '') {
+    if (selectedPath) return pimConnectionPathIsSelected(pair, selectedPath);
+    const child = nodesById.get(pair.childId);
+    const parent = pair.parentId === 'core' ? core : nodesById.get(pair.parentId);
+    return Boolean(child?.element?.classList.contains('is-open')
+        || child?.element?.classList.contains('is-selected')
+        || parent?.classList?.contains('is-open')
+        || parent?.classList?.contains('is-selected'));
+}
+
+/**
+ * Recalculate the one SVG connection layer beneath a canonical PIM map.
+ * Geometry comes from the rendered cells, so an orientation change or bloom
+ * transition cannot leave a line anchored at an old percentage or centre.
+ */
+export function syncPimConnectionLayer(map) {
+    if (!map) return null;
+    const layer = ensurePimConnectionLayer(map);
+    if (!layer) return null;
+    const { geometry, nodes, core, corePosition } = pimDomConnectionNodes(map);
+    layer.setAttribute('viewBox', `0 0 ${geometry.width} ${geometry.height}`);
+    layer.setAttribute('width', String(geometry.width));
+    layer.setAttribute('height', String(geometry.height));
+    const selectedPath = map.querySelector('.plant-knowledge-cell.is-selected')?.dataset.pimNode || '';
+    const pairs = pimConnectionPairs(nodes);
+    const desired = new Map();
+    pairs.forEach(pair => {
+        const child = nodes.find(node => node.nodeId === pair.childId);
+        const childPosition = child?.position;
+        const parentPosition = pair.parentId === 'core'
+            ? corePosition
+            : nodes.find(node => node.nodeId === pair.parentId)?.position;
+        if (!childPosition || !parentPosition) return;
+        const start = pimHexEdgePoint(parentPosition.center, childPosition.center, parentPosition.bounds);
+        const end = pimHexEdgePoint(childPosition.center, parentPosition.center, childPosition.bounds);
+        const curve = pimConnectionCurve(start, end, {
+            bend: pair.depth > 1 ? .09 : .12,
+            sign: pimConnectionCurveSign(pair.parentId, pair.childId)
+        });
+        desired.set(pair.id, { pair, curve, active: connectionIsActive(pair, new Map(nodes.map(node => [node.nodeId, node])), core, selectedPath) });
+    });
+    const existing = new Map([...layer.querySelectorAll('.plant-knowledge-connection')]
+        .map(path => [String(path.dataset.pimConnectionId || ''), path])
+        .filter(([id]) => id));
+    const timers = map.__pimConnectionExitTimers || (map.__pimConnectionExitTimers = new Map());
+    desired.forEach(({ pair, curve, active }) => {
+        const path = existing.get(pair.id) || document.createElementNS(PIM_CONNECTION_SVG_NS, 'path');
+        const wasNew = !path.parentNode;
+        const wasClosing = path.classList.contains('is-closing');
+        if (timers.has(pair.id)) {
+            globalThis.clearTimeout(timers.get(pair.id));
+            timers.delete(pair.id);
+        }
+        path.classList.add('plant-knowledge-connection');
+        path.classList.toggle('is-active', active);
+        path.classList.remove('is-closing');
+        path.dataset.pimConnectionId = pair.id;
+        path.dataset.pimConnectionParent = pair.parentId;
+        path.dataset.pimConnectionChild = pair.childId;
+        path.dataset.pimConnectionBranch = pair.branchId;
+        path.style.setProperty('--pim-connection-hue', String(pair.hue));
+        path.setAttribute('pathLength', '1');
+        path.setAttribute('d', curve.d);
+        if (wasNew || wasClosing) {
+            path.classList.add('is-opening');
+            path.addEventListener('animationend', () => path.classList.remove('is-opening'), { once: true });
+            if (wasNew) layer.append(path);
+        }
+    });
+    existing.forEach((path, id) => {
+        if (desired.has(id) || timers.has(id)) return;
+        path.classList.remove('is-opening');
+        path.classList.add('is-closing');
+        const timer = globalThis.setTimeout(() => {
+            path.remove();
+            timers.delete(id);
+        }, PIM_CONNECTION_ANIMATION_MS);
+        timers.set(id, timer);
+    });
+    return layer;
+}
+
+function schedulePimConnectionReflow(map) {
+    if (!map) return;
+    syncPimConnectionLayer(map);
+    if (map.__pimConnectionFrames) return;
+    let frameCount = 0;
+    const raf = callback => globalThis.requestAnimationFrame
+        ? globalThis.requestAnimationFrame(callback)
+        : globalThis.setTimeout(() => callback(performance.now()), 40);
+    const run = () => {
+        map.__pimConnectionFrames = 0;
+        syncPimConnectionLayer(map);
+        frameCount += 1;
+        if (frameCount < 5) map.__pimConnectionFrames = raf(run);
+    };
+    map.__pimConnectionFrames = raf(run);
+}
+
+function bindPimConnectionLayout(map, signal) {
+    if (!map || map.__pimConnectionLayoutBound) return;
+    const refresh = () => schedulePimConnectionReflow(map);
+    const observer = typeof globalThis.ResizeObserver === 'function'
+        ? new globalThis.ResizeObserver(refresh)
+        : null;
+    observer?.observe(map);
+    globalThis.window?.addEventListener?.('resize', refresh, { passive: true });
+    globalThis.window?.addEventListener?.('orientationchange', refresh, { passive: true });
+    globalThis.window?.visualViewport?.addEventListener?.('resize', refresh, { passive: true });
+    const cleanup = () => {
+        observer?.disconnect();
+        globalThis.window?.removeEventListener?.('resize', refresh);
+        globalThis.window?.removeEventListener?.('orientationchange', refresh);
+        globalThis.window?.visualViewport?.removeEventListener?.('resize', refresh);
+        if (map.__pimConnectionFrames && globalThis.cancelAnimationFrame) globalThis.cancelAnimationFrame(map.__pimConnectionFrames);
+        map.__pimConnectionFrames = 0;
+        map.__pimConnectionLayoutBound = false;
+    };
+    map.__pimConnectionLayoutBound = true;
+    map.__pimConnectionLayoutCleanup = cleanup;
+    signal?.addEventListener?.('abort', cleanup, { once: true });
+    refresh();
+}
+
 /**
  * Diff canonical PIM cells by stable node ID. Demo and Creator call this for
  * branch changes so already-visible cells keep their DOM identity, listeners,
@@ -40,6 +250,7 @@ export function reconcilePlantInformationMesh(container, markup) {
     const currentMap = container.querySelector('[data-pim-renderer="canonical"]');
     if (!currentMap) {
         container.replaceChildren(nextMap);
+        schedulePimConnectionReflow(nextMap);
         return nextMap;
     }
 
@@ -63,6 +274,7 @@ export function reconcilePlantInformationMesh(container, markup) {
     currentByKey.forEach((element, key) => {
         if (!retained.has(key)) element.remove();
     });
+    schedulePimConnectionReflow(currentMap);
     return currentMap;
 }
 
@@ -205,8 +417,10 @@ export function bindPlantInformationMeshPress(container, options = {}) {
         event.stopPropagation();
     }, true);
     options.signal?.addEventListener?.('abort', () => finish({ drain: false }), { once: true });
+    bindPimConnectionLayout(container.querySelector('[data-pim-renderer="canonical"]'), options.signal);
     return () => {
         finish({ drain: false });
+        container.querySelector('[data-pim-renderer="canonical"]')?.__pimConnectionLayoutCleanup?.();
         container.dataset.pimPressBound = 'false';
     };
 }
@@ -272,10 +486,11 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
         const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
         const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-node-scale:${node.layoutScale || 1};--pim-child-index:${Number(node.childIndex) || 0};--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
     }).join('');
     const handleLabel = options.handleLabel || `Drag the ${label(source.title)} Plant Information Mesh`;
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
     const core = `<span class="plant-knowledge-core" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><strong>${escapeHtml(source.title)}</strong></span>`;
-    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${cells}${core}</span>`;
+    const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
+    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}</span>`;
 }

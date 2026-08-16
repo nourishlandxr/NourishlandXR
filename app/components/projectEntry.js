@@ -114,8 +114,7 @@ export function renderProjectEntry(config) {
     return `<div class="screen project-entry location-selected${config.nonPlantMode ? ' nonplant-project' : ''}${spotlightTarget ? ' tutorial-spotlight-active' : ''}" data-location-id="${config.locationId}">
         <div class="dashboard-frame">
         <header class="location-dashboard-header">
-            <div class="dashboard-header-copy"><p class="dashboard-frame-kicker">CLASSIC DASHBOARD</p><h1>${config.locationName}</h1></div>
-            ${(config.livingAction || config.v2Action) ? `<div class="dashboard-version-switcher" aria-label="Dashboard mode"><span>Classic Dashboard</span><button type="button" onclick="${config.livingAction || config.v2Action}">Living Dashboard</button></div>` : ''}
+            <div class="dashboard-header-copy"><p class="dashboard-frame-kicker">PROJECT DASHBOARD</p><h1>${config.locationName}</h1></div>
         </header>
 
         ${growthJourneyHtml}

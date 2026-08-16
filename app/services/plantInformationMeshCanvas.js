@@ -5,6 +5,13 @@ import {
     pimVisibleNodeBounds,
     pimVisibleNodes
 } from './plantInformationMesh.js';
+import {
+    pimConnectionCurve,
+    pimConnectionCurveSign,
+    pimConnectionPathIsSelected,
+    pimConnectionPairs,
+    pimHexEdgePoint
+} from './plantInformationMeshConnections.js';
 
 export const PIM_TEXTURE_SIZE = Object.freeze({ width: 1440, height: 1080 });
 export const PIM_BLOOM_DURATION_MS = 220;
@@ -99,11 +106,92 @@ function drawOutlinedLines(context, lines, x, startY, lineHeight) {
     });
 }
 
+function quadraticPoint(start, control, end, progress) {
+    const t = Math.max(0, Math.min(1, Number(progress)));
+    const inverse = 1 - t;
+    return {
+        x: inverse * inverse * start.x + 2 * inverse * t * control.x + t * t * end.x,
+        y: inverse * inverse * start.y + 2 * inverse * t * control.y + t * t * end.y
+    };
+}
+
+function drawPimConnections(context, width, height, nodes, expanded, hoverPath, selectedNodeId, bloom, { currentNodeIds = new Set(), closingPaths = [] } = {}) {
+    const source = Array.isArray(nodes) ? nodes : [];
+    const closing = Array.isArray(closingPaths) ? closingPaths.map(String) : [];
+    const byId = new Map(source.map(node => [String(node.nodeId || node.id || node.path || ''), node]));
+    const centerPercent = source[0]?.layoutCenterPosition || { x: 50, y: 50 };
+    const center = { x: centerPercent.x / 100 * width, y: centerPercent.y / 100 * height };
+    const coreWidth = Math.max(1, Number(source[0]?.layoutCellWidthPercent || 0) / 100 * width);
+    const coreHeight = Math.max(1, Number(source[0]?.layoutCellHeightPercent || 0) / 100 * height);
+    const position = node => {
+        const point = pimNodeVisualPosition(node, node?.depth > 0 ? bloom : 1);
+        return {
+            center: { x: point.x / 100 * width, y: point.y / 100 * height },
+            bounds: {
+                left: point.x / 100 * width - Number(node?.layoutCellWidthPercent || 0) / 100 * width / 2,
+                top: point.y / 100 * height - Number(node?.layoutCellHeightPercent || 0) / 100 * height / 2,
+                width: Math.max(1, Number(node?.layoutCellWidthPercent || 0) / 100 * width),
+                height: Math.max(1, Number(node?.layoutCellHeightPercent || 0) / 100 * height)
+            }
+        };
+    };
+    const corePosition = {
+        center,
+        bounds: {
+            left: center.x - coreWidth / 2,
+            top: center.y - coreHeight / 2,
+            width: coreWidth,
+            height: coreHeight
+        }
+    };
+    pimConnectionPairs(source).forEach(pair => {
+        const child = byId.get(pair.childId);
+        const parent = pair.parentId === 'core' ? null : byId.get(pair.parentId);
+        if (!child) return;
+        const closingLine = !currentNodeIds.has(pair.childId)
+            && closing.some(path => child.path === path
+                || child.path.startsWith(`${path}.`)
+                || child.path.startsWith(`${path}/`));
+        if (!closingLine && !currentNodeIds.has(pair.childId)) return;
+        const childPosition = position(child);
+        const parentPosition = parent ? position(parent) : corePosition;
+        const curve = pimConnectionCurve(
+            pimHexEdgePoint(parentPosition.center, childPosition.center, parentPosition.bounds),
+            pimHexEdgePoint(childPosition.center, parentPosition.center, childPosition.bounds),
+            {
+                bend: pair.depth > 1 ? .09 : .12,
+                sign: pimConnectionCurveSign(pair.parentId, pair.childId)
+            }
+        );
+        const active = selectedNodeId
+            ? pimConnectionPathIsSelected(pair, selectedNodeId)
+            : expanded.has(child.path)
+                || Boolean(parent && expanded.has(parent.path))
+                || hoverPath === child.path
+                || hoverPath === parent?.path;
+        const progress = closingLine ? 1 - bloom : child.depth > 0 ? bloom : 1;
+        const end = quadraticPoint(curve.start, curve.control, curve.end, progress);
+        context.save();
+        context.globalAlpha = closingLine ? Math.max(0, .65 * (1 - bloom)) : active ? .65 : .36;
+        const hue = Number.isFinite(Number(child.hue)) ? Number(child.hue) : pimNodeHue(child);
+        context.strokeStyle = `hsla(${hue}, 58%, 82%, 1)`;
+        context.lineWidth = 1.75;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.beginPath();
+        context.moveTo(curve.start.x, curve.start.y);
+        context.quadraticCurveTo(curve.control.x, curve.control.y, end.x, end.y);
+        context.stroke();
+        context.restore();
+    });
+}
+
 export function drawPlantInformationHoneycomb(context, canvas, knowledge, expandedPaths = [], options = {}) {
     const width = canvas.width;
     const height = canvas.height;
     const expanded = new Set(expandedPaths);
-    const nodes = pimVisibleNodes(knowledge, expandedPaths, {
+    const closingPaths = [...new Set((Array.isArray(options.closingPaths) ? options.closingPaths : []).map(String))];
+    const layoutOptions = {
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
@@ -115,7 +203,13 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         gapPixels: options.gapPixels,
         topInset: options.topInset,
         bottomInset: options.bottomInset
-    });
+    };
+    const currentNodes = pimVisibleNodes(knowledge, expandedPaths, layoutOptions);
+    const currentNodeIds = new Set(currentNodes.map(node => String(node.nodeId || node.path)));
+    const renderPaths = [...new Set([...expanded, ...closingPaths])];
+    const nodes = closingPaths.length
+        ? pimVisibleNodes(knowledge, renderPaths, layoutOptions)
+        : currentNodes;
     const centerPercent = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
     const center = { x: centerPercent.x / 100 * width, y: centerPercent.y / 100 * height };
     const reducedMotion = options.reducedMotion ?? (typeof window !== 'undefined'
@@ -138,7 +232,15 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.textBaseline = 'middle';
     context.lineJoin = 'round';
 
+    // Draw the single relationship layer first. Lines terminate at the
+    // nearest hex edge and remain behind every label and cell surface.
+    drawPimConnections(context, width, height, nodes, expanded, hoverPath, options.selectedNodeId, bloom, {
+        currentNodeIds,
+        closingPaths
+    });
+
     nodes.forEach(node => {
+        if (!currentNodeIds.has(String(node.nodeId || node.path))) return;
         const nodeBloom = node.depth > 0 ? bloom : 1;
         // position() already applies the single shared parent-to-child bloom
         // interpolation used by hit-testing; do not interpolate it again.

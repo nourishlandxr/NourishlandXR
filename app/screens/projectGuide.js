@@ -12,14 +12,14 @@ const GUIDE_FAQ = Object.freeze([
     ['Totems and Alignment', 'Why might an AR object need realignment?', 'Browser-based tracking can drift as the device moves or loses visual reference points. A Totem or recognised marker can provide a known alignment checkpoint.'],
     ['Projects and Areas', 'What does “unplaced” mean?', 'An unplaced plant exists in the project but does not yet have a confirmed location in an area or AR scene.'],
     ['Mapping and Export', 'Can project information be exported?', 'Project and plant data can be prepared for supported export formats. Future mapping exports may include spatial coordinates where reliable position data exists.'],
-    ['Living Map', 'What is the Living Dashboard?', 'The Living Dashboard is the project’s spatial home: it connects areas, plants, placement progress and confirmed spatial relationships through one Living Map.'],
+    ['Mapping and Export', 'What is the Project Map?', 'The Project Map is the project’s spatial workspace: it connects areas, plants, placement progress and confirmed spatial relationships in one place.'],
     ['Troubleshooting', 'What should I do if a feature is unavailable?', 'Use the established Web Hub, Area, Plant and AR actions for confirmed work. Available, Experimental and Planned labels identify what is operational.']
 ]);
 
-const GUIDE_CATEGORIES = Object.freeze(['All', 'Getting Started', 'Projects and Areas', 'Plants and PIM', 'AR Mode', 'Totems and Alignment', 'Living Map', 'Mapping and Export', 'Troubleshooting']);
+const GUIDE_CATEGORIES = Object.freeze(['All', 'Getting Started', 'Projects and Areas', 'Plants and PIM', 'AR Mode', 'Totems and Alignment', 'Mapping and Export', 'Troubleshooting']);
 
 const GUIDE_PREVIEW_TOPICS = Object.freeze([
-    ['The Living Map', 'The Living Map is intended to show how project areas relate to one another, where plants have been placed and which parts of the landscape still need mapping or alignment.'],
+    ['The Project Map', 'The Project Map shows how project areas relate to one another, where plants have been placed and which parts of the landscape still need mapping or alignment.'],
     ['GIS integration', 'Geographic Information Systems can store, analyse and export real-world location data. Future NLXR mapping could associate areas, plants, paths and ecological observations with geographic coordinates and supported GIS formats. Possible future formats include GeoJSON, KML, CSV with coordinates and GIS-compatible project layers.'],
     ['VPS positioning', 'A Visual Positioning System uses recognised visual features from a scanned environment to estimate a device’s position and orientation. This could eventually allow NLXR content to remain aligned across a larger mapped garden more accurately than basic browser tracking alone.'],
     ['Totems and visual markers', 'Totems can operate as known checkpoints within a project. Physical markers may help the application recognise an area, restore alignment and connect local AR experiences to the wider project map.'],
@@ -33,16 +33,16 @@ function guidePreviewArt() {
     const nodes = [
         ['Home', 18, 35, 'is-home'], ['Orchard', 74, 28, ''], ['Nursery', 50, 57, 'is-current'], ['Creek', 22, 72, ''], ['Food Forest', 66, 78, '']
     ];
-    return `<div class="project-guide-v2-preview-art" role="img" aria-label="Conceptual Living Map preview"><span class="project-guide-v2-preview-art-title">NourishlandXR V1 · Living Map</span><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M18 35 50 57 74 28 66 78 22 72 18 35"/><path d="M74 28 66 78"/></svg>${nodes.map(([label, x, y, className]) => `<span class="project-guide-v2-preview-node ${className}" style="--preview-x:${x}%;--preview-y:${y}%"><i aria-hidden="true">${className === 'is-home' ? '⌂' : '▧'}</i><strong>${label}</strong></span>`).join('')}<small>Conceptual layout · preview only</small></div>`;
+    return `<div class="project-guide-v2-preview-art" role="img" aria-label="Conceptual Project Map preview"><span class="project-guide-v2-preview-art-title">NourishlandXR · Project Map</span><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M18 35 50 57 74 28 66 78 22 72 18 35"/><path d="M74 28 66 78"/></svg>${nodes.map(([label, x, y, className]) => `<span class="project-guide-v2-preview-node ${className}" style="--preview-x:${x}%;--preview-y:${y}%"><i aria-hidden="true">${className === 'is-home' ? '⌂' : '▧'}</i><strong>${label}</strong></span>`).join('')}<small>Conceptual layout · preview only</small></div>`;
 }
 
 export function renderProjectGuide(app, encodedProjectId = '', returnTo = 'creator') {
     let projectId = '';
     try { projectId = decodeURIComponent(encodedProjectId || ''); } catch { projectId = String(encodedProjectId || ''); }
     const backAction = projectId
-        ? `window.renderLivingDashboard('${encoded(projectId)}')`
+        ? `window.renderProjectDashboard('${encoded(projectId)}')`
         : returnTo === 'launch' ? 'window.renderLaunchScreen()' : 'window.renderDemoProjects()';
-    const v2Action = projectId ? `window.renderLivingDashboard('${encoded(projectId)}')` : 'window.renderDemoProjects()';
+    const dashboardAction = projectId ? `window.renderProjectDashboard('${encoded(projectId)}')` : 'window.renderDemoProjects()';
     const faqHtml = GUIDE_FAQ.map(([category, question, answer], index) => {
         const id = `projectGuideAnswer${index + 1}`;
         const search = `${category} ${question} ${answer}`.toLocaleLowerCase();
@@ -54,7 +54,7 @@ export function renderProjectGuide(app, encodedProjectId = '', returnTo = 'creat
     app.innerHTML = `<div class="screen project-guide-screen">
         <header class="project-guide-header"><button class="ghost project-guide-back" type="button" onclick="${backAction}">← Back</button><p class="project-guide-eyebrow">NOURISHLANDXR</p><h1>Project Guide</h1><p class="subtitle">Fast answers for projects, plants, PIM and spatial work.</p></header>
         <section class="project-guide-faq-section" aria-labelledby="projectGuideFaqTitle"><div class="project-guide-section-heading"><div><p class="project-guide-eyebrow">QUICK ANSWERS</p><h2 id="projectGuideFaqTitle">Project Guide FAQ</h2></div><span class="project-guide-count">${GUIDE_FAQ.length} answers</span></div><div class="project-guide-search"><span aria-hidden="true">⌕</span><input id="projectGuideSearch" type="search" placeholder="Search the guide" aria-label="Search the guide" autocomplete="off" /></div><div class="project-guide-category-row" role="group" aria-label="Guide categories">${GUIDE_CATEGORIES.map((category, index) => `<button type="button" class="${index === 0 ? 'is-active' : ''}" data-guide-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join('')}</div><div class="project-guide-faq-list">${faqHtml}</div><p class="project-guide-empty" data-guide-empty hidden>No guide answers match that search.</p></section>
-        <section class="project-guide-v2-section" aria-labelledby="projectGuideV2Title"><div class="project-guide-v2-heading"><div><p class="project-guide-eyebrow">ROADMAP</p><h2 id="projectGuideV2Title">Living Map roadmap</h2></div><span class="project-guide-preview-badge">NourishlandXR V1</span></div><p>The Living Map is the shared spatial foundation for projects. Available tools use real project records; Experimental and Planned topics are labelled so they are never mistaken for working features.</p>${guidePreviewArt()}<button type="button" class="project-guide-open-v2" onclick="${v2Action}">Open Living Dashboard <span aria-hidden="true">›</span></button><div class="project-guide-preview-topics" aria-label="Living Map roadmap topics">${topicHtml}</div></section>
+        <section class="project-guide-v2-section" aria-labelledby="projectGuideMapTitle"><div class="project-guide-v2-heading"><div><p class="project-guide-eyebrow">SPATIAL WORKSPACE</p><h2 id="projectGuideMapTitle">Project Map</h2></div></div><p>The Project Map is the shared spatial foundation for projects. Available tools use real project records; Experimental and Planned topics are labelled so they are never mistaken for working features.</p>${guidePreviewArt()}<button type="button" class="project-guide-open-v2" onclick="${dashboardAction}">Open Project Dashboard <span aria-hidden="true">›</span></button><div class="project-guide-preview-topics" aria-label="Project Map topics">${topicHtml}</div></section>
     </div>`;
 
     const applyFilters = () => {

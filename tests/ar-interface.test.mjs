@@ -832,26 +832,23 @@ test('project settings can rename a project while the dashboard stays overview-o
     assert.match(mainSource, /window\.toggleAreas = toggleAreas/);
 });
 
-test('opening a project paints a dashboard loading state before data work begins', () => {
+test('opening a project uses one canonical project dashboard route', () => {
     const mainSource = read('app/main.js');
-    const styles = read('app/style.css');
-    assert.match(mainSource, /class="project-loading-screen"/);
-    assert.match(mainSource, /resolvedName/);
-    assert.match(mainSource, /Returning to dashboard/);
-    assert.match(mainSource, /loadingContext === 'returning'/);
-    assert.match(mainSource, /Adding the trellis/);
-    assert.match(mainSource, /Soaking the seeds/);
-    assert.match(mainSource, /Digging a few holes/);
-    assert.match(mainSource, /Waking up the worms/);
-    assert.match(mainSource, /Mapping the mycelium/);
-    assert.match(mainSource, /\}, 2200\)/);
-    assert.match(mainSource, /clearInterval\(loadingCommentTimer\)/);
+    const dashboardSource = read('app/screens/projectDashboardV2.js');
+    assert.match(mainSource, /renderProjectDashboardV2Screen/);
+    assert.match(mainSource, /window\.renderProjectDashboard = async/);
+    assert.doesNotMatch(mainSource, /renderProjectDashboardV09|renderClassicDashboard|renderLivingDashboard/);
+    assert.doesNotMatch(mainSource, /dashboardMode|dashboardVersion|readDashboardVersion|rememberDashboardVersion/);
+    assert.match(dashboardSource, /PROJECT/);
+    assert.match(dashboardSource, /Choose project/);
+    assert.match(dashboardSource, /Project Map/);
+    assert.doesNotMatch(dashboardSource, /Living Dashboard|Classic Dashboard|NourishlandXR V1/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
     assert.match(mainSource, /window\.addEventListener\('popstate'/);
     assert.match(mainSource, /nourishland-xr-current-view-v1/);
     assert.match(mainSource, /function pushViewHistory/);
     assert.match(mainSource, /function replaceViewHistory/);
-    assert.match(mainSource, /rememberedView\?\.view === 'dashboard'/);
+    assert.match(mainSource, /\['dashboard', 'dashboard-v2', 'living-dashboard', 'dashboard-classic'\]/);
     assert.match(mainSource, /rememberedView\?\.view === 'area'/);
     assert.match(mainSource, /rememberedView\?\.view === 'totem'/);
     assert.match(mainSource, /rememberedView\?\.view === 'entry'/);
@@ -864,9 +861,9 @@ test('opening a project paints a dashboard loading state before data work begins
     assert.match(mainSource, /pushViewHistory\('totem', args\)/);
     assert.match(mainSource, /pushViewHistory\('entry', args\)/);
     assert.match(mainSource, /pushViewHistory\('field-guide', args\)/);
-    assert.match(mainSource, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
-    assert.match(styles, /\.project-loading-track span/);
-    assert.match(styles, /@keyframes project-loading-progress/);
+    assert.match(dashboardSource, /data-map-fit/);
+    assert.match(dashboardSource, /data-map-edit/);
+    assert.match(dashboardSource, /data-map-layer-toggle/);
 });
 
 test('Field Guide correlates Area membership for both plant instances and AR plant markers', () => {
@@ -1345,12 +1342,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /data-demo-depth-joystick\] input/);
     assert.match(styles, /\.tryit-sim-marker-plant\.has-plant-profile:is\(:hover, :focus-visible\)/);
     assert.match(styles, /\.plant-knowledge-map/);
-    assert.doesNotMatch(pimViewSource, /plant-knowledge-connectors/);
-    assert.doesNotMatch(styles, /\.plant-knowledge-connectors path/);
+    assert.match(pimViewSource, /plant-knowledge-connections/);
+    assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-connection/);
+    assert.match(styles, /pim-connection-open/);
     assert.match(styles, /--pim-cell-size: clamp\(76px, 14vw, 132px\)/);
     assert.match(styles, /height: min\(62dvh, 620px\)/);
     assert.match(styles, /data-pim-layout="honeycomb"/);
-    assert.doesNotMatch(pimViewSource, /pimConnectorPath/);
+    assert.match(pimViewSource, /pimConnectionCurve/);
+    assert.match(pimViewSource, /pimConnectionPairs/);
     assert.doesNotMatch(source, /pimFocusedView\(/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
     assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
@@ -1358,7 +1357,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /return canvasTexture\(label\);/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
-    assert.doesNotMatch(pimViewSource, /is-parent-link/);
+    assert.match(pimViewSource, /data-pim-parent-id/);
     assert.match(styles, /@keyframes pim-demo-attached-grow/);
     assert.doesNotMatch(styles, /--pim-parent-grid-x/);
     assert.doesNotMatch(source, /globalCompositeOperation = 'destination-over'/);
@@ -1826,7 +1825,7 @@ test('Field Guide separates visual guidance, optional creative tools and physica
     assert.match(fieldGuideSource, /DEFAULT_HOME_AREA_NAME/);
     assert.match(fieldGuideSource, /Visitor Entrances/);
     assert.match(fieldGuideSource, /field-guide-management-row/);
-    assert.match(fieldGuideSource, /Coming in V2/);
+    assert.match(fieldGuideSource, /Coming later/);
     assert.match(fieldGuideSource, /anchored element/);
     assert.doesNotMatch(fieldGuideSource, /of \$\{markerCount\} records anchored/);
     assert.match(fieldGuideSource, /renderProjectAreaForm/);

@@ -296,7 +296,7 @@ function ancestorPaths(path) {
  * `selectedNodeId` is only for highlighting/status; `expandedNodeIds` controls
  * which descendants are present in the complete mesh.
  */
-export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '', focusedPlantId = '') {
+export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId = '', focusedPlantId = '', closingNodePaths = []) {
     const selected = String(selectedNodeId || '');
     const expanded = expandedIdSet(expandedNodeIds);
     return {
@@ -304,6 +304,9 @@ export function pimCreateInteractionState(expandedNodeIds = [], selectedNodeId =
         // Selection is only a highlight. Every explicitly opened branch stays
         // in the state so expanding one parent never hides another branch.
         expandedNodeIds: expanded,
+        // Short-lived render metadata used only to retract lines smoothly
+        // after a branch has been logically removed from the visible tree.
+        closingNodePaths: expandedIdSet(closingNodePaths),
         focusedPlantId: String(focusedPlantId || '')
     };
 }
@@ -321,15 +324,20 @@ function removePathAndDescendants(paths, targetPath) {
 export function pimToggleNodeState(knowledge = {}, state = {}, nodeId = '') {
     const targetId = String(nodeId || '');
     const node = pimNodeAtPath(knowledge, targetId);
+    const previousExpanded = expandedIdSet(state?.expandedNodeIds);
     const next = pimCreateInteractionState(
-        state?.expandedNodeIds,
+        previousExpanded,
         targetId || state?.selectedNodeId,
-        state?.focusedPlantId
+        state?.focusedPlantId,
+        []
     );
     if (!node) return next;
     const children = pimNodeChildren(node);
     if (!children.length) return next;
     if (next.expandedNodeIds.has(targetId)) {
+        next.closingNodePaths = new Set([...previousExpanded].filter(candidate => candidate === targetId
+            || candidate.startsWith(`${targetId}.`)
+            || candidate.startsWith(`${targetId}/`)));
         next.expandedNodeIds = removePathAndDescendants(next.expandedNodeIds, targetId);
         return next;
     }
@@ -345,6 +353,10 @@ export function pimResetInteractionState(state = {}) {
 
 export function pimExpandedNodeIds(state = {}) {
     return [...expandedIdSet(state?.expandedNodeIds)];
+}
+
+export function pimClosingNodePaths(state = {}) {
+    return [...expandedIdSet(state?.closingNodePaths)];
 }
 
 function safeNumber(value, fallback) {
