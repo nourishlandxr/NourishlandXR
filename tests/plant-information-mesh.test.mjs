@@ -28,7 +28,7 @@ import {
     pimToggleNodeState,
     pimVisibleNodes
 } from '../app/services/plantInformationMesh.js';
-import { pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../app/services/plantInformationMeshCanvas.js';
+import { PIM_TEXTURE_CELL_WIDTH, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../app/services/plantInformationMeshCanvas.js';
 import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
 import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../app/services/demoTutorialControls.js';
@@ -315,20 +315,22 @@ test('PIM grows child cells outward from the selected category with stable famil
     assert.equal(pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []).length, 6);
 });
 
-test('PIM spatial bloom and hit-testing share the same parent-relative cell position', () => {
-    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest']);
+test('PIM spatial bloom keeps a new cell in its final reserved slot', () => {
+    const layoutOptions = { ...PIM_SPATIAL_LAYOUT_OPTIONS, cellWidthPixels: PIM_TEXTURE_CELL_WIDTH };
+    const nodes = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, ['food-forest'], layoutOptions);
     const parent = nodes.find(node => node.path === 'food-forest');
     const child = nodes.find(node => node.parentPath === 'food-forest');
     const start = pimNodeVisualPosition(child, 0);
     const end = pimNodeVisualPosition(child, 1);
-    assert.deepEqual(start, { x: parent.position.x, y: parent.position.y });
+    assert.deepEqual(start, { x: child.position.x, y: child.position.y });
     assert.deepEqual(end, { x: child.position.x, y: child.position.y });
+    assert.notDeepEqual(start, { x: parent.position.x, y: parent.position.y });
     assert.equal(pimHoneycombTargetAtPercent(
         PIGEON_PEA_AR_KNOWLEDGE,
         ['food-forest'],
         end.x,
         end.y,
-        { bloomProgress: 1 }
+        { ...layoutOptions, bloomProgress: 1 }
     ).path, child.path);
 });
 

@@ -840,7 +840,9 @@ test('opening a project uses one canonical project dashboard route', () => {
     assert.doesNotMatch(mainSource, /renderProjectDashboardV09|renderClassicDashboard|renderLivingDashboard/);
     assert.doesNotMatch(mainSource, /dashboardMode|dashboardVersion|readDashboardVersion|rememberDashboardVersion/);
     assert.match(dashboardSource, /PROJECT/);
-    assert.match(dashboardSource, /Choose project/);
+    assert.doesNotMatch(dashboardSource, /Choose project/);
+    assert.match(dashboardSource, /Project Status/);
+    assert.match(dashboardSource, /data-v2-status-action/);
     assert.match(dashboardSource, /Project Map/);
     assert.doesNotMatch(dashboardSource, /Living Dashboard|Classic Dashboard|NourishlandXR V1/);
     assert.match(mainSource, /nourishlandView: 'dashboard'/);
@@ -1358,7 +1360,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
     assert.match(source, /data-pim-back/);
     assert.match(pimViewSource, /data-pim-parent-id/);
-    assert.match(styles, /@keyframes pim-demo-attached-grow/);
+    assert.match(styles, /@keyframes pim-cell-fade-in/);
+    assert.doesNotMatch(styles, /@keyframes pim-demo-attached-grow/);
     assert.doesNotMatch(styles, /--pim-parent-grid-x/);
     assert.doesNotMatch(source, /globalCompositeOperation = 'destination-over'/);
     assert.match(source, /explorationGoal = record\.tutorialStage === 'plant' \? 3 : 2/);

@@ -42,8 +42,11 @@ test('Project Dashboard keeps conceptual mapping honest and relationship-driven'
     assert.match(modelSource, /conceptualLayout: true/);
     assert.match(modelSource, /geographicCoordinates: false/);
     assert.match(modelSource, /totalPlants \? Math\.round/);
-    assert.match(screenSource, /Conceptual layout/);
-    assert.match(screenSource, /Spatial Readiness/);
+    assert.match(screenSource, /Project Status/);
+    assert.match(screenSource, /data-v2-status-action/);
+    assert.match(screenSource, /Reset automatic layout/);
+    assert.match(screenSource, /Totem alignment/);
+    assert.doesNotMatch(screenSource, /Conceptual layout|Spatial Readiness|SPATIAL ORGANISATION|Spatial Organization/);
     assert.match(screenSource, /Add Area/);
     assert.match(screenSource, /Project Map/);
     assert.doesNotMatch(screenSource, /Living Dashboard|Classic Dashboard|NourishlandXR V1/);

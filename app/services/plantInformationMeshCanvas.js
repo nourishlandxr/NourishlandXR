@@ -257,8 +257,8 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         context.save();
         context.globalAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         if (active) {
-            context.shadowColor = `hsla(${hue}, 70%, 68%, .46)`;
-            context.shadowBlur = 22;
+            context.shadowColor = `hsla(${hue}, 70%, 68%, .22)`;
+            context.shadowBlur = 8;
         }
         drawHexagon(
             context,
@@ -267,42 +267,42 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             radius,
             `hsla(${hue}, 31%, 19%, ${active ? .58 : node.depth ? .42 : .22})`,
             `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
-            active ? 5 : 3
+            active ? 4 : 2
         );
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
         context.fillStyle = '#fff';
         context.strokeStyle = 'rgba(0, 0, 0, .94)';
-        context.lineWidth = 7;
+        context.lineWidth = 4;
         const titleFontSize = Math.max(node.depth ? 13 : 18, Math.min(node.depth ? 23 : 29, radius * (node.depth ? .25 : .31)));
         const titleLineHeight = Math.round(titleFontSize * 1.08);
         context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
         const textWidth = Math.max(54, radius * 1.5);
         const titleLines = wrapLines(context, node.label, textWidth).slice(0, 2);
         const hasDescription = node.depth > 0 && Boolean(node.value);
-        const startY = point.y + (hasDescription ? -titleLineHeight : 0) - (titleLines.length - 1) * titleLineHeight / 2;
-        drawOutlinedLines(context, titleLines, point.x, startY, titleLineHeight);
+        const titleStartY = point.y - radius * .43 + (titleLines.length - 1) * titleLineHeight * .5;
+        drawOutlinedLines(context, titleLines, point.x, titleStartY, titleLineHeight);
         if (hasDescription) {
             const detailFontSize = Math.max(10, Math.min(19, titleFontSize * .66));
             const detailLineHeight = Math.round(detailFontSize * 1.2);
             context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
             context.fillStyle = 'rgba(255, 255, 255, .96)';
-            context.shadowColor = 'rgba(0, 0, 0, .98)';
-            context.shadowBlur = 7;
-            drawWrappedText(context, node.value, point.x, startY + titleLines.length * titleLineHeight + detailFontSize * .35, textWidth, detailLineHeight, 2);
+            context.shadowColor = 'transparent';
+            context.shadowBlur = 0;
+            drawWrappedText(context, node.value, point.x, point.y + radius * .11, textWidth, detailLineHeight, 2);
             context.shadowBlur = 0;
         }
     });
 
     const coreRadius = Math.max(22, Number(nodes[0]?.layoutCellWidthPercent || 13.9) / 100 * width / 2);
     context.save();
-    context.shadowColor = 'rgba(76, 108, 166, .34)';
-    context.shadowBlur = 18;
+    context.shadowColor = 'rgba(76, 108, 166, .18)';
+    context.shadowBlur = 8;
     drawHexagon(context, center.x, center.y, coreRadius, 'rgba(39, 58, 92, .78)', 'rgba(137, 165, 213, .82)', 4);
     context.restore();
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
-    context.lineWidth = 8;
+    context.lineWidth = 5;
     const coreFontSize = Math.max(20, Math.min(36, coreRadius * .36));
     context.font = `650 ${coreFontSize}px system-ui, sans-serif`;
     const coreTitle = knowledge.title || knowledge.name || 'Plant';

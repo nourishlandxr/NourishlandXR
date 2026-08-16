@@ -17,17 +17,16 @@ function mapMarkup(model) {
         return from && to ? `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />` : '';
     }).join('');
     const nodes = areas.map(area => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
-    const mapModeLabel = model.mapMode === 'image-aligned' ? 'Image aligned' : model.mapMode === 'image-draft' ? 'Image draft' : 'Conceptual layout';
     const mapImage = model.siteMap?.image || model.livingMap?.background?.assetUrl;
     return `<div class="nlxr-db-v2-living-map" aria-labelledby="nlxrDbV2MapTitle">
-        <div class="nlxr-db-v2-map-canvas" aria-label="${mapModeLabel} project area layout">
+        <div class="nlxr-db-v2-map-canvas" aria-label="Project area layout">
             ${mapImage ? `<img class="nlxr-db-v2-map-image" src="${escapeHtml(mapImage)}" alt="" aria-hidden="true" />` : ''}
             <div class="nlxr-db-v2-map-grid" aria-hidden="true"></div>
             <svg class="nlxr-db-v2-map-lines" data-map-layer="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="nlxrV2Glow"><feGaussianBlur stdDeviation="1.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#nlxrV2Glow)">${lines}</g></svg>
-            ${nodes || '<p class="nlxr-db-v2-map-empty">Add an Area to begin the project map. The first layout will be clearly marked conceptual.</p>'}
+            ${nodes || '<p class="nlxr-db-v2-map-empty">Add an Area to begin the project map.</p>'}
             <div class="nlxr-db-v2-map-compass" aria-hidden="true">N<br><span>↑</span></div>
         </div>
-        <footer class="nlxr-db-v2-map-footer"><span><i aria-hidden="true">✦</i> ${areas.length} area${areas.length === 1 ? '' : 's'} · ${model.totalPlants} plant cluster${model.totalPlants === 1 ? '' : 's'}</span><strong class="nlxr-db-v2-map-mode">${escapeHtml(mapModeLabel)}</strong></footer>
+        <footer class="nlxr-db-v2-map-footer"><span><i aria-hidden="true">✦</i> ${areas.length} area${areas.length === 1 ? '' : 's'} · ${model.totalPlants} plant cluster${model.totalPlants === 1 ? '' : 's'}</span></footer>
         <p class="nlxr-db-v2-map-legend"><span><i class="is-area" aria-hidden="true"></i> Areas</span><span><i class="is-plant" aria-hidden="true"></i> Plant clusters</span><span><i class="is-link" aria-hidden="true"></i> Confirmed links</span><span><i class="is-totem" aria-hidden="true"></i> Totems</span></p>
     </div>`;
 }
@@ -38,13 +37,30 @@ function activityMarkup(model, heading = 'Recent activity') {
     return `<section class="nlxr-db-v2-card nlxr-db-v2-activity-card" aria-labelledby="nlxrDbV2ActivityTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">◷</span><h2 id="nlxrDbV2ActivityTitle">${heading}</h2></div>${viewAll}</header>${rows ? `<ul class="nlxr-db-v2-activity-list">${rows}</ul>` : '<p class="nlxr-db-v2-empty">No activity has been recorded yet.</p>'}</section>`;
 }
 
-function healthMarkup(model) {
-    const readiness = model.spatialReadiness;
-    if (readiness.state === 'not-configured') {
-        return `<section class="nlxr-db-v2-card nlxr-db-v2-health-card nlxr-db-v2-readiness-card" aria-labelledby="nlxrDbV2HealthTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon is-health" aria-hidden="true">⌁</span><h2 id="nlxrDbV2HealthTitle">Spatial Readiness</h2></div><span class="nlxr-db-v2-readiness-state">Conceptual layout ready</span></header><p>Areas can stay conceptual. Add a Totem or site image when you want to align this project with a real place.</p><div class="nlxr-db-v2-readiness-actions"><button type="button" class="nlxr-db-v2-review-action" data-v2-guide>Learn about Totems <span aria-hidden="true">›</span></button><button type="button" class="nlxr-db-v2-review-action" data-v2-map-image>Add site image <span aria-hidden="true">›</span></button></div></section>`;
-    }
-    const placement = model.totalPlants ? `${model.placedPlants} of ${model.totalPlants}` : 'No plants yet';
-    return `<section class="nlxr-db-v2-card nlxr-db-v2-health-card" aria-labelledby="nlxrDbV2HealthTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon is-health" aria-hidden="true">⌁</span><h2 id="nlxrDbV2HealthTitle">Spatial Readiness</h2></div><span class="nlxr-db-v2-readiness-state">Configured</span></header><div class="nlxr-db-v2-health-grid"><div><span aria-hidden="true">⌖</span><strong>${readiness.confirmedTotems}</strong><small>Totems confirmed</small></div><div><span aria-hidden="true">▱</span><strong>${readiness.siteImage ? 'Added' : 'Not added'}</strong><small>Site image</small></div><div><span aria-hidden="true">✦</span><strong>${escapeHtml(placement)}</strong><small>Plants placed</small></div></div><div class="nlxr-db-v2-readiness-actions"><button type="button" class="nlxr-db-v2-review-action" data-v2-health-review>Review spatial setup <span aria-hidden="true">›</span></button>${model.totalPlants > model.placedPlants ? `<button type="button" class="nlxr-db-v2-review-action" data-v2-unplaced>Review unplaced plants <span aria-hidden="true">›</span></button>` : ''}</div></section>`;
+function statusItem(label, value, action, extraClass = '') {
+    return `<button type="button" class="nlxr-db-v2-status-item ${extraClass}" data-v2-status-action="${action}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></button>`;
+}
+
+function projectStatusMarkup(model) {
+    const readiness = model.spatialReadiness || {};
+    const attention = Math.max(0, Number(readiness.totalTotems || 0) - Number(readiness.confirmedTotems || 0));
+    const alignedAreas = Number(readiness.areasWithConfirmedTotems || 0);
+    const areaTotal = model.areas.length;
+    return `<section class="nlxr-db-v2-status-board" aria-labelledby="nlxrDbV2StatusTitle">
+        <header class="nlxr-db-v2-status-heading"><h2 id="nlxrDbV2StatusTitle">Project Status</h2><span>Tap a value to manage it</span></header>
+        <div class="nlxr-db-v2-status-main" role="group" aria-label="Project statistics">
+            ${statusItem('Plants', model.totalPlants, 'plants')}
+            ${statusItem('Placed', model.placedPlants, 'placed')}
+            ${statusItem('Areas', model.areas.length, 'areas')}
+            ${statusItem('Mapped', `${model.mappedPercentage}%`, 'mapped', 'is-percentage')}
+        </div>
+        <div class="nlxr-db-v2-status-readiness" role="group" aria-label="Spatial readiness">
+            ${statusItem('Totems configured', readiness.confirmedTotems || 0, 'totems')}
+            ${statusItem('Need attention', attention, 'attention', attention ? 'is-attention' : '')}
+            ${statusItem('Areas aligned', `${alignedAreas}/${areaTotal}`, 'alignment')}
+            ${statusItem('Site image', readiness.siteImage ? 'Added' : 'Not added', 'site-image')}
+        </div>
+    </section>`;
 }
 
 function toolsMarkup(model) {
@@ -65,17 +81,14 @@ function areaSummaryMarkup(model) {
 function overviewMarkup(model) {
     const projectId = encoded(model.project.id);
     const activeArea = encoded(model.currentAreaId);
-    return `<section class="nlxr-db-v2-metrics" aria-label="Project metrics">${metric('Plants', model.totalPlants, '✦')}${metric('Placed', model.placedPlants, '⌖')}${metric('Areas', model.areas.length, '▧')}${metric('Mapped', `${model.mappedPercentage}%`, '◔', 'is-percentage')}</section>
-        <section class="nlxr-db-v2-primary-actions" aria-label="Primary project actions"><button class="is-primary" type="button" onclick="window.openProjectArMode('${projectId}','${activeArea}')"><span aria-hidden="true">⌾</span><strong>Open AR</strong></button><button type="button" onclick="window.renderLocationFieldMarker('${projectId}','plant','without-ar',true)"><span aria-hidden="true">⊕</span><strong>Add Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${projectId}','dashboard')"><span aria-hidden="true">▧</span><strong>Add Area</strong></button></section>
+    return `<section class="nlxr-db-v2-primary-actions" aria-label="Primary project actions"><button class="is-primary" type="button" onclick="window.openProjectArMode('${projectId}','${activeArea}')"><span aria-hidden="true">⌾</span><strong>Open AR</strong></button><button type="button" onclick="window.renderLocationFieldMarker('${projectId}','plant','without-ar',true)"><span aria-hidden="true">⊕</span><strong>Add Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${projectId}','dashboard')"><span aria-hidden="true">▧</span><strong>Add Area</strong></button></section>
+        ${projectStatusMarkup(model)}
         ${areaSummaryMarkup(model)}
-        ${healthMarkup(model)}
         <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div>`;
 }
 
 function mapWorkspaceMarkup(model) {
-    const mapModeLabel = model.mapMode === 'image-aligned' ? 'Image-aligned' : model.mapMode === 'image-draft' ? 'Image draft' : 'Conceptual';
-    const layoutLabel = model.mapMode === 'conceptual' ? 'Automatic area layout' : 'Saved area layout';
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><div><p class="nlxr-db-v2-eyebrow">SPATIAL ORGANISATION</p><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2><p>${layoutLabel} · ${escapeHtml(mapModeLabel)} status</p></div><span class="nlxr-db-v2-map-status">${escapeHtml(mapModeLabel)}</span></header><div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map controls"><button type="button" data-map-fit>Fit all</button><button type="button" data-map-edit>Edit layout</button><button type="button" data-v2-map-image>Site image</button><details><summary>Layers</summary><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></details></div>${mapMarkup(model)}<div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header><div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map controls"><button type="button" data-map-fit>Fit all</button><button type="button" data-map-edit>Edit layout</button><button type="button" data-map-reset>Reset automatic layout</button><button type="button" data-map-align>Totem alignment</button><button type="button" data-v2-map-image>Site image</button><details><summary>Layers</summary><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></details></div>${mapMarkup(model)}<div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
 }
 
 function previewModeMarkup(model, mode) {
@@ -94,7 +107,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             ? '<p class="nlxr-db-v2-sync is-offline"><i aria-hidden="true"></i> Offline</p>'
             : '';
         app.innerHTML = `<div class="screen nlxr-db-v2" data-project-id="${projectKey}">
-            <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div><button type="button" class="nlxr-db-v2-projects-action" onclick="window.renderDemoProjects()">Choose project</button></header>
+            <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="activity"><span aria-hidden="true">⌁</span> Activity</button></nav>
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
@@ -108,12 +121,24 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             target.textContent = message;
             target.hidden = false;
         };
+        const showMode = mode => {
+            const button = app.querySelector(`[data-v2-mode="${mode}"]`);
+            if (!button) return;
+            app.querySelectorAll('[data-v2-mode]').forEach(candidate => {
+                const active = candidate === button;
+                candidate.classList.toggle('is-active', active);
+                if (active) candidate.setAttribute('aria-current', 'page');
+                else candidate.removeAttribute('aria-current');
+            });
+            panel.innerHTML = previewModeMarkup(model, mode);
+            bindPanel();
+        };
         const bindPanel = () => {
             panel.querySelectorAll('[data-living-area]').forEach(button => button.addEventListener('click', () => {
                 const area = model.areas.find(candidate => candidate.id === button.dataset.livingArea);
                 const sheet = app.querySelector('#nlxrLivingMapSheet');
                 if (!area || !sheet) return;
-                sheet.innerHTML = `<div><div><p class="nlxr-db-v2-eyebrow">AREA</p><h2>${escapeHtml(area.label)}</h2><p>${area.plantCount} plant${area.plantCount === 1 ? '' : 's'} · ${area.entryCount} entr${area.entryCount === 1 ? 'y' : 'ies'}</p></div><button type="button" aria-label="Close area details" data-close-map-sheet>×</button></div><p>${area.totemCount ? `${area.placedTotemCount} Totem${area.placedTotemCount === 1 ? '' : 's'} confirmed.` : 'No Totem is configured. This Area can remain conceptual.'}</p><div><button type="button" onclick="window.renderProjectAreaDashboard('${projectKey}','${encoded(area.id)}')">Open Area</button><button type="button" onclick="window.openProjectArMode('${projectKey}','${encoded(area.id)}')">Open in AR</button><button type="button" data-v2-notice="position">Edit position</button></div>`;
+                sheet.innerHTML = `<div><div><p class="nlxr-db-v2-eyebrow">AREA</p><h2>${escapeHtml(area.label)}</h2><p>${area.plantCount} plant${area.plantCount === 1 ? '' : 's'} · ${area.entryCount} entr${area.entryCount === 1 ? 'y' : 'ies'}</p></div><button type="button" aria-label="Close area details" data-close-map-sheet>×</button></div><p>${area.totemCount ? `${area.placedTotemCount} Totem${area.placedTotemCount === 1 ? '' : 's'} confirmed.` : 'No Totem is configured for this Area.'}</p><div><button type="button" onclick="window.renderProjectAreaDashboard('${projectKey}','${encoded(area.id)}')">Open Area</button><button type="button" onclick="window.openProjectArMode('${projectKey}','${encoded(area.id)}')">Open in AR</button><button type="button" data-v2-notice="position">Edit position</button></div>`;
                 sheet.hidden = false;
                 sheet.querySelector('[data-close-map-sheet]')?.addEventListener('click', () => { sheet.hidden = true; });
                 sheet.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => notice('Manual position editing is available from Edit layout.')));
@@ -124,6 +149,8 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             panel.querySelector('[data-v2-unplaced]')?.addEventListener('click', () => window.renderFieldGuide(projectKey, true));
             panel.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => notice('This capability is not yet available. Existing project tools remain available for live work.')));
             panel.querySelector('[data-map-edit]')?.addEventListener('click', () => window.renderLocationMap(projectKey, true, 'dashboard'));
+            panel.querySelector('[data-map-reset]')?.addEventListener('click', () => window.renderLocationMap(projectKey, true, 'dashboard'));
+            panel.querySelector('[data-map-align]')?.addEventListener('click', () => window.renderLocationMap(projectKey, true, 'dashboard'));
             panel.querySelector('[data-map-fit]')?.addEventListener('click', () => {
                 panel.querySelector('.nlxr-db-v2-map-canvas')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 notice('All project areas are visible in the automatic layout.');
@@ -134,17 +161,19 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 control.setAttribute('aria-pressed', String(active));
                 panel.querySelectorAll(`[data-map-layer="${layer}"]`).forEach(item => item.classList.toggle('is-layer-hidden', !active));
             }));
+            panel.querySelectorAll('[data-v2-status-action]').forEach(control => control.addEventListener('click', () => {
+                const action = control.dataset.v2StatusAction;
+                if (action === 'plants' || action === 'areas') return window.renderFieldGuide(projectKey, true);
+                if (action === 'placed') {
+                    showMode('map');
+                    notice('Placed Plants are shown in the Plant clusters layer.');
+                    return;
+                }
+                return window.renderLocationMap(projectKey, true, 'dashboard');
+            }));
         };
         app.querySelectorAll('[data-v2-mode]').forEach(button => button.addEventListener('click', () => {
-            const mode = button.dataset.v2Mode;
-            app.querySelectorAll('[data-v2-mode]').forEach(candidate => {
-                const active = candidate === button;
-                candidate.classList.toggle('is-active', active);
-                if (active) candidate.setAttribute('aria-current', 'page');
-                else candidate.removeAttribute('aria-current');
-            });
-            panel.innerHTML = previewModeMarkup(model, mode);
-            bindPanel();
+            showMode(button.dataset.v2Mode);
         }));
         app.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => {
             const messages = {

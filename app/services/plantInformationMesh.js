@@ -222,15 +222,13 @@ function directionIndex(direction) {
 
 function outwardChildAxials(parent, childCount) {
     const index = directionIndex(parent.rootDirection || parent.direction);
-    const outward = DIRECTION_AXIAL[HONEYCOMB_DIRECTIONS[index]];
     const previous = DIRECTION_AXIAL[HONEYCOMB_DIRECTIONS[(index + HONEYCOMB_DIRECTIONS.length - 1) % HONEYCOMB_DIRECTIONS.length]];
+    const outward = DIRECTION_AXIAL[HONEYCOMB_DIRECTIONS[index]];
     const next = DIRECTION_AXIAL[HONEYCOMB_DIRECTIONS[(index + 1) % HONEYCOMB_DIRECTIONS.length]];
     const offsets = [
-        outward,
         previous,
+        outward,
         next,
-        addAxial(outward, previous),
-        addAxial(outward, next),
         scaleAxial(outward, 2),
         addAxial(scaleAxial(outward, 2), previous),
         addAxial(scaleAxial(outward, 2), next)
@@ -246,17 +244,25 @@ export function pimChildPosition(parent, childIndex, childCount, options = {}) {
     );
 }
 
+function childSlotOffset(childIndex, childCount) {
+    const count = Math.max(1, Number(childCount) || 1);
+    if (count === 1) return 0;
+    if (count === 2) return Number(childIndex) === 0 ? -1 : 1;
+    return Math.max(-1, Math.min(1, Number(childIndex) - 1));
+}
+
 // The spatial canvas and its ray-hit map must use the same position while a
 // child generation blooms out of its parent. Keeping this calculation here
 // prevents the renderer and the interaction layer from drifting apart.
 export function pimNodeVisualPosition(node, bloomProgress = 1) {
     const target = node?.position || { x: 50, y: 50 };
-    if (Number(node?.depth) <= 0) return { x: Number(target.x), y: Number(target.y) };
-    const parent = node?.parentPosition || { x: 50, y: 50 };
-    const progress = Math.max(0, Math.min(1, Number(bloomProgress)));
+    // Bloom is now opacity/connection timing only. A newly opened cell is
+    // created at its reserved final slot so existing cells never appear to
+    // move, fly or make room for another branch.
+    void bloomProgress;
     return {
-        x: Number(parent.x) + (Number(target.x) - Number(parent.x)) * progress,
-        y: Number(parent.y) + (Number(target.y) - Number(parent.y)) * progress
+        x: Number(target.x),
+        y: Number(target.y)
     };
 }
 
@@ -552,6 +558,9 @@ export function pimCorrectVisibleNodeBounds(nodes = [], options = {}) {
     return source.map(node => ({
         ...node,
         position: transformPimPoint(node.position, scale, translation),
+        fixedPosition: node.fixedPosition
+            ? transformPimPoint(node.fixedPosition, scale, translation)
+            : node.fixedPosition,
         parentPosition: node.parentPosition
             ? transformPimPoint(node.parentPosition, scale, translation)
             : node.parentPosition,
@@ -599,86 +608,32 @@ function siblingTarget(childIndex, childCount) {
     };
 }
 
-function placePimRecord(record, parent, occupied, metrics) {
+function placePimRecord(record, parent, metrics) {
     const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
-    const sibling = siblingTarget(record.childIndex, record.childCount);
-    const target = {
-        x: parent.layoutGrid.x + direction.x * sibling.radial + direction.tangentX * sibling.tangent,
-        y: parent.layoutGrid.y + direction.y * sibling.radial + direction.tangentY * sibling.tangent
-    };
-    // Prefer the authored three-cell outward cluster around the real parent.
-    // The fallback below is only for an actual collision with another branch.
-    const preferred = pimChildPosition(parent, record.childIndex, record.childCount, metrics);
-    const preferredGrid = { x: preferred.axial.q, y: preferred.axial.r };
-    const preferredKey = `${preferredGrid.x}:${preferredGrid.y}`;
-    if (!occupied.has(preferredKey)) {
-        occupied.add(preferredKey);
-        record.layoutGrid = preferredGrid;
-        record.position = layoutPosition(preferredGrid, metrics);
-        return;
-    }
-    const directionLength = Math.max(.001, Math.hypot(direction.x, direction.y));
-    const candidates = [];
-    for (let radius = 1; radius <= 12; radius += 1) {
-        for (let y = -radius; y <= radius; y += 1) {
-            for (let x = -radius; x <= radius; x += 1) {
-                if (Math.max(Math.abs(x), Math.abs(y)) !== radius) continue;
-                const fromParent = { x: x - parent.layoutGrid.x, y: y - parent.layoutGrid.y };
-                const outward = (fromParent.x * direction.x + fromParent.y * direction.y) / directionLength;
-                // First-generation petals preserve the branch's authored
-                // radial direction. Deeper generations may turn along that
-                // branch's tangent when the straight continuation would
-                // force the entire phone mesh to shrink below readable size.
-                // They still attach to their real parent and never fold back
-                // toward the plant core.
-                const minimumOutward = record.depth > 1 ? -.05 : .45;
-                if (outward < minimumOutward) continue;
-                const gridKey = `${x}:${y}`;
-                // AABB rectangles overlap for every pair of neighbouring
-                // regular hexagons, including the intended shared edge. The
-                // axial cell itself is therefore the collision primitive.
-                if (occupied.has(gridKey)) continue;
-                const point = layoutPosition({ x, y }, metrics);
-                const rectangle = pimCellRectangle(record.path, point, {
-                    width: metrics.cellWidthPercent,
-                    height: metrics.cellHeightPercent
-                });
-                const distanceToTarget = Math.hypot(x - target.x, y - target.y);
-                const distanceToParent = Math.hypot(fromParent.x, fromParent.y);
-                const portraitPackingPenalty = metrics.viewportWidth < metrics.viewportHeight
-                    ? Math.max(0, Math.abs(x) - 2) * 300
-                        + Math.max(0, Math.abs(y) - 3) * 300
-                    : 0;
-                candidates.push({
-                    grid: { x, y },
-                    point,
-                    rectangle,
-                    score: distanceToTarget * 100 + distanceToParent * 4 + portraitPackingPenalty + radius * .01
-                });
-            }
-        }
-        if (candidates.length) break;
-    }
-    candidates.sort((left, right) => left.score - right.score
-        || Math.abs(left.grid.x) - Math.abs(right.grid.x)
-        || Math.abs(left.grid.y) - Math.abs(right.grid.y)
-        || left.grid.y - right.grid.y
-        || left.grid.x - right.grid.x);
-    const chosen = candidates[0] || (() => {
-        const grid = { x: Math.round(target.x), y: Math.round(target.y) };
-        const point = layoutPosition(grid, metrics);
-        return {
-            grid,
-            point,
-            rectangle: pimCellRectangle(record.path, point, {
-                width: metrics.cellWidthPercent,
-                height: metrics.cellHeightPercent
-            })
+    const slotOffset = childSlotOffset(record.childIndex, record.childCount);
+    const slotIndex = Number(parent?.slotIndex || 0) + slotOffset;
+    let grid;
+    if (record.depth === 1) {
+        // The six first-generation slots are the three outward-facing axial
+        // neighbours of the real parent. They are reserved whether open or
+        // not, so a later branch cannot take one and move an earlier cell.
+        const preferred = pimChildPosition(parent, record.childIndex, record.childCount, metrics);
+        grid = { x: preferred.axial.q, y: preferred.axial.r };
+    } else {
+        // Deeper generations continue along the root branch sector. The
+        // inherited slot index makes a compact local fan around the actual
+        // parent while the depth keeps every generation in a new outward
+        // ring. No collision search is allowed to rewrite an existing slot.
+        const root = DIRECTION_AXIAL[record.rootDirection] || { q: 0, r: 0 };
+        grid = {
+            x: root.q + root.q * record.depth + direction.tangentX * slotIndex,
+            y: root.r + root.r * record.depth + direction.tangentY * slotIndex
         };
-    })();
-    occupied.add(`${chosen.grid.x}:${chosen.grid.y}`);
-    record.layoutGrid = chosen.grid;
-    record.position = chosen.point;
+    }
+    record.slotIndex = slotIndex;
+    record.fixedPosition = layoutPosition(grid, metrics);
+    record.layoutGrid = grid;
+    record.position = { ...record.fixedPosition };
 }
 
 /**
@@ -703,8 +658,11 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
             parentId: parentRecord?.nodeId || null,
             depth,
             rootDirection,
+            branchId: rootDirection,
             childIndex,
             childCount,
+            slotIndex: depth === 0 ? 0 : childIndex,
+            fixedPosition: null,
             layoutCellWidthPercent: metrics.cellWidthPercent * cellScale,
             layoutCellHeightPercent: metrics.cellHeightPercent * cellScale,
             layoutCellWidthPixels: metrics.cellWidthPixels * cellScale,
@@ -728,15 +686,14 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
 
-    const occupied = new Set();
     const byPath = new Map(layoutRecords.map(record => [record.path, record]));
     const corePosition = layoutPosition({ x: 0, y: 0 }, metrics);
-    occupied.add('0:0');
     layoutRecords.filter(record => record.depth === 0).forEach(record => {
         const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
         record.layoutGrid = { x: direction.x, y: direction.y };
+        record.slotIndex = 0;
+        record.fixedPosition = layoutPosition(record.layoutGrid, metrics);
         record.position = layoutPosition(record.layoutGrid, metrics);
-        occupied.add(`${record.layoutGrid.x}:${record.layoutGrid.y}`);
     });
     const closedFlowerBounds = rawBounds(layoutRecords.filter(record => record.depth === 0), options);
     layoutRecords
@@ -744,7 +701,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         .sort((left, right) => left.depth - right.depth || left._pimOrder - right._pimOrder)
         .forEach(record => {
             const parent = byPath.get(record._pimParentPath);
-            placePimRecord(record, parent, occupied, metrics);
+            placePimRecord(record, parent, metrics);
         });
     layoutRecords.forEach(record => {
         const parent = byPath.get(record._pimParentPath);
