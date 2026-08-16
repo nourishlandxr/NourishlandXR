@@ -519,17 +519,17 @@ test('Creator and Demo AR taskbars reflow into a touch-safe landscape bottom doc
     assert.match(styles, /\.creator-ar-taskbar > button,[\s\S]*min-width: 44px;[\s\S]*min-height: 44px;/);
     assert.match(styles, /\.tryit-demo-footer[\s\S]*width: min\(calc\(100dvw - env\(safe-area-inset-left/);
     assert.match(styles, /\.tryit-demo-taskbar \{[\s\S]*display: flex;[\s\S]*overflow-x: auto;/);
-    assert.match(styles, /body\.ar-browser-overlay-clearance \{ --ar-bottom-clearance/);
+    assert.doesNotMatch(styles, /ar-browser-overlay-clearance|ar-bottom-clearance|nxr-ar-fullscreen-guidance/);
     assert.match(orientationSource, /orientation\.lock\('any'\)/);
     assert.match(orientationSource, /orientation\.unlock/);
     assert.match(arSource, /allowArScreenRotation\(\);/);
     assert.match(arSource, /releaseArScreenRotation\(\);/);
     assert.match(demoSource, /allowArScreenRotation\(\);/);
     assert.match(demoSource, /releaseArScreenRotation\(\);/);
-    assert.match(onboardingSource, /localStorage/);
-    assert.match(onboardingSource, /Swipe the browser message right/);
-    assert.match(arSource, /data-ar-fullscreen-help/);
-    assert.match(demoSource, /data-tryit-fullscreen-help/);
+    assert.match(onboardingSource, /CAMERA_SAFETY_ACK_KEY/);
+    assert.doesNotMatch(onboardingSource, /FULLSCREEN_GUIDANCE|Swipe the browser message right|showArFullscreenGuidance/);
+    assert.doesNotMatch(arSource, /data-ar-fullscreen-help|showArFullscreenGuidance/);
+    assert.doesNotMatch(demoSource, /data-tryit-fullscreen-help|showArFullscreenGuidance/);
 });
 
 test('Creator AR keeps the editable Location Note hidden until it is opened from its Totem', () => {

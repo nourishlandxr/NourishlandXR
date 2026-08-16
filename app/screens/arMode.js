@@ -24,7 +24,7 @@ import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialG
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
-import { dismissArFullscreenGuidance, showArFullscreenGuidance, showArSafetyDialog } from '../services/arOnboarding.js';
+import { showArSafetyDialog } from '../services/arOnboarding.js';
 import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
@@ -5031,8 +5031,7 @@ function createOverlay() {
     overlayRoot.className = 'creator-ar-overlay';
     overlayRoot.innerHTML = `
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
-        <div class="creator-ar-utility-controls" aria-label="AR help">
-          <button type="button" data-ar-fullscreen-help aria-label="Show fullscreen guidance">?</button>
+        <div class="creator-ar-utility-controls" aria-label="AR safety">
           <button type="button" data-ar-safety-help aria-label="Show AR safety">Safety</button>
         </div>
         <section class="creator-ar-controller-hud" data-ar-controller-hud hidden aria-live="polite">
@@ -5118,7 +5117,6 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
     bindTaskbarAction('[data-ar-change-project]', () => void finishArExitToProjectChooser());
     bindTaskbarAction('[data-ar-exit-creator]', () => exitArMode());
-    overlayRoot.querySelector('[data-ar-fullscreen-help]')?.addEventListener('click', () => showArFullscreenGuidance(overlayRoot, { force: true }));
     overlayRoot.querySelector('[data-ar-safety-help]')?.addEventListener('click', () => showArSafetyDialog(overlayRoot));
     overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {
         event.preventDefault();
@@ -5152,7 +5150,6 @@ function createOverlay() {
 
 function cleanup() {
     creatorViewportCleanup?.();
-    dismissArFullscreenGuidance();
     releaseArScreenRotation();
     clearControllerMarkerPress();
     cleanupDrag();
@@ -5477,7 +5474,6 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         } else if (!arSession.passthrough) {
             setPlacementStatus(`WebXR opened AR mode but reports an opaque blend (${arSession.blendMode || 'unknown'}). Camera passthrough is unavailable in this runtime.`);
         }
-        showArFullscreenGuidance(overlayRoot);
         const restoringOverlay = overlayRoot;
         const requestedExistingMarkerId = pendingExistingMarkerId;
         const loadingOperation = captureArOperationContext();

@@ -1,5 +1,4 @@
 const CAMERA_SAFETY_ACK_KEY = 'nourishlandxr.camera-safety-ack.v1';
-const FULLSCREEN_GUIDANCE_SEEN_KEY = 'nourishlandxr.fullscreen-guidance-seen.v1';
 
 function storageOrDefault(storage) {
     return storage || globalThis.localStorage;
@@ -21,14 +20,6 @@ export function hasArCameraSafetyAcknowledgement(storage) {
 
 export function acknowledgeArCameraSafety(storage) {
     writeFlag(CAMERA_SAFETY_ACK_KEY, storage);
-}
-
-export function hasArFullscreenGuidanceBeenSeen(storage) {
-    return readFlag(FULLSCREEN_GUIDANCE_SEEN_KEY, storage);
-}
-
-export function markArFullscreenGuidanceSeen(storage) {
-    writeFlag(FULLSCREEN_GUIDANCE_SEEN_KEY, storage);
 }
 
 export const AR_CAMERA_SAFETY_COPY = Object.freeze({
@@ -55,53 +46,6 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
         finally { button.disabled = false; }
     });
     app.querySelector('[data-ar-safety-cancel]')?.addEventListener('click', () => onCancel?.());
-}
-
-let activeGuidance = null;
-
-function removeFullscreenGuidance() {
-    activeGuidance?.timer && clearTimeout(activeGuidance.timer);
-    activeGuidance?.clearanceTimer && clearTimeout(activeGuidance.clearanceTimer);
-    activeGuidance?.element?.remove();
-    activeGuidance = null;
-    document.body?.classList.remove('ar-browser-overlay-clearance');
-}
-
-export function dismissArFullscreenGuidance() {
-    removeFullscreenGuidance();
-}
-
-export function showArFullscreenGuidance(root, { force = false } = {}) {
-    if (!root || (!force && hasArFullscreenGuidanceBeenSeen())) return null;
-    removeFullscreenGuidance();
-    if (!force) markArFullscreenGuidanceSeen();
-    const element = document.createElement('aside');
-    element.className = 'nxr-ar-fullscreen-guidance';
-    element.setAttribute('role', 'status');
-    element.setAttribute('aria-live', 'polite');
-    element.innerHTML = `<span class="nxr-ar-guidance-arrow" aria-hidden="true">→</span><span><strong>Swipe the browser message right</strong><small>to clear your controls.</small></span><button type="button" aria-label="Dismiss AR fullscreen guidance">×</button>`;
-    root.append(element);
-    document.body?.classList.add('ar-browser-overlay-clearance');
-    const dismiss = () => {
-        if (element.classList.contains('is-dismissing')) return;
-        element.classList.add('is-dismissing');
-        setTimeout(() => {
-            if (activeGuidance?.element === element) {
-                element.remove();
-                activeGuidance.element = null;
-            }
-        }, 220);
-    };
-    element.addEventListener('click', dismiss, { once: true });
-    const timer = setTimeout(dismiss, 7000);
-    const clearanceTimer = setTimeout(() => {
-        if (activeGuidance?.element === element || activeGuidance?.element === null) {
-            document.body?.classList.remove('ar-browser-overlay-clearance');
-            if (activeGuidance) activeGuidance.clearanceTimer = null;
-        }
-    }, 7600);
-    activeGuidance = { element, timer, clearanceTimer };
-    return { dismiss };
 }
 
 export function showArSafetyDialog(root) {

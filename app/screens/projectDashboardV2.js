@@ -5,10 +5,6 @@ const encoded = value => encodeURIComponent(String(value ?? ''));
 const markerIcon = type => ({ plant: '✦', note: '▤', area_checkpoint: '⌖', sub_checkpoint: '◆' }[type] || '•');
 const areaIcon = area => area.current ? '⌂' : '▧';
 
-function metric(label, value, icon, extraClass = '') {
-    return `<div class="nlxr-db-v2-metric ${extraClass}"><span class="nlxr-db-v2-metric-icon" aria-hidden="true">${icon}</span><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
-}
-
 function mapMarkup(model) {
     const areas = model.areas || [];
     const lines = model.connections.map(connection => {
@@ -42,34 +38,20 @@ function statusItem(label, value, action, extraClass = '') {
 }
 
 function projectStatusMarkup(model) {
-    const readiness = model.spatialReadiness || {};
-    const attention = Math.max(0, Number(readiness.totalTotems || 0) - Number(readiness.confirmedTotems || 0));
-    const alignedAreas = Number(readiness.areasWithConfirmedTotems || 0);
-    const areaTotal = model.areas.length;
     return `<section class="nlxr-db-v2-status-board" aria-labelledby="nlxrDbV2StatusTitle">
-        <header class="nlxr-db-v2-status-heading"><h2 id="nlxrDbV2StatusTitle">Project Status</h2><span>Tap a value to manage it</span></header>
+        <header class="nlxr-db-v2-status-heading"><h2 id="nlxrDbV2StatusTitle">Project Status</h2></header>
         <div class="nlxr-db-v2-status-main" role="group" aria-label="Project statistics">
             ${statusItem('Plants', model.totalPlants, 'plants')}
             ${statusItem('Placed', model.placedPlants, 'placed')}
             ${statusItem('Areas', model.areas.length, 'areas')}
             ${statusItem('Mapped', `${model.mappedPercentage}%`, 'mapped', 'is-percentage')}
         </div>
-        <div class="nlxr-db-v2-status-readiness" role="group" aria-label="Spatial readiness">
-            ${statusItem('Totems configured', readiness.confirmedTotems || 0, 'totems')}
-            ${statusItem('Need attention', attention, 'attention', attention ? 'is-attention' : '')}
-            ${statusItem('Areas aligned', `${alignedAreas}/${areaTotal}`, 'alignment')}
-            ${statusItem('Site image', readiness.siteImage ? 'Added' : 'Not added', 'site-image')}
-        </div>
     </section>`;
 }
 
 function toolsMarkup(model) {
     const projectId = encoded(model.project.id);
-    const firstPlant = model.plantEntries[0]?.marker?.id;
-    const pimAction = firstPlant
-        ? `window.openProjectEntry('${projectId}','${encoded(firstPlant)}',false,'dashboard',{workspace:'pim'})`
-        : '';
-    return `<section class="nlxr-db-v2-card nlxr-db-v2-tools-card" aria-labelledby="nlxrDbV2ToolsTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">⊞</span><h2 id="nlxrDbV2ToolsTitle">Project tools</h2></div></header><div class="nlxr-db-v2-tools-grid"><button type="button" onclick="window.renderFieldGuide('${projectId}',true)"><span aria-hidden="true">✦</span><strong>Plants</strong></button><button type="button" onclick="window.renderFieldGuide('${projectId}',true)"><span aria-hidden="true">▧</span><strong>Areas</strong></button><button type="button" ${pimAction ? `onclick="${pimAction}"` : 'data-v2-notice="pim"'}><span aria-hidden="true">⬡</span><strong>PIM</strong></button><button type="button" onclick="window.renderPrintCenter('${projectId}')"><span aria-hidden="true">↥</span><strong>Export</strong></button><button type="button" onclick="window.renderProjectGuide('${projectId}')"><span aria-hidden="true">?</span><strong>Project Guide</strong></button><button type="button" onclick="window.renderProjectSettings('${projectId}')"><span aria-hidden="true">⚙</span><strong>Project Settings</strong></button></div></section>`;
+    return `<section class="nlxr-db-v2-card nlxr-db-v2-tools-card" aria-labelledby="nlxrDbV2ToolsTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">⊞</span><h2 id="nlxrDbV2ToolsTitle">Project tools</h2></div></header><div class="nlxr-db-v2-tools-grid"><button type="button" onclick="window.renderPrintCenter('${projectId}')"><span aria-hidden="true">↥</span><strong>Print and Export</strong></button><button type="button" onclick="window.renderProjectGuide('${projectId}')"><span aria-hidden="true">?</span><strong>Project Guide</strong></button><button type="button" onclick="window.renderProjectSettings('${projectId}')"><span aria-hidden="true">⚙</span><strong>Project Settings</strong></button></div></section>`;
 }
 
 function areaSummaryMarkup(model) {
@@ -106,12 +88,13 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         const offlineStatus = typeof navigator !== 'undefined' && navigator.onLine === false
             ? '<p class="nlxr-db-v2-sync is-offline"><i aria-hidden="true"></i> Offline</p>'
             : '';
-        app.innerHTML = `<div class="screen nlxr-db-v2" data-project-id="${projectKey}">
+        app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
             <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="activity"><span aria-hidden="true">⌁</span> Activity</button></nav>
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
             <div class="nlxr-living-map-sheet" id="nlxrLivingMapSheet" hidden></div>
+            <footer class="nlxr-db-v2-close-project"><button type="button" data-v2-close-project>Close Project</button></footer>
         </div>`;
 
         const panel = app.querySelector('.nlxr-db-v2-mode-panel');
@@ -175,6 +158,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         app.querySelectorAll('[data-v2-mode]').forEach(button => button.addEventListener('click', () => {
             showMode(button.dataset.v2Mode);
         }));
+        app.querySelector('[data-v2-close-project]')?.addEventListener('click', () => window.renderDemoProjects());
         app.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => {
             const messages = {
                 pim: 'PIM opens after a Plant record exists. Add or import a Plant first.',
@@ -184,6 +168,6 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         }));
         bindPanel();
     } catch (error) {
-        app.innerHTML = `<div class="screen nlxr-db-v2"><div class="page-header"><button class="ghost" type="button" onclick="window.renderDemoProjects()">Back to Choose Project</button><p class="nlxr-db-v2-eyebrow">PROJECT</p><h1>Project Dashboard unavailable</h1><p class="subtitle">${escapeHtml(error.message)}</p><button type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Try again</button></div></div>`;
+        app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2"><div class="page-header"><button class="ghost" type="button" onclick="window.renderDemoProjects()">Back to Project Selection</button><p class="nlxr-db-v2-eyebrow">PROJECT</p><h1>Project Dashboard unavailable</h1><p class="subtitle">${escapeHtml(error.message)}</p><button type="button" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Try again</button></div></div>`;
     }
 }

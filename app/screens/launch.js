@@ -2,7 +2,7 @@ import { BUILD_INFO } from '../services/buildInfo.js';
 
 export function renderLaunchScreen(app) {
     app.innerHTML = `
-        <div class="screen launch-screen intro-launch">
+        <div class="screen app-surface app-surface-intro launch-screen intro-launch">
             <div class="page-header intro-heading">
                 <div><h1>NourishLand<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p><span class="version-badge welcome-version-badge" aria-label="Version and release channel">V${BUILD_INFO.version} · DEMO</span></div>
             </div>

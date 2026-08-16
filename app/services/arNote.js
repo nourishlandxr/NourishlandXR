@@ -3,7 +3,6 @@
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb } from './spatialSphereRenderer.js';
 import { requestImmersiveArSession } from './webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from './arScreenOrientation.js';
-import { dismissArFullscreenGuidance, showArFullscreenGuidance } from './arOnboarding.js';
 
 let session;
 let gl;
@@ -66,7 +65,6 @@ export async function startArNote(marker, profile) {
         const arSession = await requestImmersiveArSession(document.body);
         session = arSession.session;
         allowArScreenRotation();
-        showArFullscreenGuidance(document.body);
         const transparentSession = arSession.passthrough !== false;
 
         const canvas = document.createElement('canvas');
@@ -92,7 +90,6 @@ export async function startArNote(marker, profile) {
         panelTex = createPanelTexture(gl, drawMenuPanel);
 
         session.addEventListener('end', () => {
-            dismissArFullscreenGuidance();
             releaseArScreenRotation();
             document.getElementById('arCanvas')?.remove();
             destroySpatialSphereRenderer(gl, sphereRenderer);
@@ -126,7 +123,6 @@ export async function startArNote(marker, profile) {
 
     } catch (error) {
         console.error('[AR] error:', error);
-        dismissArFullscreenGuidance();
         releaseArScreenRotation();
         const activeSession = session;
         session = null;

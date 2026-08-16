@@ -1223,11 +1223,12 @@ export async function renderPlatformHome(app) {
         const name = PROJECT_NAMES[project.id] || project.name;
         return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><strong>${escapeHtml(name)}</strong></button>`;
     }).join('');
-    app.innerHTML = `<div class="screen platform-home creator-project-menu">
+    app.innerHTML = `<div class="screen app-surface app-surface-selection platform-home creator-project-menu">
         <div class="page-header">
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
-            <p class="welcome-label">Nourishland XR</p>
-            <h1>Home</h1>
+            <p class="welcome-label">PROJECT SELECTION</p>
+            <h1>Choose Project</h1>
+            <p class="subtitle">Open a project workspace or create a new one.</p>
         </div>
         <section class="project-section">
             <h2 class="project-section-title">Locations</h2>
