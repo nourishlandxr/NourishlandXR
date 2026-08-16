@@ -38,6 +38,7 @@ import { normalizePimDocument, pimAddNode } from '../services/pimModel.js';
 import { reviewPimImport, stagePimImport } from '../services/pimImportReview.js';
 import { pimRouteFromUrl, pimRouteUrl } from '../services/pimRouting.js';
 import { createAreaLink, normalizeAreaLinks } from '../services/areaLinks.js';
+import { renderProjectGuide } from './projectGuide.js';
 
 const PROJECT_NAMES = {
     Hillyards: 'Hillyards Food Forest',
@@ -667,11 +668,11 @@ function dashboardGuidance(projectId, { hasArea, startingConfigured, freshProjec
             action: `window.openCreatorArMode('${encoded(projectId)}')`
         },
         helpGuide: {
-            title: 'Suggest reading: Help Guide',
-            full: 'The Help Guide explains the main workflows, Areas, Totems, Plant Live Tags and the relationship between Web Hub and AR Mode.',
-            short: 'Open the Help Guide whenever you want a concise explanation of the project tools.',
-            actionLabel: 'Open Help Guide',
-            action: `window.renderPlatformComingSoon('Help Guide', 'creator')`
+            title: 'Suggest reading: Project Guide',
+            full: 'The Project Guide explains the main workflows, Areas, Totems, Plant Live Tags and the relationship between Web Hub and AR Mode.',
+            short: 'Open the Project Guide whenever you want a concise explanation of the project tools.',
+            actionLabel: 'Open Project Guide',
+            action: `window.renderProjectGuide('${encoded(projectId)}')`
         },
         contentMode: {
             title: 'About Content Mode',
@@ -1281,6 +1282,9 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
         </div>`;
         return;
     }
+    if (feature === 'Help Guide' || feature === 'Project Guide') {
+        return renderProjectGuide(app, '', returnTo);
+    }
     if (feature === 'Help Guide') {
         app.innerHTML = `<div class="screen help-guide-screen">
             <div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><p class="welcome-label">NourishlandXR</p><h1>Help Guide</h1><p class="subtitle">Fast answers while you create.</p></div>
@@ -1529,6 +1533,8 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                 notice: ''
             },
             openArAction: `window.openProjectArMode('${encoded(project.id)}','${encoded(activeAreaId)}')`,
+            livingAction: `window.renderLivingDashboard('${encoded(project.id)}')`,
+            projectGuideAction: `window.renderProjectGuide('${encoded(project.id)}')`,
             createAreaAction: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`,
             growthJourney,
             addUnplacedAction: `window.renderAddToLocation('${encoded(project.id)}')`,
@@ -1543,7 +1549,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             tools: [
                 { icon: 'settings', label: 'Project Settings', action: `window.renderProjectSettings('${encoded(project.id)}')` },
                 { icon: 'adjustments', label: 'NourishlandXR Settings', action: `window.renderPlatformComingSoon('Settings', 'creator')` },
-                { icon: 'help', label: 'Help Guide', action: `window.renderPlatformComingSoon('Help Guide', 'creator')` },
+                { icon: 'help', label: 'Project Guide', action: `window.renderProjectGuide('${encoded(project.id)}')` },
                 { icon: 'print', label: 'Printing options', description: 'Tags, lists, profiles and Map.', action: `window.renderPrintCenter('${encoded(project.id)}')` }
             ],
             latestEntries,
@@ -2237,6 +2243,10 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <h1>Project Settings</h1>
             <p class="subtitle">${escapeHtml(project.name)} · Project-wide configuration</p>
         </div>
+        <section class="panel dashboard-mode-setting" aria-labelledby="dashboardModeTitle">
+            <div class="section-heading-row"><div><h2 id="dashboardModeTitle">Dashboard preference</h2><p>Choose the calm spatial Living Dashboard or keep using the established Classic Dashboard. Both read the same project data.</p></div></div>
+            <div class="button-row"><button class="primary" type="button" onclick="window.renderLivingDashboard('${encoded(project.id)}')">Use Living Dashboard</button><button type="button" onclick="window.renderClassicDashboard('${encoded(project.id)}')">Open Classic Dashboard</button></div>
+        </section>
         <details class="panel project-name-setting settings-collapsible" open aria-labelledby="projectNameTitle">
             <summary>
                 <div class="section-heading-row">

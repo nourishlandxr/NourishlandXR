@@ -23,7 +23,10 @@ import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, re
 import { printCenterOutput, printPlantVirtualTag, renderPrintCenter, updatePrintRangeFields } from './screens/printCenter.js';
 import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, openProjectAreaAr, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from './screens/projectDashboard.js';
 import { startAreaNavigationAr } from './screens/explorer.js';
-import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard, renderProjectHome, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
+import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectDashboard as renderProjectDashboardV09Screen, renderProjectHome, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from './screens/projectDashboard.js';
+import { renderProjectDashboardV2 as renderProjectDashboardV2Screen } from './screens/projectDashboardV2.js';
+import { renderProjectGuide } from './screens/projectGuide.js';
+import { DASHBOARD_VERSIONS, readDashboardVersion, rememberDashboardVersion } from './services/dashboardVersion.js';
 import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from './services/persistence.js';
 import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from './services/apiClient.js';
 import { isProjectTutorialEnabled, recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from './services/tutorialProgress.js';
@@ -180,7 +183,7 @@ async function bootstrap() {
         if (!params.size && recovery?.projectId) {
             sessionStorage.removeItem(recoveryKey);
             setExperienceRole('creator');
-            await renderProjectDashboard(app, encodeURIComponent(recovery.projectId));
+            await window.renderLivingDashboard(encodeURIComponent(recovery.projectId));
             return;
         }
         const rememberedView = !params.size ? readCurrentView() : null;
@@ -190,10 +193,16 @@ async function bootstrap() {
             await renderDemoProjects(app);
             return;
         }
+        if ((rememberedView?.view === 'dashboard-v2' || rememberedView?.view === 'living-dashboard') && rememberedView.args?.[0]) {
+            setExperienceRole('creator');
+            replaceViewHistory('living-dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '', dashboardVersion: 'living' });
+            await window.renderLivingDashboard(rememberedView.args[0], rememberedView.args[1] || '', true);
+            return;
+        }
         if (rememberedView?.view === 'dashboard' && rememberedView.args?.[0]) {
             setExperienceRole('creator');
-            replaceViewHistory('dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '' });
-            await window.renderProjectDashboard(...rememberedView.args);
+            replaceViewHistory('living-dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '', dashboardVersion: 'living' });
+            await window.renderLivingDashboard(rememberedView.args[0], rememberedView.args[1] || '', true);
             return;
         }
         if (rememberedView?.view === 'print-center' && rememberedView.args?.[0]) {
@@ -292,11 +301,11 @@ window.renderProjectHome = async projectId => {
     setExperienceRole('creator');
     return renderProjectHome(app, projectId);
 };
-window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+async function renderProjectDashboardV09(projectId, projectName = '', fromHistory = false, loadingContext = 'opening') {
     if (window.__nourishlandSpatialWindow?.renderProjectDashboard) {
         return window.__nourishlandSpatialWindow.renderProjectDashboard(projectId);
     }
-    rememberCurrentView('dashboard', [projectId, projectName]);
+    rememberCurrentView('dashboard-classic', [projectId, projectName]);
     const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
     const gardenLoadingComments = [
         'Adding the trellis…',
@@ -330,8 +339,8 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         'Following the garden path…',
         'Giving the soil a moment…'
     ];
-    if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
-        history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName }, '', window.location.href);
+    if (!fromHistory && (!['dashboard-classic', 'dashboard'].includes(history.state?.nourishlandView) || history.state?.projectId !== projectId)) {
+        history.pushState({ nourishlandView: 'dashboard', dashboardMode: 'classic', projectId, projectName: resolvedName, dashboardVersion: 'classic' }, '', window.location.href);
     }
     app.innerHTML = `<div class="project-loading-screen" role="status" aria-live="polite">
         <div class="project-loading-mark" aria-hidden="true">◉</div>
@@ -349,15 +358,50 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
     }, 2200);
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try {
-        return await renderProjectDashboard(app, projectId);
+        return await renderProjectDashboardV09Screen(app, projectId);
     } finally {
         clearInterval(loadingCommentTimer);
     }
+}
+window.renderProjectDashboardV09 = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+    rememberDashboardVersion(DASHBOARD_VERSIONS.classic);
+    return renderProjectDashboardV09(projectId, projectName, fromHistory, loadingContext);
+};
+window.renderClassicDashboard = window.renderProjectDashboardV09;
+window.renderLivingDashboard = async (projectId, projectName = '', fromHistory = false) => {
+    rememberDashboardVersion(DASHBOARD_VERSIONS.living);
+    const args = [projectId, projectName];
+    rememberCurrentView('living-dashboard', args);
+    if (!fromHistory && (history.state?.nourishlandView !== 'living-dashboard' || history.state?.projectId !== projectId)) {
+        history.pushState({ nourishlandView: 'living-dashboard', projectId, projectName, viewArgs: args, dashboardVersion: 'living' }, '', window.location.href);
+    }
+    setExperienceRole('creator');
+    return renderProjectDashboardV2Screen(app, projectId);
+};
+// Legacy aliases keep existing deep links working while the product names the
+// new experience Living Dashboard and the fallback Classic Dashboard.
+window.renderProjectDashboardV2 = window.renderLivingDashboard;
+window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+    if (window.__nourishlandSpatialWindow?.renderProjectDashboard) {
+        return window.__nourishlandSpatialWindow.renderProjectDashboard(projectId);
+    }
+    if (readDashboardVersion() === DASHBOARD_VERSIONS.classic) {
+        return window.renderClassicDashboard(projectId, projectName, fromHistory, loadingContext);
+    }
+    return window.renderLivingDashboard(projectId, projectName, fromHistory);
+};
+window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
+    setExperienceRole('creator');
+    return renderProjectGuide(app, projectId, returnTo);
 };
 window.addEventListener('popstate', event => {
     if (isArModeActive()) return;
-    if (event.state?.nourishlandView === 'dashboard' && event.state.projectId) {
-        void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
+    if ((event.state?.nourishlandView === 'dashboard-v2' || event.state?.nourishlandView === 'living-dashboard') && event.state.projectId) {
+        void window.renderLivingDashboard(event.state.projectId, event.state.projectName || '', true);
+        return;
+    }
+    if ((event.state?.nourishlandView === 'dashboard-classic' || event.state?.nourishlandView === 'dashboard') && event.state.projectId) {
+        void window.renderClassicDashboard(event.state.projectId, event.state.projectName || '', true);
         return;
     }
     if (event.state?.nourishlandView === 'print-center' && event.state.viewArgs?.[0]) {
@@ -705,7 +749,7 @@ window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = ''
             onContinue: () => startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId),
             onCancel: () => decodedReturnContext === 'dashboard' && decodedAreaId
                 ? renderProjectAreaDashboard(app, encodeURIComponent(decodedProjectId), encodeURIComponent(decodedAreaId))
-                : renderProjectDashboard(app, encodeURIComponent(decodedProjectId))
+                : renderProjectDashboardV09Screen(app, encodeURIComponent(decodedProjectId))
         });
         return true;
     }
