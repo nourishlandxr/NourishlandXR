@@ -123,7 +123,7 @@ export function renderProjectEntry(config) {
             <button class="global-ar-action dashboard-open-ar ar-square-action" type="button" aria-label="Open project in AR" onclick="${config.openArAction}">
                 <strong id="openArTitle">AR</strong>
             </button>
-            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Web Hub'}"><span aria-hidden="true">${dashboardIcon('webhub')}</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'WEB HUB'}</strong></button>
+            <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Content'}"><span aria-hidden="true">${dashboardIcon('webhub')}</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'CONTENT'}</strong></button>
         </section>
 
         <div class="${spotlightTarget === 'contentModes' ? 'tutorial-spotlight-target' : ''}">${contentSections}</div>

@@ -27,10 +27,9 @@ function mapMarkup(model) {
     </div>`;
 }
 
-function activityMarkup(model, heading = 'Recent activity') {
+function activityMarkup(model) {
     const rows = (model.recentActivity || []).map(item => `<li><span class="nlxr-db-v2-activity-icon" aria-hidden="true">${markerIcon(item.type)}</span><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></span><i aria-hidden="true">•</i></li>`).join('');
-    const viewAll = heading === 'Recent activity' ? '<button type="button" class="nlxr-db-v2-text-action" data-v2-mode="activity">View all</button>' : '';
-    return `<section class="nlxr-db-v2-card nlxr-db-v2-activity-card" aria-labelledby="nlxrDbV2ActivityTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">◷</span><h2 id="nlxrDbV2ActivityTitle">${heading}</h2></div>${viewAll}</header>${rows ? `<ul class="nlxr-db-v2-activity-list">${rows}</ul>` : '<p class="nlxr-db-v2-empty">No activity has been recorded yet.</p>'}</section>`;
+    return `<section class="nlxr-db-v2-card nlxr-db-v2-activity-card" aria-labelledby="nlxrDbV2ActivityTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">◷</span><h2 id="nlxrDbV2ActivityTitle">Recent activity</h2></div></header>${rows ? `<ul class="nlxr-db-v2-activity-list">${rows}</ul>` : '<p class="nlxr-db-v2-empty">No activity has been recorded yet.</p>'}</section>`;
 }
 
 function statusItem(label, value, action, extraClass = '') {
@@ -75,7 +74,6 @@ function mapWorkspaceMarkup(model) {
 
 function previewModeMarkup(model, mode) {
     if (mode === 'map') return mapWorkspaceMarkup(model);
-    if (mode === 'activity') return activityMarkup(model, 'Activity');
     return overviewMarkup(model);
 }
 
@@ -90,7 +88,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             : '';
         app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
             <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div></header>
-            <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="activity"><span aria-hidden="true">⌁</span> Activity</button></nav>
+            <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">☰</span> Content</button></nav>
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
             <div class="nlxr-living-map-sheet" id="nlxrLivingMapSheet" hidden></div>
@@ -156,6 +154,10 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             }));
         };
         app.querySelectorAll('[data-v2-mode]').forEach(button => button.addEventListener('click', () => {
+            if (button.dataset.v2Mode === 'content') {
+                window.renderFieldGuide(projectKey, true);
+                return;
+            }
             showMode(button.dataset.v2Mode);
         }));
         app.querySelector('[data-v2-close-project]')?.addEventListener('click', () => window.renderDemoProjects());

@@ -136,7 +136,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.match(styles, /\.dashboard-ar-path \{ display: grid; grid-template-columns:/);
     assert.doesNotMatch(entrySource, />Work Mode</);
     assert.doesNotMatch(entrySource, />Quick Access</);
-    assert.match(entrySource, /'WEB HUB'/);
+    assert.match(entrySource, /'CONTENT'/);
     assert.match(source, /openArAction/);
     assert.match(source, /addUnplacedAction/);
     assert.match(source, /renderContentMode/);
@@ -251,7 +251,7 @@ test('creator dashboard prioritizes Areas and Open AR while optional features st
     assert.doesNotMatch(dashboardHtml, /onclick="undefined"/);
 });
 
-test('Create and Manage opens saved projects while each project owns its Web Hub', () => {
+test('Create and Manage opens saved projects while Content belongs to the project dashboard', () => {
     const dashboardSource = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const mainSource = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
     const fieldGuideSource = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
@@ -261,8 +261,8 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(dashboardSource, /window\.renderProjectForm/);
     assert.doesNotMatch(dashboardSource, /export async function renderWebHubHome/);
     assert.doesNotMatch(mainSource, /window\.renderWebHubHome/);
-    assert.match(dashboardSource, /<strong>Web Hub<\/strong>/);
-    assert.match(fieldGuideSource, /const guideTitle = creator \? 'Web Hub' : 'Field Guide'/);
+    assert.match(dashboardSource, /<strong>Content<\/strong>/);
+    assert.match(fieldGuideSource, /const guideTitle = creator \? 'Content' : 'Field Guide'/);
     assert.match(fieldGuideSource, /loadSitePlaces\(project\.id, site\.id\)\.catch\(\(\) => \[\]\)/);
     assert.doesNotMatch(fieldGuideSource, /WEB HUB LOCATION/);
     assert.doesNotMatch(fieldGuideSource, /ADD TO WEB HUB/);
@@ -274,9 +274,9 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(styles, /\.field-guide-tool \.field-guide-summary > span \{[\s\S]*display:flex[\s\S]*min-height:32px/);
     assert.match(styles, /\.field-guide-tool \.field-guide-map-action \{[\s\S]*min-height:32px/);
     assert.match(fieldGuideSource, /field-guide-primary-actions/);
-    assert.match(fieldGuideSource, /applyCreatorWebHubCopy/);
-    assert.match(fieldGuideSource, /Project Home/);
-    assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
+    assert.match(fieldGuideSource, /applyCreatorContentCopy/);
+    assert.match(fieldGuideSource, /fieldGuideEssentialsTitle">Content/);
+    assert.match(fieldGuideSource, /field-guide-dashboard-nav/);
     assert.match(fieldGuideSource, /Results/);
     assert.match(fieldGuideSource, /field-guide-all-plants-count/);
     assert.match(fieldGuideSource, /app\.querySelector\('#fieldGuideCount'\)\?\.remove\(\)/);
@@ -297,7 +297,7 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.match(fieldGuideSource, /field-guide-hub-redesign/);
     assert.match(fieldGuideSource, /field-guide-spatial-setup/);
     assert.match(fieldGuideSource, /project-overview-header/);
-    assert.match(fieldGuideSource, /map-button/);
+    assert.match(fieldGuideSource, /field-guide-dashboard-nav/);
     assert.match(fieldGuideSource, /field-guide-management-row/);
     assert.doesNotMatch(fieldGuideSource, /Map · \$\{placedCount\} elements · \$\{guide\.totems\.length\} totems · \$\{anchoredCount\} anchors/);
     assert.match(fieldGuideSource, /field-guide-view-all/);
@@ -311,16 +311,16 @@ test('Create and Manage opens saved projects while each project owns its Web Hub
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
-    assert.match(fieldGuideSource, /<h1>Web Hub<\/h1>/);
+    assert.match(fieldGuideSource, /aria-current="page"><span aria-hidden="true">☰<\/span> Content/);
     assert.match(fieldGuideSource, /<strong>\$\{places\.length\}<\/strong> Areas/);
     assert.match(fieldGuideSource, /<strong>\$\{guide\.totems\.length\}<\/strong> Totems/);
 });
 
-test('Web Hub redesign keeps a compact mobile grid and expands into desktop columns', () => {
+test('Content workspace keeps a compact mobile grid and expands into desktop columns', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /field-guide-hub-redesign/);
-    assert.match(source, /Project Home/);
+    assert.match(source, /fieldGuideEssentialsTitle">Content/);
     assert.match(source, /<strong>Add plant<\/strong>/);
     assert.match(source, /<strong>Add area<\/strong>/);
     assert.match(source, /Spatial setup/);

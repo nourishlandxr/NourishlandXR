@@ -8888,6 +8888,21 @@ body:has(.field-guide-hub-redesign) {
     padding-top: 24px;
 }
 
+.field-guide-hub-redesign > .field-guide-dashboard-nav {
+    --v2-line: rgba(45, 88, 56, .16);
+    margin-top: 12px;
+}
+
+.location-map-screen.nlxr-db-v2 .location-map-workspace-heading {
+    padding: 4px 0 0;
+}
+
+.location-map-screen.nlxr-db-v2 .location-map-workspace-heading h2 {
+    margin: 0;
+    color: var(--v2-ink);
+    font-size: clamp(1.35rem, 4vw, 1.8rem);
+}
+
 .field-guide-hub-redesign .field-guide-essentials,
 .field-guide-hub-redesign .field-guide-primary-actions,
 .field-guide-hub-redesign .field-guide-areas-board,

@@ -51,5 +51,8 @@ test('Project Dashboard keeps conceptual mapping honest and relationship-driven'
     assert.doesNotMatch(screenSource, /Conceptual layout|Spatial Readiness|SPATIAL ORGANISATION|Spatial Organization/);
     assert.match(screenSource, /Add Area/);
     assert.match(screenSource, /Project Map/);
+    assert.match(screenSource, /data-v2-mode="content"/);
+    assert.doesNotMatch(screenSource, /data-v2-mode="activity"/);
+    assert.match(screenSource, /Recent activity/);
     assert.doesNotMatch(screenSource, /Living Dashboard|Classic Dashboard|NourishlandXR V1/);
 });

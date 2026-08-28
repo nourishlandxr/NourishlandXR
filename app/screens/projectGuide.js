@@ -13,7 +13,7 @@ const GUIDE_FAQ = Object.freeze([
     ['Projects and Areas', 'What does “unplaced” mean?', 'An unplaced plant exists in the project but does not yet have a confirmed location in an area or AR scene.'],
     ['Mapping and Export', 'Can project information be exported?', 'Project and plant data can be prepared for supported export formats. Future mapping exports may include spatial coordinates where reliable position data exists.'],
     ['Mapping and Export', 'What is the Project Map?', 'The Project Map is the project’s spatial workspace: it connects areas, plants, placement progress and confirmed spatial relationships in one place.'],
-    ['Troubleshooting', 'What should I do if a feature is unavailable?', 'Use the established Web Hub, Area, Plant and AR actions for confirmed work. Available, Experimental and Planned labels identify what is operational.']
+    ['Troubleshooting', 'What should I do if a feature is unavailable?', 'Use the established Content, Area, Plant and AR actions for confirmed work. Available, Experimental and Planned labels identify what is operational.']
 ]);
 
 const GUIDE_CATEGORIES = Object.freeze(['All', 'Getting Started', 'Projects and Areas', 'Plants and PIM', 'AR Mode', 'Totems and Alignment', 'Mapping and Export', 'Troubleshooting']);

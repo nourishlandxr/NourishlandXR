@@ -1434,7 +1434,7 @@ function openSpatialWebWindow() {
             const areaId = spatialWebAreaId();
             return areaId
                 ? renderIntoWindow(renderProjectAreaDashboard, encodedProjectId, encodeURIComponent(areaId))
-                : renderIntoWindow(() => { content.innerHTML = '<div class="screen"><div class="panel"><h2>No named Area selected</h2><p>Select an Area in the Web Hub first, then reopen this spatial window.</p></div></div>'; });
+                : renderIntoWindow(() => { content.innerHTML = '<div class="screen"><div class="panel"><h2>No named Area selected</h2><p>Select an Area in Content first, then reopen this spatial window.</p></div></div>'; });
         }
         if (name === 'selected') {
             if (selectedRecord?.marker?.type === 'area_checkpoint') {
@@ -2190,7 +2190,7 @@ async function openUnplacedBag() {
             return entries.filter(Boolean);
         }));
         const items = groups.flat();
-        bag.innerHTML = `<div><strong>Unplaced content</strong><button type="button" data-ar-close-bag aria-label="Close unplaced content">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.isHome ? DEFAULT_HOME_AREA_NAME : item.areaName || 'Area')}</small></span></button>`).join('')}</div>` : '<p>No unplaced content. Save a Plant or Note in Web Hub, then return here to position it.</p>'}`;
+        bag.innerHTML = `<div><strong>Unplaced content</strong><button type="button" data-ar-close-bag aria-label="Close unplaced content">&times;</button></div>${items.length ? `<div class="creator-ar-bag-list">${items.map((item, index) => `<button type="button" data-ar-bag-item="${index}">${markerIcon(item.marker.type)} <span><strong>${escapeHtml(item.marker.name)}</strong><small>${readyPlacementLabel(item.marker.type)} · ${escapeHtml(item.isHome ? DEFAULT_HOME_AREA_NAME : item.areaName || 'Area')}</small></span></button>`).join('')}</div>` : '<p>No unplaced content. Save a Plant or Note in Content, then return here to position it.</p>'}`;
         bag.querySelector('[data-ar-close-bag]')?.addEventListener('click', closeUnplacedBag);
         bag.querySelectorAll('[data-ar-bag-item]').forEach(button => button.addEventListener('click', () => {
             const item = items[Number(button.dataset.arBagItem)];

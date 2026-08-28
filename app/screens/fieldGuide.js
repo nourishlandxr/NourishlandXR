@@ -242,13 +242,11 @@ export async function renderFieldGuideProjects(app) {
     app.innerHTML = `<div class="screen field-guide"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">Back</button><p class="welcome-label">Field Guide</p><h1>Choose a location</h1><p class="subtitle">Browse plants, maps and information.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderFieldGuide('${encoded(project.id)}')"><strong>${escapeHtml(project.name)} Field Guide</strong><span>Location notebook and plant records</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
 }
 
-function applyCreatorWebHubCopy(app) {
+function applyCreatorContentCopy(app) {
     const header = app.querySelector('.field-guide-header');
-    const title = header?.querySelector('h1');
-    if (title) title.textContent = 'Web Hub';
     header?.querySelector('.field-guide-header-subtitle')?.remove();
     const snapshotTitle = app.querySelector('#fieldGuideEssentialsTitle');
-    if (snapshotTitle) snapshotTitle.textContent = 'Project Home';
+    if (snapshotTitle) snapshotTitle.textContent = 'Content';
     const areasTitle = app.querySelector('#fieldGuideAreasTitle');
     if (areasTitle) areasTitle.textContent = 'Areas';
     const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
@@ -398,7 +396,7 @@ function applyCreatorWebHubCopy(app) {
             openGlobalProfile = result;
             const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
             if (!siteGroup?.site?.id || !currentGuide?.creator) {
-                if (globalStatus) globalStatus.textContent = 'Open this from a Creator Web Hub to create an NLXR plant profile.';
+                if (globalStatus) globalStatus.textContent = 'Open this from a project Content workspace to create an NLXR plant profile.';
                 return;
             }
             button.textContent = 'Opening import page…';
@@ -459,7 +457,7 @@ function applyCreatorWebHubCopy(app) {
                     }));
                     globalResults.querySelector('[data-global-allocation-continue]')?.addEventListener('click', async event => {
                         if (!siteGroup?.site?.id || !currentGuide?.creator) {
-                            if (allocationStatus) allocationStatus.textContent = 'Open this from a Creator Web Hub to create an NLXR plant profile.';
+                            if (allocationStatus) allocationStatus.textContent = 'Open this from a project Content workspace to create an NLXR plant profile.';
                             return;
                         }
                         const visibleRows = [...globalResults.querySelectorAll('[data-global-allocation-fact]')];
@@ -582,7 +580,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
     try {
         const guide = creator ? await loadCreatorGuide(projectId) : await loadGuide(projectId);
         const backAction = creator ? `window.renderProjectDashboard('${encoded(projectId)}')` : `window.renderVisitorLocationIntro('${encoded(projectId)}')`;
-        const guideTitle = creator ? 'Web Hub' : 'Field Guide';
+        const guideTitle = creator ? 'Content' : 'Field Guide';
         const allPlaces = guide.siteGroups.flatMap(group => group.placeGroups.map(placeGroup => ({ ...placeGroup.place, siteName: group.site.name, siteId: group.site.id, count: placeGroup.plants.length, markerCount: placeGroup.markerCount, placedCount: placeGroup.placedCount, placedItems: placeGroup.placedItems, anchoredCount: placeGroup.anchoredCount, anchoredItems: placeGroup.anchoredItems, totems: placeGroup.totems, hasTotem: placeGroup.hasTotem, hasStartingPoint: placeGroup.hasStartingPoint })));
         const homePlace = allPlaces.find(isDefaultHomeArea) || null;
         const places = allPlaces;
@@ -671,10 +669,10 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
                 </div>
             </section>`;
             app.innerHTML = `<div class="screen field-guide field-guide-hub field-guide-tool field-guide-hub-redesign analog-print-page">
-                <header class="page-header field-guide-header"><div><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>Web Hub</h1></div></header>
+                <header class="page-header field-guide-header"><div><p class="print-kicker">PROJECT</p><h1>${escapeHtml(guide.project.name)}</h1></div></header>
+                <nav class="nlxr-db-v2-mode-nav field-guide-dashboard-nav" aria-label="Dashboard views"><button type="button" onclick="window.renderProjectDashboard('${encoded(guide.project.id)}')"><span aria-hidden="true">✦</span> Overview</button><button type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')"><span aria-hidden="true">▧</span> Map</button><button type="button" class="is-active" aria-current="page"><span aria-hidden="true">☰</span> Content</button></nav>
                 <main class="field-guide-workspace">
-                    <section class="field-guide-essentials field-guide-project-home" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading project-overview-header"><div><p class="field-guide-section-kicker">Workspace</p><h2 id="fieldGuideEssentialsTitle">Project Home</h2></div><button class="field-guide-map-action map-button" type="button" aria-label="Open project Map" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')">${webHubIcon('map')}<span>Map</span></button></div><p class="field-guide-project-summary"><strong>${places.length}</strong> area${places.length === 1 ? '' : 's'} <span aria-hidden="true">·</span> <strong>${guide.plants.length}</strong> plant${guide.plants.length === 1 ? '' : 's'}</p></section>
-                    <section class="field-guide-map-tools" aria-labelledby="fieldGuideMapToolsTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Spatial overview</p><h2 id="fieldGuideMapToolsTitle">Map</h2><p>View Areas, paths and placed content together.</p></div></div><div class="field-guide-secondary-tool-list field-guide-management-list"><button class="field-guide-management-row" type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')"><span class="field-guide-management-row-icon">${webHubIcon('map')}</span><span class="field-guide-management-row-content"><strong>Open Site Map</strong><small>Review the landscape and its Areas without using the camera.</small></span><b class="field-guide-management-row-action">Open <span class="field-guide-management-row-chevron" aria-hidden="true">${webHubIcon('chevron')}</span></b></button><p class="field-guide-section-intro">Map options include uploading a site plan or aerial photo, linking Areas to positions on the map, and printing the map.</p></div></section>
+                    <section class="field-guide-essentials field-guide-project-home" aria-labelledby="fieldGuideEssentialsTitle"><div class="field-guide-essentials-heading project-overview-header"><div><p class="field-guide-section-kicker">Workspace</p><h2 id="fieldGuideEssentialsTitle">Content</h2></div></div><p class="field-guide-project-summary"><strong>${places.length}</strong> area${places.length === 1 ? '' : 's'} <span aria-hidden="true">·</span> <strong>${guide.plants.length}</strong> plant${guide.plants.length === 1 ? '' : 's'}</p></section>
                     <section class="field-guide-primary-actions" aria-label="Add to project">${creationBoard}</section>
                     <section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Workspace structure</p><h2 id="fieldGuideAreasTitle">Areas</h2></div>${places.length > 1 ? `<button class="field-guide-view-all" type="button" onclick="window.filterFieldGuidePlace('')">View all</button>` : ''}</div><p class="field-guide-section-intro">Home is the default workspace. Open an Area to work in its saved layout.</p><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>
                     <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Knowledge records</p><h2 id="fieldGuidePlantSearchTitle">Plants</h2><p>Search saved plants, then switch to Global for reference records.</p></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div><details class="field-guide-advanced-search"><summary>Filters</summary><div class="field"><label for="fieldGuideLayer">Layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></details></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
@@ -683,18 +681,18 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
                     ${virtualTagsSection}
                     <details class="field-guide-area-help"><summary aria-label="About Areas">?</summary><p>Each Area keeps its own Plants and spatial markers. Home is the unassigned starting space.</p></details>
                 </main>
-                <footer class="analog-print-footer field-guide-redesign-footer"><button class="ghost analog-navigation" type="button" onclick="${backAction}">Back to Dashboard</button></footer>
+                <footer class="analog-print-footer field-guide-redesign-footer"><button class="ghost analog-navigation" type="button" onclick="${backAction}">Back to Overview</button></footer>
             </div>`;
-            // Keep the footer navigation in the Web Hub. Only the print action
+            // Keep the footer navigation in the Content workspace. Only the print action
             // is removed from the live screen; removing its parent footer
             // leaves users with no route back to the project dashboard.
             app.querySelectorAll('.analog-print-button').forEach(button => button.remove());
-            applyCreatorWebHubCopy(app);
+            applyCreatorContentCopy(app);
             applyFieldGuideFilter('');
             return;
         }
         app.innerHTML = `<div class="screen field-guide field-guide-hub analog-print-page"><div class="page-header field-guide-header"><p class="print-kicker">${escapeHtml(guide.project.name).toUpperCase()}</p><h1>${guideTitle}</h1><p class="subtitle">${creator ? 'Manage Home, Plants, Areas, Totem Markers and their spatial information.' : 'Find, filter and open Plants, Areas and Totem Markers.'}</p><div class="field-guide-summary"><span><strong>${guide.plants.length}</strong> Plants</span><span><strong>${places.length}</strong> Areas</span><span><strong>${guide.totems.length}</strong> Totem Markers</span>${unassignedCount ? `<span class="is-unassigned"><strong>${unassignedCount}</strong> In Unassigned Folder</span>` : ''}</div></div>${creationBoard}<section class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Deep search</label><input id="fieldGuideSearch" type="search" placeholder="Plants, Totem Markers, Areas, layers, uses or notes…" oninput="window.applyFieldGuideFilter()" /></div><div class="field"><label for="fieldGuideLayer">Forest layer</label><select id="fieldGuideLayer" onchange="window.applyFieldGuideFilter()"><option value="">All layers</option>${layers.map(layer => `<option value="${escapeHtml(layer.toLowerCase())}">${escapeHtml(layer)}</option>`).join('')}</select></div></section><section><div class="field-guide-section-heading"><div><h2>Areas</h2><p>${creator ? 'Home is the default. Open a named Area to work in its saved layout.' : 'Choose an Area to filter its records below.'}</p></div><button type="button" onclick="${locationResetAction}">${creator ? DEFAULT_HOME_AREA_NAME : 'Show all'}</button></div><div class="field-guide-place-cloud">${areaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>${totemCards ? `<section><div class="field-guide-section-heading"><div><h2>Totem Markers</h2><p>Area markers and their information boards.</p></div></div><div class="field-guide-totem-grid">${totemCards}</div></section>` : ''}${totemLinks.length || places.some(place => place.hasTotem) ? totemDiagram : ''}<section><div class="field-guide-section-heading"><div><h2>Plant records</h2><p id="fieldGuideCount">${creator ? homeCount : guide.plants.length} plant${(creator ? homeCount : guide.plants.length) === 1 ? '' : 's'}</p></div></div><div class="analog-plant-list field-guide-plant-grid">${guide.plants.map(plant => `<button class="analog-plant-row field-guide-plant-card" data-field-guide-plant data-place="${escapeHtml(plant.placeId)}" data-layer="${escapeHtml(String(plant.layer || '').toLowerCase())}" data-search="${escapeHtml([plant.commonName, plant.scientificName, plant.family, plant.origin, plant.plantType, plant.layer, Array.isArray(plant.uses) ? plant.uses.join(' ') : plant.uses, plant.propagation, plant.localNotes, plant.summary, plant.placeId, plant.placeName].join(' ').toLowerCase())}" onclick="window.openFieldGuidePlant('${encoded(plant.instanceId)}')"><span class="field-guide-card-icon" aria-hidden="true">🌿</span><span><strong>${escapeHtml(plant.commonName || 'Unnamed plant')}</strong><small><em>${escapeHtml(plant.scientificName || 'Scientific name not entered')}</em></small><small>${escapeHtml(plant.placeName === 'Unassigned' ? 'Unassigned Folder · Area not assigned' : plant.placeName || plant.placeId)}${plant.layer ? ` · ${escapeHtml(plant.layer)}` : ''}</small></span></button>`).join('') || '<div class="panel"><p>No plant records yet.</p></div>'}</div></section><div class="analog-print-footer"><button class="analog-print-button" onclick="window.print()">Print</button><button class="ghost analog-navigation" onclick="${backAction}">Back</button></div></div>`;
-        // Keep the footer navigation in the Web Hub. Only the print action is
+        // Keep the footer navigation in the Content workspace. Only the print action is
         // removed from the live screen so Back remains available.
         app.querySelectorAll('.analog-print-button').forEach(button => button.remove());
         app.querySelectorAll('.field-guide-area-card').forEach((card, index) => {
@@ -736,7 +734,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
             searchDeck.appendChild(advanced);
         }
     } catch (error) {
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${creator ? `window.renderProjectDashboard('${encoded(projectId)}')` : 'window.renderFieldGuideProjects()'}">Back</button><h1>${creator ? 'Web Hub' : 'Field Guide'} unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
+        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="${creator ? `window.renderProjectDashboard('${encoded(projectId)}')` : 'window.renderFieldGuideProjects()'}">Back</button><h1>${creator ? 'Content' : 'Field Guide'} unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
 }
 
@@ -789,7 +787,7 @@ export function openFieldGuidePlant(app, encodedInstanceId) {
     const instanceId = decodeURIComponent(encodedInstanceId);
     const plant = currentGuide?.plants.find(item => item.instanceId === instanceId);
     if (!plant) throw new Error('Plant is unavailable.');
-    // Creator Web Hub plant links use the unified Plant Profile. The old
+    // Creator Content plant links use the unified Plant Profile. The old
     // printable Field Guide page is visitor-facing only; leaving it in the
     // creator path produced the ghost "FIELD GUIDE" surface with dead boxes.
     if (currentGuide.creator && plant.markerId && typeof window.openProjectEntry === 'function') {
