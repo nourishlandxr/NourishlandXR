@@ -14,7 +14,15 @@ const providers = Object.freeze([
 ]);
 
 const text = value => String(value ?? '').trim();
-const searchKey = result => text(result?.scientificName || result?.canonicalName).toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const searchKey = result => {
+    const provider = text(result?.source || result?.sourceLabel).toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const taxon = text(result?.scientificName || result?.canonicalName).toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const externalId = text(result?.externalId).toLocaleLowerCase();
+    // Keep source-specific records separate. ALA, Daleys, GBIF and iNaturalist
+    // often describe the same taxon, but each record carries different facts,
+    // links and extraction opportunities for the user.
+    return [provider, taxon || externalId].filter(Boolean).join(':');
+};
 
 export function createPlantProvenance(result, retrievedAt = new Date().toISOString()) {
     return {

@@ -31,15 +31,22 @@ test('iNaturalist plant search keeps plant taxa and photo provenance', async () 
     assert.equal(results[0].scientificName, 'Moringa oleifera');
 });
 
-test('global plant search combines APIs, de-duplicates taxa and keeps provenance', async () => {
+test('global plant search combines APIs, preserves source-specific records and keeps provenance', async () => {
     clearGbifPlantSearchCache();
     clearINaturalistPlantSearchCache();
     const results = await searchPlantSources('pea', { fetchImpl: async url => {
         if (url.includes('api.ala.org.au')) return responseFor({ autoCompleteList: [{ name: 'Cajanus cajan', commonName: 'Pigeon Pea', guid: 'https://id.biodiversity.org.au/node/apni/1', kingdom: 'Plantae' }] });
+        if (url.includes('plant-search/daleys')) return responseFor({ results: [{ source: 'daleys', sourceLabel: 'Daleys Fruit Tree Nursery', externalId: 'daleys:123', scientificName: 'Cajanus cajan', commonName: 'Pigeon Pea' }] });
         if (url.includes('api.gbif.org')) return responseFor([{ key: 123, scientificName: 'Cajanus cajan', kingdom: 'Plantae' }, { key: 124, scientificName: 'Pisum sativum', kingdom: 'Plantae' }]);
         return responseFor({ results: [{ id: 456, name: 'Moringa oleifera', iconic_taxon_name: 'Plantae' }] });
     } });
-    assert.deepEqual(results.map(result => result.scientificName), ['Cajanus cajan', 'Pisum sativum', 'Moringa oleifera']);
+    assert.deepEqual(results.map(result => `${result.source}:${result.scientificName}`), [
+        'ala:Cajanus cajan',
+        'daleys:Cajanus cajan',
+        'gbif:Cajanus cajan',
+        'gbif:Pisum sativum',
+        'inaturalist:Moringa oleifera'
+    ]);
     assert.deepEqual(createPlantProvenance(results[0], '2026-08-10T00:00:00.000Z'), {
         provider: 'Atlas of Living Australia',
         providerId: 'https://id.biodiversity.org.au/node/apni/1',

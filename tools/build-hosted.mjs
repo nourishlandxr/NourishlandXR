@@ -82,7 +82,13 @@ console.log(`Frontend: ${webDist}`);
 console.log(`Build: ${buildVersion}`);
 if (!frontendOnly) {
     recreateDirectory(apiDist);
-    fs.copyFileSync(path.join(root, 'tools', 'persistence-server.mjs'), path.join(apiDist, 'server.mjs'));
+    const apiServer = fs.readFileSync(path.join(root, 'tools', 'persistence-server.mjs'), 'utf8')
+        .replaceAll("../app/services/", './app/services/');
+    fs.writeFileSync(path.join(apiDist, 'server.mjs'), apiServer);
+    const apiServices = ['spatialDataModel.js', 'daleysPlant.js', 'pigeonPeaTemplate.js', 'pigeonPeaExample.js', 'pigeonPeaPim.js', 'pimModel.js', 'pimCompass.js'];
+    const apiServiceDist = path.join(apiDist, 'app', 'services');
+    fs.mkdirSync(apiServiceDist, { recursive: true });
+    apiServices.forEach(fileName => fs.copyFileSync(path.join(root, 'app', 'services', fileName), path.join(apiServiceDist, fileName)));
     fs.writeFileSync(path.join(apiDist, 'package.json'), JSON.stringify({
         name: 'nourishland-xr-api',
         private: true,
