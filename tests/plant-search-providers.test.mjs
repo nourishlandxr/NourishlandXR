@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildGbifSearchUrl, clearGbifPlantSearchCache, normalizeGbifPlantResult, searchGbifPlants } from '../app/services/gbifPlantSearch.js';
 import { buildINaturalistSearchUrl, clearINaturalistPlantSearchCache, normalizeINaturalistPlantResult, searchINaturalistPlants } from '../app/services/inaturalistPlantSearch.js';
-import { createPlantProvenance, searchPlantSources } from '../app/services/plantSearchProviders.js';
+import { createPlantProvenance, plantSearchProviders, searchPlantSources } from '../app/services/plantSearchProviders.js';
 
 const responseFor = payload => ({ ok: true, async json() { return payload; } });
 
@@ -47,4 +47,8 @@ test('global plant search combines APIs, de-duplicates taxa and keeps provenance
         retrievedAt: '2026-08-10T00:00:00.000Z',
         scientificName: 'Cajanus cajan'
     });
+});
+
+test('global plant search advertises Daleys as a searchable source', () => {
+    assert.deepEqual(plantSearchProviders().map(source => source.id), ['ala', 'daleys', 'gbif', 'inaturalist']);
 });

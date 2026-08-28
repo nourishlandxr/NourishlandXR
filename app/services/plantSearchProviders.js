@@ -1,4 +1,5 @@
 import { searchAlaPlants } from './alaPlantSearch.js';
+import { searchDaleysPlants } from './daleysPlantSearch.js';
 import { searchGbifPlants } from './gbifPlantSearch.js';
 import { searchINaturalistPlants } from './inaturalistPlantSearch.js';
 
@@ -7,6 +8,7 @@ const GLOBAL_SOURCE_LABEL = 'Global plant databases';
 
 const providers = Object.freeze([
     Object.freeze({ id: 'ala', label: 'Atlas of Living Australia', search: searchAlaPlants }),
+    Object.freeze({ id: 'daleys', label: 'Daleys Fruit Tree Nursery', search: searchDaleysPlants }),
     Object.freeze({ id: 'gbif', label: 'GBIF Backbone Taxonomy', search: searchGbifPlants }),
     Object.freeze({ id: 'inaturalist', label: 'iNaturalist', search: searchINaturalistPlants })
 ]);

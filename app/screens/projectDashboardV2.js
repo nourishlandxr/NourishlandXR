@@ -80,6 +80,7 @@ async function renderContentInDashboard(panel, projectKey) {
     await renderFieldGuide(staging, projectKey, true);
     const content = staging.querySelector('.field-guide-workspace');
     if (!content) throw new Error('Content workspace unavailable.');
+    panel.classList.add('field-guide-hub-redesign');
     panel.replaceChildren(content);
 }
 
@@ -120,6 +121,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             if (mode === 'content') {
                 await renderContentInDashboard(panel, projectKey);
             } else {
+                panel.classList.remove('field-guide-hub-redesign');
                 panel.innerHTML = previewModeMarkup(model, mode);
                 bindPanel();
             }

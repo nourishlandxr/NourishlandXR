@@ -9143,6 +9143,8 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-global-result strong,
 .field-guide-hub-redesign .field-guide-global-result em,
 .field-guide-hub-redesign .field-guide-global-result small { overflow-wrap: anywhere; white-space: normal; }
+.field-guide-hub-redesign .field-guide-global-result .field-guide-global-commercial { color: var(--webhub-green-deep); font-weight: 750; }
+.field-guide-hub-redesign .field-guide-global-source-link { width: fit-content; max-width: 100%; overflow-wrap: anywhere; color: var(--webhub-green-deep); font-size: .68rem; text-decoration: underline; }
 
 .field-guide-hub-redesign .field-guide-spatial-setup {
     padding: 16px;

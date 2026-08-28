@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { createProjectSpatialData } from '../app/services/spatialDataModel.js';
 import { createPigeonPeaTemplateProfile } from '../app/services/pigeonPeaTemplate.js';
 import { PIGEON_PEA_EXAMPLE } from '../app/services/pigeonPeaExample.js';
+import { daleysPlantMatchesQuery, normalizeDaleysPlantResult } from '../app/services/daleysPlant.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -17,6 +18,11 @@ const creatorPassword = process.env.NOURISHLAND_CREATOR_PASSWORD || '';
 const sessionSecret = process.env.NOURISHLAND_SESSION_SECRET || '';
 const creatorAuthDisabled = String(process.env.NOURISHLAND_CREATOR_AUTH_DISABLED || '').trim().toLowerCase() === 'true';
 const publicOrigin = (process.env.NOURISHLAND_PUBLIC_ORIGIN || 'https://nourishland.org').replace(/\/$/, '');
+const DALEYS_PRODUCTS_URL = 'https://www.daleysfruit.com.au/app/products.php';
+const DALEYS_BATCH_SIZE = 100;
+const DALEYS_CATALOG_TTL_MS = 15 * 60 * 1000;
+let daleysCatalogCache = { expiresAt: 0, products: [] };
+let daleysCatalogPromise = null;
 const sessionTtlMs = 12 * 60 * 60 * 1000;
 const PLACE_TYPES = new Set([
     'Outdoor Area',
@@ -58,6 +64,31 @@ function sendJson(res, statusCode, payload) {
     });
     res.end(JSON.stringify(payload));
     return true;
+}
+
+async function loadDaleysCatalog() {
+    if (daleysCatalogCache.expiresAt > Date.now()) return daleysCatalogCache.products;
+    if (daleysCatalogPromise) return daleysCatalogPromise;
+    daleysCatalogPromise = (async () => {
+        const products = [];
+        for (let start = 0; start < 100000; start += DALEYS_BATCH_SIZE) {
+            const endpoint = `${DALEYS_PRODUCTS_URL}?Start=${start}&Qty=${DALEYS_BATCH_SIZE}`;
+            const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+            if (!response.ok) throw new Error(`Daleys catalog request failed (${response.status})`);
+            const payload = await response.json();
+            const batch = Array.isArray(payload?.data) ? payload.data : [];
+            products.push(...batch);
+            if (batch.length < DALEYS_BATCH_SIZE) break;
+        }
+        daleysCatalogCache = { expiresAt: Date.now() + DALEYS_CATALOG_TTL_MS, products };
+        return products;
+    })().finally(() => { daleysCatalogPromise = null; });
+    return daleysCatalogPromise;
+}
+
+async function searchDaleysCatalog(query) {
+    const products = await loadDaleysCatalog();
+    return products.map(normalizeDaleysPlantResult).filter(result => result && daleysPlantMatchesQuery(result, query)).slice(0, 20);
 }
 
 function readJson(filePath, fallback = null) {
@@ -851,6 +882,14 @@ function handleApi(req, res) {
     }
     if (pathname === '/api' && req.method === 'GET') {
         return sendJson(res, 200, { ok: true, service: 'nourishland-xr-api', health: '/xr-api/health' });
+    }
+    if (pathname === '/api/plant-search/daleys' && req.method === 'GET') {
+        const query = String(url.searchParams.get('q') || '').trim();
+        if (query.length < 2) return sendJson(res, 200, { source: 'daleys', results: [] });
+        searchDaleysCatalog(query)
+            .then(results => sendJson(res, 200, { source: 'daleys', results }))
+            .catch(error => sendJson(res, 502, { error: error.message || 'Daleys plant search is temporarily unavailable.' }));
+        return true;
     }
     const loginRequest = req.method === 'POST' && ['/api/auth/login', '/api/auth/session'].includes(pathname);
     if (loginRequest) {

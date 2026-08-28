@@ -91,7 +91,7 @@ const decodeSourceMarkup = value => String(value ?? '')
     .trim();
 const TECHNICAL_SOURCE_KEY = /(?:^|_)(?:id|ids|key|guid|url|uri|flag|flags|score|scores|active|level|ancestor|ancestors|iconic_taxon|taxon_id|georeferenced_count|occurrence_count|match|matches|api|raw|metadata|dataset)(?:$|_)/i;
 const SOURCE_FIELD_ALIASES = Object.freeze({
-    name: 'scientific_name', scientific_name: 'scientific_name', canonical_name: 'scientific_name',
+    name: 'scientific_name', scientific_name: 'scientific_name', canonical_name: 'scientific_name', botanical_name: 'scientific_name',
     vernacular_name: 'common_name', preferred_common_name: 'common_name', common_name: 'common_name',
     matched_names: 'alternative_names', common_name_matches: 'alternative_names',
     taxonomic_rank: 'rank', rank_string: 'rank', image_url: 'image', thumbnail_url: 'image',
@@ -101,11 +101,12 @@ const factGroup = key => {
     if (['common_name', 'alternative_names', 'description', 'image'].includes(key)) return 'Essential';
     if (['distribution', 'origin', 'native_range', 'range'].includes(key)) return 'Distribution';
     if (['source', 'attribution'].includes(key)) return 'Sources';
+    if (['price', 'availability', 'currency', 'category'].includes(key)) return 'Retail';
     return 'Taxonomy';
 };
 const recommendedFact = key => new Set([
     'common_name', 'scientific_name', 'alternative_names', 'rank', 'family', 'genus', 'species',
-    'description', 'distribution', 'image', 'source', 'attribution'
+    'description', 'distribution', 'image', 'source', 'attribution', 'category', 'price', 'availability'
 ]).has(key);
 const usefulFactValue = value => {
     if (value === null || value === undefined || value === '') return '';
@@ -122,13 +123,15 @@ const sourceFacts = result => {
     const preferred = {
         common_name: result?.commonName, scientific_name: result?.scientificName, canonical_name: result?.canonicalName,
         family: result?.family, kingdom: result?.kingdom, rank: result?.rank, image: result?.thumbnailUrl ? 'Reference image available' : '',
+        description: result?.description, category: result?.category, price: result?.price,
+        availability: result?.availability, currency: result?.currency,
         source: result?.sourceLabel, attribution: result?.imageAttribution
     };
     const facts = new Map();
     Object.entries({ ...raw, ...preferred }).forEach(([key, value]) => {
         const rawKey = String(key).replace(/([a-z])([A-Z])/g, '$1_$2').toLocaleLowerCase();
         const normalizedKey = SOURCE_FIELD_ALIASES[rawKey] || rawKey;
-        if (isTechnicalSourceKey(rawKey) || ['kingdom', 'source_url', 'source_id'].includes(rawKey)) return;
+        if (isTechnicalSourceKey(rawKey) || rawKey.startsWith('@') || ['kingdom', 'source_url', 'source_id'].includes(rawKey)) return;
         const normalizedValue = usefulFactValue(value);
         if (!normalizedValue || normalizedValue.length > 1200) return;
         const destinations = factDestinations(normalizedKey);
@@ -339,7 +342,7 @@ function applyCreatorContentCopy(app) {
             ${importProgress('select', 'Select facts')}
             <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL PLANT IMPORT</span><h3 id="fieldGuideGlobalProfileTitle" tabindex="-1">Select facts</h3><p>Choose useful plant information to bring into NLXR.</p></div></header>
             ${importIdentityMarkup(result)}
-            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Facts to import</h4><p>Recommended facts are selected. Technical database fields stay out of the PIM.</p></div><button type="button" class="ghost" data-global-select-recommended>Select recommended</button></div><div class="field-guide-fact-groups">${['Essential', 'Taxonomy', 'Distribution', 'Sources'].map(group => groupedFacts[group]?.length ? `<section class="field-guide-fact-group"><h4>${group}</h4><div>${groupedFacts[group].map(fact => `<label class="field-guide-extract-row"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong>${valueMarkup(fact)}${fact.recommended ? '<em class="field-guide-recommended">Recommended</em>' : ''}</span></label>`).join('')}</div></section>` : '').join('')}</div></section>
+            <section class="field-guide-global-profile-extract" aria-labelledby="fieldGuideGlobalExtractTitle"><div class="field-guide-extract-heading"><div><h4 id="fieldGuideGlobalExtractTitle">Facts to import</h4><p>Recommended facts are selected. Technical database fields stay out of the PIM.</p></div><button type="button" class="ghost" data-global-select-recommended>Select recommended</button></div><div class="field-guide-fact-groups">${['Essential', 'Taxonomy', 'Distribution', 'Retail', 'Sources'].map(group => groupedFacts[group]?.length ? `<section class="field-guide-fact-group"><h4>${group}</h4><div>${groupedFacts[group].map(fact => `<label class="field-guide-extract-row"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label)}</strong>${valueMarkup(fact)}${fact.recommended ? '<em class="field-guide-recommended">Recommended</em>' : ''}</span></label>`).join('')}</div></section>` : '').join('')}</div></section>
             <details class="field-guide-technical-source"><summary>Technical source data</summary><p>Kept as private import metadata for attribution, deduplication and future syncing.</p><dl>${technicalSourceFacts(result).map(fact => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('') || '<p class="meta">No technical fields supplied.</p>'}</dl></details>
             <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p>
             <nav class="field-guide-import-actions" aria-label="Import navigation"><button type="button" class="ghost" data-global-profile-back>Back</button><button type="button" class="primary" data-global-profile-review>Review</button></nav>
@@ -389,7 +392,7 @@ function applyCreatorContentCopy(app) {
     };
     const renderGlobalResults = results => {
         if (!globalResults) return;
-        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small></span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}${result.price || result.availability ? `<small class="field-guide-global-commercial">${escapeHtml([result.price, result.availability].filter(Boolean).join(' · '))}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small>${result.sourceUrl ? `<a class="field-guide-global-source-link" href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noopener noreferrer">View source</a>` : ''}</span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
         globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
             const result = results[Number(button.dataset.globalPlantIndex)];
             if (!result) return;
