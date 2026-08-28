@@ -1,6 +1,6 @@
 {
   "id": "unassigned",
-  "name": "Unassigned",
+  "name": "Home",
   "type": "Other",
   "description": "Support species awaiting Area assignment.",
   "visibility": "draft",
@@ -223,5 +223,6 @@
       "type": "plant",
       "path": "markers/williams_banana/marker.json"
     }
-  ]
+  ],
+  "systemKey": "home"
 }

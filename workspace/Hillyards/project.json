@@ -14,5 +14,20 @@
       "name": "hillyards loaded",
       "path": "sites/main_food_forest/site.json"
     }
-  ]
+  ],
+  "spatialData": {
+    "spatialDataVersion": 1,
+    "coordinateSystem": {
+      "type": "local-metric",
+      "units": "metres",
+      "axisOrder": "x,y,z",
+      "originTotemMarkerId": "",
+      "geographicReferenceSystem": "",
+      "georeferencingTransformation": null
+    },
+    "totemMarkers": [],
+    "plantLiveTags": [],
+    "captureSessions": [],
+    "features": []
+  }
 }
