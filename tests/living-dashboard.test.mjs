@@ -44,12 +44,12 @@ test('Project Dashboard keeps conceptual mapping honest and relationship-driven'
     assert.match(modelSource, /totalPlants \? Math\.round/);
     assert.match(screenSource, /Project Status/);
     assert.match(screenSource, /data-v2-status-action/);
-    assert.match(screenSource, /Reset automatic layout/);
-    assert.match(screenSource, /Totem alignment/);
+    assert.doesNotMatch(screenSource, /Reset automatic layout/);
+    assert.doesNotMatch(screenSource, /Totem alignment/);
     assert.match(screenSource, /Print and Export/);
     assert.match(screenSource, /Close Project/);
     assert.doesNotMatch(screenSource, /Conceptual layout|Spatial Readiness|SPATIAL ORGANISATION|Spatial Organization/);
-    assert.match(screenSource, /Add Area/);
+    assert.doesNotMatch(screenSource, /Add Area/);
     assert.match(screenSource, /Project Map/);
     assert.match(screenSource, /data-v2-mode="content"/);
     assert.doesNotMatch(screenSource, /data-v2-mode="activity"/);

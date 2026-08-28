@@ -1,4 +1,5 @@
 import { loadProjectDashboardV2Model } from '../services/projectDashboardV2Model.js';
+import { renderFieldGuide } from './fieldGuide.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value ?? ''));
@@ -60,21 +61,26 @@ function areaSummaryMarkup(model) {
 }
 
 function overviewMarkup(model) {
-    const projectId = encoded(model.project.id);
-    const activeArea = encoded(model.currentAreaId);
-    return `<section class="nlxr-db-v2-primary-actions" aria-label="Primary project actions"><button class="is-primary" type="button" onclick="window.openProjectArMode('${projectId}','${activeArea}')"><span aria-hidden="true">⌾</span><strong>Open AR</strong></button><button type="button" onclick="window.renderLocationFieldMarker('${projectId}','plant','without-ar',true)"><span aria-hidden="true">⊕</span><strong>Add Plant</strong></button><button type="button" onclick="window.renderProjectAreaForm('${projectId}','dashboard')"><span aria-hidden="true">▧</span><strong>Add Area</strong></button></section>
-        ${projectStatusMarkup(model)}
+    return `${projectStatusMarkup(model)}
         ${areaSummaryMarkup(model)}
         <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div>`;
 }
 
 function mapWorkspaceMarkup(model) {
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header><div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map controls"><button type="button" data-map-fit>Fit all</button><button type="button" data-map-edit>Edit layout</button><button type="button" data-map-reset>Reset automatic layout</button><button type="button" data-map-align>Totem alignment</button><button type="button" data-v2-map-image>Site image</button><details><summary>Layers</summary><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></details></div>${mapMarkup(model)}<div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${mapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layers"><details open><summary>Layers</summary><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></details></div><div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
 }
 
 function previewModeMarkup(model, mode) {
     if (mode === 'map') return mapWorkspaceMarkup(model);
     return overviewMarkup(model);
+}
+
+async function renderContentInDashboard(panel, projectKey) {
+    const staging = document.createElement('div');
+    await renderFieldGuide(staging, projectKey, true);
+    const content = staging.querySelector('.field-guide-workspace');
+    if (!content) throw new Error('Content workspace unavailable.');
+    panel.replaceChildren(content);
 }
 
 export async function renderProjectDashboardV2(app, encodedProjectId) {
@@ -102,7 +108,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             target.textContent = message;
             target.hidden = false;
         };
-        const showMode = mode => {
+        const showMode = async mode => {
             const button = app.querySelector(`[data-v2-mode="${mode}"]`);
             if (!button) return;
             app.querySelectorAll('[data-v2-mode]').forEach(candidate => {
@@ -111,8 +117,12 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 if (active) candidate.setAttribute('aria-current', 'page');
                 else candidate.removeAttribute('aria-current');
             });
-            panel.innerHTML = previewModeMarkup(model, mode);
-            bindPanel();
+            if (mode === 'content') {
+                await renderContentInDashboard(panel, projectKey);
+            } else {
+                panel.innerHTML = previewModeMarkup(model, mode);
+                bindPanel();
+            }
         };
         const bindPanel = () => {
             panel.querySelectorAll('[data-living-area]').forEach(button => button.addEventListener('click', () => {
@@ -154,11 +164,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             }));
         };
         app.querySelectorAll('[data-v2-mode]').forEach(button => button.addEventListener('click', () => {
-            if (button.dataset.v2Mode === 'content') {
-                window.renderFieldGuide(projectKey, true);
-                return;
-            }
-            showMode(button.dataset.v2Mode);
+            void showMode(button.dataset.v2Mode);
         }));
         app.querySelector('[data-v2-close-project]')?.addEventListener('click', () => window.renderDemoProjects());
         app.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => {

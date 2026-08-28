@@ -275,7 +275,7 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.match(styles, /\.field-guide-tool \.field-guide-map-action \{[\s\S]*min-height:32px/);
     assert.match(fieldGuideSource, /field-guide-primary-actions/);
     assert.match(fieldGuideSource, /applyCreatorContentCopy/);
-    assert.match(fieldGuideSource, /fieldGuideEssentialsTitle">Content/);
+    assert.match(fieldGuideSource, /const creationBoard = ''/);
     assert.match(fieldGuideSource, /field-guide-dashboard-nav/);
     assert.match(fieldGuideSource, /Results/);
     assert.match(fieldGuideSource, /field-guide-all-plants-count/);
@@ -292,11 +292,8 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.match(fieldGuideSource, /field-guide-plant-search/);
     assert.match(fieldGuideSource, /field-guide-area-help/);
     assert.match(fieldGuideSource, /is-search-match/);
-    assert.match(fieldGuideSource, /<strong>Add plant<\/strong>/);
-    assert.match(fieldGuideSource, /<strong>Add area<\/strong>/);
     assert.match(fieldGuideSource, /field-guide-hub-redesign/);
     assert.match(fieldGuideSource, /field-guide-spatial-setup/);
-    assert.match(fieldGuideSource, /project-overview-header/);
     assert.match(fieldGuideSource, /field-guide-dashboard-nav/);
     assert.match(fieldGuideSource, /field-guide-management-row/);
     assert.doesNotMatch(fieldGuideSource, /Map · \$\{placedCount\} elements · \$\{guide\.totems\.length\} totems · \$\{anchoredCount\} anchors/);
@@ -312,17 +309,13 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
     assert.match(fieldGuideSource, /aria-current="page"><span aria-hidden="true">☰<\/span> Content/);
-    assert.match(fieldGuideSource, /<strong>\$\{places\.length\}<\/strong> Areas/);
-    assert.match(fieldGuideSource, /<strong>\$\{guide\.totems\.length\}<\/strong> Totems/);
 });
 
 test('Content workspace keeps a compact mobile grid and expands into desktop columns', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldGuide.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /field-guide-hub-redesign/);
-    assert.match(source, /fieldGuideEssentialsTitle">Content/);
-    assert.match(source, /<strong>Add plant<\/strong>/);
-    assert.match(source, /<strong>Add area<\/strong>/);
+    assert.match(source, /const creationBoard = ''/);
     assert.match(source, /Spatial setup/);
     assert.match(source, /field-guide-management-row-content/);
     assert.match(source, /Coming later/);
