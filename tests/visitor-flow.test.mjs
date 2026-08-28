@@ -277,8 +277,8 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.match(fieldGuideSource, /applyCreatorContentCopy/);
     assert.match(fieldGuideSource, /const creationBoard = ''/);
     assert.match(fieldGuideSource, /field-guide-dashboard-nav/);
-    assert.match(fieldGuideSource, /Results/);
-    assert.match(fieldGuideSource, /field-guide-all-plants-count/);
+    assert.doesNotMatch(fieldGuideSource, /field-guide-all-plants/);
+    assert.doesNotMatch(fieldGuideSource, /<summary>Results<\/summary>/);
     assert.match(fieldGuideSource, /app\.querySelector\('#fieldGuideCount'\)\?\.remove\(\)/);
     assert.match(fieldGuideSource, /searchGlobalPlants/);
     assert.match(fieldGuideSource, /data-field-guide-scope-button="global"/);
@@ -324,7 +324,7 @@ test('Content workspace keeps a compact mobile grid and expands into desktop col
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-primary-actions \.field-guide-creation-actions[\s\S]*display: grid/);
     assert.match(styles, /@media \(min-width: 760px\)[\s\S]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(300px, \.85fr\)/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-map-action::before[\s\S]*content: none/);
-    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-all-plants\[hidden\][\s\S]*display: none !important/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-plant-grid\[hidden\][\s\S]*display: none !important/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
     assert.match(styles, /@media \(max-width: 380px\)[\s\S]*\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\)/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-plant-scope button \{ min-height: 44px;/);

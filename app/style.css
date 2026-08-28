@@ -7598,29 +7598,6 @@ body:has(.field-guide-tool) {
 .field-guide-tool .field-guide-special-elements:hover { border-color:#c28d42; background:#fff9e8; transform:translateY(-2px); }
 .field-guide-tool .field-guide-anchor-readiness { background:rgba(214,236,232,.76); }
 .field-guide-tool .field-guide-area-help summary { border-color:rgba(46,103,68,.32); background:#fff8df; color:#6b703e; }
-.field-guide-tool .field-guide-all-plants {
-    margin-top:8px;
-    overflow:hidden;
-    border:1px solid rgba(54,105,69,.18);
-    border-radius:15px 6px 15px 6px;
-    background:rgba(255,255,250,.78);
-}
-.field-guide-tool .field-guide-all-plants > summary {
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto auto;
-    align-items:center;
-    gap:8px;
-    min-height:48px;
-    padding:10px 12px;
-    cursor:pointer;
-    list-style:none;
-}
-.field-guide-tool .field-guide-all-plants > summary::-webkit-details-marker { display:none; }
-.field-guide-tool .field-guide-all-plants > summary strong { color:var(--quest-ink); font-size:.82rem; }
-.field-guide-tool .field-guide-all-plants-count { color:#5d7767; font-size:.72rem; }
-.field-guide-tool .field-guide-details-chevron { color:var(--quest-deep); font-size:1rem; line-height:1; }
-.field-guide-tool .field-guide-all-plants[open] .field-guide-details-chevron { transform:rotate(180deg); }
-.field-guide-tool .field-guide-all-plants > .field-guide-plant-grid { padding:0 10px 10px; }
 .project-entry .latest-entries-section > summary {
     display:flex;
     align-items:center;
@@ -9080,12 +9057,6 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-search-deck select { width: 100%; min-height: 46px; border: 1px solid rgba(45, 88, 56, .22); border-radius: 12px; background: #fff; color: var(--webhub-ink); font-size: 1rem; }
 .field-guide-hub-redesign .field-guide-search-deck input:focus,
 .field-guide-hub-redesign .field-guide-search-deck select:focus { border-color: var(--webhub-green); box-shadow: 0 0 0 3px rgba(46, 112, 70, .12); outline: 0; }
-.field-guide-hub-redesign .field-guide-advanced-search { border: 1px solid var(--webhub-line); border-radius: 12px; background: rgba(255, 255, 252, .68); }
-.field-guide-hub-redesign .field-guide-advanced-search > summary { display: flex; align-items: center; min-height: 44px; padding: 9px 12px; cursor: pointer; color: var(--webhub-green-deep); font-size: .78rem; font-weight: 850; list-style: none; }
-.field-guide-hub-redesign .field-guide-advanced-search > summary::-webkit-details-marker { display: none; }
-.field-guide-hub-redesign .field-guide-advanced-search > summary::after { content: "⌄"; margin-left: auto; font-size: 1rem; }
-.field-guide-hub-redesign .field-guide-advanced-search[open] > summary::after { transform: rotate(180deg); }
-.field-guide-hub-redesign .field-guide-advanced-search > .field { padding: 0 12px 12px; }
 .field-guide-hub-redesign .field-guide-plant-search > #fieldGuideCount { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
 
 .field-guide-hub-redesign .field-guide-plant-scope {
@@ -9105,23 +9076,8 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-global-search { padding: 0; }
 .field-guide-hub-redesign .field-guide-global-search > .meta { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
 
-.field-guide-hub-redesign .field-guide-all-plants {
-    display: block;
-    overflow: hidden;
-    border: 1px solid var(--webhub-line);
-    border-radius: 14px;
-    background: rgba(255, 255, 252, .72);
-}
-
-.field-guide-hub-redesign .field-guide-all-plants > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 13px; cursor: pointer; color: var(--webhub-ink); list-style: none; }
-.field-guide-hub-redesign .field-guide-all-plants[hidden],
+.field-guide-hub-redesign .field-guide-plant-grid[hidden],
 .field-guide-hub-redesign .field-guide-global-search[hidden] { display: none !important; }
-.field-guide-hub-redesign .field-guide-all-plants > summary::-webkit-details-marker { display: none; }
-.field-guide-hub-redesign .field-guide-all-plants > summary strong { font-size: .82rem; }
-.field-guide-hub-redesign .field-guide-all-plants-count { color: var(--webhub-muted); font-size: .76rem; }
-.field-guide-hub-redesign .field-guide-details-chevron { margin-left: auto; color: var(--webhub-green); }
-.field-guide-hub-redesign .field-guide-all-plants[open] .field-guide-details-chevron { transform: rotate(180deg); }
-.field-guide-hub-redesign .field-guide-all-plants > .field-guide-plant-grid { padding: 0 10px 10px; }
 .field-guide-hub-redesign .field-guide-plant-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .field-guide-hub-redesign .field-guide-plant-card { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; width: 100%; min-height: 66px; gap: 10px; padding: 10px 11px; border: 1px solid var(--webhub-line); border-radius: 13px; background: #fff; color: var(--webhub-ink); text-align: left; }
 .field-guide-hub-redesign .field-guide-plant-card:hover,
