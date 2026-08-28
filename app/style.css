@@ -6794,39 +6794,6 @@ body[data-project-theme] .creator-ar-taskbar [data-ar-web-return] {
     box-shadow:inset 0 -3px #dceea5,0 4px 10px rgba(0,0,0,.22);
 }
 
-.creator-ar-exit-actions {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 5px;
-    border: 1px solid rgba(213,226,184,.28);
-    border-top: 0;
-    border-radius: 0 0 13px 13px;
-    background: rgba(12,25,18,.94);
-    pointer-events: auto;
-}
-.creator-ar-exit-actions button {
-    min-width: 0;
-    min-height: 44px;
-    padding: 8px 10px;
-    border: 1px solid rgba(255,255,255,.22);
-    border-radius: 8px;
-    background: rgba(255,255,255,.07);
-    color: #f7faef;
-    cursor: pointer;
-    font: 750 .64rem/1.05 Inter,"Aptos","Segoe UI",system-ui,sans-serif;
-    letter-spacing: .035em;
-    text-transform: uppercase;
-}
-.creator-ar-exit-actions button:first-child { border-color: rgba(196,220,169,.48); color: #dceea5; }
-.creator-ar-exit-actions button:last-child { border-color: rgba(120,182,215,.55); background: rgba(37,111,156,.38); color: #fff; }
-.creator-ar-exit-actions button:is(:hover,:focus-visible) { filter: brightness(1.14); }
-.creator-ar-exit-actions button:disabled { cursor: wait; opacity: .5; }
-
 /* Quest 3 spatial link bar: a compact, shallow arc anchored to the bottom
    of the view, closer to Meta's system-bar language than a waist-wide panel. */
 body.creator-ar-quest-headset .creator-ar-quest-link-bar {
@@ -10449,8 +10416,39 @@ body:has(.project-entry) #app {
 .project-guide-preview-topic p { padding: 0 12px 12px; color: var(--v2-muted); font-size: .8rem; }
 
 @media (min-width: 860px) {
+    .nlxr-db-v2 {
+        max-width: 1040px;
+        margin-inline: auto;
+        gap: 18px;
+    }
+    .nlxr-db-v2-header {
+        justify-content: center;
+        padding-top: 14px;
+        text-align: center;
+    }
+    .nlxr-db-v2-header-copy { display: grid; justify-items: center; }
+    .nlxr-db-v2-project-title { justify-content: center; }
+    .nlxr-db-v2-project-title h1 { font-size: clamp(2rem, 3.5vw, 2.75rem); }
+    .nlxr-db-v2-mode-nav {
+        width: min(100%, 660px);
+        margin-inline: auto;
+        padding: 6px;
+        gap: 6px;
+        border-radius: 18px;
+        background: rgba(255, 255, 249, .9);
+        box-shadow: 0 10px 30px rgba(44, 67, 36, .08);
+    }
+    .nlxr-db-v2-mode-nav button {
+        min-height: 48px;
+        border-radius: 13px;
+        font-size: .95rem;
+    }
+    .nlxr-db-v2-mode-nav button.is-active {
+        background: linear-gradient(180deg, #f4f8ed, #eaf2df);
+        box-shadow: inset 0 0 0 1px #c4d5b1, 0 4px 12px rgba(58, 97, 42, .08);
+    }
     .nlxr-db-v2-mode-panel { gap: 16px; }
-    .nlxr-db-v2-primary-actions { max-width: 760px; }
+    .nlxr-db-v2-primary-actions { width: 100%; max-width: none; }
     .nlxr-db-v2-lower-grid { grid-template-columns: minmax(0, 1.08fr) minmax(280px, .92fr); }
     .nlxr-db-v2-health-card { grid-template-columns: 1fr auto; align-items: center; }
     .nlxr-db-v2-health-card > .nlxr-db-v2-card-heading { grid-column: 1 / -1; }

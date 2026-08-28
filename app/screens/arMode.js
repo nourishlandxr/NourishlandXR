@@ -5078,10 +5078,6 @@ function createOverlay() {
             <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="EDIT mode: select markers and open edit tools" aria-pressed="false"><b aria-hidden="true">&#x270E;</b><span>EDIT</span></button>
             <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open project Hub"><b aria-hidden="true">&#x23CE;</b><span>HUB</span></button>
           </nav>
-          <nav class="creator-ar-exit-actions" aria-label="Creator session actions">
-            <button type="button" data-ar-change-project>Change Project</button>
-            <button type="button" data-ar-exit-creator>Exit Creator</button>
-          </nav>
         </div>`;
 
     const armDirectPlacement = type => {
@@ -5115,8 +5111,6 @@ function createOverlay() {
     bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
     bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
     bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
-    bindTaskbarAction('[data-ar-change-project]', () => void finishArExitToProjectChooser());
-    bindTaskbarAction('[data-ar-exit-creator]', () => exitArMode());
     overlayRoot.querySelector('[data-ar-safety-help]')?.addEventListener('click', () => showArSafetyDialog(overlayRoot));
     overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {
         event.preventDefault();
