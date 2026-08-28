@@ -644,7 +644,8 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /createPlaceMarker/);
     assert.match(arSource, /createProjectSite/);
     assert.match(arSource, /loadPlaceMarkers/);
-    assert.match(arSource, /draftName = `\$\{baseName\} \(\$\{suffix\+\+\}\)`/);
+    assert.match(arSource, /function uniqueMarkerName\(requestedName, existingMarkers = \[\], excludedId = ''\)/);
+    assert.match(arSource, /name: uniqueMarkerName\(requestedName, existingMarkers\)/);
     assert.match(arSource, /saveMarkerAnchor/);
     assert.match(arSource, /type: 'spatial'/);
     assert.match(arSource, /let interactionMode = 'neutral'/);

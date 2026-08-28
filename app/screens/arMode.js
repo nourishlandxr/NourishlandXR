@@ -588,6 +588,18 @@ function hasRenderableSpatialPosition(record) {
         && ['x', 'y', 'z'].every(axis => Number.isFinite(Number(record.position[axis])));
 }
 
+function uniqueMarkerName(requestedName, existingMarkers = [], excludedId = '') {
+    const baseName = String(requestedName || 'New marker').trim() || 'New marker';
+    const existingNames = new Set(existingMarkers
+        .filter(marker => marker?.id !== excludedId)
+        .map(marker => String(marker.name || '').trim().toLocaleLowerCase())
+        .filter(Boolean));
+    let candidate = baseName;
+    let suffix = 1;
+    while (existingNames.has(candidate.toLocaleLowerCase())) candidate = `${baseName} (${suffix++})`;
+    return candidate;
+}
+
 function renderableAreaMarkers() {
     return activeAreaMarkers().filter(hasRenderableSpatialPosition);
 }
@@ -4569,7 +4581,7 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
             pimSelectedNodeId: '',
             pimSpatialPose: null,
             pimStoredPose: anchor?.pim_pose || null,
-            position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : { x: 0, y: 0, z: -1 },
+            position: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             anchorPosition: hasPosition ? { x: Number(position.x), y: Number(position.y), z: Number(position.z) } : null,
             siteId,
             areaId: area.id,
@@ -4586,9 +4598,9 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     const unplaced = restored.filter(record => record?.unplaced && !isAreaCheckpointMarker(record.marker));
     const ringTotem = restored.find(record => isAreaCheckpointMarker(record.marker) && hasSavedSpatialPosition(record))
         || sessionMarkers.find(record => record.areaId === restoreOperation.areaId && isAreaCheckpointMarker(record.marker) && hasSavedSpatialPosition(record));
-    const ringCentre = ringTotem?.position || { x: 0, y: 0, z: -1 };
+    const ringCentre = ringTotem?.position || null;
     const ringRadius = .28;
-    unplaced.forEach((record, index) => {
+    unplaced.filter(() => ringCentre).forEach((record, index) => {
         const angle = -Math.PI / 2 + (index / Math.max(unplaced.length, 1)) * Math.PI * 2;
         record.position = {
             x: ringCentre.x + Math.cos(angle) * ringRadius,
@@ -4827,11 +4839,14 @@ async function setPlacedMarkerType(record, type) {
     const defaults = { plant: 'New plant', sub_checkpoint: 'New marker', note: 'New note', intro_checkpoint: 'Trail Entrance', area_checkpoint: 'New Totem Marker' };
     try {
         setPlacementStatus(`Creating ${readyPlacementLabel(type)}…`);
+        const existingMarkers = await loadPlaceMarkers(activeProjectId, record.siteId, record.areaId).catch(() => []);
+        const requestedName = record.marker.name === 'New marker' ? defaults[type] : record.marker.name;
+        const nextName = uniqueMarkerName(requestedName, existingMarkers, record.marker.id);
         const update = {
             ...record.marker,
             type,
-            name: record.marker.name === 'New marker' ? defaults[type] : record.marker.name,
-            plant_profile: type === 'plant' ? { common_name: defaults[type] } : undefined
+            name: nextName,
+            plant_profile: type === 'plant' ? { common_name: nextName } : undefined
         };
         const updated = type === 'area_checkpoint'
             ? await convertRecordToAreaCheckpoint(record, update)
@@ -4959,17 +4974,12 @@ async function quickPlace(type) {
             }
             return;
         }
-        const existingNames = new Set(existingMarkers.map(marker => String(marker.name || '').trim().toLocaleLowerCase()));
         const baseName = defaults[type];
-        let draftName = baseName;
-        let suffix = 1;
-        while (existingNames.has(draftName.toLocaleLowerCase())) {
-            draftName = `${baseName} (${suffix++})`;
-        }
         const specialMarker = type === 'sub_checkpoint' ? readySpecialMarker : null;
         readySpecialMarker = null;
+        const requestedName = specialMarker?.name || placementDetails?.name || baseName;
         const draft = createMinimalMarkerDraft(type, {
-            name: specialMarker?.name || placementDetails?.name || draftName,
+            name: uniqueMarkerName(requestedName, existingMarkers),
             description: placementDetails?.description || (type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : '')
         });
         if (placementAppearance) draft.appearance = { ...(draft.appearance || {}), ...placementAppearance };
