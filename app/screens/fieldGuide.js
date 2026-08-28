@@ -2,6 +2,7 @@ import { loadMarkerAnchor, loadPlaceMarkers, loadPlantProfile, loadProjectSites,
 import { loadResolvedPlantsForPlace, searchGlobalPlants } from '../services/plantDataService.js';
 import { openGlobalPlantProfile } from './fieldMarker.js';
 import { PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
+import { rankPlantSearchResults } from '../services/plantSearchRelevance.js';
 import { DEFAULT_HOME_AREA_NAME, areaIcon, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { DEFAULT_TOTEM_COLOR } from '../services/totemAppearance.js';
 import { physicalMarkerLabel } from '../services/physicalAnchor.js';
@@ -22,6 +23,7 @@ const webHubIcon = name => {
 let currentGuide = null;
 let currentGuidePlaceId = '';
 let globalGuideSearchTimer = null;
+let globalSearchQuery = '';
 
 const GLOBAL_FACT_DESTINATIONS = Object.freeze({
     common_name: ['Plant identity', 'Identity & taxonomy'], scientific_name: ['Scientific Information', 'Taxonomy'],
@@ -300,7 +302,7 @@ function applyCreatorContentCopy(app) {
     const globalPanel = document.createElement('div');
     globalPanel.className = 'field-guide-global-search';
     globalPanel.hidden = true;
-    globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p><div class="field-guide-global-results" data-field-guide-global-results></div>';
+    globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p><div class="field-guide-global-match-legend" aria-label="Global search result relevance"><span class="field-guide-global-legend-exact">Green · exact match</span><span class="field-guide-global-legend-related">Yellow · same genus or name match</span><span class="field-guide-global-legend-caution">Red · check species carefully</span></div><div class="field-guide-global-results" data-field-guide-global-results></div>';
     searchDeck.append(globalPanel);
 
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
@@ -392,10 +394,12 @@ function applyCreatorContentCopy(app) {
     };
     const renderGlobalResults = results => {
         if (!globalResults) return;
-        globalResults.innerHTML = results.map((result, index) => `<article class="field-guide-global-result">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}${result.price || result.availability ? `<small class="field-guide-global-commercial">${escapeHtml([result.price, result.availability].filter(Boolean).join(' · '))}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small>${result.sourceUrl ? `<a class="field-guide-global-source-link" href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noopener noreferrer">View source</a>` : ''}</span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        const rankedResults = rankPlantSearchResults(results, globalSearchQuery);
+        globalResults.innerHTML = rankedResults.map((result, index) => { const match = result.searchMatch || {}; return `<article class="field-guide-global-result field-guide-global-result--${escapeHtml(match.tone || 'caution')}">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><small class="field-guide-global-match-badge" title="${escapeHtml(match.kind === 'same-genus' ? 'This record shares the genus with an exact result, but it is a different species.' : match.kind === 'other' ? 'This record is not the exact species. Confirm the scientific name before importing.' : '')}">${escapeHtml(match.label || 'Review match')}</small><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}${result.price || result.availability ? `<small class="field-guide-global-commercial">${escapeHtml([result.price, result.availability].filter(Boolean).join(' · '))}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small>${result.sourceUrl ? `<a class="field-guide-global-source-link" href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noopener noreferrer">View source</a>` : ''}</span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`; }).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
         globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
-            const result = results[Number(button.dataset.globalPlantIndex)];
+            const result = rankedResults[Number(button.dataset.globalPlantIndex)];
             if (!result) return;
+            const { searchMatch, searchResultIndex, ...sourceResult } = result;
             openGlobalProfile = result;
             const siteGroup = currentGuide?.siteGroups?.find(group => currentGuidePlaceId && group.placeGroups.some(placeGroup => placeGroup.place.id === currentGuidePlaceId)) || currentGuide?.siteGroups?.[0];
             if (!siteGroup?.site?.id || !currentGuide?.creator) {
@@ -412,7 +416,7 @@ function applyCreatorContentCopy(app) {
                     place: currentGuidePlaceId || '__unassigned__',
                     returnAction: `window.renderFieldGuide('${encoded(currentGuide.project.id)}', true)`,
                     globalPlant: {
-                        ...result,
+                        ...sourceResult,
                         importFacts: facts,
                         extractionFields: facts.filter(fact => fact.recommended).map(fact => fact.key)
                     }
@@ -525,6 +529,7 @@ function applyCreatorContentCopy(app) {
     const searchGlobal = value => {
         clearTimeout(globalGuideSearchTimer);
         const query = String(value || '').trim();
+        globalSearchQuery = query;
         if (globalResults) globalResults.innerHTML = '';
         openGlobalProfile = null;
         if (query.length < 2) {

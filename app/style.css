@@ -6033,6 +6033,18 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .field-guide-global-search .field > label { color:#405947; font-size:.68rem; font-weight:800; }
 .field-guide-global-results { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr)); gap:.65rem; align-items:stretch; }
 .field-guide-global-result { display:grid; grid-template-columns:56px minmax(0,1fr); grid-template-rows:1fr auto; gap:.35rem .65rem; min-width:0; padding:.65rem .7rem; overflow:hidden; border:1px solid rgba(70,111,73,.16); border-radius:14px; background:rgba(255,255,252,.84); }
+.field-guide-global-result--exact { border-color:rgba(47,123,72,.42); background:linear-gradient(145deg,rgba(238,249,235,.98),rgba(255,255,252,.9)); }
+.field-guide-global-result--related { border-color:rgba(181,143,35,.42); background:linear-gradient(145deg,rgba(255,249,218,.94),rgba(255,255,252,.9)); }
+.field-guide-global-result--caution { border-color:rgba(181,76,57,.34); background:linear-gradient(145deg,rgba(255,239,232,.92),rgba(255,255,252,.9)); }
+.field-guide-global-match-legend { display:flex; flex-wrap:wrap; gap:.3rem .55rem; color:#68766c; font-size:.62rem; font-weight:750; }
+.field-guide-global-match-legend span { padding:.18rem .4rem; border-radius:999px; }
+.field-guide-global-legend-exact { background:#e3f3e2; color:#28613b; }
+.field-guide-global-legend-related { background:#fff3c9; color:#81631c; }
+.field-guide-global-legend-caution { background:#ffe5dc; color:#9a4939; }
+.field-guide-global-match-badge { width:fit-content; padding:.16rem .38rem; border-radius:999px; font-size:.57rem !important; font-weight:850; letter-spacing:.02em; }
+.field-guide-global-result--exact .field-guide-global-match-badge { background:#d9efd9; color:#28613b; }
+.field-guide-global-result--related .field-guide-global-match-badge { background:#ffefb4; color:#80601b; }
+.field-guide-global-result--caution .field-guide-global-match-badge { background:#ffdcd2; color:#984938; }
 .field-guide-global-result img { width:52px; height:52px; object-fit:cover; border-radius:11px; background:#eef3e9; }
 .field-guide-global-result-placeholder { display:grid; place-items:center; width:52px; height:52px; border-radius:11px; background:#eef3e9; }
 .field-guide-global-result > span:nth-child(2) { display:grid; align-content:start; min-width:0; }

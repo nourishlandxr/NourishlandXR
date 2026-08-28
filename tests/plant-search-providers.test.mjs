@@ -3,6 +3,7 @@ import test from 'node:test';
 import { buildGbifSearchUrl, clearGbifPlantSearchCache, normalizeGbifPlantResult, searchGbifPlants } from '../app/services/gbifPlantSearch.js';
 import { buildINaturalistSearchUrl, clearINaturalistPlantSearchCache, normalizeINaturalistPlantResult, searchINaturalistPlants } from '../app/services/inaturalistPlantSearch.js';
 import { createPlantProvenance, plantSearchProviders, searchPlantSources } from '../app/services/plantSearchProviders.js';
+import { rankPlantSearchResults } from '../app/services/plantSearchRelevance.js';
 
 const responseFor = payload => ({ ok: true, async json() { return payload; } });
 
@@ -58,4 +59,21 @@ test('global plant search combines APIs, preserves source-specific records and k
 
 test('global plant search advertises Daleys as a searchable source', () => {
     assert.deepEqual(plantSearchProviders().map(source => source.id), ['ala', 'daleys', 'gbif', 'inaturalist']);
+});
+
+test('global plant search ranks the exact species above same-genus cousins', () => {
+    const ranked = rankPlantSearchResults([
+        { source: 'ala', commonName: 'Pigeon Pea', scientificName: 'Cajanus cajan' },
+        { source: 'daleys', commonName: 'Pigeon Pea', scientificName: 'Cajanus cajan' },
+        { source: 'inaturalist', commonName: 'Pigeon Pea', scientificName: 'Cajanus cajan' },
+        { source: 'ala', commonName: 'Wild Pigeon Pea', scientificName: 'Cajanus marmoratus' },
+        { source: 'gbif', commonName: 'Garden Pea', scientificName: 'Pisum sativum' }
+    ], 'pigeon pea');
+    assert.deepEqual(ranked.map(result => result.scientificName), ['Cajanus cajan', 'Cajanus cajan', 'Cajanus cajan', 'Cajanus marmoratus', 'Pisum sativum']);
+    assert.deepEqual(ranked.slice(0, 3).map(result => result.searchMatch.kind), ['exact', 'exact', 'exact']);
+    assert.deepEqual(ranked.slice(0, 3).map(result => result.searchMatch.tone), ['exact', 'exact', 'exact']);
+    assert.equal(ranked[3].searchMatch.kind, 'same-genus');
+    assert.equal(ranked[3].searchMatch.tone, 'related');
+    assert.equal(ranked[4].searchMatch.kind, 'other');
+    assert.equal(ranked[4].searchMatch.tone, 'caution');
 });
