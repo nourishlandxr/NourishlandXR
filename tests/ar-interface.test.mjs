@@ -895,6 +895,8 @@ test('Field Guide correlates Area membership for both plant instances and AR pla
     assert.match(source, /const searchInput = app\.querySelector\('#fieldGuideSearch'\)/);
     assert.match(source, /field-guide-global-legend-local/);
     assert.match(source, /searchGlobal\(event\.target\.value\)/);
+    assert.match(source, /Opening import page…/);
+    assert.match(source, /The import page took too long to open/);
     assert.doesNotMatch(source, /id="fieldGuideGlobalSearch"/);
     const fieldGuideStyles = read('app/style.css');
     assert.match(fieldGuideStyles, /\.field-guide-global-search\[hidden\]\s*\{\s*display:none;/);

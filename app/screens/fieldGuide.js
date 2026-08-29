@@ -317,7 +317,7 @@ function applyCreatorContentCopy(app) {
     globalPanel.className = 'field-guide-global-search';
     globalPanel.hidden = true;
     globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta"></p><div class="field-guide-global-results" data-field-guide-global-results></div>';
-    plantListSection.append(globalPanel);
+    plantListSection.insertBefore(globalPanel, allPlants);
 
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
@@ -424,7 +424,7 @@ function applyCreatorContentCopy(app) {
             button.disabled = true;
             try {
                 const facts = sourceFacts(result);
-                await openGlobalPlantProfile(app, {
+                const importDefaults = {
                     project: currentGuide.project.id,
                     site: siteGroup.site.id,
                     place: currentGuidePlaceId || '__unassigned__',
@@ -436,7 +436,11 @@ function applyCreatorContentCopy(app) {
                         importFacts: facts,
                         extractionFields: facts.filter(fact => fact.recommended).map(fact => fact.key)
                     }
-                });
+                };
+                await Promise.race([
+                    openGlobalPlantProfile(app, importDefaults),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('The import page took too long to open. Please try again.')), 8000))
+                ]);
             } catch (error) {
                 button.disabled = false;
                 button.textContent = 'Open profile';

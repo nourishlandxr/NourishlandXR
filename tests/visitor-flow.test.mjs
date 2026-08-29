@@ -334,7 +334,7 @@ test('Content workspace keeps a compact mobile grid and expands into desktop col
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
     assert.match(styles, /@media \(max-width: 380px\)[\s\S]*\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\)/);
     assert.match(styles, /\.field-guide-global-legend-local \{ background:#e4f0ff;/);
-    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-match-legend \{[\s\S]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-match-legend \{[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(150px, 1fr\)\)/);
     assert.match(styles, /\.field-guide-hub-redesign \[data-field-guide-plant\]\[hidden\][\s\S]*display: none !important/);
 });
 
