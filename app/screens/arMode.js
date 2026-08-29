@@ -1008,6 +1008,11 @@ function updateNotePlacementPreview() {
 function positionNotePlacementPreview(view = latestView) {
     const preview = overlayRoot?.querySelector('[data-ar-note-placement-preview]');
     if (!preview || readyPlacementType !== 'note') return;
+    if (!view) {
+        preview.hidden = true;
+        preview.style.removeProperty('transform');
+        return;
+    }
     const target = placementPoint('note');
     latestNotePlacementPoint = target;
     if (questBeltUsesSpatialRenderer()) {
@@ -1016,11 +1021,20 @@ function positionNotePlacementPreview(view = latestView) {
     }
     const pointer = overlayRoot?.querySelector('.creator-ar-placement-guide');
     const pointerRect = pointer?.getBoundingClientRect();
-    const point = target && pointerRect
+    const hasPointerRect = pointerRect
+        && pointerRect.width > 0
+        && pointerRect.height > 0
+        && Number.isFinite(pointerRect.left)
+        && Number.isFinite(pointerRect.top);
+    const point = target && hasPointerRect
         ? { x: pointerRect.left + pointerRect.width / 2, y: pointerRect.top + pointerRect.height / 2 }
         : target ? projectWorldPoint(view, target) : null;
-    preview.hidden = !point;
-    if (!point) return;
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        preview.hidden = true;
+        preview.style.removeProperty('transform');
+        return;
+    }
+    preview.hidden = false;
     preview.style.transform = `translate(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px) translate(-50%, -50%)`;
 }
 
@@ -2638,11 +2652,12 @@ function projectWorldPoint(view, point) {
     if (!inverse || !view.projectionMatrix) return null;
     const eye = multiplyMatrixVector(inverse, [point.x, point.y, point.z, 1]);
     const clip = multiplyMatrixVector(view.projectionMatrix, eye);
-    if (!Number.isFinite(clip[3]) || clip[3] <= 0) return null;
-    return {
+    if (!clip.every(Number.isFinite) || clip[3] <= 0) return null;
+    const projected = {
         x: (clip[0] / clip[3] * .5 + .5) * window.innerWidth,
         y: (-clip[1] / clip[3] * .5 + .5) * window.innerHeight
     };
+    return Number.isFinite(projected.x) && Number.isFinite(projected.y) ? projected : null;
 }
 
 function ensureLocationNoteAnchor() {
@@ -3810,7 +3825,24 @@ function bindCreatorViewportReflow() {
 }
 
 function positionSessionMarkers(view = latestView) {
-    if (!view || !overlayRoot) return;
+    if (!overlayRoot) return;
+    const hideProjectedMarker = element => {
+        if (!element) return;
+        element.hidden = true;
+        element.classList.add('is-projection-hidden');
+        element.style.removeProperty('transform');
+    };
+    const showProjectedMarker = element => {
+        if (!element) return;
+        element.hidden = false;
+        element.classList.remove('is-projection-hidden');
+    };
+    if (!view) {
+        overlayRoot.querySelectorAll('[data-ar-marker-id]').forEach(hideProjectedMarker);
+        positionLocationNote(null);
+        positionNotePlacementPreview(null);
+        return;
+    }
     positionLocationNote(view);
     positionNotePlacementPreview(view);
     positionControllerPointer(view);
@@ -3821,7 +3853,10 @@ function positionSessionMarkers(view = latestView) {
         // hidden instead of letting fixed-position elements fall back to
         // (0, 0) in the top-left corner.
         const currentRecords = activeAreaMarkers();
-        currentRecords.forEach(record => setMarkerAncillaryVisibility(record, true));
+        currentRecords.forEach(record => {
+            hideProjectedMarker(overlayRoot.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`));
+            setMarkerAncillaryVisibility(record, true);
+        });
         return;
     }
     activeAreaMarkers().forEach(record => {
@@ -3831,12 +3866,12 @@ function positionSessionMarkers(view = latestView) {
             return;
         }
         if (!hasRenderableSpatialPosition(record) || hiddenStructuralMarkerIds.has(record.marker.id)) {
-            element.hidden = true;
+            hideProjectedMarker(element);
             setMarkerAncillaryVisibility(record, true);
             return;
         }
         if (questBeltUsesSpatialRenderer() && record.marker.type === 'note') {
-            element.hidden = true;
+            hideProjectedMarker(element);
             setMarkerAncillaryVisibility(record, true);
             return;
         }
@@ -3851,8 +3886,8 @@ function positionSessionMarkers(view = latestView) {
             : record.position;
         const eye = multiplyMatrixVector(inverse, [projectedPosition.x, projectedPosition.y, projectedPosition.z, 1]);
         const clip = multiplyMatrixVector(view.projectionMatrix, eye);
-        if (!Number.isFinite(clip[3]) || clip[3] <= 0) {
-            element.hidden = true;
+        if (!clip.every(Number.isFinite) || clip[3] <= 0) {
+            hideProjectedMarker(element);
             setMarkerAncillaryVisibility(record, true);
             return;
         }
@@ -3866,10 +3901,10 @@ function positionSessionMarkers(view = latestView) {
         const visible = noteFactor
             ? x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight
             : x > -40 && x < window.innerWidth + 40 && y > -40 && y < window.innerHeight + 40;
-        element.hidden = !visible;
+        if (!visible) hideProjectedMarker(element);
+        else showProjectedMarker(element);
         setMarkerAncillaryVisibility(record, !visible);
         if (!visible) {
-            element.style.removeProperty('transform');
             return;
         }
         element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;

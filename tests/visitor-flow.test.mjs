@@ -296,6 +296,9 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.match(fieldGuideSource, /data-field-guide-area/);
     assert.match(fieldGuideSource, /is-home-area/);
     assert.match(fieldGuideSource, /field-guide-plant-search/);
+    assert.match(fieldGuideSource, /Plant Search/);
+    assert.match(fieldGuideSource, /field-guide-search-input/);
+    assert.doesNotMatch(fieldGuideSource, /Knowledge records/);
     assert.match(fieldGuideSource, /field-guide-area-help/);
     assert.match(fieldGuideSource, /is-search-match/);
     assert.match(fieldGuideSource, /field-guide-hub-redesign/);

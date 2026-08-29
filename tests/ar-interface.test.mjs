@@ -593,6 +593,8 @@ test('Note placement preview uses one DOM surface on phones and one spatial text
     assert.match(arSource, /element\.style\.removeProperty\('transform'\)/);
     assert.match(arSource, /const boardHalfWidth = Math\.min\(window\.innerWidth \* \.31, 260\)/);
     assert.match(arSource, /const visible = boardPoint\.x >= boardHalfWidth/);
+    assert.match(arSource, /if \(!point \|\| !Number\.isFinite\(point\.x\) \|\| !Number\.isFinite\(point\.y\)\)/);
+    assert.match(styles, /\.creator-ar-marker-hit-target\[hidden\][\s\S]*display: none !important/);
     assert.match(drawSource, /readyPlacementType\?\.toLocaleLowerCase\(\) === 'note'/);
     assert.match(drawSource, /drawQuestSpatialNote\(view, \{ marker: previewMarker, position: noteTarget \}\)/);
     assert.match(arSource, /if \(questBeltUsesSpatialRenderer\(\)\) \{\s*preview\.hidden = true/);
@@ -1587,6 +1589,10 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldMarker, /Step 2 of 2/);
     assert.match(fieldMarker, /reviewGlobalPlantImport/);
     assert.match(fieldMarker, /data-global-setup-category/);
+    assert.match(fieldMarker, /data-global-setup-group-category/);
+    assert.match(fieldMarker, /field-guide-import-advanced/);
+    assert.match(fieldMarker, /field-guide-import-confirmation/);
+    assert.doesNotMatch(fieldMarker, /data-global-setup-category=\"\$\{escapeHtml\(fact\.key\)\}\"/);
     assert.match(fieldMarker, /stagePimImport/);
     assert.match(fieldMarker, /Content selected for NLXR/);
     assert.match(alaSearch, /api\.ala\.org\.au\/species\/search\/auto/);

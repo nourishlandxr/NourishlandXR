@@ -142,6 +142,12 @@ function globalImportFactsMarkup(result) {
 function globalImportSetupMarkup(result) {
     const displayName = result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant';
     const facts = Array.isArray(result.extractedFacts) ? result.extractedFacts : [];
+    const profileFacts = facts.filter(fact => GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key));
+    const pimFacts = facts.filter(fact => !GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key));
+    const groups = [...new Set(pimFacts.map(globalImportSuggestedCategory))].map(categoryId => ({
+        categoryId,
+        facts: pimFacts.filter(fact => globalImportSuggestedCategory(fact) === categoryId)
+    }));
     const thumbnail = result.thumbnailUrl
         ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />`
         : '<span aria-hidden="true">&#127793;</span>';
@@ -149,11 +155,9 @@ function globalImportSetupMarkup(result) {
         <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review + plant setup</span></div>
         <p class="field-guide-import-step">Step 2 of 2 · Review + plant setup</p>
         <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong>${globalImportScientificMarkup(result.scientificName)}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
-        <section class="field-guide-allocation-group" aria-labelledby="globalImportSetupFactsTitle"><div class="field-guide-allocation-group-heading"><div><h2 id="globalImportSetupFactsTitle">Review imported facts</h2><span>Confirm where each selected fact belongs before saving.</span></div></div><div class="field-guide-global-setup-facts">${facts.map(fact => {
-            if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) return `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</div><span class="field-guide-allocation-smart">Plant profile</span></div>`;
-            const categoryId = fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
-            return `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</div><label class="field-guide-global-setup-destination">Destination<select data-global-setup-category="${escapeHtml(fact.key)}">${GLOBAL_IMPORT_CATEGORIES.map(category => `<option value="${category.id}" ${category.id === categoryId ? 'selected' : ''}>${category.label}</option>`).join('')}</select></label></div>`;
-        }).join('') || '<p class="meta">No facts selected. Go back and select at least one fact.</p>'}</div></section>
+        <section class="field-guide-import-confirmation" aria-labelledby="globalImportSetupTitle"><div><h2 id="globalImportSetupTitle">Ready to create this plant</h2><p>Identity and image stay with the Plant Profile. The remaining facts are grouped below using NLXR’s suggested destinations.</p></div><div class="field-guide-import-profile-summary"><strong>Plant Profile</strong><span>${profileFacts.length ? profileFacts.map(fact => escapeHtml(fact.label || fact.key)).join(' · ') : 'Display name and source attribution'}</span></div></section>
+        <section class="field-guide-import-destinations" aria-labelledby="globalImportDestinationsTitle"><div class="field-guide-allocation-group-heading"><div><h2 id="globalImportDestinationsTitle">Place the selected facts</h2><span>Change a whole group once. Individual overrides are under Advanced options.</span></div></div><div class="field-guide-import-destination-groups">${groups.map(group => { const category = globalImportCategory(group.categoryId); return `<section class="field-guide-import-destination-group" data-global-setup-group="${group.categoryId}"><div class="field-guide-allocation-group-heading"><div><h3>${escapeHtml(category.label)}</h3><span>${group.facts.length} fact${group.facts.length === 1 ? '' : 's'} grouped together</span></div><label class="field-guide-global-setup-destination">Destination<select data-global-setup-category="${group.categoryId}" data-global-setup-group-category="${group.categoryId}">${GLOBAL_IMPORT_CATEGORIES.map(option => `<option value="${option.id}" ${option.id === group.categoryId ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><ul class="field-guide-import-fact-list">${group.facts.map(fact => `<li data-global-setup-fact-row="${escapeHtml(fact.key)}"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</li>`).join('')}</ul></section>`; }).join('') || '<p class="meta">No PIM facts selected. Go back and select at least one fact.</p>'}</div></section>
+        ${pimFacts.length ? `<details class="field-guide-import-advanced"><summary>Advanced options · move one fact</summary><p>Use this only when one fact belongs in a different category from the rest of its group.</p><div class="field-guide-import-advanced-list">${pimFacts.map(fact => `<label><span><strong>${escapeHtml(fact.label || fact.key)}</strong><small>Use its group destination by default</small></span><select data-global-setup-fact-category="${escapeHtml(fact.key)}"><option value="">Use group destination</option>${GLOBAL_IMPORT_CATEGORIES.map(category => `<option value="${category.id}">${category.label}</option>`).join('')}</select></label>`).join('')}</div></details>` : ''}
         <p class="meta">The Area and display name are confirmed below on this same page. Nothing is saved until you create the NLXR Plant Profile.</p>
     </section>`;
 }
@@ -373,8 +377,11 @@ function syncGlobalImportSetupDestinations() {
     if (!selectedGlobalPlant || !Array.isArray(selectedGlobalPlant.extractedFacts)) return;
     const extractedFacts = selectedGlobalPlant.extractedFacts.map(fact => {
         if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) return fact;
-        const select = [...document.querySelectorAll('[data-global-setup-category]')].find(item => item.dataset.globalSetupCategory === fact.key);
-        const categoryId = select?.value || fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
+        const row = [...document.querySelectorAll('[data-global-setup-fact-row]')].find(item => item.dataset.globalSetupFactRow === fact.key);
+        const group = row?.closest('[data-global-setup-group]');
+        const groupSelect = group?.querySelector('[data-global-setup-group-category]');
+        const override = [...document.querySelectorAll('[data-global-setup-fact-category]')].find(item => item.dataset.globalSetupFactCategory === fact.key);
+        const categoryId = override?.value || groupSelect?.value || fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
         const category = globalImportCategory(categoryId);
         const cell = globalImportCell(fact, categoryId);
         return {

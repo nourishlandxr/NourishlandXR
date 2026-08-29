@@ -274,9 +274,9 @@ function applyCreatorContentCopy(app, renderTarget = app) {
     const areasTitle = app.querySelector('#fieldGuideAreasTitle');
     if (areasTitle) areasTitle.textContent = 'Areas';
     const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
-    if (searchTitle) searchTitle.textContent = 'Plants';
+    if (searchTitle) searchTitle.textContent = 'Plant Search';
     const searchLabel = app.querySelector('label[for="fieldGuideSearch"]');
-    if (searchLabel) searchLabel.textContent = 'Search';
+    if (searchLabel) searchLabel.textContent = 'Search all plants';
     const creativeTitle = app.querySelector('#fieldGuideCreativeToolsTitle');
     if (creativeTitle) creativeTitle.textContent = 'Creative Features';
     const anchorsTitle = app.querySelector('#fieldGuideAnchorsTitle');
@@ -676,7 +676,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false, r
                 <nav class="nlxr-db-v2-mode-nav field-guide-dashboard-nav" aria-label="Dashboard views"><button type="button" onclick="window.renderProjectDashboard('${encoded(guide.project.id)}')"><span aria-hidden="true">✦</span> Overview</button><button type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')"><span aria-hidden="true">▧</span> Map</button><button type="button" class="is-active" aria-current="page"><span aria-hidden="true">☰</span> Content</button></nav>
                 <main class="field-guide-workspace">
                     <section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div>${places.length > 1 ? `<button class="field-guide-view-all" type="button" onclick="window.filterFieldGuidePlace('')">View all</button>` : ''}</div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>
-                    <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Knowledge records</p><h2 id="fieldGuidePlantSearchTitle">Plants</h2><p>Search saved and reference plants together.</p></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
+                    <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading field-guide-plant-search-heading"><div><p class="field-guide-section-kicker">Plant library</p><h2 id="fieldGuidePlantSearchTitle">Plant Search</h2><p>Search saved and reference plants together.</p></div><span class="field-guide-search-badge">LOCAL + GLOBAL</span></div><div class="field-guide-search-deck field-guide-search-deck--prominent"><div class="field field-guide-plant-search-field"><label for="fieldGuideSearch">Search all plants</label><div class="field-guide-search-input"><span aria-hidden="true">⌕</span><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div><small>Search your saved plants and global sources together.</small></div></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
                     ${creatorSpatialSetup}
                     ${creatorCreativeSetup}
                     ${virtualTagsSection}
