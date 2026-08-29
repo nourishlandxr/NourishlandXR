@@ -196,7 +196,7 @@ export async function renderFieldMarker(target, defaults = null) {
     if (!app) return;
     nonPlantMode = defaults?.nonPlantMode === true;
     const initialGlobalPlant = defaults?.globalPlant && typeof defaults.globalPlant === 'object' ? defaults.globalPlant : null;
-    plantProfiles = nonPlantMode
+    plantProfiles = nonPlantMode || initialGlobalPlant
         ? []
         : ((await loadPlantLibrary(true)).plants || []).filter(profile => !/^lemon drop(?: old profile| garcinia)?$/i.test(String(profile.commonName || profile.name || '').trim()));
     plantSearchScope = initialGlobalPlant ? 'global' : 'local';
@@ -212,8 +212,8 @@ export async function renderFieldMarker(target, defaults = null) {
         selected = { project: defaults.project || '', site: defaults.site || '', place: defaults.place || '' };
         markerType = ['plant', 'note', 'sub_checkpoint'].includes(defaults.type) ? defaults.type : 'plant';
         placementMode = defaults.placementMode === 'ar' ? 'ar' : 'without-ar';
-        sites = selected.project ? await loadProjectSites(selected.project) : [];
-        places = selected.project && selected.site ? await loadSitePlaces(selected.project, selected.site) : [];
+        sites = Array.isArray(defaults.sites) ? defaults.sites : selected.project ? await loadProjectSites(selected.project) : [];
+        places = Array.isArray(defaults.places) ? defaults.places : selected.project && selected.site ? await loadSitePlaces(selected.project, selected.site) : [];
     } else {
         dashboardProjectId = '';
         throw new Error('Open Quick Access from a selected location.');
@@ -417,6 +417,8 @@ export async function openGlobalPlantProfile(target, defaults = {}) {
         placementMode: 'without-ar',
         dashboardProjectId: defaults.project,
         returnAction: defaults.returnAction || '',
+        sites: defaults.sites,
+        places: defaults.places,
         globalPlant
     });
 }

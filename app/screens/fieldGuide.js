@@ -278,26 +278,22 @@ function applyCreatorContentCopy(app) {
     const searchDeck = app.querySelector('.field-guide-search-deck');
     const searchInput = app.querySelector('#fieldGuideSearch');
     const searchField = searchInput?.closest('.field');
-    const localPlants = plantList;
-    if (!searchHeading || !searchDeck || !searchInput || !searchField || !localPlants || searchHeading.querySelector('[data-field-guide-scope]')) return;
+    if (!searchHeading || !searchDeck || !searchInput || !searchField || !plantList) return;
 
-    const scope = document.createElement('div');
-    scope.className = 'field-guide-plant-scope';
-    scope.dataset.fieldGuideScope = '';
-    scope.setAttribute('role', 'group');
-    scope.setAttribute('aria-label', 'Plant search scope');
-    scope.innerHTML = '<button type="button" data-field-guide-scope-button="global" aria-pressed="false">Global</button><button type="button" data-field-guide-scope-button="local" class="is-active" aria-pressed="true">Local</button>';
-    searchHeading.append(scope);
+    const searchLegend = document.createElement('div');
+    searchLegend.className = 'field-guide-global-match-legend';
+    searchLegend.setAttribute('aria-label', 'Plant search result colours');
+    searchLegend.innerHTML = '<span class="field-guide-global-legend-local">Blue · Local plants</span><span class="field-guide-global-legend-exact">Green · Exact match</span><span class="field-guide-global-legend-related">Yellow · Same genus / related</span><span class="field-guide-global-legend-caution">Red · Check species</span>';
+    searchHeading.append(searchLegend);
 
     const globalPanel = document.createElement('div');
     globalPanel.className = 'field-guide-global-search';
     globalPanel.hidden = true;
-    globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta">Type at least 2 letters.</p><div class="field-guide-global-match-legend" aria-label="Global search result relevance"><span class="field-guide-global-legend-exact">Green · exact match</span><span class="field-guide-global-legend-related">Yellow · same genus or name match</span><span class="field-guide-global-legend-caution">Red · check species carefully</span></div><div class="field-guide-global-results" data-field-guide-global-results></div>';
-    searchDeck.append(globalPanel);
+    globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta"></p><div class="field-guide-global-results" data-field-guide-global-results></div>';
+    plantList.parentNode.append(globalPanel);
 
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
-    let searchScope = 'local';
     let openGlobalProfile = null;
     let globalImportStep = 'select';
     const globalExtractionFields = result => new Set(Array.isArray(result?.extractionFields) && result.extractionFields.length
@@ -385,7 +381,7 @@ function applyCreatorContentCopy(app) {
     const renderGlobalResults = results => {
         if (!globalResults) return;
         const rankedResults = rankPlantSearchResults(results, globalSearchQuery);
-        globalResults.innerHTML = rankedResults.map((result, index) => { const match = result.searchMatch || {}; return `<article class="field-guide-global-result field-guide-global-result--${escapeHtml(match.tone || 'caution')}">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><small class="field-guide-global-match-badge" title="${escapeHtml(match.kind === 'same-genus' ? 'This record shares the genus with an exact result, but it is a different species.' : match.kind === 'other' ? 'This record is not the exact species. Confirm the scientific name before importing.' : '')}">${escapeHtml(match.label || 'Review match')}</small><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}${result.price || result.availability ? `<small class="field-guide-global-commercial">${escapeHtml([result.price, result.availability].filter(Boolean).join(' · '))}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small>${result.sourceUrl ? `<a class="field-guide-global-source-link" href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noopener noreferrer">View source</a>` : ''}</span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`; }).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
+        globalResults.innerHTML = rankedResults.map((result, index) => { const match = result.searchMatch || {}; return `<article class="field-guide-global-result field-guide-global-result--${escapeHtml(match.tone || 'caution')}">${result.thumbnailUrl ? `<img src="${escapeHtml(result.thumbnailUrl)}" alt="" loading="lazy" />` : '<span class="field-guide-global-result-placeholder" aria-hidden="true">🌿</span>'}<span><strong title="${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}">${escapeHtml(result.commonName || result.canonicalName || result.scientificName || 'Unnamed plant')}</strong><em title="${escapeHtml(result.scientificName || result.canonicalName || '')}">${escapeHtml(result.scientificName || result.canonicalName || 'Scientific name not supplied')}</em>${result.family ? `<small title="${escapeHtml(result.family)}">${escapeHtml(result.family)}</small>` : ''}${result.price || result.availability ? `<small class="field-guide-global-commercial">${escapeHtml([result.price, result.availability].filter(Boolean).join(' · '))}</small>` : ''}<small title="${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}">${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)}</small>${result.sourceUrl ? `<a class="field-guide-global-source-link" href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noopener noreferrer">View source</a>` : ''}</span><button type="button" class="primary field-guide-global-open" data-global-plant-index="${index}">Open profile</button></article>`; }).join('') || `<p class="meta">No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.</p>`;
         globalResults.querySelectorAll('[data-global-plant-index]').forEach(button => button.addEventListener('click', async () => {
             const result = rankedResults[Number(button.dataset.globalPlantIndex)];
             if (!result) return;
@@ -405,6 +401,8 @@ function applyCreatorContentCopy(app) {
                     site: siteGroup.site.id,
                     place: currentGuidePlaceId || '__unassigned__',
                     returnAction: `window.renderFieldGuide('${encoded(currentGuide.project.id)}', true)`,
+                    sites: [siteGroup.site],
+                    places: siteGroup.placeGroups.map(placeGroup => placeGroup.place),
                     globalPlant: {
                         ...sourceResult,
                         importFacts: facts,
@@ -523,53 +521,28 @@ function applyCreatorContentCopy(app) {
         if (globalResults) globalResults.innerHTML = '';
         openGlobalProfile = null;
         if (query.length < 2) {
+            globalPanel.hidden = true;
             if (globalStatus) globalStatus.textContent = 'Type at least 2 letters.';
             return;
         }
+        globalPanel.hidden = false;
         if (globalStatus) globalStatus.textContent = 'Searching the global plant list…';
         globalGuideSearchTimer = setTimeout(async () => {
             try {
                 const results = await searchGlobalPlants(query);
-                if (searchInput.value.trim() !== query || searchScope !== 'global') return;
+                if (searchInput.value.trim() !== query) return;
                 renderGlobalResults(results);
                 if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.` : `No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.`;
             } catch (error) {
-                if (globalStatus) globalStatus.textContent = 'Plant database unavailable. Try again or continue with local records.';
+                if (searchInput.value.trim() !== query) return;
+                if (globalStatus) globalStatus.textContent = 'Global plant databases unavailable. Local results remain available.';
             }
         }, 300);
     };
-    const updateSearchField = global => {
-        const label = searchField.querySelector('label');
-        if (label) label.textContent = global ? 'Search global plants' : 'Search plants';
-        searchInput.placeholder = global ? 'Common name, genus or species…' : 'Name, scientific name, use or Area';
-        if (global) searchInput.setAttribute('aria-describedby', 'fieldGuideGlobalSearchStatus');
-        else searchInput.removeAttribute('aria-describedby');
-    };
     searchInput.addEventListener('input', event => {
-        if (searchScope === 'global') searchGlobal(event.target.value);
-        else applyFieldGuideFilter(currentGuidePlaceId);
+        applyFieldGuideFilter(currentGuidePlaceId);
+        searchGlobal(event.target.value);
     });
-
-    const setScope = value => {
-        const global = value === 'global';
-        searchScope = global ? 'global' : 'local';
-        scope.querySelectorAll('[data-field-guide-scope-button]').forEach(button => {
-            const active = button.dataset.fieldGuideScopeButton === value;
-            button.classList.toggle('is-active', active);
-            button.setAttribute('aria-pressed', String(active));
-        });
-        if (localPlants) localPlants.hidden = global;
-        globalPanel.hidden = !global;
-        updateSearchField(global);
-        if (global) {
-            searchInput.focus();
-            searchGlobal(searchInput.value);
-        } else {
-            if (globalResults) globalResults.innerHTML = '';
-            applyFieldGuideFilter(currentGuidePlaceId);
-        }
-    };
-    scope.querySelectorAll('[data-field-guide-scope-button]').forEach(button => button.addEventListener('click', () => setScope(button.dataset.fieldGuideScopeButton)));
 }
 
 export async function renderFieldGuide(app, encodedProjectId, creator = false) {
@@ -670,7 +643,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false) {
                 <nav class="nlxr-db-v2-mode-nav field-guide-dashboard-nav" aria-label="Dashboard views"><button type="button" onclick="window.renderProjectDashboard('${encoded(guide.project.id)}')"><span aria-hidden="true">✦</span> Overview</button><button type="button" onclick="window.renderLocationMap('${encoded(guide.project.id)}',true,'field-guide')"><span aria-hidden="true">▧</span> Map</button><button type="button" class="is-active" aria-current="page"><span aria-hidden="true">☰</span> Content</button></nav>
                 <main class="field-guide-workspace">
                     <section class="field-guide-areas-board" aria-labelledby="fieldGuideAreasTitle"><div class="field-guide-section-heading"><div><h2 id="fieldGuideAreasTitle">Areas</h2></div>${places.length > 1 ? `<button class="field-guide-view-all" type="button" onclick="window.filterFieldGuidePlace('')">View all</button>` : ''}</div><div class="field-guide-place-cloud field-guide-area-grid">${creatorAreaCards || '<p class="meta">No Areas are available yet.</p>'}</div></section>
-                    <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Knowledge records</p><h2 id="fieldGuidePlantSearchTitle">Plants</h2><p>Search saved plants, then switch to Global for reference records.</p></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
+                    <section class="field-guide-plant-search" aria-labelledby="fieldGuidePlantSearchTitle"><div class="field-guide-section-heading"><div><p class="field-guide-section-kicker">Knowledge records</p><h2 id="fieldGuidePlantSearchTitle">Plants</h2><p>Search saved and reference plants together.</p></div></div><div class="field-guide-search-deck"><div class="field"><label for="fieldGuideSearch">Search plants</label><input id="fieldGuideSearch" type="search" placeholder="Name, scientific name, use or Area" /></div></div><p id="fieldGuideCount">${guide.plants.length} plant${guide.plants.length === 1 ? '' : 's'}</p><div class="analog-plant-list field-guide-plant-grid">${plantRows}</div></section>
                     ${creatorSpatialSetup}
                     ${creatorCreativeSetup}
                     ${virtualTagsSection}

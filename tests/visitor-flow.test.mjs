@@ -281,8 +281,10 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.doesNotMatch(fieldGuideSource, /<summary>Results<\/summary>/);
     assert.match(fieldGuideSource, /app\.querySelector\('#fieldGuideCount'\)\?\.remove\(\)/);
     assert.match(fieldGuideSource, /searchGlobalPlants/);
-    assert.match(fieldGuideSource, /data-field-guide-scope-button="global"/);
-    assert.match(fieldGuideSource, /data-field-guide-scope-button="local"/);
+    assert.doesNotMatch(fieldGuideSource, /data-field-guide-scope-button="global"/);
+    assert.doesNotMatch(fieldGuideSource, /data-field-guide-scope-button="local"/);
+    assert.match(fieldGuideSource, /field-guide-global-legend-local/);
+    assert.match(fieldGuideSource, /applyFieldGuideFilter\(currentGuidePlaceId\);\s*searchGlobal\(event\.target\.value\)/);
     assert.doesNotMatch(fieldGuideSource, /Your garden quest|Explore your garden|Bring the garden to life/);
     assert.doesNotMatch(fieldGuideSource, /CHOOSE YOUR NEXT PATCH|DISCOVER SOMETHING NEW/);
     assert.match(fieldGuideSource, /field-guide-area-grid/);
@@ -327,7 +329,7 @@ test('Content workspace keeps a compact mobile grid and expands into desktop col
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-plant-grid\[hidden\][\s\S]*display: none !important/);
     assert.match(styles, /\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
     assert.match(styles, /@media \(max-width: 380px\)[\s\S]*\.field-guide-hub-redesign \.field-guide-global-result[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\)/);
-    assert.match(styles, /\.field-guide-hub-redesign \.field-guide-plant-scope button \{ min-height: 44px;/);
+    assert.match(styles, /\.field-guide-global-legend-local \{ background:#e4f0ff;/);
 });
 
 test('creator dashboard frame stays inside the viewport with a simple border', () => {
