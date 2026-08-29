@@ -589,8 +589,10 @@ test('Note placement preview uses one DOM surface on phones and one spatial text
     assert.match(arSource, /function positionNotePlacementPreview\(view = latestView\)/);
     assert.match(arSource, /markerDomAppearanceStyle\(marker\)\.split\(';'\)/);
     assert.match(arSource, /--marker-note-width/);
-    assert.match(arSource, /const marginX = noteFactor \? Math\.min\(window\.innerWidth \* \.48, 140 \* noteFactor \+ 48\) : 40/);
-    assert.match(arSource, /const marginY = noteFactor \? 58 \* noteFactor \+ 56 : 40/);
+    assert.match(arSource, /const visible = noteFactor\s+\? x >= 0 && x <= window\.innerWidth && y >= 0 && y <= window\.innerHeight/);
+    assert.match(arSource, /element\.style\.removeProperty\('transform'\)/);
+    assert.match(arSource, /const boardHalfWidth = Math\.min\(window\.innerWidth \* \.31, 260\)/);
+    assert.match(arSource, /const visible = boardPoint\.x >= boardHalfWidth/);
     assert.match(drawSource, /readyPlacementType\?\.toLocaleLowerCase\(\) === 'note'/);
     assert.match(drawSource, /drawQuestSpatialNote\(view, \{ marker: previewMarker, position: noteTarget \}\)/);
     assert.match(arSource, /if \(questBeltUsesSpatialRenderer\(\)\) \{\s*preview\.hidden = true/);
@@ -1780,6 +1782,10 @@ test('Area and Totem records use compact profile cards with Totem-owned text box
     assert.match(arSource, /creator-ar-location-stick creator-ar-totem-stick/);
     assert.match(arSource, /creator-ar-location-note-board creator-ar-totem-balloon/);
     assert.match(arSource, /function positionCreatorTotemInformation\(record, markerX, markerY, view = latestView\)/);
+    assert.match(arSource, /const attachmentPoint = view \? projectWorldPoint\(view, topWorld\) : null/);
+    assert.match(arSource, /const boardFitsViewport = boardX >= boardWidth \/ 2 \+ 12/);
+    assert.match(arSource, /const signX = attachmentPoint\.x \+ direction \* \(signWidth \/ 2 \+ signGap \+ row \* 8\)/);
+    assert.doesNotMatch(arSource, /Math\.max\(signWidth \/ 2 \+ 10, Math\.min\(window\.innerWidth - signWidth \/ 2 - 10/);
     assert.match(arSource, /alignAreaToCheckpoint\(areaRecords, totem\.marker\.id, origin\)/);
     assert.doesNotMatch(arSource, /Checkpoint linked/);
     assert.match(dashboardSource, /Back to Area/);

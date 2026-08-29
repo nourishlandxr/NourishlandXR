@@ -2681,15 +2681,17 @@ function positionLocationNote(view = latestView) {
         note.hidden = true;
         return;
     }
-    const marginX = Math.min(window.innerWidth * .45, 390);
-    const marginY = Math.min(window.innerHeight * .25, 180);
-    const visible = boardPoint.x > -marginX
-        && boardPoint.x < window.innerWidth + marginX
-        && boardPoint.y > -marginY
-        && boardPoint.y < window.innerHeight + marginY;
+    const boardHalfHeight = Math.min(78, Math.max(58, window.innerHeight * .075));
+    const boardHalfWidth = Math.min(window.innerWidth * .31, 260);
+    // Keep the location board world-anchored. Do not let a projected point
+    // drift beyond the viewport and appear pinned to an edge while the camera
+    // turns; it will return when the real-world anchor is visible again.
+    const visible = boardPoint.x >= boardHalfWidth
+        && boardPoint.x <= window.innerWidth - boardHalfWidth
+        && boardPoint.y >= boardHalfHeight
+        && boardPoint.y <= window.innerHeight - boardHalfHeight;
     note.hidden = !visible;
     if (!visible) return;
-    const boardHalfHeight = Math.min(78, Math.max(58, window.innerHeight * .075));
     const stickStart = { x: boardPoint.x, y: boardPoint.y + boardHalfHeight };
     const dx = attachmentPoint.x - stickStart.x;
     const dy = attachmentPoint.y - stickStart.y;
@@ -3857,20 +3859,23 @@ function positionSessionMarkers(view = latestView) {
         const x = (clip[0] / clip[3] * 0.5 + 0.5) * window.innerWidth;
         const y = (-clip[1] / clip[3] * 0.5 + 0.5) * window.innerHeight;
         const noteFactor = record.marker.type === 'note' ? markerSizeFactor(record.marker) : 0;
-        const marginX = noteFactor ? Math.min(window.innerWidth * .48, 140 * noteFactor + 48) : 40;
-        const marginY = noteFactor ? 58 * noteFactor + 56 : 40;
-        const visible = x > -marginX
-            && x < window.innerWidth + marginX
-            && y > -marginY
-            && y < window.innerHeight + marginY;
+        // Notes are sizeable world surfaces, so their screen center must stay
+        // inside the actual camera viewport. The old generous margins kept a
+        // note alive after it had left view, which made it look screen-locked
+        // during a camera turn instead of remaining firmly world-anchored.
+        const visible = noteFactor
+            ? x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight
+            : x > -40 && x < window.innerWidth + 40 && y > -40 && y < window.innerHeight + 40;
         element.hidden = !visible;
         setMarkerAncillaryVisibility(record, !visible);
-        if (visible) {
-            element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
-            element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
-            positionCreatorPlantProfile(record, x, y);
-            if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y, view);
+        if (!visible) {
+            element.style.removeProperty('transform');
+            return;
         }
+        element.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -50%)`;
+        element.style.setProperty('--marker-rotation', `${Number(record.rotationDegrees) || 0}deg`);
+        positionCreatorPlantProfile(record, x, y);
+        if (record.marker.type === 'area_checkpoint') positionCreatorTotemInformation(record, x, y, view);
     });
 }
 
@@ -3958,10 +3963,25 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
     const ground = groundedTotemPosition(record.position);
     const [, halfHeight] = markerDimensions(record.marker);
     const topWorld = { ...ground, y: ground.y + .08 * markerSizeFactor(record.marker) + halfHeight * 2 };
-    const projectedTop = view ? projectWorldPoint(view, topWorld) : null;
-    const attachmentPoint = projectedTop || { x: markerX, y: markerY - Math.max(48, window.innerHeight * .08) };
-    const boardX = Math.max(boardWidth / 2 + 12, Math.min(window.innerWidth - boardWidth / 2 - 12, attachmentPoint.x));
-    const boardY = Math.max(72, attachmentPoint.y - boardHalfHeight - 28);
+    const attachmentPoint = view ? projectWorldPoint(view, topWorld) : null;
+    if (!attachmentPoint) {
+        information.hidden = true;
+        return;
+    }
+    const boardX = attachmentPoint.x;
+    const boardY = attachmentPoint.y - boardHalfHeight - 28;
+    const boardFitsViewport = boardX >= boardWidth / 2 + 12
+        && boardX <= window.innerWidth - boardWidth / 2 - 12
+        && boardY >= 12
+        && boardY <= window.innerHeight - boardHalfHeight - 12;
+    // A fixed edge-clamped board is misleading in AR: it no longer points to
+    // the Totem. Hide it until the real projected anchor has room for the
+    // board, rather than parking it at a screen edge.
+    if (!boardFitsViewport) {
+        information.hidden = true;
+        return;
+    }
+    information.hidden = false;
     const stickStart = { x: boardX, y: boardY + boardHalfHeight };
     const dx = attachmentPoint.x - stickStart.x;
     const dy = attachmentPoint.y - stickStart.y;
@@ -3986,8 +4006,8 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
     information.querySelectorAll('[data-ar-totem-link-area]').forEach((sign, index) => {
         const direction = sign.classList.contains('is-left') ? -1 : 1;
         const row = Math.floor(index / 2);
-        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8)));
-        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 18 - row * 54));
+        const signX = attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8);
+        const signY = attachmentPoint.y - 18 - row * 54;
         const armLength = Math.max(14, Math.abs(signX - attachmentPoint.x) - signWidth / 2 + 4);
         sign.style.left = `${signX.toFixed(1)}px`;
         sign.style.top = `${signY.toFixed(1)}px`;
@@ -3997,8 +4017,8 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
     information.querySelectorAll('[data-ar-totem-link-branch]').forEach((branch, index) => {
         const direction = branch.classList.contains('is-left') ? -1 : 1;
         const row = Math.floor(index / 2);
-        const signX = Math.max(signWidth / 2 + 10, Math.min(window.innerWidth - signWidth / 2 - 10, attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8)));
-        const signY = Math.max(64, Math.min(window.innerHeight - 58, attachmentPoint.y - 18 - row * 54));
+        const signX = attachmentPoint.x + direction * (signWidth / 2 + signGap + row * 8);
+        const signY = attachmentPoint.y - 18 - row * 54;
         const armLength = Math.max(14, Math.abs(signX - attachmentPoint.x) - signWidth / 2 + 4);
         branch.style.left = `${(direction > 0 ? attachmentPoint.x : attachmentPoint.x - armLength).toFixed(1)}px`;
         branch.style.top = `${signY.toFixed(1)}px`;
