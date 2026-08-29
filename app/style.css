@@ -9050,6 +9050,87 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-search-deck select:focus { border-color: var(--webhub-green); box-shadow: 0 0 0 3px rgba(46, 112, 70, .12); outline: 0; }
 .field-guide-hub-redesign .field-guide-plant-search > #fieldGuideCount { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
 
+.field-guide-hub-redesign .field-guide-global-match-legend {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin: 10px 0 0;
+    padding: 0;
+    border: 0;
+}
+.field-guide-hub-redesign .field-guide-global-match-legend > legend {
+    grid-column: 1 / -1;
+    margin: 0 0 1px;
+    padding: 0;
+    color: var(--webhub-muted);
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.field-guide-hub-redesign .field-guide-global-legend-option {
+    display: grid;
+    grid-template-columns: 16px 10px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 42px;
+    margin: 0;
+    padding: 7px 8px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    cursor: pointer;
+    font-weight: 400;
+}
+.field-guide-hub-redesign .field-guide-global-legend-option:hover,
+.field-guide-hub-redesign .field-guide-global-legend-option:focus-within { border-color: rgba(45, 88, 56, .18); }
+.field-guide-hub-redesign .field-guide-global-legend-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--webhub-green); }
+.field-guide-hub-redesign .field-guide-global-legend-swatch { width: 10px; height: 10px; border-radius: 50%; }
+.field-guide-hub-redesign .field-guide-global-legend-option > span:last-child { display: grid; min-width: 0; gap: 1px; }
+.field-guide-hub-redesign .field-guide-global-legend-option strong,
+.field-guide-hub-redesign .field-guide-global-legend-option small { overflow-wrap: anywhere; }
+.field-guide-hub-redesign .field-guide-global-legend-option strong { color: var(--webhub-ink); font-size: .72rem; line-height: 1.1; }
+.field-guide-hub-redesign .field-guide-global-legend-option small { color: var(--webhub-muted); font-size: .65rem; line-height: 1.15; }
+.field-guide-hub-redesign .field-guide-global-legend-local { background: #e4f0ff; color: #2c5f95; }
+.field-guide-hub-redesign .field-guide-global-legend-exact { background: #e3f3e2; color: #28613b; }
+.field-guide-hub-redesign .field-guide-global-legend-related { background: #fff3c9; color: #81631c; }
+.field-guide-hub-redesign .field-guide-global-legend-caution { background: #ffe5dc; color: #9a4939; }
+.field-guide-hub-redesign .field-guide-global-legend-local .field-guide-global-legend-swatch { background: #4f91d8; }
+.field-guide-hub-redesign .field-guide-global-legend-exact .field-guide-global-legend-swatch { background: #4b9c61; }
+.field-guide-hub-redesign .field-guide-global-legend-related .field-guide-global-legend-swatch { background: #c69a20; }
+.field-guide-hub-redesign .field-guide-global-legend-caution .field-guide-global-legend-swatch { background: #c95f4c; }
+
+.field-guide-hub-redesign .field-guide-all-plants {
+    margin-top: 10px;
+    border: 1px solid var(--webhub-line);
+    border-radius: 15px;
+    background: rgba(255, 255, 252, .68);
+    overflow: hidden;
+}
+.field-guide-hub-redesign .field-guide-all-plants > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding: 9px 12px;
+    cursor: pointer;
+    list-style: none;
+}
+.field-guide-hub-redesign .field-guide-all-plants > summary::-webkit-details-marker { display: none; }
+.field-guide-hub-redesign .field-guide-all-plants > summary::after { content: '＋'; color: var(--webhub-green); font-size: 1rem; font-weight: 500; }
+.field-guide-hub-redesign .field-guide-all-plants[open] > summary::after { content: '−'; }
+.field-guide-hub-redesign .field-guide-all-plants > summary:focus-visible { outline: 3px solid rgba(46, 112, 70, .16); outline-offset: -3px; }
+.field-guide-hub-redesign .field-guide-all-plants-heading { display: grid; min-width: 0; gap: 2px; }
+.field-guide-hub-redesign .field-guide-all-plants-heading strong { color: var(--webhub-ink); font-size: .88rem; }
+.field-guide-hub-redesign .field-guide-all-plants-heading small,
+.field-guide-hub-redesign .field-guide-all-plants-count { color: var(--webhub-muted); font-size: .7rem; }
+.field-guide-hub-redesign .field-guide-all-plants-count { flex: 0 0 auto; }
+.field-guide-hub-redesign .field-guide-all-plants > .field-guide-plant-grid { padding: 0 10px 10px; }
+.field-guide-hub-redesign [data-field-guide-plant][hidden],
+.field-guide-hub-redesign .field-guide-global-results [data-field-guide-search-tone][hidden] { display: none !important; }
+
 .field-guide-hub-redesign .field-guide-global-search { padding: 0; }
 .field-guide-hub-redesign .field-guide-global-search > .meta { margin: 0; color: var(--webhub-muted); font-size: .78rem; }
 
@@ -9061,10 +9142,16 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign .field-guide-plant-card:focus-visible { border-color: rgba(55, 119, 185, .55); background: #f7fbff; box-shadow: 0 0 0 3px rgba(55, 119, 185, .12); }
 .field-guide-hub-redesign .field-guide-card-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--webhub-green-soft); font-size: 1.05rem; }
 .field-guide-hub-redesign .field-guide-plant-card > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.field-guide-hub-redesign .field-guide-plant-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .field-guide-hub-redesign .field-guide-plant-card strong,
 .field-guide-hub-redesign .field-guide-plant-card small { overflow-wrap: anywhere; }
 .field-guide-hub-redesign .field-guide-plant-card strong { font-size: .9rem; }
 .field-guide-hub-redesign .field-guide-plant-card small { color: var(--webhub-muted); font-size: .75rem; line-height: 1.25; }
+.field-guide-hub-redesign .field-guide-plant-capability { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 4px; padding: 3px 6px; border: 1px solid rgba(45, 88, 56, .14); border-radius: 999px; color: var(--webhub-muted); font-size: .61rem; font-weight: 850; line-height: 1; white-space: nowrap; }
+.field-guide-hub-redesign .field-guide-plant-capability > span { font-size: .58rem; }
+.field-guide-hub-redesign .field-guide-plant-capability--basic { background: #f1f3f0; }
+.field-guide-hub-redesign .field-guide-plant-capability--advanced { background: #f5f0ff; color: #67518c; }
+.field-guide-hub-redesign .field-guide-plant-capability--pim { background: #e7f5ec; color: #28613b; }
 
 .field-guide-hub-redesign .field-guide-global-result {
     grid-template-columns: 44px minmax(0, 1fr) auto;

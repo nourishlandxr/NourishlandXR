@@ -35,6 +35,10 @@ const initialPimCells = () => [];
 // Legacy placement copy “Not yet placed · can be placed later” is intentionally
 // omitted here; placement belongs to the post-creation flow.
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const globalImportScientificMarkup = value => {
+    const scientificName = String(value || '').trim();
+    return scientificName ? `<em>${escapeHtml(scientificName)}</em>` : '';
+};
 
 const GLOBAL_IMPORT_CATEGORIES = Object.freeze([
     { id: 'scientific-information', label: 'Scientific Information', fallbackCell: 'Imported facts' },
@@ -128,7 +132,7 @@ function globalImportFactsMarkup(result) {
         <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span>2 Review + plant setup</span></div>
         <p class="field-guide-import-step">Step 1 of 2 · Select facts</p>
         <header class="field-guide-global-profile-heading"><div><span class="field-guide-global-profile-kicker">GLOBAL PLANT IMPORT</span><h2 id="globalImportFactsTitle" tabindex="-1">Select facts</h2><p>Choose the source information you want to bring into this project.</p></div></header>
-        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(globalImportDisplayName(result))}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · Source attribution is kept automatically.</small></span></div>
+        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(globalImportDisplayName(result))}</strong>${globalImportScientificMarkup(result.scientificName)}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · Source attribution is kept automatically.</small></span></div>
         <section class="field-guide-global-profile-extract" aria-labelledby="globalImportFactsListTitle"><div class="field-guide-extract-heading"><div><h3 id="globalImportFactsListTitle">Facts to import</h3><p>Recommended facts are selected. You can change this before reviewing the plant setup.</p></div><button type="button" class="ghost" onclick="window.selectGlobalImportRecommended()">Select recommended</button></div><div class="field-guide-fact-groups">${['Essential', 'Taxonomy', 'Distribution', 'Retail', 'Sources'].map(group => groupedFacts[group]?.length ? `<section class="field-guide-fact-group"><h4>${group}</h4><div>${groupedFacts[group].map(fact => `<label class="field-guide-extract-row"><input type="checkbox" data-global-extract-field="${escapeHtml(fact.key)}" ${extraction.has(fact.key) ? 'checked' : ''} /><span><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}${fact.recommended ? '<em class="field-guide-recommended">Recommended</em>' : ''}</span></label>`).join('')}</div></section>` : '').join('')}</div></section>
         <p class="field-guide-global-profile-status" data-global-profile-status role="status" aria-live="polite"></p>
         <nav class="field-guide-import-actions" aria-label="Import navigation"><button type="button" class="ghost" onclick="${escapeHtml(globalImportReturn())}">Back</button><button type="button" class="primary" onclick="window.reviewGlobalPlantImport()">Review + plant setup</button></nav>
@@ -144,7 +148,7 @@ function globalImportSetupMarkup(result) {
     return `<section class="field-guide-global-setup" aria-labelledby="globalImportSetupTitle">
         <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review + plant setup</span></div>
         <p class="field-guide-import-step">Step 2 of 2 · Review + plant setup</p>
-        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong><em>${escapeHtml(result.scientificName || 'Scientific name not supplied')}</em><small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
+        <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong>${globalImportScientificMarkup(result.scientificName)}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
         <section class="field-guide-allocation-group" aria-labelledby="globalImportSetupFactsTitle"><div class="field-guide-allocation-group-heading"><div><h2 id="globalImportSetupFactsTitle">Review imported facts</h2><span>Confirm where each selected fact belongs before saving.</span></div></div><div class="field-guide-global-setup-facts">${facts.map(fact => {
             if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)) return `<div class="field-guide-allocation-row"><div class="field-guide-allocation-fact"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</div><span class="field-guide-allocation-smart">Plant profile</span></div>`;
             const categoryId = fact.confirmedDestinations?.[0]?.[0] || globalImportSuggestedCategory(fact);
@@ -196,9 +200,10 @@ export async function renderFieldMarker(target, defaults = null) {
     if (!app) return;
     nonPlantMode = defaults?.nonPlantMode === true;
     const initialGlobalPlant = defaults?.globalPlant && typeof defaults.globalPlant === 'object' ? defaults.globalPlant : null;
-    plantProfiles = nonPlantMode || initialGlobalPlant
-        ? []
-        : ((await loadPlantLibrary(true)).plants || []).filter(profile => !/^lemon drop(?: old profile| garcinia)?$/i.test(String(profile.commonName || profile.name || '').trim()));
+    // Draw an import page immediately. The global result already contains all
+    // facts needed for step one, so waiting for the full local plant library
+    // can only make the button appear stuck on “Opening import page…”.
+    plantProfiles = [];
     plantSearchScope = initialGlobalPlant ? 'global' : 'local';
     globalPlantResults = [];
     selectedGlobalPlant = initialGlobalPlant;
@@ -219,6 +224,10 @@ export async function renderFieldMarker(target, defaults = null) {
         throw new Error('Open Quick Access from a selected location.');
     }
     draw();
+    if (!nonPlantMode && !initialGlobalPlant) {
+        plantProfiles = ((await loadPlantLibrary(true)).plants || []).filter(profile => !/^lemon drop(?: old profile| garcinia)?$/i.test(String(profile.commonName || profile.name || '').trim()));
+        draw();
+    }
 }
 
 export function setFieldMarkerType(type) {
