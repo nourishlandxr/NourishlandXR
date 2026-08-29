@@ -1575,6 +1575,7 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldGuide, /data-global-allocation/);
     assert.match(fieldGuide, /Convert selected content/);
     assert.match(fieldGuide, /openGlobalPlantProfile/);
+    assert.match(fieldGuide, /openGlobalPlantProfile\(renderTarget \|\| app/);
     assert.match(fieldGuide, /field-guide-import-progress/);
     assert.match(fieldGuide, /Select recommended/);
     assert.match(fieldGuide, /Technical source data/);

@@ -438,7 +438,7 @@ function applyCreatorContentCopy(app) {
                     }
                 };
                 await Promise.race([
-                    openGlobalPlantProfile(app, importDefaults),
+                    openGlobalPlantProfile(renderTarget || app, importDefaults),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('The import page took too long to open. Please try again.')), 8000))
                 ]);
             } catch (error) {
@@ -512,7 +512,7 @@ function applyCreatorContentCopy(app) {
                         event.currentTarget.disabled = true;
                         event.currentTarget.textContent = 'Opening plant setup';
                         try {
-                            await openGlobalPlantProfile(app, {
+                            await openGlobalPlantProfile(renderTarget || app, {
                                 project: currentGuide.project.id,
                                 site: siteGroup.site.id,
                                 place: currentGuidePlaceId || '__unassigned__',
@@ -532,7 +532,7 @@ function applyCreatorContentCopy(app) {
             if (false) {
             button.textContent = 'Opening profile…';
             try {
-                await openGlobalPlantProfile(app, {
+                await openGlobalPlantProfile(renderTarget || app, {
                     project: currentGuide.project.id,
                     site: siteGroup.site.id,
                     place: currentGuidePlaceId || '__unassigned__',
@@ -578,7 +578,7 @@ function applyCreatorContentCopy(app) {
     });
 }
 
-export async function renderFieldGuide(app, encodedProjectId, creator = false) {
+export async function renderFieldGuide(app, encodedProjectId, creator = false, renderTarget = app) {
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const guide = creator ? await loadCreatorGuide(projectId) : await loadGuide(projectId);

@@ -52,6 +52,9 @@ test('Project Dashboard keeps conceptual mapping honest and relationship-driven'
     assert.doesNotMatch(screenSource, /Add Area/);
     assert.match(screenSource, /Project Map/);
     assert.match(screenSource, /data-v2-mode="content"/);
+    assert.match(screenSource, /class="nlxr-db-v2-header-ar" data-v2-open-ar/);
+    assert.match(screenSource, /Map layer filters/);
+    assert.match(screenSource, /renderFieldGuide\(staging, projectKey, true, panel\)/);
     assert.match(screenSource, /panel\.classList\.add\('field-guide-hub-redesign'\)/);
     assert.match(screenSource, /panel\.classList\.remove\('field-guide-hub-redesign'\)/);
     assert.doesNotMatch(screenSource, /data-v2-mode="activity"/);

@@ -13,7 +13,7 @@ function mapMarkup(model) {
         const to = areas.find(area => area.id === connection.to)?.point;
         return from && to ? `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />` : '';
     }).join('');
-    const nodes = areas.map(area => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
+    const nodes = areas.map((area, index) => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}${index % 2 ? ' is-alt' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
     const mapImage = model.siteMap?.image || model.livingMap?.background?.assetUrl;
     return `<div class="nlxr-db-v2-living-map" aria-labelledby="nlxrDbV2MapTitle">
         <div class="nlxr-db-v2-map-canvas" aria-label="Project area layout">
@@ -67,7 +67,7 @@ function overviewMarkup(model) {
 }
 
 function mapWorkspaceMarkup(model) {
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${mapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layers"><details open><summary>Layers</summary><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></details></div><div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${mapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div><div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
 }
 
 function previewModeMarkup(model, mode) {
@@ -77,7 +77,9 @@ function previewModeMarkup(model, mode) {
 
 async function renderContentInDashboard(panel, projectKey) {
     const staging = document.createElement('div');
-    await renderFieldGuide(staging, projectKey, true);
+    // Render the content markup off-screen first, but keep actions pointed at
+    // the live dashboard panel after it is moved into the tab shell.
+    await renderFieldGuide(staging, projectKey, true, panel);
     const content = staging.querySelector('.field-guide-workspace');
     if (!content) throw new Error('Content workspace unavailable.');
     panel.classList.add('field-guide-hub-redesign');
@@ -94,7 +96,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             ? '<p class="nlxr-db-v2-sync is-offline"><i aria-hidden="true"></i> Offline</p>'
             : '';
         app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
-            <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div></header>
+            <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div><button type="button" class="nlxr-db-v2-header-ar" data-v2-open-ar><span aria-hidden="true">⌁</span> Open AR</button></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">☰</span> Content</button></nav>
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
@@ -109,6 +111,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             target.textContent = message;
             target.hidden = false;
         };
+        app.querySelector('[data-v2-open-ar]')?.addEventListener('click', () => window.openCreatorArMode(projectKey));
         const showMode = async mode => {
             const button = app.querySelector(`[data-v2-mode="${mode}"]`);
             if (!button) return;
