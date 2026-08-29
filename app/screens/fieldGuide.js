@@ -266,7 +266,7 @@ export async function renderFieldGuideProjects(app) {
     app.innerHTML = `<div class="screen field-guide"><div class="page-header"><button class="ghost" onclick="window.renderV1Explorer()">Back</button><p class="welcome-label">Field Guide</p><h1>Choose a location</h1><p class="subtitle">Browse plants, maps and information.</p></div><div class="menu-stack">${projects.map(project => `<button class="menu-card" onclick="window.renderFieldGuide('${encoded(project.id)}')"><strong>${escapeHtml(project.name)} Field Guide</strong><span>Location notebook and plant records</span></button>`).join('') || '<div class="panel"><p>No public locations are available.</p></div>'}</div></div>`;
 }
 
-function applyCreatorContentCopy(app) {
+function applyCreatorContentCopy(app, renderTarget = app) {
     const header = app.querySelector('.field-guide-header');
     header?.querySelector('.field-guide-header-subtitle')?.remove();
     const snapshotTitle = app.querySelector('#fieldGuideEssentialsTitle');
@@ -688,7 +688,7 @@ export async function renderFieldGuide(app, encodedProjectId, creator = false, r
             // is removed from the live screen; removing its parent footer
             // leaves users with no route back to the project dashboard.
             app.querySelectorAll('.analog-print-button').forEach(button => button.remove());
-            applyCreatorContentCopy(app);
+            applyCreatorContentCopy(app, renderTarget);
             applyFieldGuideFilter('');
             return;
         }
