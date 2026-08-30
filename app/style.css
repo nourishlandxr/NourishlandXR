@@ -8929,55 +8929,92 @@ body:has(.field-guide-hub-redesign) {
 }
 
 .field-guide-hub-redesign .field-guide-content-create {
-    display: grid;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    padding: 16px;
-    border: 1px solid var(--webhub-line);
-    border-radius: 16px;
-    background: var(--webhub-surface);
-    box-shadow: 0 8px 22px rgba(42, 76, 47, .05);
+    min-width: 0;
+    padding: 2px 0;
+}
+
+.field-guide-content-create-heading {
+    min-width: 0;
+}
+
+.field-guide-content-create-heading h2 {
+    margin: 0;
+    color: var(--webhub-muted);
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
 }
 
 .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex: 0 0 auto;
+    width: auto;
+    gap: 6px;
 }
 
 .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button {
-    display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
-    grid-template-areas: "icon title" "icon detail";
+    display: inline-flex;
     align-items: center;
-    justify-content: initial;
-    min-height: 68px;
-    padding: 11px 12px;
-    text-align: left;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 6px 9px;
+    border: 1px solid rgba(46, 112, 70, .22);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--webhub-green-deep);
+    box-shadow: none;
+    font-size: .72rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button:last-child {
+    border-color: rgba(46, 112, 70, .22);
+    background: transparent;
+    color: var(--webhub-green-deep);
+}
+
+.field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button:hover,
+.field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button:focus-visible {
+    background: rgba(46, 112, 70, .07);
+    box-shadow: 0 0 0 3px rgba(46, 112, 70, .08);
 }
 
 .field-guide-content-create .field-guide-creation-action-icon {
-    grid-area: icon;
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    border: 1px solid currentColor;
-    border-radius: 9px;
-    font-size: 1rem;
+    display: inline;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    font-size: .9rem;
     line-height: 1;
 }
 
 .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button strong {
-    grid-area: title;
-    font-size: .78rem;
-    line-height: 1.15;
+    font-size: inherit;
+    line-height: 1;
 }
 
 .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions button small {
-    grid-area: detail;
-    color: inherit;
-    font-size: .65rem;
-    font-weight: 500;
-    line-height: 1.3;
-    opacity: .78;
+    display: none;
+}
+
+/* Keep the compact action row from turning into a full-width card on phones. */
+@media (max-width: 480px) {
+    .field-guide-hub-redesign .field-guide-content-create {
+        align-items: center;
+    }
+    .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
 }
 
 .field-guide-hub-redesign .field-guide-essentials-heading,
@@ -9465,7 +9502,6 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-hub-redesign details.field-guide-management-row > div { grid-column: 1 / -1; padding: 0 12px 12px; }
 
 @media (max-width: 480px) {
-    .field-guide-hub-redesign .field-guide-content-create .field-guide-creation-actions { grid-template-columns: minmax(0, 1fr); }
     .field-guide-hub-redesign .field-guide-global-match-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .field-guide-import-view .field-guide-extract-heading { align-items: stretch; }
     .field-guide-import-view .field-guide-extract-heading > button { justify-self: start; min-height: 44px; }
