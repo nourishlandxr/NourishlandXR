@@ -197,6 +197,7 @@ export function syncPimConnectionLayer(map) {
 function schedulePimConnectionReflow(map) {
     if (!map) return;
     syncPimConnectionLayer(map);
+    schedulePimTextFit(map);
     if (map.__pimConnectionFrames) return;
     let frameCount = 0;
     const raf = callback => globalThis.requestAnimationFrame
@@ -209,6 +210,67 @@ function schedulePimConnectionReflow(map) {
         if (frameCount < 5) map.__pimConnectionFrames = raf(run);
     };
     map.__pimConnectionFrames = raf(run);
+}
+
+function fitPimDomTextBlock(block) {
+    const title = block?.querySelector?.('b,strong');
+    if (!block || !title) return;
+    const detail = block.querySelector('small');
+    // Re-measure from the authored CSS size after every reconciliation or
+    // resize. Otherwise a previous dense pass would become the new baseline
+    // and progressively make every later render smaller.
+    title.style.removeProperty('font-size');
+    detail?.style.removeProperty('font-size');
+    const computedStyle = typeof globalThis.getComputedStyle === 'function'
+        ? globalThis.getComputedStyle
+        : null;
+    const titleBase = Number.parseFloat(computedStyle?.(title)?.fontSize || title.style.fontSize);
+    const detailBase = Number.parseFloat(detail && (computedStyle?.(detail)?.fontSize || detail.style.fontSize));
+    const width = Number(block.clientWidth) || Number(block.getBoundingClientRect?.().width);
+    const height = Number(block.clientHeight) || Number(block.getBoundingClientRect?.().height);
+    if (!width || !height || !Number.isFinite(titleBase)) return;
+    const titleSize = Math.max(8, titleBase);
+    const detailSize = Number.isFinite(detailBase) ? Math.max(7, detailBase) : 0;
+    const textElements = [title, detail].filter(element => element
+        && (!computedStyle || computedStyle(element).display !== 'none')
+        && !element.hidden);
+    const compactNameOnly = block.classList.contains('plant-knowledge-cell-copy')
+        && block.closest('.plant-knowledge-map[data-pim-density="compact"]')
+        && textElements.length === 1;
+    if (compactNameOnly && title.textContent.trim().length <= 24) return;
+    const fits = () => {
+        const blockRect = block.getBoundingClientRect();
+        return textElements.every(element => {
+            const rect = element.getBoundingClientRect();
+            return rect.left >= blockRect.left - .5
+                && rect.right <= blockRect.right + .5
+                && rect.top >= blockRect.top - .5
+                && rect.bottom <= blockRect.bottom + .5
+                && element.scrollHeight <= element.clientHeight + 1;
+        });
+    };
+    for (let scale = 1; scale >= .52; scale -= .04) {
+        title.style.fontSize = `${titleSize * scale}px`;
+        if (detail && detailSize) detail.style.fontSize = `${detailSize * scale}px`;
+        if (fits()) break;
+    }
+}
+
+function fitPimDomText(map) {
+    if (!map) return;
+    map.querySelectorAll('.plant-knowledge-cell-copy,.plant-knowledge-core-copy')
+        .forEach(fitPimDomTextBlock);
+}
+
+function schedulePimTextFit(map) {
+    if (!map || map.__pimTextFitFrame) return;
+    const raf = callback => globalThis.requestAnimationFrame
+        ? globalThis.requestAnimationFrame(callback)
+        : globalThis.setTimeout(callback, 0);
+    map.__pimTextFitFrame = raf(() => {
+        map.__pimTextFitFrame = 0;
+        fitPimDomText(map);
+    });
 }
 
 function bindPimConnectionLayout(map, signal) {
@@ -421,6 +483,9 @@ export function bindPlantInformationMeshPress(container, options = {}) {
     return () => {
         finish({ drain: false });
         container.querySelector('[data-pim-renderer="canonical"]')?.__pimConnectionLayoutCleanup?.();
+        const map = container.querySelector('[data-pim-renderer="canonical"]');
+        if (map?.__pimTextFitFrame && globalThis.cancelAnimationFrame) globalThis.cancelAnimationFrame(map.__pimTextFitFrame);
+        if (map) map.__pimTextFitFrame = 0;
         container.dataset.pimPressBound = 'false';
     };
 }
@@ -486,11 +551,11 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
         const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
         const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-node-scale:${node.layoutScale || 1};--pim-child-index:${Number(node.childIndex) || 0};--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></button>`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><span class="plant-knowledge-cell-copy"><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></span></button>`;
     }).join('');
     const handleLabel = options.handleLabel || `Drag the ${label(source.title)} Plant Information Mesh`;
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
-    const core = `<span class="plant-knowledge-core" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><strong>${escapeHtml(source.title)}</strong></span>`;
+    const core = `<span class="plant-knowledge-core" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><span class="plant-knowledge-core-copy"><strong>${escapeHtml(source.title)}</strong></span></span>`;
     const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
     return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}</span>`;
 }

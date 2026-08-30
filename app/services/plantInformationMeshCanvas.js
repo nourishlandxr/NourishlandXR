@@ -59,26 +59,192 @@ export function pimHoneycombTextureSize(knowledge, expandedPaths = [], options =
     };
 }
 
-function wrapLines(context, text, maxWidth) {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    const lines = [];
-    let line = '';
-    words.forEach(word => {
-        const candidate = line ? `${line} ${word}` : word;
-        if (line && context.measureText(candidate).width > maxWidth) {
-            lines.push(line);
-            line = word;
+function measuredTextWidth(context, text) {
+    const width = Number(context?.measureText?.(String(text || '')).width);
+    return Number.isFinite(width) ? width : String(text || '').length * 8;
+}
+
+function splitLongWord(context, word, maxWidth) {
+    if (measuredTextWidth(context, word) <= maxWidth) return [word];
+    const chunks = [];
+    let chunk = '';
+    for (const character of Array.from(word)) {
+        const candidate = `${chunk}${character}`;
+        if (chunk && measuredTextWidth(context, candidate) > maxWidth) {
+            chunks.push(chunk);
+            chunk = character;
         } else {
-            line = candidate;
+            chunk = candidate;
         }
+    }
+    if (chunk) chunks.push(chunk);
+    return chunks.length ? chunks : [word];
+}
+
+/**
+ * Wrap PIM copy against the inner safe rectangle. Unlike the old helper this
+ * also breaks a single long word, preserves intentional newlines and never
+ * relies on a canvas max-width argument to clip an over-wide line.
+ */
+export function wrapPimTextLines(context, text, maxWidth) {
+    const width = Math.max(1, Number(maxWidth) || 1);
+    const paragraphs = String(text ?? '').split(/\r?\n/);
+    const lines = [];
+    paragraphs.forEach((paragraph, paragraphIndex) => {
+        const words = paragraph.trim().split(/\s+/).filter(Boolean);
+        if (!words.length) {
+            if (paragraphIndex < paragraphs.length - 1) lines.push('');
+            return;
+        }
+        let line = '';
+        words.forEach(word => {
+            splitLongWord(context, word, width).forEach((chunk, chunkIndex) => {
+                const candidate = line
+                    ? `${line}${chunkIndex === 0 ? ' ' : ''}${chunk}`
+                    : chunk;
+                if (line && measuredTextWidth(context, candidate) > width) {
+                    lines.push(line);
+                    line = chunk;
+                } else {
+                    line = candidate;
+                }
+            });
+        });
+        if (line) lines.push(line);
+        if (paragraphIndex < paragraphs.length - 1) lines.push('');
     });
-    if (line) lines.push(line);
+    while (lines.at(-1) === '') lines.pop();
     return lines;
 }
 
-function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines = 2) {
-    const lines = wrapLines(context, text, maxWidth).slice(0, maxLines);
-    lines.forEach((line, index) => context.fillText(line, x, y + index * lineHeight));
+export function pimHoneycombTextSafeArea(radius, options = {}) {
+    const cellRadius = Math.max(1, Number(radius) || 1);
+    const depth = Number(options.depth) || 0;
+    return {
+        width: cellRadius * (Number(options.widthFactor) || (depth ? 1.12 : 1.18)),
+        height: cellRadius * (Number(options.heightFactor) || (depth ? .82 : .78))
+    };
+}
+
+function fontSizeRange(radius, depth, options) {
+    const cellRadius = Math.max(1, Number(radius) || 1);
+    const titleScale = Number(options.titleScale) || (depth ? .25 : .31);
+    const preferred = Number(options.maxTitleFontSize)
+        || Math.min(depth ? 23 : 29, cellRadius * titleScale);
+    const minimum = Number(options.minTitleFontSize)
+        || Math.max(10, cellRadius * (depth ? .13 : .16));
+    return {
+        preferred: Math.max(1, preferred),
+        minimum: Math.min(Math.max(1, minimum), Math.max(1, preferred))
+    };
+}
+
+/**
+ * Find a readable title/detail arrangement that fits the central rectangle
+ * of a flat-top hexagon. The returned offsets are relative to the hex centre,
+ * so the complete group stays vertically centred instead of pinning the
+ * title and description to unrelated fixed y positions.
+ */
+export function fitPimTextBlock(context, options = {}) {
+    const radius = Math.max(1, Number(options.radius) || 1);
+    const depth = Number(options.depth) || 0;
+    const title = String(options.title ?? '').trim();
+    const detail = String(options.detail ?? '').trim();
+    const hasDetail = Boolean(detail);
+    const safeArea = pimHoneycombTextSafeArea(radius, options);
+    const titleRange = fontSizeRange(radius, depth, options);
+    const titleLinesLimit = Number.isFinite(Number(options.maxTitleLines))
+        ? Math.max(1, Number(options.maxTitleLines))
+        : Infinity;
+    const detailLinesLimit = Number.isFinite(Number(options.maxDetailLines))
+        ? Math.max(1, Number(options.maxDetailLines))
+        : Infinity;
+    const detailPreferred = Number(options.maxDetailFontSize)
+        || Math.min(depth ? 17 : 19, titleRange.preferred * .64);
+    const detailMinimum = Number(options.minDetailFontSize)
+        || Math.max(8, radius * (depth ? .09 : .1));
+    const gap = hasDetail ? Math.max(3, radius * (depth ? .035 : .028)) : 0;
+    const step = .5;
+    const titleLineHeightFor = size => Math.max(1, Math.round(size * 1.06));
+    const detailLineHeightFor = size => Math.max(1, Math.round(size * 1.12));
+    const build = (titleFontSize, detailFontSize) => {
+        context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
+        const titleWidth = Math.max(1, safeArea.width - titleFontSize * .18);
+        const titleLines = wrapPimTextLines(context, title, titleWidth);
+        if (!titleLines.length || titleLines.length > titleLinesLimit) return null;
+        const titleLineHeight = titleLineHeightFor(titleFontSize);
+        let detailLines = [];
+        let detailLineHeight = 0;
+        if (hasDetail) {
+            context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
+            const detailWidth = Math.max(1, safeArea.width - detailFontSize * .16);
+            detailLines = wrapPimTextLines(context, detail, detailWidth);
+            if (!detailLines.length || detailLines.length > detailLinesLimit) return null;
+            detailLineHeight = detailLineHeightFor(detailFontSize);
+        }
+        const titleHeight = titleLines.length * titleLineHeight;
+        const detailHeight = detailLines.length * detailLineHeight;
+        const totalHeight = titleHeight + (hasDetail ? gap + detailHeight : 0);
+        if (totalHeight > safeArea.height) return null;
+        const titleOffsetY = -totalHeight / 2 + titleLineHeight / 2;
+        return {
+            titleLines,
+            detailLines,
+            titleFontSize,
+            detailFontSize,
+            titleLineHeight,
+            detailLineHeight,
+            titleOffsetY,
+            detailOffsetY: titleOffsetY + titleHeight + gap + detailLineHeight / 2,
+            safeWidth: safeArea.width,
+            safeHeight: safeArea.height,
+            totalHeight
+        };
+    };
+
+    for (let titleFontSize = titleRange.preferred; titleFontSize >= titleRange.minimum; titleFontSize -= step) {
+        const detailStart = hasDetail
+            ? Math.max(detailMinimum, Math.min(detailPreferred, titleFontSize * .64))
+            : 0;
+        const detailEnd = hasDetail
+            ? detailMinimum
+            : 0;
+        for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= detailEnd : detailFontSize === 0; detailFontSize -= step) {
+            const result = build(titleFontSize, detailFontSize);
+            if (result) return result;
+        }
+    }
+
+    // Only genuinely dense copy enters this range. Normal labels keep the
+    // readable minimum above; unusually long content is reduced further until
+    // all of its wrapped lines fit rather than being clipped or discarded.
+    for (let titleFontSize = titleRange.minimum - step; titleFontSize >= 1; titleFontSize -= step) {
+        const detailStart = hasDetail
+            ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
+            : 0;
+        for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= 1 : detailFontSize === 0; detailFontSize -= step) {
+            const result = build(titleFontSize, detailFontSize);
+            if (result) return result;
+        }
+    }
+
+    // Empty labels have no drawable lines, but still return a stable shape for
+    // callers that render a partially authored PIM record.
+    const fallbackTitleSize = Math.max(6, titleRange.minimum * .8);
+    const fallbackDetailSize = hasDetail ? Math.max(6, Math.min(detailMinimum, fallbackTitleSize * .58)) : 0;
+    return build(fallbackTitleSize, fallbackDetailSize) || {
+        titleLines: wrapPimTextLines(context, title, Math.max(1, safeArea.width - fallbackTitleSize * .18)),
+        detailLines: hasDetail ? wrapPimTextLines(context, detail, Math.max(1, safeArea.width - fallbackDetailSize * .16)) : [],
+        titleFontSize: fallbackTitleSize,
+        detailFontSize: fallbackDetailSize,
+        titleLineHeight: titleLineHeightFor(fallbackTitleSize),
+        detailLineHeight: hasDetail ? detailLineHeightFor(fallbackDetailSize) : 0,
+        titleOffsetY: 0,
+        detailOffsetY: 0,
+        safeWidth: safeArea.width,
+        safeHeight: safeArea.height,
+        totalHeight: safeArea.height
+    };
 }
 
 function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -271,25 +437,37 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         );
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
+        const hasDescription = node.depth > 0 && Boolean(node.value);
+        const textLayout = fitPimTextBlock(context, {
+            title: node.label,
+            detail: hasDescription ? node.value : '',
+            radius,
+            depth: node.depth
+        });
         context.fillStyle = '#fff';
         context.strokeStyle = 'rgba(0, 0, 0, .94)';
-        context.lineWidth = 4;
-        const titleFontSize = Math.max(node.depth ? 13 : 18, Math.min(node.depth ? 23 : 29, radius * (node.depth ? .25 : .31)));
-        const titleLineHeight = Math.round(titleFontSize * 1.08);
-        context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
-        const textWidth = Math.max(54, radius * 1.5);
-        const titleLines = wrapLines(context, node.label, textWidth).slice(0, 2);
-        const hasDescription = node.depth > 0 && Boolean(node.value);
-        const titleStartY = point.y - radius * .43 + (titleLines.length - 1) * titleLineHeight * .5;
-        drawOutlinedLines(context, titleLines, point.x, titleStartY, titleLineHeight);
-        if (hasDescription) {
-            const detailFontSize = Math.max(10, Math.min(19, titleFontSize * .66));
-            const detailLineHeight = Math.round(detailFontSize * 1.2);
-            context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
+        context.font = `650 ${textLayout.titleFontSize}px system-ui, sans-serif`;
+        context.lineWidth = Math.max(2, Math.round(textLayout.titleFontSize * .13));
+        drawOutlinedLines(
+            context,
+            textLayout.titleLines,
+            point.x,
+            point.y + textLayout.titleOffsetY,
+            textLayout.titleLineHeight
+        );
+        if (textLayout.detailLines.length) {
+            context.font = `500 ${textLayout.detailFontSize}px system-ui, sans-serif`;
+            context.lineWidth = Math.max(1.5, Math.round(textLayout.detailFontSize * .1));
             context.fillStyle = 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'transparent';
             context.shadowBlur = 0;
-            drawWrappedText(context, node.value, point.x, point.y + radius * .11, textWidth, detailLineHeight, 2);
+            drawOutlinedLines(
+                context,
+                textLayout.detailLines,
+                point.x,
+                point.y + textLayout.detailOffsetY,
+                textLayout.detailLineHeight
+            );
             context.shadowBlur = 0;
         }
     });
@@ -302,12 +480,20 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.restore();
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
-    context.lineWidth = 5;
-    const coreFontSize = Math.max(20, Math.min(36, coreRadius * .36));
-    context.font = `650 ${coreFontSize}px system-ui, sans-serif`;
     const coreTitle = knowledge.title || knowledge.name || 'Plant';
-    const coreLines = wrapLines(context, coreTitle, coreRadius * 1.54).slice(0, 2);
-    drawOutlinedLines(context, coreLines, center.x, center.y - (coreLines.length - 1) * coreFontSize / 2, coreFontSize);
+    const coreTextLayout = fitPimTextBlock(context, {
+        title: coreTitle,
+        radius: coreRadius,
+        maxTitleFontSize: 36,
+        minTitleFontSize: Math.max(14, coreRadius * .18),
+        titleScale: .36,
+        widthFactor: 1.18,
+        heightFactor: .78
+    });
+    const coreLines = coreTextLayout.titleLines;
+    context.font = `650 ${coreTextLayout.titleFontSize}px system-ui, sans-serif`;
+    context.lineWidth = Math.max(2, Math.round(coreTextLayout.titleFontSize * .14));
+    drawOutlinedLines(context, coreLines, center.x, center.y + coreTextLayout.titleOffsetY, coreTextLayout.titleLineHeight);
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.
     return;

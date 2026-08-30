@@ -28,7 +28,14 @@ import {
     pimToggleNodeState,
     pimVisibleNodes
 } from '../app/services/plantInformationMesh.js';
-import { PIM_TEXTURE_CELL_WIDTH, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../app/services/plantInformationMeshCanvas.js';
+import {
+    PIM_TEXTURE_CELL_WIDTH,
+    fitPimTextBlock,
+    pimHoneycombTargetAtPercent,
+    pimHoneycombTextSafeArea,
+    pimHoneycombTextureSize,
+    wrapPimTextLines
+} from '../app/services/plantInformationMeshCanvas.js';
 import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
 import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../app/services/demoTutorialControls.js';
@@ -129,6 +136,44 @@ test('phone PIM markup uses the shared name-first density without a second rende
     assert.match(desktopMarkup, /data-pim-density="comfortable"/);
     assert.equal((phoneMarkup.match(/data-pim-renderer="canonical"/g) || []).length, 1);
     assert.equal((desktopMarkup.match(/data-pim-renderer="canonical"/g) || []).length, 1);
+});
+
+test('PIM honeycomb typography wraps and fits the hexagon safe area', () => {
+    const context = {
+        font: '',
+        measureText(value) {
+            const fontSize = Number(this.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || 16);
+            return { width: [...String(value)].reduce((width, character) => width + (character === ' ' ? fontSize * .28 : fontSize * .56), 0) };
+        }
+    };
+    const brokenWord = wrapPimTextLines(context, 'SupercalifragilisticHoneycombHeading', 70);
+    assert.ok(brokenWord.length > 1, 'unbroken headings are split instead of overflowing');
+    assert.ok(brokenWord.every(line => context.measureText(line).width <= 70));
+
+    const examples = [
+        { title: 'Uses', detail: '', radius: 190, depth: 0 },
+        { title: 'Propagation', detail: '', radius: 190, depth: 0 },
+        { title: 'Ecological functions', detail: 'Soil and biomass support', radius: 134, depth: 1 },
+        { title: 'VeryLongUnbrokenHoneycombHeading', detail: 'Supporting description with a long word', radius: 80, depth: 1 }
+    ];
+    examples.forEach(example => {
+        const layout = fitPimTextBlock(context, example);
+        const safeArea = pimHoneycombTextSafeArea(example.radius, example);
+        context.font = `650 ${layout.titleFontSize}px system-ui, sans-serif`;
+        assert.ok(layout.titleLines.every(line => context.measureText(line).width <= safeArea.width), `${example.title} title stays inside safe width`);
+        if (layout.detailLines.length) {
+            context.font = `500 ${layout.detailFontSize}px system-ui, sans-serif`;
+            assert.ok(layout.detailLines.every(line => context.measureText(line).width <= safeArea.width), `${example.title} detail stays inside safe width`);
+        }
+        assert.ok(layout.totalHeight <= layout.safeHeight, `${example.title} text group stays inside safe height`);
+    });
+    const ecological = fitPimTextBlock(context, examples[2]);
+    assert.deepEqual(ecological.titleLines, ['Ecological', 'functions']);
+    assert.deepEqual(ecological.detailLines, ['Soil and biomass', 'support']);
+    assert.ok(fitPimTextBlock(context, examples[0]).titleFontSize > ecological.titleFontSize, 'short labels retain larger type');
+    const veryLong = fitPimTextBlock(context, examples[3]);
+    assert.ok(veryLong.titleLines.length > 2, 'very long headings keep all wrapped lines');
+    assert.ok(veryLong.totalHeight <= veryLong.safeHeight, 'very long headings still fit the safe height');
 });
 
 test('dynamic plants retain the same six empty-visible primary positions', () => {

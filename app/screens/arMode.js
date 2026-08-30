@@ -2058,7 +2058,11 @@ function drawControllerPointer(view) {
 }
 
 function drawControllerPointerContact(view) {
-    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay || !sphereRenderer) return;
+    const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
+    if (creatorInputMode !== 'controller'
+        || (interactionMode === 'view' && !viewingPim)
+        || !latestControllerRay
+        || !sphereRenderer) return;
     const point = controllerPointerEnd();
     if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     // DOM overlay is optional on Quest. Keep the contact point in the XR
@@ -5621,10 +5625,13 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialSpecialPalette(view);
                 drawQuestSpatialWebPanel(view);
                 drawHandTrackingLines(view);
-                drawControllerPointer(view);
                 drawCalibratedTotemPath(view);
                 drawSpatialMarkers(view);
                 drawSpatialPlantProfiles(view);
+                // Keep the controller laser and its contact marker in the
+                // foreground. A world-locked PIM panel is transparent, but
+                // its quad can still cover a laser drawn before the panel.
+                drawControllerPointer(view);
                 drawControllerPointerContact(view);
             }
             gl.disable(gl.SCISSOR_TEST);
