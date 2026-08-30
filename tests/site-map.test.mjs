@@ -43,6 +43,10 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(dashboardV2, /Open detailed map workspace/);
     assert.match(dashboardV2, /data-site-map-canvas/);
     assert.match(dashboardV2, /Current map/);
+    assert.match(dashboardV2, /Project layout/);
+    assert.match(dashboardV2, /nlxr-db-v2-map-node/);
+    assert.match(dashboardV2, /nlxr-db-v2-map-lines/);
+    assert.match(dashboardV2, /nlxr-db-v2-map-compass/);
     assert.match(dashboardV2, /terrace-marking\.png/);
     assert.match(dashboardV2, /site-map-totem-links/);
     assert.match(dashboardV2, /dashboard-v2/);
@@ -58,5 +62,8 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(styles, /\.site-map-area \{[\s\S]*background: rgba\(11,45,25,.26\)/);
     assert.match(styles, /\.nlxr-db-v2-map-controls/);
     assert.match(styles, /\.nlxr-db-v2-map-actions/);
+    assert.match(fieldGuide, /field-guide-content-create/);
+    assert.match(fieldGuide, /renderLocationFieldMarker/);
+    assert.match(fieldGuide, /renderProjectAreaForm/);
     assert.equal(fs.existsSync(path.join(root, 'app/assets/terrace-marking.png')), true);
 });

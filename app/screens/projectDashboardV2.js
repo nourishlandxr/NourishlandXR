@@ -7,6 +7,29 @@ const encoded = value => encodeURIComponent(String(value ?? ''));
 const markerIcon = type => ({ plant: '✦', note: '▤', area_checkpoint: '⌖', sub_checkpoint: '◆' }[type] || '•');
 const areaIcon = area => area.current ? '⌂' : '▧';
 
+function conceptualMapMarkup(model) {
+    const areas = model.areas || [];
+    const lines = (model.connections || []).map(connection => {
+        const from = areas.find(area => area.id === connection.from)?.point;
+        const to = areas.find(area => area.id === connection.to)?.point;
+        return from && to ? `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />` : '';
+    }).join('');
+    const nodes = areas.map((area, index) => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}${index % 2 ? ' is-alt' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
+    const mapImage = model.siteMap?.image || model.livingMap?.background?.assetUrl;
+    return `<section class="nlxr-db-v2-living-map" aria-labelledby="nlxrDbV2ConceptualMapTitle">
+        <div class="nlxr-db-v2-map-section-heading"><div><p class="nlxr-db-v2-eyebrow">AREA MAP</p><h3 id="nlxrDbV2ConceptualMapTitle">Project layout</h3><p>Organise Areas and confirmed connections in the project view. This layout is conceptual and does not claim GPS accuracy.</p></div></div>
+        <div class="nlxr-db-v2-map-canvas" data-site-map-canvas aria-label="Project Area layout">
+            ${mapImage ? `<img class="nlxr-db-v2-map-image" src="${escapeHtml(mapImage)}" alt="" aria-hidden="true" />` : ''}
+            <div class="nlxr-db-v2-map-grid" aria-hidden="true"></div>
+            <svg class="nlxr-db-v2-map-lines" data-map-layer="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="nlxrV2Glow"><feGaussianBlur stdDeviation="1.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#nlxrV2Glow)">${lines}</g></svg>
+            ${nodes || '<p class="nlxr-db-v2-map-empty">Add an Area to begin the project map.</p>'}
+            <div class="nlxr-db-v2-map-compass" aria-hidden="true">N<br><span>↑</span></div>
+        </div>
+        <footer class="nlxr-db-v2-map-footer"><span><i aria-hidden="true">✦</i> ${areas.length} area${areas.length === 1 ? '' : 's'} · ${model.totalPlants} plant cluster${model.totalPlants === 1 ? '' : 's'}</span></footer>
+        <p class="nlxr-db-v2-map-legend"><span><i class="is-area" aria-hidden="true"></i> Areas</span><span><i class="is-plant" aria-hidden="true"></i> Plant clusters</span><span><i class="is-link" aria-hidden="true"></i> Confirmed links</span><span><i class="is-totem" aria-hidden="true"></i> Totems</span></p>
+    </section>`;
+}
+
 function currentMapMarkup(model) {
     const projectId = encoded(model.project.id);
     const visiblePlaces = (model.areas || []).filter(area => !area.current);
@@ -103,7 +126,7 @@ function mapControlsMarkup(model) {
 }
 
 function mapWorkspaceMarkup(model) {
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${currentMapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div>${mapControlsMarkup(model)}</section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2><p>Organise the project first, then review its saved site map below.</p></header>${conceptualMapMarkup(model)}${currentMapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div>${mapControlsMarkup(model)}</section>`;
 }
 
 function previewModeMarkup(model, mode) {
@@ -198,9 +221,9 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             panel.querySelectorAll('[data-map-link-area]').forEach(control => control.addEventListener('click', () => {
                 if (typeof window.beginSiteMapAreaLink === 'function') window.beginSiteMapAreaLink(projectKey, control.dataset.mapLinkArea, control.dataset.mapLinkAreaName, 'dashboard-v2');
             }));
-            panel.querySelector('[data-site-map-canvas]')?.addEventListener('click', event => {
+            panel.querySelectorAll('[data-site-map-canvas]').forEach(canvas => canvas.addEventListener('click', event => {
                 if (typeof window.placeLinkedAreaOnSiteMap === 'function') void window.placeLinkedAreaOnSiteMap(event);
-            });
+            }));
             panel.querySelectorAll('[data-map-layer-toggle]').forEach(control => control.addEventListener('click', () => {
                 const layer = control.dataset.mapLayerToggle;
                 const active = control.getAttribute('aria-pressed') !== 'true';

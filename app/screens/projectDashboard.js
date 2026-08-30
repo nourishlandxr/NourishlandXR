@@ -2664,7 +2664,7 @@ export function beginSiteMapAreaLink(encodedProjectId, encodedAreaId, encodedAre
         areaName: decodeURIComponent(encodedAreaName),
         returnContext
     };
-    document.querySelector('[data-site-map-canvas]')?.classList.add('is-linking-area');
+    document.querySelectorAll('[data-site-map-canvas]').forEach(canvas => canvas.classList.add('is-linking-area'));
     const status = document.querySelector('[data-site-map-editor-status], [data-v2-map-status]');
     if (status) status.textContent = `Tap the map where ${pendingSiteMapAreaLink.areaName} belongs.`;
 }
@@ -2680,7 +2680,7 @@ export async function placeLinkedAreaOnSiteMap(event) {
     };
     const link = pendingSiteMapAreaLink;
     pendingSiteMapAreaLink = null;
-    canvas.classList.remove('is-linking-area');
+    document.querySelectorAll('[data-site-map-canvas]').forEach(candidate => candidate.classList.remove('is-linking-area'));
     const project = await projectById(link.projectId);
     await renameProjectOnDisk(project.id, {
         ...project,
