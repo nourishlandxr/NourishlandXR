@@ -42,6 +42,9 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(dashboardV2, /data-map-link-area/);
     assert.match(dashboardV2, /Open detailed map workspace/);
     assert.match(dashboardV2, /data-site-map-canvas/);
+    assert.match(dashboardV2, /Current map/);
+    assert.match(dashboardV2, /terrace-marking\.png/);
+    assert.match(dashboardV2, /site-map-totem-links/);
     assert.match(dashboardV2, /dashboard-v2/);
     assert.match(dashboard, /returnToDashboardMap/);
     assert.match(dashboard, /GeoPackage, GeoJSON, CSV with X\/Y\/Z, KML, GPX or DXF/);

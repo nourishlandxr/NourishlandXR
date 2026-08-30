@@ -379,7 +379,7 @@ const terracePlanPoint = area => {
     return point ? { ...point, positioned: true, planLinked: true } : null;
 };
 
-function buildSiteMapLayout(areas, entries, useTerracePlan = false, savedAreaPoints = {}) {
+export function buildSiteMapLayout(areas, entries, useTerracePlan = false, savedAreaPoints = {}) {
     const gpsPoints = [
         ...areas.map(area => area.anchor),
         ...entries.map(entry => entry.anchor)
