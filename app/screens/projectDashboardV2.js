@@ -16,7 +16,7 @@ function mapMarkup(model) {
     const nodes = areas.map((area, index) => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}${index % 2 ? ' is-alt' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
     const mapImage = model.siteMap?.image || model.livingMap?.background?.assetUrl;
     return `<div class="nlxr-db-v2-living-map" aria-labelledby="nlxrDbV2MapTitle">
-        <div class="nlxr-db-v2-map-canvas" aria-label="Project area layout">
+        <div class="nlxr-db-v2-map-canvas" data-site-map-canvas aria-label="Project area layout">
             ${mapImage ? `<img class="nlxr-db-v2-map-image" src="${escapeHtml(mapImage)}" alt="" aria-hidden="true" />` : ''}
             <div class="nlxr-db-v2-map-grid" aria-hidden="true"></div>
             <svg class="nlxr-db-v2-map-lines" data-map-layer="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="nlxrV2Glow"><feGaussianBlur stdDeviation="1.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#nlxrV2Glow)">${lines}</g></svg>
@@ -66,8 +66,28 @@ function overviewMarkup(model) {
         <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div>`;
 }
 
+function mapControlsMarkup(model) {
+    const areas = (model.areas || []).filter(area => !area.current);
+    const hasMapPhoto = Boolean(model.siteMap?.image || model.livingMap?.background?.assetUrl);
+    const areaLinks = areas.map(area => {
+        const hasSavedPoint = Boolean(model.siteMap?.areaPoints?.[area.id] || model.livingMap?.nodes?.[area.id]);
+        return `<button type="button" class="nlxr-db-v2-map-area-link" data-map-link-area="${encoded(area.id)}" data-map-link-area-name="${encoded(area.label)}"><span class="nlxr-db-v2-map-area-link-icon" aria-hidden="true">⌖</span><span><strong>${escapeHtml(area.label)}</strong><small>${hasSavedPoint ? 'Position saved · choose to update' : 'Choose a point on the map'}</small></span><b aria-hidden="true">+</b></button>`;
+    }).join('');
+    return `<section class="nlxr-db-v2-map-controls" aria-labelledby="nlxrDbV2MapControlsTitle">
+        <header class="nlxr-db-v2-map-controls-heading"><div><p class="nlxr-db-v2-eyebrow">MAP TOOLS</p><h3 id="nlxrDbV2MapControlsTitle">Map options</h3><p>Keep the map photo and Area positions together, then use the detailed workspace for the full map view.</p></div><span class="nlxr-db-v2-map-photo-state">${hasMapPhoto ? 'Map image added' : 'No map image yet'}</span></header>
+        <div class="nlxr-db-v2-map-actions">
+            <label class="nlxr-db-v2-map-action nlxr-db-v2-map-photo-upload"><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">＋</span><span><strong>Upload map photo</strong><small>Use a plan, aerial photo or hand-drawn layout.</small></span><input type="file" accept="image/*" data-map-photo-upload /></label>
+            ${model.siteMap?.image ? '<button type="button" class="nlxr-db-v2-map-action" data-map-photo-remove><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">×</span><span><strong>Remove uploaded photo</strong><small>Keep the Area records and positions.</small></span></button>' : ''}
+            <button type="button" class="nlxr-db-v2-map-action" data-map-editor><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">↗</span><span><strong>Open detailed map workspace</strong><small>See placed content, Totem links and spatial export.</small></span></button>
+        </div>
+        <div class="nlxr-db-v2-map-area-links-section"><div><strong>Place Areas on the map</strong><small>Choose an Area, then click its position in the map above.</small></div><div class="nlxr-db-v2-map-area-links">${areaLinks || '<p class="nlxr-db-v2-map-controls-empty">Create an Area before linking it to the map.</p>'}</div></div>
+        <div class="nlxr-db-v2-map-export"><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">⌘</span><span><strong>GIS export</strong><small>GeoPackage, GeoJSON, CSV with X/Y/Z, KML, GPX or DXF.</small></span><span class="nlxr-db-v2-map-export-badge">Coming soon</span></div>
+        <p class="nlxr-db-v2-map-status-text" data-v2-map-status role="status">${hasMapPhoto ? 'Choose an Area above to update its position on the map.' : 'Upload a map photo when you are ready, or place Areas on the conceptual map first.'}</p>
+    </section>`;
+}
+
 function mapWorkspaceMarkup(model) {
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${mapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div><div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div></section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2></header>${mapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div><div class="nlxr-db-v2-map-summary" aria-label="Map summary"><span>${model.areas.length} area${model.areas.length === 1 ? '' : 's'}</span><span>${model.totalPlants} plant${model.totalPlants === 1 ? '' : 's'}</span><span>${model.spatialReadiness.confirmedTotems} confirmed Totem${model.spatialReadiness.confirmedTotems === 1 ? '' : 's'}</span></div>${mapControlsMarkup(model)}</section>`;
 }
 
 function previewModeMarkup(model, mode) {
@@ -151,6 +171,19 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             panel.querySelector('[data-map-fit]')?.addEventListener('click', () => {
                 panel.querySelector('.nlxr-db-v2-map-canvas')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 notice('All project areas are visible in the automatic layout.');
+            });
+            panel.querySelector('[data-map-photo-upload]')?.addEventListener('change', event => {
+                if (typeof window.uploadSiteMapPhoto === 'function') void window.uploadSiteMapPhoto(event, projectKey, 'dashboard-v2');
+            });
+            panel.querySelector('[data-map-photo-remove]')?.addEventListener('click', () => {
+                if (typeof window.removeSiteMapPhoto === 'function') void window.removeSiteMapPhoto(projectKey, 'dashboard-v2');
+            });
+            panel.querySelector('[data-map-editor]')?.addEventListener('click', () => window.renderLocationMap(projectKey, true, 'dashboard'));
+            panel.querySelectorAll('[data-map-link-area]').forEach(control => control.addEventListener('click', () => {
+                if (typeof window.beginSiteMapAreaLink === 'function') window.beginSiteMapAreaLink(projectKey, control.dataset.mapLinkArea, control.dataset.mapLinkAreaName, 'dashboard-v2');
+            }));
+            panel.querySelector('[data-site-map-canvas]')?.addEventListener('click', event => {
+                if (typeof window.placeLinkedAreaOnSiteMap === 'function') void window.placeLinkedAreaOnSiteMap(event);
             });
             panel.querySelectorAll('[data-map-layer-toggle]').forEach(control => control.addEventListener('click', () => {
                 const layer = control.dataset.mapLayerToggle;

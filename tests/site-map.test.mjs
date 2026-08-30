@@ -8,6 +8,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('Field Guide Map renders a site map with areas and placed content', () => {
     const dashboard = read('app/screens/projectDashboard.js');
+    const dashboardV2 = read('app/screens/projectDashboardV2.js');
     const fieldGuide = read('app/screens/fieldGuide.js');
     const styles = read('app/style.css');
 
@@ -35,6 +36,14 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(dashboard, /GPS positions are shown relative to one another/);
     assert.match(dashboard, /gis-export-preview/);
     assert.match(dashboard, /GIS Export — Coming soon/);
+    assert.match(dashboardV2, /Map options/);
+    assert.match(dashboardV2, /Upload map photo/);
+    assert.match(dashboardV2, /data-map-photo-upload/);
+    assert.match(dashboardV2, /data-map-link-area/);
+    assert.match(dashboardV2, /Open detailed map workspace/);
+    assert.match(dashboardV2, /data-site-map-canvas/);
+    assert.match(dashboardV2, /dashboard-v2/);
+    assert.match(dashboard, /returnToDashboardMap/);
     assert.match(dashboard, /GeoPackage, GeoJSON, CSV with X\/Y\/Z, KML, GPX or DXF/);
     assert.match(styles, /\.site-map-canvas/);
     assert.match(styles, /\.site-map-generic-surface/);
@@ -44,5 +53,7 @@ test('Field Guide Map renders a site map with areas and placed content', () => {
     assert.match(styles, /\.site-map-pin::after/);
     assert.match(styles, /\.site-map-pin \{[\s\S]*width: 3px; height: 3px/);
     assert.match(styles, /\.site-map-area \{[\s\S]*background: rgba\(11,45,25,.26\)/);
+    assert.match(styles, /\.nlxr-db-v2-map-controls/);
+    assert.match(styles, /\.nlxr-db-v2-map-actions/);
     assert.equal(fs.existsSync(path.join(root, 'app/assets/terrace-marking.png')), true);
 });

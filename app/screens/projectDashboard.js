@@ -2651,21 +2651,29 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
 
 let pendingSiteMapAreaLink = null;
 
-export function beginSiteMapAreaLink(encodedProjectId, encodedAreaId, encodedAreaName) {
+async function returnToDashboardMap(projectId) {
+    if (typeof window.renderProjectDashboard !== 'function') return;
+    await window.renderProjectDashboard(encoded(projectId));
+    document.querySelector('[data-v2-mode="map"]')?.click();
+}
+
+export function beginSiteMapAreaLink(encodedProjectId, encodedAreaId, encodedAreaName, returnContext = '') {
     pendingSiteMapAreaLink = {
         projectId: decodeURIComponent(encodedProjectId),
         areaId: decodeURIComponent(encodedAreaId),
-        areaName: decodeURIComponent(encodedAreaName)
+        areaName: decodeURIComponent(encodedAreaName),
+        returnContext
     };
     document.querySelector('[data-site-map-canvas]')?.classList.add('is-linking-area');
-    const status = document.querySelector('[data-site-map-editor-status]');
+    const status = document.querySelector('[data-site-map-editor-status], [data-v2-map-status]');
     if (status) status.textContent = `Tap the map where ${pendingSiteMapAreaLink.areaName} belongs.`;
 }
 
 export async function placeLinkedAreaOnSiteMap(event) {
-    if (!pendingSiteMapAreaLink || event.target.closest('.site-map-area, .site-map-pin')) return;
+    if (!pendingSiteMapAreaLink || event.target.closest('.site-map-area, .site-map-pin, .nlxr-db-v2-map-node')) return;
     const canvas = event.currentTarget;
     const bounds = canvas.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
     const point = {
         x: Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100)),
         y: Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100))
@@ -2682,6 +2690,10 @@ export async function placeLinkedAreaOnSiteMap(event) {
             areaPoints: { ...(project.siteMap?.areaPoints || {}), [link.areaId]: point }
         }
     });
+    if (link.returnContext === 'dashboard-v2' && typeof window.renderProjectDashboard === 'function') {
+        await returnToDashboardMap(project.id);
+        return;
+    }
     await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
 }
 
@@ -2722,27 +2734,35 @@ function compressedPlantImage(file) {
     });
 }
 
-export async function uploadSiteMapPhoto(event, encodedProjectId) {
+export async function uploadSiteMapPhoto(event, encodedProjectId, returnContext = '') {
     const file = event.target.files?.[0];
     if (!file) return;
-    const status = document.querySelector('[data-site-map-editor-status]');
+    const status = document.querySelector('[data-site-map-editor-status], [data-v2-map-status]');
     if (status) status.textContent = 'Preparing the map photo…';
     try {
         const projectId = decodeURIComponent(encodedProjectId);
         const project = await projectById(projectId);
         const image = await compressedMapImage(file);
         await renameProjectOnDisk(project.id, { ...project, preserveId: true, siteMap: { ...(project.siteMap || {}), image } });
-        await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+        if (returnContext === 'dashboard-v2' && typeof window.renderProjectDashboard === 'function') {
+            await returnToDashboardMap(project.id);
+        } else {
+            await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+        }
     } catch (error) {
         if (status) status.textContent = `Map photo could not be saved: ${error.message}`;
     }
 }
 
-export async function removeSiteMapPhoto(encodedProjectId) {
+export async function removeSiteMapPhoto(encodedProjectId, returnContext = '') {
     const projectId = decodeURIComponent(encodedProjectId);
     const project = await projectById(projectId);
     await renameProjectOnDisk(project.id, { ...project, preserveId: true, siteMap: { ...(project.siteMap || {}), image: '' } });
-    await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+    if (returnContext === 'dashboard-v2' && typeof window.renderProjectDashboard === 'function') {
+        await returnToDashboardMap(project.id);
+    } else {
+        await renderLocationMap(document.getElementById('app'), encoded(project.id), true);
+    }
 }
 
 export async function renderStartingPoints(app, encodedProjectId) {
