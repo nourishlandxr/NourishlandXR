@@ -1,7 +1,7 @@
-import { createPlaceMarker, createSitePlace, createSpatialPlant, loadProjectSites, loadSitePlaces, savePlantProfile } from '../services/persistence.js';
+import { createPlaceMarker, createSitePlace, createSpatialPlant, loadPlantProfile, loadProjectSites, loadSitePlaces, savePlantProfile } from '../services/persistence.js';
 import { loadPlantLibrary, searchGlobalPlants } from '../services/plantDataService.js';
 import { createPlantProvenance, PLANT_SEARCH_SOURCE_LABEL } from '../services/plantSearchProviders.js';
-import { createPimDocument } from '../services/pimModel.js';
+import { createPimDocument, normalizePimDocument } from '../services/pimModel.js';
 import { stagePimImport } from '../services/pimImportReview.js';
 import { recordTutorialEvent } from '../services/tutorialProgress.js';
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
@@ -23,6 +23,9 @@ let alaImportPreview = false;
 let alaImportConfirmed = false;
 let globalImportStep = 1;
 let globalImportReturnAction = '';
+let globalImportDestination = 'new';
+let globalImportExistingPlantId = '';
+let globalImportExistingPlants = [];
 let nonPlantMode = false;
 
 // New profiles begin with the six roots. The branch library is offered by the
@@ -30,8 +33,8 @@ let nonPlantMode = false;
 const initialPimCells = () => [];
 // “Name (optional)” remains only as a migration/search phrase; the desktop
 // conversion form renders one required Display / common name field.
-// “Use existing” is intentionally not rendered in the source-conversion step;
-// existing saved records remain available through the separate local workflow.
+// Source conversion can now target either a new profile or an existing plant;
+// existing targets keep their identity and receive staged PIM facts.
 // Legacy placement copy “Not yet placed · can be placed later” is intentionally
 // omitted here; placement belongs to the post-creation flow.
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -90,6 +93,57 @@ const globalImportReturn = () => globalImportReturnAction || `window.renderProje
 const globalImportValueMarkup = fact => String(fact?.value || '').length > 150
     ? `<details class="field-guide-fact-value"><summary>${escapeHtml(String(fact.value).slice(0, 144))}…</summary><span>${escapeHtml(fact.value)}</span></details>`
     : `<small>${escapeHtml(fact?.value || 'Not supplied')}</small>`;
+const globalImportSafeId = (value, fallback = 'information') => String(value || fallback)
+    .trim()
+    .toLocaleLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || fallback;
+const globalImportCustomMappings = facts => Object.fromEntries(facts
+    .filter(fact => fact?.key && !GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key))
+    .map(fact => {
+        const categoryId = globalImportSuggestedCategory(fact);
+        const category = globalImportCategory(categoryId);
+        const cell = globalImportCell(fact, categoryId);
+        return [fact.key, {
+            primaryCategory: categoryId,
+            parentChain: [{ id: globalImportSafeId(cell), title: cell }],
+            nodeId: globalImportSafeId(`${cell}-${fact.key}`),
+            title: fact.label || 'Imported information',
+            informationType: 'fact',
+            evidenceStatus: 'sourced'
+        }];
+    }));
+const mergePimImportReviews = (previous, next) => {
+    const previousItems = Array.isArray(previous?.items) ? previous.items : [];
+    if (!previousItems.length) return next;
+    const usedItemIds = new Set(previousItems.map(item => String(item?.id || '')).filter(Boolean));
+    const usedNodeIds = new Set(previousItems.map(item => String(item?.proposedNode?.id || '')).filter(Boolean));
+    const items = next.items.map(item => {
+        let itemId = String(item.id || 'staged-import');
+        let nodeId = String(item.proposedNode?.id || 'imported-information');
+        let suffix = 2;
+        while (usedItemIds.has(itemId) || usedNodeIds.has(nodeId)) {
+            itemId = `${String(item.id || 'staged-import')}-${suffix}`;
+            nodeId = `${String(item.proposedNode?.id || 'imported-information')}-${suffix++}`;
+        }
+        usedItemIds.add(itemId);
+        usedNodeIds.add(nodeId);
+        return {
+            ...item,
+            id: itemId,
+            proposedNode: { ...item.proposedNode, id: nodeId }
+        };
+    });
+    return {
+        ...next,
+        id: previous.id || next.id,
+        createdAt: previous.createdAt || next.createdAt,
+        items: [...previousItems, ...items],
+        status: 'pending_review'
+    };
+};
 
 function alaResultMarkup(result, index) {
     const thumbnail = result.thumbnailUrl
@@ -153,12 +207,13 @@ function globalImportSetupMarkup(result) {
         : '<span aria-hidden="true">&#127793;</span>';
     return `<section class="field-guide-global-setup" aria-labelledby="globalImportSetupTitle">
         <div class="field-guide-import-progress" aria-label="Import progress"><span class="is-active">1 Select facts</span><span class="is-active">2 Review + plant setup</span></div>
-        <p class="field-guide-import-step">Step 2 of 2 · Review + plant setup</p>
+        <p class="field-guide-import-step">Step 2 of 2 · Review + destination</p>
         <div class="field-guide-import-identity"><span class="field-guide-import-thumbnail">${thumbnail}</span><span><strong>${escapeHtml(displayName)}</strong>${globalImportScientificMarkup(result.scientificName)}<small>${escapeHtml(result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL)} · ${facts.length} selected fact${facts.length === 1 ? '' : 's'}</small></span></div>
-        <section class="field-guide-import-confirmation" aria-labelledby="globalImportSetupTitle"><div><h2 id="globalImportSetupTitle">Ready to create this plant</h2><p>Identity and image stay with the Plant Profile. The remaining facts are grouped below using NLXR’s suggested destinations.</p></div><div class="field-guide-import-profile-summary"><strong>Plant Profile</strong><span>${profileFacts.length ? profileFacts.map(fact => escapeHtml(fact.label || fact.key)).join(' · ') : 'Display name and source attribution'}</span></div></section>
+        <section class="field-guide-import-confirmation" aria-labelledby="globalImportSetupTitle"><div><h2 id="globalImportSetupTitle">${globalImportDestination === 'existing' ? 'Ready to add to an existing plant' : 'Ready to create this plant'}</h2><p>${globalImportDestination === 'existing' ? 'The selected plant keeps its existing identity and location. The selected facts will enter its PIM review queue.' : 'Identity and image stay with the Plant Profile. The remaining facts are grouped below using NLXR’s suggested destinations.'}</p></div><div class="field-guide-import-profile-summary"><strong>${globalImportDestination === 'existing' ? 'Existing plant' : 'Plant Profile'}</strong><span>${globalImportDestination === 'existing' ? escapeHtml(globalImportExistingPlants.find(plant => String(plant.markerId) === String(globalImportExistingPlantId))?.commonName || 'Choose a plant below') : profileFacts.length ? profileFacts.map(fact => escapeHtml(fact.label || fact.key)).join(' · ') : 'Display name and source attribution'}</span></div></section>
         <section class="field-guide-import-destinations" aria-labelledby="globalImportDestinationsTitle"><div class="field-guide-allocation-group-heading"><div><h2 id="globalImportDestinationsTitle">Place the selected facts</h2><span>Change a whole group once. Individual overrides are under Advanced options.</span></div></div><div class="field-guide-import-destination-groups">${groups.map(group => { const category = globalImportCategory(group.categoryId); return `<section class="field-guide-import-destination-group" data-global-setup-group="${group.categoryId}"><div class="field-guide-allocation-group-heading"><div><h3>${escapeHtml(category.label)}</h3><span>${group.facts.length} fact${group.facts.length === 1 ? '' : 's'} grouped together</span></div><label class="field-guide-global-setup-destination">Destination<select data-global-setup-category="${group.categoryId}" data-global-setup-group-category="${group.categoryId}">${GLOBAL_IMPORT_CATEGORIES.map(option => `<option value="${option.id}" ${option.id === group.categoryId ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><ul class="field-guide-import-fact-list">${group.facts.map(fact => `<li data-global-setup-fact-row="${escapeHtml(fact.key)}"><strong>${escapeHtml(fact.label || fact.key)}</strong>${globalImportValueMarkup(fact)}</li>`).join('')}</ul></section>`; }).join('') || '<p class="meta">No PIM facts selected. Go back and select at least one fact.</p>'}</div></section>
         ${pimFacts.length ? `<details class="field-guide-import-advanced"><summary>Advanced options · move one fact</summary><p>Use this only when one fact belongs in a different category from the rest of its group.</p><div class="field-guide-import-advanced-list">${pimFacts.map(fact => `<label><span><strong>${escapeHtml(fact.label || fact.key)}</strong><small>Use its group destination by default</small></span><select data-global-setup-fact-category="${escapeHtml(fact.key)}"><option value="">Use group destination</option>${GLOBAL_IMPORT_CATEGORIES.map(category => `<option value="${category.id}">${category.label}</option>`).join('')}</select></label>`).join('')}</div></details>` : ''}
-        <p class="meta">The Area and display name are confirmed below on this same page. Nothing is saved until you create the NLXR Plant Profile.</p>
+        <fieldset class="field-guide-import-destination-choice" aria-labelledby="globalImportDestinationTitle"><legend id="globalImportDestinationTitle">Where should this information go?</legend><p>Choose a destination for the selected facts. Source attribution is kept either way.</p><label class="field-guide-import-destination-option"><input type="radio" name="globalImportDestination" value="new" ${globalImportDestination === 'new' ? 'checked' : ''} onchange="window.setGlobalImportDestination(this.value)" /><span><strong>Create new plant profile</strong><small>Use the selected source record as the identity for a new NLXR plant.</small></span></label><label class="field-guide-import-destination-option${globalImportExistingPlants.length ? '' : ' is-disabled'}"><input type="radio" name="globalImportDestination" value="existing" ${globalImportDestination === 'existing' ? 'checked' : ''} ${globalImportExistingPlants.length ? '' : 'disabled'} onchange="window.setGlobalImportDestination(this.value)" /><span><strong>Add to existing plant</strong><small>Keep the existing identity and add these facts as new staged PIM information.</small></span></label>${globalImportExistingPlants.length ? `<label class="field-guide-existing-plant-select"><span>Existing plant</span><select id="globalImportExistingPlant" onchange="window.selectGlobalImportExistingPlant(this.value)" ${globalImportDestination === 'existing' ? 'required' : ''}><option value="">Choose a plant</option>${globalImportExistingPlants.map(plant => `<option value="${escapeHtml(plant.markerId)}" ${String(plant.markerId) === String(globalImportExistingPlantId) ? 'selected' : ''}>${escapeHtml(plant.commonName || plant.name || 'Unnamed plant')}${plant.scientificName ? ` · ${escapeHtml(plant.scientificName)}` : ''}${plant.placeName ? ` · ${escapeHtml(plant.placeName)}` : ''}</option>`).join('')}</select></label>` : '<p class="meta">No existing plants are available in this project yet.</p>'}</fieldset>
+        <p class="meta">${globalImportDestination === 'existing' ? 'Nothing is saved until you add the selected facts to the chosen plant.' : 'The Area and display name are confirmed below on this same page. Nothing is saved until you create the NLXR Plant Profile.'}</p>
     </section>`;
 }
 
@@ -166,6 +221,8 @@ function draw() {
     const plant = markerType === 'plant';
     const globalConversion = plant && Boolean(selectedGlobalPlant);
     const globalImportStepOne = globalConversion && globalImportStep === 1;
+    const existingImport = globalConversion && !globalImportStepOne && globalImportDestination === 'existing';
+    const existingPlant = globalImportExistingPlants.find(item => String(item.markerId) === String(globalImportExistingPlantId));
     const typeLabel = plant ? 'Plant' : markerType === 'sub_checkpoint' ? (nonPlantMode ? 'Dynamic Marker' : 'Checkpoint') : 'Note';
     const identityLabel = plant ? 'Display / common name' : markerType === 'note' ? 'Title' : 'Name';
     const areaOptions = places.filter(place => !isDefaultHomeArea(place)).map(area => `<option value="${escapeHtml(area.id)}" ${area.id === selected.place ? 'selected' : ''}>${escapeHtml(area.name)}</option>`).join('');
@@ -174,11 +231,13 @@ function draw() {
             <div class="page-header">
                 <p class="welcome-label">Organizer Folder</p>
                 <h1>${globalConversion ? (globalImportStepOne ? 'Import plant' : 'Review plant') : `Add ${typeLabel}`}</h1>
-                <p class="subtitle">${globalConversion ? (globalImportStepOne ? 'Step 1 of 2 · Select facts.' : 'Step 2 of 2 · Review and set up the plant.') : plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
+                <p class="subtitle">${globalConversion ? (globalImportStepOne ? 'Step 1 of 2 · Select facts.' : 'Step 2 of 2 · Review facts and choose their destination.') : plant ? 'Let’s keep the first step compact. Add only what you know now.' : 'Save a draft now and complete its details later.'}</p>
             </div>
             ${globalConversion ? (globalImportStepOne ? globalImportFactsMarkup(selectedGlobalPlant) : globalImportSetupMarkup(selectedGlobalPlant)) : ''}
             <form class="panel minimal-creation-form" ${globalImportStepOne ? 'hidden' : ''} onsubmit="window.saveFieldMarker(event)">
-                <div class="field compact-area-field">
+                ${existingImport
+                    ? `<input id="fieldName" type="hidden" value="${escapeHtml(existingPlant?.commonName || existingPlant?.name || '')}" /><p class="field-guide-existing-import-note">The selected facts will be added to <strong>${escapeHtml(existingPlant?.commonName || existingPlant?.name || 'the chosen plant')}</strong> as staged PIM information. Its existing identity and location will remain unchanged.</p>`
+                    : `<div class="field compact-area-field">
                     <label for="fieldArea">Area</label>
                     <div class="compact-inline-control"><select id="fieldArea" onchange="window.selectFieldPlace(this.value)">
                         <option value="">Select an Area</option>
@@ -188,9 +247,9 @@ function draw() {
                 </div>
                 <div class="compact-identity-row"><div class="field"><label for="fieldName">${identityLabel}</label><input id="fieldName" ${plant ? 'required' : ''} value="${globalConversion ? escapeHtml(selectedGlobalPlant.commonName || selectedGlobalPlant.canonicalName || selectedGlobalPlant.scientificName) : ''}" placeholder="${markerType === 'note' ? 'Title for this note' : 'Plant name'}" /></div>${plant && !globalConversion ? `<div class="field"><label for="fieldPlantProfile">Saved plant</label><select id="fieldPlantProfile" onchange="window.selectFieldPlantProfile(this.value)"><option value="">Create new plant</option>${plantProfiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.commonName)}</option>`).join('')}</select></div>` : ''}</div>
                 ${markerType === 'note' ? '<div class="field note-quick-information"><label for="fieldDescription">Information</label><textarea id="fieldDescription" rows="5" placeholder="Write the information this note should contain."></textarea></div>' : ''}
-                ${plant && !globalConversion ? `<details class="compact-advanced"><summary>Search plant database</summary><div class="plant-search-scope" role="group" aria-label="Plant search source"><button type="button" class="${plantSearchScope === 'local' ? 'primary' : ''}" onclick="window.setPlantSearchScope('local')">Saved records</button><button type="button" class="${plantSearchScope === 'global' ? 'primary' : ''}" onclick="window.setPlantSearchScope('global')">Search plant database</button></div><p class="meta">Use Global Search in Content to research and convert source records.</p></details>` : ''}
+                ${plant && !globalConversion ? `<details class="compact-advanced"><summary>Search plant database</summary><div class="plant-search-scope" role="group" aria-label="Plant search source"><button type="button" class="${plantSearchScope === 'local' ? 'primary' : ''}" onclick="window.setPlantSearchScope('local')">Saved records</button><button type="button" class="${plantSearchScope === 'global' ? 'primary' : ''}" onclick="window.setPlantSearchScope('global')">Search plant database</button></div><p class="meta">Use Global Search in Content to research and convert source records.</p></details>` : ''}`}
                 <div class="button-row">
-                    ${globalConversion ? '<button class="primary" type="submit" name="saveIntent" value="later">Create NLXR Plant Profile</button>' : `<button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>`}
+                    ${globalConversion ? `<button class="primary" type="submit" name="saveIntent" value="later">${existingImport ? 'Add selected facts to plant' : 'Create NLXR Plant Profile'}</button>` : `<button class="primary" type="submit" name="saveIntent" value="later">Add ${typeLabel}</button>`}
                 </div>
                 <p id="fieldError" class="meta"></p>
             </form>
@@ -215,6 +274,11 @@ export async function renderFieldMarker(target, defaults = null) {
     alaImportPreview = Boolean(initialGlobalPlant);
     globalImportStep = initialGlobalPlant ? 1 : 1;
     globalImportReturnAction = initialGlobalPlant && defaults?.returnAction ? String(defaults.returnAction) : '';
+    globalImportDestination = 'new';
+    globalImportExistingPlantId = '';
+    globalImportExistingPlants = Array.isArray(defaults?.existingPlants)
+        ? defaults.existingPlants.filter(plant => plant?.markerId)
+        : [];
     alaImportConfirmed = false;
     if (defaults) {
         dashboardProjectId = defaults.dashboardProjectId || '';
@@ -340,6 +404,16 @@ export function selectGlobalImportRecommended() {
     });
 }
 
+export function setGlobalImportDestination(destination) {
+    globalImportDestination = destination === 'existing' && globalImportExistingPlants.length ? 'existing' : 'new';
+    draw();
+}
+
+export function selectGlobalImportExistingPlant(markerId) {
+    globalImportExistingPlantId = String(markerId || '');
+    draw();
+}
+
 export function reviewGlobalPlantImport() {
     if (!selectedGlobalPlant) return;
     const selectedFields = [...document.querySelectorAll('[data-global-extract-field]:checked')]
@@ -435,6 +509,7 @@ export async function openGlobalPlantProfile(target, defaults = {}) {
         returnAction: defaults.returnAction || '',
         sites: defaults.sites,
         places: defaults.places,
+        existingPlants: defaults.existingPlants,
         globalPlant
     });
 }
@@ -443,31 +518,58 @@ export function refreshFieldLocation() {
     document.getElementById('fieldError').textContent = 'Use Place in AR after saving to add a physical position.';
 }
 
-async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId, commonName) {
+async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId, commonName, options = {}) {
     if (!selectedGlobalPlant || !Array.isArray(selectedGlobalPlant.extractionFields)) return;
     const selectedFields = new Set(selectedGlobalPlant.extractionFields);
     const extractedFacts = Array.isArray(selectedGlobalPlant.extractedFacts) ? selectedGlobalPlant.extractedFacts : [];
-    const profile = {
-        common_name: commonName,
-        scientific_name: selectedFields.has('scientific_name') ? selectedGlobalPlant.scientificName || '' : '',
-        family: selectedFields.has('family') ? selectedGlobalPlant.family || '' : '',
-        photo: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
-        image: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
-        externalSources: [{ ...createPlantProvenance(selectedGlobalPlant), sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: selectedGlobalPlant.externalId || '', sourceUrl: selectedGlobalPlant.sourceUrl || '', retrievalDate: new Date().toISOString(), reviewStatus: 'pending', rawSourceData: selectedGlobalPlant.rawSourceData || {} }],
-        research_extraction: extractedFacts
-    };
+    const existingProfile = options.existingProfile && typeof options.existingProfile === 'object' ? options.existingProfile : null;
+    const existingDocument = existingProfile?.pim_document || existingProfile?.pim || null;
+    const existingIdentity = existingDocument?.identity && typeof existingDocument.identity === 'object' ? existingDocument.identity : {};
+    const profile = existingProfile
+        ? {
+            ...existingProfile,
+            common_name: existingProfile.common_name || existingIdentity.commonName || commonName,
+            scientific_name: existingProfile.scientific_name || existingIdentity.scientificName || '',
+            family: existingProfile.family || '',
+            photo: existingProfile.photo || existingProfile.image || existingIdentity.image || '',
+            image: existingProfile.image || existingProfile.photo || existingIdentity.image || '',
+            externalSources: Array.isArray(existingProfile.externalSources) ? [...existingProfile.externalSources] : [],
+            research_extraction: Array.isArray(existingProfile.research_extraction) ? [...existingProfile.research_extraction] : []
+        }
+        : {
+            common_name: commonName,
+            scientific_name: selectedFields.has('scientific_name') ? selectedGlobalPlant.scientificName || '' : '',
+            family: selectedFields.has('family') ? selectedGlobalPlant.family || '' : '',
+            photo: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
+            image: selectedFields.has('image') ? selectedGlobalPlant.thumbnailUrl || '' : '',
+            externalSources: [],
+            research_extraction: []
+        };
+    const sourceRecord = { ...createPlantProvenance(selectedGlobalPlant), sourceDatabase: selectedGlobalPlant.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: selectedGlobalPlant.externalId || '', sourceUrl: selectedGlobalPlant.sourceUrl || '', retrievalDate: new Date().toISOString(), reviewStatus: 'pending', rawSourceData: selectedGlobalPlant.rawSourceData || {} };
+    const sourceKey = `${sourceRecord.sourceDatabase}|${sourceRecord.sourceRecordId || sourceRecord.sourceUrl}`;
+    profile.externalSources = [...profile.externalSources.filter(source => `${source.sourceDatabase || source.provider || ''}|${source.sourceRecordId || source.providerId || source.sourceUrl || source.url || ''}` !== sourceKey), sourceRecord];
+    profile.research_extraction = [...profile.research_extraction, ...extractedFacts.filter(fact => !GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key))];
     const importFields = {};
-    if (profile.scientific_name) importFields.scientificName = profile.scientific_name;
-    if (profile.family) importFields.family = profile.family;
+    if (!existingProfile && profile.scientific_name) importFields.scientificName = profile.scientific_name;
+    if (!existingProfile && profile.family) importFields.family = profile.family;
     extractedFacts.forEach(fact => {
-        if (fact?.key && fact.value !== undefined && !(fact.key in importFields)) importFields[fact.key] = fact.value;
+        if (GLOBAL_IMPORT_PROFILE_FACTS.has(fact?.key)) return;
+        if (!fact?.key || fact.value === undefined || String(fact.value).trim() === '') return;
+        const field = fact.key === 'scientific_name' ? 'scientificName' : fact.key;
+        if (!(field in importFields)) importFields[field] = fact.value;
     });
     if (Object.keys(importFields).length) {
-        const document = createPimDocument({
-            plantId: markerId,
-            identity: { commonName, scientificName: profile.scientific_name, image: profile.image },
-            nodes: initialPimCells()
-        });
+        const document = existingDocument && Array.isArray(existingDocument.nodes)
+            ? normalizePimDocument({
+                ...existingDocument,
+                plantId: markerId,
+                identity: { ...existingIdentity, commonName: profile.common_name, scientificName: profile.scientific_name, image: profile.image }
+            })
+            : createPimDocument({
+                plantId: markerId,
+                identity: { commonName: profile.common_name, scientificName: profile.scientific_name, image: profile.image },
+                nodes: initialPimCells()
+            });
         // Keep extracted facts in the review queue only.  Adding them to the
         // document before staging made the same fact exist twice: once as an
         // unpublished draft and again as the deterministic import candidate.
@@ -480,11 +582,17 @@ async function saveSelectedGlobalPimContent(projectId, siteId, placeId, markerId
             sourceUrl: selectedGlobalPlant.sourceUrl || '',
             licence: selectedGlobalPlant.imageLicense || '',
             attribution: selectedGlobalPlant.imageAttribution || ''
-        }, { plantId: markerId, attribution: selectedGlobalPlant.imageAttribution || '' });
+        }, {
+            plantId: markerId,
+            attribution: selectedGlobalPlant.imageAttribution || '',
+            fieldMappings: globalImportCustomMappings(extractedFacts)
+        });
         profile.profile_enabled = true;
-        profile.spm_enabled = true;
+        if (!existingProfile) profile.spm_enabled = true;
         profile.pim_document = staging.document;
-        profile.pim_import_review = staging;
+        profile.pim_import_review = existingProfile
+            ? mergePimImportReviews(existingProfile.pim_import_review || existingProfile.pim_import_staging, staging)
+            : staging;
     }
     await savePlantProfile(projectId, siteId, placeId, markerId, profile);
 }
@@ -499,7 +607,33 @@ export async function saveFieldMarker(event) {
     const plantId = plantSearchScope === 'local' ? (document.getElementById('fieldPlantProfile')?.value || '') : '';
     const saveIntent = event?.submitter?.value || (placementMode === 'ar' ? 'ar' : 'later');
 
+    const addingToExisting = type === 'plant' && plantSearchScope === 'global' && selectedGlobalPlant && alaImportConfirmed && globalImportDestination === 'existing';
     if (!selected.project || !selected.site) { error.textContent = 'The selected Location is unavailable.'; return; }
+    if (addingToExisting) {
+        const existingPlant = globalImportExistingPlants.find(plant => String(plant.markerId) === String(globalImportExistingPlantId));
+        if (!existingPlant?.markerId || !existingPlant.placeId || !existingPlant.siteId) {
+            error.textContent = 'Choose an existing plant before adding the selected facts.';
+            return;
+        }
+        syncGlobalImportSetupDestinations();
+        const importedFactCount = (selectedGlobalPlant.extractedFacts || []).filter(fact => !GLOBAL_IMPORT_PROFILE_FACTS.has(fact.key)).length;
+        if (!importedFactCount) {
+            error.textContent = 'Select at least one information fact to add to the existing plant.';
+            return;
+        }
+        try {
+            error.textContent = 'Adding selected facts…';
+            const existingProfile = await loadPlantProfile(selected.project, existingPlant.siteId, existingPlant.placeId, existingPlant.markerId).catch(() => existingPlant.profile || {});
+            await saveSelectedGlobalPimContent(selected.project, existingPlant.siteId, existingPlant.placeId, existingPlant.markerId, existingPlant.commonName || existingPlant.name || 'Unnamed plant', { existingProfile });
+            error.textContent = `Selected facts staged for ${existingPlant.commonName || existingPlant.name || 'the existing plant'}.`;
+            if (typeof window.openProjectEntry === 'function') {
+                await window.openProjectEntry(encodeURIComponent(selected.project), encodeURIComponent(existingPlant.markerId), false, 'field-guide');
+            }
+        } catch (failure) {
+            error.textContent = `Import failed: ${failure.message}`;
+        }
+        return;
+    }
     if (!selected.place) { error.textContent = 'Select an Area or choose Home.'; return; }
     if (type === 'plant' && plantSearchScope === 'global' && selectedGlobalPlant && !alaImportConfirmed) {
         error.textContent = 'Review the selected database record before creating the Plant Profile.';

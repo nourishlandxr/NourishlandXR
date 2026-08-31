@@ -289,6 +289,34 @@ test('external imports stage provenance and surface duplicates and conflicts wit
     assert.equal(staged.unmapped[0].field, 'unknown_measure');
 });
 
+test('external imports can stage a source-specific fact as a custom PIM cell', () => {
+    const base = createPimDocument({ plantId: 'custom-import-plant', now: NOW });
+    const staged = stagePimImport(base, {
+        sourceDatabase: 'Reference Nursery',
+        sourceRecordId: 'RN-42',
+        fields: { seasonal_note: 'Flowers after the wet season.' }
+    }, {
+        now: NOW,
+        fieldMappings: {
+            seasonal_note: {
+                primaryCategory: 'cultivation',
+                parentChain: [{ id: 'seasonal-care', title: 'Seasonal care' }],
+                nodeId: 'seasonal-note',
+                title: 'Seasonal note',
+                informationType: 'fact',
+                evidenceStatus: 'sourced'
+            }
+        }
+    });
+    assert.equal(staged.unmapped.length, 0);
+    assert.equal(staged.items[0].proposedNode.title, 'Seasonal note');
+    assert.equal(staged.items[0].proposedNode.provenance[0].sourceRecordId, 'RN-42');
+    const reviewed = reviewPimImport(staged, staged.items[0].id, { decision: 'approve', reviewedAt: NOW });
+    const node = pimNodeById(reviewed.document, staged.items[0].proposedNode.id);
+    assert.equal(node.path, `cultivation/seasonal-care/${node.id}`);
+    assert.equal(node.body, 'Flowers after the wet season.');
+});
+
 test('import review can acknowledge duplicates, reject conflicts, or modify an approved block', () => {
     let base = createPimDocument({ plantId: 'review-plant', now: NOW });
     base = pimAddNode(base, {

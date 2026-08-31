@@ -496,7 +496,7 @@ test('Organizer Folder excludes compatibility Area Totems by semantic type', () 
 test('quick access creation is minimal and separates Area assignment from placement', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/fieldMarker.js'), 'utf8');
     assert.match(source, /<label for="fieldArea">Area<\/label>/);
-    assert.match(source, /Use existing/);
+    assert.match(source, /Add to existing plant/);
     assert.match(source, /Home — assign later/);
     assert.match(source, /Create new Area/);
     assert.match(source, /markerType === 'note' \? 'Title' : 'Name'/);

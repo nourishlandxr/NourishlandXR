@@ -119,10 +119,10 @@ const METADATA_FIELDS = new Set([
     'data', 'fields'
 ]);
 
-function resolvedMapping(field) {
-    const mapping = PIM_EXTERNAL_FIELD_MAP[field];
+function resolvedMapping(field, customMappings = {}) {
+    const mapping = PIM_EXTERNAL_FIELD_MAP[field] || customMappings[field];
     if (!mapping) return null;
-    return mapping.aliasOf ? PIM_EXTERNAL_FIELD_MAP[mapping.aliasOf] : mapping;
+    return mapping.aliasOf ? (PIM_EXTERNAL_FIELD_MAP[mapping.aliasOf] || customMappings[mapping.aliasOf] || null) : mapping;
 }
 
 function normalizeExternalValue(value, mapping) {
@@ -177,6 +177,9 @@ function existingSemanticNodes(document, mapping) {
 export function stagePimImport(document, sourceRecord = {}, options = {}) {
     const baseDocument = normalizePimDocument(document, { now: options.now });
     const record = clone(sourceRecord || {});
+    const customMappings = options.fieldMappings && typeof options.fieldMappings === 'object'
+        ? options.fieldMappings
+        : {};
     const data = record.fields && typeof record.fields === 'object'
         ? record.fields
         : record.data && typeof record.data === 'object'
@@ -189,7 +192,7 @@ export function stagePimImport(document, sourceRecord = {}, options = {}) {
 
     Object.entries(data).forEach(([field, originalValue], index) => {
         if (!meaningful(originalValue) || METADATA_FIELDS.has(field)) return;
-        const mapping = resolvedMapping(field);
+        const mapping = resolvedMapping(field, customMappings);
         if (!mapping) {
             unmapped.push({ field, originalValue: clone(originalValue), reason: 'No approved PIM destination mapping is defined.' });
             return;

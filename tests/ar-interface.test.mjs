@@ -1596,6 +1596,11 @@ test('plant creation separates Local records from read-only Global discovery', (
     assert.match(fieldMarker, /data-global-setup-group-category/);
     assert.match(fieldMarker, /field-guide-import-advanced/);
     assert.match(fieldMarker, /field-guide-import-confirmation/);
+    assert.match(fieldMarker, /Create new plant profile/);
+    assert.match(fieldMarker, /Add to existing plant/);
+    assert.match(fieldMarker, /globalImportExistingPlants/);
+    assert.match(fieldMarker, /saveSelectedGlobalPimContent[\s\S]*existingProfile/);
+    assert.match(fieldGuide, /existingPlants: currentGuide\.plants/);
     assert.doesNotMatch(fieldMarker, /data-global-setup-category=\"\$\{escapeHtml\(fact\.key\)\}\"/);
     assert.match(fieldMarker, /stagePimImport/);
     assert.match(fieldMarker, /Content selected for NLXR/);

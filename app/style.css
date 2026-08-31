@@ -9485,6 +9485,20 @@ body:has(.field-guide-hub-redesign) {
 .field-guide-import-advanced-list strong { overflow-wrap: anywhere; color: #3e5d47; font-size: .68rem; }
 .field-guide-import-advanced-list small { color: var(--webhub-muted, #66766a); font-size: .62rem; }
 .field-guide-import-advanced-list select { width: 100%; min-height: 34px; padding: 5px 7px; border: 1px solid rgba(45, 88, 56, .2); border-radius: 8px; background: #fff; color: var(--webhub-ink, #23382a); font-size: .68rem; }
+.field-guide-import-destination-choice { display: grid; gap: 8px; margin: 0; padding: 12px; border: 1px solid rgba(46, 112, 70, .18); border-radius: 13px; background: #fff; }
+.field-guide-import-destination-choice legend { padding: 0 4px; color: var(--webhub-ink, #23382a); font-size: .82rem; font-weight: 850; }
+.field-guide-import-destination-choice > p { margin: 0; color: var(--webhub-muted, #66766a); font-size: .7rem; line-height: 1.35; }
+.field-guide-import-destination-option { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px; align-items: start; min-width: 0; padding: 9px 10px; border: 1px solid rgba(45, 88, 56, .14); border-radius: 10px; background: #f8fbf6; cursor: pointer; }
+.field-guide-import-destination-option:has(input:checked) { border-color: rgba(46, 112, 70, .42); background: #edf6e9; box-shadow: inset 3px 0 #39764a; }
+.field-guide-import-destination-option input { width: 20px; min-width: 20px; height: 20px; margin: 1px 0 0; }
+.field-guide-import-destination-option span { display: grid; gap: 2px; min-width: 0; }
+.field-guide-import-destination-option strong { color: var(--webhub-ink, #23382a); font-size: .76rem; line-height: 1.25; }
+.field-guide-import-destination-option small { color: var(--webhub-muted, #66766a); font-size: .68rem; line-height: 1.35; }
+.field-guide-import-destination-option.is-disabled { opacity: .58; cursor: not-allowed; }
+.field-guide-existing-plant-select { display: grid; gap: 4px; min-width: 0; color: var(--webhub-muted, #66766a); font-size: .66rem; font-weight: 850; }
+.field-guide-existing-plant-select select { width: 100%; min-height: 40px; padding: 7px 9px; border: 1px solid rgba(45, 88, 56, .22); border-radius: 9px; background: #fff; color: var(--webhub-ink, #23382a); font-size: .74rem; }
+.field-guide-existing-import-note { margin: 0; padding: 10px 11px; border-radius: 10px; background: #edf6e9; color: var(--webhub-muted, #66766a); font-size: .74rem; line-height: 1.4; }
+.field-guide-existing-import-note strong { color: var(--webhub-green-deep, #28613b); }
 .field-guide-management-list { display: grid; gap: 8px; }
 .field-guide-hub-redesign .field-guide-management-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 18px; align-items: center; min-width: 0; min-height: 64px; gap: 10px; padding: 10px 12px; border: 1px solid var(--webhub-line); border-radius: 13px; background: rgba(255, 255, 252, .78); color: var(--webhub-ink); text-align: left; }
 .field-guide-hub-redesign button.field-guide-management-row { width: 100%; cursor: pointer; }

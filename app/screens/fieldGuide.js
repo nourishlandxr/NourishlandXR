@@ -431,6 +431,7 @@ function applyCreatorContentCopy(app, renderTarget = app) {
                     returnAction: `window.renderFieldGuide('${encoded(currentGuide.project.id)}', true)`,
                     sites: [siteGroup.site],
                     places: siteGroup.placeGroups.map(placeGroup => placeGroup.place),
+                    existingPlants: currentGuide.plants,
                     globalPlant: {
                         ...sourceResult,
                         importFacts: facts,
@@ -516,6 +517,7 @@ function applyCreatorContentCopy(app, renderTarget = app) {
                                 project: currentGuide.project.id,
                                 site: siteGroup.site.id,
                                 place: currentGuidePlaceId || '__unassigned__',
+                                existingPlants: currentGuide.plants,
                                 globalPlant: { ...result, extractionFields: selectedFacts.map(fact => fact.key), extractedFacts }
                             });
                         } catch (error) {
