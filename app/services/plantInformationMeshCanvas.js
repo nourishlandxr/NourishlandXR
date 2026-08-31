@@ -86,8 +86,9 @@ function splitLongWord(context, word, maxWidth) {
  * also breaks a single long word, preserves intentional newlines and never
  * relies on a canvas max-width argument to clip an over-wide line.
  */
-export function wrapPimTextLines(context, text, maxWidth) {
+export function wrapPimTextLines(context, text, maxWidth, options = {}) {
     const width = Math.max(1, Number(maxWidth) || 1);
+    const breakWords = options.breakWords !== false;
     const paragraphs = String(text ?? '').split(/\r?\n/);
     const lines = [];
     paragraphs.forEach((paragraph, paragraphIndex) => {
@@ -98,7 +99,8 @@ export function wrapPimTextLines(context, text, maxWidth) {
         }
         let line = '';
         words.forEach(word => {
-            splitLongWord(context, word, width).forEach((chunk, chunkIndex) => {
+            const chunks = breakWords ? splitLongWord(context, word, width) : [word];
+            chunks.forEach((chunk, chunkIndex) => {
                 const candidate = line
                     ? `${line}${chunkIndex === 0 ? ' ' : ''}${chunk}`
                     : chunk;
@@ -167,19 +169,21 @@ export function fitPimTextBlock(context, options = {}) {
     const step = .5;
     const titleLineHeightFor = size => Math.max(1, Math.round(size * 1.06));
     const detailLineHeightFor = size => Math.max(1, Math.round(size * 1.12));
-    const build = (titleFontSize, detailFontSize) => {
+    const build = (titleFontSize, detailFontSize, breakWords = false) => {
         context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
         const titleWidth = Math.max(1, safeArea.width - titleFontSize * .18);
-        const titleLines = wrapPimTextLines(context, title, titleWidth);
-        if (!titleLines.length || titleLines.length > titleLinesLimit) return null;
+        const titleLines = wrapPimTextLines(context, title, titleWidth, { breakWords });
+        const titleHasOverflow = !breakWords && titleLines.some(line => measuredTextWidth(context, line) > titleWidth);
+        if (!titleLines.length || titleHasOverflow || titleLines.length > titleLinesLimit) return null;
         const titleLineHeight = titleLineHeightFor(titleFontSize);
         let detailLines = [];
         let detailLineHeight = 0;
         if (hasDetail) {
             context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
             const detailWidth = Math.max(1, safeArea.width - detailFontSize * .16);
-            detailLines = wrapPimTextLines(context, detail, detailWidth);
-            if (!detailLines.length || detailLines.length > detailLinesLimit) return null;
+            detailLines = wrapPimTextLines(context, detail, detailWidth, { breakWords });
+            const detailHasOverflow = !breakWords && detailLines.some(line => measuredTextWidth(context, line) > detailWidth);
+            if (!detailLines.length || detailHasOverflow || detailLines.length > detailLinesLimit) return null;
             detailLineHeight = detailLineHeightFor(detailFontSize);
         }
         const titleHeight = titleLines.length * titleLineHeight;
@@ -210,7 +214,23 @@ export function fitPimTextBlock(context, options = {}) {
             ? detailMinimum
             : 0;
         for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= detailEnd : detailFontSize === 0; detailFontSize -= step) {
-            const result = build(titleFontSize, detailFontSize);
+            const result = build(titleFontSize, detailFontSize, false);
+            if (result) return result;
+        }
+    }
+
+    // If a genuinely long word cannot fit at a readable size, allow the
+    // controlled character break as a last resort. Normal words have already
+    // had the opportunity to reduce and remain intact above.
+    for (let titleFontSize = titleRange.preferred; titleFontSize >= titleRange.minimum; titleFontSize -= step) {
+        const detailStart = hasDetail
+            ? Math.max(detailMinimum, Math.min(detailPreferred, titleFontSize * .64))
+            : 0;
+        const detailEnd = hasDetail
+            ? detailMinimum
+            : 0;
+        for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= detailEnd : detailFontSize === 0; detailFontSize -= step) {
+            const result = build(titleFontSize, detailFontSize, true);
             if (result) return result;
         }
     }
@@ -223,7 +243,16 @@ export function fitPimTextBlock(context, options = {}) {
             ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
             : 0;
         for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= 1 : detailFontSize === 0; detailFontSize -= step) {
-            const result = build(titleFontSize, detailFontSize);
+            const result = build(titleFontSize, detailFontSize, false);
+            if (result) return result;
+        }
+    }
+    for (let titleFontSize = titleRange.minimum - step; titleFontSize >= 1; titleFontSize -= step) {
+        const detailStart = hasDetail
+            ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
+            : 0;
+        for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= 1 : detailFontSize === 0; detailFontSize -= step) {
+            const result = build(titleFontSize, detailFontSize, true);
             if (result) return result;
         }
     }

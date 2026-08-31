@@ -174,6 +174,8 @@ test('PIM honeycomb typography wraps and fits the hexagon safe area', () => {
     const veryLong = fitPimTextBlock(context, examples[3]);
     assert.ok(veryLong.titleLines.length > 2, 'very long headings keep all wrapped lines');
     assert.ok(veryLong.totalHeight <= veryLong.safeHeight, 'very long headings still fit the safe height');
+    const information = fitPimTextBlock(context, { title: 'Information', radius: 90, depth: 1 });
+    assert.deepEqual(information.titleLines, ['Information'], 'normal words stay intact when a smaller readable size can fit');
 });
 
 test('dynamic plants retain the same six empty-visible primary positions', () => {

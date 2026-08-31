@@ -798,6 +798,10 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /controllerSpatialDashboardAtAim/);
     assert.match(arSource, /questSpatialDashboardMirror\.activateAt/);
     assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
+    assert.match(arSource, /function controllerSpatialSurfaceAtAim\(\)/);
+    assert.match(arSource, /if \(surfaceHit\?\.position\) return surfaceHit\.position/);
+    assert.match(arSource, /color: surfaceHit[\s\S]*\[0\.65, 1, 0\.24, 1\]/);
+    assert.match(arSource, /surfaceHit \? \.019 : \.012/);
     assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
     assert.doesNotMatch(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);

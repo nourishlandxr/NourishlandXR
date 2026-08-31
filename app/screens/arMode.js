@@ -1666,17 +1666,6 @@ function controllerSpatialDashboardAtAim() {
     let target = questSpatialWebVisible && questSpatialDashboardMirror
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror)
         : null;
-    if (target) {
-        const foregroundEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
-        const subjectDistance = foregroundEnd ? Math.hypot(
-            foregroundEnd.x - latestControllerRay.origin.x,
-            foregroundEnd.y - latestControllerRay.origin.y,
-            foregroundEnd.z - latestControllerRay.origin.z
-        ) : Infinity;
-        const beltDistance = controllerQuestBeltSurfaceHit()?.distance ?? Infinity;
-        const foregroundDistance = Math.min(subjectDistance, beltDistance);
-        if (foregroundDistance + .01 < target.distance) target = null;
-    }
     questSpatialDashboardHit = target;
     if (target) {
         clearMarkerHover();
@@ -1714,13 +1703,25 @@ function controllerLaserSubjects() {
     return subjects;
 }
 
-function controllerPointerEnd() {
-    const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
-    const beltHit = controllerQuestBeltSurfaceHit();
-    const pimHit = spatialPimTargetAtAim({ updateHover: false })?.hit || null;
+function controllerSpatialSurfaceAtAim() {
     const dashboardHit = questSpatialWebVisible && questSpatialDashboardPanel
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror || {})
         : null;
+    const pimCandidate = spatialPimTargetAtAim({ updateHover: false });
+    const candidates = [
+        dashboardHit && { ...dashboardHit, kind: 'dashboard' },
+        pimCandidate?.hit && { ...pimCandidate.hit, kind: 'pim' }
+    ].filter(Boolean);
+    return candidates.sort((left, right) => left.distance - right.distance)[0] || null;
+}
+
+function controllerPointerEnd(surfaceHit = controllerSpatialSurfaceAtAim()) {
+    // UI surfaces are rendered as world-locked panels over the plant/orb. Use
+    // their actual plane hit first so the laser reaches the control being
+    // aimed at instead of stopping on the orb behind or in front of it.
+    if (surfaceHit?.position) return surfaceHit.position;
+    const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const beltHit = controllerQuestBeltSurfaceHit();
     const candidates = [
         spatialEnd && {
             position: spatialEnd,
@@ -1730,9 +1731,7 @@ function controllerPointerEnd() {
                 spatialEnd.z - latestControllerRay.origin.z
             )
         },
-        pimHit,
-        beltHit,
-        dashboardHit
+        beltHit
     ].filter(candidate => candidate && candidate.distance <= XR_LASER_POINTER_CONFIG.length)
         .sort((left, right) => left.distance - right.distance);
     return candidates[0]?.position || null;
@@ -2046,14 +2045,17 @@ function drawControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = controllerPointerEnd();
+    const surfaceHit = controllerSpatialSurfaceAtAim();
+    const end = controllerPointerEnd(surfaceHit);
     if (!end) return;
     drawSpatialTether(gl, controllerPointerRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
         width: XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
-        color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
+        color: surfaceHit
+            ? [0.65, 1, 0.24, 1]
+            : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
 }
 
@@ -2063,14 +2065,15 @@ function drawControllerPointerContact(view) {
         || (interactionMode === 'view' && !viewingPim)
         || !latestControllerRay
         || !sphereRenderer) return;
-    const point = controllerPointerEnd();
+    const surfaceHit = controllerSpatialSurfaceAtAim();
+    const point = controllerPointerEnd(surfaceHit);
     if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     // DOM overlay is optional on Quest. Keep the contact point in the XR
     // layer so a shortened laser always ends in a visible, actionable hit.
-    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, .012, {
-        color: [0.35, 1, 0.2],
-        alpha: .95,
-        emissive: .75
+    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, surfaceHit ? .019 : .012, {
+        color: surfaceHit?.kind === 'pim' ? [0.76, 1, 0.28] : [0.35, 1, 0.2],
+        alpha: 1,
+        emissive: 1
     });
 }
 
