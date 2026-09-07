@@ -677,7 +677,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
 
     const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
         const record = makeRecord(node, depth, rootDirection, parentRecord, childIndex, childCount);
-        const children = pimArVisibleChildren({ ...node, depth });
+        const children = options.includeAllChildren ? pimNodeChildren({ ...node, depth }) : pimArVisibleChildren({ ...node, depth });
         const open = expanded.has(node.path) || selectedAncestors.has(node.path);
         if (open && children.length) {
             children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));

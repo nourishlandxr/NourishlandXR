@@ -527,6 +527,7 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
             : { selectedNodeId: options.selectedNodeId };
     const nodes = pimVisibleNodes(source, expanded, {
         ...layoutOptions,
+        includeAllChildren: options.includeAllChildren === true,
         viewportWidth: viewportWidth || undefined,
         viewportHeight: viewportHeight || undefined,
         layoutWidth: metrics.layoutWidth,

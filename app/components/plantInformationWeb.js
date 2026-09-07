@@ -1,6 +1,8 @@
+import { pimVisibleNodes, pimVisibleNodeBounds } from '../services/plantInformationMesh.js';
 import { PIM_COMPASS, PIM_COMPASS_BY_ID } from '../services/pimCompass.js';
 import * as PimModel from '../services/pimModel.js';
 import * as PimImportReview from '../services/pimImportReview.js';
+import { plantInformationMeshMarkup, syncPimConnectionLayer } from '../services/plantInformationMeshView.js';
 
 const GROUPS = Object.freeze([
     { id: 'relationship', label: 'Relationship', question: 'How this plant belongs in living systems' },
@@ -170,6 +172,7 @@ function normalizedState(state = {}) {
         searchLimit: Number(state.searchLimit) || 20,
         searchReturn: state.searchReturn ? clone(state.searchReturn) : null,
         editorImportId: String(state.editorImportId || ''),
+        meshZoom: Math.max(1, Math.min(2.5, Number(state.meshZoom) || 1)),
         visitedNodeIds: unique(state.visitedNodeIds),
         outlineBranchId: String(state.outlineBranchId || 'scientific-information'),
         // The readable hierarchy is the safe first view. Diagram mode remains
@@ -599,6 +602,31 @@ function importReviewMarkup(document, state, options) {
     }).join('')}</div><p class="pim-web-import-message" role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>${previousArchives}${archive}`;
 }
 
+function honeycombMarkup(document, state, options) {
+    const width = Math.max(320, Math.min(1100, Number(options.meshWidth) || 900));
+    const height = width < 500 ? 460 : 640;
+    const paths = state.openNodeIds.map(id => nodeById(document,id)?.path).filter(Boolean);
+    const selected = nodeById(document,state.highlightedNodeId);
+    const knowledge = PimModel.pimToArKnowledge(document);
+    const geometry = {
+        viewportWidth:width, viewportHeight:height, layoutWidth:width, layoutHeight:height,
+        cellWidthPixels:width < 500 ? 108 : 160, selectedNodeId:selected?.path,
+        safeArea:{left:4,right:96,top:5,bottom:95}, includeAllChildren:true,
+        handleLabel:'Plant identity — reset the honeycomb'
+    };
+    const mesh = plantInformationMeshMarkup(knowledge, paths, geometry);
+    const bounds = pimVisibleNodeBounds(pimVisibleNodes(knowledge, paths, geometry), geometry);
+    const offsetX = Math.max(0,24-bounds.left*width/100);
+    const offsetY = Math.max(0,24-bounds.top*height/100);
+    const canvasWidth = Math.max(width,bounds.right*width/100+24)+offsetX;
+    const canvasHeight = Math.max(height,bounds.bottom*height/100+24)+offsetY;
+    const branches = selected ? childrenOf(document,selected.id) : [];
+    return `<section class="pim-honeycomb" data-pim-compass-view aria-label="Honeycomb knowledge explorer"><header class="pim-honeycomb-toolbar"><div><strong>Follow a living connection</strong><p>Select a cell to reveal its branches. Read the selected topic below.</p></div><div role="group" aria-label="Diagram zoom"><button type="button" data-pim-zoom="out" aria-label="Zoom out"${state.meshZoom <= 1 ? ' disabled' : ''}>−</button><span>${Math.round(state.meshZoom*100)}%</span><button type="button" data-pim-zoom="in" aria-label="Zoom in"${state.meshZoom >= 2.5 ? ' disabled' : ''}>+</button><button type="button" data-pim-mesh-reset>Reset mesh</button></div></header>
+        <div class="pim-honeycomb-viewport" tabindex="0" aria-label="Scrollable honeycomb diagram"><div class="pim-honeycomb-size" data-offset-x="${offsetX}" data-offset-y="${offsetY}" data-zoom="${state.meshZoom}" style="width:${canvasWidth*state.meshZoom}px;height:${canvasHeight*state.meshZoom}px"><div class="pim-honeycomb-plane" style="left:${offsetX*state.meshZoom}px;top:${offsetY*state.meshZoom}px;width:${width}px;height:${height}px;transform:scale(${state.meshZoom})">${mesh}</div></div></div>
+        <section class="pim-honeycomb-reading" aria-label="Selected diagram topic"><div><small>${selected ? escapeHtml(plantInformationWebPath(document,selected.id)) : 'SIX CONNECTED WAYS TO KNOW A PLANT'}</small><h2>${escapeHtml(selected?.title || document.identity.commonName || 'Plant knowledge')}</h2><p>${escapeHtml(selected?.preview || selected?.question || 'Begin with a category. The centre keeps the plant in view as its knowledge grows.')}</p>${selected ? `<span>${escapeHtml(scopeLabel(selected))} · ${escapeHtml(evidenceLabel(selected.evidenceStatus))}</span>` : ''}</div><div>${selected ? `<button type="button" data-pim-related-node-id="${attribute(selected.id)}">Read topic</button>${options.editable ? `<button type="button" data-pim-add-parent-id="${attribute(selected.id)}">Grow this branch</button>` : ''}` : ''}</div>${branches.length ? `<nav aria-label="Topics in selected branch">${branches.map(node=>`<button type="button" data-pim-diagram-select="${attribute(node.id)}">${escapeHtml(node.title)}</button>`).join('')}</nav>` : ''}</section>
+        ${customRootsMarkup(document,state,options)}</section>`;
+}
+
 export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const current = normalizedState(state);
     const source = PimModel.pimReadingDocument(document, { editable: options.editable === true, scope: current.knowledgeScope });
@@ -607,16 +635,14 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const visualIdentity = showIdentity ? identityMarkup(source, current, 'visual', renderOptions) : '';
     const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
     const standaloneDirections = directionsInfoMarkup(source);
-    const groups = GROUPS.map(group => groupMarkup(source, group, current, renderOptions)).join('');
     const compassView = current.viewMode === 'compass'
-        ? `<div class="pim-web-compass-shell" data-pim-compass-view>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}${customRootsMarkup(source, current, renderOptions)}</div></div>`
+        ? `${visualIdentity}${knowledgeToolbar(source,current,renderOptions)}${honeycombMarkup(source,current,renderOptions)}`
         : '';
     const listView = current.viewMode === 'list'
         ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${knowledgeToolbar(source, current, renderOptions)}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
         <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
-        ${current.viewMode === 'compass' ? knowledgeToolbar(source, current, renderOptions) : ''}
         ${compassView}
         ${listView}
         ${detailMarkup(source, current, renderOptions)}
@@ -751,7 +777,18 @@ export function mountPlantInformationWeb(container, options = {}) {
         const previousScroll = typeof window !== 'undefined' && typeof window.scrollY === 'number'
             ? { left: window.scrollX, top: window.scrollY }
             : null;
-        container.innerHTML = plantInformationWebMarkup(document, state, { ...options, editable, importReview });
+        const oldViewport = container.querySelector('.pim-honeycomb-viewport');
+        const oldSize = container.querySelector('.pim-honeycomb-size');
+        const pan = oldViewport && oldSize ? {x:(oldViewport.scrollLeft+oldViewport.clientWidth/2)/Number(oldSize.dataset.zoom)-Number(oldSize.dataset.offsetX),y:(oldViewport.scrollTop+oldViewport.clientHeight/2)/Number(oldSize.dataset.zoom)-Number(oldSize.dataset.offsetY)} : null;
+        container.innerHTML = plantInformationWebMarkup(document, state, { ...options, editable, importReview, meshWidth: container.clientWidth });
+        requestAnimationFrame(() => syncPimConnectionLayer(container.querySelector('[data-pim-renderer="canonical"]')));
+        const viewport = container.querySelector('.pim-honeycomb-viewport');
+        const size = container.querySelector('.pim-honeycomb-size');
+        if (pan && viewport && size) {
+            viewport.scrollLeft = (pan.x+Number(size.dataset.offsetX))*state.meshZoom-viewport.clientWidth/2;
+            viewport.scrollTop = (pan.y+Number(size.dataset.offsetY))*state.meshZoom-viewport.clientHeight/2;
+        }
+        container.querySelector('[data-pim-role="center"]')?.setAttribute('role','button');
         focusNode(focusId);
         if (previousScroll && typeof window.requestAnimationFrame === 'function') {
             window.requestAnimationFrame(() => window.scrollTo({ ...previousScroll, behavior: 'instant' }));
@@ -764,8 +801,12 @@ export function mountPlantInformationWeb(container, options = {}) {
     };
 
     container.addEventListener('click', async event => {
+        if (event.target.closest('[data-pim-role="center"]')) { commit({ ...state, openNodeIds: [], highlightedNodeId: '', detailNodeId: '' }, '', false); return; }
         const button = event.target.closest('button');
         if (!button || !container.contains(button) || saving) return;
+        if (button.matches('[data-pim-zoom]')) { commit({ ...state, meshZoom: state.meshZoom + (button.dataset.pimZoom === 'in' ? .25 : -.25) }, '', false); return; }
+        if (button.matches('[data-pim-mesh-reset]')) { commit({ ...state, openNodeIds: [], highlightedNodeId: '', detailNodeId: '', meshZoom: 1 }, '', false); return; }
+        if (button.matches('[data-pim-diagram-select]')) { const next = togglePlantInformationWebNode(document,state,button.dataset.pimDiagramSelect); commit({ ...next, detailNodeId: '' },button.dataset.pimDiagramSelect); return; }
         if (button.matches('[data-pim-scope]')) { commit({ ...state, knowledgeScope: button.dataset.pimScope, detailNodeId: '', searchReturn: null }, '', false); return; }
         if (button.matches('[data-pim-clear-search]')) { commit({ ...state, searchQuery: '', searchMessage: '', searchReturn: null }, '', false); return; }
         if (button.matches('[data-pim-more-results]')) { commit({ ...state, searchLimit: state.searchLimit + 20 }, '', false); return; }
@@ -795,7 +836,7 @@ export function mountPlantInformationWeb(container, options = {}) {
         }
         if (button.matches('[data-pim-node-id]')) {
             const next = togglePlantInformationWebNode(document, state, button.dataset.pimNodeId);
-            commit(next, button.dataset.pimNodeId);
+            commit(button.hasAttribute('data-pim-node') ? { ...next, detailNodeId: '' } : next, button.dataset.pimNodeId);
             return;
         }
         if (button.matches('[data-pim-centre]')) {
@@ -961,6 +1002,7 @@ export function mountPlantInformationWeb(container, options = {}) {
     }, listenerOptions);
 
     container.addEventListener('keydown', event => {
+        if (event.target.matches('[data-pim-role="center"]') && ['Enter',' '].includes(event.key)) { event.preventDefault(); commit({ ...state, openNodeIds: [], highlightedNodeId: '', detailNodeId: '' }, '', false); return; }
         if (event.key === 'Escape') {
             if (state.editorMode) commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorImportId: '', editorSeed: null }, state.editorNodeId || state.editorParentId, false);
             else if (state.detailNodeId) closeReading();
@@ -976,6 +1018,14 @@ export function mountPlantInformationWeb(container, options = {}) {
         visible[nextIndex]?.focus();
     }, listenerOptions);
 
+    let meshWidth = container.clientWidth;
+    const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+        if (Math.abs(container.clientWidth - meshWidth) < 2) return;
+        meshWidth = container.clientWidth;
+        if (state.viewMode === 'compass') render();
+    }) : null;
+    resizeObserver?.observe(container);
+    controller?.signal.addEventListener('abort', () => resizeObserver?.disconnect(), {once:true});
     render();
     return {
         getDocument: () => clone(document),

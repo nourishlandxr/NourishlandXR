@@ -1710,7 +1710,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.match(dashboardSource, /plant-spm-toggle-line/);
     assert.match(dashboardSource, /mountPlantInformationWeb/);
     assert.match(dashboardSource, /data-plant-pim-web-mount/);
-    assert.match(dashboardSource, /pim_document: activePimDocument/);
+    assert.match(dashboardSource, /pim_document: pendingDocument/);
     assert.match(dashboardSource, /projectEntrySpmEnabled/);
     assert.match(dashboardSource, /projectEntryClimate/);
     assert.match(dashboardSource, /spm_enabled: spmEnabled/);
@@ -1719,7 +1719,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(dashboardSource, /Info Mesh overview|Advanced identity|Growing knowledge|Origin &amp; story|projectEntryRelationships/);
     assert.match(dashboardSource, /Plant Information Mesh/);
     assert.match(dashboardSource, /Info Mesh opens an expandable information diagram/);
-    assert.match(dashboardSource, /showSearch: false/);
+    assert.match(dashboardSource, /showSearch: true/);
     assert.match(dashboardSource, /if \(plantProfileFormPresent\)/);
     assert.match(arSource, /focusedRecord\.profileExpanded = focusedProfileView/);
     assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);

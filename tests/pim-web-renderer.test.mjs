@@ -79,14 +79,10 @@ function referenceDocument() {
     });
 }
 
-test('Web PIM renders the six stable categories as a rectangular plant knowledge diagram', () => {
+test('Web PIM renders the six stable categories in the shared honeycomb diagram', () => {
     const document = referenceDocument();
     const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document, { viewMode: 'compass' }));
-    assert.match(markup, /class="pim-web-compass-shell"/);
-    assert.match(markup, /data-pim-group="relationship"/);
-    assert.match(markup, /data-pim-group="agency"/);
-    assert.match(markup, /data-pim-group="certainty"/);
-    assert.match(markup, /data-pim-group="process"/);
+    assert.match(markup, /class="pim-honeycomb"/);
     for (const id of ['food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data', 'cultivation']) {
         assert.match(markup, new RegExp(`data-pim-node-id="${id}"`));
     }
@@ -96,7 +92,8 @@ test('Web PIM renders the six stable categories as a rectangular plant knowledge
     assert.match(markup, /data-pim-directions-info/);
     assert.match(markup, /aria-label="Plant knowledge directions" hidden/);
     assert.doesNotMatch(markup, /Knowledge Compass/);
-    assert.doesNotMatch(`${rendererSource}\n${styles}`, /hexagon|honeycomb|clip-path:\s*polygon/i);
+    assert.match(markup, /data-pim-layout="honeycomb"/);
+    assert.match(markup, /Scrollable honeycomb diagram/);
     for (const id of ['food-forest', 'uses', 'propagation', 'scientific-information', 'historical-data', 'cultivation']) {
         assert.equal((markup.match(new RegExp(`data-pim-node-id="${id}"`, 'g')) || []).length, 1);
     }

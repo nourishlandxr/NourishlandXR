@@ -78,3 +78,14 @@ test('actual sparse orchard record adapts without changing its stored fields',()
  assert.equal(JSON.stringify(profile),before);
  assert.equal(d.nodes.filter(n=>!n.parentId).length,6);
 });
+
+
+test('honeycomb exposes every child and allocates scroll space for deep branches',()=>{
+ const state=createPlantInformationWebState(PIGEON_PEA_PIM,{viewMode:'compass',openNodeIds:['cultivation','maintenance','pruning'],meshZoom:1.25});
+ const markup=plantInformationWebMarkup(PIGEON_PEA_PIM,state,{meshWidth:320});
+ for(const id of ['climate','harvest','light','maintenance','soil','water','pruning','chop-and-drop-cycle']) assert.match(markup,new RegExp(`data-pim-node-id="${id}"`));
+ assert.match(markup,/data-offset-x="[0-9.]+"/);
+ assert.match(markup,/data-zoom="1.25"/);
+ assert.match(markup,/aria-label="Scrollable honeycomb diagram"/);
+ assert.match(markup,/aria-label="Zoom in"/);
+});
