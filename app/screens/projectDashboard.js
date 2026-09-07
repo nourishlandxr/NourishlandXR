@@ -3096,15 +3096,18 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
         const profileEnabledField = app.querySelector('#projectEntryProfileEnabled');
         let pimWebController = null;
         const pimInitialRouteState = pimInitialState || (routeFromUrl.path && (!routeFromUrl.markerId || routeFromUrl.markerId === entry.marker.id) ? { path: routeFromUrl.path } : {});
-        const savePimDocument = async nextDocument => {
-            activePimDocument = normalizePimDocument(nextDocument);
+        const savePimDocument = async (nextDocument, nextReview) => {
+            const pendingDocument = normalizePimDocument(nextDocument);
+            const pendingReview = nextReview || activePimImportReview;
             await savePlantProfile(project.id, site.id, entry.place.id, entry.marker.id, {
                 ...profile,
                 profile_enabled: true,
                 spm_enabled: true,
-                pim_document: activePimDocument,
-                pim_import_review: activePimImportReview
+                pim_document: pendingDocument,
+                pim_import_review: pendingReview
             });
+            activePimDocument = pendingDocument;
+            activePimImportReview = pendingReview;
             return activePimDocument;
         };
         const mountInfoMesh = () => {
@@ -3115,7 +3118,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             pimWebController = mountPlantInformationWeb(mount, {
                 document: activePimDocument,
                 editable: true,
-                showSearch: false,
+                showSearch: true,
                 showIdentity: pimWorkspace,
                 importReview: activePimImportReview,
                 initialState: pimInitialRouteState,

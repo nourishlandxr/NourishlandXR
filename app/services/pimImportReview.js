@@ -239,6 +239,7 @@ export function stagePimImport(document, sourceRecord = {}, options = {}) {
                 preview: previewFor(normalizedValue),
                 body: normalizedValue,
                 informationType: mapping.informationType,
+                knowledgeScope: 'species',
                 evidenceStatus: mapping.evidenceStatus,
                 status: 'draft',
                 semanticKey: mapping.nodeId,
@@ -259,6 +260,7 @@ export function stagePimImport(document, sourceRecord = {}, options = {}) {
         plantId: baseDocument.plantId,
         status: 'pending_review',
         source,
+        sourceRecord: clone(record),
         createdAt: text(options.now || new Date().toISOString()),
         document: clone(baseDocument),
         items,
@@ -308,7 +310,9 @@ export function reviewPimImport(staging, itemId, review, patch = {}) {
     if (index < 0) throw new Error(`Staged PIM import item was not found: ${itemId}.`);
     const decision = normalizedReview(review, patch);
     if (!['approve', 'reject', 'modify'].includes(decision.decision)) throw new Error('Import review decision must be approve, reject or modify.');
+    if (decision.changes.informationType === 'local_observation' || decision.changes.knowledgeScope === 'specimen') throw new Error('External species data cannot become a local observation. Add a separate observation with a specimen reference.');
     const item = source.items[index];
+    if (item.reviewStatus !== 'pending') throw new Error('This item has already been reviewed. Stage a new source revision to review it again.');
     const now = text(review?.reviewedAt || new Date().toISOString());
 
     if (decision.decision === 'reject') {
@@ -329,6 +333,9 @@ export function reviewPimImport(staging, itemId, review, patch = {}) {
         const proposedNode = {
             ...item.proposedNode,
             ...changes,
+            knowledgeScope: 'species',
+            specimenId: '',
+            observedAt: '',
             parentId: prepared.parentId,
             status: decision.publish ? 'published' : 'draft',
             updatedAt: now,

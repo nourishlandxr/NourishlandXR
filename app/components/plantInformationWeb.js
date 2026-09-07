@@ -166,6 +166,10 @@ function normalizedState(state = {}) {
         searchQuery: String(state.searchQuery || ''),
         searchMessage: String(state.searchMessage || ''),
         searchPath: String(state.searchPath || ''),
+        knowledgeScope: ['species', 'specimen', 'unspecified'].includes(state.knowledgeScope) ? state.knowledgeScope : 'all',
+        searchLimit: Number(state.searchLimit) || 20,
+        searchReturn: state.searchReturn ? clone(state.searchReturn) : null,
+        editorImportId: String(state.editorImportId || ''),
         visitedNodeIds: unique(state.visitedNodeIds),
         outlineBranchId: String(state.outlineBranchId || 'scientific-information'),
         // The readable hierarchy is the safe first view. Diagram mode remains
@@ -265,30 +269,33 @@ export function togglePlantInformationWebNode(document, state, nodeId) {
 }
 
 export function searchPlantInformationWeb(document, state, query, options = {}) {
-    const source = normalizeDocument(document);
     const current = normalizedState(state);
     const value = String(query || '').trim();
-    if (!value) return { ...current, searchQuery: '', searchMessage: 'Enter a plant name or knowledge topic.', searchPath: '', highlightedNodeId: '' };
-    const results = typeof PimModel.pimSearch === 'function' ? PimModel.pimSearch(source, value, { includeDraft: options.includeDraft !== false }) : [];
-    const result = results[0];
-    if (!result) return { ...current, searchQuery: value, searchMessage: `No knowledge found for “${value}”.`, searchPath: '', highlightedNodeId: '' };
-    if (!result.nodeId) {
-        return { ...current, centerOpen: true, searchQuery: value, searchMessage: `Found ${result.title}.`, searchPath: result.pathLabel || result.title, highlightedNodeId: '' };
-    }
-    const node = nodeById(source, result.nodeId);
-    const path = result.pathLabel || plantInformationWebPath(source, result.nodeId);
-    return {
-        ...current,
-        centerOpen: true,
-        openNodeIds: unique([...current.openNodeIds, ...asList(result.openNodeIds), ...ancestorsOf(source, result.nodeId).map(item => item.id)]),
-        outlineBranchId: ancestorsOf(source, result.nodeId)[0]?.id || current.outlineBranchId,
-        detailNodeId: node?.body ? result.nodeId : current.detailNodeId,
-        highlightedNodeId: result.nodeId,
-        visitedNodeIds: unique([...current.visitedNodeIds, result.nodeId]),
-        searchQuery: value,
-        searchMessage: `1 of ${results.length} matching topic${results.length === 1 ? '' : 's'}.`,
-        searchPath: path
-    };
+    const source = PimModel.pimReadingDocument(document, { editable: options.includeDraft === true, scope: current.knowledgeScope });
+    const results = PimModel.pimSearch(source, value, { includeDraft: options.includeDraft === true });
+    return { ...current, searchQuery: value, searchLimit: 20, detailNodeId: '', highlightedNodeId: '', searchPath: '', searchReturn: null,
+        searchMessage: value ? `${results.length} matching topic${results.length === 1 ? '' : 's'} in this plant.` : 'Search within this plant, not the plant catalogue.' };
+}
+
+export function selectPlantInformationSearchResult(document, state, nodeId) {
+    const current = normalizedState(state);
+    const node = nodeById(document, nodeId);
+    if (!node) return current;
+    const ancestors = ancestorsOf(document, node.id);
+    return { ...current, centerOpen: true, detailNodeId: node.id, highlightedNodeId: node.id,
+        outlineBranchId: ancestors[0]?.id || node.id,
+        openNodeIds: unique([...current.openNodeIds, ...ancestors.map(item => item.id), node.id]),
+        visitedNodeIds: unique([...current.visitedNodeIds, node.id]), searchPath: plantInformationWebPath(document, node.id),
+        searchReturn: current.searchReturn || { openNodeIds: current.openNodeIds, outlineBranchId: current.outlineBranchId, viewMode: current.viewMode } };
+}
+
+const scopeLabel = node => ({ species: 'General species knowledge', specimen: 'Local specimen knowledge', unspecified: 'Scope not yet reviewed' }[PimModel.pimKnowledgeScope(node)]);
+
+function knowledgeToolbar(document, state, options) {
+    const results = state.searchQuery ? PimModel.pimSearch(document, state.searchQuery, { includeDraft: options.editable }) : [];
+    return `<div class="pim-reading-tools"><div class="pim-scope-switch" role="group" aria-label="Knowledge context">${[['all','All knowledge'],['species','Species'],['specimen','This specimen'],['unspecified','Unreviewed scope']].map(([id,title]) => `<button type="button" data-pim-scope="${id}" aria-pressed="${state.knowledgeScope === id}">${title}</button>`).join('')}</div>
+        <p class="pim-reading-hint">Species knowledge describes the plant generally. Specimen knowledge records a plant in its place.</p>
+        ${state.searchQuery && !state.detailNodeId ? `<section class="pim-search-results" aria-label="Knowledge search results" tabindex="-1"><header><h2>${results.length} results for “${escapeHtml(state.searchQuery)}”</h2><button type="button" data-pim-clear-search>Clear search</button></header><p>Within ${escapeHtml(document.identity.commonName || document.plantId)} · ${options.editable ? 'includes drafts' : 'published topics'}</p><ol>${results.slice(0,state.searchLimit).map(result => { const node = nodeById(document,result.nodeId); return `<li><button type="button" data-pim-search-result="${attribute(result.nodeId || '__identity__')}"><small>${escapeHtml(result.pathLabel)}</small><strong>${escapeHtml(result.title)}</strong><span>${escapeHtml(node?.preview || node?.body?.slice(0,180) || result.preview || 'Explore this branch')}</span>${node ? `<small>${escapeHtml(scopeLabel(node))} · ${escapeHtml(evidenceLabel(node.evidenceStatus))}${options.editable ? ` · ${escapeHtml(node.status)}` : ''}</small>` : ''}</button></li>`; }).join('')}</ol>${results.length > state.searchLimit ? '<button type="button" data-pim-more-results>Show more results</button>' : ''}${results.length ? '' : '<p>Try a shorter term or choose another knowledge context.</p>'}</section>` : ''}</div>`;
 }
 
 function nodeButtonMarkup(document, node, state, options, suffix = 'visual', depth = 1) {
@@ -380,7 +387,7 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
             <label for="pim-web-search-${token}">Search this plant’s knowledge</label>
             <div><input id="pim-web-search-${token}" name="query" type="search" value="${attribute(state.searchQuery)}" placeholder="Try nitrogen, seed or soil" autocomplete="off" aria-describedby="pim-web-search-status-${token}" /><button type="submit">Find</button></div>
         </form>
-        <p class="pim-web-search-status" id="pim-web-search-status-${token}" role="status" aria-live="polite">${escapeHtml(state.searchMessage || 'Search opens and highlights a complete knowledge path.')}${state.searchPath ? `<strong>${escapeHtml(state.searchPath)}</strong>` : ''}</p>` : ''}
+        <p class="pim-web-search-status" id="pim-web-search-status-${token}" role="status" aria-live="polite">${escapeHtml(state.searchMessage || 'Search within this plant, not the plant catalogue.')}${state.searchPath ? `<strong>${escapeHtml(state.searchPath)}</strong>` : ''}</p>` : ''}
         <div class="pim-web-progress"><label for="pim-web-progress-${token}">Topics explored</label><progress id="pim-web-progress-${token}" max="100" value="${progress}">${progress}%</progress><span>${explored} of ${explorable}</span></div>
     </section>`;
 }
@@ -400,7 +407,7 @@ function accessibleNodeMarkup(document, node, state, options, depth = 1, seen = 
     const open = state.openNodeIds.includes(node.id);
     const expandable = primary || children.length > 0;
     const panelId = `pim-web-children-${domToken(document.plantId)}-${domToken(node.id)}-list`;
-    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${nodeActionsMarkup(node, options, state.highlightedNodeId === node.id)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
+    return `<li data-pim-list-item-id="${attribute(node.id)}" data-pim-list-item-path="${attribute(node.path)}">${nodeButtonMarkup(document, node, state, options, 'list', depth)}${children.length && node.body ? `<button class="pim-read-branch" type="button" data-pim-related-node-id="${attribute(node.id)}">Read ${escapeHtml(node.title)}</button>` : ''}${nodeActionsMarkup(node, options, state.highlightedNodeId === node.id)}${expandable ? `<div id="${panelId}" class="pim-web-list-children"${open ? '' : ' hidden'}><ul>${children.map(child => accessibleNodeMarkup(document, child, state, options, depth + 1, nextSeen)).join('')}</ul>${children.length ? '' : '<p class="pim-web-empty-state">Information growing.</p>'}${addInformationMarkup(node, options, 'list')}</div>` : ''}</li>`;
 }
 
 function outlineBranchMarkup(document, root, state, options) {
@@ -436,23 +443,8 @@ function legacyAccessibleListMarkup(document, state, options) {
 
 function outlineBranchMarkupV2(document, root, state, options) {
     const children = childrenOf(document, root.id);
-    const submenus = children.filter(child => child.informationType === 'category' || childrenOf(document, child.id).length > 0);
-    const submenuIds = new Set(submenus.map(child => child.id));
-    const directCells = children.filter(child => !submenuIds.has(child.id));
-    const descendants = [...descendantsOf(document, root.id)].map(id => nodeById(document, id)).filter(Boolean);
-    const cellCount = descendants.filter(node => node.informationType !== 'category').length;
-    const addActions = options.editable
-        ? `<div class="pim-web-selected-branch-actions"><button type="button" data-pim-add-parent-id="${attribute(root.id)}">Add submenu</button><button type="button" data-pim-add-parent-id="${attribute(root.id)}">Add cell</button></div>`
-        : '';
-    const submenuMarkup = submenus.map(submenu => {
-        const cells = childrenOf(document, submenu.id);
-        return `<section class="pim-web-outline-submenu" aria-labelledby="pim-web-outline-submenu-${attribute(submenu.id)}"><header><div><h4 id="pim-web-outline-submenu-${attribute(submenu.id)}">${escapeHtml(submenu.title)}</h4><small>${cells.length} cell${cells.length === 1 ? '' : 's'}</small></div>${options.editable ? `<button type="button" data-pim-add-parent-id="${attribute(submenu.id)}">Add cell</button>` : ''}</header><ul class="pim-web-tree">${accessibleNodeMarkup(document, submenu, state, options, 1)}</ul></section>`;
-    }).join('');
-    const directMarkup = directCells.length
-        ? `<section class="pim-web-outline-uncategorised" aria-labelledby="pim-web-outline-uncategorised-${attribute(root.id)}"><header><div><h4 id="pim-web-outline-uncategorised-${attribute(root.id)}">Uncategorised cells</h4><small>Existing direct cells kept in place</small></div></header><ul class="pim-web-tree">${directCells.map(cell => accessibleNodeMarkup(document, cell, state, options, 1)).join('')}</ul></section>`
-        : '';
-    const rootPanelId = `pim-web-children-${domToken(document.plantId)}-${domToken(root.id)}-list`;
-    return `<section id="${rootPanelId}" class="pim-web-selected-branch" data-pim-selected-branch="${attribute(root.id)}" data-pim-list-item-id="${attribute(root.id)}" style="--pim-category:${attribute(categoryFor(root).color)}"><header class="pim-web-selected-branch-header"><div><span>MAIN BRANCH</span><h3>${escapeHtml(root.title)}</h3><p>${escapeHtml(root.preview || 'Information branch')}</p><small>${submenus.length} submenu${submenus.length === 1 ? '' : 's'} · ${cellCount} cell${cellCount === 1 ? '' : 's'}</small></div>${nodeActionsMarkup(root, options, true)}${addActions}</header><div class="pim-web-selected-branch-content">${submenuMarkup || directMarkup || '<p class="pim-web-empty-state">No submenus or cells yet. Add the first submenu or cell to this branch.</p>'}</div></section>`;
+    const count = [...descendantsOf(document, root.id)].map(id => nodeById(document,id)).filter(node => node?.body).length;
+    return `<section id="pim-web-children-${domToken(document.plantId)}-${domToken(root.id)}-list" class="pim-web-selected-branch" data-pim-selected-branch="${attribute(root.id)}" style="--pim-category:${attribute(categoryFor(root).color)}"><header class="pim-web-selected-branch-header"><div><span>EXPLORE</span><h3>${escapeHtml(root.title)}</h3><p>${escapeHtml(root.preview || root.question || 'Discover this part of the plant’s story.')}</p><small>${count} topic${count === 1 ? '' : 's'} to read</small></div>${nodeActionsMarkup(root, options, true)}${options.editable ? `<button type="button" data-pim-add-parent-id="${attribute(root.id)}">Add topic or branch</button>` : ''}</header><ul class="pim-web-tree">${children.map(child => accessibleNodeMarkup(document, child, state, options, 1)).join('')}</ul>${children.length ? '' : `<p class="pim-web-empty-state">Knowledge is growing here.${options.editable ? ' Add one useful topic, a source, or a local observation.' : ' No published topics in this context yet.'}</p>`}</section>`;
 }
 
 function accessibleListMarkup(document, state, options) {
@@ -464,9 +456,9 @@ function accessibleListMarkup(document, state, options) {
         const submenuCount = childrenOf(document, root.id).filter(child => child.informationType === 'category' || childrenOf(document, child.id).length > 0).length;
         const open = state.openNodeIds.includes(root.id);
         const panelId = `pim-web-children-${domToken(document.plantId)}-${domToken(root.id)}-list`;
-        return `<button type="button" class="pim-web-outline-branch${activeRoot?.id === root.id ? ' is-selected' : ''}" data-pim-outline-branch="${attribute(root.id)}" data-pim-node-id="${attribute(root.id)}" data-pim-node-path="${attribute(root.path)}" data-pim-list-item-id="${attribute(root.id)}" data-pim-list-item-path="${attribute(root.path)}" data-pim-depth="0" aria-pressed="${activeRoot?.id === root.id}" aria-expanded="${open}" aria-controls="${panelId}"><span class="pim-web-category-marker" aria-hidden="true" style="--pim-category:${attribute(categoryFor(root).color)}"></span><span><strong>${escapeHtml(root.title)}</strong><small>${submenuCount} submenu${submenuCount === 1 ? '' : 's'} · ${cells} cell${cells === 1 ? '' : 's'}</small></span></button>`;
+        return `<button type="button" class="pim-web-outline-branch${activeRoot?.id === root.id ? ' is-selected' : ''}" data-pim-outline-branch="${attribute(root.id)}" data-pim-node-id="${attribute(root.id)}" data-pim-node-path="${attribute(root.path)}" data-pim-list-item-id="${attribute(root.id)}" data-pim-list-item-path="${attribute(root.path)}" data-pim-depth="0" aria-pressed="${activeRoot?.id === root.id}" aria-expanded="${open}" aria-controls="${panelId}"><span class="pim-web-category-marker" aria-hidden="true" style="--pim-category:${attribute(categoryFor(root).color)}"></span><span><strong>${escapeHtml(root.title)}</strong><small>${cells} topic${cells === 1 ? '' : 's'}</small></span></button>`;
     }).join('');
-    return `<section id="pim-web-sectors-${domToken(document.plantId)}-list" class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><div class="pim-web-outline-intro"><div><h2 id="pim-web-list-title">Plant knowledge outline</h2><p>Complete Plant Information Mesh - choose a branch, then open its contents.</p></div></div><div class="pim-web-outline-layout"><nav class="pim-web-outline-rail" aria-label="Main plant knowledge branches">${rail}</nav><div class="pim-web-outline-content">${activeRoot ? outlineBranchMarkupV2(document, activeRoot, state, options) : '<p class="pim-web-empty-state">No main branches available.</p>'}</div></div></section>`;
+    return `<section id="pim-web-sectors-${domToken(document.plantId)}-list" class="pim-web-accessible-list" data-pim-list-view aria-labelledby="pim-web-list-title"${state.viewMode === 'list' && state.centerOpen ? '' : ' hidden'}><div class="pim-web-outline-intro"><div><h2 id="pim-web-list-title">Plant knowledge outline</h2><p>Choose a category. Follow a topic as deeply as you like.</p></div></div><div class="pim-web-outline-layout"><nav class="pim-web-outline-rail" aria-label="Main plant knowledge branches">${rail}</nav><div class="pim-web-outline-content">${activeRoot ? outlineBranchMarkupV2(document, activeRoot, state, options) : '<p class="pim-web-empty-state">No main branches available.</p>'}</div></div></section>`;
 }
 
 function detailMarkup(document, state, options) {
@@ -483,16 +475,16 @@ function detailMarkup(document, state, options) {
         : '<span class="pim-web-related-root"><span>From</span>Plant identity</span>';
     const childrenMarkup = children.length
         ? children.map(child => `<button type="button" data-pim-related-node-id="${attribute(child.id)}"><span>Expands to</span>${escapeHtml(child.title)}</button>`).join('')
-        : '<span class="pim-web-related-empty">No connected child cells yet.</span>';
+        : '<span class="pim-web-related-empty">This is the end of this branch for now.</span>';
     return `<aside class="pim-web-detail" role="dialog" aria-modal="false" aria-labelledby="pim-web-detail-title-${attribute(node.id)}" data-pim-detail-id="${attribute(node.id)}" data-pim-detail-path="${attribute(node.path)}" style="--pim-category:${attribute(category.color)}">
-        <header><div><span>${escapeHtml(category.title)} · ${escapeHtml(evidenceLabel(node.evidenceStatus))}</span><h2 id="pim-web-detail-title-${attribute(node.id)}">${escapeHtml(node.title)}</h2><p>${escapeHtml(plantInformationWebPath(document, node.id))}</p></div><button type="button" data-pim-close-detail aria-label="Close ${attribute(node.title)} details">×</button></header>
-        <div class="pim-web-detail-body"><section class="pim-web-ar-mini-card" aria-label="AR PIM mini information"><span>AR PIM mini info</span><strong>${escapeHtml(node.title)}</strong><p>${escapeHtml(concisePreview(node))}</p></section>${node.body ? `<p>${escapeHtml(node.body).replace(/\n/g, '<br />')}</p>` : '<p class="pim-web-optional-description">Description can be added when this cell needs more detail.</p>'}
-            <section class="pim-web-related-cells" aria-label="Connected information cells"><h3>Connected cells</h3><div class="pim-web-related-parent">${parentMarkup}</div><div class="pim-web-related-children">${childrenMarkup}</div></section>
-            <dl><div><dt>Information type</dt><dd>${escapeHtml(titleCase(node.informationType))}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(evidenceLabel(node.evidenceStatus))}</dd></div>${node.countryOfOrigin ? `<div><dt>Country of origin</dt><dd>${escapeHtml(node.countryOfOrigin)}</dd></div>` : ''}${node.region ? `<div><dt>Region</dt><dd>${escapeHtml(node.region)}</dd></div>` : ''}${node.climateContext ? `<div><dt>Climate context</dt><dd>${escapeHtml(node.climateContext)}</dd></div>` : ''}${node.attribution ? `<div><dt>Attribution</dt><dd>${escapeHtml(node.attribution)}</dd></div>` : ''}</dl>
-            ${node.safetyNote ? `<section class="pim-web-safety-note" aria-label="Safety note"><strong>Safety note</strong><p>${escapeHtml(node.safetyNote)}</p></section>` : ''}
-            ${sources.length ? `<section><h3>Sources</h3><ul>${sources.map(source => `<li>${escapeHtml(source)}</li>`).join('')}</ul></section>` : ''}
-            ${provenance.length ? `<section><h3>Provenance</h3><ul>${provenance.map(item => `<li>${escapeHtml(item.sourceDatabase || item.source || 'Source')}${item.licence ? ` · ${escapeHtml(item.licence)}` : ''}${item.retrievalDate ? ` · ${escapeHtml(item.retrievalDate)}` : ''}</li>`).join('')}</ul></section>` : ''}
-            ${media.length ? `<section><h3>Media</h3><ul>${media.map(item => `<li>${escapeHtml(typeof item === 'string' ? item : item.alt || item.url || 'Media item')}</li>`).join('')}</ul></section>` : ''}
+        <header><div><span>${escapeHtml(category.title)} · ${escapeHtml(evidenceLabel(node.evidenceStatus))}</span><h2 id="pim-web-detail-title-${attribute(node.id)}">${escapeHtml(node.title)}</h2><nav class="pim-reading-breadcrumbs" aria-label="Topic path">${ancestorsOf(document,node.id).map(ancestor => `<button type="button" data-pim-related-node-id="${attribute(ancestor.id)}">${escapeHtml(ancestor.title)}</button>`).join(' <span aria-hidden="true">›</span> ')}</nav></div><button type="button" data-pim-close-detail aria-label="Close ${attribute(node.title)} details">×</button></header>
+        <div class="pim-web-detail-body"><button type="button" data-pim-close-detail>${state.searchReturn ? '← Back to search results' : '← Back to topics'}</button><p class="pim-reading-context">${escapeHtml(scopeLabel(node))}${node.specimenId ? ` · ${escapeHtml(node.specimenId)}` : ''}${node.observedAt ? ` · ${escapeHtml(node.observedAt)}` : ''}</p>${node.body ? `<p>${escapeHtml(node.body).replace(/\n/g, '<br />')}</p>` : '<p class="pim-web-optional-description">Description can be added when this cell needs more detail.</p>'}
+            <section class="pim-web-related-cells" aria-label="Connected information cells"><h3>Explore connections</h3><div class="pim-web-related-parent">${parentMarkup}</div><div class="pim-web-related-children">${childrenMarkup}</div></section>
+            <details class="pim-reading-evidence"><summary>Evidence and sources · ${escapeHtml(evidenceLabel(node.evidenceStatus))}</summary><dl><div><dt>Information type</dt><dd>${escapeHtml(titleCase(node.informationType))}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(evidenceLabel(node.evidenceStatus))}</dd></div>${node.countryOfOrigin ? `<div><dt>Country of origin</dt><dd>${escapeHtml(node.countryOfOrigin)}</dd></div>` : ''}${node.region ? `<div><dt>Region</dt><dd>${escapeHtml(node.region)}</dd></div>` : ''}${node.climateContext ? `<div><dt>Climate context</dt><dd>${escapeHtml(node.climateContext)}</dd></div>` : ''}${node.attribution ? `<div><dt>Attribution</dt><dd>${escapeHtml(node.attribution)}</dd></div>` : ''}</dl>
+            </details>${node.safetyNote ? `<section class="pim-web-safety-note" aria-label="Safety note"><strong>Safety note</strong><p>${escapeHtml(node.safetyNote)}</p></section>` : ''}
+            <details class="pim-reading-evidence"><summary>Source records and provenance</summary>${sources.length ? `<section><h3>Sources</h3><ul>${sources.map(source => `<li>${escapeHtml(source)}</li>`).join('')}</ul></section>` : ''}
+            ${provenance.length ? `<section><h3>Provenance</h3><ul>${provenance.map(item => `<li>${escapeHtml(item.sourceDatabase || item.source || 'Source')}${item.sourceRecordId ? ` · Record ${escapeHtml(item.sourceRecordId)}` : ''}${item.sourceUrl ? ` · ${escapeHtml(item.sourceUrl)}` : ''}${item.reviewStatus ? ` · ${escapeHtml(item.reviewStatus)}` : ''}${item.licence ? ` · ${escapeHtml(item.licence)}` : ''}${item.retrievalDate ? ` · ${escapeHtml(item.retrievalDate)}` : ''}</li>`).join('')}</ul></section>` : ''}
+            </details>${media.length ? `<section><h3>Media</h3><ul>${media.map(item => `<li>${escapeHtml(typeof item === 'string' ? item : item.alt || item.url || 'Media item')}</li>`).join('')}</ul></section>` : ''}
         </div>
         ${options.editable ? `<footer><button type="button" data-pim-edit-node-id="${attribute(node.id)}" data-pim-edit-node-path="${attribute(node.path)}">Edit information</button></footer>` : ''}
     </aside>`;
@@ -550,6 +542,9 @@ function editorMarkup(document, state, options) {
             <div class="pim-web-editor-fields pim-web-editor-fields--essential">
                 ${countryOfOriginMarkup(parent, state, seed)}
                 ${selectMarkup('informationType', 'Information type', INFORMATION_TYPES, seed.informationType || 'fact', true)}
+                ${selectMarkup('knowledgeScope', 'Knowledge applies to', [['unspecified','Scope not yet reviewed'],['species','The species generally'],['specimen','A local specimen']], PimModel.pimKnowledgeScope(seed), true)}
+                <label>Specimen or site reference<input name="specimenId" value="${inputValue(seed.specimenId)}" placeholder="For local knowledge: plant tag or location" /></label>
+                <label>Observed on<input name="observedAt" type="date" value="${inputValue(seed.observedAt)}" /></label>
                 <label>Title<input name="title" value="${inputValue(seed.title)}" required maxlength="120" autofocus /></label>
                 <label>Short preview<input name="preview" value="${inputValue(seed.preview)}" required maxlength="80" placeholder="Two to five useful words" /></label>
                 <label class="pim-web-editor-wide">Information<textarea name="body" rows="5"${state.editorSeed?.templateId === 'country-of-origin' ? '' : ' required'} placeholder="Add the useful detail that belongs in this one information block.">${escapeHtml(seed.body || '')}</textarea></label>
@@ -586,10 +581,13 @@ function importItems(document, options) {
 
 function importReviewMarkup(document, state, options) {
     if (!options.editable) return '';
-    const { items: allItems } = importItems(document, options);
+    const { items: allItems, staging } = importItems(document, options);
     const items = allItems.filter(item => !item.reviewStatus || item.reviewStatus === 'pending');
-    if (!items.length) return '';
-    return `<section class="pim-web-import-review" aria-labelledby="pim-web-import-title"><header><div><span>Editor review</span><h2 id="pim-web-import-title">Staged plant data</h2><p>Imported information remains unpublished until it is reviewed.</p></div><strong class="pim-web-import-count" aria-label="${items.length} item${items.length === 1 ? '' : 's'} awaiting review">${items.length}</strong></header><div class="pim-web-import-list">${items.map((item, index) => {
+    const intake = `<details class="pim-import-intake"><summary>Bring in external plant knowledge</summary><p>Paste a source record as JSON. Known fields become species-knowledge suggestions for review; other fields stay in the source archive. Nothing is published automatically.</p><form data-pim-stage-form><label>Source record<textarea name="record" rows="7" required placeholder='Paste a database record with sourceDatabase, sourceRecordId and fields'></textarea></label><button type="submit"${items.length ? ' disabled' : ''}>Stage for review</button>${items.length ? '<p>Finish the current review before adding another source.</p>' : ''}</form></details>`;
+    const previousArchives = asList(document.sourceArchives).map(record => `<details class="pim-source-archive"><summary>Previous source · ${escapeHtml(record.source?.sourceDatabase || 'External source')}</summary><pre>${escapeHtml(JSON.stringify(record,null,2))}</pre></details>`).join('');
+    const archive = staging ? `<details class="pim-source-archive"><summary>Source archive and review history</summary><p>${escapeHtml(staging.source?.sourceDatabase || 'External source')} · ${escapeHtml(staging.source?.sourceRecordId || '')} · ${escapeHtml(staging.source?.retrievalDate || '')}</p><p>${asList(staging.unmapped).length} unmapped fields retained as source data.</p><ul>${allItems.map(item => `<li>${escapeHtml(item.proposedNode?.title)} — ${escapeHtml(item.reviewStatus)}</li>`).join('')}</ul><pre>${escapeHtml(JSON.stringify(staging.sourceRecord || staging.unmapped,null,2))}</pre></details>` : '';
+    if (!items.length) return `${intake}${previousArchives}${archive}<p role="status">${escapeHtml(state.importMessage)}</p>`;
+    return `${intake}<section class="pim-web-import-review" aria-labelledby="pim-web-import-title"><header><div><span>Editor review</span><h2 id="pim-web-import-title">Staged plant data</h2><p>Accepting information creates a draft. Review the wording and evidence, then publish deliberately.</p></div><strong class="pim-web-import-count" aria-label="${items.length} item${items.length === 1 ? '' : 's'} awaiting review">${items.length}</strong></header><div class="pim-web-import-list">${items.map((item, index) => {
         const id = item.id || item.itemId || `import-${index + 1}`;
         const node = item.node || item.mappedNode || item.proposedNode || {};
         const rawDestination = item.destination || node.path || node.primaryCategory || item.primaryCategory || 'Needs mapping';
@@ -597,13 +595,13 @@ function importReviewMarkup(document, state, options) {
             ? [rawDestination.primaryCategory, ...asList(rawDestination.parentChain).map(segment => segment?.title || segment?.id)].filter(Boolean).join(' → ')
             : String(rawDestination);
         const status = item.reviewStatus || item.status || 'pending';
-        return `<article data-pim-import-id="${attribute(id)}" data-pim-import-destination="${attribute(destination)}"><div class="pim-web-import-copy"><span>${escapeHtml(item.sourceDatabase || item.source?.name || 'External source')}</span><h3>${escapeHtml(node.title || item.title || 'Imported information')}</h3><p>${escapeHtml(node.preview || item.normalizedValue || item.originalValue || 'Review this proposed block.')}</p><small>${escapeHtml(destination)} · ${escapeHtml(titleCase(status))}${item.conflict ? ' · Conflict detected' : ''}</small></div><footer><button class="pim-web-import-approve" type="button" data-pim-import-decision="approve" data-pim-import-id="${attribute(id)}">Approve</button><button type="button" data-pim-import-decision="reject" data-pim-import-id="${attribute(id)}">Reject</button><button type="button" data-pim-import-decision="modify" data-pim-import-id="${attribute(id)}">Modify</button></footer></article>`;
-    }).join('')}</div><p class="pim-web-import-message" role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>`;
+        return `<article data-pim-import-id="${attribute(id)}" data-pim-import-destination="${attribute(destination)}"><div class="pim-web-import-copy"><span>${escapeHtml(staging?.source?.sourceDatabase || item.sourceDatabase || 'External source')}</span><h3>${escapeHtml(node.title || item.title || 'Imported information')}</h3><p>${escapeHtml(node.preview || item.normalizedValue || item.originalValue || 'Review this proposed block.')}</p><small>${escapeHtml(destination)} · ${escapeHtml(titleCase(status))}${item.conflictsWith?.length ? ' · Conflicting existing knowledge: modify and review both claims' : ''}${item.duplicateOf ? ' · Existing matching topic; no duplicate will be added' : ''}</small></div><footer><button class="pim-web-import-approve" type="button" data-pim-import-decision="approve" data-pim-import-id="${attribute(id)}"${item.conflictsWith?.length ? ' disabled' : ''}>Accept as draft</button><button type="button" data-pim-import-decision="reject" data-pim-import-id="${attribute(id)}">Reject</button><button type="button" data-pim-import-decision="modify" data-pim-import-id="${attribute(id)}">Modify</button></footer></article>`;
+    }).join('')}</div><p class="pim-web-import-message" role="status" aria-live="polite">${escapeHtml(state.importMessage)}</p></section>${previousArchives}${archive}`;
 }
 
 export function plantInformationWebMarkup(document, state = {}, options = {}) {
-    const source = normalizeDocument(document);
     const current = normalizedState(state);
+    const source = PimModel.pimReadingDocument(document, { editable: options.editable === true, scope: current.knowledgeScope });
     const renderOptions = { ...options, editable: options.editable === true };
     const showIdentity = options.showIdentity !== false;
     const visualIdentity = showIdentity ? identityMarkup(source, current, 'visual', renderOptions) : '';
@@ -614,10 +612,11 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
         ? `<div class="pim-web-compass-shell" data-pim-compass-view>${visualIdentity}<div class="pim-web-sectors" id="pim-web-sectors-${domToken(source.plantId)}-visual"${current.centerOpen ? '' : ' hidden'}>${groups}${customRootsMarkup(source, current, renderOptions)}</div></div>`
         : '';
     const listView = current.viewMode === 'list'
-        ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${accessibleListMarkup(source, current, renderOptions)}`
+        ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${knowledgeToolbar(source, current, renderOptions)}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
         <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
+        ${current.viewMode === 'compass' ? knowledgeToolbar(source, current, renderOptions) : ''}
         ${compassView}
         ${listView}
         ${detailMarkup(source, current, renderOptions)}
@@ -664,6 +663,9 @@ function editorPayload(form, document) {
         primaryCategory: values.primaryCategory,
         knowledgeMode: values.knowledgeMode,
         informationType: values.informationType,
+        knowledgeScope: values.informationType === 'local_observation' ? 'specimen' : values.knowledgeScope,
+        specimenId: String(values.specimenId || '').trim(),
+        observedAt: values.observedAt || '',
         title,
         preview: String(values.preview || '').trim(),
         body,
@@ -685,7 +687,14 @@ function editorPayload(form, document) {
 }
 
 export function applyPlantInformationWebEdit(document, mode, nodeId, payload) {
+    if (payload.knowledgeScope === 'specimen' && !payload.specimenId) throw new Error('Add a specimen or site reference for local knowledge.');
     if (mode === 'edit') {
+        const existing = nodeById(document, nodeId);
+        // The form edits the first source; all other source records and rich media survive.
+        const provenance = asList(existing?.provenance);
+        payload = { ...payload, primaryCategory: existing.primaryCategory, knowledgeMode: existing.knowledgeMode,
+            provenance: payload.provenance?.length ? [{ ...provenance[0], ...payload.provenance[0] }, ...provenance.slice(1)] : provenance,
+            media: payload.media === undefined ? asList(existing.media) : asList(payload.media).map(value => asList(existing.media).find(item => typeof item === 'object' && item.url === value) || value) };
         if (typeof PimModel.pimUpdateNode !== 'function') throw new Error('PIM editing is not available in this build.');
         return PimModel.pimUpdateNode(document, nodeId, payload);
     }
@@ -708,6 +717,23 @@ export function mountPlantInformationWeb(container, options = {}) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const listenerOptions = controller ? { signal: controller.signal } : undefined;
 
+    let searchScroll = null;
+    let saving = false;
+    const persist = async (nextDocument, nextReview = importReview) => {
+        const review = nextReview ? { ...nextReview, document: clone(nextDocument) } : null;
+        saving = true;
+        try {
+            const saved = await options.onSaveDocument?.(nextDocument, review);
+            document = normalizeDocument(saved?.nodes ? saved : nextDocument);
+            importReview = review;
+        } finally { saving = false; }
+    };
+    const closeReading = () => {
+        const focusId = state.detailNodeId;
+        const returning = state.searchReturn;
+        commit({ ...state, ...(returning || {}), detailNodeId: '', searchReturn: null, searchPath: returning ? '' : state.searchPath }, returning ? '' : focusId);
+        if (returning) requestAnimationFrame(() => { container.querySelector('.pim-search-results')?.focus({preventScroll:true}); if (searchScroll !== null) window.scrollTo({top:searchScroll,behavior:'instant'}); });
+    };
     const publicState = () => clone(state);
     const selectedNode = () => nodeById(document, state.detailNodeId || state.highlightedNodeId);
     const notifyRoute = () => options.onRouteChange?.(publicState(), selectedNode());
@@ -739,7 +765,18 @@ export function mountPlantInformationWeb(container, options = {}) {
 
     container.addEventListener('click', async event => {
         const button = event.target.closest('button');
-        if (!button || !container.contains(button)) return;
+        if (!button || !container.contains(button) || saving) return;
+        if (button.matches('[data-pim-scope]')) { commit({ ...state, knowledgeScope: button.dataset.pimScope, detailNodeId: '', searchReturn: null }, '', false); return; }
+        if (button.matches('[data-pim-clear-search]')) { commit({ ...state, searchQuery: '', searchMessage: '', searchReturn: null }, '', false); return; }
+        if (button.matches('[data-pim-more-results]')) { commit({ ...state, searchLimit: state.searchLimit + 20 }, '', false); return; }
+        if (button.matches('[data-pim-search-result]')) {
+            const id = button.dataset.pimSearchResult;
+            if (id === '__identity__') { commit({ ...state, searchQuery: '', centerOpen: true }, '', false); return; }
+            searchScroll = window.scrollY;
+            commit(selectPlantInformationSearchResult(document, state, id), id);
+            requestAnimationFrame(() => container.querySelector('[data-pim-close-detail]')?.focus());
+            return;
+        }
         if (button.matches('[data-pim-directions-close]')) {
             const panel = button.closest('[data-pim-directions-panel]');
             const trigger = panel?.id ? container.querySelector(`[aria-controls="${panel.id}"]`) : null;
@@ -791,7 +828,7 @@ export function mountPlantInformationWeb(container, options = {}) {
         if (button.matches('[data-pim-move-node]')) {
             try {
                 const moved = PimModel.pimMoveNode?.(document, button.dataset.pimMoveNodeId, button.dataset.pimMoveNode);
-                if (moved) { document = normalizeDocument(moved); commit(state, button.dataset.pimMoveNodeId); }
+                if (moved) { await persist(moved); commit(state, button.dataset.pimMoveNodeId); }
             } catch (error) { commit({ ...state, editorMessage: error.message }, button.dataset.pimMoveNodeId, false); }
             return;
         }
@@ -802,13 +839,12 @@ export function mountPlantInformationWeb(container, options = {}) {
             if (!restoring && !window.confirm(`Remove “${node?.title || 'this cell'}” from the active Mesh? Its information will be kept for restore.`)) return;
             try {
                 const next = restoring ? PimModel.pimRestoreNode?.(document, nodeId) : PimModel.pimArchiveNode?.(document, nodeId);
-                if (next) { document = normalizeDocument(next); commit(state, nodeId); }
+                if (next) { await persist(next); commit(state, nodeId); }
             } catch (error) { commit({ ...state, editorMessage: error.message }, nodeId, false); }
             return;
         }
         if (button.matches('[data-pim-close-detail]')) {
-            const focusId = state.detailNodeId;
-            commit({ ...state, detailNodeId: '' }, focusId);
+            closeReading();
             return;
         }
         if (button.matches('[data-pim-add-parent-id]')) {
@@ -838,7 +874,7 @@ export function mountPlantInformationWeb(container, options = {}) {
         }
         if (button.matches('[data-pim-cancel-editor]')) {
             const focusId = state.editorNodeId || state.editorParentId;
-            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null, editorMessage: '' }, focusId, false);
+            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorImportId: '', editorSeed: null, editorMessage: '' }, focusId, false);
             return;
         }
         if (button.matches('[data-pim-save-field-note]')) {
@@ -857,25 +893,17 @@ export function mountPlantInformationWeb(container, options = {}) {
             if (decision === 'modify') {
                 options.onModifyImport?.(item, document);
                 const seed = item?.node || item?.mappedNode || item?.proposedNode || item || {};
-                const parentId = seed.parentId || PIM_COMPASS_BY_ID[seed.primaryCategory]?.id || PIM_COMPASS[0].id;
-                commit({ ...state, editorMode: 'add', editorParentId: parentId, editorNodeId: '', editorSeed: seed, importMessage: `Modify ${seed.title || 'imported information'} before approval.` }, '', false);
+                const parentId = item.destination?.primaryCategory || seed.parentId || PIM_COMPASS[0].id;
+                commit({ ...state, editorMode: 'add', editorParentId: parentId, editorNodeId: '', editorImportId: id, editorSeed: { ...seed, templateId: 'custom' }, importMessage: `Modify ${seed.title || 'imported information'} before approval.` }, '', false);
                 return;
             }
             try {
-                const callback = decision === 'approve' ? options.onApproveImport : options.onRejectImport;
-                const callbackResult = await callback?.(item, document);
-                if (callbackResult?.nodes) document = normalizeDocument(callbackResult);
-                else if (callbackResult?.document?.nodes) {
-                    importReview = callbackResult;
-                    document = normalizeDocument(callbackResult.document);
+                const nextReview = PimImportReview.reviewPimImport({ ...staging, document }, id, decision);
+                if (!options.onSaveDocument) {
+                    const callback = decision === 'approve' ? options.onApproveImport : options.onRejectImport;
+                    await callback?.(item, document, nextReview);
                 }
-                if (!callback && staging && typeof PimImportReview.reviewPimImport === 'function') {
-                    importReview = PimImportReview.reviewPimImport(staging, id, decision);
-                    if (importReview?.document?.nodes) {
-                        document = normalizeDocument(importReview.document);
-                        await options.onSaveDocument?.(document);
-                    }
-                }
+                await persist(nextReview.document, nextReview);
                 commit({ ...state, importMessage: `${titleCase(decision)}d ${item?.node?.title || item?.title || 'imported information'}.` }, '', false);
             } catch (error) {
                 commit({ ...state, importMessage: `Import review failed: ${error.message}` }, '', false);
@@ -884,6 +912,23 @@ export function mountPlantInformationWeb(container, options = {}) {
     }, listenerOptions);
 
     container.addEventListener('submit', async event => {
+        if (saving) { event.preventDefault(); return; }
+        if (event.target.matches('[data-pim-stage-form]')) {
+            event.preventDefault();
+            try {
+                if (!editable) return;
+                if (importReview?.items?.some(item => item.reviewStatus === 'pending')) throw new Error('Finish the current review first.');
+                const raw = JSON.parse(new FormData(event.target).get('record'));
+                if (!raw || Array.isArray(raw) || typeof raw !== 'object') throw new Error('Provide a source record object.');
+                const nextReview = PimImportReview.stagePimImport(document, raw);
+                const previousReview = importReview ? clone(importReview) : null;
+                if (previousReview) delete previousReview.document;
+                const nextDocument = { ...document, sourceArchives: [...asList(document.sourceArchives), ...(previousReview ? [previousReview] : [])] };
+                await persist(nextDocument, nextReview);
+                commit({ ...state, importMessage: `${nextReview.items.length} suggestions staged. Review each before adding it to knowledge.` }, '', false);
+            } catch (error) { commit({ ...state, importMessage: `Could not stage: ${error.message}` }, '', false); }
+            return;
+        }
         if (event.target.matches('[data-pim-search-form]')) {
             event.preventDefault();
             const query = new FormData(event.target).get('query');
@@ -894,25 +939,31 @@ export function mountPlantInformationWeb(container, options = {}) {
         if (!event.target.matches('[data-pim-editor-form]')) return;
         event.preventDefault();
         const form = event.target;
+        let draftPayload;
         try {
             const payload = editorPayload(form, document);
-            const nextDocument = applyPlantInformationWebEdit(document, form.dataset.pimEditorMode, form.dataset.pimEditorNodeId, payload);
-            const saved = await options.onSaveDocument?.(nextDocument);
-            document = normalizeDocument(saved?.nodes ? saved : nextDocument);
-            const nodeId = form.dataset.pimEditorMode === 'edit'
+            draftPayload = payload;
+            let nextDocument;
+            let reviewed = null;
+            if (state.editorImportId) {
+                reviewed = PimImportReview.reviewPimImport({ ...importReview, document }, state.editorImportId, { decision: 'modify', changes: payload });
+                nextDocument = reviewed.document;
+            } else nextDocument = applyPlantInformationWebEdit(document, form.dataset.pimEditorMode, form.dataset.pimEditorNodeId, payload);
+            await persist(nextDocument, reviewed || importReview);
+            const nodeId = reviewed ? reviewed.items.find(item => item.id === state.editorImportId).proposedNode.id : form.dataset.pimEditorMode === 'edit'
                 ? form.dataset.pimEditorNodeId
                 : payload.id;
             const focusId = nodeId || (payload.parentId === '__top_level__' ? '' : payload.parentId);
-            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null, editorMessage: '', openNodeIds: focusId ? unique([...state.openNodeIds, focusId]) : state.openNodeIds, highlightedNodeId: nodeId || '' }, focusId);
+            commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorImportId: '', editorSeed: null, editorMessage: '', openNodeIds: focusId ? unique([...state.openNodeIds, ...ancestorsOf(document, focusId).map(node => node.id), focusId]) : state.openNodeIds, outlineBranchId: ancestorsOf(document, nodeId)[0]?.id || (nodeById(document,nodeId)?.parentId ? state.outlineBranchId : nodeId) || state.outlineBranchId, importMessage: reviewed ? 'Reviewed wording saved as a draft. Publication is a separate decision.' : state.importMessage, highlightedNodeId: nodeId || '' }, focusId);
         } catch (error) {
-            commit({ ...state, editorMessage: `Could not save: ${error.message}` }, '', false);
+            commit({ ...state, editorSeed: draftPayload ? { ...draftPayload, templateId: 'custom' } : state.editorSeed, editorMessage: `Could not save: ${error.message}` }, '', false);
         }
     }, listenerOptions);
 
     container.addEventListener('keydown', event => {
         if (event.key === 'Escape') {
-            if (state.editorMode) commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorSeed: null }, state.editorNodeId || state.editorParentId, false);
-            else if (state.detailNodeId) commit({ ...state, detailNodeId: '' }, state.detailNodeId);
+            if (state.editorMode) commit({ ...state, editorMode: '', editorNodeId: '', editorParentId: '', editorImportId: '', editorSeed: null }, state.editorNodeId || state.editorParentId, false);
+            else if (state.detailNodeId) closeReading();
             return;
         }
         const current = event.target.closest('[data-pim-node-id]');

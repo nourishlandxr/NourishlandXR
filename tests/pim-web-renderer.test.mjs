@@ -8,6 +8,7 @@ import {
     createPlantInformationWebState,
     plantInformationWebMarkup,
     searchPlantInformationWeb,
+    selectPlantInformationSearchResult,
     togglePlantInformationWebCentre,
     togglePlantInformationWebNode
 } from '../app/components/plantInformationWeb.js';
@@ -173,7 +174,10 @@ test('the central plant closes the whole PIM and reopens the primary compass', (
 
 test('search opens the complete ancestry, highlights the topic and reports its path', () => {
     const document = referenceDocument();
-    const state = searchPlantInformationWeb(document, createPlantInformationWebState(document), 'nitrogen');
+    const results = searchPlantInformationWeb(document, createPlantInformationWebState(document), 'nitrogen');
+    assert.equal(results.detailNodeId, '');
+    assert.match(plantInformationWebMarkup(document, results), /data-pim-search-result="nitrogen-fixer"/);
+    const state = selectPlantInformationSearchResult(document, results, 'nitrogen-fixer');
     assert.equal(state.highlightedNodeId, 'nitrogen-fixer');
     assert.equal(state.openNodeIds.includes('food-forest'), true);
     assert.equal(state.openNodeIds.includes('ecological-functions'), true);
@@ -192,7 +196,7 @@ test('semantic controls expose expansion state, controlled branches and a comple
     state = { ...state, viewMode: 'list' };
     const markup = plantInformationWebMarkup(document, state);
     assert.match(markup, /data-pim-list-view/);
-    assert.match(markup, /Complete Plant Information Mesh/);
+    assert.match(markup, /Choose a category/);
     assert.match(markup, /<ul class="pim-web-tree">/);
     assert.match(markup, /aria-expanded="true" aria-controls="pim-web-children-pigeon-pea-food-forest-list"/);
     assert.match(markup, /data-pim-node-path="food-forest\/ecological-functions\/nitrogen-fixer"/);
@@ -206,8 +210,8 @@ test('specific topics open a non-destructive detail surface with evidence and sa
     const markup = plantInformationWebMarkup(document, state);
     assert.match(markup, /class="pim-web-detail" role="dialog" aria-modal="false"/);
     assert.match(markup, /data-pim-detail-id="direct-sowing"/);
-    assert.match(markup, /AR PIM mini info/);
-    assert.match(markup, /Connected cells/);
+    assert.match(markup, /pim-reading-context/);
+    assert.match(markup, /Explore connections/);
     assert.match(markup, /data-pim-related-node-id="propagation"/);
     assert.match(markup, /Evidence/);
     assert.match(markup, /Safety note/);
@@ -387,7 +391,7 @@ test('Web PIM CSS reflows to ordered mobile groups without horizontal scrolling'
 test('mount contract keeps explicit state and exposes routing, persistence and import callbacks', () => {
     assert.match(rendererSource, /export function mountPlantInformationWeb\(container, options = \{\}\)/);
     assert.match(rendererSource, /options\.onRouteChange\?\.\(publicState\(\), selectedNode\(\)\)/);
-    assert.match(rendererSource, /options\.onSaveDocument\?\.\(nextDocument\)/);
+    assert.match(rendererSource, /options\.onSaveDocument\?\.\(nextDocument, review\)/);
     assert.match(rendererSource, /options\.onApproveImport/);
     assert.match(rendererSource, /options\.onRejectImport/);
     assert.match(rendererSource, /options\.onModifyImport/);
@@ -397,7 +401,8 @@ test('mount contract keeps explicit state and exposes routing, persistence and i
 });
 
 test('project entry import callbacks return and persist the updated review state', () => {
-    assert.match(dashboardSource, /pim_import_review:\s*activePimImportReview/);
+    assert.match(dashboardSource, /pim_import_review:\s*pendingReview/);
     assert.match(dashboardSource, /activePimImportReview = nextReview;[\s\S]*return nextReview;/);
     assert.match(dashboardSource, /onRejectImport:[\s\S]*await savePimDocument\(activePimDocument\);[\s\S]*return activePimImportReview/);
 });
+

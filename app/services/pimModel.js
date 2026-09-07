@@ -537,7 +537,7 @@ export function pimArchivedNodes(document) {
 
 export function pimPublishedDocument(document) {
     const source = normalizePimDocument(document);
-    const keep = new Set(PIM_COMPASS.map(entry => entry.id));
+    const keep = new Set([...PIM_COMPASS.map(entry => entry.id), ...source.nodes.filter(node => !node.parentId && node.status === 'published').map(node => node.id)]);
     let changed = true;
     while (changed) {
         changed = false;
@@ -584,4 +584,21 @@ export function pimToArKnowledge(document, options = {}) {
         identityStatement: source.identity.identityStatement,
         categories: PIM_COMPASS.map(compass => projectNode(pimNodeById(source, compass.id), 'core'))
     };
+}
+
+// Scope is explicit for new knowledge. Legacy content is not silently classified.
+export function pimKnowledgeScope(node = {}) {
+    if (['species', 'specimen'].includes(node.knowledgeScope)) return node.knowledgeScope;
+    return node.informationType === 'local_observation' ? 'specimen' : 'unspecified';
+}
+
+export function pimReadingDocument(document, { editable = false, scope = 'all' } = {}) {
+    const source = editable ? normalizePimDocument(document) : pimPublishedDocument(document);
+    if (scope === 'all') return source;
+    const matches = new Set(source.nodes.filter(node => pimKnowledgeScope(node) === scope).map(node => node.id));
+    const keep = new Set(source.nodes.filter(node => !node.parentId).map(node => node.id));
+    for (const id of matches) { keep.add(id); pimAncestors(source, id).forEach(node => keep.add(node.id)); }
+    return { ...source, nodes: source.nodes.filter(node => keep.has(node.id)).map(node => matches.has(node.id) ? node : {
+        ...node, body: '', preview: '', provenance: [], sourceIds: [], media: [], safetyNote: '', contextOnly: true
+    }) };
 }
