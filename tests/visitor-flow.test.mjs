@@ -21,33 +21,16 @@ test('matching Totem names remain independent across projects', () => {
     assert.match(arSource, /scopedMarkerStorageId\(operation\.projectId, operation\.siteId, operation\.areaId, 'area-totem'\)/);
 });
 
-test('welcome keeps primary roles separate and pairs About with the existing AR demo', () => {
-    const app = { innerHTML: '' };
-    renderLaunchScreen(app);
-    const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
-    assert.match(app.innerHTML, /Create &amp; Manage/);
-    assert.match(app.innerHTML, /Build and manage locations, content and visitor experiences/);
-    assert.match(app.innerHTML, /Explore a Place/);
-    assert.match(app.innerHTML, /welcome-complementary-grid/);
-    assert.match(app.innerHTML, /About This Tool/);
-    assert.match(app.innerHTML, /Understand what NourishlandXR is and what it can help you build/);
-    assert.match(app.innerHTML, /TRY IT NOW/);
-    const header = app.innerHTML.slice(app.innerHTML.indexOf('intro-heading'), app.innerHTML.indexOf('</div>', app.innerHTML.indexOf('intro-heading')) + 6);
-    assert.match(header, /Plant literacy/);
-    assert.match(header, /welcome-version-badge/);
-    assert.match(header, /· DEMO/);
-    assert.doesNotMatch(app.innerHTML, /welcome-label">DEMO/);
-    assert.match(app.innerHTML, /A quick introduction to spatial stories, Markers and Areas/);
-    assert.match(app.innerHTML, /openTemporaryArDemoWindow/);
-    assert.doesNotMatch(app.innerHTML, /Using a suitable device/);
-    assert.ok(app.innerHTML.indexOf('welcome-complementary-grid') > app.innerHTML.indexOf('role-grid'));
-    assert.doesNotMatch(app.innerHTML, /assets\/herov2\.png/);
-    assert.match(styles, /\.intro-launch \.role-grid \{ grid-template-columns:repeat\(2/);
-    assert.match(styles, /\.welcome-complementary-grid \{[\s\S]*?grid-template-columns:\s*repeat\(2/);
-    assert.match(styles, /body:has\(\.intro-launch\) #app \{[\s\S]*?padding: max\(10px, env\(safe-area-inset-top\)\)/);
-    assert.match(styles, /\.intro-launch \.role-grid,[\s\S]*?\.intro-launch \.welcome-complementary-grid \{ gap:6px;/);
-    assert.match(styles, /\.intro-launch \.platform-landing-nav \{ display:grid; grid-template-columns:repeat\(2/);
-    assert.match(styles, /body:has\(\.intro-launch\) \.collaboration-credit \{ display:none; \}/);
+test('V2 welcome gives exploration priority while preserving creator and AR entry', () => {
+ const app={innerHTML:''};renderLaunchScreen(app);
+ assert.match(app.innerHTML,/Explore a place/);
+ assert.match(app.innerHTML,/Create &amp; manage/);
+ assert.match(app.innerHTML,/renderDemoProjects/);
+ assert.match(app.innerHTML,/openTemporaryArDemoWindow/);
+ assert.match(app.innerHTML,/About Nourishland XR/);
+ assert.match(app.innerHTML,/welcome-version-badge/);
+ assert.ok(app.innerHTML.indexOf('renderV1Explorer') < app.innerHTML.indexOf('renderDemoProjects'));
+ assert.doesNotMatch(app.innerHTML,/requestSession|geolocation/);
 });
 
 test('About This Tool explains the concept without tutorial instructions', () => {

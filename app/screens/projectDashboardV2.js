@@ -134,11 +134,12 @@ function previewModeMarkup(model, mode) {
     return overviewMarkup(model);
 }
 
-async function renderContentInDashboard(panel, projectKey) {
+async function renderContentInDashboard(panel, projectKey, isCurrent = () => true) {
     const staging = document.createElement('div');
     // Render the content markup off-screen first, but keep actions pointed at
     // the live dashboard panel after it is moved into the tab shell.
     await renderFieldGuide(staging, projectKey, true, panel);
+    if(!isCurrent() || !panel.isConnected) return;
     const content = staging.querySelector('.field-guide-workspace');
     if (!content) throw new Error('Content workspace unavailable.');
     panel.classList.add('field-guide-hub-redesign');
@@ -156,8 +157,8 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             : '';
         app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
             <header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div>${offlineStatus}</div></header>
-            <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">☰</span> Content</button></nav>
-            <div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">＋</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Place this project’s Content in the landscape.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>
+            <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">✦</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">▧</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">☰</span> Knowledge</button><button type="button" data-v2-publish>Publish</button></nav>
+            <div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">＋</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Create and position plants, notes and area markers.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
             <div class="nlxr-living-map-sheet" id="nlxrLivingMapSheet" hidden></div>
@@ -172,7 +173,10 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             target.hidden = false;
         };
         app.querySelector('[data-v2-open-ar]')?.addEventListener('click', () => window.openCreatorArMode(projectKey));
+        app.querySelector('[data-v2-publish]')?.addEventListener('click',()=>window.renderProjectSettings(projectKey));
+        let modeGeneration = 0;
         const showMode = async mode => {
+            const request = ++modeGeneration;
             const button = app.querySelector(`[data-v2-mode="${mode}"]`);
             if (!button) return;
             app.querySelectorAll('[data-v2-mode]').forEach(candidate => {
@@ -182,7 +186,9 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 else candidate.removeAttribute('aria-current');
             });
             if (mode === 'content') {
-                await renderContentInDashboard(panel, projectKey);
+                panel.innerHTML='<p class="v2-status" role="status">Opening plant knowledge…</p>';
+                try { await renderContentInDashboard(panel, projectKey,()=>request===modeGeneration); }
+                catch(error) { if(request===modeGeneration) { panel.innerHTML='<div class="v2-notice" role="alert">Knowledge could not load. <button type="button" data-retry-content>Try again</button></div>'; panel.querySelector('[data-retry-content]').addEventListener('click',()=>showMode('content')); } }
             } else {
                 panel.classList.remove('field-guide-hub-redesign');
                 panel.innerHTML = previewModeMarkup(model, mode);

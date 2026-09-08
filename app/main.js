@@ -1,3 +1,5 @@
+import { enhanceProductScreen } from './services/productExperience.js';
+import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from './screens/visitorExperience.js';
 import { SiteManager } from './managers/siteManager.js';
 import { renderLaunchScreen } from './screens/launch.js';
 import { renderStudio } from './screens/studio.js';
@@ -61,18 +63,7 @@ function replaceViewHistory(view, args = [], extra = {}) {
     history.replaceState({ nourishlandView: view, viewArgs: args, ...extra }, '', window.location.href);
 }
 function placeGlobalNavigationAtBottom() {
-    app.querySelectorAll('.screen').forEach(screen => {
-        const buttons = [...screen.querySelectorAll(':scope > .page-header > button:first-child, :scope > header.page-header > button:first-child')]
-            .filter(button => /^(back|return|exit|close|save and exit)/i.test(button.textContent.trim()));
-        if (!buttons.length) return;
-        let navigation = screen.querySelector(':scope > .bottom-navigation');
-        if (!navigation) {
-            navigation = document.createElement('nav');
-            navigation.className = 'bottom-navigation global-bottom-navigation';
-            screen.append(navigation);
-        }
-        buttons.forEach(button => navigation.append(button));
-    });
+    enhanceProductScreen(app.querySelector('.screen'));
 }
 let observedScreen = app.querySelector('.screen');
 new MutationObserver(() => {
@@ -97,6 +88,12 @@ const decodeMainValue = value => {
 applyPlatformSettings();
 applyNxrLanguage();
 const setExperienceRole = role => {
+    if(role !== 'visitor') {
+        cancelVisitorExperience();
+        const cleanUrl = new URL(window.location.href);
+        ['visit','explore','page','plant'].forEach(name=>cleanUrl.searchParams.delete(name));
+        history.replaceState(history.state,'',cleanUrl);
+    }
     document.body.dataset.experienceRole = role;
     queueMicrotask(syncCreatorTestingWarning);
 };
@@ -128,22 +125,7 @@ async function unregisterServiceWorkersForTesting() {
     }
 }
 
-function moveBackButtonsToBottom() {
-    app.querySelectorAll('.screen').forEach(screen => {
-        const backButtons = [...screen.querySelectorAll('button')].filter(button => button.textContent.trim() === 'Back' && !button.closest('.bottom-back-nav'));
-        if (!backButtons.length) return;
-        let footer = [...screen.children].find(child => child.classList?.contains('bottom-back-nav'));
-        if (!footer) {
-            footer = document.createElement('footer');
-            footer.className = 'bottom-back-nav';
-        }
-        backButtons.forEach(button => {
-            button.classList.add('bottom-back-button');
-            footer.append(button);
-        });
-        screen.append(footer);
-    });
-}
+function moveBackButtonsToBottom() { /* V2 retains return controls beside the screen heading. */ }
 
 function syncArLocationAvailability() {
     document.body.classList.toggle('ar-location-selected', Boolean(app.querySelector('.location-selected')));
@@ -185,7 +167,10 @@ async function bootstrap() {
             await window.renderProjectDashboard(encodeURIComponent(recovery.projectId));
             return;
         }
+        const visitorLink = params.get('explore');
+        if (visitorLink || params.has('visit')) { await window.openVisitor(params.get('visit') || params.get('page') || 'place',visitorLink || '',params.get('plant') || '',true); return; }
         const rememberedView = !params.size ? readCurrentView() : null;
+        if (rememberedView?.view === 'visitor-v2') { await window.openVisitor(...rememberedView.args,true); return; }
         if (rememberedView?.view === 'projects') {
             setExperienceRole('creator');
             replaceViewHistory('projects');
@@ -313,6 +298,7 @@ window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
 };
 window.addEventListener('popstate', event => {
     if (isArModeActive()) return;
+    if (event.state?.nourishlandView === 'visitor-v2') { void window.openVisitor(...event.state.viewArgs,true); return; }
     if (['dashboard', 'dashboard-v2', 'living-dashboard', 'dashboard-classic'].includes(event.state?.nourishlandView) && event.state.projectId) {
         void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
         return;
@@ -947,4 +933,28 @@ window.addEventListener('nxr:latest-entry-added', async () => {
     }
 });
 
+// Existing entry points remain callable; visitor destinations share one history-aware journey.
+window.openVisitor = (view='places',project='',selection='',fromHistory=false) => {
+    const args=[view,project,selection];
+    setExperienceRole('visitor');
+    rememberCurrentView('visitor-v2',args);
+    const url = new URL(window.location.href);
+    url.search='';url.searchParams.set('visit',view);
+    if(project)url.searchParams.set('explore',project);
+    if(selection)url.searchParams.set('plant',selection);
+    const entry={nourishlandView:'visitor-v2',viewArgs:args};
+    if(!fromHistory && JSON.stringify(history.state?.viewArgs)!==JSON.stringify(args)) history.pushState(entry,'',url);
+    else history.replaceState(entry,'',url);
+    return renderVisitorExperience(app,view,project,selection);
+};
+const legacyFieldGuide=window.renderFieldGuide;
+const legacyWelcome=window.renderVisitorLocationIntro;
+const legacyBrowse=window.renderBrowseContent;
+window.renderV1Explorer=()=>{clearVisitorCache();return window.openVisitor('places');};
+window.renderExplorerProjects=window.renderV1Explorer;
+window.renderFieldGuideProjects=window.renderV1Explorer;
+window.renderVisitorLocationIntro=(id,creator=false,preview=false)=>creator||preview?legacyWelcome(id,creator,preview):window.openVisitor('place',decodeMainValue(id));
+window.renderFieldGuide=(id,creator=false)=>creator?legacyFieldGuide(id,true):window.openVisitor('plants',decodeMainValue(id));
+window.renderBrowseContent=(id,creator=false)=>creator?legacyBrowse(id,true):window.openVisitor('plants',decodeMainValue(id));
+if(!history.state?.nourishlandView) replaceViewHistory('welcome');
 bootstrap();

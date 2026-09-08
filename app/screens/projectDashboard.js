@@ -1227,12 +1227,12 @@ export async function renderPlatformHome(app) {
         <div class="page-header">
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
             <p class="welcome-label">PROJECT SELECTION</p>
-            <h1>Choose Project</h1>
-            <p class="subtitle">Open a project workspace or create a new one.</p>
+            <h1>Your places</h1>
+            <p class="subtitle">Build knowledge, organise a place, and prepare it for visitors.</p>
         </div>
         <section class="project-section">
             <h2 class="project-section-title">Locations</h2>
-            <div class="menu-stack project-selection-list">${cards || '<div class="panel"><p>No locations are available.</p></div>'}<button class="menu-card create-project-action" onclick="window.renderProjectForm()"><strong>Create a new location, experience or project</strong></button></div>
+            <div class="menu-stack project-selection-list">${cards || '<div class="panel"><p>No locations are available.</p></div>'}<button class="menu-card create-project-action" onclick="window.renderProjectForm()"><strong>Create a place</strong></button></div>
         </section>
     </div>`;
 }
@@ -3117,6 +3117,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
             mount.hidden = false;
             pimWebController = mountPlantInformationWeb(mount, {
                 document: activePimDocument,
+                specimenId: `${project.id}/${site.id}/${entry.place.id}/${entry.marker.id}`,
                 editable: true,
                 showSearch: true,
                 showIdentity: pimWorkspace,

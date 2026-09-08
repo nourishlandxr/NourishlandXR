@@ -1,46 +1,10 @@
 import { BUILD_INFO } from '../services/buildInfo.js';
-
+import { html, leafArtwork, productHeader, bindProductHeader } from '../services/productExperience.js';
 export function renderLaunchScreen(app) {
-    app.innerHTML = `
-        <div class="screen app-surface app-surface-intro launch-screen intro-launch">
-            <div class="page-header intro-heading">
-                <div><h1>NourishLand<span>XR</span></h1><p class="subtitle">Plant literacy · spatial learning</p><span class="version-badge welcome-version-badge" aria-label="Version and release channel">V${BUILD_INFO.version} · DEMO</span></div>
-            </div>
-
-            <section class="intro-copy" aria-labelledby="demoWelcomeTitle">
-                <h2 id="demoWelcomeTitle">MAP. GROW. LEARN IN PLACE.</h2>
-                <p><strong>Nourishland XR</strong> turns real gardens and landscapes into interactive learning experiences, helping people discover the plants, stories and natural relationships found around them.</p>
-            </section>
-
-            <section class="role-choice" aria-labelledby="roleChoiceTitle">
-                <h2 id="roleChoiceTitle">What would you like to do?</h2>
-                <div class="role-grid">
-                    <button class="menu-card role-card creator-role" onclick="window.renderDemoProjects()">
-                        <strong>Create &amp; Manage</strong>
-                        <span>Build and manage locations, content and visitor experiences.</span>
-                    </button>
-                    <button class="menu-card role-card visitor-role" onclick="window.renderV1Explorer()">
-                        <strong>Explore a Place</strong>
-                        <span>Discover plants and stories using Explorer or the Field Guide.</span>
-                    </button>
-                </div>
-                <div class="welcome-complementary-grid">
-                    <button class="menu-card role-card welcome-complementary-card" onclick="window.renderPlatformComingSoon('About This Tool', 'launch')">
-                        <strong>About This Tool</strong>
-                        <span>Understand what NourishlandXR is and what it can help you build.</span>
-                    </button>
-                    <button class="menu-card role-card welcome-complementary-card try-it-now-entry" onclick="window.openTemporaryArDemoWindow()">
-                        <strong>TRY IT NOW</strong>
-                        <span>A quick introduction to spatial stories, Markers and Areas.</span>
-                    </button>
-                </div>
-            </section>
-
-        <nav class="platform-landing-nav" aria-label="Platform navigation">
-            <button onclick="window.renderPlatformComingSoon('Settings', 'launch')"><strong>Settings</strong></button>
-            <button onclick="window.renderPlatformComingSoon('Account', 'launch')"><strong>Account</strong></button>
-        </nav>
-
-            <p class="collaboration-credit"><strong>Nourishland</strong> is committed to providing educational tools and hands-on solutions that help green our planet, growing more sustainable and engaging food systems for the world around us. Through food forests, plant literacy, and immersive learning experiences, we bring people closer to how food is grown, cared for, and shared — making sustainability something practical, adaptable, and genuinely enjoyable to be part of.</p>
-        </div>`;
+ let last=null;try{last=JSON.parse(globalThis.localStorage?.getItem('nxr-v2-last-place') || 'null');}catch{}
+ app.innerHTML=`<div class="screen v2-screen v2-welcome">${productHeader('Plant literacy · spatial learning')}
+ <section class="v2-hero"><div><p class="v2-eyebrow">Knowledge grows here</p><h1>A living world.<br>A closer look.</h1><p class="v2-lead">Discover the plants, people and relationships that make a place. Learn in a food forest, or explore from wherever you are.</p><div class="v2-actions"><button class="v2-primary" onclick="window.renderV1Explorer()">Explore a place →</button><button class="v2-secondary" onclick="window.renderDemoProjects()">Create &amp; manage</button></div>${last?.id?`<button class="v2-secondary" data-resume-place>Continue exploring ${html(last.name)}</button>`:''}<p class="v2-reading-label">Start with the field guide. Bring knowledge into the landscape with AR.</p></div>${leafArtwork()}</section>
+ <section class="v2-intro-grid" aria-label="Ways to explore"><article><small>01 · FIND YOUR PLACE</small><h2>Follow your curiosity</h2><p>Visit a garden or food forest. Meet the plants that grow there.</p></article><article><small>02 · LOOK CLOSER</small><h2>Knowledge, connected</h2><p>Follow a plant’s uses, growing needs and relationships. See where each idea comes from.</p></article><article><small>03 · LEARN IN PLACE</small><h2>Step into the landscape</h2><p>Read on screen or try a spatial experience on a compatible device.</p><button class="v2-secondary" onclick="window.openTemporaryArDemoWindow()">Try the AR introduction</button></article></section>
+ <footer class="v2-context"><button onclick="window.renderPlatformComingSoon('About This Tool','launch')">About Nourishland XR</button><span class="welcome-version-badge" aria-label="Version and release channel">V${BUILD_INFO.version} · ${BUILD_INFO.target==='production'?'Live':'Local preview'}</span></footer></div>`;
+ if(app.querySelector){bindProductHeader(app);app.querySelector('[data-resume-place]')?.addEventListener('click',()=>window.openVisitor('place',last.id));}
 }

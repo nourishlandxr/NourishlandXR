@@ -235,7 +235,7 @@ export function renderARPanel(gl, frame, refSpace, tex, opts = {}) {
                 mvp[c * 4 + r] = projMatrix[r] * mv[c * 4] + projMatrix[4 + r] * mv[c * 4 + 1] + projMatrix[8 + r] * mv[c * 4 + 2] + projMatrix[12 + r] * mv[c * 4 + 3];
         
         gl.uniformMatrix4fv(mvpLoc, false, mvp);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        if (!opts.hidePanel) gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
     if (typeof opts.drawSpatialContent === 'function') {

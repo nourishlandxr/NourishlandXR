@@ -191,7 +191,7 @@ async function loadAreaPlants(projectId, siteId, placeId, visitor) {
     const representedMarkers = new Set(resolved.map(plant => plant.markerId).filter(Boolean));
     const markerPlants = await Promise.all(markers.filter(marker => marker.type === 'plant' && !representedMarkers.has(marker.id)).map(async marker => {
         let profile = marker.plant_profile || {};
-        if (marker.plant_profile_path) {
+        if (marker.id) {
             profile = await loadPlantProfile(projectId, siteId, placeId, marker.id, visitor).catch(() => profile);
         }
         return {
@@ -218,7 +218,7 @@ async function loadAreaPlants(projectId, siteId, placeId, visitor) {
     const resolvedPlants = await Promise.all(resolved.map(async plant => {
         if (!plant.markerId) return { ...plant, virtualTagEnabled: false };
         const profile = await loadPlantProfile(projectId, siteId, placeId, plant.markerId, visitor).catch(() => ({}));
-        return { ...plant, physicalAnchor: markerById.get(plant.markerId)?.physicalAnchor || null, virtualTagEnabled: profile.virtual_tag_enabled === true };
+        return { ...profile, ...plant, pim_document: profile.pim_document || plant.pim_document, physicalAnchor: markerById.get(plant.markerId)?.physicalAnchor || null, virtualTagEnabled: profile.virtual_tag_enabled === true };
     }));
     return [...resolvedPlants, ...markerPlants];
 }
@@ -228,7 +228,7 @@ async function loadAreaGuideGroup(projectId, siteId, place, visitor) {
         loadAreaPlants(projectId, siteId, place.id, visitor),
         loadPlaceMarkers(projectId, siteId, place.id, visitor).catch(() => [])
     ]);
-    const anchorStates = await Promise.all(markers.map(marker => loadMarkerAnchor(projectId, siteId, place.id, marker.id, visitor).catch(() => null)));
+    const anchorStates = visitor ? markers.map(() => null) : await Promise.all(markers.map(marker => loadMarkerAnchor(projectId, siteId, place.id, marker.id, visitor).catch(() => null)));
     const markerAnchorItems = markers.map((marker, index) => ({ marker, anchor: anchorStates[index] }));
     const placedItems = markerAnchorItems.filter(item => item.anchor?.type === 'spatial');
     const anchoredItems = markerAnchorItems.filter(item => String(item.marker?.physicalAnchor?.markerId ?? '').trim() !== '');
@@ -246,12 +246,12 @@ async function loadAreaGuideGroup(projectId, siteId, place, visitor) {
     };
 }
 
-async function loadGuide(projectId) {
+export async function loadGuide(projectId) {
     const project = (await loadProjects(true)).find(item => item.id === projectId);
     if (!project) throw new Error('This location is not public.');
     const sites = await loadProjectSites(project.id, true);
     const siteGroups = await Promise.all(sites.map(async site => {
-        const places = await loadSitePlaces(project.id, site.id, true).catch(() => []);
+        const places = await loadSitePlaces(project.id, site.id, true);
         const placeGroups = await Promise.all(places.map(place => loadAreaGuideGroup(project.id, site.id, place, true)));
         return { site, placeGroups };
     }));
@@ -276,7 +276,7 @@ function applyCreatorContentCopy(app, renderTarget = app) {
     const searchTitle = app.querySelector('#fieldGuidePlantSearchTitle');
     if (searchTitle) searchTitle.textContent = 'Plant Search';
     const searchLabel = app.querySelector('label[for="fieldGuideSearch"]');
-    if (searchLabel) searchLabel.textContent = 'Search all plants';
+    if (searchLabel) searchLabel.textContent = 'Search saved plants';
     const creativeTitle = app.querySelector('#fieldGuideCreativeToolsTitle');
     if (creativeTitle) creativeTitle.textContent = 'Creative Features';
     const anchorsTitle = app.querySelector('#fieldGuideAnchorsTitle');
@@ -303,6 +303,7 @@ function applyCreatorContentCopy(app, renderTarget = app) {
     const allPlants = document.createElement('details');
     allPlants.className = 'field-guide-all-plants';
     allPlants.innerHTML = '<summary><span class="field-guide-all-plants-heading"><strong>All plants</strong><small>Saved plant records in this project</small></span><span id="fieldGuideCount" class="field-guide-all-plants-count"></span></summary>';
+    allPlants.open = true;
     allPlants.append(plantList);
     plantListSection.append(allPlants);
 
@@ -319,6 +320,28 @@ function applyCreatorContentCopy(app, renderTarget = app) {
     globalPanel.innerHTML = '<p id="fieldGuideGlobalSearchStatus" class="meta"></p><div class="field-guide-global-results" data-field-guide-global-results></div>';
     plantListSection.insertBefore(globalPanel, allPlants);
 
+    let sourceScope = 'local';
+    const sourceSwitch = document.createElement('nav');
+    sourceSwitch.className = 'v2-source-mode';
+    sourceSwitch.setAttribute('aria-label','Plant search scope');
+    sourceSwitch.innerHTML = '<button type="button" data-source-scope="local" aria-pressed="true">Saved plants</button><button type="button" data-source-scope="external" aria-pressed="false">External sources</button>';
+    searchDeck.before(sourceSwitch);
+    const scopeHelp = searchField.querySelector('small');
+    if(scopeHelp) scopeHelp.textContent = 'Only plants saved in this project. External research is a separate step.';
+    searchHeading.querySelector('.field-guide-search-badge')?.remove();
+    const headingCopy = searchHeading.querySelector('p:not(.field-guide-section-kicker)');
+    if(headingCopy) headingCopy.textContent = 'Find your plants, or deliberately bring in source material.';
+    sourceSwitch.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
+        sourceScope=button.dataset.sourceScope;
+        clearTimeout(globalGuideSearchTimer);
+        sourceSwitch.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+        allPlants.hidden=sourceScope==='external';
+        globalPanel.hidden=sourceScope!=='external';
+        if(searchLabel) searchLabel.textContent=sourceScope==='external'?'Search external plant databases':'Search saved plants';
+        if(scopeHelp) scopeHelp.textContent=sourceScope==='external'?'Source records are suggestions. Review before adding knowledge; publication is separate.':'Only plants saved in this project. External research is a separate step.';
+        if(sourceScope==='external') searchGlobal(searchInput.value);
+        else applyFieldGuideFilter(currentGuidePlaceId);
+    }));
     const globalStatus = globalPanel.querySelector('#fieldGuideGlobalSearchStatus');
     const globalResults = globalPanel.querySelector('[data-field-guide-global-results]');
     let openGlobalProfile = null;
@@ -448,108 +471,12 @@ function applyCreatorContentCopy(app, renderTarget = app) {
                 if (globalStatus) globalStatus.textContent = `Could not open the plant import page: ${error.message}`;
             }
             return;
-            const renderExtractionStep = () => {
-                globalImportStep = 'select';
-                globalResults.innerHTML = referenceProfileMarkup(result);
-                focusImportPanel(globalResults.querySelector('#fieldGuideGlobalProfileTitle'));
-                globalResults.querySelector('[data-global-profile-back]')?.addEventListener('click', () => {
-                    openGlobalProfile = null;
-                    renderGlobalResults(results);
-                    if (globalStatus) globalStatus.textContent = `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.`;
-                });
-                const profileStatus = globalResults.querySelector('[data-global-profile-status]');
-                globalResults.querySelector('[data-global-select-recommended]')?.addEventListener('click', () => {
-                    const recommended = new Set(sourceFacts(result).filter(fact => fact.recommended).map(fact => fact.key));
-                    globalResults.querySelectorAll('[data-global-extract-field]').forEach(input => { input.checked = recommended.has(input.dataset.globalExtractField); });
-                });
-                globalResults.querySelector('[data-global-profile-review]')?.addEventListener('click', () => {
-                    const selectedFields = [...globalResults.querySelectorAll('[data-global-extract-field]:checked')].map(input => input.dataset.globalExtractField).filter(Boolean);
-                    if (!selectedFields.length) {
-                        if (profileStatus) profileStatus.textContent = 'Select at least one fact to continue.';
-                        return;
-                    }
-                    result.extractionFields = selectedFields;
-                    const factsByKey = new Map(sourceFacts(result).map(fact => [fact.key, fact]));
-                    const selectedFacts = selectedFields.map(key => factsByKey.get(key)).filter(Boolean);
-                    globalImportStep = 'review';
-                    globalResults.innerHTML = allocationReviewMarkup(result, selectedFacts);
-                    focusImportPanel(globalResults.querySelector('#fieldGuideAllocationTitle'));
-                    const allocationStatus = globalResults.querySelector('[data-global-profile-status]');
-                    globalResults.querySelector('[data-global-allocation-back]')?.addEventListener('click', renderExtractionStep);
-                    globalResults.querySelectorAll('[data-global-remove-fact]').forEach(removeButton => removeButton.addEventListener('click', () => {
-                        removeButton.closest('[data-global-allocation-fact]')?.remove();
-                        globalResults.querySelectorAll('[data-global-allocation-group]').forEach(group => {
-                            if (!group.querySelector('[data-global-allocation-fact]')) group.remove();
-                        });
-                        result.extractionFields = [...globalResults.querySelectorAll('[data-global-allocation-fact]')].map(row => row.dataset.globalAllocationFact).filter(Boolean);
-                    }));
-                    globalResults.querySelector('[data-global-allocation-continue]')?.addEventListener('click', async event => {
-                        if (!siteGroup?.site?.id || !currentGuide?.creator) {
-                            if (allocationStatus) allocationStatus.textContent = 'Open this from a project Content workspace to create an NLXR plant profile.';
-                            return;
-                        }
-                        const visibleRows = [...globalResults.querySelectorAll('[data-global-allocation-fact]')];
-                        const visibleFacts = visibleRows.map(row => factsByKey.get(row.dataset.globalAllocationFact)).filter(Boolean);
-                        const extractedFacts = visibleRows.map(row => {
-                            const fact = factsByKey.get(row.dataset.globalAllocationFact);
-                            if (!fact) return null;
-                            if (PROFILE_ONLY_FACTS.has(fact.key)) {
-                                return { ...fact, confirmedDestinations: [], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: 'profile', reviewStatus: 'pending' };
-                            }
-                            const group = row.closest('[data-global-allocation-group]');
-                            const groupCategory = group?.querySelector('[data-global-group-category]')?.value;
-                            const individualCategory = row.querySelector('[data-global-allocation]')?.value;
-                            const categoryId = individualCategory || groupCategory || pimAllocationCategory(fact);
-                            const category = pimAllocationCategoryById(categoryId);
-                            const cell = pimAllocationCell(fact, categoryId);
-                            return { ...fact, destination: [category.label, cell], confirmedDestinations: [[categoryId, cell]], sourceDatabase: result.sourceLabel || PLANT_SEARCH_SOURCE_LABEL, sourceRecordId: result.externalId || '', sourceUrl: result.sourceUrl || '', retrievalDate: new Date().toISOString(), confidence: categoryId === pimAllocationCategory(fact) ? 'suggested' : 'confirmed', reviewStatus: 'pending' };
-                        }).filter(Boolean);
-                        result.extractionFields = visibleFacts.map(fact => fact.key);
-                        if (!extractedFacts.length) {
-                            if (allocationStatus) allocationStatus.textContent = 'Keep at least one fact before continuing.';
-                            return;
-                        }
-                        globalImportStep = 'setup';
-                        event.currentTarget.disabled = true;
-                        event.currentTarget.textContent = 'Opening plant setup';
-                        try {
-                            await openGlobalPlantProfile(renderTarget || app, {
-                                project: currentGuide.project.id,
-                                site: siteGroup.site.id,
-                                place: currentGuidePlaceId || '__unassigned__',
-                                existingPlants: currentGuide.plants,
-                                globalPlant: { ...result, extractionFields: selectedFacts.map(fact => fact.key), extractedFacts }
-                            });
-                        } catch (error) {
-                            event.currentTarget.disabled = false;
-                            event.currentTarget.textContent = 'Continue to plant setup';
-                            if (allocationStatus) allocationStatus.textContent = `Could not open the NLXR profile: ${error.message}`;
-                        }
-                    });
-                });
-            };
-            renderExtractionStep();
-            return;
-            /* Legacy direct conversion flow retained below for compatibility. */
-            if (false) {
-            button.textContent = 'Opening profile…';
-            try {
-                await openGlobalPlantProfile(renderTarget || app, {
-                    project: currentGuide.project.id,
-                    site: siteGroup.site.id,
-                    place: currentGuidePlaceId || '__unassigned__',
-                    globalPlant: result
-                });
-            } catch (error) {
-                button.disabled = false;
-                button.textContent = 'Convert to NLXR profile';
-                if (globalStatus) globalStatus.textContent = `Could not open the plant profile: ${error.message}`;
-            }
-            }
+
         }));
     };
     const searchGlobal = value => {
         clearTimeout(globalGuideSearchTimer);
+        if(sourceScope !== 'external') return;
         const query = String(value || '').trim();
         globalSearchQuery = query;
         if (globalResults) globalResults.innerHTML = '';
@@ -564,11 +491,11 @@ function applyCreatorContentCopy(app, renderTarget = app) {
         globalGuideSearchTimer = setTimeout(async () => {
             try {
                 const results = await searchGlobalPlants(query);
-                if (searchInput.value.trim() !== query) return;
+                if (sourceScope !== 'external' || searchInput.value.trim() !== query || !searchInput.isConnected) return;
                 renderGlobalResults(results);
                 if (globalStatus) globalStatus.textContent = results.length ? `${results.length} plant record${results.length === 1 ? '' : 's'} found across ${PLANT_SEARCH_SOURCE_LABEL}. Select one to open its profile.` : `No plant matches found across ${PLANT_SEARCH_SOURCE_LABEL}.`;
             } catch (error) {
-                if (searchInput.value.trim() !== query) return;
+                if (sourceScope !== 'external' || searchInput.value.trim() !== query || !searchInput.isConnected) return;
                 if (globalStatus) globalStatus.textContent = 'Global plant databases unavailable. Local results remain available.';
             }
         }, 300);

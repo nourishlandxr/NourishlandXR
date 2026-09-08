@@ -1,0 +1,127 @@
+/* V2 presentation layer. Spatial transforms, data contracts and project themes remain owned by their existing modules. */
+:root { --v2-ink:#253f32; --v2-muted:#586b5c; --v2-paper:#f6f5ed; --v2-surface:#fffef8; --v2-line:#d4dece; --v2-leaf:#355e45; --v2-soft:#e6eddf; --v2-radius:22px; }
+body { background:var(--v2-paper); }
+#app .screen { color:var(--v2-ink); }
+#app .screen.v2-unified,#app .screen.v2-screen { max-width:1180px; margin:0 auto; padding:24px 30px 72px; background:var(--v2-paper); border:0; border-radius:0; box-shadow:none; min-height:100svh; }
+#app .v2-masthead { display:flex; align-items:center; gap:24px; padding:0 0 22px; margin-bottom:32px; border-bottom:1px solid var(--v2-line); }
+#app .v2-masthead > span { margin-left:auto; color:var(--v2-muted); font-size:12px; }
+#app .v2-wordmark { font-size:23px; font-weight:700; letter-spacing:-1px; padding:0; border:0; background:none; box-shadow:none; color:var(--v2-ink); }
+#app .v2-wordmark span { font-size:11px; vertical-align:super; letter-spacing:1px; margin-left:5px; }
+#app .v2-masthead > button:last-child { background:transparent; border:1px solid var(--v2-line); padding:10px 14px; border-radius:99px; font-size:12px; }
+#app :is(.v2-unified,.v2-screen) :is(button,input,select,textarea) { font:inherit; }
+#app :is(.v2-unified,.v2-screen) button { cursor:pointer; min-height:44px; }
+#app :is(.v2-unified,.v2-screen) button:disabled { cursor:default; opacity:.55; }
+#app :is(.v2-unified,.v2-screen) :is(button,a,input,select,textarea,summary):focus-visible { outline:3px solid #966b32; outline-offset:4px; }
+#app .v2-screen h1 { font-family:Georgia,'Times New Roman',serif; font-weight:400; font-size:clamp(36px,5vw,65px); line-height:1.06; letter-spacing:-1.5px; margin:12px 0 20px; text-transform:none; color:var(--v2-ink); }
+#app .v2-screen h2 { font-size:23px; line-height:1.3; letter-spacing:-.5px; text-transform:none; color:var(--v2-ink); }
+#app .v2-screen p { line-height:1.65; max-width:65ch; }
+.v2-eyebrow { text-transform:uppercase; letter-spacing:2px; font-size:11px; font-weight:650; color:var(--v2-muted); }
+.v2-lead { font-size:17px; color:var(--v2-muted); }
+.v2-hero { display:grid; grid-template-columns:1.2fr 1fr; align-items:center; gap:48px; padding:24px 0 48px; }
+.v2-botanical { width:100%; max-height:430px; }
+.v2-actions { display:flex; gap:12px; flex-wrap:wrap; margin:24px 0; }
+#app .v2-primary,#app .v2-secondary { border-radius:99px; padding:13px 24px; background:var(--v2-leaf); color:#fffef8; border:1px solid var(--v2-leaf); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+#app .v2-secondary { background:var(--v2-surface); color:var(--v2-ink); border-color:var(--v2-line); }
+.v2-intro-grid,.v2-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+.v2-intro-grid article { padding:24px 0; border-top:1px solid var(--v2-line); }
+.v2-intro-grid small { color:var(--v2-muted); }
+.v2-intro-grid p { color:var(--v2-muted); font-size:14px; }
+#app .v2-card { display:flex; flex-direction:column; align-items:start; text-align:left; padding:25px; background:var(--v2-surface); border:1px solid var(--v2-line); border-radius:var(--v2-radius); color:var(--v2-ink); gap:10px; box-shadow:none; overflow:hidden; transition:border-color .22s ease,background .22s ease; }
+#app .v2-card:hover { border-color:#8da785; background:#edf1e5; }
+.v2-card strong { font-size:21px; line-height:1.3; font-weight:550; }
+.v2-card small { color:var(--v2-muted); line-height:1.6; }
+.v2-card em { font-size:14px; }
+.v2-card-image { height:150px; width:100%; object-fit:cover; border-radius:12px; }
+.v2-card-glyph { width:48px; height:48px; border-radius:50% 50% 50% 5%; display:grid; place-items:center; background:#e5ebd9; font-size:23px; color:#54784b; }
+.v2-place-nav { display:flex; gap:6px; padding:6px; background:#e7ecdf; border-radius:99px; width:max-content; max-width:100%; margin:24px 0; }
+#app .v2-place-nav button { background:transparent; color:var(--v2-ink); border:0; border-radius:99px; padding:10px 25px; }
+#app .v2-place-nav button[aria-current] { background:var(--v2-surface); box-shadow:0 2px 6px #23392110; }
+.v2-context { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:22px; }
+#app .v2-context button { border:0; background:none; padding:4px 0; color:var(--v2-muted); font-size:13px; text-decoration:underline; text-underline-offset:4px; }
+.v2-context span { color:var(--v2-muted); font-size:13px; }
+.v2-search { display:grid; grid-template-columns:minmax(0,1fr) minmax(130px,.4fr) minmax(130px,.4fr); gap:12px; margin:24px 0 12px; }
+.v2-search label { display:grid; gap:8px; font-size:12px; color:var(--v2-muted); }
+#app .v2-search :is(input,select) { width:100%; min-width:0; border:1px solid var(--v2-line); background:var(--v2-surface); padding:14px; border-radius:12px; color:var(--v2-ink); }
+.v2-result-count { font-size:13px; color:var(--v2-muted); margin:16px 0; }
+.v2-notice { padding:20px 24px; border-left:3px solid #98ae7f; background:#e9eedf; border-radius:0 16px 16px 0; line-height:1.65; margin:20px 0; }
+.v2-empty { padding:44px 24px; border:1px dashed #b5c4ad; border-radius:22px; text-align:center; }
+.v2-empty p { margin-inline:auto; }
+.v2-profile-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(200px,.4fr); gap:24px; align-items:center; }
+.v2-profile-intro img { width:100%; max-height:270px; object-fit:cover; border-radius:22px; }
+.v2-profile-context { padding:18px 22px; border:1px solid var(--v2-line); background:var(--v2-surface); border-radius:18px; margin:20px 0; }
+.v2-profile-context p { margin:6px 0; font-size:14px; }
+.v2-profile .pim-web-identity-wrap { display:none; }
+.v2-profile .pim-web { margin-top:20px; }
+.v2-profile .pim-web > header h1 { font-family:inherit!important; font-size:24px!important; letter-spacing:0!important; }
+.v2-reading-label { font-size:13px; color:var(--v2-muted); }
+.v2-map-board { position:relative; min-height:290px; background:#e8edde; border:1px solid var(--v2-line); border-radius:22px; padding:30px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:18px; }
+.v2-map-board .v2-card { min-width:150px; }
+.v2-map-image { width:100%; max-height:550px; object-fit:contain; background:var(--v2-surface); border-radius:20px; }
+.v2-status { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--v2-muted); }
+.v2-status:before { content:''; width:8px; height:8px; border-radius:50%; background:#7f966c; }
+.v2-ar-steps { padding:20px 0; display:grid; gap:18px; counter-reset:steps; }
+.v2-ar-steps li { list-style:none; display:flex; gap:14px; align-items:start; line-height:1.6; }
+.v2-ar-steps li:before { counter-increment:steps; content:counter(steps); border:1px solid var(--v2-line); border-radius:50%; min-width:30px; height:30px; display:grid; place-items:center; }
+#app .v2-unified .page-header { background:none; box-shadow:none; border:0; padding:0 0 24px; border-radius:0; }
+#app .v2-unified .page-header h1 { font-size:clamp(28px,4vw,45px); letter-spacing:-1px; line-height:1.2; }
+#app .v2-unified :is(.panel,.nlxr-db-v2-card,.field-guide-plant-search,.field-guide-areas-board,.field-guide-creation-board,.field-guide-spatial-setup,.field-guide-creative-tools,.setting-row) { background:var(--v2-surface); border-color:var(--v2-line); box-shadow:none; border-radius:18px; }
+#app .v2-unified .nlxr-db-v2-header { background:none; border:0; box-shadow:none; }
+#app .v2-unified .nlxr-db-v2-ar-strip { margin:18px 0; }
+#app .v2-unified .nlxr-db-v2-ar-button { background:#e3ebd8; color:var(--v2-ink); border:1px solid var(--v2-line); box-shadow:none; border-radius:18px; }
+#app .v2-unified .nlxr-db-v2-mode-nav { background:#e7ecdf; border:0; border-radius:99px; padding:6px; }
+#app .v2-unified .nlxr-db-v2-mode-nav button { color:var(--v2-ink); border-radius:99px; }
+#app .v2-unified .nlxr-db-v2-mode-nav button.is-active { background:var(--v2-surface); box-shadow:none; }
+#app .v2-unified .nlxr-db-v2-eyebrow { color:var(--v2-muted); }
+#app .v2-unified .project-selection-row { border:1px solid var(--v2-line); border-radius:18px; background:var(--v2-surface); box-shadow:none; }
+#app .v2-unified .field-guide-global-match-legend { display:none; }
+.v2-source-mode { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; }
+.v2-source-mode button { border:1px solid var(--v2-line); border-radius:99px; background:var(--v2-surface); padding:10px 18px; color:var(--v2-ink); }
+.v2-source-mode button[aria-pressed="true"] { background:var(--v2-leaf); color:white; }
+.v2-review-path { padding:18px; background:#eef1e5; border-radius:16px; margin:18px 0; font-size:13px; line-height:1.7; }
+.v2-visitor-ar { position:fixed; inset:0; z-index:9100; pointer-events:none; color:#fff; font-family:inherit; }
+.v2-visitor-ar button { pointer-events:auto; min-height:48px; background:#f5f6ec; color:#26432f; border:1px solid #b9cbb0; border-radius:99px; padding:12px 18px; font:inherit; }
+.v2-visitor-ar-status { position:absolute; top:max(16px,env(safe-area-inset-top)); left:16px; right:16px; margin:auto; max-width:600px; padding:12px 18px; background:#203c30e8; border-radius:18px; font-size:13px; }
+.v2-visitor-ar-dock { position:absolute; bottom:max(18px,env(safe-area-inset-bottom)); left:12px; right:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.v2-visitor-ar-selection { position:absolute; bottom:92px; left:16px; right:16px; max-width:560px; margin:auto; padding:20px; background:#fcfcf0f5; color:#26432f; border-radius:22px; pointer-events:auto; }
+.v2-visitor-ar-selection h2 { font-size:24px; margin:0 0 8px; }
+.v2-visitor-ar-selection p { line-height:1.5; }
+.v2-visitor-ar-selection[hidden] { display:none; }
+.creator-ar-control-dock[data-ar-taskbar-version="2"] { --v2-ar-surface:#edf1e5; }
+body:not([data-nxr-headset="quest"]) .creator-ar-taskbar { border-radius:22px!important; }
+.creator-ar-taskbar button:focus-visible { outline:3px solid #e5c480; outline-offset:3px; }
+@media(max-width:700px) {
+ #app .screen.v2-unified,#app .screen.v2-screen { padding:16px 18px 48px; }
+ #app .v2-masthead { gap:10px; margin-bottom:22px; padding-bottom:16px; }
+ #app .v2-masthead > span { display:none; }
+ #app .v2-masthead > button:last-child { margin-left:auto; }
+ .v2-hero { grid-template-columns:1fr; gap:0; padding:12px 0 28px; position:relative; }
+ .v2-hero > .v2-botanical { position:absolute; width:130px; right:0; top:-8px; opacity:.32; pointer-events:none; }
+ .v2-hero > div { position:relative; z-index:1; }
+ .v2-hero h1 { max-width:10ch; }
+ .v2-intro-grid,.v2-grid { grid-template-columns:1fr; gap:12px; }
+ .v2-intro-grid article { padding:14px 0; }
+ .v2-intro-grid h2 { margin:4px 0; }
+ .v2-search { grid-template-columns:1fr 1fr; }
+ .v2-search label:first-child { grid-column:1/-1; }
+ #app .v2-place-nav { display:flex; width:100%; box-sizing:border-box; position:sticky; top:8px; z-index:5; box-shadow:0 4px 15px #24422b14; }
+ #app .v2-place-nav button { flex:1; padding:10px; }
+ .v2-profile-intro { grid-template-columns:1fr; }
+ .v2-profile-intro img { max-height:200px; }
+ .v2-lead { font-size:16px; }
+ #app .v2-screen h1 { font-size:41px; }
+ #app .v2-unified .nlxr-db-v2-mode-nav { overflow-x:auto; }
+ .v2-map-board { padding:18px; }
+}
+@media(prefers-reduced-motion:reduce) { .v2-screen *, .v2-unified *, .v2-visitor-ar * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media print { .v2-masthead,.v2-place-nav,.v2-actions,.v2-context,.v2-search { display:none!important; } }
+
+body.visitor-ar-active { background:transparent!important; }
+body.visitor-ar-active #app { visibility:hidden; }
+
+#app :is(.v2-screen,.v2-unified) [hidden] { display:none!important; }
+.v2-profile .pim-web-identity { padding:0; margin:0; background:none; border:0; }
+.v2-profile .pim-web-progress { display:none; }
+#app .v2-profile .pim-web-heading h2 { font-size:25px; margin:0; }
+#app .v2-review-path button { padding:10px 18px; border:1px solid #b8c9ae; background:#fffef8; color:#31523b; border-radius:22px; }
+#app .v2-unified .nlxr-db-v2-mode-nav { display:flex; }
+#app .v2-unified .nlxr-db-v2-mode-nav button { flex:1; min-width:0; }

@@ -24,6 +24,7 @@ const frontendEntries = [
     'main.js',
     'style.css',
     'pim.css',
+    'product-v2.css',
     'assets',
     'components',
     'managers',

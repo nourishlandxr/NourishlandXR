@@ -378,8 +378,8 @@ function identityMarkup(document, state, suffix = 'visual', options = {}) {
     const progress = Math.min(100, Math.round((explored / explorable) * 100));
     const token = `${domToken(document.plantId)}-${domToken(suffix)}`;
     const showSearch = options.showSearch !== false;
-    return `<section class="pim-web-identity" aria-labelledby="pim-web-identity-title-${token}">
-        <div class="pim-web-identity-topline">
+    return `<section class="pim-web-identity" ${options.embedded ? 'aria-label="Search plant knowledge"' : `aria-labelledby="pim-web-identity-title-${token}"`}>
+        <div class="pim-web-identity-topline"${options.embedded ? ' hidden' : ''}>
         <button class="pim-web-centre" type="button" data-pim-centre aria-expanded="${state.centerOpen}" aria-controls="pim-web-sectors-${token}">
             <span class="pim-web-plant-visual">${identity.image ? `<img src="${attribute(identity.image)}" alt="${attribute(commonName)}" />` : '<span aria-hidden="true">🌿</span>'}</span>
             <span class="pim-web-identity-copy"><strong id="pim-web-identity-title-${token}">${escapeHtml(commonName)}</strong><em>${escapeHtml(scientificName)}</em><small>${escapeHtml(statement)}</small></span>
@@ -642,7 +642,7 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
         ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${knowledgeToolbar(source, current, renderOptions)}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading"><h1>Plant Information Mesh</h1><div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>
+        <header class="pim-web-heading">${options.embedded ? '<h2>Plant knowledge</h2>' : '<h1>Plant Information Mesh</h1>'}<div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>${renderOptions.editable ? `<aside class="v2-review-path"><strong>Grow this plant’s knowledge</strong><p>Bring in source material → review suggestions → save a draft → publish when ready. Local observations belong to a specimen and stay separate from species knowledge.</p><button type="button" data-pim-add-observation>Add a local observation</button></aside>` : ''}
         ${compassView}
         ${listView}
         ${detailMarkup(source, current, renderOptions)}
@@ -886,6 +886,10 @@ export function mountPlantInformationWeb(container, options = {}) {
         }
         if (button.matches('[data-pim-close-detail]')) {
             closeReading();
+            return;
+        }
+        if (button.matches('[data-pim-add-observation]')) {
+            commit({ ...state, editorMode: 'add', editorParentId: state.outlineBranchId || 'food-forest', editorNodeId: '', editorSeed: {templateId:'custom',informationType:'local_observation',knowledgeScope:'specimen',specimenId:options.specimenId || '',status:'draft'}, editorMessage:'Record what you observed here. Add a date and evidence when available.' }, '', false);
             return;
         }
         if (button.matches('[data-pim-add-parent-id]')) {
