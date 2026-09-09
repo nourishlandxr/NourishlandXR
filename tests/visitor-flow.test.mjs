@@ -548,7 +548,8 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /Finish demo/);
     assert.match(source, /spatialPosition\(null, matrix, 0\)/);
-    assert.doesNotMatch(source, /persistence|apiFetch|fetch\(/);
+    assert.doesNotMatch(source, /from ['"][^'"]*persistence|apiFetch|fetch\(/);
+    assert.match(source, /load:async\(\)=>record\.demoKnowledgeProfile/);
 });
 
 test('new location asks only for core details and supported templates', () => {

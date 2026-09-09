@@ -34,7 +34,7 @@ export async function startArNote(marker,profile,options={}) {
     if(!navigator.xr)throw new Error('WebXR is unavailable in this browser.');
     starting=true;
     let gl=null,renderer=null,spheres=null,texture=null,overlay=null,canvas=null,owned=null;
-    let positions=[],selected=-1,tracked=null,latestPose=null,returnAction=null;
+    let positions=[],selected=-1,tracked=null,returnAction=null;
     // Read-only session samples; persisted coordinates are never modified or inferred.
     const plants=(options.plants?.length ? options.plants : marker ? [{...marker,description:profile?.overview || marker.description}] : []).slice(0,5);
     const cleanup=()=>{
@@ -92,12 +92,11 @@ export async function startArNote(marker,profile,options={}) {
             const pose=xrFrame.getViewerPose(space);
             if(tracked!==Boolean(pose)){tracked=Boolean(pose);overlay.querySelector('[data-ar-tracking]').textContent=visitorTrackingCopy(tracked,plants.length);}
             if(!pose)return;
-            latestPose=pose;
             if(!positions.length)positions=readingPositions(pose,plants.length+2);
             const center=positions[Math.floor(plants.length/2)] || positions[0];
             renderARPanel(gl,xrFrame,space,texture,{program:renderer.program,buffer:renderer.buffer,position:[center.x,center.y+.4,center.z],width:.68,height:.42,
                 hidePanel:selected<0 && Boolean(owned.domOverlayState),
-                drawSpatialContent:view=>positions.forEach((position,index)=>drawSpatialOrb(gl,spheres,view,position,index===selected?.11:.075,{type:index<plants.length?'plant':'marker'}))});
+                drawSpatialContent:view=>positions.forEach((position,index)=>drawSpatialOrb(gl,spheres,view,position,index === selected ? .11 : .075,{type:index<plants.length?'plant':'marker'}))});
         };
         owned.requestAnimationFrame(frame);starting=false;
     } catch(error){recordArFailure(error,'Start');cleanup();if(owned)await owned.end().catch(()=>{});throw error;}

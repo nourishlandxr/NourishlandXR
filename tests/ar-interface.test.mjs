@@ -383,10 +383,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
     const pointerSource = read('app/services/placementPointer.js');
-    const taskbar = arSource.slice(
-        arSource.indexOf('<nav class="creator-ar-taskbar"'),
-        arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
-    );
+    const taskbar = read('app/services/creatorArControls.js');
     assert.match(arSource, /data-ar-add-plant/);
     assert.match(arSource, /data-ar-add-note/);
     assert.doesNotMatch(arSource, /data-ar-add-marker/);
@@ -432,12 +429,12 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.doesNotMatch(arSource, /data-ar-select-area/);
     assert.match(taskbar, /data-ar-view-mode/);
     assert.match(taskbar, /data-ar-select-mode/);
-    assert.match(taskbar, />PLAY<|>PLAY<\/span>/);
-    assert.match(taskbar, />EDIT<|>EDIT<\/span>/);
+    assert.match(taskbar, />View plants</);
+    assert.match(taskbar, />Inspect</);
     assert.doesNotMatch(taskbar, /data-ar-hold-mode|&#x270B;/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag|Organizer Folder/);
-    assert.equal((taskbar.match(/<button/g) || []).length, 6);
+    assert.equal((taskbar.slice(taskbar.indexOf('<nav class="creator-ar-taskbar"'),taskbar.indexOf('</nav>')).match(/<button/g) || []).length, 4);
     assert.doesNotMatch(styles, /creator-ar-quest-link-bar \.creator-ar-taskbar > button:nth-child/);
     assert.match(styles, /body\.creator-ar-quest-headset[\s\S]*\.creator-ar-taskbar > \[data-ar-view-mode\][\s\S]*display: none !important/);
     assert.doesNotMatch(styles, /data-ar-hold-mode/);
@@ -461,10 +458,8 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.doesNotMatch(arSource, /data-ar-ready-place|creator-ar-ready-placement|creator-ar-ready-ring/);
     assert.match(arSource, /launchedSession\.addEventListener\('select'/);
     assert.match(arSource, /data-ar-placement-capture/);
-    assert.match(arSource, /const bindTaskbarAction = \(selector, action\) =>/);
-    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-plant\]'/);
-    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-note\]'/);
-    assert.match(arSource, /bindTaskbarAction\('\[data-ar-add-special\]'/);
+    assert.match(arSource, /bindCreatorArControls\(overlayRoot/);
+    assert.match(read('app/services/creatorArControls.js'), /addEventListener\('click'/);
     assert.match(arSource, /addEventListener\('pointerup'/);
     assert.match(arSource, /event\.stopImmediatePropagation\(\)/);
     assert.doesNotMatch(arSource, /querySelector\('\.creator-ar-taskbar'\)\.addEventListener\('click'/);
@@ -780,10 +775,7 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
 test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard input', () => {
     const arSource = read('app/screens/arMode.js');
     const styles = read('app/style.css');
-    const taskbar = arSource.slice(
-        arSource.indexOf('<nav class="creator-ar-taskbar"'),
-        arSource.indexOf('</nav>', arSource.indexOf('<nav class="creator-ar-taskbar"'))
-    );
+    const taskbar = read('app/services/creatorArControls.js');
     assert.match(arSource, /targetRayMode|selectstart|selectend/);
     assert.match(arSource, /handedness === 'right'/);
     assert.match(arSource, /source\.targetRaySpace, source\.gripSpace/);
@@ -1051,7 +1043,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010; pointer-events:auto;/);
-    assert.doesNotMatch(source, /Dashboard|draggable-window/);
+    assert.doesNotMatch(source, /renderProjectDashboard|draggable-window/);
+    assert.match(source, /mountCreatorArKnowledge/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-stage \{ pointer-events: none;/);
     assert.match(styles, /\.tryit-exit[\s\S]*pointer-events: auto;/);
     assert.match(source, /label\.width = record\.demoType === 'zone' \? 720 : PIM_TEXTURE_SIZE\.width/);
@@ -1655,7 +1648,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     const dashboardSource = read('app/screens/projectDashboard.js');
     const styles = read('app/style.css');
     assert.match(arSource, /function hasPlantProfile\(record\)/);
-    assert.match(arSource, /resolvePlantPim\(profile,/);
+    assert.match(read('app/services/creatorArKnowledge.js'), /resolvePlantPim\(record\.plantProfile/);
     assert.match(arSource, /pimToArKnowledge\(document\)/);
     assert.doesNotMatch(arSource, /profile\.pim_categories/);
     assert.match(pigeonSource, /pimToArKnowledge\(PIGEON_PEA_PIM\)/);
@@ -1673,7 +1666,7 @@ test('Creator Plants use a compact encyclopedia file and collapsible AR informat
     assert.doesNotMatch(arSource, /tetherEndY|data-ar-plant-tether/);
     assert.match(arSource, /creator-ar-plant-profile is-anchored-profile/);
     assert.match(arSource, /return `\$\{markerLayer\}\$\{profileLayer\}`/);
-    assert.match(arSource, /scientificName: profile\.scientific_name \|\| ''/);
+    assert.match(read('app/services/creatorArKnowledge.js'), /scientificName: record\.plantProfile/);
     assert.doesNotMatch(arSource, /--profile-accent:\$\{markerAppearanceColor\(record\.marker\)\}/);
     assert.doesNotMatch(arSource, /creator-ar-plant-tether[\s\S]*<path/);
     assert.match(arSource, /const wasOpen = creatorPimState\(record\)\.expandedNodeIds\.has\(nodePath\)/);
@@ -2012,7 +2005,7 @@ test('Creator phone AR uses the Demo transparent PIM surface and short demo hold
     const canvasSource = read('app/services/plantInformationMeshCanvas.js');
     const styles = read('app/style.css');
     assert.match(creatorSource, /function usesSpatialPimRenderer\(\)/);
-    assert.match(creatorSource, /if \(!usesSpatialPimRenderer\(\) \|\| !homeSignProgram/);
+    assert.match(creatorSource, /creatorKnowledgeWorkspace \|\| !usesSpatialPimRenderer\(\) \|\| !homeSignProgram/);
     assert.match(creatorSource, /is-spatial-pim-hit-layer/);
     assert.match(creatorSource, /pimHoneycombTextureSize/);
     assert.match(demoSource, /function introWorldAnchorFromViewer\(matrix\)/);

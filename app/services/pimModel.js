@@ -569,6 +569,11 @@ export function pimToArKnowledge(document, options = {}) {
             primaryCategory: node.primaryCategory,
             knowledgeMode: node.knowledgeMode,
             informationType: node.informationType,
+            knowledgeScope: pimKnowledgeScope(node),
+            specimenId: node.specimenId,
+            observedAt: node.observedAt,
+            sourceIds: clone(node.sourceIds),
+            media: clone(node.media),
             evidenceStatus: node.evidenceStatus,
             status: node.status,
             attribution: node.attribution,
@@ -582,6 +587,8 @@ export function pimToArKnowledge(document, options = {}) {
         title: source.identity.commonName || source.identity.scientificName || source.plantId,
         scientificName: source.identity.scientificName,
         identityStatement: source.identity.identityStatement,
+        sources: clone(source.sources || []),
+        customCategories: source.nodes.filter(node => !node.parentId && !PIM_COMPASS.some(compass => compass.id === node.id)).map(node => projectNode(node, 'core')),
         categories: PIM_COMPASS.map(compass => projectNode(pimNodeById(source, compass.id), 'core'))
     };
 }

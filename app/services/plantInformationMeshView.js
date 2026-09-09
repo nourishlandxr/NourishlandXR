@@ -1,5 +1,6 @@
 import {
     pimLayoutMetrics,
+    pimReaderControl,
     pimNodeChildren,
     pimNodeHue,
     pimViewportSafeArea,
@@ -557,6 +558,8 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
     const handleLabel = options.handleLabel || `Drag the ${label(source.title)} Plant Information Mesh`;
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
     const core = `<span class="plant-knowledge-core" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><span class="plant-knowledge-core-copy"><strong>${escapeHtml(source.title)}</strong></span></span>`;
+    const box=pimReaderControl(nodes,{layoutWidth:metrics.layoutWidth,layoutHeight:metrics.layoutHeight});
+    const reader=options.readerControl ? `<button type="button" data-pim-read-all class="pim-spatial-read-all" style="position:absolute;left:${box.left}%;top:${box.top}%;width:${box.width}%;height:${box.height}%">All topics · read & edit</button>` : '';
     const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
-    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}</span>`;
+    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
 }

@@ -3,7 +3,9 @@ export const QUEST_SPATIAL_BELT_ACTIONS = Object.freeze([
     Object.freeze({ id: 'note', label: 'NOTE', symbol: '\u270E', color: '#8a654d' }),
     Object.freeze({ id: 'special', label: 'TOTEM', symbol: '\u2316', color: '#8c7544' }),
     // WEB HUB opens one mirrored Project Dashboard surface in Q3.
-    Object.freeze({ id: 'web', label: 'HUB', symbol: '\u25A6', color: '#3973a2' })
+    Object.freeze({ id: 'web', label: 'WORKSPACE', symbol: '\u25A6', color: '#61766c' }),
+    Object.freeze({ id: 'knowledge', label: 'KNOWLEDGE', symbol: '\u2B21', color: '#70866b' }),
+    Object.freeze({ id: 'exit', label: 'EXIT AR', symbol: '\u21A9', color: '#6f7166' })
 ]);
 
 export const QUEST_SPECIAL_PALETTE_ACTIONS = Object.freeze([

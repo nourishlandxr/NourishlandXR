@@ -20,8 +20,8 @@ test('Quest spatial belt stays in one uniform waist-level tray in front of the v
     ]);
     const layout = questSpatialBeltLayout(viewer);
     assert.equal(layout.length, QUEST_SPATIAL_BELT_ACTIONS.length);
-    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.id), ['plant', 'note', 'special', 'web']);
-    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.label), ['PLANT', 'NOTE', 'TOTEM', 'HUB']);
+    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.id), ['plant', 'note', 'special', 'web', 'knowledge', 'exit']);
+    assert.deepEqual(QUEST_SPATIAL_BELT_ACTIONS.map(action => action.label), ['PLANT', 'NOTE', 'TOTEM', 'WORKSPACE', 'KNOWLEDGE', 'EXIT AR']);
     assert.equal(layout[1].id, 'note');
     assert.equal(layout[1].faceUp, .72);
     assert.ok(Math.abs(layout[1].position.y - 1.02) < .002);

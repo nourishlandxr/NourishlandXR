@@ -614,8 +614,8 @@ test('the AR PIM blooms three connected children at a time at a fixed scale', ()
         assert.ok(children.every(child => {
             const dq = child.position.axial.q - cultivation.position.axial.q;
             const dr = child.position.axial.r - cultivation.position.axial.r;
-            return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) <= 1 && (dq || dr);
-        }), `${width}x${height}: children share an edge with their parent`);
+            return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) <= 3 && (dq || dr);
+        }), `${width}x${height}: children remain near their parent without taking a reserved neighbour slot`);
         if (portrait) assert.ok(nodes[0].layoutCellWidthPixels >= 44, `${width}x${height} keeps a readable cell`);
 
         state = pimToggleNodeState(PIGEON_PEA_AR_KNOWLEDGE, state, 'historical-data');

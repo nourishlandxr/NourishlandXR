@@ -21,6 +21,8 @@ import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pi
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
+import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
+import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
@@ -28,6 +30,8 @@ import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
 import { plantInformationMeshSurfaceLayout } from '../services/plantInformationMeshSurfaceLayout.js';
 
+let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=null, demoKnowledgePanel=null;
+let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
 let sessionMode = 'immersive-ar';
@@ -242,7 +246,7 @@ const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA
     title: 'Moringa Tree',
     scientificName: 'Moringa oleifera'
 })));
-const knowledgeFor = record => record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE;
+const knowledgeFor = record => record.demoKnowledgeProjection || (record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE);
 const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
 function demoPimSurfaceSize(record) {
     return pimHoneycombTextureSize(knowledgeFor(record), demoPimExpandedNodeIds(record), {
@@ -267,6 +271,7 @@ const NOTE_TEMPLATES = Object.freeze({
 const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
+    closeDemoKnowledge(true);
     releaseArScreenRotation();
     hitTestSource?.cancel?.();
     hitTestSource = null;
@@ -448,28 +453,7 @@ function closeDemoVirtualTag(record) {
 }
 
 function openDemoVirtualTag(record) {
-    const webMode = appRoot?.querySelector('[data-demo-virtual-tag]');
-    if (!webMode || demoWebModeOpen) return;
-    demoWebModeOpen = true;
-    placementReady = false;
-    suppressSessionSelectUntil = Number.POSITIVE_INFINITY;
-    hideGuidedChoice({ hideBoard: true });
-    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.WEB_MODE);
-    appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden', '');
-    appRoot?.querySelector('.tryit-demo')?.classList.add('is-web-mode');
-    const stage = appRoot?.querySelector('.tryit-stage');
-    if (stage) {
-        stage.inert = true;
-        stage.setAttribute('aria-hidden', 'true');
-    }
-    webMode.innerHTML = virtualTagProfileMarkup();
-    webMode.hidden = false;
-    demoPimWebController = mountPlantInformationWeb(webMode.querySelector('[data-demo-pim-web-mount]'), {
-        document: PIGEON_PEA_PIM,
-        editable: false
-    });
-    webMode.querySelector('[data-demo-close-web-mode]')?.addEventListener('click', () => closeDemoVirtualTag(record));
-    setGuide('Web Mode is showing the complete Pigeon Pea Plant Profile.');
+    openDemoKnowledge(record);
 }
 
 function advancePastVirtualTag(record) {
@@ -1332,6 +1316,7 @@ function renderSimulatedTotem(record, index, anchor) {
 }
 
 function toggleDemoPlantProfile(record) {
+    if(demoKnowledgeWorkspace) return;
     if (!record || record.demoType !== 'plant') return;
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
@@ -1348,7 +1333,7 @@ function toggleDemoPlantProfile(record) {
             record.demoProfileInteracted = false;
             record.demoProfileInteractionCount = 0;
         }
-        record.informationPose = plantInformationPose(record);
+        record.informationPose ||= plantInformationPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition || null;
         // Establish the compact tutorial board before sizing the canonical
         // mesh so its first frame already respects the true top safe inset.
@@ -1412,6 +1397,7 @@ function selectDemoProfileCell() {
         setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
         return false;
     }
+    if (node.pimRead) {openDemoKnowledge(record);return true;}
     if (node.pimCore) {
         setDemoPimState(record, pimResetInteractionState(demoPimState(record)));
         record.demoActiveBranch = '';
@@ -1430,7 +1416,7 @@ function selectDemoProfileCell() {
     if (!pimNodeChildren(node).length) {
         setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
         refreshDemoPimProfile(record);
-        setGuide(`${node.label}: ${node.value || 'Information cell'}`);
+        openDemoKnowledge(record,node.path);
         return true;
     }
     const wasOpen = demoPimState(record).expandedNodeIds.has(node.path);
@@ -1752,6 +1738,7 @@ function bindSimulatedInformationPanels(layer) {
             if (pimTarget(event)) event.stopPropagation();
         });
         profile.addEventListener('click', event => {
+            if(event.target.closest('[data-pim-read-all]')) {event.stopPropagation();openDemoKnowledge(record);return;}
             const core = event.target.closest?.('[data-pim-role="center"]');
             if (core && profile.contains(core)) {
                 event.stopPropagation();
@@ -1780,6 +1767,7 @@ function bindSimulatedInformationPanels(layer) {
             const node = pimNodeAtPath(knowledgeFor(record), nodePath);
             const cellLabel = cell.querySelector('b')?.textContent || 'Cell';
             if (!node || !pimNodeChildren(node).length) {
+                if(node) openDemoKnowledge(record,nodePath);
                 setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), nodePath));
                 refreshDemoPimProfile(record, profile);
                 setGuide(`${cellLabel}: ${node?.value || 'Information cell'}`);
@@ -2089,7 +2077,7 @@ function releaseHeldDemoRecord() {
 function plantInformationPosition(record) {
     if (record?.informationPose?.position) return record.informationPose.position;
     if (viewerMatrix) {
-        record.informationPose = plantInformationPose(record);
+        record.informationPose ||= plantInformationPose(record);
         if (record.informationPose?.position) return record.informationPose.position;
     }
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
@@ -2187,6 +2175,49 @@ function pressPlacementPointer(event) {
         pointerPressTimer = null;
         placeMarker();
     }, 360);
+}
+
+function closeDemoKnowledge(force=false) {
+    if(!demoKnowledgeWorkspace) return;
+    if(!force) {demoKnowledgeWorkspace.close();return;}
+    demoKnowledgeMirror?.destroy();demoKnowledgeMirror=null;demoKnowledgePanel=null;
+    demoKnowledgeWorkspace.destroy();demoKnowledgeWorkspace=null;demoKnowledgeRoot?.remove();demoKnowledgeRoot=null;
+    const stage=appRoot?.querySelector('.tryit-stage'); if(stage) stage.inert=false;
+    suppressSessionSelectUntil=performance.now()+350;
+}
+
+function openDemoKnowledge(record,path='') {
+    if(demoKnowledgeWorkspace || demoWebModeOpen || placementReady) return;
+    const profile=record.demoKnowledgeProfile || (record.demoPlantPreset==='moringa' ? structuredClone(MORINGA_PROFILE) : {common_name:'Pigeon Pea',pim_document:structuredClone(PIGEON_PEA_PIM)});
+    record.demoKnowledgeProfile=profile;
+    const proxy={marker:{id:record.id || record.demoPlantPreset || 'pigeon-pea',name:record.name || profile.common_name},plantProfile:profile,areaName:'Try It Now · changes stay in this demo',arKnowledgeState:record.arKnowledgeState};
+    const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
+    const stage=appRoot.querySelector('.tryit-stage');if(stage) stage.inert=true;
+    demoKnowledgeWorkspace=mountCreatorArKnowledge(root,{
+        record:proxy,context:['demo','session','practice',proxy.marker.id],path,
+        persistence:{load:async()=>record.demoKnowledgeProfile,save:async(...args)=>{record.demoKnowledgeProfile=args.at(-1);}},
+        onSaved:profile=>{record.demoKnowledgeProfile=profile;record.demoKnowledgeProjection=pimToArKnowledge(resolvePlantPim(profile));refreshDemoPimProfile(record);},
+        onClose:()=>{record.arKnowledgeState=demoKnowledgeWorkspace.controller.getState();closeDemoKnowledge(true);}
+    });
+    if(session && !domOverlayEnabled && gl) {
+        demoKnowledgePanel=spatialDashboardPanelFromViewer(viewerMatrix,{width:1.18,height:1.02});
+        demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:960,height:830,title:'DEMO · PLANT KNOWLEDGE',onStatus:setGuide,onError:error=>setGuide(error.message)});
+    }
+}
+
+function drawDemoKnowledge(view) {
+    if(!demoKnowledgeMirror || !demoKnowledgePanel) return;
+    const model=spatialDashboardPanelMatrix(demoKnowledgePanel);
+    // Existing demo quad spans ±.20 by ±.08 and has top-down texture UVs.
+    for(let i=0;i<4;i++){model[i]*=5;model[4+i]*=-12.5;}
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
+    gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+    gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,demoKnowledgeMirror.texture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),1);
+    gl.disable(gl.CULL_FACE);gl.drawArrays(gl.TRIANGLES,0,6);
+    const axes=demoControllerInputSource()?.gamepad?.axes || [];const vertical=axes[3] ?? axes[1] ?? 0;
+    if(Math.abs(vertical)>.4 && performance.now()-demoKnowledgeScrollAt>150){demoKnowledgeMirror.scrollBy(vertical*120);demoKnowledgeScrollAt=performance.now();}
 }
 
 function renderInterface(simulated) {
@@ -3035,6 +3066,7 @@ function drawMarker(view) {
                 record.pimBloomStarted = 0;
             }
         }
+        if(demoKnowledgeWorkspace && record.demoType === 'plant' && record.demoExpanded) return;
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
         if (orbOnly) return;
@@ -3158,6 +3190,7 @@ async function startImmersive() {
         }
         setupRenderer();
         session.addEventListener('select', () => {
+            if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
             if (placementReady) return pressPlacementPointer();
@@ -3172,6 +3205,7 @@ async function startImmersive() {
             selectGuidedDemoOrb();
         });
         session.addEventListener('selectstart', () => {
+            if(demoKnowledgeWorkspace) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (placementReady) return;
             const actionTarget = demoRecordAtPointer()?.record;
@@ -3200,7 +3234,7 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
-            updateHeldDemoRecordPosition();
+            if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
@@ -3212,6 +3246,7 @@ async function startImmersive() {
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawMarker(view);
+                drawDemoKnowledge(view);
             }
             gl.disable(gl.SCISSOR_TEST);
         };

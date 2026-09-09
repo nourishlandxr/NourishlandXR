@@ -220,7 +220,7 @@ export function createSpatialDashboardMirror(options = {}) {
         context.font = '500 25px system-ui, sans-serif';
         context.fillText(detail, 64, 140);
     };
-    paintStatus('PROJECT DASHBOARD', 'Loading dashboard...');
+    paintStatus(options.title || 'PROJECT DASHBOARD', 'Opening workspace…');
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
 
     const originalStyle = root.getAttribute('style');

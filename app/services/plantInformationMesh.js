@@ -65,7 +65,10 @@ export const PIM_CHILD_SCALE = .7;
 export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
     safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
     layoutWidth: 1440,
-    layoutHeight: 1080
+    layoutHeight: 1080,
+    readerControl: true,
+    compactLabels: true,
+    softSurface: true
 });
 
 const PIM_DEFAULT_SAFE_AREA = Object.freeze({ left: 6, right: 94, top: 6, bottom: 94 });
@@ -649,6 +652,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     const metrics = pimLayoutMetrics(options);
     const layoutRecords = [];
     let order = 0;
+    const visited = new Set();
 
     const makeRecord = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
         const cellScale = depth > 0 ? PIM_CHILD_SCALE : 1;
@@ -675,13 +679,15 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         return record;
     };
 
-    const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount) => {
+    const visit = (node, depth, rootDirection, parentRecord, childIndex, childCount, visible = true) => {
+        if (visited.has(node.path) || depth > 100) return;
+        visited.add(node.path);
         const record = makeRecord(node, depth, rootDirection, parentRecord, childIndex, childCount);
+        record._visible = visible;
         const children = options.includeAllChildren ? pimNodeChildren({ ...node, depth }) : pimArVisibleChildren({ ...node, depth });
         const open = expanded.has(node.path) || selectedAncestors.has(node.path);
-        if (open && children.length) {
-            children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length));
-        }
+        // Reserve slots for closed branches too: opening a sibling cannot move existing cells.
+        children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length, visible && open));
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
@@ -696,25 +702,46 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         record.position = layoutPosition(record.layoutGrid, metrics);
     });
     const closedFlowerBounds = rawBounds(layoutRecords.filter(record => record.depth === 0), options);
+    const occupied = new Set(['0,0', ...layoutRecords.filter(record => !record.depth).map(record => `${record.layoutGrid.x},${record.layoutGrid.y}`)]);
     layoutRecords
         .filter(record => record.depth > 0)
         .sort((left, right) => left.depth - right.depth || left._pimOrder - right._pimOrder)
         .forEach(record => {
             const parent = byPath.get(record._pimParentPath);
             placePimRecord(record, parent, metrics);
+            const preferred = record.layoutGrid;
+            let chosen = preferred;
+            // Unique axial cells guarantee disjoint hexagon interiors. Search a deterministic
+            // nearest ring, favouring the authored outward direction, rather than reusing a slot.
+            for (let radius = 0; occupied.has(`${chosen.x},${chosen.y}`); radius++) {
+                const candidates = [];
+                for (let q = -radius-1; q <= radius+1; q++) for (let t = -radius-1; t <= radius+1; t++) {
+                    if(Math.max(Math.abs(q),Math.abs(t),Math.abs(q+t)) !== radius+1) continue;
+                    const candidate={x:preferred.x+q,y:preferred.y+t};
+                    if(!occupied.has(`${candidate.x},${candidate.y}`)) candidates.push(candidate);
+                }
+                const direction = axialVisual(DIRECTION_AXIAL[record.rootDirection]);
+                candidates.sort((a,b)=> {
+                    const av=axialVisual({q:a.x,r:a.y}),bv=axialVisual({q:b.x,r:b.y});
+                    return (bv.x*direction.x+bv.y*direction.y)-(av.x*direction.x+av.y*direction.y) || a.x-b.x || a.y-b.y;
+                });
+                if(candidates.length) chosen=candidates[0];
+            }
+            occupied.add(`${chosen.x},${chosen.y}`);
+            record.layoutGrid=chosen; record.fixedPosition=layoutPosition(chosen,metrics); record.position={...record.fixedPosition};
         });
     layoutRecords.forEach(record => {
         const parent = byPath.get(record._pimParentPath);
         record.parentPosition = parent?.position || corePosition;
     });
 
-    return pimCorrectVisibleNodeBounds(layoutRecords, {
+    return pimCorrectVisibleNodeBounds(layoutRecords.filter(record => record._visible), {
         ...options,
         fixedLayoutBounds: closedFlowerBounds
     })
         .sort((left, right) => left._pimOrder - right._pimOrder)
         .map(record => {
-            const { _pimOrder, _pimParentPath, ...publicRecord } = record;
+            const { _pimOrder, _pimParentPath, _visible, ...publicRecord } = record;
             return publicRecord;
         });
 }
@@ -882,4 +909,11 @@ export function pimSpatialPanel(pose, options = {}) {
         width: (Number(options.width) || PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres) * scale,
         height: (Number(options.height) || PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres) * scale
     };
+}
+
+// Shared bounds for the visible button and its DOM/controller hit target.
+export function pimReaderControl(nodes, options = {}) {
+    const width=Number(options.layoutWidth) || 1440, height=Number(options.layoutHeight) || 1080;
+    const bounds=pimVisibleNodeBounds(nodes);
+    return {left:50-180/width*100,top:bounds.bottom+12/height*100,width:360/width*100,height:56/height*100};
 }

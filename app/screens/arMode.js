@@ -30,6 +30,8 @@ import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialD
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
+import { mountCreatorArKnowledge, creatorKnowledgeDocument } from '../services/creatorArKnowledge.js';
+import { creatorArControlsMarkup, bindCreatorArControls } from '../services/creatorArControls.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
@@ -104,6 +106,11 @@ let questSpatialDashboardHit = null;
 let questSpatialDashboardScrollCooldownUntil = 0;
 let questNoteTextures = new Map();
 let spatialPimTextures = new Map();
+let creatorKnowledgeWorkspace = null;
+let creatorKnowledgeRecord = null;
+let creatorKnowledgeRoot = null;
+let creatorKnowledgeReturnFocus = null;
+const creatorKnowledgeCache = new WeakMap();
 let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
 let prismRenderer = null;
@@ -640,20 +647,67 @@ function hasPlantProfile(record) {
 }
 
 function creatorPlantKnowledge(record) {
-    const marker = record?.marker || {};
-    const profile = record?.plantProfile || marker.plant_profile || {};
-    const commonName = profile.common_name || marker.name || 'Plant Profile';
-    const plantId = marker.plantId || marker.id || profile.plant_id || commonName;
-    const document = resolvePlantPim(profile, {
-        id: plantId,
-        plantId,
-        name: commonName,
-        commonName,
-        title: commonName,
-        scientificName: profile.scientific_name || '',
-        image: profile.photo || profile.image || ''
+    const profile = record.plantProfile || record.marker?.plant_profile;
+    const cached = creatorKnowledgeCache.get(record);
+    if (cached?.profile === profile && cached?.name === record.marker.name) return cached.knowledge;
+    const document = creatorKnowledgeDocument(record);
+    const knowledge = pimToArKnowledge(document);
+    creatorKnowledgeCache.set(record, {profile, name:record.marker.name, knowledge});
+    return knowledge;
+}
+
+function selectedKnowledgeRecord() {
+    return sessionMarkers.find(record => record.profileExpanded && record.marker.type === 'plant')
+        || (contextToolbarRecord?.marker.type === 'plant' ? contextToolbarRecord : null);
+}
+
+function updateKnowledgeControls() {
+    const record = selectedKnowledgeRecord();
+    const context = overlayRoot?.querySelector('[data-ar-knowledge-context]');
+    if (context) {
+        context.hidden = !record?.profileExpanded || Boolean(creatorKnowledgeWorkspace);
+        context.querySelector('[data-ar-knowledge-label]').textContent = record ? `${record.marker.name} · ${record.areaName || 'This specimen'}` : '';
+    }
+    const open = overlayRoot?.querySelector('[data-ar-knowledge-open]');
+    if (open) open.disabled = !record;
+}
+
+function closeCreatorKnowledge({force = false} = {}) {
+    if (!creatorKnowledgeWorkspace) return true;
+    if (!force) return creatorKnowledgeWorkspace.close();
+    creatorKnowledgeWorkspace.destroy(); creatorKnowledgeWorkspace = null;
+    closeQuestSpatialWebPanel();
+    creatorKnowledgeRoot?.remove(); creatorKnowledgeRoot = null;
+    creatorKnowledgeRecord = null;
+    overlayRoot?.classList.remove('has-creator-knowledge');
+    updateKnowledgeControls();
+    creatorKnowledgeReturnFocus?.isConnected && creatorKnowledgeReturnFocus.focus({preventScroll:true});
+    return true;
+}
+
+function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', observation = false} = {}) {
+    if (!record || !overlayRoot || readyPlacementType || dragState) return;
+    if (creatorKnowledgeWorkspace) { creatorKnowledgeWorkspace.close(); return; }
+    placementArmGeneration += 1;
+    closeQuestSpatialWebPanel(); closeMarkerContextToolbar(); closePlacePicker(); clearMarkerHoldGesture();
+    creatorKnowledgeReturnFocus = document.activeElement;
+    creatorKnowledgeRecord = record;
+    const owner = session;
+    const root = document.createElement('section'); creatorKnowledgeRoot = root;
+    overlayRoot.append(root); overlayRoot.classList.add('has-creator-knowledge');
+    creatorKnowledgeWorkspace = mountCreatorArKnowledge(root, {
+        record, context:[activeProjectId, activeSiteId, record.areaId || activeAreaId, record.marker.id], path, observation,
+        onClose:()=>closeCreatorKnowledge({force:true}),
+        onSaved:()=>{ creatorKnowledgeCache.delete(record); invalidateSpatialPimTexture(record); if(session===owner) renderSessionMarkers(); }
     });
-    return pimToArKnowledge(document);
+    if (questHeadsetSession && gl) {
+        questSpatialWebVisible = true;
+        questSpatialDashboardPanel = spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix, {width:1.18,height:1.02});
+        questSpatialDashboardMirror = createSpatialDashboardMirror({ gl, root, width:960,height:830,
+            title:'PLANT KNOWLEDGE', onStatus:setPlacementStatus,
+            onError:error=>setPlacementStatus(`Knowledge panel: ${error.message}`) });
+    }
+    updateKnowledgeControls();
 }
 
 function creatorPimState(record) {
@@ -972,6 +1026,9 @@ async function openContextInWebMode() {
 
 function updateReadyPlacementControl() {
     overlayRoot?.classList.toggle('is-placement-armed', Boolean(readyPlacementType));
+    const placementActions=overlayRoot?.querySelector('[data-ar-placement-actions]');
+    if(placementActions){placementActions.hidden=!readyPlacementType;placementActions.querySelector('[data-ar-placement-name]').textContent=readyPlacementType ? `Place ${readyPlacementLabel(readyPlacementType)}` : '';}
+    updateKnowledgeControls();
     overlayRoot?.querySelector('[data-ar-add-plant]')?.classList.toggle('is-active', readyPlacementType === 'plant');
     overlayRoot?.querySelector('[data-ar-add-note]')?.classList.toggle('is-active', readyPlacementType === 'note');
     if (!readyPlacementType && !interactionMode) {
@@ -1415,6 +1472,7 @@ async function openQuestSpatialWebPanel() {
 // `web-area:${activeAreaId}` : 'webhub'
 
 function openSpatialWebWindow() {
+    if (creatorKnowledgeWorkspace) { creatorKnowledgeWorkspace.close(); return; }
     const selectedRecord = contextToolbarRecord && sessionMarkers.includes(contextToolbarRecord)
         ? contextToolbarRecord
         : null;
@@ -1542,7 +1600,7 @@ function cycleControllerAction(direction) {
 }
 
 function dispatchControllerAction(button) {
-    if (!button) return;
+    if (!button || button.disabled) return;
     button.click();
     const event = new Event('pointerup', { bubbles: true, cancelable: true });
     Object.defineProperty(event, 'button', { value: 0 });
@@ -1587,7 +1645,7 @@ function usesSpatialPimRenderer() {
 
 function questBeltActionElements() {
     const buttons = new Map(
-        [...(overlayRoot?.querySelectorAll('.creator-ar-taskbar > button:not([disabled])') || [])]
+        [...(overlayRoot?.querySelectorAll('[data-quest-ar-action]') || [])]
             .filter(button => !button.hidden)
             .map(button => [button.dataset.questArAction, button])
     );
@@ -3006,7 +3064,7 @@ function ensureQuestNoteTexture(marker) {
         markerNoteSurface(marker)
     ]);
     const cached = questNoteTextures.get(marker.id);
-    if (cached?.key === key) return cached.texture;
+    if (cached?.key === key && cached.knowledge === knowledge) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const texture = createQuestNoteTexture(marker);
     if (texture) questNoteTextures.set(marker.id, { key, texture });
@@ -3094,7 +3152,8 @@ function spatialAnchorForRecord(record, context = null) {
 function ensureSpatialPimTexture(record) {
     if (!gl || !record?.profileExpanded) return null;
     const knowledge = creatorPlantKnowledge(record);
-    const elapsed = record.pimBloomStarted ? performance.now() - record.pimBloomStarted : PIM_BLOOM_DURATION_MS;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const elapsed = record.pimBloomStarted && !reduceMotion ? performance.now() - record.pimBloomStarted : PIM_BLOOM_DURATION_MS;
     const bloomProgress = Math.max(0, Math.min(1, elapsed / PIM_BLOOM_DURATION_MS));
     if (bloomProgress >= 1) {
         record.pimBloomStarted = 0;
@@ -3103,9 +3162,9 @@ function ensureSpatialPimTexture(record) {
     const closingPaths = record.pimClosingNodePaths || [];
     const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
     const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
-    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame, knowledge.categories]);
+    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame]);
     const cached = spatialPimTextures.get(record.marker.id);
-    if (cached?.key === key) return cached.texture;
+    if (cached?.key === key && cached.knowledge === knowledge) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const size = spatialPimSurfaceSize(record);
     const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
@@ -3114,17 +3173,17 @@ function ensureSpatialPimTexture(record) {
         height: size.height,
         layoutWidth: size.layoutWidth,
         layoutHeight: size.layoutHeight,
-        hoverPath,
+        hoverPath, compactLabels:true, softSurface:true,
         selectedNodeId: record.pimSelectedNodeId,
         bloomProgress,
         closingPaths
     });
-    if (texture) spatialPimTextures.set(record.marker.id, { key, texture });
+    if (texture) spatialPimTextures.set(record.marker.id, { key, texture, knowledge });
     return texture;
 }
 
 function spatialPimTargetAtAim({ updateHover = true } = {}) {
-    if (!questBeltUsesSpatialRenderer() || !latestControllerRay) return null;
+    if (creatorKnowledgeWorkspace || !questBeltUsesSpatialRenderer() || !latestControllerRay) return null;
     const candidate = renderableAreaMarkers()
         .filter(record => record.marker.type === 'plant' && record.profileExpanded)
         .map(record => {
@@ -3175,6 +3234,7 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
 function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
     if (!candidate) return false;
     const { record, target } = candidate;
+    if(target.pimRead) {openCreatorKnowledge(record);return true;}
     if (target.pimCore) {
         setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
         record.pimBloomStarted = 0;
@@ -3196,7 +3256,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
         setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), target.path));
         invalidateSpatialPimTexture(record);
         renderSessionMarkers();
-        setPlacementStatus(`${target.label}: ${target.value || 'Information cell'}`);
+        openCreatorKnowledge(record, {path: target.path});
         return true;
     }
     const wasOpen = creatorPimState(record).expandedNodeIds.has(target.path);
@@ -3209,7 +3269,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
 }
 
 function drawSpatialPlantProfiles(view) {
-    if (!usesSpatialPimRenderer() || !homeSignProgram || !homeSignBuffer) return;
+    if (creatorKnowledgeWorkspace || !usesSpatialPimRenderer() || !homeSignProgram || !homeSignBuffer) return;
     const records = renderableAreaMarkers().filter(record => record.marker.type === 'plant' && record.profileExpanded);
     if (!records.length) return;
     gl.enable(gl.DEPTH_TEST);
@@ -4069,6 +4129,7 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
 }
 
 function renderSessionMarkers() {
+    updateKnowledgeControls();
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
     const visibleMarkers = activeAreaMarkers();
@@ -4125,6 +4186,7 @@ function renderSessionMarkers() {
             if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
         });
         profilePanel?.addEventListener('click', event => {
+            if(event.target.closest('[data-pim-read-all]')) {event.stopPropagation();openCreatorKnowledge(record);return;}
             const clearPimFocus = target => {
                 if (target && profilePanel.contains(target)) target.blur?.();
             };
@@ -4159,7 +4221,7 @@ function renderSessionMarkers() {
             if (!pimNodeChildren(node).length) {
                 setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), nodePath));
                 refreshCreatorPimProfile(record, profilePanel);
-                setPlacementStatus(`${node.label}: ${node.value || 'Information cell'}`);
+                openCreatorKnowledge(record, {path: node.path});
                 return;
             }
             const wasOpen = creatorPimState(record).expandedNodeIds.has(nodePath);
@@ -4367,6 +4429,7 @@ function openInlineEditor(record, force = false) {
 }
 
 function beginMarkerInteraction(record, event, { directHold = false, element = event.currentTarget } = {}) {
+    if (creatorKnowledgeWorkspace) return;
     if (hasPlantProfile(record) && !directHold) {
         event.preventDefault();
         event.stopPropagation();
@@ -4380,7 +4443,7 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
         record.profileExpanded = opening;
         record.infoVisible = record.profileExpanded;
         if (opening) {
-            ensureSpatialPimPose(record, true);
+            ensureSpatialPimPose(record);
             record.pimExpandedNodeIds ||= [...(record.pimExpandedPaths || [])];
             record.pimExpandedPaths ||= [...record.pimExpandedNodeIds];
             record.pimBloomStarted = performance.now();
@@ -5142,14 +5205,7 @@ function createOverlay() {
           <section class="creator-ar-area-chooser" data-ar-area-chooser hidden></section>
           <section class="creator-ar-place-picker" data-ar-place-picker aria-label="Marker type" hidden></section>
           <nav class="creator-ar-context-toolbar" data-ar-context-toolbar hidden></nav>
-          <nav class="creator-ar-taskbar" aria-label="AR placement controls">
-            <button class="creator-ar-add-marker creator-ar-add-plant" type="button" data-quest-ar-action="plant" data-ar-add-plant aria-label="Add Plant"><strong>+ 🌱</strong><span class="sr-only">Plant</span></button>
-            <button class="creator-ar-add-marker creator-ar-add-note" type="button" data-quest-ar-action="note" data-ar-add-note aria-label="Add Note"><strong>+ ✎</strong><span class="sr-only">Note</span></button>
-            <button class="creator-ar-special-marker" type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Open Totem tools"><strong>+ TOTEM</strong></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-view-mode aria-label="PLAY mode: view markers and open information" aria-pressed="false"><b class="creator-ar-view-icon" aria-hidden="true"></b><span>PLAY</span></button>
-            <button class="creator-ar-mode-control" type="button" data-ar-select-mode aria-label="EDIT mode: select markers and open edit tools" aria-pressed="false"><b aria-hidden="true">&#x270E;</b><span>EDIT</span></button>
-            <button type="button" data-quest-ar-action="web" data-ar-web-return aria-label="Open project Hub"><b aria-hidden="true">&#x23CE;</b><span>HUB</span></button>
-          </nav>
+          ${creatorArControlsMarkup()}
         </div>`;
 
     const armDirectPlacement = type => {
@@ -5168,21 +5224,21 @@ function createOverlay() {
         closePlacePicker();
         void armPlacement(type);
     };
-    const bindTaskbarAction = (selector, action) => {
-        overlayRoot.querySelector(selector).addEventListener('pointerup', event => {
-            if (event.button != null && event.button !== 0) return;
-            event.preventDefault();
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-            action();
-        });
-    };
-    bindTaskbarAction('[data-ar-add-plant]', () => armDirectPlacement('plant'));
-    bindTaskbarAction('[data-ar-add-note]', () => armDirectPlacement('note'));
-    bindTaskbarAction('[data-ar-add-special]', () => void openSpecialMarkerPicker());
-    bindTaskbarAction('[data-ar-view-mode]', () => setInteractionMode('view'));
-    bindTaskbarAction('[data-ar-select-mode]', () => setInteractionMode('select'));
-    bindTaskbarAction('[data-ar-web-return]', openSpatialWebWindow);
+    bindCreatorArControls(overlayRoot, {
+        '[data-ar-add-plant]':()=>armDirectPlacement('plant'),
+        '[data-ar-add-note]':()=>armDirectPlacement('note'),
+        '[data-ar-add-special]':()=>void openSpecialMarkerPicker(),
+        '[data-ar-view-mode]':()=>setInteractionMode('view'),
+        '[data-ar-select-mode]':()=>setInteractionMode('select'),
+        '[data-ar-web-return]':openSpatialWebWindow,
+        '[data-ar-knowledge-open]':()=>openCreatorKnowledge(),
+        '[data-ar-read-branch]':()=>{const record=selectedKnowledgeRecord(); openCreatorKnowledge(record,{path:record?.pimSelectedNodeId || ''});},
+        '[data-ar-observe]':()=>openCreatorKnowledge(selectedKnowledgeRecord(),{observation:true}),
+        '[data-ar-close-knowledge]':()=>{const record=selectedKnowledgeRecord(); if(record){record.profileExpanded=false;record.infoVisible=false;invalidateSpatialPimTexture(record);renderSessionMarkers();}},
+        '[data-ar-exit-session]':()=>{if(creatorKnowledgeWorkspace){creatorKnowledgeWorkspace.close();return;} exitArMode();},
+        '[data-ar-confirm-place]':()=>{if(readyPlacementType) void quickPlace(readyPlacementType);},
+        '[data-ar-cancel-place]':()=>{placementArmGeneration+=1;readyPlacementType='';readySpecialMarker=null;pendingBagRecord=null;pendingPlacementAppearance=null;pendingPlacementDetails=null;updateReadyPlacementControl();setPlacementStatus('Placement cancelled.');}
+    });
     overlayRoot.querySelector('[data-ar-safety-help]')?.addEventListener('click', () => showArSafetyDialog(overlayRoot));
     overlayRoot.querySelector('[data-ar-open-area-lens]')?.addEventListener('pointerup', event => {
         event.preventDefault();
@@ -5215,6 +5271,7 @@ function createOverlay() {
 }
 
 function cleanup() {
+    closeCreatorKnowledge({force:true});
     creatorViewportCleanup?.();
     releaseArScreenRotation();
     clearControllerMarkerPress();

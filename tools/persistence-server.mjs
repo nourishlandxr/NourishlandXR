@@ -1380,7 +1380,11 @@ function handleApi(req, res) {
         const [ , projectId, siteId, placeId ] = markersMatch;
         if (visitor && !isPublicHierarchy(decodeURIComponent(projectId), decodeURIComponent(siteId), decodeURIComponent(placeId))) return sendJson(res, 200, []);
         const markersDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers');
-        if (!fs.existsSync(markersDir)) return sendJson(res, 404, { error: 'Place not found' });
+        if (!fs.existsSync(markersDir)) {
+            // A saved empty area may not have a markers folder yet. This read must not create one.
+            if (fs.existsSync(path.join(path.dirname(markersDir), 'place.json'))) return sendJson(res, 200, []);
+            return sendJson(res, 404, { error: 'Place not found' });
+        }
         const markers = fs.readdirSync(markersDir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => readJson(path.join(markersDir, entry.name, 'marker.json'), { id: entry.name })).filter(marker => !visitor || isPublic(marker));
         sendJson(res, 200, markers);
         return true;

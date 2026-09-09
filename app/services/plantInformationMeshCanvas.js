@@ -1,6 +1,7 @@
 import {
     PIM_SPATIAL_CONFIG,
     pimNodeHue,
+    pimReaderControl,
     pimNodeVisualPosition,
     pimVisibleNodeBounds,
     pimVisibleNodes
@@ -238,6 +239,14 @@ export function fitPimTextBlock(context, options = {}) {
     // Only genuinely dense copy enters this range. Normal labels keep the
     // readable minimum above; unusually long content is reduced further until
     // all of its wrapped lines fit rather than being clipped or discarded.
+    if (options.strictMinimum) {
+        const size = Math.max(14, titleRange.minimum);
+        context.font = `650 ${size}px system-ui, sans-serif`;
+        const lines = wrapPimTextLines(context, title, safeArea.width, {breakWords:true}).slice(0, 3);
+        const fit = line => { let value=line; while(value.length && context.measureText(value+'…').width>safeArea.width) value=value.slice(0,-1); return value+'…'; };
+        if(lines.length) lines[lines.length-1]=fit(lines[lines.length-1]);
+        return {titleLines:lines,detailLines:[],titleFontSize:size,detailFontSize:14,titleLineHeight:size*1.1,detailLineHeight:16,titleOffsetY:-(lines.length-1)*size*.55,detailOffsetY:0};
+    }
     for (let titleFontSize = titleRange.minimum - step; titleFontSize >= 1; titleFontSize -= step) {
         const detailStart = hasDetail
             ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
@@ -460,21 +469,22 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.x,
             point.y,
             radius,
-            `hsla(${hue}, 31%, 19%, ${active ? .58 : node.depth ? .42 : .22})`,
-            `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
+            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, .96)` : `hsla(${hue}, 31%, 19%, ${active ? .58 : node.depth ? .42 : .22})`,
+            options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const textLayout = fitPimTextBlock(context, {
-            title: node.label,
-            detail: hasDescription ? node.value : '',
+            title: options.compactLabels ? String(node.label).slice(0, 54) : node.label,
+            detail: options.compactLabels ? (node.depth ? 'Open knowledge' : '') : hasDescription ? node.value : '',
+            strictMinimum: options.compactLabels,
             radius,
             depth: node.depth
         });
-        context.fillStyle = '#fff';
-        context.strokeStyle = 'rgba(0, 0, 0, .94)';
+        context.fillStyle = options.softSurface ? '#243d30' : '#fff';
+        context.strokeStyle = options.softSurface ? 'rgba(246,248,239,.8)' : 'rgba(0, 0, 0, .94)';
         context.font = `650 ${textLayout.titleFontSize}px system-ui, sans-serif`;
         context.lineWidth = Math.max(2, Math.round(textLayout.titleFontSize * .13));
         drawOutlinedLines(
@@ -487,7 +497,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         if (textLayout.detailLines.length) {
             context.font = `500 ${textLayout.detailFontSize}px system-ui, sans-serif`;
             context.lineWidth = Math.max(1.5, Math.round(textLayout.detailFontSize * .1));
-            context.fillStyle = 'rgba(255, 255, 255, .96)';
+            context.fillStyle = options.softSurface ? '#425b4a' : 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'transparent';
             context.shadowBlur = 0;
             drawOutlinedLines(
@@ -505,10 +515,11 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.save();
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
-    drawHexagon(context, center.x, center.y, coreRadius, 'rgba(39, 58, 92, .78)', 'rgba(137, 165, 213, .82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? '#d3dfc9' : 'rgba(39, 58, 92, .78)', options.softSurface ? '#6b8261' : 'rgba(137, 165, 213, .82)', 4);
     context.restore();
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
+    if(options.softSurface) {context.fillStyle='#294534';context.strokeStyle='#d3dfc9';}
     const coreTitle = knowledge.title || knowledge.name || 'Plant';
     const coreTextLayout = fitPimTextBlock(context, {
         title: coreTitle,
@@ -523,6 +534,12 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.font = `650 ${coreTextLayout.titleFontSize}px system-ui, sans-serif`;
     context.lineWidth = Math.max(2, Math.round(coreTextLayout.titleFontSize * .14));
     drawOutlinedLines(context, coreLines, center.x, center.y + coreTextLayout.titleOffsetY, coreTextLayout.titleLineHeight);
+    if(options.readerControl) {
+        const box=pimReaderControl(nodes,{layoutWidth:width,layoutHeight:height});
+        context.fillStyle='#f3f5eb';context.fillRect(box.left/100*width,box.top/100*height,box.width/100*width,box.height/100*height);
+        context.strokeStyle='#71876c';context.lineWidth=2;context.strokeRect(box.left/100*width,box.top/100*height,box.width/100*width,box.height/100*height);
+        context.fillStyle='#294534';context.font='600 25px system-ui';context.fillText('All topics · read & edit',width/2,(box.top+box.height/2)/100*height);
+    }
     // PIM placement is automatic above the orb; its surface has no recenter
     // control, so the former bottom arrow is deliberately not rendered.
     return;
@@ -580,8 +597,12 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
         (xPercent - center.x) / coreWidth,
         (yPercent - center.y) / coreHeight
     );
+        if(options.readerControl) {
+        const box=pimReaderControl(nodes,options);
+        if(xPercent>=box.left && xPercent<=box.left+box.width && yPercent>=box.top && yPercent<=box.top+box.height) return {pimRead:true,path:'',label:'All topics'};
+    }
     if (coreDistance <= 1) {
-        return {
+    return {
             pimCore: true,
             path: '',
             label: knowledge?.title || knowledge?.name || 'Plant',

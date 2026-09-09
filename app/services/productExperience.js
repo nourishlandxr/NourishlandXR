@@ -19,7 +19,7 @@ export function productHeader(mode = 'Explore') {
 }
 export function bindProductHeader(root) {
     root.querySelector('[data-v2-home]')?.addEventListener('click', () => window.renderLaunchScreen());
-    root.querySelector('[data-v2-settings]')?.addEventListener('click', () => window.renderPlatformComingSoon('Settings','launch'));
+    root.querySelector('[data-v2-settings]')?.addEventListener('click', () => window.openExperienceSettings ? window.openExperienceSettings() : window.renderPlatformComingSoon('Settings','launch'));
 }
 export function enhanceProductScreen(screen) {
     if (!screen || screen.querySelector('.v2-masthead')) return;

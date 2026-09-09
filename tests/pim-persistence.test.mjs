@@ -160,3 +160,15 @@ test('new projects fall back to Main Location when site suggestions are unusable
     const markers = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers`)).json();
     assert.ok(markers.some(marker => marker.name === 'Pigeon Pea' && marker.template_id === 'pigeon-pea-reference'));
 });
+
+
+test('saved empty areas list no markers without creating folders; missing areas still fail', async () => {
+ const directory=path.join(workspaceDir,projectId,'sites',siteId,'places','empty_area');
+ writeJson(path.join(directory,'place.json'),{id:'empty_area',name:'Empty area',visibility:'public'});
+ const response=await fetch(`${baseUrl}/api/projects/${projectId}/sites/${siteId}/places/empty_area/markers`);
+ assert.equal(response.status,200);
+ assert.deepEqual(await response.json(),[]);
+ assert.equal(fs.existsSync(path.join(directory,'markers')),false);
+ const missing=await fetch(`${baseUrl}/api/projects/${projectId}/sites/${siteId}/places/does_not_exist/markers`);
+ assert.equal(missing.status,404);
+});

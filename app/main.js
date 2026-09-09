@@ -298,6 +298,7 @@ window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
 };
 window.addEventListener('popstate', event => {
     if (isArModeActive()) return;
+    if(event.state?.nourishlandView==='experience-settings'){ window.openExperienceSettings(true,event.state.returnState); return; }
     if (event.state?.nourishlandView === 'visitor-v2') { void window.openVisitor(...event.state.viewArgs,true); return; }
     if (['dashboard', 'dashboard-v2', 'living-dashboard', 'dashboard-classic'].includes(event.state?.nourishlandView) && event.state.projectId) {
         void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
@@ -933,6 +934,13 @@ window.addEventListener('nxr:latest-entry-added', async () => {
     }
 });
 
+window.openExperienceSettings=(fromHistory=false,returnState=history.state)=>{
+    cancelVisitorExperience();
+    if(!fromHistory) history.pushState({nourishlandView:'experience-settings',returnState},'',window.location.href);
+    renderPlatformComingSoon(app,'Settings','launch');
+    const back=app.querySelector('.page-header > button');
+    if(back){back.removeAttribute('onclick');back.textContent='Back to your experience';back.addEventListener('click',()=>history.back());}
+};
 // Existing entry points remain callable; visitor destinations share one history-aware journey.
 window.openVisitor = (view='places',project='',selection='',fromHistory=false) => {
     const args=[view,project,selection];

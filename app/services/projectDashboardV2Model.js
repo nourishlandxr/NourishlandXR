@@ -67,10 +67,12 @@ export async function loadProjectDashboardV2Model(projectId) {
     const sites = await loadProjectSites(project.id);
     const site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
     const places = site ? await loadSitePlaces(project.id, site.id) : [];
-    const groups = await Promise.all(places.map(async place => ({
-        place,
-        markers: site ? await loadPlaceMarkers(project.id, site.id, place.id) : []
-    })));
+    const loadWarnings = [];
+    const groups = await Promise.all(places.map(async place => {
+        try { return {place,markers:site ? await loadPlaceMarkers(project.id,site.id,place.id) : []}; }
+        catch(error) { loadWarnings.push({areaId:place.id,name:place.name,message:error.message}); return {place,markers:[]}; }
+    }));
+    if (places.length && loadWarnings.length === places.length) throw new Error('Area content could not be loaded. Please retry.');
     const entries = groups.flatMap(group => group.markers.map(marker => ({ marker, place: group.place })));
     const placements = await Promise.all(entries.map(async entry => ({
         ...entry,
@@ -131,6 +133,7 @@ export async function loadProjectDashboardV2Model(projectId) {
 
     return {
         project,
+        loadWarnings,
         site,
         areas: mapAreas,
         connections,
