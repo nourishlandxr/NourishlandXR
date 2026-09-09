@@ -28,6 +28,7 @@ function syncPimElement(target, source, { content = true } = {}) {
 }
 
 function pimElementKey(element) {
+    if (element?.hasAttribute?.('data-pim-read-all')) return 'read-all';
     if (element?.hasAttribute?.('data-pim-node-id')) return `node:${element.dataset.pimNodeId}`;
     if (element?.hasAttribute?.('data-pim-node')) return `node:${element.dataset.pimNode}`;
     if (element?.getAttribute?.('data-pim-role') === 'center') return 'center';
@@ -548,7 +549,7 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
         const selected = String(options.selectedNodeId || '') === node.path;
-        const detailsVisible = node.depth > 0;
+        const detailsVisible = node.depth > 0 && !options.compactLabels;
         const role = node.depth === 0 ? 'primary' : 'child';
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
         const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
@@ -561,5 +562,5 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
     const box=pimReaderControl(nodes,{layoutWidth:metrics.layoutWidth,layoutHeight:metrics.layoutHeight});
     const reader=options.readerControl ? `<button type="button" data-pim-read-all class="pim-spatial-read-all" style="position:absolute;left:${box.left}%;top:${box.top}%;width:${box.width}%;height:${box.height}%">All topics · read & edit</button>` : '';
     const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
-    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
+    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-palette="${options.softSurface ? 'soft' : 'default'}" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
 }

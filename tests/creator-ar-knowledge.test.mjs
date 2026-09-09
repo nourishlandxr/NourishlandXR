@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPimDocument,pimAddNode,pimToArKnowledge} from '../app/services/pimModel.js';
+import {createPimDocument,pimAddNode,pimAddTopLevelNode,pimToArKnowledge} from '../app/services/pimModel.js';
 import {createCreatorPimSave,creatorKnowledgeState} from '../app/services/creatorArKnowledge.js';
 import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
 import {pimVisibleNodes,pimReaderControl,PIM_SPATIAL_LAYOUT_OPTIONS} from '../app/services/plantInformationMesh.js';
@@ -8,7 +8,7 @@ import {pimHoneycombTargetAtPercent,pimHoneycombTextureSize,fitPimTextBlock} fro
 
 const fixture=()=>pimAddNode(createPimDocument({plantId:'specimen-a',identity:{commonName:'Example'}}),{id:'observed',parentId:'food-forest',title:'New growth',body:'Seen here',knowledgeScope:'specimen',specimenId:'project/site/area/specimen-a',observedAt:'2026-09-09',sourceIds:['evidence'],media:[{url:'photo.jpg'}],status:'draft',evidenceStatus:'needs_review'});
 test('AR projection retains specimen, evidence, publication and custom root identity without mutating knowledge',()=>{
- const doc=pimAddNode(fixture(),{id:'custom-notebook',title:'Notebook',primaryCategory:'custom',status:'draft'}),before=JSON.stringify(doc);
+ const doc=pimAddTopLevelNode(fixture(),{id:'custom-notebook',title:'Notebook',primaryCategory:'custom',status:'draft'}),before=JSON.stringify(doc);
  const projected=pimToArKnowledge(doc),node=projected.categories.find(n=>n.id==='food-forest').children[0];
  assert.equal(node.specimenId,'project/site/area/specimen-a');assert.equal(node.knowledgeScope,'specimen');assert.equal(node.observedAt,'2026-09-09');assert.deepEqual(node.sourceIds,['evidence']);assert.equal(node.media.length,1);assert.equal(node.status,'draft');assert.equal(node.evidenceStatus,'needs_review');
  assert.equal(projected.categories.length,6);assert.equal(projected.customCategories[0].id,'custom-notebook');assert.equal(JSON.stringify(doc),before);

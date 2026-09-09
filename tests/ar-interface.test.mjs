@@ -1198,8 +1198,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     assert.match(source, /record\.tutorialStage === 'plant'\) inviteVirtualTag\(record\)/);
-    assert.match(source, /demoWebModeOpen = true;[\s\S]*suppressSessionSelectUntil = Number\.POSITIVE_INFINITY/);
-    assert.match(source, /stage\.inert = true;[\s\S]*stage\.setAttribute\('aria-hidden', 'true'\)/);
+    assert.match(source, /if\(demoKnowledgeWorkspace\) \{const hit=spatialDashboardRayHit/);
+    assert.match(source, /if\(stage\) stage\.inert=true/);
+    assert.match(source, /function openDemoVirtualTag\(record\) \{\s*openDemoKnowledge\(record\)/);
     assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);
     assert.match(source, /demoWebModeOpen = false;[\s\S]*record\.demoExpanded = false;[\s\S]*armDemoPlacement\('plant2'\)/);
     assert.match(styles, /\.tryit-virtual-tag-mode \{[^}]*position:fixed;[^}]*z-index:12100;[^}]*background:#f2f4ec;/);

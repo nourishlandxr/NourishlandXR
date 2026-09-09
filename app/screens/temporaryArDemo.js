@@ -1,3 +1,4 @@
+import {showLivingIntroduction} from '../services/liveNotes.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -249,11 +250,15 @@ const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA
 const knowledgeFor = record => record.demoKnowledgeProjection || (record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE);
 const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
 function demoPimSurfaceSize(record) {
-    return pimHoneycombTextureSize(knowledgeFor(record), demoPimExpandedNodeIds(record), {
+    const knowledge=knowledgeFor(record), expanded=demoPimExpandedNodeIds(record), key=JSON.stringify(expanded);
+    if(record.pimSurfaceCache?.knowledge===knowledge && record.pimSurfaceCache.key===key) return record.pimSurfaceCache.size;
+    const size=pimHoneycombTextureSize(knowledge, expanded, {
         ...demoSpatialPimLayoutOptions(),
         width: PIM_TEXTURE_SIZE.width,
         height: PIM_TEXTURE_SIZE.height
     });
+    record.pimSurfaceCache={knowledge,key,size};
+    return size;
 }
 
 function demoPimPanel(record, pose = record?.informationPose) {
@@ -1278,6 +1283,7 @@ function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { 
         ? Math.max(8, surface.panelTop + surface.panelHeight - (markerY - markerClearance))
         : 8;
     return plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), {
+        ...demoSpatialPimLayoutOptions(),
         selectedNodeId: record.demoSelectedNodeId,
         viewportWidth: viewport.width,
         viewportHeight: viewport.height,
@@ -1723,7 +1729,7 @@ function bindSimulatedInformationPanels(layer) {
         const record = markers[index];
         const handle = profile.querySelector('[data-plant-profile-handle]');
         if (!record || !handle) return;
-        const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back]');
+        const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]');
         profile.addEventListener('pointerdown', event => {
             if (!pimTarget(event)) return;
             event.stopPropagation();
@@ -3262,7 +3268,13 @@ export function openTemporaryArDemoWindow(app) {
     return startTemporaryArDemo(app);
 }
 
-export async function startTemporaryArDemo(app) {
+let livingIntroduction = null;
+export function startTemporaryArDemo(app) {
+    livingIntroduction?.destroy();
+    livingIntroduction = showLivingIntroduction(app, {onContinue:()=>{livingIntroduction=null;void launchTemporaryArDemo(app);},onCancel:()=>{livingIntroduction=null;}});
+}
+
+async function launchTemporaryArDemo(app) {
     appRoot = app;
     clearSessionState();
     const immersive = await startImmersive();

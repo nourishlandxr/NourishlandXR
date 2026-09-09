@@ -73,6 +73,7 @@ export function mountCreatorArKnowledge(root, { record, context, path = '', obse
     root.querySelector('[data-knowledge-observation]').addEventListener('click',()=>navigate({detailNodeId:'',editorMode:'add',editorParentId:controller.getState().outlineBranchId || 'food-forest',editorSeed:{templateId:'custom',informationType:'local_observation',knowledgeScope:'specimen',specimenId,status:'draft'}}));
     root.querySelector('[data-knowledge-close]').addEventListener('click', close);
     const onKey = event => {
+        if(event.defaultPrevented) return;
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
         if (event.key !== 'Tab') return;
         const controls = [...root.querySelectorAll('button,input,textarea,select,a[href],summary,[tabindex="0"]')].filter(item => !item.disabled && item.getClientRects().length && !item.closest('[hidden]'));

@@ -1,3 +1,4 @@
+import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
 /*
  * Creator AR placement mode
  *
@@ -673,9 +674,9 @@ function updateKnowledgeControls() {
 }
 
 function closeCreatorKnowledge({force = false} = {}) {
-    if (!creatorKnowledgeWorkspace) return true;
-    if (!force) return creatorKnowledgeWorkspace.close();
-    creatorKnowledgeWorkspace.destroy(); creatorKnowledgeWorkspace = null;
+    if (!creatorKnowledgeWorkspace && !creatorKnowledgeRoot) return true;
+    if (!force && creatorKnowledgeWorkspace) return creatorKnowledgeWorkspace.close();
+    creatorKnowledgeWorkspace?.destroy(); creatorKnowledgeWorkspace = null;
     closeQuestSpatialWebPanel();
     creatorKnowledgeRoot?.remove(); creatorKnowledgeRoot = null;
     creatorKnowledgeRecord = null;
@@ -685,16 +686,30 @@ function closeCreatorKnowledge({force = false} = {}) {
     return true;
 }
 
-function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', observation = false} = {}) {
+async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', observation = false} = {}) {
     if (!record || !overlayRoot || readyPlacementType || dragState) return;
-    if (creatorKnowledgeWorkspace) { creatorKnowledgeWorkspace.close(); return; }
+    if (creatorKnowledgeRoot) { closeCreatorKnowledge(); return; }
     placementArmGeneration += 1;
-    closeQuestSpatialWebPanel(); closeMarkerContextToolbar(); closePlacePicker(); clearMarkerHoldGesture();
+    closeQuestSpatialWebPanel(); closeQuestSpecialPalette(); closeMarkerContextToolbar(); closePlacePicker(); clearMarkerHoldGesture(); clearControllerMarkerPress();
     creatorKnowledgeReturnFocus = document.activeElement;
     creatorKnowledgeRecord = record;
     const owner = session;
     const root = document.createElement('section'); creatorKnowledgeRoot = root;
     overlayRoot.append(root); overlayRoot.classList.add('has-creator-knowledge');
+    root.className='creator-ar-knowledge-workspace';
+    root.innerHTML='<p role="status">Opening plant knowledge…</p><button type="button">Back to AR</button>';
+    root.querySelector('button').onclick=()=>closeCreatorKnowledge({force:true});
+    setPlacementStatus('Opening plant knowledge…');
+    try {
+        const fresh=await loadPlantProfile(activeProjectId,activeSiteId,record.areaId || activeAreaId,record.marker.id);
+        if(session!==owner || root!==creatorKnowledgeRoot) return;
+        record.plantProfile=fresh || {};creatorKnowledgeCache.delete(record);
+    } catch(error) {
+        if(root!==creatorKnowledgeRoot) return;
+        root.querySelector('p').textContent=`Knowledge could not load: ${error.message}`;
+        setPlacementStatus('Knowledge could not load. Return to AR and try again.');
+        return;
+    }
     creatorKnowledgeWorkspace = mountCreatorArKnowledge(root, {
         record, context:[activeProjectId, activeSiteId, record.areaId || activeAreaId, record.marker.id], path, observation,
         onClose:()=>closeCreatorKnowledge({force:true}),
@@ -708,6 +723,20 @@ function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', ob
             onError:error=>setPlacementStatus(`Knowledge panel: ${error.message}`) });
     }
     updateKnowledgeControls();
+}
+
+function openCreatorLiveNote(record) {
+    if (!overlayRoot || creatorKnowledgeRoot || readyPlacementType || dragState) return;
+    placementArmGeneration += 1;
+    closeQuestSpatialWebPanel();closeQuestSpecialPalette();closeMarkerContextToolbar();closePlacePicker();clearMarkerHoldGesture();clearControllerMarkerPress();
+    creatorKnowledgeReturnFocus=document.activeElement;creatorKnowledgeRecord=record;
+    const root=document.createElement('section');creatorKnowledgeRoot=root;overlayRoot.append(root);overlayRoot.classList.add('has-creator-knowledge');
+    creatorKnowledgeWorkspace=mountLiveNote(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
+    if(questHeadsetSession && gl){
+        questSpatialWebVisible=true;
+        questSpatialDashboardPanel=spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix,{width:1.18,height:1.02});
+        questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:960,height:830,title:'LIVE NOTE',onStatus:setPlacementStatus,onError:error=>setPlacementStatus(error.message)});
+    }
 }
 
 function creatorPimState(record) {
@@ -771,6 +800,7 @@ function creatorPlantKnowledgeMarkup(record) {
         { topInset, bottomInset }
     );
     return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
         selectedNodeId: record.pimSelectedNodeId,
         viewportWidth,
         viewportHeight,
@@ -1941,7 +1971,17 @@ function activateQuestSpatialDashboard(hit = controllerSpatialDashboardAtAim()) 
     return true;
 }
 
+function activateKnowledgeSelection() {
+    const hit=controllerSpatialDashboardAtAim();
+    if(hit) {activateQuestSpatialDashboard(hit);return true;}
+    const belt=controllerBeltActionAtAim();
+    const action=belt && QUEST_SPATIAL_BELT_ACTIONS[belt.index]?.id;
+    if(action==='knowledge' || action==='web' || action==='exit') closeCreatorKnowledge();
+    return true;
+}
+
 function activateControllerSelection() {
+    if(creatorKnowledgeRoot) return activateKnowledgeSelection();
     if (readyPlacementType) {
         void quickPlace(readyPlacementType);
         return true;
@@ -1961,7 +2001,7 @@ function activateControllerSelection() {
     }
     const markerTarget = controllerMarkerAtAim();
     if (markerTarget) {
-        if (hasPlantProfile(markerTarget)) {
+        if (hasPlantProfile(markerTarget) || liveNoteEnabled(markerTarget.marker)) {
             const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(markerTarget.marker.id)}"]`);
             if (element) {
                 beginMarkerInteraction(markerTarget, {
@@ -2043,6 +2083,7 @@ function pollHandPinch() {
     if (!latestHandState?.pointer) return;
     const pinching = Boolean(latestHandState.pinch);
     if (pinching && !handPinchActive) {
+        if(creatorKnowledgeRoot) {activateKnowledgeSelection();handPinchActive=pinching;return;}
         // Hand tracking has no controller select event. Once Note (or Plant)
         // is armed, a pinch is the placement press at the current aim point.
         if (readyPlacementType) {
@@ -3114,16 +3155,20 @@ function ensureSpatialPimPose(record, force = false) {
 }
 
 function spatialPimSurfaceSize(record) {
-    const size = pimHoneycombTextureSize(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
+    const knowledge=creatorPlantKnowledge(record), expanded=creatorPimExpandedNodeIds(record), key=JSON.stringify(expanded);
+    if(record.pimSurfaceCache?.knowledge===knowledge && record.pimSurfaceCache.key===key) return record.pimSurfaceCache.size;
+    const size = pimHoneycombTextureSize(knowledge, expanded, {
         ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
         width: PIM_TEXTURE_SIZE.width,
         height: PIM_TEXTURE_SIZE.height
     });
-    return {
+    const surface = {
         ...size,
         panelWidth: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * size.width / PIM_TEXTURE_SIZE.width,
         panelHeight: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
     };
+    record.pimSurfaceCache={knowledge,key,size:surface};
+    return surface;
 }
 
 function pimPoseAnchorPayload(record) {
@@ -4180,10 +4225,10 @@ function renderSessionMarkers() {
             event.stopPropagation();
         });
         profilePanel?.addEventListener('pointerup', event => {
-            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
+            if (event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]')) event.stopPropagation();
         });
         profilePanel?.addEventListener('pointercancel', event => {
-            if (event.target.closest?.('[data-pim-node],[data-pim-back]')) event.stopPropagation();
+            if (event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]')) event.stopPropagation();
         });
         profilePanel?.addEventListener('click', event => {
             if(event.target.closest('[data-pim-read-all]')) {event.stopPropagation();openCreatorKnowledge(record);return;}
@@ -4297,6 +4342,12 @@ function openInlineEditor(record, force = false) {
         information.value = record.marker.description || record.marker.notes || '';
         informationField.append(information);
         editorForm.insertBefore(informationField, appearanceFieldset);
+        const live = record.marker.appearance?.live_note || {};
+        const liveField=document.createElement('fieldset');
+        liveField.innerHTML=`<legend>Live Note</legend><label><input type="checkbox" name="liveNoteEnabled" ${live.enabled?'checked':''}> Open this note as connected cells</label><label>Topic cells<textarea name="liveNoteTopics" rows="5" placeholder="Area | What makes this place special&#10;Plant guild | How these plants work together&#10;Technique | What is being tried here"></textarea></label><p>One topic per line: title | information. Up to 12 topics. Your original note stays intact.</p>`;
+        liveField.querySelector('textarea').value=(live.topics || []).map(topic=>`${topic.title} | ${topic.body}`).join('\n');
+        editorForm.insertBefore(liveField,appearanceFieldset);
+
     }
     if (plant) {
         const shapeField = document.createElement('label');
@@ -4369,7 +4420,7 @@ function openInlineEditor(record, force = false) {
                     color: form.elements.markerColor.value,
                     size: form.elements.markerSize.value,
                     opacity: Number(form.elements.markerOpacity?.value ?? markerAppearanceOpacity(record.marker)),
-                    ...(type === 'note' ? { surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled' } : {})
+                    ...(type === 'note' ? { surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled', live_note:{...appearance.live_note,enabled:Boolean(form.elements.liveNoteEnabled?.checked),topics:liveNoteTopics(form.elements.liveNoteTopics?.value,appearance.live_note?.topics)} } : {})
                 },
                 plant_profile: type === 'plant' ? {
                     ...(record.marker.plant_profile || {}),
@@ -4429,7 +4480,8 @@ function openInlineEditor(record, force = false) {
 }
 
 function beginMarkerInteraction(record, event, { directHold = false, element = event.currentTarget } = {}) {
-    if (creatorKnowledgeWorkspace) return;
+    if (creatorKnowledgeRoot) return;
+    if (liveNoteEnabled(record.marker) && !directHold && interactionMode !== 'select') {event.preventDefault();event.stopPropagation();openCreatorLiveNote(record);return;}
     if (hasPlantProfile(record) && !directHold) {
         event.preventDefault();
         event.stopPropagation();
@@ -5714,6 +5766,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
         });
         launchedSession.addEventListener('selectstart', event => {
+            if(creatorKnowledgeRoot) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
             if (interactionMode === 'view') return;
             if (controllerSpatialDashboardAtAim()) return;

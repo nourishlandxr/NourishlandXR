@@ -181,3 +181,23 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .pim-spatial-read-all {z-index:5;min-height:28px;padding:4px 8px;background:#f3f5eb!important;color:#294534!important;border:1px solid #71876c;border-radius:8px;font:600 14px/1.2 system-ui,sans-serif;pointer-events:auto;}
 
 .creator-ar-knowledge-workspace .pim-web-detail>footer,.creator-ar-knowledge-workspace .pim-web-editor form>footer {position:static;box-shadow:none;backdrop-filter:none;}
+
+.creator-ar-knowledge-workspace .pim-web-detail-body {grid-template-columns:minmax(0,1fr);}
+.creator-ar-knowledge-workspace .pim-web-detail-body>* {min-width:0;max-width:100%;overflow-wrap:anywhere;}
+.creator-ar-knowledge-workspace .pim-web-editor:not(.is-awaiting-template) .pim-web-template-palette {display:none;}
+.creator-ar-knowledge-workspace :is(input,select,textarea) {min-width:0;max-width:100%;box-sizing:border-box;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell {background:transparent!important;color:#294534!important;border-color:hsl(var(--pim-hue) 25% 45%)!important;box-shadow:none!important;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell::before {background:hsl(var(--pim-hue) 25% 55%);}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell::after {background:hsl(var(--pim-hue) 23% 91%);}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell:is(.is-open,.is-selected)::after {background:hsl(var(--pim-hue) 24% 82%);}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell :is(b,small) {color:#294534!important;text-shadow:none!important;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-core {background:#d3dfc9!important;color:#294534!important;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-core strong {color:#294534!important;text-shadow:none!important;}
+
+.plant-knowledge-map[data-pim-palette="soft"] :is(.plant-knowledge-cell-copy,.plant-knowledge-core-copy) {width:74%;max-width:74%;}
+.plant-knowledge-map[data-pim-palette="soft"] :is(.plant-knowledge-cell-copy b,.plant-knowledge-core-copy strong) {overflow-wrap:normal;word-break:normal;}
+
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell {display:grid;padding:0;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy {height:auto;max-height:70%;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy b {position:static;transform:none;width:100%;max-width:100%;}
+.plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy small[aria-hidden="true"] {display:none;}

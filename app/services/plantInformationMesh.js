@@ -626,7 +626,7 @@ function placePimRecord(record, parent, metrics) {
         // Deeper generations continue along the root branch sector. The
         // inherited slot index makes a compact local fan around the actual
         // parent while the depth keeps every generation in a new outward
-        // ring. No collision search is allowed to rewrite an existing slot.
+        // ring. These are preferences; the full-tree allocator below reserves unique slots.
         const root = DIRECTION_AXIAL[record.rootDirection] || { q: 0, r: 0 };
         grid = {
             x: root.q + root.q * record.depth + direction.tangentX * slotIndex,
@@ -915,5 +915,6 @@ export function pimSpatialPanel(pose, options = {}) {
 export function pimReaderControl(nodes, options = {}) {
     const width=Number(options.layoutWidth) || 1440, height=Number(options.layoutHeight) || 1080;
     const bounds=pimVisibleNodeBounds(nodes);
-    return {left:50-180/width*100,top:bounds.bottom+12/height*100,width:360/width*100,height:56/height*100};
+    const buttonWidth = Math.min(360, Math.max(0, width - 16));
+    return {left:50-buttonWidth/2/width*100,top:bounds.bottom+12/height*100,width:buttonWidth/width*100,height:56/height*100};
 }
