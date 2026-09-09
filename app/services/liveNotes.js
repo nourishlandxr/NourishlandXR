@@ -24,19 +24,22 @@ export const INTRO_GROVES = [
         {title:'Tips',body:'Knowledge becomes useful when it meets a place.',children:[leaf('Observe first','Notice light, water and seasonal change.'),leaf('Record locally','Keep site observations distinct from general species knowledge.'),leaf('Share evidence','Attach sources and observations so others can follow your reasoning.')]}]},
     {title:'Landscape',body:'Every place has a story to explore.',children:[leaf('Native forest','Explore locally native communities and the relationships observed here.'),leaf('Food forest','Discover the design and knowledge behind a layered productive landscape.'),leaf('Backyard','Follow a small garden through its plants, experiments and seasons.'),leaf('Productive orchard','Explore tree records, management techniques and local observations.') ]}
 ];
-export function mountLiveCells(root, tree, {automatic=false,onChange=()=>{}}={}) {
-    let path=[];
+export function mountLiveCells(root, tree, {automatic=false,automaticDelay=22000,onChange=()=>{}}={}) {
+    let path=[], timer=null;
+    const stop=()=>{clearTimeout(timer);timer=null;};
+    root.addEventListener('pointerdown',stop);root.addEventListener('keydown',stop);
     const render=()=>{
         const node=path.reduce((parent,index)=>parent.children[index],tree);
-        root.classList.add('live-cells'); root.classList.toggle('is-automatic',automatic && !path.length);
-        root.innerHTML=`<div class="live-cell-path">${path.length?'<button type="button" data-live-back>← Back</button>':''}<span>${escape(tree.title)}</span></div><button type="button" class="live-hex live-root" data-live-root aria-expanded="true">${escape(node.title)}</button><div class="live-cell-branches">${(node.children || []).map((child,index)=>`<button type="button" class="live-hex" style="--cell-order:${index}" data-live-child="${index}" aria-label="Explore ${escape(child.title)}">${escape(child.title)}</button>`).join('')}</div><div class="live-cell-reading"><p>${escape(node.body)}</p>${node.source && /^https:\/\//.test(node.source)?`<a href="${escape(node.source)}" target="_blank" rel="noopener noreferrer">Read the source ↗</a>`:''}</div>`;
+        root.classList.add('live-cells'); root.classList.toggle('is-automatic',automatic && !path.length);root.classList.toggle('is-unfolding',automatic && Boolean(path.length));
+        root.innerHTML=`<div class="live-cell-path">${path.length?'<button type="button" data-live-back>← Back</button>':''}<span>${escape(tree.title)}</span></div><button type="button" class="live-hex live-root" data-live-root aria-pressed="false">${escape(node.title)}</button><div class="live-cell-branches">${(node.children || []).map((child,index)=>`<button type="button" class="live-hex" style="--cell-order:${index}" data-live-child="${index}" aria-label="Explore ${escape(child.title)}">${escape(child.title)}</button>`).join('')}</div><div class="live-cell-reading"><p>${escape(node.body)}</p>${node.source && /^https:\/\//.test(node.source)?`<a href="${escape(node.source)}" target="_blank" rel="noopener noreferrer">Read the source ↗</a>`:''}</div>`;
         root.querySelector('[data-live-back]')?.addEventListener('click',()=>{path.pop();render();root.querySelector('[data-live-root]').focus();});
-        root.querySelector('[data-live-root]').onclick=()=>{root.querySelector('.live-cell-reading').classList.toggle('is-emphasized');onChange();};
+        root.querySelector('[data-live-root]').onclick=()=>{const active=root.querySelector('.live-cell-reading').classList.toggle('is-emphasized');root.querySelector('[data-live-root]').setAttribute('aria-pressed',String(active));onChange();};
         root.querySelectorAll('[data-live-child]').forEach(button=>button.onclick=()=>{path.push(Number(button.dataset.liveChild));render();root.querySelector('[data-live-root]').focus();});
         onChange();
     };
     render();
-    return {destroy(){root.replaceChildren();}};
+    if(automatic && tree.children?.[0]?.children?.length && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) timer=setTimeout(()=>{path=[0];render();},automaticDelay);
+    return {destroy(){stop();root.removeEventListener('pointerdown',stop);root.removeEventListener('keydown',stop);root.replaceChildren();}};
 }
 export function mountLiveNote(root, marker, {onClose=()=>{}}={}) {
     root.classList.add('creator-ar-knowledge-workspace','live-note-workspace');
@@ -60,7 +63,7 @@ export function showLivingIntroduction(app, {onContinue,onCancel=()=>{}}) {
     const root=document.createElement('section');root.className='living-introduction';root.setAttribute('aria-label','NourishlandXR introduction');
     root.innerHTML=`<button type="button" class="living-close" aria-label="Close introduction">Close</button><header class="living-title"><p class="living-eyebrow">A WORLD OF CONNECTIONS</p><h1>Nourishland<span>XR</span></h1><p class="living-promise">Explore the wonders of plants and ecosystems<br>in an immersive, interactive way.</p><button type="button" class="living-continue">Continue <span aria-hidden="true">↗</span></button><small>Enter the guided AR demo</small></header><nav class="living-tabs" aria-label="Explore introduction themes">${INTRO_GROVES.map((tree,i)=>`<button type="button" data-live-tab="${i}" aria-pressed="${i===0}">${tree.title}</button>`).join('')}</nav>${INTRO_GROVES.map((_,i)=>`<section class="living-grove grove-${i}" data-grove="${i}"></section>`).join('')}<p class="living-footnote">Every cell opens another way to see a place. Select one to explore.</p>`;
     app.replaceChildren(root);
-    const mounts=INTRO_GROVES.map((tree,i)=>mountLiveCells(root.querySelector(`[data-grove="${i}"]`),tree,{automatic:true}));
+    const mounts=INTRO_GROVES.map((tree,i)=>mountLiveCells(root.querySelector(`[data-grove="${i}"]`),tree,{automatic:true,automaticDelay:22000+i*5000}));
     root.dataset.activeGrove='0';
     root.querySelectorAll('[data-live-tab]').forEach(button=>button.onclick=()=>{root.dataset.activeGrove=button.dataset.liveTab;root.querySelectorAll('[data-live-tab]').forEach(tab=>tab.setAttribute('aria-pressed',String(tab===button)));});
     let closed=false;

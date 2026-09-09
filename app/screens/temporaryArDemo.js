@@ -2205,6 +2205,7 @@ function openDemoKnowledge(record,path='') {
         onSaved:profile=>{record.demoKnowledgeProfile=profile;record.demoKnowledgeProjection=pimToArKnowledge(resolvePlantPim(profile));refreshDemoPimProfile(record);},
         onClose:()=>{record.arKnowledgeState=demoKnowledgeWorkspace.controller.getState();closeDemoKnowledge(true);}
     });
+    root.classList.add('demo-knowledge-workspace');
     if(session && !domOverlayEnabled && gl) {
         demoKnowledgePanel=spatialDashboardPanelFromViewer(viewerMatrix,{width:1.18,height:1.02});
         demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:960,height:830,title:'DEMO · PLANT KNOWLEDGE',onStatus:setGuide,onError:error=>setGuide(error.message)});

@@ -201,3 +201,68 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy {height:auto;max-height:70%;}
 .plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy b {position:static;transform:none;width:100%;max-width:100%;}
 .plant-knowledge-map[data-pim-palette="soft"] .plant-knowledge-cell-copy small[aria-hidden="true"] {display:none;}
+
+/* Living introduction and opt-in Live Notes share a quiet, readable cell vocabulary. */
+.living-introduction {position:relative;isolation:isolate;min-height:100dvh;box-sizing:border-box;padding:36px clamp(20px,4vw,72px);display:grid;grid-template-columns:minmax(240px,1fr) minmax(310px,1.25fr) minmax(240px,1fr);grid-template-rows:auto auto;gap:28px;color:#304f40;background:radial-gradient(ellipse at 48% 42%,#fffdf2 0%,#eff1df 48%,#dce7d5 100%);overflow:hidden;}
+.living-title {grid-column:2;grid-row:1/3;align-self:center;text-align:center;padding:38px 10px;z-index:2;}
+.living-title h1 {font:400 clamp(36px,4.1vw,64px)/1.1 Georgia,serif;letter-spacing:-.05em;margin:20px 0;animation:living-arrive 6s both;}
+.living-title h1 span {display:block;font:400 18px/2 system-ui;letter-spacing:.36em;margin-top:6px;}
+.living-eyebrow {font:600 10px/1.6 system-ui;letter-spacing:.25em;animation:living-arrive 4s both;}
+.living-promise {font:400 clamp(17px,1.55vw,22px)/1.65 Georgia,serif;animation:living-arrive 5s 1s both;}
+.living-title .living-continue {display:block;margin:32px auto 12px;min-width:170px;min-height:48px;border:1px solid #6e876b;border-radius:30px;background:#355443;color:#fff;padding:12px 24px;font:500 15px system-ui;}
+.living-title>small {font:12px/1.5 system-ui;color:#65735e;}
+.living-close {position:absolute;right:24px;top:14px;background:transparent!important;color:#355443!important;border:0;padding:10px;z-index:3;}
+.living-grove {min-width:0;align-self:center;}
+.grove-0 {grid-column:1;grid-row:1;--grove-hue:100;}
+.grove-1 {grid-column:3;grid-row:1;--grove-hue:36;}
+.grove-2 {grid-column:1;grid-row:2;--grove-hue:170;}
+.living-footnote {grid-column:3;grid-row:2;align-self:center;max-width:240px;font:italic 18px/1.65 Georgia,serif;color:#677b64;}
+.live-cells {max-width:480px;margin:auto;color:#304f40;}
+.live-cell-path {display:flex;gap:12px;align-items:center;min-height:32px;font:600 11px/1.4 system-ui;letter-spacing:.08em;text-transform:uppercase;}
+.live-cell-path button {background:transparent!important;color:#304f40!important;border:0;min-height:36px;}
+.live-hex {display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;aspect-ratio:1.155;min-width:0;min-height:64px;padding:14% 14%;border:0!important;border-radius:0!important;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:hsl(var(--grove-hue,105) 26% 83%)!important;color:#304f40!important;font:500 clamp(12px,1vw,15px)/1.3 system-ui;text-align:center;cursor:pointer;transition:background 700ms,filter 700ms;white-space:normal;overflow-wrap:normal;}
+.live-hex:hover {filter:brightness(1.05);}
+.live-hex:focus-visible {outline:0;box-shadow:inset 0 0 0 5px #446745;filter:brightness(1.07);}
+.live-root {width:44%;max-width:154px;margin:8px auto 12px;background:#bfd1b4!important;font-weight:650;}
+.live-cell-branches {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;}
+.live-cell-branches:before {content:'';position:absolute;left:16%;right:16%;top:-9px;height:1px;background:#9eaf91;}
+.live-cell-reading {margin-top:16px;min-height:68px;font:400 13px/1.65 system-ui;color:#586a54;}
+.live-cell-reading p {margin:0;}
+.live-cell-reading a {display:inline-block;margin-top:8px;color:#355443;text-decoration:underline;}
+.live-cell-reading.is-emphasized {background:#f6f7ef;border-radius:12px;padding:12px;}
+.is-automatic .live-root {animation:living-arrive 4s 6s both;}
+.is-automatic .live-cell-branches>.live-hex {animation:living-arrive 3.5s calc(9s + var(--cell-order)*1.4s) both;}
+.is-automatic .live-cell-path,.is-automatic .live-cell-reading {animation:living-arrive 4s 6s both;}
+.is-automatic:focus-within * {animation:none!important;}
+.living-tabs {display:none;}
+.live-note-workspace>header {margin-bottom:20px;}
+.live-note-workspace>header>button {min-height:44px;padding:10px 18px;}
+.live-note-workspace .live-cells {max-width:540px;}
+@keyframes living-arrive {from {opacity:0;transform:translateY(10px);}to {opacity:1;transform:translateY(0);}}
+@media(max-width:1000px) {
+ .living-introduction {display:flex;flex-direction:column;gap:16px;padding:42px 20px 26px;}
+ .living-title {padding:6px 0;align-self:stretch;}
+ .living-title h1 {font-size:42px;margin:12px 0;}
+ .living-title h1 span {display:inline;font-size:19px;margin-left:8px;letter-spacing:.08em;}
+ .living-title .living-continue {margin:18px auto 8px;}
+ .living-promise {font-size:18px;margin:12px 0;}
+ .living-tabs {display:flex;justify-content:center;gap:6px;flex-wrap:wrap;}
+ .living-tabs button {border:1px solid #8b9e80;border-radius:24px;min-height:42px;padding:8px 14px;background:transparent;color:#355443;}
+ .living-tabs button[aria-pressed=true] {background:#d5e1ca;}
+ .living-grove {display:none;width:min(100%,390px);}
+ .living-introduction[data-active-grove="0"] .grove-0,.living-introduction[data-active-grove="1"] .grove-1,.living-introduction[data-active-grove="2"] .grove-2 {display:block;}
+ .living-footnote {font-size:14px;max-width:390px;margin:auto;text-align:center;}
+ .live-hex {font-size:13px;}
+ .live-cell-reading {min-height:0;}
+}
+@media(prefers-reduced-motion:reduce) {.living-introduction *, .live-note-workspace * {animation:none!important;transition:none!important;}}
+
+.living-introduction {position:fixed;inset:0;z-index:10000;overflow:auto;}
+.living-title h1 {color:#304f40;}
+.is-automatic .live-cell-branches:before {animation:living-arrive 3s 9s both;}
+
+.is-unfolding .live-cell-branches>.live-hex {animation:living-arrive 3s calc(var(--cell-order)*1.2s) both;}
+.is-unfolding:focus-within * {animation:none!important;}
+@media(prefers-reduced-motion:reduce) {.is-unfolding * {animation:none!important;}}
+
+.demo-knowledge-workspace {z-index:12010;}
