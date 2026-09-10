@@ -285,7 +285,7 @@ export function fitPimTextBlock(context, options = {}) {
     };
 }
 
-function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) {
+export function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) {
     context.beginPath();
     for (let point = 0; point < 6; point += 1) {
         const angle = Math.PI / 3 * point;

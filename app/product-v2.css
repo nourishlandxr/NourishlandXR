@@ -238,3 +238,11 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .tryit-guided-choice.is-ar-welcome-showcase canvas {display:block;width:100%;height:100%;max-height:calc(100dvh - 150px);object-fit:contain;}
 .tryit-demo.is-immersive .tryit-guided-choice.is-ar-welcome-showcase {display:none;}
 @media(prefers-reduced-motion:reduce){.live-note-workspace *{animation:none!important;transition:none!important;}}
+
+/* Four project destinations, with explicit typography independent of page headings. */
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:720px;box-sizing:border-box;}
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button {display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;width:100%;min-height:48px;height:auto;padding:12px 10px;box-sizing:border-box;font:600 14px/1.35 system-ui,sans-serif;letter-spacing:0;text-transform:none;white-space:normal;overflow-wrap:anywhere;text-align:center;}
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button>span {flex:0 0 auto;font-size:14px;line-height:1;}
+@media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+@media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button {padding:10px 3px;white-space:nowrap;overflow-wrap:normal;}#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button>span {display:none;}}

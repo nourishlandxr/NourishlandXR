@@ -30,3 +30,9 @@ Verification: 228 automated tests; desktop 1440×900 and narrow mobile 320×740 
 Limits: physical phone/headset passthrough, hand/controller selection and headset text readability need device testing. Reduced motion is implemented in CSS and timer gating; an OS-level reduced-motion browser test has not been performed. Creator quick-edit interaction itself needs physical AR validation. No claim of hardware verification is made.
 
 Follow-up regression: demo PIM observation saved using keyboard, returned to AR, reopened and found the saved topic with its specimen context retained. This exposed a pre-existing stacking issue: the demo scene was above the reader. The reader now has a demo-specific z-index above the scene. Final layering still merits a complete fresh-session pointer check on device.
+
+## 0.9025 — retain original glass and animate PIM cells
+
+Removed the pale replacement panel. Extracted the original green welcome gradient, translucent fills, border, corner radii and glass highlight unchanged into app/services/arWelcomePanel.js; both scrolling welcome and showcase call it. The showcase imports the same drawHexagon primitive as PIM rather than maintaining its own polygon drawing code. Cell fills use 12% opacity, labels remain white, and growth eases from the parent with a subtle scale change. New cells begin 1.5 seconds apart after the title arrives. Attribute groups are chosen once per opening and stay stable; no sudden label swaps. Reduced motion shows a static complete composition. Animation remains bounded and Continue cancels it.
+
+Version 0.9025; 230 tests pass. Local build only. Device-based AR validation remains necessary.

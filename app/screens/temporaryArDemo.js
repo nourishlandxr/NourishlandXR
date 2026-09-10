@@ -1,4 +1,5 @@
-import {drawArWelcomeShowcase,AR_WELCOME_SHOWCASE_DURATION} from '../services/arWelcomeShowcase.js';
+import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
+import {drawArWelcomeShowcase,createArWelcomeClusters,AR_WELCOME_SHOWCASE_DURATION} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -64,7 +65,7 @@ let aimRevealTimer = null;
 let pointerPressTimer = null;
 let demoHoldTimer = null;
 let introNarrationTimer = null;
-let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0;
+let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[];
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardVisible = true;
@@ -815,6 +816,7 @@ function showArWelcomeShowcase() {
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     if(!panel || !button)return;
+    arWelcomeClusters=createArWelcomeClusters();
     arWelcomeShowcaseActive=true;introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;
     introSceneStartedAt=performance.now();introBoardTextureDirty=true;
     introBoardTitle='NourishlandXR';introBoardBody='';introBoardVisibleBody='';
@@ -826,7 +828,7 @@ function showArWelcomeShowcase() {
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
         const elapsed=now-introSceneStartedAt;
-        if(now-last>=50){drawArWelcomeShowcase(ctx,elapsed,reduced);introBoardTextureDirty=true;last=now;}
+        if(now-last>=50){drawArWelcomeShowcase(ctx,elapsed,reduced,arWelcomeClusters);introBoardTextureDirty=true;last=now;}
         if(!reduced && elapsed<AR_WELCOME_SHOWCASE_DURATION)arWelcomeShowcaseFrame=requestAnimationFrame(frame);
     };
     frame(performance.now());
@@ -2623,25 +2625,8 @@ function createIntroNoteTexture(texture = null) {
     label.height = 1080;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,performance.now()-introSceneStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches);return canvasTexture(label,texture);}
-    const noteGradient = ctx.createLinearGradient(70, 90, 1330, 1000);
-    noteGradient.addColorStop(0, 'rgba(74,122,91,.64)');
-    noteGradient.addColorStop(.48, 'rgba(24,70,48,.54)');
-    noteGradient.addColorStop(1, 'rgba(8,32,21,.42)');
-    ctx.fillStyle = noteGradient;
-    ctx.strokeStyle = 'rgba(239,255,229,.82)';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.roundRect(48, 50, 1304, 980, [62, 48, 68, 52]);
-    ctx.fill();
-    ctx.stroke();
-    const glassLight = ctx.createRadialGradient(280, 130, 20, 350, 190, 520);
-    glassLight.addColorStop(0, 'rgba(255,255,255,.2)');
-    glassLight.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = glassLight;
-    ctx.beginPath();
-    ctx.roundRect(54, 56, 1292, 968, [58, 44, 64, 48]);
-    ctx.fill();
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,performance.now()-introSceneStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters);return canvasTexture(label,texture);}
+    drawArWelcomePanel(ctx);
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
