@@ -1,12 +1,72 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {drawArWelcomeShowcase,AR_WELCOME_CLUSTERS} from '../app/services/arWelcomeShowcase.js';
-function paint(time,reduced=false){const text=[];const ctx=new Proxy({globalAlpha:1,fillText(value){if(this.globalAlpha>.01)text.push(value);}},{get:(target,key)=>key in target?target[key]:key.startsWith('create')?()=>({addColorStop(){}}):()=>{}});drawArWelcomeShowcase(ctx,time,reduced);return text;}
-test('welcome rectangle and title precede corner cells; reduced motion is complete immediately',()=>{
- assert.deepEqual(paint(0),[]);assert.ok(paint(4000).includes('NourishlandXR'));assert.ok(!paint(4000).includes('Climate'));
- assert.ok(paint(20000).includes('Climate'));assert.ok(paint(20000).includes('Mango'));assert.ok(paint(0,true).includes('Mango'));
+import {welcomeNetworkFrame,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
+test('one corner grows through three levels, fades and passes to the next',()=>{
+ assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
+ assert.equal(welcomeNetworkFrame(3500).nodes.filter(n=>n.opacity>0).length,1);
+ const full=welcomeNetworkFrame(12000);assert.equal(full.nodes.length,8);assert.ok(full.nodes.every(n=>n.opacity===1));assert.equal(full.nodes.filter(n=>n.depth===2).length,4);
+ assert.ok(welcomeNetworkFrame(15999).nodes.every(n=>n.opacity<.00001));
+ assert.equal(welcomeNetworkFrame(16000).corner,1);assert.equal(welcomeNetworkFrame(32000).corner,2);assert.equal(welcomeNetworkFrame(48000).corner,3);
+ assert.ok(welcomeNetworkFrame(AR_WELCOME_SHOWCASE_DURATION).nodes.every(n=>n.opacity===0));
 });
-test('corner cells stay inside the texture and do not overlap each other',()=>{
- const points=AR_WELCOME_CLUSTERS.flatMap(c=>c.points);
- points.forEach(([x,y],i)=>{assert.ok(x>=72 && x<=1328 && y>=54 && y<=1026);points.slice(i+1).forEach(([a,b])=>assert.ok(Math.hypot(x-a,y-b)>144));});
+test('nodes retain parent identity and fit without overlap or central text intrusion',()=>{
+ for(let corner=0;corner<4;corner++){const {nodes}=welcomeNetworkFrame(corner*16000+12000);for(const [i,n] of nodes.entries()){
+ assert.ok(n.x-n.radius>0 && n.x+n.radius<2500 && n.y-n.radius>0 && n.y+n.radius<2100);
+ assert.ok(n.y+n.radius<560 || n.y-n.radius>1540 || n.x+n.radius<598 || n.x-n.radius>1902);
+ if(n.parent)assert.ok(nodes.find(p=>p.id===n.parent));
+ for(const other of nodes.slice(i+1))assert.ok(Math.hypot(n.x-other.x,n.y-other.y)>n.radius+other.radius);
+ }}
+});
+test('reduced motion remains static and later loops explore additional branches',()=>{
+ assert.deepEqual(welcomeNetworkFrame(0,true),welcomeNetworkFrame(999999,true));
+ assert.notDeepEqual(welcomeNetworkFrame(12000).nodes.map(n=>n.label),welcomeNetworkFrame(76000).nodes.map(n=>n.label));
+});
+
+// Exercise the renderer with canvas state restoration, which caused the label bug.
+test('cell labels stay centred and fitted even when the caller uses left-aligned text',()=>{
+ const stack=[],labels=[];
+ const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
+ save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
+ restore(){Object.assign(this,stack.pop());},
+ measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1]||10)*.56};},
+ fillText(text,x,y){labels.push({text,x,y,align:this.textAlign,baseline:this.textBaseline,width:this.measureText(text).width});},
+ createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}};
+ for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','fill','stroke','roundRect','arc'])ctx[method]=()=>{};
+ drawArWelcomeShowcase(ctx,12000,true);
+ const frame=welcomeNetworkFrame(12000,true);
+ for(const node of frame.nodes){for(const word of node.label.split(' ')){
+  const label=labels.find(l=>l.text===word && l.x===0);
+  assert.ok(label,`missing cell label: ${word}`);assert.equal(label.align,'center');assert.equal(label.baseline,'middle');assert.ok(label.width<=node.baseRadius*1.48);
+ }}
+ assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');
+});
+
+test('Continue unlocks only at the midpoint of the complete intro',async()=>{
+ const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
+ assert.equal(AR_WELCOME_CONTINUE_MS,32000);
+ for(const elapsed of [-1,0,16000,31999,NaN])assert.equal(welcomeCanContinue(elapsed),false);
+ assert.equal(welcomeCanContinue(32000),true);assert.equal(welcomeCanContinue(96000),true);
+});
+
+test('developed corners persist across the midpoint, narration and later demo steps',async()=>{
+ const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
+ assert.equal(welcomeExperienceFrames(12000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,8);
+ assert.equal(welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,16);
+ const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,32);
+ assert.deepEqual(welcomeExperienceFrames(640000),settled);
+ assert.deepEqual(welcomeExperienceFrames(0,true),settled);
+});
+
+test('hiding a cell removes only its descendants and stays dismissed',async()=>{
+ const {welcomeExperienceFrames,welcomeCellAtPoint}=await import('../app/services/arWelcomeShowcase.js');
+ const hidden=new Set(['0:branch-0','2:root']);
+ const frames=welcomeExperienceFrames(64000,false,undefined,hidden);
+ const climate=frames[0].nodes;
+ for(const id of ['branch-0','attribute-0','attribute-1'])assert.equal(climate.find(n=>n.id===id).opacity,0);
+ assert.equal(climate.find(n=>n.id==='branch-1').opacity,1);
+ assert.ok(frames[2].nodes.every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
+ const cell=climate.find(n=>n.id==='branch-1');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
+ const gone=climate.find(n=>n.id==='branch-0');assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y),null);
+ assert.equal(welcomeCellAtPoint(frames,1250,1050),null);
+ assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden),frames);
 });

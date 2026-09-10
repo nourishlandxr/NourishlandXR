@@ -234,9 +234,6 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 
 .demo-knowledge-workspace {z-index:12010;}
 /* Showcase occupies the actual welcome-board surface; immersive mode uses its WebGL texture. */
-.tryit-demo.is-simulated .tryit-guided-choice.is-ar-welcome-showcase {position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:min(96vw,1100px);height:auto;min-height:0;max-height:calc(100dvh - 150px);aspect-ratio:1400/1080;padding:0;border:0;background:transparent;box-shadow:none;backdrop-filter:none;overflow:visible;animation:none;}
-.tryit-guided-choice.is-ar-welcome-showcase canvas {display:block;width:100%;height:100%;max-height:calc(100dvh - 150px);object-fit:contain;}
-.tryit-demo.is-immersive .tryit-guided-choice.is-ar-welcome-showcase {display:none;}
 @media(prefers-reduced-motion:reduce){.live-note-workspace *{animation:none!important;transition:none!important;}}
 
 /* Four project destinations, with explicit typography independent of page headings. */
@@ -246,3 +243,12 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 @media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 @media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button {padding:10px 3px;white-space:nowrap;overflow-wrap:normal;}#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button>span {display:none;}}
+
+/* One welcome canvas survives narration and placement; only cells accept input. */
+.tryit-live-welcome {position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:min(96vw,1100px,calc((100dvh - 150px)*2500/2100));aspect-ratio:2500/2100;z-index:12006;pointer-events:none;}
+.tryit-live-welcome canvas {display:block;width:100%;height:100%;pointer-events:none;}
+.tryit-live-welcome button[data-welcome-cell] {position:absolute;transform:translate(-50%,-50%);min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent!important;box-shadow:none;clip-path:polygon(0 50%,25% 7%,75% 7%,100% 50%,75% 93%,25% 93%);pointer-events:auto;cursor:pointer;}
+.tryit-live-welcome button[data-welcome-cell]:focus-visible {background:rgba(239,255,216,.24)!important;outline:3px solid #e8ffd0;outline-offset:-5px;}
+.tryit-live-welcome button[hidden] {display:none;}
+.tryit-demo .tryit-guided-choice.is-live-welcome-copy {position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important;}
+.tryit-demo.is-immersive .tryit-live-welcome {display:none;}

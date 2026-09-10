@@ -36,3 +36,24 @@ Follow-up regression: demo PIM observation saved using keyboard, returned to AR,
 Removed the pale replacement panel. Extracted the original green welcome gradient, translucent fills, border, corner radii and glass highlight unchanged into app/services/arWelcomePanel.js; both scrolling welcome and showcase call it. The showcase imports the same drawHexagon primitive as PIM rather than maintaining its own polygon drawing code. Cell fills use 12% opacity, labels remain white, and growth eases from the parent with a subtle scale change. New cells begin 1.5 seconds apart after the title arrives. Attribute groups are chosen once per opening and stay stable; no sudden label swaps. Reduced motion shows a static complete composition. Animation remains bounded and Continue cancels it.
 
 Version 0.9025; 230 tests pass. Local build only. Device-based AR validation remains necessary.
+
+### 0.9026 — outward-growing AR welcome networks
+
+Replaced fixed chains with bounded three-level Climate, Food forest, Plant and Pin graphs. One corner grows at a time, holds, fades, then hands over; later cycles reveal other attributes. Uneven positions, varied cell sizes, soft emergence and slight drift avoid rigid rows. Roots connect to the OUTSIDE corners of the original green glass panel. Transparent texture margins provide room for the branches; immersive plane dimensions compensate so the original panel retains its physical size and anchor. Continue restores the original welcome narration and texture dimensions. PIM records, PIM rendering and controls remain unchanged.
+
+Validation: 231 automated tests pass, including parent identity, non-overlap, exterior bounds, loop progression and reduced motion. Local welcome displays V0.9026. Browser simulation inspected; physical headset/passthrough rendering requires device verification. No production deployment.
+
+### 0.9027 — centred labels and animated glass cells
+
+Fixed canvas text alignment being reset after the panel draw. Each cell now owns its face transform, centred text baseline and measured label sizing. Increased cell radii with wider exterior spacing (approximately 60% larger on screen), keeping all branches outside the original panel. Added translucent gradient faces, a shallow rear rim, connecting facets, softly changing edge light and slow unfolding. The same hexagon primitive remains shared with PIM. Reduced motion renders a static glass network; Continue and exit retain animation cleanup.
+
+Validation: 232 tests pass, including a renderer regression test that begins with left-aligned canvas defaults and verifies centred, fitted cell labels. Desktop and mobile browser composition inspected. Physical AR hardware remains unverified. Local build/version 0.9027; no deployment.
+
+
+### 0.9028 — one persistent welcome surface, deliberate progression
+
+Continue stays hidden and disabled until 32 seconds, the midpoint of the four-corner introduction. Skip cannot bypass the opening. Controller-only AR now requires a ray hit on the actual Continue control; general scene selection cannot activate it. Close remains available.
+
+Continue reveals the existing welcome copy on the same canvas and glass rectangle, without replacing the panel, restarting its entry fade or resetting the cell clock. The shared surface also carries later narrative boards. Developed cells remain through the demo; selecting a cell hides it and its descendants until the next demo session. Native buttons support touch and keyboard dismissal; immersive selection uses the same geometry as the rendered billboard. Cleanup cancels the unlock timer and animation and clears dismissals on exit.
+
+Validation: 235 tests pass. Browser verified the initial lock, subsequent unlock, unchanged canvas bounds across Continue, persistent branches and keyboard dismissal of one branch without hiding its sibling. Version 0.9028 appears on the local welcome. Physical XR controller and phone ray targeting still require hardware verification. No deployment.

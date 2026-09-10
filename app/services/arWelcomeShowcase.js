@@ -1,47 +1,178 @@
 import {drawArWelcomePanel} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
-// Painted into the existing AR welcome texture, and its simulated preview.
-export const AR_WELCOME_SHOWCASE_DURATION = 36000;
-export const AR_WELCOME_CLUSTERS = [
- {hue:105,points:[[330,300],[235,180],[140,60]],labels:['Climate','Tropical','Mango'],later:['Climate','Subtropical','Citrus']},
- {hue:42,points:[[1070,300],[1165,180],[1260,60]],labels:['Food forest','Layers','Canopy'],later:['Food forest','Uses','Habitat']},
- {hue:165,points:[[330,760],[235,880],[140,1000]],labels:['Landscape','Food forest','Backyard'],later:['Landscape','Native forest','Orchard']},
- {hue:85,points:[[1070,760],[1165,880],[1260,1000]],labels:['Live Notes','Plant guild','Technique'],later:['Live Notes','Local insights','Observation']}
+
+// Presentation data only: no PIM records, stored IDs or navigation are modified.
+export const AR_WELCOME_CORNER_MS = 16000;
+export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 4;
+const topic = (label, children=[]) => ({label,children:children.map(item=>typeof item==='string'?{label:item,children:[]}:item)});
+export const AR_WELCOME_GRAPHS = [
+ topic('Climate',[
+  topic('Subtropical',['Temperature','Rainfall','Frost tolerance','Seasonal growth','Suitable plants','Planting conditions']),
+  topic('Tropical',['Humidity','Rainfall','Growth']),topic('Temperate',['Seasons','Frost','Dormancy']),
+  topic('Cool',['Temperature','Shelter']),topic('Dry',['Water','Soil cover']),topic('Humid',['Airflow','Rainfall'])]),
+ topic('Food forest',[
+  topic('Layers',['Canopy','Understorey','Shrub','Herb','Ground cover','Climbers','Roots']),
+  topic('Function',['Habitat','Harvest','Soil relationships']),topic('Light',['Shade','Height','Growth habit']),
+  topic('Ecology',['Companions','Pollinators','Soil life'])]),
+ topic('Plant',[
+  topic('Identity',['Species','Cultivar','Characteristics']),topic('Propagation',['Seed','Cutting','Graft','Marcott','Division']),
+  topic('Climate',['Tropical','Subtropical','Temperate']),topic('Layer',['Height','Evergreen','Growth habit']),
+  topic('Harvest',['Fruit','Flower','Season']),topic('Soil',['Water','Ecology'])]),
+ topic('Pin',[
+  topic('Place',['Story','Learning','Photo']),topic('Plant',['Species','Cultivar','Layer','Propagation']),
+  topic('Observation',['Date','Condition','Growth','Fruiting','Problem','Action']),
+  topic('Note',['Task','Data','Learning'])])
 ];
-export function createArWelcomeClusters(random = Math.random) {
- return AR_WELCOME_CLUSTERS.map(cluster=>({...cluster,labels:[...(random()<.5?cluster.labels:cluster.later)]}));
+export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS;
+const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
+export const AR_WELCOME_CANVAS = {width:2500,height:2100};
+// Transparent margins let cells grow OUTSIDE the unchanged welcome glass.
+const positions=[[535,435],[215,338],[408,245],[656,266],[110,112],[309,93],[516,94],[786,105]];
+
+// Derive a bounded, three-level graph for the active corner. Later loops explore
+// different branches instead of crowding the entire knowledge tree onto the panel.
+export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS) {
+ const time=reducedMotion?12000:Math.max(0,elapsed);
+ const corner=Math.floor(time/AR_WELCOME_CORNER_MS)%graphs.length;
+ const phase=time%AR_WELCOME_CORNER_MS;
+ const cycle=Math.floor(time/(AR_WELCOME_CORNER_MS*graphs.length));
+ const tree=graphs[corner];
+ const children=Array.from({length:Math.min(3,tree.children.length)},(_,i)=>tree.children[(i+cycle)%tree.children.length]);
+ const nodes=[{id:'root',parent:null,label:tree.label,depth:0,at:2000,slot:0}];
+ children.forEach((child,i)=>nodes.push({id:`branch-${i}`,parent:'root',label:child.label,depth:1,at:4000+i*950,slot:i+1}));
+ // First branch demonstrates two descendants; other branches each add one.
+ const leaves=[[0,0],[0,1],[1,0],[2,0]];
+ leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:7100+i*850,slot:4+i});});
+ const fading=1-smooth(phase,14000,2000);
+ for(const node of nodes){
+  const [x,y]=positions[node.slot];node.x=corner%2?2500-x:x;node.y=corner<2?y:2100-y;
+  node.progress=reducedMotion?1:smooth(phase,node.at,1700+(node.slot%3)*100);
+  node.opacity=node.progress*(reducedMotion?1:fading);
+  node.scale=(.38+.62*node.progress)*(reducedMotion?1:.86+.14*fading);
+  node.baseRadius=node.depth?[92,94,90,84,86,82,88][node.slot-1]:104;
+  node.radius=node.baseRadius*node.scale;
+  node.emphasis=(1-smooth(phase,node.at+1800,1800))*node.progress;
+  node.state=node.opacity===0?'hidden':phase>=14000?'contracting':node.progress<1?'revealing':'settled';
+ }
+ return {corner,phase,cycle,nodes};
 }
-export const AR_WELCOME_CELL_INTERVAL = 1500;
-const ease = (time,delay,duration) => {const t=Math.min(1,Math.max(0,(time-delay)/duration));return t*t*(3-2*t);};
-export function drawArWelcomeShowcase(ctx, elapsed, reducedMotion=false, clusters=AR_WELCOME_CLUSTERS) {
- const time=reducedMotion?AR_WELCOME_SHOWCASE_DURATION:Math.min(elapsed,AR_WELCOME_SHOWCASE_DURATION);
- ctx.clearRect(0,0,1400,1080);ctx.save();ctx.globalAlpha=ease(time,0,4000);
- drawArWelcomePanel(ctx);
+
+export const AR_WELCOME_CONTINUE_MS = AR_WELCOME_SHOWCASE_DURATION / 2;
+export const welcomeCanContinue = elapsed => Number.isFinite(elapsed) && elapsed >= AR_WELCOME_CONTINUE_MS;
+
+// Keep developed cells in place. Dismissal uses stable corner/node identities,
+// so hidden branches stay hidden while the rest of the demo continues.
+export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set()) {
+ return graphs.map((_,corner)=>{
+  const local=reducedMotion?12000:Math.min(12000,Math.max(0,elapsed-corner*AR_WELCOME_CORNER_MS));
+  const frame=welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+local,false,graphs);
+  const dismissed=new Set();
+  for(const node of frame.nodes){
+   node.key=`${corner}:${node.id}`;
+   if(hidden.has(node.key) || dismissed.has(node.parent)){node.opacity=0;dismissed.add(node.id);}
+  }
+  return frame;
+ });
+}
+
+export function welcomeCellAtPoint(frames,x,y) {
+ for(const frame of frames)for(const node of frame.nodes){
+  // Inscribed hexagon area: a hit cannot leak into neighbouring empty space.
+  if(node.opacity>.5 && Math.hypot(x-node.x,y-node.y)<node.radius*.86)return node;
+ }
+ return null;
+}
+
+// Labels share the face transform, so their centre cannot drift off the cell.
+export function fitWelcomeCellLabel(ctx,label,radius,depth) {
+ const lines=label.split(' '), maxWidth=radius*1.48;
+ let font=depth?34:39;
+ do {ctx.font=`${depth?'550':'650'} ${font}px system-ui`;if(lines.every(line=>ctx.measureText(line).width<=maxWidth))break;font--;}
+ while(font>12);
+ return {lines,font,lineHeight:font*1.12,maxWidth};
+}
+
+function drawGlassCell(ctx,node,hue,elapsed,reducedMotion) {
+ const wave=reducedMotion?0:Math.sin(elapsed/2800+node.slot*1.3);
+ const opening=1-node.progress;
+ ctx.save();ctx.globalAlpha=node.opacity;
+ ctx.translate(node.drawX,node.drawY);
+ ctx.rotate(reducedMotion?0:(opening*-.14+wave*.022));
+ ctx.scale(node.scale*(1-opening*.18),node.scale);
+ const r=node.baseRadius, thickness=10+opening*12;
+ // Rear rim and connecting facets give the transparent face physical depth.
+ drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.08)',`hsla(${hue},24%,64%,.24)`,2);
+ for(let i=0;i<6;i++){
+  const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+5,y+thickness);
+  ctx.strokeStyle=`hsla(${hue},36%,83%,.28)`;ctx.lineWidth=1.6;ctx.stroke();
+ }
+ const glass=ctx.createLinearGradient(-r,-r,r*.6,r);
+ glass.addColorStop(0,`hsla(${hue},28%,90%,.26)`);
+ glass.addColorStop(.45,`hsla(${hue},23%,78%,.09)`);
+ glass.addColorStop(1,'rgba(15,53,36,.17)');
+ const rim=ctx.createLinearGradient(-r,-r,r,r);
+ rim.addColorStop(0,'rgba(246,255,231,.92)');rim.addColorStop(.5,`hsla(${hue},31%,78%,.58)`);rim.addColorStop(1,'rgba(232,251,217,.3)');
+ ctx.shadowColor='rgba(7,29,18,.22)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;
+ drawHexagon(ctx,0,0,r,glass,rim,3);
+ ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ drawHexagon(ctx,0,0,r-6,'rgba(255,255,255,0)',`hsla(${hue},28%,91%,.16)`,1);
+ // A quiet change in edge light follows the opening, without flashing.
+ ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
+ ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();
+ ctx.globalAlpha=node.opacity*smooth(node.progress,.35,.65);
  ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.globalAlpha=ease(time,500,4500);ctx.fillStyle='#dcef95';ctx.font='750 30px system-ui';ctx.fillText('A LIVING WORLD OF KNOWLEDGE',700,412);
+ ctx.fillStyle='rgba(255,255,245,.98)';
+ ctx.shadowColor='rgba(6,28,15,.8)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+ const label=fitWelcomeCellLabel(ctx,node.label,r,node.depth);
+ label.lines.forEach((line,i)=>ctx.fillText(line,0,(i-(label.lines.length-1)/2)*label.lineHeight));
+ ctx.restore();
+}
+
+export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
+ ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(550,510);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
+ if(options.drawPanel!==false){
+ drawArWelcomePanel(ctx);
+ if(options.drawContent){options.drawContent(ctx);}else{
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.globalAlpha=reducedMotion?1:smooth(elapsed,500,3000);ctx.fillStyle='#dcef95';ctx.font='750 30px system-ui';ctx.fillText('A LIVING WORLD OF KNOWLEDGE',700,412);
  ctx.fillStyle='#fff';ctx.font='760 72px system-ui';ctx.fillText('NourishlandXR',700,500);
  ctx.font='500 32px system-ui';ctx.fillText('Explore the wonders of plants and ecosystems',700,577);
  ctx.fillText('in an immersive, interactive way.',700,622);
- ctx.font='24px system-ui';ctx.fillText('Continue to begin the guided demo',700,690);
- clusters.forEach((cluster,c)=>{
-  cluster.points.forEach(([x,y],i)=>{
-   // Grow from parent to child, one new cell every 1.5 seconds across the four corners.
-   const progress=ease(time,4500+(i*4+c)*AR_WELCOME_CELL_INTERVAL,2000);if(!progress)return;
-   const [px,py]=i?cluster.points[i-1]:[c%2?1050:350,c<2?345:735];
-   const cx=x+(px-x)*.25*(1-progress),cy=y+(py-y)*.25*(1-progress);
-   const radius=72*(.65+.35*progress);
-   ctx.globalAlpha=progress;
-   const dx=cx-px,dy=cy-py,length=Math.hypot(dx,dy)||1;
-   const cut=i?62:0;
-   ctx.strokeStyle='rgba(220,239,195,.45)';ctx.lineWidth=1.5;
-   ctx.beginPath();ctx.moveTo(px+dx/length*cut,py+dy/length*cut);ctx.lineTo(cx-dx/length*radius*.86,cy-dy/length*radius*.86);ctx.stroke();
-   // Use the actual PIM hexagon primitive. Light glass fill retains the AR scene underneath.
-   drawHexagon(ctx,cx,cy,radius,`hsla(${cluster.hue},30%,78%,.12)`,`hsla(${cluster.hue},42%,84%,.72)`,2);
-   ctx.fillStyle='rgba(255,255,246,.96)';ctx.font=`${i?'500':'650'} 24px system-ui`;
-   ctx.globalAlpha=progress*ease(progress, .3, .7);
-   const words=cluster.labels[i].split(' ');
-   if(words.join(' ').length>10 && words.length>1){ctx.fillText(words[0],cx,cy-14);ctx.fillText(words.slice(1).join(' '),cx,cy+14);}else ctx.fillText(words.join(' '),cx,cy);
-  });
- });
+ ctx.font='24px system-ui';ctx.fillText(welcomeCanContinue(elapsed)?'Continue to explore · select a cell to hide its branch':'Let the knowledge unfold',700,690);
+ }
+ }
  ctx.restore();
+ const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden);
+ for(const frame of frames){
+ const hue=[105,42,165,85][frame.corner];
+ const byId=new Map(frame.nodes.map(node=>[node.id,node]));
+ // Draw stems first; glass faces sit above their connections.
+ for(const node of frame.nodes){
+  const parent=byId.get(node.parent);
+  const anchorX=frame.corner%2?1883:617,anchorY=frame.corner<2?580:1520;
+  const originX=parent?parent.x:anchorX,originY=parent?parent.y:anchorY;
+  const drift=reducedMotion?0:Math.sin(elapsed/2700+node.slot*1.7)*3*node.progress;
+  node.drawX=node.x+(originX-node.x)*.16*(1-node.progress)+drift;
+  node.drawY=node.y+(originY-node.y)*.16*(1-node.progress)+(reducedMotion?0:Math.cos(elapsed/3300+node.slot)*2*node.progress);
+  if(!node.opacity)continue;
+  const px=parent?parent.drawX:anchorX,py=parent?parent.drawY:anchorY;
+  const dx=node.drawX-px,dy=node.drawY-py,length=Math.hypot(dx,dy)||1;
+  const startRadius=parent?parent.radius:0;
+  const ax=px+dx/length*startRadius,ay=py+dy/length*startRadius;
+  const bx=node.drawX-dx/length*node.radius,by=node.drawY-dy/length*node.radius;
+  const bend=(frame.corner%2?-1:1)*9;
+  const cx=(ax+bx)/2-dy/length*bend,cy=(ay+by)/2+dx/length*bend;
+  ctx.globalAlpha=node.opacity;ctx.strokeStyle=`hsla(${hue},32%,82%,.48)`;ctx.lineWidth=2.4;
+  ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo(cx,cy,bx,by);ctx.stroke();
+  if(!reducedMotion && node.progress<1){
+   const t=node.progress,u=1-t;
+   ctx.globalAlpha=node.opacity*(1-node.progress);ctx.fillStyle='#ecfbd7';
+   ctx.beginPath();ctx.arc(u*u*ax+2*u*t*cx+t*t*bx,u*u*ay+2*u*t*cy+t*t*by,3,0,Math.PI*2);ctx.fill();
+  }
+ }
+ for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion);
+ }
+ ctx.restore();
+ return frames;
 }

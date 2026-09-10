@@ -1,5 +1,5 @@
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
-import {drawArWelcomeShowcase,createArWelcomeClusters,AR_WELCOME_SHOWCASE_DURATION} from '../services/arWelcomeShowcase.js';
+import {drawArWelcomeShowcase,createArWelcomeClusters,AR_WELCOME_CONTINUE_MS,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -66,6 +66,9 @@ let pointerPressTimer = null;
 let demoHoldTimer = null;
 let introNarrationTimer = null;
 let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[];
+let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
+let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
+let arWelcomeHidden=new Set();
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardVisible = true;
@@ -304,6 +307,8 @@ function clearSessionState() {
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
+    clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;
+    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;arWelcomeHidden=new Set();
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
     aimRevealTimer = null;
@@ -527,7 +532,13 @@ function hideGuidedChoice({ hideBoard = false } = {}) {
 
 function activateImmersiveDemoControl() {
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    if (continueButton && !continueButton.hidden) {
+    if (continueButton && !continueButton.hidden && !continueButton.disabled) {
+        if(arWelcomeShowcaseActive){
+            if(arWelcomeIntroPending && !welcomeCanContinue(performance.now()-arWelcomeStartedAt))return false;
+            // DOM-overlay buttons handle their own clicks. Controller-only AR
+            // must hit the drawn Continue control instead of accepting any tap.
+            if(domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,[0,-.16,-2.8]),1.85,.78,900,220))return false;
+        }
         continueButton.click();
         return true;
     }
@@ -564,6 +575,7 @@ function prepareTutorialBoard(panel) {
 }
 
 function showGuidedChoice(html, onClick = () => {}, options = {}) {
+    useSharedWelcomeBoard(false);
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
@@ -670,6 +682,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
     const paragraphs = (Array.isArray(body) ? body : [body])
@@ -777,6 +790,7 @@ function finishIntroBoard() {
 }
 
 function showPersistentPimPrompt(record) {
+    useSharedWelcomeBoard(false);
     setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -812,35 +826,108 @@ function showPersistentPimPrompt(record) {
     setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh.`);
 }
 
+function useSharedWelcomeBoard(visible) {
+    if(!arWelcomeShowcaseActive)return;
+    arWelcomeSharedBoard=visible;introBoardTextureDirty=true;
+    appRoot?.querySelector('[data-tryit-guided-choice]')?.classList.toggle('is-live-welcome-copy',visible);
+}
+
+function welcomeFrames() {
+    return welcomeExperienceFrames(performance.now()-arWelcomeStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,arWelcomeHidden);
+}
+
+function hideWelcomeCell(key) {
+    arWelcomeHidden.add(key);introBoardTextureDirty=true;
+    // The click and any generated XR select must never also advance the demo.
+    suppressSessionSelectUntil=performance.now()+700;
+}
+
+function paintWelcomeLayer(now) {
+    if(!arWelcomeCanvas)return;
+    const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),now-arWelcomeStartedAt,
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
+            hidden:arWelcomeHidden,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            drawContent:arWelcomeIntroPending?null:drawIntroNoteContent
+        });
+    for(const frame of frames)for(const node of frame.nodes){
+        const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
+        if(button)button.hidden=node.opacity<=.5;
+    }
+}
+
 function showArWelcomeShowcase() {
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
+    const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
-    arWelcomeClusters=createArWelcomeClusters();
-    arWelcomeShowcaseActive=true;introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;
-    introSceneStartedAt=performance.now();introBoardTextureDirty=true;
+    arWelcomeClusters=createArWelcomeClusters();arWelcomeHidden=new Set();
+    arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
+    introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
+    arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardTitle='NourishlandXR';introBoardBody='';introBoardVisibleBody='';
-    panel.classList.add('is-welcome-board','is-ar-welcome-showcase');panel.hidden=false;
-    panel.innerHTML='<canvas width="1400" height="1080" role="img" aria-label="NourishlandXR. Explore the wonders of plants and ecosystems in an immersive, interactive way. Honeycomb examples: Climate, Food forest, Landscape and Live Notes."></canvas>';
-    const canvas=panel.querySelector('canvas'),ctx=canvas.getContext('2d');
-    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let last=-Infinity;
+    panel.hidden=true;panel.classList.add('is-live-welcome-copy');
+    const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR. Living knowledge grows from Climate, Food forest, Plant and Pin. Select a cell to hide it and its descendants."></canvas>';
+    arWelcomeCanvas=layer.querySelector('canvas');
+    // Native buttons provide touch, keyboard and screen-reader access to cells.
+    for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
+        const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;
+        cell.setAttribute('aria-label',`Hide ${node.label} cell and its descendants`);cell.hidden=true;
+        cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
+        cell.addEventListener('beforexrselect',event=>event.preventDefault());
+        cell.addEventListener('click',event=>{event.stopPropagation();hideWelcomeCell(node.key);paintWelcomeLayer(performance.now());});
+        layer.append(cell);
+    }
+    appRoot.querySelector('.tryit-stage').append(layer);
+    let last=-Infinity,lastState='';
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
-        const elapsed=now-introSceneStartedAt;
-        if(now-last>=50){drawArWelcomeShowcase(ctx,elapsed,reduced,arWelcomeClusters);introBoardTextureDirty=true;last=now;}
-        if(!reduced && elapsed<AR_WELCOME_SHOWCASE_DURATION)arWelcomeShowcaseFrame=requestAnimationFrame(frame);
+        const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeHidden.size,welcomeCanContinue(now-arWelcomeStartedAt)].join('|');
+        if(now-last>=50 && (!reduced || state!==lastState)){
+            paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
+        }
+        // XRSession frames drive immersive textures; a hidden DOM canvas need
+        // not render a second copy. Reduced motion repaints only changed copy.
+        if(simulatedMode)arWelcomeShowcaseFrame=requestAnimationFrame(frame);
     };
     frame(performance.now());
-    button.textContent=demoLocalizedText('Continue');button.hidden=false;
+    button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;
+    if(skip)skip.hidden=true;
+    arWelcomeUnlockTimer=setTimeout(()=>{
+        if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
+        button.disabled=false;button.hidden=false;
+        setGuide('Continue is now available. Select a cell to hide it and its descendants.');
+    },AR_WELCOME_CONTINUE_MS);
     button.onclick=()=>{
-        if(!arWelcomeShowcaseActive)return;
-        arWelcomeShowcaseActive=false;cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;
-        panel.classList.remove('is-ar-welcome-showcase');introBoardTextureDirty=true;
-        suppressSessionSelectUntil=performance.now()+700;runArWelcomeTutorial();
+        if(!arWelcomeIntroPending || !welcomeCanContinue(performance.now()-arWelcomeStartedAt))return;
+        arWelcomeIntroPending=false;introBoardTextureDirty=true;
+        if(skip)skip.hidden=false;
+        suppressSessionSelectUntil=performance.now()+700;
+        runArWelcomeTutorial();
     };
-    skipDemoNarration=()=>button.click();
-    setGuide('Explore the wonders of plants and ecosystems. Continue to begin the guided demo.');
+    // Only the explicit Continue action advances the opening animation.
+    skipDemoNarration=()=>{};
+    setGuide('Explore the wonders of plants and ecosystems. Continue becomes available halfway through the introduction.');
+}
+
+// Use the same billboard geometry for ray hits and texture drawing.
+function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
+    if(!introWorldAnchor)return null;
+    const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
+    const origin=demoPointerWorldOrigin(),direction=demoPointerWorldRay();
+    if(!origin || !direction)return null;
+    return spatialDashboardRayHit({origin,direction},{center:position,
+        right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},
+        normal:{x:matrix[8],y:0,z:matrix[10]},width:.4*scaleX,height:.16*scaleY},{width,height});
+}
+
+function selectWelcomeCell() {
+    if(!arWelcomeShowcaseActive || !introWorldAnchor)return false;
+    const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
+    const cell=hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
+    if(!cell)return false;
+    hideWelcomeCell(cell.key);return true;
 }
 
 function runArWelcomeTutorial() {
@@ -2623,10 +2710,16 @@ function createIntroNoteTexture(texture = null) {
     const label = introNoteCanvas ||= document.createElement('canvas');
     label.width = 1400;
     label.height = 1080;
+    if(arWelcomeShowcaseActive){label.width=2500;label.height=2100;}
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,performance.now()-introSceneStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters);return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,performance.now()-arWelcomeStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:arWelcomeHidden,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
+    drawIntroNoteContent(ctx);
+    return canvasTexture(label, texture);
+}
+
+function drawIntroNoteContent(ctx) {
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
@@ -2666,7 +2759,6 @@ function createIntroNoteTexture(texture = null) {
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
-    return canvasTexture(label, texture);
 }
 
 function createIntroControlTexture(labelText, texture = null) {
@@ -2776,10 +2868,11 @@ function introWorldAnchorFromViewer(matrix) {
 }
 
 function drawIntroSpatial(view) {
-    if (!introSceneActive || !viewerMatrix || !program || !buffer) return;
+    if ((!introSceneActive && !arWelcomeShowcaseActive) || !viewerMatrix || !program || !buffer) return;
     introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
     const now = performance.now();
-    if (introBoardVisible && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken))) {
+    if(arWelcomeShowcaseActive && !window.matchMedia('(prefers-reduced-motion: reduce)').matches)introBoardTextureDirty=true;
+    if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
@@ -2810,13 +2903,13 @@ function drawIntroSpatial(view) {
             easedKnowledge * .9
         );
     }
-    if (introBoardVisible && introNoteTexture) {
+    if ((introBoardVisible || arWelcomeShowcaseActive) && introNoteTexture) {
         drawTexture(
             introNoteTexture,
             introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
-            AR_PHONE_COMFORT.boardScale[0],
-            AR_PHONE_COMFORT.boardScale[1],
-            easedNote
+            AR_PHONE_COMFORT.boardScale[0] * (arWelcomeShowcaseActive ? 2500/1400 : 1),
+            AR_PHONE_COMFORT.boardScale[1] * (arWelcomeShowcaseActive ? 2100/1080 : 1),
+            arWelcomeShowcaseActive ? 1 : easedNote
         );
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -3218,6 +3311,8 @@ async function startImmersive() {
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
+            if (selectWelcomeCell()) return;
+            if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
@@ -3232,7 +3327,7 @@ async function startImmersive() {
         session.addEventListener('selectstart', () => {
             if(demoKnowledgeWorkspace) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
-            if (placementReady) return;
+            if (arWelcomeIntroPending || placementReady) return;
             const actionTarget = demoRecordAtPointer()?.record;
             if (actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();
