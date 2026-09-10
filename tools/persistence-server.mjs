@@ -1730,6 +1730,7 @@ const server = http.createServer((req, res) => {
     }
 
     try {
+        if (pathname.startsWith('/api/')) enforceRequestBodyLimit(req, res, pathname);
         if (handleApi(req, res)) return;
     } catch (error) {
         sendJson(res, 500, { error: error.message || 'Internal API error' });
@@ -1774,6 +1775,9 @@ const port = process.env.PORT || 8000;
 const host = process.env.HOST || '127.0.0.1';
 if (production && (!creatorPassword || sessionSecret.length < 32)) {
     throw new Error('Production requires NOURISHLAND_CREATOR_PASSWORD and a NOURISHLAND_SESSION_SECRET of at least 32 characters');
+}
+if (production && creatorAuthDisabled) {
+    throw new Error('Production cannot run with NOURISHLAND_CREATOR_AUTH_DISABLED=true');
 }
 server.requestTimeout = 30000;
 server.on('error', error => {
