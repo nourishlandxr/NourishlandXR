@@ -237,10 +237,10 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 @media(prefers-reduced-motion:reduce){.live-note-workspace *{animation:none!important;transition:none!important;}}
 
 /* Four project destinations, with explicit typography independent of page headings. */
-#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:720px;box-sizing:border-box;}
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:100%;max-width:720px;box-sizing:border-box;}
 #app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button {display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;width:100%;min-height:48px;height:auto;padding:12px 10px;box-sizing:border-box;font:600 14px/1.35 system-ui,sans-serif;letter-spacing:0;text-transform:none;white-space:normal;overflow-wrap:anywhere;text-align:center;}
 #app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button>span {flex:0 0 auto;font-size:14px;line-height:1;}
-@media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav {grid-template-columns:repeat(3,minmax(0,1fr));}}
 
 @media(max-width:520px){#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button {padding:10px 3px;white-space:nowrap;overflow-wrap:normal;}#app .nlxr-db-v2 .nlxr-db-v2-mode-nav>button>span {display:none;}}
 
@@ -252,3 +252,11 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .tryit-live-welcome button[hidden] {display:none;}
 .tryit-demo .tryit-guided-choice.is-live-welcome-copy {position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important;}
 .tryit-demo.is-immersive .tryit-live-welcome {display:none;}
+
+/* Topic detail is a quiet side note in AR: the world and PIM stay visible. */
+.creator-ar-knowledge-workspace.is-ar-pim-side-note,
+.demo-knowledge-workspace.is-ar-pim-side-note {left:24px;right:auto;top:50%;bottom:auto;width:min(52vw,520px);max-height:70vh;transform:translateY(-50%);animation:ar-pim-side-note-in .42s ease-out both;}
+.creator-ar-knowledge-workspace.is-ar-pim-side-note[data-spatial-dashboard-mirror-source],
+.demo-knowledge-workspace.is-ar-pim-side-note[data-spatial-dashboard-mirror-source] {left:0!important;top:0!important;width:min(100%,720px)!important;max-height:none!important;transform:none!important;}
+@keyframes ar-pim-side-note-in {from{opacity:0;transform:translate(-12px,-50%)}to{opacity:1;transform:translate(0,-50%)}}
+@media(prefers-reduced-motion:reduce){.creator-ar-knowledge-workspace.is-ar-pim-side-note,.demo-knowledge-workspace.is-ar-pim-side-note{animation:none;}}

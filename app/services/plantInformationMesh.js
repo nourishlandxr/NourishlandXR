@@ -66,9 +66,9 @@ export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
     safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
     layoutWidth: 1440,
     layoutHeight: 1080,
-    readerControl: true,
+    readerControl: false,
     compactLabels: true,
-    softSurface: true
+    softSurface: false
 });
 
 const PIM_DEFAULT_SAFE_AREA = Object.freeze({ left: 6, right: 94, top: 6, bottom: 94 });

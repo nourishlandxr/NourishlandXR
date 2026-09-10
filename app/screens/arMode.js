@@ -673,6 +673,20 @@ function updateKnowledgeControls() {
     if (open) open.disabled = !record;
 }
 
+function spatialPimSidePanelFromViewer(viewerMatrix) {
+    const panel = spatialDashboardPanelFromViewer(viewerMatrix, { width: .78, height: .68, distance: 1.12, drop: .02 });
+    if (!panel) return panel;
+    // Keep the note at the user's left hand level while the PIM remains in the
+    // centre of the world view. The panel stays world locked after opening.
+    const sideOffset = -.66;
+    panel.center = {
+        x: panel.center.x + panel.right.x * sideOffset,
+        y: panel.center.y + .04,
+        z: panel.center.z + panel.right.z * sideOffset
+    };
+    return panel;
+}
+
 function closeCreatorKnowledge({force = false} = {}) {
     if (!creatorKnowledgeWorkspace && !creatorKnowledgeRoot) return true;
     if (!force && creatorKnowledgeWorkspace) return creatorKnowledgeWorkspace.close();
@@ -715,10 +729,11 @@ async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = 
         onClose:()=>closeCreatorKnowledge({force:true}),
         onSaved:()=>{ creatorKnowledgeCache.delete(record); invalidateSpatialPimTexture(record); if(session===owner) renderSessionMarkers(); }
     });
+    root.classList.add('is-ar-pim-side-note');
     if (questHeadsetSession && gl) {
         questSpatialWebVisible = true;
-        questSpatialDashboardPanel = spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix, {width:1.18,height:1.02});
-        questSpatialDashboardMirror = createSpatialDashboardMirror({ gl, root, width:960,height:830,
+        questSpatialDashboardPanel = spatialPimSidePanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
+        questSpatialDashboardMirror = createSpatialDashboardMirror({ gl, root, width:720,height:620,
             title:'PLANT KNOWLEDGE', onStatus:setPlacementStatus,
             onError:error=>setPlacementStatus(`Knowledge panel: ${error.message}`) });
     }
@@ -732,10 +747,11 @@ function openCreatorLiveNote(record) {
     creatorKnowledgeReturnFocus=document.activeElement;creatorKnowledgeRecord=record;
     const root=document.createElement('section');creatorKnowledgeRoot=root;overlayRoot.append(root);overlayRoot.classList.add('has-creator-knowledge');
     creatorKnowledgeWorkspace=mountLiveNote(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
+    root.classList.add('is-ar-pim-side-note');
     if(questHeadsetSession && gl){
         questSpatialWebVisible=true;
-        questSpatialDashboardPanel=spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix,{width:1.18,height:1.02});
-        questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:960,height:830,title:'LIVE NOTE',onStatus:setPlacementStatus,onError:error=>setPlacementStatus(error.message)});
+        questSpatialDashboardPanel=spatialPimSidePanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
+        questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'LIVE NOTE',onStatus:setPlacementStatus,onError:error=>setPlacementStatus(error.message)});
     }
 }
 
@@ -3218,7 +3234,7 @@ function ensureSpatialPimTexture(record) {
         height: size.height,
         layoutWidth: size.layoutWidth,
         layoutHeight: size.layoutHeight,
-        hoverPath, compactLabels:true, softSurface:true,
+        hoverPath, compactLabels:true, readerControl:false, softSurface:false,
         selectedNodeId: record.pimSelectedNodeId,
         bloomProgress,
         closingPaths

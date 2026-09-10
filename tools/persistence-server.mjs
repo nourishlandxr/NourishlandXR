@@ -18,12 +18,19 @@ const creatorPassword = process.env.NOURISHLAND_CREATOR_PASSWORD || '';
 const sessionSecret = process.env.NOURISHLAND_SESSION_SECRET || '';
 const creatorAuthDisabled = String(process.env.NOURISHLAND_CREATOR_AUTH_DISABLED || '').trim().toLowerCase() === 'true';
 const publicOrigin = (process.env.NOURISHLAND_PUBLIC_ORIGIN || 'https://nourishland.org').replace(/\/$/, '');
+const MAX_JSON_BODY_BYTES = 1 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
+const MAX_IMPORT_FILES = 10_000;
+const MAX_IMPORT_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+const loginFailures = new Map();
 const DALEYS_PRODUCTS_URL = 'https://www.daleysfruit.com.au/app/products.php';
 const DALEYS_BATCH_SIZE = 100;
 const DALEYS_CATALOG_TTL_MS = 15 * 60 * 1000;
 let daleysCatalogCache = { expiresAt: 0, products: [] };
 let daleysCatalogPromise = null;
 const sessionTtlMs = 12 * 60 * 60 * 1000;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
 const PLACE_TYPES = new Set([
     'Outdoor Area',
     'Indoor Area',
@@ -55,6 +62,7 @@ const demoMarkersDir = path.join(demoPlaceDir, 'markers');
 fs.mkdirSync(workspaceDir, { recursive: true });
 
 function sendJson(res, statusCode, payload) {
+    if (res.writableEnded || res.destroyed) return false;
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
@@ -146,6 +154,38 @@ function signSession(expires) {
     return `${expires}.${crypto.createHmac('sha256', sessionSecret).update(String(expires)).digest('hex')}`;
 }
 
+function loginClientKey(req) {
+    return String(req.socket?.remoteAddress || 'unknown');
+}
+
+function loginRateLimit(req) {
+    const key = loginClientKey(req);
+    const record = loginFailures.get(key);
+    if (!record || Date.now() - record.firstFailureAt >= LOGIN_WINDOW_MS) {
+        loginFailures.delete(key);
+        return { blocked: false };
+    }
+    if (record.failures >= LOGIN_MAX_FAILURES) {
+        return { blocked: true, retryAfter: Math.ceil((record.firstFailureAt + LOGIN_WINDOW_MS - Date.now()) / 1000) };
+    }
+    return { blocked: false };
+}
+
+function recordLoginFailure(req) {
+    const key = loginClientKey(req);
+    const now = Date.now();
+    const current = loginFailures.get(key);
+    if (!current || now - current.firstFailureAt >= LOGIN_WINDOW_MS) {
+        loginFailures.set(key, { firstFailureAt: now, failures: 1 });
+    } else {
+        current.failures += 1;
+    }
+}
+
+function clearLoginFailures(req) {
+    loginFailures.delete(loginClientKey(req));
+}
+
 function hasCreatorSession(req) {
     if (!production) return true;
     if (creatorAuthDisabled) return true;
@@ -172,14 +212,65 @@ function isAllowedOrigin(req) {
 }
 
 function readRequestJson(req, callback) {
-    let body = '';
-    req.on('data', chunk => {
-        body += chunk;
-        if (Buffer.byteLength(body) > 1024 * 1024) req.destroy(new Error('Request body is too large'));
-    });
-    req.on('end', () => {
+    readRequestBody(req, (error, body) => {
+        if (error) return callback(error);
         try { callback(null, JSON.parse(body || '{}')); }
-        catch (error) { callback(new Error('Request body must contain valid JSON')); }
+        catch (parseError) { callback(new Error('Request body must contain valid JSON')); }
+    }, MAX_JSON_BODY_BYTES);
+}
+
+function readRequestBody(req, callback, maxBytes) {
+    let size = 0;
+    const chunks = [];
+    let settled = false;
+    const finish = (error, body = '') => {
+        if (settled) return;
+        settled = true;
+        callback(error, body);
+    };
+    const declaredLength = Number(req.headers['content-length']);
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+        const error = new Error('Request body is too large');
+        error.statusCode = 413;
+        process.nextTick(() => { finish(error); req.destroy(); });
+        return;
+    }
+    req.on('data', chunk => {
+        if (settled) return;
+        size += chunk.length;
+        if (size > maxBytes) {
+            const error = new Error('Request body is too large');
+            error.statusCode = 413;
+            finish(error);
+            req.destroy();
+            return;
+        }
+        chunks.push(chunk);
+    });
+    req.on('end', () => finish(null, Buffer.concat(chunks).toString('utf8')));
+    req.on('error', error => finish(error));
+}
+
+function enforceRequestBodyLimit(req, res, pathname) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return;
+    const maxBytes = pathname === '/api/projects/import' ? MAX_IMPORT_BYTES : MAX_JSON_BODY_BYTES;
+    const declaredLength = Number(req.headers['content-length']);
+    let size = 0;
+    let rejected = false;
+    const reject = () => {
+        if (rejected) return;
+        rejected = true;
+        sendJson(res, 413, { error: 'Request body is too large' });
+        req.destroy();
+    };
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+        process.nextTick(reject);
+        return;
+    }
+    req.on('data', chunk => {
+        if (rejected) return;
+        size += chunk.length;
+        if (size > maxBytes) reject();
     });
 }
 
@@ -248,6 +339,19 @@ function ensureDefaultHomeAreas(projectId) {
 function runPowerShell(command) {
     const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { encoding: 'utf8' });
     if (result.status !== 0) throw new Error(result.stderr || 'Archive operation failed');
+}
+
+function validateImportArchive(archivePath) {
+    const script = `$archive = [IO.Compression.ZipFile]::OpenRead('${escapePs(archivePath)}'); try { $entries = @($archive.Entries); if ($entries.Count -gt ${MAX_IMPORT_FILES}) { throw 'ZIP contains too many files' }; [int64]$total = 0; foreach ($entry in $entries) { if ([IO.Path]::IsPathRooted($entry.FullName) -or $entry.FullName -match '(^|[\\/])\.\.([\\/]|$)') { throw 'ZIP contains an unsafe path' }; $total += [int64]$entry.Length; if ($total -gt ${MAX_IMPORT_UNCOMPRESSED_BYTES}) { throw 'ZIP expands beyond the allowed size' } } } finally { $archive.Dispose() }`;
+    runPowerShell(script);
+}
+
+function resolveWorkspaceProject(projectId) {
+    const safeId = assertSafeId(projectId, 'project id');
+    const workspaceRoot = path.resolve(workspaceDir);
+    const target = path.resolve(workspaceRoot, safeId);
+    if (target !== workspaceRoot && !target.startsWith(`${workspaceRoot}${path.sep}`)) throw new Error('Project path escapes the workspace');
+    return target;
 }
 
 function validateProjectDirectory(projectDir) {
@@ -895,13 +999,20 @@ function handleApi(req, res) {
     if (loginRequest) {
         if (!isAllowedOrigin(req)) return sendJson(res, 403, { error: 'Request origin is not allowed' });
         if (creatorAuthDisabled) return sendJson(res, 200, { authenticated: true, required: false, authDisabled: true });
+        const rate = loginRateLimit(req);
+        if (rate.blocked) {
+            res.setHeader('Retry-After', String(rate.retryAfter));
+            return sendJson(res, 429, { error: 'Too many failed login attempts. Try again later.' });
+        }
         readRequestJson(req, (error, data) => {
-            if (error) return sendJson(res, 400, { error: error.message });
+            if (error) return sendJson(res, error.statusCode || 400, { error: error.message });
             const supplied = Buffer.from(String(data.password || ''));
             const expected = Buffer.from(creatorPassword);
             if (!creatorPassword || supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+                recordLoginFailure(req);
                 return sendJson(res, 401, { error: 'Invalid Creator password' });
             }
+            clearLoginFailures(req);
             const expires = Date.now() + sessionTtlMs;
             setSessionCookie(res, signSession(expires), Math.floor(sessionTtlMs / 1000));
             return sendJson(res, 200, { authenticated: true });
@@ -1100,21 +1211,24 @@ function handleApi(req, res) {
             try {
                 const archivePath = path.join(tempDir, 'project.zip');
                 fs.writeFileSync(archivePath, Buffer.concat(chunks));
+                validateImportArchive(archivePath);
                 const extractDir = path.join(tempDir, 'extracted');
                 runPowerShell(`Expand-Archive -LiteralPath '${escapePs(archivePath)}' -DestinationPath '${escapePs(extractDir)}' -Force`);
                 const entries = fs.readdirSync(extractDir, { withFileTypes: true }).filter(entry => entry.isDirectory());
                 if (entries.length !== 1) throw new Error('ZIP must contain exactly one project folder');
-                const sourceDir = path.join(extractDir, entries[0].name);
+                const extractionRoot = path.resolve(extractDir);
+                const sourceDir = path.resolve(extractionRoot, entries[0].name);
+                if (!sourceDir.startsWith(`${extractionRoot}${path.sep}`)) throw new Error('ZIP project path is invalid');
                 validateProjectDirectory(sourceDir);
                 const project = JSON.parse(fs.readFileSync(path.join(sourceDir, 'project.json'), 'utf8'));
-                let projectId = project.id || toProjectId(entries[0].name);
-                let targetDir = path.join(workspaceDir, projectId);
+                let projectId = assertSafeId(project.id || toProjectId(entries[0].name), 'project id');
+                let targetDir = resolveWorkspaceProject(projectId);
                 if (fs.existsSync(targetDir)) {
                     if (req.headers['x-import-as-copy'] !== 'true') { sendJson(res, 409, { error: 'Project ID already exists', conflict: projectId }); return; }
                     const base = toProjectId(`${projectId}_copy`) || 'project_copy'; let index = 1;
                     projectId = base;
-                    while (fs.existsSync(path.join(workspaceDir, projectId))) projectId = `${base}_${index++}`;
-                    targetDir = path.join(workspaceDir, projectId);
+                    while (fs.existsSync(resolveWorkspaceProject(projectId))) projectId = assertSafeId(`${base}_${index++}`, 'project id');
+                    targetDir = resolveWorkspaceProject(projectId);
                     project.id = projectId;
                     project.name = `${project.name || entries[0].name} Copy`;
                     fs.writeFileSync(path.join(sourceDir, 'project.json'), JSON.stringify(project, null, 2) + '\n');

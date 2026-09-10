@@ -4,7 +4,7 @@ import {welcomeNetworkFrame,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase} 
 test('one corner grows through three levels, fades and passes to the next',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
  assert.equal(welcomeNetworkFrame(3500).nodes.filter(n=>n.opacity>0).length,1);
- const full=welcomeNetworkFrame(12000);assert.equal(full.nodes.length,8);assert.ok(full.nodes.every(n=>n.opacity===1));assert.equal(full.nodes.filter(n=>n.depth===2).length,4);
+ const full=welcomeNetworkFrame(14000);assert.equal(full.nodes.length,8);assert.ok(full.nodes.every(n=>n.opacity===1));assert.equal(full.nodes.filter(n=>n.depth===2).length,4);
  assert.ok(welcomeNetworkFrame(15999).nodes.every(n=>n.opacity<.00001));
  assert.equal(welcomeNetworkFrame(16000).corner,1);assert.equal(welcomeNetworkFrame(32000).corner,2);assert.equal(welcomeNetworkFrame(48000).corner,3);
  assert.ok(welcomeNetworkFrame(AR_WELCOME_SHOWCASE_DURATION).nodes.every(n=>n.opacity===0));
@@ -50,7 +50,7 @@ test('Continue unlocks only at the midpoint of the complete intro',async()=>{
 
 test('developed corners persist across the midpoint, narration and later demo steps',async()=>{
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
- assert.equal(welcomeExperienceFrames(12000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,8);
+ assert.equal(welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,8);
  assert.equal(welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,16);
  const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,32);
  assert.deepEqual(welcomeExperienceFrames(640000),settled);
@@ -62,11 +62,15 @@ test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  const hidden=new Set(['0:branch-0','2:root']);
  const frames=welcomeExperienceFrames(64000,false,undefined,hidden);
  const climate=frames[0].nodes;
- for(const id of ['branch-0','attribute-0','attribute-1'])assert.equal(climate.find(n=>n.id===id).opacity,0);
+ assert.equal(climate.find(n=>n.id==='branch-0').hollow,true);
+ for(const id of ['attribute-0','attribute-1'])assert.equal(climate.find(n=>n.id===id).opacity,0);
  assert.equal(climate.find(n=>n.id==='branch-1').opacity,1);
- assert.ok(frames[2].nodes.every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
+ assert.equal(frames[2].nodes.find(n=>n.id==='root').hollow,true);
+ assert.ok(frames[2].nodes.filter(n=>n.id!=='root').every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
  const cell=climate.find(n=>n.id==='branch-1');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
- const gone=climate.find(n=>n.id==='branch-0');assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y),null);
+ const gone=climate.find(n=>n.id==='branch-0');
+ assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y).key,gone.key);
+ assert.equal(gone.hollow,true);
  assert.equal(welcomeCellAtPoint(frames,1250,1050),null);
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden),frames);
 });

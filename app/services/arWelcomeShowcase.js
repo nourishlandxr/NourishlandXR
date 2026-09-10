@@ -9,17 +9,17 @@ export const AR_WELCOME_GRAPHS = [
  topic('Climate',[
   topic('Subtropical',['Temperature','Rainfall','Frost tolerance','Seasonal growth','Suitable plants','Planting conditions']),
   topic('Tropical',['Humidity','Rainfall','Growth']),topic('Temperate',['Seasons','Frost','Dormancy']),
-  topic('Cool',['Temperature','Shelter']),topic('Dry',['Water','Soil cover']),topic('Humid',['Airflow','Rainfall'])]),
+  topic('Cool',['Shelter','Wind exposure']),topic('Dry',['Water needs','Soil cover']),topic('Humid',['Airflow','Cloud cover'])]),
  topic('Food forest',[
   topic('Layers',['Canopy','Understorey','Shrub','Herb','Ground cover','Climbers','Roots']),
-  topic('Function',['Habitat','Harvest','Soil relationships']),topic('Light',['Shade','Height','Growth habit']),
+  topic('Function',['Habitat','Yield','Soil relationships']),topic('Light',['Shade','Height','Growth habit']),
   topic('Ecology',['Companions','Pollinators','Soil life'])]),
  topic('Plant',[
-  topic('Identity',['Species','Cultivar','Characteristics']),topic('Propagation',['Seed','Cutting','Graft','Marcott','Division']),
-  topic('Climate',['Tropical','Subtropical','Temperate']),topic('Layer',['Height','Evergreen','Growth habit']),
-  topic('Harvest',['Fruit','Flower','Season']),topic('Soil',['Water','Ecology'])]),
+  topic('Identity',['Species','Cultivar','Characteristics']),topic('Propagation',['Seed','Cutting','Graft','Marcot','Division']),
+  topic('Range',['Warmth','Latitude','Exposure']),topic('Layer',['Evergreen','Mature size','Form']),
+  topic('Harvest',['Fruit','Flower','Season']),topic('Soil',['Moisture','Soil life'])]),
  topic('Pin',[
-  topic('Place',['Story','Learning','Photo']),topic('Plant',['Species','Cultivar','Layer','Propagation']),
+  topic('Place',['Story','Learning','Photo']),topic('Specimen',['Genus','Variety','Canopy layer','Method']),
   topic('Observation',['Date','Condition','Growth','Fruiting','Problem','Action']),
   topic('Note',['Task','Data','Learning'])])
 ];
@@ -39,18 +39,19 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
  const tree=graphs[corner];
  const children=Array.from({length:Math.min(3,tree.children.length)},(_,i)=>tree.children[(i+cycle)%tree.children.length]);
  const nodes=[{id:'root',parent:null,label:tree.label,depth:0,at:2000,slot:0}];
- children.forEach((child,i)=>nodes.push({id:`branch-${i}`,parent:'root',label:child.label,depth:1,at:4000+i*950,slot:i+1}));
+ children.forEach((child,i)=>nodes.push({id:`branch-${i}`,parent:'root',label:child.label,depth:1,at:3500+i*1500,slot:i+1}));
  // First branch demonstrates two descendants; other branches each add one.
  const leaves=[[0,0],[0,1],[1,0],[2,0]];
- leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:7100+i*850,slot:4+i});});
+ leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:8200+i*1300,slot:4+i});});
  const fading=1-smooth(phase,14000,2000);
  for(const node of nodes){
   const [x,y]=positions[node.slot];node.x=corner%2?2500-x:x;node.y=corner<2?y:2100-y;
-  node.progress=reducedMotion?1:smooth(phase,node.at,1700+(node.slot%3)*100);
+  node.progress=reducedMotion?1:smooth(phase,node.at,1500+(node.slot%3)*80);
   node.opacity=node.progress*(reducedMotion?1:fading);
   node.scale=(.38+.62*node.progress)*(reducedMotion?1:.86+.14*fading);
   node.baseRadius=node.depth?[92,94,90,84,86,82,88][node.slot-1]:104;
   node.radius=node.baseRadius*node.scale;
+  node.hollow=false;
   node.emphasis=(1-smooth(phase,node.at+1800,1800))*node.progress;
   node.state=node.opacity===0?'hidden':phase>=14000?'contracting':node.progress<1?'revealing':'settled';
  }
@@ -64,12 +65,27 @@ export const welcomeCanContinue = elapsed => Number.isFinite(elapsed) && elapsed
 // so hidden branches stay hidden while the rest of the demo continues.
 export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set()) {
  return graphs.map((_,corner)=>{
-  const local=reducedMotion?12000:Math.min(12000,Math.max(0,elapsed-corner*AR_WELCOME_CORNER_MS));
+  const started=Number.isFinite(elapsed)?elapsed-corner*AR_WELCOME_CORNER_MS:0;
+  const local=reducedMotion?AR_WELCOME_CORNER_MS-1:Math.min(AR_WELCOME_CORNER_MS-1,Math.max(0,started));
+  // Build each corner from its own timeline even when reduced motion is on.
+  // Passing `reducedMotion` into welcomeNetworkFrame would pin every corner
+  // to the first graph, which makes the static fallback lose three corners.
   const frame=welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+local,false,graphs);
+  const settled=reducedMotion || started>=AR_WELCOME_CORNER_MS;
+  if(settled) frame.nodes.forEach(node=>{node.progress=1;node.opacity=1;node.scale=1;node.radius=node.baseRadius;node.state='settled';});
+  else frame.nodes.forEach(node=>{node.opacity=node.progress;node.scale=.38+.62*node.progress;node.radius=node.baseRadius*node.scale;});
   const dismissed=new Set();
   for(const node of frame.nodes){
    node.key=`${corner}:${node.id}`;
-   if(hidden.has(node.key) || dismissed.has(node.parent)){node.opacity=0;dismissed.add(node.id);}
+   const collapsed=hidden.has(node.key);
+   if(collapsed && node.progress>.02){
+    node.hollow=true;
+    node.opacity=Math.max(node.opacity,.76);
+    dismissed.add(node.id);
+   } else if(dismissed.has(node.parent)){
+    node.opacity=0;
+    dismissed.add(node.id);
+   }
   }
   return frame;
  });
@@ -92,31 +108,31 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  return {lines,font,lineHeight:font*1.12,maxWidth};
 }
 
-function drawGlassCell(ctx,node,hue,elapsed,reducedMotion) {
+ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion) {
  const wave=reducedMotion?0:Math.sin(elapsed/2800+node.slot*1.3);
  const opening=1-node.progress;
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
  ctx.rotate(reducedMotion?0:(opening*-.14+wave*.022));
  ctx.scale(node.scale*(1-opening*.18),node.scale);
- const r=node.baseRadius, thickness=10+opening*12;
+ const r=node.baseRadius, thickness=10+opening*12, hollow=Boolean(node.hollow);
  // Rear rim and connecting facets give the transparent face physical depth.
- drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.08)',`hsla(${hue},24%,64%,.24)`,2);
+ drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.04)',`hsla(${hue},24%,64%,${hollow?.42:.24})`,2);
  for(let i=0;i<6;i++){
   const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;
   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+5,y+thickness);
   ctx.strokeStyle=`hsla(${hue},36%,83%,.28)`;ctx.lineWidth=1.6;ctx.stroke();
  }
  const glass=ctx.createLinearGradient(-r,-r,r*.6,r);
- glass.addColorStop(0,`hsla(${hue},28%,90%,.26)`);
- glass.addColorStop(.45,`hsla(${hue},23%,78%,.09)`);
- glass.addColorStop(1,'rgba(15,53,36,.17)');
+ glass.addColorStop(0,`hsla(${hue},28%,90%,${hollow?.035:.26})`);
+ glass.addColorStop(.45,`hsla(${hue},23%,78%,${hollow?.015:.09})`);
+ glass.addColorStop(1,`rgba(15,53,36,${hollow?.025:.17})`);
  const rim=ctx.createLinearGradient(-r,-r,r,r);
  rim.addColorStop(0,'rgba(246,255,231,.92)');rim.addColorStop(.5,`hsla(${hue},31%,78%,.58)`);rim.addColorStop(1,'rgba(232,251,217,.3)');
  ctx.shadowColor='rgba(7,29,18,.22)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;
- drawHexagon(ctx,0,0,r,glass,rim,3);
+ drawHexagon(ctx,0,0,r,glass,rim,hollow?2.5:3);
  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
- drawHexagon(ctx,0,0,r-6,'rgba(255,255,255,0)',`hsla(${hue},28%,91%,.16)`,1);
+ drawHexagon(ctx,0,0,r-6,'rgba(255,255,255,0)',`hsla(${hue},28%,91%,${hollow?.4:.16})`,hollow?2:1);
  // A quiet change in edge light follows the opening, without flashing.
  ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
  ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();

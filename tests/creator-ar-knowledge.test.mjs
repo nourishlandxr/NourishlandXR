@@ -47,12 +47,13 @@ test('deep and adjacent expanded branches have no overlapping hexagon interiors 
  for(const node of partial)assert.deepEqual(nodes.find(n=>n.path===node.path).position,node.position,'opening another branch must not move an existing cell');
  }
 });
-test('all-topics spatial button matches its controller target and stays below the mesh',()=>{
+test('spatial PIM no longer renders an all-topics bar below the mesh',()=>{
  const knowledge=pimToArKnowledge(PIGEON_PEA_PIM),expanded=['cultivation','scientific-information'];
  const size=pimHoneycombTextureSize(knowledge,expanded,PIM_SPATIAL_LAYOUT_OPTIONS);
- const options={...PIM_SPATIAL_LAYOUT_OPTIONS,...size,cellWidthPixels:200};
- const nodes=pimVisibleNodes(knowledge,expanded,options),box=pimReaderControl(nodes,options);
- assert.ok(box.top+box.height<=100);assert.equal(pimHoneycombTargetAtPercent(knowledge,expanded,box.left+box.width/2,box.top+box.height/2,options).pimRead,true);
+ const options={...size,...PIM_SPATIAL_LAYOUT_OPTIONS,cellWidthPixels:200};
+ const nodes=pimVisibleNodes(knowledge,expanded,options);
+ assert.equal(options.readerControl,false);
+ assert.equal(pimHoneycombTargetAtPercent(knowledge,expanded,50,98,options),null);
  assert.equal(pimHoneycombTargetAtPercent(knowledge,expanded,nodes[0].position.x,nodes[0].position.y,options).path,nodes[0].path);
 });
 test('spatial compact labels do not shrink below the readable font floor',()=>{

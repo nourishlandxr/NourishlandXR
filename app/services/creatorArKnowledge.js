@@ -51,7 +51,7 @@ export function mountCreatorArKnowledge(root, { record, context, path = '', obse
     root.classList.add('creator-ar-knowledge-workspace');
     root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
     root.setAttribute('aria-label', `${document.identity.commonName || 'Plant'} knowledge`);
-    root.innerHTML = `<header class="creator-ar-knowledge-header"><div><small>CREATOR · KNOWLEDGE IN PLACE</small><h2>${html(document.identity.commonName || record.marker.name)}</h2><p>${html(record.areaName || context[2])} · ${html(record.marker.id)}</p></div><button type="button" data-knowledge-close>Back to AR</button></header><nav class="creator-ar-knowledge-nav" aria-label="Knowledge workspace"><button type="button" data-knowledge-all>All topics</button><button type="button" data-knowledge-observation>Add observation</button></nav><p class="creator-ar-knowledge-message" role="status" data-knowledge-message></p><div class="creator-ar-knowledge-content" data-knowledge-mount></div>`;
+    root.innerHTML = `<header class="creator-ar-knowledge-header"><div><small>CREATOR · KNOWLEDGE IN PLACE</small><h2>${html(document.identity.commonName || record.marker.name)}</h2><p>${html(record.areaName || context[2])} · ${html(record.marker.id)}</p></div><button type="button" data-knowledge-close>Back to AR</button></header><nav class="creator-ar-knowledge-nav" aria-label="Knowledge workspace"><button type="button" data-knowledge-observation>Add observation</button></nav><p class="creator-ar-knowledge-message" role="status" data-knowledge-message></p><div class="creator-ar-knowledge-content" data-knowledge-mount></div>`;
     const message = root.querySelector('[data-knowledge-message]');
     const controller = mountPlantInformationWeb(root.querySelector('[data-knowledge-mount]'), {
         document, editable: true, embedded: true, showSearch: true, showIdentity: true, specimenId,
@@ -69,7 +69,6 @@ export function mountCreatorArKnowledge(root, { record, context, path = '', obse
         if(controller.isSaving() || controller.getState().editorMode) {message.textContent='Save or cancel the open editor before changing topics.';return;}
         controller.setState(next); root.scrollTop=0;
     };
-    root.querySelector('[data-knowledge-all]').addEventListener('click',()=>navigate({detailNodeId:'',viewMode:'list',searchQuery:'',searchPath:''}));
     root.querySelector('[data-knowledge-observation]').addEventListener('click',()=>navigate({detailNodeId:'',editorMode:'add',editorParentId:controller.getState().outlineBranchId || 'food-forest',editorSeed:{templateId:'custom',informationType:'local_observation',knowledgeScope:'specimen',specimenId,status:'draft'}}));
     root.querySelector('[data-knowledge-close]').addEventListener('click', close);
     const onKey = event => {

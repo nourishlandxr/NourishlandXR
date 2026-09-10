@@ -836,8 +836,10 @@ function welcomeFrames() {
     return welcomeExperienceFrames(performance.now()-arWelcomeStartedAt,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,arWelcomeHidden);
 }
 
-function hideWelcomeCell(key) {
-    arWelcomeHidden.add(key);introBoardTextureDirty=true;
+function toggleWelcomeCell(key) {
+    if(arWelcomeHidden.has(key)) arWelcomeHidden.delete(key);
+    else arWelcomeHidden.add(key);
+    introBoardTextureDirty=true;
     // The click and any generated XR select must never also advance the demo.
     suppressSessionSelectUntil=performance.now()+700;
 }
@@ -851,7 +853,11 @@ function paintWelcomeLayer(now) {
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
-        if(button)button.hidden=node.opacity<=.5;
+        if(button){
+            button.hidden=node.opacity<=.5;
+            button.dataset.welcomeHollow=node.hollow?'true':'false';
+            button.setAttribute('aria-label',`${node.hollow?'Reopen':'Hide'} ${node.label} cell${node.hollow?' and its descendants':''}`);
+        }
     }
 }
 
@@ -875,7 +881,7 @@ function showArWelcomeShowcase() {
         cell.setAttribute('aria-label',`Hide ${node.label} cell and its descendants`);cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
-        cell.addEventListener('click',event=>{event.stopPropagation();hideWelcomeCell(node.key);paintWelcomeLayer(performance.now());});
+        cell.addEventListener('click',event=>{event.stopPropagation();toggleWelcomeCell(node.key);paintWelcomeLayer(performance.now());});
         layer.append(cell);
     }
     appRoot.querySelector('.tryit-stage').append(layer);
@@ -927,7 +933,7 @@ function selectWelcomeCell() {
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
     const cell=hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
     if(!cell)return false;
-    hideWelcomeCell(cell.key);return true;
+    toggleWelcomeCell(cell.key);return true;
 }
 
 function runArWelcomeTutorial() {
@@ -1627,6 +1633,8 @@ function demoPimPointerTarget(record) {
         yPercent,
         node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, {
             ...demoSpatialPimLayoutOptions(),
+            readerControl:false,
+            softSurface:false,
             layoutWidth: size.layoutWidth,
             layoutHeight: size.layoutHeight,
             bloomProgress,
@@ -2326,11 +2334,19 @@ function openDemoKnowledge(record,path='') {
         onSaved:profile=>{record.demoKnowledgeProfile=profile;record.demoKnowledgeProjection=pimToArKnowledge(resolvePlantPim(profile));refreshDemoPimProfile(record);},
         onClose:()=>{record.arKnowledgeState=demoKnowledgeWorkspace.controller.getState();closeDemoKnowledge(true);}
     });
-    root.classList.add('demo-knowledge-workspace');
+    root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
     if(session && !domOverlayEnabled && gl) {
-        demoKnowledgePanel=spatialDashboardPanelFromViewer(viewerMatrix,{width:1.18,height:1.02});
-        demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:960,height:830,title:'DEMO · PLANT KNOWLEDGE',onStatus:setGuide,onError:error=>setGuide(error.message)});
+        demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);
+        demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'DEMO · PLANT KNOWLEDGE',onStatus:setGuide,onError:error=>setGuide(error.message)});
     }
+}
+
+function spatialPimSidePanelFromViewer(viewerMatrix) {
+    const panel=spatialDashboardPanelFromViewer(viewerMatrix,{width:.78,height:.68,distance:1.12,drop:.02});
+    if(!panel)return panel;
+    const sideOffset=-.66;
+    panel.center={x:panel.center.x+panel.right.x*sideOffset,y:panel.center.y+.04,z:panel.center.z+panel.right.z*sideOffset};
+    return panel;
 }
 
 function drawDemoKnowledge(view) {
