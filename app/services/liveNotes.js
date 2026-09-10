@@ -58,19 +58,3 @@ export function mountLiveNote(root, marker, {onClose=()=>{}}={}) {
     root.querySelector('[data-live-close]').focus();
     return {close:onClose,destroy:()=>cells.destroy()};
 }
-export function showLivingIntroduction(app, {onContinue,onCancel=()=>{}}) {
-    const previous=[...app.childNodes],focus=document.activeElement;
-    const root=document.createElement('section');root.className='living-introduction';root.setAttribute('aria-label','NourishlandXR introduction');
-    root.innerHTML=`<button type="button" class="living-close" aria-label="Close introduction">Close</button><header class="living-title"><p class="living-eyebrow">A WORLD OF CONNECTIONS</p><h1>Nourishland<span>XR</span></h1><p class="living-promise">Explore the wonders of plants and ecosystems<br>in an immersive, interactive way.</p><button type="button" class="living-continue">Continue <span aria-hidden="true">↗</span></button><small>Enter the guided AR demo</small></header><nav class="living-tabs" aria-label="Explore introduction themes">${INTRO_GROVES.map((tree,i)=>`<button type="button" data-live-tab="${i}" aria-pressed="${i===0}">${tree.title}</button>`).join('')}</nav>${INTRO_GROVES.map((_,i)=>`<section class="living-grove grove-${i}" data-grove="${i}"></section>`).join('')}<p class="living-footnote">Every cell opens another way to see a place. Select one to explore.</p>`;
-    app.replaceChildren(root);
-    const mounts=INTRO_GROVES.map((tree,i)=>mountLiveCells(root.querySelector(`[data-grove="${i}"]`),tree,{automatic:true,automaticDelay:22000+i*5000}));
-    root.dataset.activeGrove='0';
-    root.querySelectorAll('[data-live-tab]').forEach(button=>button.onclick=()=>{root.dataset.activeGrove=button.dataset.liveTab;root.querySelectorAll('[data-live-tab]').forEach(tab=>tab.setAttribute('aria-pressed',String(tab===button)));});
-    let closed=false;
-    const finish=proceed=>{if(closed)return;closed=true;mounts.forEach(m=>m.destroy());app.replaceChildren(...previous);focus?.isConnected && focus.focus();proceed?onContinue():onCancel();};
-    root.querySelector('.living-continue').onclick=()=>finish(true);
-    root.querySelector('.living-close').onclick=()=>finish(false);
-    root.addEventListener('keydown',event=>{if(event.key==='Escape')finish(false);});
-    root.querySelector('.living-continue').focus({preventScroll:true});
-    return {destroy:()=>finish(false)};
-}

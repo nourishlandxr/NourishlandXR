@@ -1,3 +1,18 @@
+# Correction — AR welcome showcase, 0.9023
+
+The earlier pre-AR interpretation below is superseded. The separate introduction screen and its entry-point wrapper have been removed.
+
+The demo now starts its AR session normally. Its existing welcome-note surface first displays a slowly fading rectangle/title, followed by connected honeycomb cells at the four corners. Continue then starts the original welcome narration and scrolling text. The showcase uses the existing WebGL welcome texture and world anchor in immersive mode, with the same canvas drawing in the simulated AR preview. No standalone page is shown before AR.
+
+Corner examples cover Climate, Food forest, Landscape and Live Notes. These are a timed showcase, not interactive plant records. Motion settles after 36 seconds, reduced motion renders immediately, and Continue/exit cancels the preview animation. Creator Live Notes and the earlier PIM work remain intact.
+
+Changed: app/screens/temporaryArDemo.js, app/services/arWelcomeShowcase.js (new), app/services/liveNotes.js (removed pre-AR screen), app/product-v2.css, app/services/buildInfo.js, tests/ar-interface.test.mjs, tests/ar-welcome-showcase.test.mjs (new).
+
+230 tests pass, including reveal timing, reduced motion and cell spacing. Browser simulation verifies composition and transition into the original scrolling welcome. Physical headset/phone AR still needs device verification. Local only; no deployment.
+
+---
+Historical implementation notes (superseded placement):
+
 # Living introduction and Live Notes — 0.9022
 
 Local implementation; no deployment, framework change or data migration.
