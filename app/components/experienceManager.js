@@ -1,3 +1,17 @@
+const escapeHtml = value => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const handlerArg = value => escapeHtml(JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029'));
+
 const experienceTypes = [
     'Plant Literacy',
     'Fruit Discovery',
@@ -27,13 +41,13 @@ export function renderExperienceManager(site, place, asset, onBack) {
             <div class="panel">
                 <div class="list-item">
                     <div>
-                        <strong>${experience.name}</strong>
-                        <p>${experience.type || 'Custom'}</p>
+                        <strong>${escapeHtml(experience.name)}</strong>
+                        <p>${escapeHtml(experience.type || 'Custom')}</p>
                     </div>
                     <div class="button-row">
-                        <button onclick="window.openExperience(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)}, ${JSON.stringify(experience)})">Open</button>
-                        <button onclick="window.editExperience(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)}, ${JSON.stringify(experience)})">Edit</button>
-                        <button onclick="window.deleteExperience(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)}, '${experience.id}')">Delete</button>
+                        <button onclick="window.openExperience(${handlerArg(site)}, ${handlerArg(place)}, ${handlerArg(asset)}, ${handlerArg(experience)})">Open</button>
+                        <button onclick="window.editExperience(${handlerArg(site)}, ${handlerArg(place)}, ${handlerArg(asset)}, ${handlerArg(experience)})">Edit</button>
+                        <button onclick="window.deleteExperience(${handlerArg(site)}, ${handlerArg(place)}, ${handlerArg(asset)}, ${handlerArg(experience.id)})">Delete</button>
                     </div>
                 </div>
             </div>
@@ -43,14 +57,14 @@ export function renderExperienceManager(site, place, asset, onBack) {
     return `
     <div class="screen">
         <div class="page-header">
-            <button class="ghost" onclick="${onBack}">Back</button>
+            <button class="ghost" onclick="${escapeHtml(onBack)}">Back</button>
             <h1>Experiences</h1>
             <p class="subtitle">Manage experiences for this asset.</p>
         </div>
 
         <div class="panel">
             <div class="button-row">
-                <button class="primary" onclick="window.createExperience(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">+ New Experience</button>
+                <button class="primary" onclick="window.createExperience(${handlerArg(site)}, ${handlerArg(place)}, ${handlerArg(asset)})">+ New Experience</button>
             </div>
         </div>
 
@@ -67,29 +81,29 @@ export function renderExperienceWorkspace(site, place, asset, experience) {
     return `
     <div class="screen">
         <div class="page-header">
-            <button class="ghost" onclick="window.renderAssetWorkspace(${JSON.stringify(site)}, ${JSON.stringify(place)}, ${JSON.stringify(asset)})">Back</button>
-            <h1>${experience.name}</h1>
+            <button class="ghost" onclick="window.renderAssetWorkspace(${handlerArg(site)}, ${handlerArg(place)}, ${handlerArg(asset)})">Back</button>
+            <h1>${escapeHtml(experience.name)}</h1>
             <p class="subtitle">Experience workspace</p>
         </div>
 
         <div class="panel">
             <h2>Title</h2>
-            <p>${experience.name}</p>
+            <p>${escapeHtml(experience.name)}</p>
         </div>
 
         <div class="panel">
             <h2>Type</h2>
-            <p>${experience.type || 'Custom'}</p>
+            <p>${escapeHtml(experience.type || 'Custom')}</p>
         </div>
 
         <div class="panel">
             <h2>Content</h2>
-            <p>${experience.content || 'Placeholder content'}</p>
+            <p>${escapeHtml(experience.content || 'Placeholder content')}</p>
         </div>
 
         <div class="panel">
             <h2>Media</h2>
-            <p>${experience.media || 'Placeholder media'}</p>
+            <p>${escapeHtml(experience.media || 'Placeholder media')}</p>
         </div>
     </div>
     `;
@@ -98,12 +112,12 @@ export function renderExperienceWorkspace(site, place, asset, experience) {
 export function renderExperienceForm(site, place, asset, experience = null, onCancel, onSubmit) {
     const selectedExperience = experience || defaultExperience('Untitled Experience');
 
-    const options = experienceTypes.map(type => `<option value="${type}" ${selectedExperience.type === type ? 'selected' : ''}>${type}</option>`).join('');
+    const options = experienceTypes.map(type => `<option value="${escapeHtml(type)}" ${selectedExperience.type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('');
 
     return `
     <div class="screen">
         <div class="page-header">
-            <button class="ghost" onclick="${onCancel}">Back</button>
+            <button class="ghost" onclick="${escapeHtml(onCancel)}">Back</button>
             <h1>${experience ? 'Edit Experience' : 'New Experience'}</h1>
             <p class="subtitle">Define the experience details.</p>
         </div>
@@ -111,7 +125,7 @@ export function renderExperienceForm(site, place, asset, experience = null, onCa
         <div class="panel">
             <div class="field">
                 <label for="experienceName">Name</label>
-                <input type="text" id="experienceName" value="${selectedExperience.name}" />
+                <input type="text" id="experienceName" value="${escapeHtml(selectedExperience.name)}" />
             </div>
 
             <div class="field">
@@ -122,8 +136,8 @@ export function renderExperienceForm(site, place, asset, experience = null, onCa
             </div>
 
             <div class="button-row">
-                <button onclick="${onCancel}">Cancel</button>
-                <button class="primary" onclick="${onSubmit}">Save</button>
+                <button onclick="${escapeHtml(onCancel)}">Cancel</button>
+                <button class="primary" onclick="${escapeHtml(onSubmit)}">Save</button>
             </div>
         </div>
     </div>

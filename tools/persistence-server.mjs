@@ -342,7 +342,7 @@ function runPowerShell(command) {
 }
 
 function validateImportArchive(archivePath) {
-    const script = `$archive = [IO.Compression.ZipFile]::OpenRead('${escapePs(archivePath)}'); try { $entries = @($archive.Entries); if ($entries.Count -gt ${MAX_IMPORT_FILES}) { throw 'ZIP contains too many files' }; [int64]$total = 0; foreach ($entry in $entries) { if ([IO.Path]::IsPathRooted($entry.FullName) -or $entry.FullName -match '(^|[\\/])\.\.([\\/]|$)') { throw 'ZIP contains an unsafe path' }; $total += [int64]$entry.Length; if ($total -gt ${MAX_IMPORT_UNCOMPRESSED_BYTES}) { throw 'ZIP expands beyond the allowed size' } } } finally { $archive.Dispose() }`;
+    const script = `Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive = [IO.Compression.ZipFile]::OpenRead('${escapePs(archivePath)}'); try { $entries = @($archive.Entries); if ($entries.Count -gt ${MAX_IMPORT_FILES}) { throw 'ZIP contains too many files' }; [int64]$total = 0; foreach ($entry in $entries) { if ([IO.Path]::IsPathRooted($entry.FullName) -or $entry.FullName -match '(^|[\\/])\.\.([\\/]|$)') { throw 'ZIP contains an unsafe path' }; $total += [int64]$entry.Length; if ($total -gt ${MAX_IMPORT_UNCOMPRESSED_BYTES}) { throw 'ZIP expands beyond the allowed size' } } } finally { $archive.Dispose() }`;
     runPowerShell(script);
 }
 
@@ -1745,7 +1745,12 @@ const server = http.createServer((req, res) => {
     const requestUrl = req.url;
     const requestPathname = new URL(requestUrl, `http://${req.headers.host}`).pathname;
     const safePath = requestPathname === '/app' || requestPathname === '/app/' ? '/app/index.html' : requestPathname;
-    const filePath = path.join(rootDir, safePath.replace(/^\//, ''));
+    const publicRoot = path.resolve(rootDir);
+    const filePath = path.resolve(publicRoot, safePath.replace(/^\//, ''));
+    if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${path.sep}`)) {
+        sendJson(res, 404, { error: 'File not found' });
+        return;
+    }
 
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         sendJson(res, 404, { error: `File not found: ${requestPathname}` });
