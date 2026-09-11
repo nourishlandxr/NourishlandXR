@@ -23,7 +23,7 @@ export const AR_WELCOME_GRAPHS = [
   topic('Observation',['Date','Condition','Growth','Fruiting','Problem','Action']),
   topic('Note',['Task','Data','Learning'])])
 ];
-export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS;
+export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map(graph=>({...graph,revealSeed:Math.random()}));
 const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
 export const AR_WELCOME_CANVAS = {width:2500,height:2100};
 // Transparent margins let cells grow OUTSIDE the unchanged welcome glass.
@@ -61,19 +61,47 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
 export const AR_WELCOME_CONTINUE_MS = AR_WELCOME_SHOWCASE_DURATION / 2;
 export const welcomeCanContinue = elapsed => Number.isFinite(elapsed) && elapsed >= AR_WELCOME_CONTINUE_MS;
 
+// Count presented time rather than time spent in a permission dialog, another
+// tab, or a suspended XR session. Multiple eyes share the same clock.
+export function createWelcomePresentationClock() {
+ let previous=null,elapsed=0;
+ return {get elapsed(){return elapsed;},tick(now,visible=true){
+  if(!Number.isFinite(now))return elapsed;
+  const delta=previous===null?0:now-previous;previous=now;
+  if(visible && delta>=0 && delta<500)elapsed+=delta;
+  return elapsed;
+ }};
+}
+
+function revealFrames(graphs) {
+ const frames=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
+ let seed=Math.floor((graphs[0]?.revealSeed ?? .3721)*2147483646)+1;
+ const random=()=>{seed=seed*16807%2147483647;return (seed-1)/2147483646;};
+ let at=2200,last=-1;
+ // A different corner buds on each beat. Each wave retains parent-before-child
+ // order; the per-session seed is stable across draws and hit testing.
+ for(let slot=0;slot<8;slot++){
+  const order=frames.map((_,i)=>i);
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  if(order[0]===last && order.length>1)[order[0],order[1]]=[order[1],order[0]];
+  for(const corner of order){const node=frames[corner].nodes[slot];if(!node)continue;node.revealAt=at;at+=1350+random()*400;last=corner;}
+ }
+ return frames;
+}
+
 // Keep developed cells in place. Dismissal uses stable corner/node identities,
 // so hidden branches stay hidden while the rest of the demo continues.
 export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set()) {
- return graphs.map((_,corner)=>{
-  const started=Number.isFinite(elapsed)?elapsed-corner*AR_WELCOME_CORNER_MS:0;
-  const local=reducedMotion?AR_WELCOME_CORNER_MS-1:Math.min(AR_WELCOME_CORNER_MS-1,Math.max(0,started));
-  // Build each corner from its own timeline even when reduced motion is on.
-  // Passing `reducedMotion` into welcomeNetworkFrame would pin every corner
-  // to the first graph, which makes the static fallback lose three corners.
-  const frame=welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+local,false,graphs);
-  const settled=reducedMotion || started>=AR_WELCOME_CORNER_MS;
-  if(settled) frame.nodes.forEach(node=>{node.progress=1;node.opacity=1;node.scale=1;node.radius=node.baseRadius;node.state='settled';});
-  else frame.nodes.forEach(node=>{node.opacity=node.progress;node.scale=.38+.62*node.progress;node.radius=node.baseRadius*node.scale;});
+ return revealFrames(graphs).map(frame=>{
+  const corner=frame.corner,time=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
+  frame.nodes.forEach(node=>{
+   node.progress=smooth(time,node.revealAt,1450);
+   node.opacity=node.progress;
+   node.scale=reducedMotion?1:.38+.62*node.progress;
+   node.radius=node.baseRadius*node.scale;
+   node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
+   node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
+  });
   const dismissed=new Set();
   for(const node of frame.nodes){
    node.key=`${corner}:${node.id}`;
@@ -114,8 +142,8 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
  ctx.rotate(reducedMotion?0:(opening*-.14+wave*.022));
- ctx.scale(node.scale*(1-opening*.18),node.scale);
- const r=node.baseRadius, thickness=10+opening*12, hollow=Boolean(node.hollow);
+ ctx.scale(node.scale*(reducedMotion?1:1-opening*.18),node.scale);
+ const r=node.baseRadius, thickness=10+(reducedMotion?0:opening*12), hollow=Boolean(node.hollow);
  // Rear rim and connecting facets give the transparent face physical depth.
  drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.04)',`hsla(${hue},24%,64%,${hollow?.42:.24})`,2);
  for(let i=0;i<6;i++){
@@ -169,8 +197,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   const anchorX=frame.corner%2?1883:617,anchorY=frame.corner<2?580:1520;
   const originX=parent?parent.x:anchorX,originY=parent?parent.y:anchorY;
   const drift=reducedMotion?0:Math.sin(elapsed/2700+node.slot*1.7)*3*node.progress;
-  node.drawX=node.x+(originX-node.x)*.16*(1-node.progress)+drift;
-  node.drawY=node.y+(originY-node.y)*.16*(1-node.progress)+(reducedMotion?0:Math.cos(elapsed/3300+node.slot)*2*node.progress);
+  node.drawX=node.x+(reducedMotion?0:(originX-node.x)*.16*(1-node.progress))+drift;
+  node.drawY=node.y+(reducedMotion?0:(originY-node.y)*.16*(1-node.progress)+Math.cos(elapsed/3300+node.slot)*2*node.progress);
   if(!node.opacity)continue;
   const px=parent?parent.drawX:anchorX,py=parent?parent.drawY:anchorY;
   const dx=node.drawX-px,dy=node.drawY-py,length=Math.hypot(dx,dy)||1;

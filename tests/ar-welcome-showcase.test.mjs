@@ -32,7 +32,7 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  fillText(text,x,y){labels.push({text,x,y,align:this.textAlign,baseline:this.textBaseline,width:this.measureText(text).width});},
  createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}};
  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','fill','stroke','roundRect','arc'])ctx[method]=()=>{};
- drawArWelcomeShowcase(ctx,12000,true);
+ drawArWelcomeShowcase(ctx,64000,true);
  const frame=welcomeNetworkFrame(12000,true);
  for(const node of frame.nodes){for(const word of node.label.split(' ')){
   const label=labels.find(l=>l.text===word && l.x===0);
@@ -50,11 +50,35 @@ test('Continue unlocks only at the midpoint of the complete intro',async()=>{
 
 test('developed corners persist across the midpoint, narration and later demo steps',async()=>{
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
- assert.equal(welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,8);
- assert.equal(welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,16);
+ const early=welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
+ const middle=welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
+ assert.ok(early>0 && early<middle && middle<32);
  const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,32);
  assert.deepEqual(welcomeExperienceFrames(640000),settled);
- assert.deepEqual(welcomeExperienceFrames(0,true),settled);
+ assert.ok(welcomeExperienceFrames(0,true).flatMap(f=>f.nodes).every(n=>n.opacity===0));
+ assert.deepEqual(welcomeExperienceFrames(64000,true),settled);
+});
+
+test('welcome buds alternate corners, preserve ancestry, and fade progressively in reduced motion',async()=>{
+ const {welcomeExperienceFrames,createArWelcomeClusters}=await import('../app/services/arWelcomeShowcase.js');
+ const graphs=createArWelcomeClusters();
+ const nodes=welcomeExperienceFrames(0,false,graphs).flatMap(f=>f.nodes);
+ assert.ok(nodes.every(n=>n.opacity===0));
+ const order=[...nodes].sort((a,b)=>a.revealAt-b.revealAt);
+ for(let i=1;i<order.length;i++)assert.notEqual(order[i].key[0],order[i-1].key[0]);
+ for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(node.revealAt>parent.revealAt+1450);}
+ const opening=welcomeExperienceFrames(order[0].revealAt+700,true,graphs).flatMap(f=>f.nodes).find(n=>n.key===order[0].key);
+ assert.ok(opening.opacity>0 && opening.opacity<1);assert.equal(opening.scale,1);
+ assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
+});
+
+test('welcome clock does not skip the opening after hidden or suspended frames',async()=>{
+ const {createWelcomePresentationClock}=await import('../app/services/arWelcomeShowcase.js');
+ const clock=createWelcomePresentationClock();
+ assert.equal(clock.tick(10000),0);assert.equal(clock.tick(10100),100);
+ assert.equal(clock.tick(74100),100);assert.equal(clock.tick(74200),200);
+ assert.equal(clock.tick(74300,false),200);assert.equal(clock.tick(74400),300);
+ assert.equal(clock.tick(74400),300);
 });
 
 test('hiding a cell removes only its descendants and stays dismissed',async()=>{
