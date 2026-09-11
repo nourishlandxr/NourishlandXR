@@ -4,6 +4,7 @@ import { requestImmersiveArSession } from './webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from './arScreenOrientation.js';
 import { readingPositions, hitReadingPlant, visitorTrackingCopy } from './visitorSpatialState.js';
 import { html } from './productExperience.js';
+import { createPlantKnowledgeResolver } from './spatialKnowledgePresentation.js';
 
 let session=null, starting=false, resetReadingSpace=null;
 const diagnostics=[];
@@ -37,6 +38,8 @@ export async function startArNote(marker,profile,options={}) {
     let positions=[],selected=-1,tracked=null,returnAction=null;
     // Read-only session samples; persisted coordinates are never modified or inferred.
     const plants=(options.plants?.length ? options.plants : marker ? [{...marker,description:profile?.overview || marker.description}] : []).slice(0,5);
+    const resolveKnowledge=createPlantKnowledgeResolver();
+    const plantKnowledge=plants.map(plant=>resolveKnowledge(plant.plant_profile || plant.profile || (plant.id===marker?.id ? profile : {}) || {},{includeDraft:false}));
     const cleanup=()=>{
         overlay?.remove();canvas?.remove();
         if(texture)gl?.deleteTexture(texture);
@@ -96,7 +99,7 @@ export async function startArNote(marker,profile,options={}) {
             const center=positions[Math.floor(plants.length/2)] || positions[0];
             renderARPanel(gl,xrFrame,space,texture,{program:renderer.program,buffer:renderer.buffer,position:[center.x,center.y+.4,center.z],width:.68,height:.42,
                 hidePanel:selected<0 && Boolean(owned.domOverlayState),
-                drawSpatialContent:view=>positions.forEach((position,index)=>drawSpatialOrb(gl,spheres,view,position,index === selected ? .11 : .075,{type:index<plants.length?'plant':'marker'}))});
+                drawSpatialContent:view=>positions.forEach((position,index)=>drawSpatialOrb(gl,spheres,view,position,index === selected ? .11 : .075,{type:index<plants.length?'plant':'marker',knowledge:plantKnowledge[index],highlighted:index===selected}))});
         };
         owned.requestAnimationFrame(frame);starting=false;
     } catch(error){recordArFailure(error,'Start');cleanup();if(owned)await owned.end().catch(()=>{});throw error;}

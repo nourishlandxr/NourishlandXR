@@ -473,12 +473,19 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
+        if (options.pressPath === node.path && options.pressProgress > 0) {
+            // drawHexagon leaves its path available: clip fill to the exact cell.
+            context.clip();
+            const progress = Math.max(0, Math.min(1, options.pressProgress));
+            context.fillStyle = 'rgba(214,246,173,.40)';
+            context.fillRect(point.x-radius*1.2, point.y+radius*(1-2*progress), radius*2.4, radius*2*progress);
+        }
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const textLayout = fitPimTextBlock(context, {
             title: options.compactLabels ? String(node.label).slice(0, 54) : node.label,
-            detail: options.compactLabels ? (node.depth ? 'Open knowledge' : '') : hasDescription ? node.value : '',
+            detail: options.compactLabels ? String(node.description || node.value || 'Hold for +Info').slice(0, 58) : hasDescription ? node.value : '',
             strictMinimum: options.compactLabels,
             radius,
             depth: node.depth

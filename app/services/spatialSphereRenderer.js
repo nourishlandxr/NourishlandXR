@@ -68,6 +68,24 @@ export function sphereModelMatrix(position, radius, scale = {}) {
     ]);
 }
 
+export function createOrbCrownGeometry() {
+    const vertices = [], indices = [];
+    // Six hollow hexagonal buds. Real triangles give a stable silhouette in XR.
+    for (let bud = 0; bud < 6; bud++) {
+        const angle = bud * Math.PI / 3 + Math.PI / 6;
+        const cx = Math.cos(angle) * 1.12, cy = Math.sin(angle) * 1.12;
+        for (let edge = 0; edge < 6; edge++) {
+            const a = edge * Math.PI / 3 + Math.PI / 6, b = a + Math.PI / 3;
+            const start = vertices.length / 6;
+            for (const [theta, size] of [[a,.28],[b,.28],[b,.22],[a,.22]]) {
+                vertices.push(cx + Math.cos(theta)*size, cy + Math.sin(theta)*size, .04, 0, 0, 1);
+            }
+            indices.push(start,start+1,start+2,start,start+2,start+3);
+        }
+    }
+    return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
+}
+
 export function createSpatialSphereRenderer(gl) {
     const vertexSource = `
         attribute vec3 position;
@@ -129,11 +147,19 @@ export function createSpatialSphereRenderer(gl) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
 
+    const crown = createOrbCrownGeometry();
+    const crownVertexBuffer = gl.createBuffer(), crownIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, crownVertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, crown.vertices, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, crownIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, crown.indices, gl.STATIC_DRAW);
+
     return {
         program,
         vertexBuffer,
         indexBuffer,
         indexCount: geometry.indices.length,
+        crownVertexBuffer, crownIndexBuffer, crownIndexCount:crown.indices.length,
         positionLocation: gl.getAttribLocation(program, 'position'),
         normalLocation: gl.getAttribLocation(program, 'normal'),
         projectionLocation: gl.getUniformLocation(program, 'projection'),
@@ -146,7 +172,11 @@ export function createSpatialSphereRenderer(gl) {
 
 export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, position, radius, material = {}) {
     if (!renderer || !projectionMatrix || !viewMatrix || !position || !Number.isFinite(Number(radius))) return;
-    const modelView = multiplyMatrices(viewMatrix, sphereModelMatrix(position, Number(radius), material.scale));
+    const model = sphereModelMatrix(position, Number(radius), material.scale);
+    if (material.billboard) {
+        for (let column=0;column<3;column++) for (let row=0;row<3;row++) model[column*4+row]=viewMatrix[row*4+column]*radius;
+    }
+    const modelView = multiplyMatrices(viewMatrix, model);
     gl.useProgram(renderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
@@ -195,8 +225,20 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.84 : 0.92, emissive: options.highlighted ? 0.9 : plant ? 0.34 : 0.24, opacity: options.opacity }
+        { color: shellColor, alpha: plant ? (options.knowledge?.live ? 0.42 : 0.74) : 0.92, emissive: options.highlighted ? 0.9 : plant ? 0.34 : 0.24, opacity: options.opacity }
     );
+
+    if (plant && options.knowledge?.live) {
+        gl.depthMask(false);
+        drawSpatialSphere(gl, { ...renderer, vertexBuffer:renderer.crownVertexBuffer,
+            indexBuffer:renderer.crownIndexBuffer, indexCount:renderer.crownIndexCount },
+            view.projectionMatrix, view.transform.inverse.matrix, position,
+            radius * (options.knowledge.state === 'expanded' ? 1.08 : 1), {
+                billboard:true, color:options.knowledge.draftOnly ? [.88,.78,.55] : [.79,.94,.82],
+                alpha:.82, emissive:.6, opacity:options.opacity
+            });
+        gl.depthMask(true);
+    }
 
     // Draw the halo after the opaque shell and without writing depth. Drawing
     // it first caused the larger transparent sphere to occlude the marker,
@@ -217,6 +259,8 @@ export function destroySpatialSphereRenderer(gl, renderer) {
     if (!gl || !renderer) return;
     gl.deleteBuffer(renderer.vertexBuffer);
     gl.deleteBuffer(renderer.indexBuffer);
+    gl.deleteBuffer(renderer.crownVertexBuffer);
+    gl.deleteBuffer(renderer.crownIndexBuffer);
     gl.deleteProgram(renderer.program);
 }
 

@@ -248,7 +248,8 @@ function fitPimDomTextBlock(block) {
                 && rect.right <= blockRect.right + .5
                 && rect.top >= blockRect.top - .5
                 && rect.bottom <= blockRect.bottom + .5
-                && element.scrollHeight <= element.clientHeight + 1;
+                && (element.scrollHeight <= element.clientHeight + 1
+                    || element === detail && Number.parseInt(computedStyle?.(element)?.webkitLineClamp, 10) > 0);
         });
     };
     for (let scale = 1; scale >= .52; scale -= .04) {
@@ -342,7 +343,8 @@ export function reconcilePlantInformationMesh(container, markup) {
     return currentMap;
 }
 
-export const PIM_PRESS_DURATION_MS = 500;
+export { PIM_ACTIVATION_MS as PIM_PRESS_DURATION_MS } from './pimActivationHold.js';
+import { PIM_ACTIVATION_MS as PIM_PRESS_DURATION_MS } from './pimActivationHold.js';
 
 function pimPressTarget(event) {
     return event?.target?.closest?.('[data-pim-node],[data-pim-back],[data-pim-role="center"]') || null;
@@ -549,12 +551,13 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const hasChildren = pimNodeChildren(node).length > 0;
         const open = expanded.has(node.path);
         const selected = String(options.selectedNodeId || '') === node.path;
-        const detailsVisible = node.depth > 0 && !options.compactLabels;
+        const detailsVisible = options.compactLabels || node.depth > 0;
+        const snippet = options.compactLabels ? String(node.description || node.value || 'Hold for +Info').slice(0, 58) : node.value;
         const role = node.depth === 0 ? 'primary' : 'child';
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
         const parentPosition = node.parentPosition || { x: 50, y: 50, gridX: 0, gridY: 0 };
         const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-node-scale:${node.layoutScale || 1};--pim-child-index:${Number(node.childIndex) || 0};--pim-hue:${pimNodeHue(node)}`;
-        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><span class="plant-knowledge-cell-copy"><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(node.value)}</small></span></button>`;
+        return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><span class="plant-knowledge-cell-copy"><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(snippet)}</small></span></button>`;
     }).join('');
     const handleLabel = options.handleLabel || `Drag the ${label(source.title)} Plant Information Mesh`;
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };

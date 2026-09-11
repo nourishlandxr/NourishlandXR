@@ -14,13 +14,14 @@ export function creatorKnowledgeDocument(record) {
     });
 }
 
-export function creatorKnowledgeState(document, { path = '', observation = false, state = {} } = {}) {
+export function creatorKnowledgeState(document, { path = '', observation = false, edit = false, state = {} } = {}) {
     const node = document.nodes.find(item => item.path === path || item.id === path);
     const ancestors = node ? pimAncestors(document, node.id) : [];
     const branch = ancestors[0]?.id || (node && !node.parentId ? node.id : state.outlineBranchId) || 'food-forest';
     return { ...state, viewMode: 'list', ...(node ? { highlightedNodeId: node.id,
         openNodeIds: [...new Set([...(state.openNodeIds || []), ...ancestors.map(item => item.id), node.id])],
         outlineBranchId: branch, detailNodeId: node.parentId ? node.id : '' } : {}),
+        ...(edit && node ? {editorMode:'edit',editorNodeId:node.id,editorParentId:'',editorSeed:null} : {}),
         ...(observation ? { detailNodeId: '', editorMode: 'add', editorParentId: branch,
             editorSeed: { templateId: 'custom', informationType: 'local_observation', knowledgeScope: 'specimen', status: 'draft' } } : {}) };
 }
@@ -43,10 +44,10 @@ export function createCreatorPimSave({ context, profile, load = loadPlantProfile
     };
 }
 
-export function mountCreatorArKnowledge(root, { record, context, path = '', observation = false, onClose = () => {}, onSaved = () => {}, persistence = {} }) {
+export function mountCreatorArKnowledge(root, { record, context, path = '', observation = false, edit = false, onClose = () => {}, onSaved = () => {}, persistence = {} }) {
     const document = creatorKnowledgeDocument(record);
     const specimenId = context.join('/');
-    let state = creatorKnowledgeState(document, { path, observation, state: record.arKnowledgeState || {} });
+    let state = creatorKnowledgeState(document, { path, observation, edit, state: record.arKnowledgeState || {} });
     if (observation) state.editorSeed.specimenId = specimenId;
     root.classList.add('creator-ar-knowledge-workspace');
     root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');

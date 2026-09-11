@@ -105,7 +105,7 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.doesNotMatch(styles, /tryit-demo-taskbar:has\([^}]*grid-template-columns:repeat\(3/);
     assert.doesNotMatch(styles, /\.tryit-intro-continue \{[^}]*position:fixed/);
     assert.match(styles, /plant-knowledge-press-fill/);
-    assert.match(viewSource, /PIM_PRESS_DURATION_MS = 500/);
+    assert.match(viewSource, /PIM_ACTIVATION_MS as PIM_PRESS_DURATION_MS/);
     assert.match(viewSource, /export function bindPlantInformationMeshPress/);
     const fs = await import('node:fs/promises');
     await assert.rejects(() => fs.access(new URL('../app/services/creatorPlantProfileLayout.js', import.meta.url)));

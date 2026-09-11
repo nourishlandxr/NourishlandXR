@@ -1,3 +1,8 @@
+import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import { bindSpatialPimHold } from '../services/pimActivationHold.js';
+import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
+import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
+const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
 import {drawArWelcomeShowcase,createArWelcomeClusters,AR_WELCOME_CONTINUE_MS,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint} from '../services/arWelcomeShowcase.js';
 /**
@@ -53,6 +58,11 @@ let simulatedMode = false;
 let program = null;
 let buffer = null;
 let sphereRenderer = null;
+let totemCardsRenderer = null;
+let infoPanel = null;
+let pimHold = null;
+function showDemoInfo(record,path) { infoPanel?.select(record,demoOrbKnowledge(record).document,path); }
+function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 let tetherRenderer = null;
 let prismRenderer = null;
 let triangleRenderer = null;
@@ -348,6 +358,8 @@ function clearSessionState() {
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;
+    pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
@@ -506,6 +518,25 @@ function continueAfterDemoPim(record) {
     if (record.tutorialStage === 'plant2') showDemoAction('note');
     else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
     return true;
+}
+
+function demoOrbKnowledge(record) {
+    const profile=record.demoKnowledgeProfile || (record.demoPlantPreset==='moringa' ? MORINGA_PROFILE : PIGEON_PEA_PROFILE_FOR_ORB);
+    return resolveOrbKnowledge(profile,{expanded:record.demoExpanded});
+}
+const PIGEON_PEA_PROFILE_FOR_ORB={pim_document:PIGEON_PEA_PIM};
+function demoTotemCards(record) {
+    const content=demoContentFor(record);
+    return totemKnowledgeCards({title:record.name || content?.title,introduction:record.description,
+        bubbles:content?.bubbles || [],
+        plants:markers.filter(item=>item.demoType==='plant').map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
+        notes:markers.filter(item=>item.demoType==='note').map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')}))
+    });
+}
+function activateDemoTotemCard(hit) {
+    if(!hit)return false;
+    hit.record.totemSelectedCard=hit.detail || hit.record.totemSelectedCard===hit.card.id ? '' : hit.card.id;
+    updateSimulatedMarkers();return true;
 }
 
 function demoContentFor(record) {
@@ -1437,7 +1468,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 
 function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
-    const bubbles = (content?.bubbles || content?.lines || []).filter(Boolean).slice(0, 5);
+    const cards = demoTotemCards(record);
     const style = DEMO_TOTEM_STYLES.find(item => item.id === (record.demoTotemStyle || 'basic')) || DEMO_TOTEM_STYLES[0];
     const styleControl = record.tutorialStage === 'totem2'
         ? `<button type="button" class="tryit-sim-totem-model-toggle" data-demo-totem-style-toggle aria-label="Change second Totem model">Model: ${style.label}<small>Tap to change</small></button>`
@@ -1445,7 +1476,7 @@ function renderSimulatedTotem(record, index, anchor) {
     const linkLabel = record.demoLinkVisible
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system is-totem-style-${style.id}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${record.name || 'Area'} Totem Marker information"><svg class="tryit-sim-totem-branches" viewBox="0 0 360 430" preserveAspectRatio="none" aria-hidden="true"><path d="M174 166 C124 142 84 106 66 72"/><path d="M180 162 C194 124 218 92 254 70"/><path d="M188 180 C230 182 260 165 298 144"/><path d="M171 225 C128 226 92 247 48 255"/><path d="M189 225 C228 226 254 250 286 264"/></svg><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${bubbles.map((text, cardIndex) => `<span class="tryit-sim-totem-card tryit-sim-totem-card-${cardIndex + 1}">${text}</span>`).join('')}${linkLabel}${styleControl}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -1546,10 +1577,11 @@ function selectDemoProfileCell() {
         setGuide(`Returned to the previous ${node.label} bloom.`);
         return true;
     }
+    showDemoInfo(record,node.path);
     if (!pimNodeChildren(node).length) {
         setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
         refreshDemoPimProfile(record);
-        openDemoKnowledge(record,node.path);
+
         return true;
     }
     const wasOpen = demoPimState(record).expandedNodeIds.has(node.path);
@@ -1662,6 +1694,7 @@ function renderSimulatedAreaLink() {
 }
 
 function updateSimulatedMarkers() {
+    appRoot?.querySelectorAll(':scope > .nlxr-totem-detail').forEach(note=>note.remove());
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     layer.innerHTML = `${renderSimulatedAreaLink()}${markers.map((record, index) => {
@@ -1771,6 +1804,10 @@ function bindSimulatedInformationPanels(layer) {
             }
         });
         if (record.demoType === 'plant') {
+            const knowledge=demoOrbKnowledge(record);
+            compactMarker.dataset.knowledgeState=knowledge.state;
+            compactMarker.insertAdjacentHTML('beforeend',liveOrbCrownMarkup(knowledge)+'<small class="nlxr-orb-label">'+knowledge.label+'</small>');
+            compactMarker.setAttribute('aria-label',(record.name || 'Plant')+' · '+knowledge.label);
             compactMarker.addEventListener('click', () => toggleDemoPlantProfile(record));
             compactMarker.addEventListener('keydown', event => {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1780,6 +1817,19 @@ function bindSimulatedInformationPanels(layer) {
             return;
         }
         if (record.demoType === 'zone') {
+            compactMarker.querySelectorAll('[data-totem-card]').forEach(button=>{
+                button.addEventListener('pointerdown',event=>event.stopPropagation());
+                button.addEventListener('click',event=>{
+                    event.stopPropagation();record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;updateSimulatedMarkers();
+                });
+            });
+            compactMarker.querySelector('[data-totem-close]')?.addEventListener('pointerdown',event=>event.stopPropagation());
+            compactMarker.querySelector('[data-totem-close]')?.addEventListener('click',event=>{
+                event.stopPropagation();const previous=record.totemSelectedCard;record.totemSelectedCard='';updateSimulatedMarkers();
+                appRoot.querySelector('[data-demo-marker-index="'+index+'"] [data-totem-card="'+previous+'"]')?.focus();
+            });
+            const detail=compactMarker.querySelector('.nlxr-totem-detail');
+            if(detail) appRoot.append(detail);
             const cycle = event => {
                 event?.preventDefault();
                 event?.stopPropagation();
@@ -1900,9 +1950,10 @@ function bindSimulatedInformationPanels(layer) {
             event.stopPropagation();
             const nodePath = cell.dataset.pimNode;
             const node = pimNodeAtPath(knowledgeFor(record), nodePath);
+            if(node) showDemoInfo(record,node.path);
             const cellLabel = cell.querySelector('b')?.textContent || 'Cell';
             if (!node || !pimNodeChildren(node).length) {
-                if(node) openDemoKnowledge(record,nodePath);
+
                 setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), nodePath));
                 refreshDemoPimProfile(record, profile);
                 setGuide(`${cellLabel}: ${node?.value || 'Information cell'}`);
@@ -2318,20 +2369,22 @@ function closeDemoKnowledge(force=false) {
     demoKnowledgeMirror?.destroy();demoKnowledgeMirror=null;demoKnowledgePanel=null;
     demoKnowledgeWorkspace.destroy();demoKnowledgeWorkspace=null;demoKnowledgeRoot?.remove();demoKnowledgeRoot=null;
     const stage=appRoot?.querySelector('.tryit-stage'); if(stage) stage.inert=false;
+    infoPanel?.suspend(false);
     suppressSessionSelectUntil=performance.now()+350;
 }
 
-function openDemoKnowledge(record,path='') {
+function openDemoKnowledge(record,path='',edit=false) {
     if(demoKnowledgeWorkspace || demoWebModeOpen || placementReady) return;
     const profile=record.demoKnowledgeProfile || (record.demoPlantPreset==='moringa' ? structuredClone(MORINGA_PROFILE) : {common_name:'Pigeon Pea',pim_document:structuredClone(PIGEON_PEA_PIM)});
     record.demoKnowledgeProfile=profile;
     const proxy={marker:{id:record.id || record.demoPlantPreset || 'pigeon-pea',name:record.name || profile.common_name},plantProfile:profile,areaName:'Try It Now · changes stay in this demo',arKnowledgeState:record.arKnowledgeState};
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     const stage=appRoot.querySelector('.tryit-stage');if(stage) stage.inert=true;
+    infoPanel?.suspend(true);
     demoKnowledgeWorkspace=mountCreatorArKnowledge(root,{
-        record:proxy,context:['demo','session','practice',proxy.marker.id],path,
+        record:proxy,context:['demo','session','practice',proxy.marker.id],path,edit,
         persistence:{load:async()=>record.demoKnowledgeProfile,save:async(...args)=>{record.demoKnowledgeProfile=args.at(-1);}},
-        onSaved:profile=>{record.demoKnowledgeProfile=profile;record.demoKnowledgeProjection=pimToArKnowledge(resolvePlantPim(profile));refreshDemoPimProfile(record);},
+        onSaved:profile=>{record.demoKnowledgeProfile=profile;record.demoKnowledgeProjection=pimToArKnowledge(resolvePlantPim(profile));infoPanel?.refresh(record,resolvePlantPim(profile));refreshDemoPimProfile(record);},
         onClose:()=>{record.arKnowledgeState=demoKnowledgeWorkspace.controller.getState();closeDemoKnowledge(true);}
     });
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
@@ -2372,6 +2425,8 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    infoPanel?.destroy(); infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true)});
+    if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = appRoot.querySelector('[data-tryit-intro-continue]');
@@ -2505,6 +2560,7 @@ function setupRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
+    totemCardsRenderer = createSpatialTotemCards(gl);
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
@@ -2619,13 +2675,13 @@ function createSpatialKnowledgeTexture(record) {
             layoutWidth: size.layoutWidth,
             layoutHeight: size.layoutHeight,
             bloomProgress,
+            pressPath:record.pimPressPath, pressProgress:record.pimPressProgress,
             selectedNodeId: record.demoSelectedNodeId,
             closingPaths
         });
     }
     if (record.demoType === 'zone') {
-        drawTotemKnowledgeTexture(ctx, label, content);
-        return canvasTexture(label);
+        return null; // Native Totems use independent shared card textures.
     }
     const gradient = ctx.createLinearGradient(0, 0, label.width, label.height);
     gradient.addColorStop(0, 'rgba(10,32,21,.72)');
@@ -2658,54 +2714,6 @@ function createSpatialKnowledgeTexture(record) {
         drawWrappedTextureText(ctx, line.slice(split + 2), 62, rowY + 42, 990, 38, 2);
     });
     return canvasTexture(label);
-}
-
-function drawTotemKnowledgeTexture(ctx, label, content) {
-    const cards = (content.bubbles || content.lines).filter(Boolean).slice(0, 5);
-    const cardLayouts = [
-        [24, 90, 190, 142],
-        [388, 52, 292, 160],
-        [476, 300, 220, 140],
-        [20, 506, 172, 150],
-        [392, 528, 250, 140]
-    ];
-    const branchEnds = [[118, 232], [534, 212], [586, 370], [106, 576], [516, 598]];
-    ctx.strokeStyle = 'rgba(221,246,238,.72)';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    branchEnds.forEach(([x, y]) => {
-        ctx.beginPath();
-        ctx.moveTo(360, 408);
-        ctx.bezierCurveTo(360 + (x - 360) * .34, 386, 360 + (x - 360) * .68, y, x, y);
-        ctx.stroke();
-    });
-    cards.forEach((text, index) => {
-        const [x, y, width, height] = cardLayouts[index];
-        const balloonLight = ctx.createRadialGradient(x + width * .25, y + height * .18, 8, x + width * .5, y + height * .5, width * .7);
-        balloonLight.addColorStop(0, 'rgba(73,121,104,.96)');
-        balloonLight.addColorStop(.46, 'rgba(19,62,51,.94)');
-        balloonLight.addColorStop(1, 'rgba(8,35,30,.94)');
-        ctx.fillStyle = balloonLight;
-        ctx.beginPath();
-        ctx.roundRect(x, y, width, height, [34, 23, 37, 27]);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(226,255,249,.8)';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        const [attachmentX, attachmentY] = branchEnds[index];
-        ctx.fillStyle = 'rgba(218,250,241,.9)';
-        ctx.beginPath();
-        ctx.arc(attachmentX, attachmentY, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.font = `${index === 1 ? '850 27px' : '800 24px'} system-ui, sans-serif`;
-        ctx.shadowColor = 'rgba(0,0,0,.95)';
-        ctx.shadowBlur = 5;
-        drawWrappedTextureText(ctx, text, x + width / 2, y + height / 2 - 16, width - 30, 30, 3);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-    });
 }
 
 function canvasTexture(label, texture = null, flipY = false) {
@@ -3128,7 +3136,7 @@ function drawMarker(view) {
             view,
             record.position,
             material?.radius || (orbType === 'plant' ? .068 : .05),
-            { type: orbType, color: material?.shell, coreColor: material?.core }
+            { type: orbType, color: material?.shell, coreColor: material?.core, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null }
         );
     });
     markers.forEach(record => {
@@ -3138,7 +3146,7 @@ function drawMarker(view) {
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
         if (style === 'organic') {
-            drawSpatialSphere(gl, sphereRenderer, view, {
+            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
                 ...record.position,
                 y: groundBaseY + .44
             }, .44, {
@@ -3160,12 +3168,12 @@ function drawMarker(view) {
             });
             return;
         }
-        drawSpatialPrism(gl, prismRenderer, view, record.position, {
+        drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
             halfWidth: .16,
             halfHeight: .9,
             halfDepth: .16,
-            color: [.3, .7, .69],
-            topColor: [.62, .92, .84],
+            color: [.45, .55, .4],
+            topColor: [.68, .76, .58],
             rotationY: Math.PI / 7
         });
     });
@@ -3201,6 +3209,7 @@ function drawMarker(view) {
             }
         }
         if(demoKnowledgeWorkspace && record.demoType === 'plant' && record.demoExpanded) return;
+        if (record.demoType === 'zone') return;
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
         if (orbOnly) return;
@@ -3250,6 +3259,16 @@ function drawMarker(view) {
             gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
     });
+    if(totemCardsRenderer) {
+        totemCardsRenderer.begin();
+        markers.filter(record=>record.demoType==='zone' && record.demoExpanded).forEach(record=>{
+            if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
+                record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
+            }
+            totemCardsRenderer.draw(view,record,{...record.position,y:record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES},record.liveTotemCards,record.totemSelectedCard);
+        });
+        totemCardsRenderer.end();
+    }
     drawDemoControllerPointer(view);
 }
 
@@ -3288,7 +3307,8 @@ function drawDemoControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const end = controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const surface = [infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const end = surface?.point || controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -3330,6 +3350,7 @@ async function startImmersive() {
             if (selectWelcomeCell()) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
+            if (activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return;
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
             if (selectDemoPlantAtPointer()) return;
@@ -3340,8 +3361,13 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
+        pimHold=bindSpatialPimHold({session,enabled:()=>!demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady && !infoPanel?.hit(latestControllerRay),
+            getTarget:demoInfoTarget,activate:()=>selectDemoProfileCell(),
+            progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;if(gl){if(record.texture)gl.deleteTexture(record.texture);record.texture=createMarkerTexture(record);}}
+        });
         session.addEventListener('selectstart', () => {
             if(demoKnowledgeWorkspace) return;
+            if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
             const actionTarget = demoRecordAtPointer()?.record;
@@ -3370,6 +3396,7 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
+            infoPanel?.update(viewerMatrix, _time); pimHold?.tick(_time);
             if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
@@ -3383,6 +3410,7 @@ async function startImmersive() {
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawMarker(view);
                 drawDemoKnowledge(view);
+                infoPanel?.draw(view);
             }
             gl.disable(gl.SCISSOR_TEST);
         };

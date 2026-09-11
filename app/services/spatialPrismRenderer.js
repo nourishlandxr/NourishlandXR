@@ -42,6 +42,28 @@ export function prismModelMatrix(position, dimensions = {}, rotationY = Math.PI 
     ]);
 }
 
+export function createBeveledPrismGeometry() {
+    const points = [[-.78,-1],[.78,-1],[1,-.78],[1,.78],[.78,1],[-.78,1],[-1,.78],[-1,-.78]];
+    const rings = [[-1,.82],[-.98,1],[.98,1],[1,.82]];
+    const vertices = [];
+    const triangle = (a,b,c) => {
+        const u=b.map((v,i)=>v-a[i]), v=c.map((n,i)=>n-a[i]);
+        const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+        const length=Math.hypot(...n);
+        for(const p of [a,b,c]) vertices.push(...p,...n.map(value=>value/length));
+    };
+    const point=(ring,i)=>[points[i][0]*rings[ring][1],rings[ring][0],points[i][1]*rings[ring][1]];
+    for(let r=0;r<3;r++) for(let i=0;i<8;i++) {
+        const j=(i+1)%8,a=point(r,i),b=point(r+1,i),c=point(r+1,j),d=point(r,j);
+        triangle(a,b,c);triangle(a,c,d);
+    }
+    for(let i=0;i<8;i++) {
+        triangle([0,1,0],point(3,(i+1)%8),point(3,i));
+        triangle([0,-1,0],point(0,i),point(0,(i+1)%8));
+    }
+    return new Float32Array(vertices);
+}
+
 function multiplyMatrices(a, b) {
     const out = new Float32Array(16);
     for (let column = 0; column < 4; column += 1) {
@@ -61,11 +83,12 @@ export function createSpatialPrismRenderer(gl) {
         attribute vec3 normal;
         uniform mat4 projection;
         uniform mat4 modelView;
+        uniform vec3 inverseScale;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
         void main() {
             vec4 viewPosition = modelView * vec4(position, 1.0);
-            surfaceNormal = normalize((modelView * vec4(normal, 0.0)).xyz);
+            surfaceNormal = normalize((modelView * vec4(normal * inverseScale * inverseScale, 0.0)).xyz);
             viewDirection = normalize(-viewPosition.xyz);
             gl_Position = projection * viewPosition;
         }
@@ -87,6 +110,9 @@ export function createSpatialPrismRenderer(gl) {
             float sideShade = 0.42 + diffuse * 0.48 + facing * 0.08;
             vec3 shaded = color * sideShade;
             shaded = mix(shaded, topColor, topFace);
+            float rim = pow(1.0 - facing, 3.0);
+            float sheen = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 28.0);
+            shaded += vec3(.8,.86,.74) * (sheen * .16 + rim * .07);
             gl_FragColor = vec4(shaded, alpha);
         }
     `);
@@ -101,7 +127,7 @@ export function createSpatialPrismRenderer(gl) {
         gl.deleteProgram(program);
         throw new Error(message);
     }
-    const geometry = createPrismGeometry();
+    const geometry = createBeveledPrismGeometry();
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, geometry, gl.STATIC_DRAW);
@@ -113,6 +139,7 @@ export function createSpatialPrismRenderer(gl) {
         normalLocation: gl.getAttribLocation(program, 'normal'),
         projectionLocation: gl.getUniformLocation(program, 'projection'),
         modelViewLocation: gl.getUniformLocation(program, 'modelView'),
+        inverseScaleLocation: gl.getUniformLocation(program, 'inverseScale'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         topColorLocation: gl.getUniformLocation(program, 'topColor'),
         alphaLocation: gl.getUniformLocation(program, 'alpha')
@@ -139,6 +166,7 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, 24, 12);
     gl.uniformMatrix4fv(renderer.projectionLocation, false, view.projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
+    gl.uniform3fv(renderer.inverseScaleLocation, [1/(Number(options.halfWidth)||.14),1/(Number(options.halfHeight)||.72),1/(Number(options.halfDepth)||Number(options.halfWidth)||.14)]);
     gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
     gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
     gl.uniform1f(renderer.alphaLocation, Number.isFinite(options.alpha) ? options.alpha : .96);

@@ -1,3 +1,8 @@
+import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import { bindSpatialPimHold, createPimHold } from '../services/pimActivationHold.js';
+import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
+import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
+const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
 /*
  * Creator AR placement mode
@@ -114,6 +119,11 @@ let creatorKnowledgeReturnFocus = null;
 const creatorKnowledgeCache = new WeakMap();
 let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
+let totemCardsRenderer = null;
+let infoPanel = null;
+let pimHold = null;
+const handPimHold = createPimHold({activate:activateSpatialPimTarget,progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}});
+function showCreatorInfo(record, path) { infoPanel?.select(record, creatorKnowledgeDocument(record), path); }
 let prismRenderer = null;
 let triangleRenderer = null;
 let controllerPointerRenderer = null;
@@ -644,7 +654,29 @@ function activateArea(area) {
 
 function hasPlantProfile(record) {
     const profile = record?.plantProfile || record?.marker?.plant_profile || {};
-    return record?.marker?.type === 'plant' && (profile.spm_enabled === true || profile.profile_enabled === true);
+    return record?.marker?.type === 'plant' && (creatorOrbKnowledge(record).live || profile.spm_enabled === true || profile.profile_enabled === true);
+}
+
+function creatorOrbKnowledge(record) {
+    return resolveOrbKnowledge(record.plantProfile || record.marker?.plant_profile || {}, {
+        expanded:record.profileExpanded, unavailable:record.plantProfile === null
+    });
+}
+
+function creatorTotemCards(record) {
+    const board=areaBoard(record.marker), areaRecords=sessionMarkers.filter(item=>item.areaId===record.areaId);
+    return totemKnowledgeCards({title:board.title,introduction:board.introduction,context:record.areaDescription,
+        bubbles:board.informationBubbles,
+        plants:areaRecords.filter(item=>item.marker.type==='plant').map(item=>({id:item.marker.id,name:item.marker.name,knowledge:creatorOrbKnowledge(item)})),
+        notes:areaRecords.filter(item=>item.marker.type==='note').map(item=>({id:item.marker.id,title:item.marker.name,body:item.marker.description || item.marker.notes}))
+    });
+}
+
+function activateCreatorTotemCard(hit) {
+    if(!hit)return false;
+    hit.record.totemSelectedCard=hit.detail || hit.record.totemSelectedCard===hit.card.id ? '' : hit.card.id;
+    renderSessionMarkers();
+    return true;
 }
 
 function creatorPlantKnowledge(record) {
@@ -694,13 +726,14 @@ function closeCreatorKnowledge({force = false} = {}) {
     closeQuestSpatialWebPanel();
     creatorKnowledgeRoot?.remove(); creatorKnowledgeRoot = null;
     creatorKnowledgeRecord = null;
+    infoPanel?.suspend(false);
     overlayRoot?.classList.remove('has-creator-knowledge');
     updateKnowledgeControls();
     creatorKnowledgeReturnFocus?.isConnected && creatorKnowledgeReturnFocus.focus({preventScroll:true});
     return true;
 }
 
-async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', observation = false} = {}) {
+async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = '', observation = false, edit = false} = {}) {
     if (!record || !overlayRoot || readyPlacementType || dragState) return;
     if (creatorKnowledgeRoot) { closeCreatorKnowledge(); return; }
     placementArmGeneration += 1;
@@ -724,10 +757,11 @@ async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = 
         setPlacementStatus('Knowledge could not load. Return to AR and try again.');
         return;
     }
+    infoPanel?.suspend(true);
     creatorKnowledgeWorkspace = mountCreatorArKnowledge(root, {
-        record, context:[activeProjectId, activeSiteId, record.areaId || activeAreaId, record.marker.id], path, observation,
+        record, context:[activeProjectId, activeSiteId, record.areaId || activeAreaId, record.marker.id], path, observation, edit,
         onClose:()=>closeCreatorKnowledge({force:true}),
-        onSaved:()=>{ creatorKnowledgeCache.delete(record); invalidateSpatialPimTexture(record); if(session===owner) renderSessionMarkers(); }
+        onSaved:()=>{ infoPanel?.refresh(record,creatorKnowledgeDocument(record)); creatorKnowledgeCache.delete(record); invalidateSpatialPimTexture(record); if(session===owner) renderSessionMarkers(); }
     });
     root.classList.add('is-ar-pim-side-note');
     if (questHeadsetSession && gl) {
@@ -848,12 +882,10 @@ function creatorTotemInformationMarkup(record) {
     const areaContext = String(record.areaDescription || '').trim();
     const text = [isGeneratedWelcome ? '' : introduction, areaContext ? `Area context: ${areaContext}` : '', ...board.informationBubbles].filter(Boolean).slice(0, 6);
     const linkedAreas = totemLinkGuideVisible ? linkedTotemAreas(record) : [];
-    if (!text.length && !linkedAreas.length) return '';
+
     const signs = linkedAreas.map(link => `<span class="creator-ar-totem-link-branch is-${escapeHtml(link.direction)}" data-ar-totem-link-branch="${escapeHtml(link.targetAreaId)}" aria-hidden="true"></span><button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
-    const balloon = record.infoVisible && text.length
-        ? `<section class="creator-ar-location-note-board creator-ar-totem-balloon nourishland-spatial-note-surface">
-          <span class="creator-ar-totem-balloon-text">${text.map(line => `<span>${escapeHtml(line)}</span>`).join('')}</span>
-        </section>`
+    const balloon = record.infoVisible && !questBeltUsesSpatialRenderer()
+        ? '<section class="creator-ar-location-note-board creator-ar-totem-balloon nlxr-totem-live-board">' + totemCardsMarkup(creatorTotemCards(record),record.totemSelectedCard) + '</section>'
         : '';
     return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
         <span class="creator-ar-location-stick creator-ar-totem-stick" aria-hidden="true"></span>
@@ -1813,6 +1845,8 @@ function controllerSpatialSurfaceAtAim() {
         : null;
     const pimCandidate = spatialPimTargetAtAim({ updateHover: false });
     const candidates = [
+        infoPanel?.hit(latestControllerRay),
+        totemCardsRenderer?.hit(latestControllerRay),
         dashboardHit && { ...dashboardHit, kind: 'dashboard' },
         pimCandidate?.hit && { ...pimCandidate.hit, kind: 'pim' }
     ].filter(Boolean);
@@ -1997,6 +2031,7 @@ function activateKnowledgeSelection() {
 }
 
 function activateControllerSelection() {
+    if (!creatorKnowledgeRoot && !readyPlacementType && activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return true;
     if(creatorKnowledgeRoot) return activateKnowledgeSelection();
     if (readyPlacementType) {
         void quickPlace(readyPlacementType);
@@ -2096,10 +2131,16 @@ function drawHandTrackingLines(view) {
 }
 
 function pollHandPinch() {
-    if (!latestHandState?.pointer) return;
+    if (!latestHandState?.pointer) {handPimHold.cancel(); return;}
     const pinching = Boolean(latestHandState.pinch);
+    if (handPimHold.active) {
+        if (!pinching) handPimHold.cancel();
+        else handPimHold.tick(spatialPimTargetAtAim({updateHover:false}),performance.now());
+        handPinchActive=pinching;return;
+    }
     if (pinching && !handPinchActive) {
         if(creatorKnowledgeRoot) {activateKnowledgeSelection();handPinchActive=pinching;return;}
+        if(infoPanel?.activate(latestControllerRay)) {handPinchActive=pinching;return;}
         // Hand tracking has no controller select event. Once Note (or Plant)
         // is armed, a pinch is the placement press at the current aim point.
         if (readyPlacementType) {
@@ -2109,7 +2150,7 @@ function pollHandPinch() {
         }
         const pimTarget = spatialPimTargetAtAim({ updateHover: false });
         if (pimTarget) {
-            activateSpatialPimTarget(pimTarget);
+            handPimHold.start(pimTarget,performance.now());
             handPinchActive = pinching;
             return;
         }
@@ -3121,7 +3162,7 @@ function ensureQuestNoteTexture(marker) {
         markerNoteSurface(marker)
     ]);
     const cached = questNoteTextures.get(marker.id);
-    if (cached?.key === key && cached.knowledge === knowledge) return cached.texture;
+    if (cached?.key === key) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const texture = createQuestNoteTexture(marker);
     if (texture) questNoteTextures.set(marker.id, { key, texture });
@@ -3223,7 +3264,7 @@ function ensureSpatialPimTexture(record) {
     const closingPaths = record.pimClosingNodePaths || [];
     const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
     const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
-    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame]);
+    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame, record.pimPressPath, record.pimPressProgress]);
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key && cached.knowledge === knowledge) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
@@ -3234,6 +3275,7 @@ function ensureSpatialPimTexture(record) {
         height: size.height,
         layoutWidth: size.layoutWidth,
         layoutHeight: size.layoutHeight,
+        pressPath:record.pimPressPath, pressProgress:record.pimPressProgress,
         hoverPath, compactLabels:true, readerControl:false, softSurface:false,
         selectedNodeId: record.pimSelectedNodeId,
         bloomProgress,
@@ -3312,12 +3354,13 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
         setPlacementStatus('Returned to the previous PIM honeycomb.');
         return true;
     }
+    showCreatorInfo(record, target.path);
     const children = pimNodeChildren(target);
     if (!children.length) {
         setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), target.path));
         invalidateSpatialPimTexture(record);
         renderSessionMarkers();
-        openCreatorKnowledge(record, {path: target.path});
+
         return true;
     }
     const wasOpen = creatorPimState(record).expandedNodeIds.has(target.path);
@@ -3703,6 +3746,8 @@ function setupSpatialMarkerRenderer() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
     setupHomeSignRenderer();
     sphereRenderer = createSpatialSphereRenderer(gl);
+    totemCardsRenderer = createSpatialTotemCards(gl);
+    infoPanel?.attach(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
@@ -3819,6 +3864,7 @@ function drawSpatialMarkers(view) {
         }
         drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
             type: shape === 4 ? 'plant' : 'marker',
+            knowledge: shape === 4 ? creatorOrbKnowledge(record) : null,
             color: markerRgb(record.marker, baseColor),
             opacity: arrivalEase * markerAppearanceOpacity(record.marker),
             highlighted: record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
@@ -4190,6 +4236,7 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
 }
 
 function renderSessionMarkers() {
+    overlayRoot?.querySelectorAll(':scope > .nlxr-totem-detail').forEach(note=>note.remove());
     updateKnowledgeControls();
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
@@ -4223,6 +4270,29 @@ function renderSessionMarkers() {
     renderableMarkers.forEach(record => setMarkerAncillaryVisibility(record, true));
     renderableMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
+        if(element && record.marker.type==='plant') {
+            const knowledge=creatorOrbKnowledge(record);
+            element.dataset.knowledgeState=knowledge.state;
+            element.insertAdjacentHTML('afterbegin',liveOrbCrownMarkup(knowledge));
+            const caption=element.querySelector('.creator-ar-spatial-name small');
+            if(caption)caption.textContent=knowledge.label;
+            element.setAttribute('aria-label',record.marker.name+' · '+knowledge.label);
+        }
+        const totemPanel=layer.querySelector('[data-ar-totem-information="'+CSS.escape(record.marker.id)+'"]');
+        totemPanel?.addEventListener('beforexrselect',event=>event.preventDefault());
+        totemPanel?.querySelectorAll('[data-totem-card]').forEach(button=>{
+            button.addEventListener('pointerdown',event=>event.stopPropagation());
+            button.addEventListener('click',event=>{
+                event.stopPropagation();record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;
+                renderSessionMarkers();
+            });
+        });
+        totemPanel?.querySelector('[data-totem-close]')?.addEventListener('click',event=>{
+            event.stopPropagation();const previous=record.totemSelectedCard;record.totemSelectedCard='';renderSessionMarkers();
+            layer.querySelector('[data-ar-totem-information="'+CSS.escape(record.marker.id)+'"] [data-totem-card="'+previous+'"]')?.focus();
+        });
+        const detail=totemPanel?.querySelector('.nlxr-totem-detail');
+        if(detail)overlayRoot.append(detail);
         element?.addEventListener('pointerdown', event => handleMarkerPointerDown(record, event));
         element?.addEventListener('pointermove', moveMarkerHoldGesture);
         element?.addEventListener('pointerup', event => finishMarkerHoldGesture(record, event));
@@ -4278,11 +4348,12 @@ function renderSessionMarkers() {
             clearPimFocus(cell);
             const node = pimNodeAtPath(creatorPlantKnowledge(record), nodePath);
             if (!node) return;
+            showCreatorInfo(record, node.path);
             const label = cell.querySelector('b')?.textContent || 'Cell';
             if (!pimNodeChildren(node).length) {
                 setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), nodePath));
                 refreshCreatorPimProfile(record, profilePanel);
-                openCreatorKnowledge(record, {path: node.path});
+
                 return;
             }
             const wasOpen = creatorPimState(record).expandedNodeIds.has(nodePath);
@@ -5334,6 +5405,8 @@ function createOverlay() {
     updateReadyPlacementControl();
     updateInteractionControls();
     document.body.append(overlayRoot);
+    infoPanel?.destroy();
+    infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true})});
     bindCreatorViewportReflow();
     updateLocationNote();
 }
@@ -5389,6 +5462,8 @@ function cleanup() {
     contextToolbarRecord = null;
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;
+    pimHold?.destroy(); pimHold = null; handPimHold.cancel(); infoPanel?.destroy(); infoPanel = null;
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
@@ -5724,6 +5799,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput();
             updateControllerRay(frame);
+            infoPanel?.update(latestViewerMatrix, _time); pimHold?.tick(_time);
             const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? spatialPimTargetAtAim() : null;
             const specialPaletteTarget = !dashboardTarget && !pimTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
@@ -5751,11 +5827,22 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawSpatialHomeSign(view);
                 drawQuestSpatialBelt(view);
                 drawQuestSpatialSpecialPalette(view);
+                if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {
+                    totemCardsRenderer.begin();
+                    activeAreaMarkers().filter(record=>record.marker.type==='area_checkpoint' && record.infoVisible && hasRenderableSpatialPosition(record)).forEach(record=>{
+                        if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
+                            record.liveTotemCards=creatorTotemCards(record);record.totemCardsRefreshed=performance.now();
+                        }
+                        totemCardsRenderer.draw(view,record,groundedTotemPosition(record.position),record.liveTotemCards,record.totemSelectedCard);
+                    });
+                    totemCardsRenderer.end();
+                }
                 drawQuestSpatialWebPanel(view);
                 drawHandTrackingLines(view);
                 drawCalibratedTotemPath(view);
                 drawSpatialMarkers(view);
                 drawSpatialPlantProfiles(view);
+                infoPanel?.draw(view);
                 // Keep the controller laser and its contact marker in the
                 // foreground. A world-locked PIM panel is transparent, but
                 // its quad can still cover a laser drawn before the panel.
@@ -5781,8 +5868,16 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         launchedSession.addEventListener('inputsourceschange', () => {
             setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
         });
+        infoPanel?.bindSession(launchedSession, refSpace);
+        pimHold = bindSpatialPimHold({session:launchedSession,
+            enabled:()=>!latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay),
+            getTarget:()=>spatialPimTargetAtAim({updateHover:false}), activate:activateSpatialPimTarget,
+            progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
+        });
         launchedSession.addEventListener('selectstart', event => {
+            if(event.inputSource.hand) return;
             if(creatorKnowledgeRoot) return;
+            if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
             if (interactionMode === 'view') return;
             if (controllerSpatialDashboardAtAim()) return;
@@ -5795,6 +5890,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (target) armControllerMarkerPress(target);
         });
         launchedSession.addEventListener('selectend', event => {
+            if(event.inputSource.hand) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource)) return;
             if (dragState?.pointerId === 'xr-controller') {
                 clearControllerMarkerPress();
@@ -5804,6 +5900,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (controllerPressState) finishControllerMarkerPress();
         });
         launchedSession.addEventListener('select', event => {
+            if(event.inputSource.hand) return;
             if (session !== launchedSession) return;
             const controllerSelect = isPrimaryControllerSource(event.inputSource);
             if (controllerSelect) {

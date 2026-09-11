@@ -25,6 +25,7 @@ const frontendEntries = [
     'style.css',
     'pim.css',
     'product-v2.css',
+    'living-objects.css',
     'assets',
     'components',
     'managers',
