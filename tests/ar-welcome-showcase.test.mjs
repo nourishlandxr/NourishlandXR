@@ -12,7 +12,7 @@ test('one corner grows through three levels, fades and passes to the next',()=>{
 test('nodes retain parent identity and fit without overlap or central text intrusion',()=>{
  for(let corner=0;corner<4;corner++){const {nodes}=welcomeNetworkFrame(corner*16000+12000);for(const [i,n] of nodes.entries()){
  assert.ok(n.x-n.radius>0 && n.x+n.radius<2500 && n.y-n.radius>0 && n.y+n.radius<2100);
- assert.ok(n.y+n.radius<560 || n.y-n.radius>1540 || n.x+n.radius<598 || n.x-n.radius>1902);
+ assert.ok(n.y+n.radius<700 || n.y-n.radius>1400 || n.x+n.radius<598 || n.x-n.radius>1902);
  if(n.parent)assert.ok(nodes.find(p=>p.id===n.parent));
  for(const other of nodes.slice(i+1))assert.ok(Math.hypot(n.x-other.x,n.y-other.y)>n.radius+other.radius);
  }}

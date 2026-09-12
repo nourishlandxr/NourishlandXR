@@ -45,7 +45,7 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
  leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:8200+i*1300,slot:4+i});});
  const fading=1-smooth(phase,14000,2000);
  for(const node of nodes){
-  const [x,y]=positions[node.slot];node.x=corner%2?2500-x:x;node.y=corner<2?y:2100-y;
+  const [x,y]=positions[node.slot];node.x=corner%2?2500-x:x;node.y=corner<2?y+140:1960-y;
   node.progress=reducedMotion?1:smooth(phase,node.at,1500+(node.slot%3)*80);
   node.opacity=node.progress*(reducedMotion?1:fading);
   node.scale=(.38+.62*node.progress)*(reducedMotion?1:.86+.14*fading);
@@ -195,7 +195,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // Draw stems first; glass faces sit above their connections.
  for(const node of frame.nodes){
   const parent=byId.get(node.parent);
-  const anchorX=frame.corner%2?1883:617,anchorY=frame.corner<2?580:1520;
+  const anchorX=frame.corner%2?1883:617,anchorY=frame.corner<2?720:1380;
   const originX=parent?parent.x:anchorX,originY=parent?parent.y:anchorY;
   const drift=reducedMotion?0:Math.sin(elapsed/2700+node.slot*1.7)*3*node.progress;
   node.drawX=node.x+(reducedMotion?0:(originX-node.x)*.16*(1-node.progress))+drift;

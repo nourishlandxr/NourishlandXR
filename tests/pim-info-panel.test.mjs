@@ -37,13 +37,13 @@ test('waist companion follows translation but remains reachable when looking lef
 });
 
 test('Control panel tabs and tools share non-overlapping hit rectangles with gated editing',()=>{
-    for(const tab of ['Details','Tools','Help']){
+    for(const tab of ['Details','Help','Settings']){
         const buttons=controlPanelControls({tab});
         assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,1);
         for(const [i,a] of buttons.entries())for(const b of buttons.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
     }
-    assert.equal(controlPanelControls({tab:'Tools'}).find(b=>b.action==='Edit').disabled,true);
-    assert.equal(controlPanelControls({tab:'Tools',selected:true}).find(b=>b.action==='Edit').disabled,false);
+    assert.equal(controlPanelControls({tab:'Details'}).find(b=>b.action==='Edit').disabled,true);
+    assert.equal(controlPanelControls({tab:'Details',selected:true}).find(b=>b.action==='Edit').disabled,false);
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
 });
 
@@ -82,3 +82,5 @@ test('XR cell holds consume their select event without blocking later object sel
     target=null;send('selectstart');send('select');send('selectend');assert.equal(ordinary,1);
     binding.destroy();
 });
+
+test('compact panel grows with content and keeps settings controls inside its surface',async()=>{const {controlPanelHeight}=await import('../app/services/pimInfoPanel.js');assert.ok(controlPanelHeight(2)<controlPanelHeight(7));assert.ok(controlPanelHeight(7,true)>controlPanelHeight(7));for(const large of [false,true]){const height=controlPanelHeight(7,large);for(const button of controlPanelControls({tab:'Settings',height,largeText:large})){assert.ok(button.y+button.height<=height);assert.ok(button.x+button.width<=1000);}}});

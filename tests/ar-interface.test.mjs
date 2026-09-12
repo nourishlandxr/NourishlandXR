@@ -1233,7 +1233,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardPosition: \[0, 0\.82, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /label\.height = 1080/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 530\)/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 350\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', 1100\)/);
     assert.match(source, /visibleLines\.forEach/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);

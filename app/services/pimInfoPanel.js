@@ -1,7 +1,7 @@
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 
-export const INFO_HELP = 'PIM is your map of plant knowledge. Hold a honeycomb cell to read its details here. Use Tools to edit a topic or recenter this panel. Hide it for a clearer view; Control panel brings it back.';
+export const INFO_HELP = 'Hold a PIM cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; Control panel restores it.';
 
 // This is a reading projection, never a second store of plant knowledge.
 export function pimInfoContent(document, path) {
@@ -55,39 +55,42 @@ export function infoPanelPose(matrix, heading = null) {
 }
 
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
-export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1}={}) {
-    if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:740,height:70}];
-    const buttons=[{action:'Hide',label:'Hide',x:650,y:20,width:120,height:48}];
-    ['Details','Tools','Help'].forEach((label,i)=>buttons.push({action:label,label,kind:'tab',selected:tab===label,x:30+i*250,y:184,width:240,height:58}));
-    if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:30,y:707,width:170,height:58,disabled:page===0},{action:'Next',label:'Next',x:600,y:707,width:170,height:58,disabled:page>=pageCount-1});
-    if(tab==='Tools')buttons.push({action:'Edit',label:'Edit information',x:30,y:707,width:360,height:58,disabled:!selected},{action:'Recenter',label:'Recenter panel',x:410,y:707,width:360,height:58});
+export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false}={}) {
+    if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
+    const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
+    ['Details','Help','Settings'].forEach((label,i)=>buttons.push({action:label,label,kind:'tab',selected:tab===label,x:18,y:148+i*76,width:174,height:62}));
+    if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:height-70,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:height-70,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:height-70,width:322,height:48,disabled:!selected});
+    if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:height-70,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:height-70,width:362,height:48});
     return buttons;
 }
+export function controlPanelHeight(lines,largeText=false){return Math.max(560,390+Math.min(7,lines)*(largeText?46:38));}
 
 let panelInstance=0;
 export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details';
-    let renderer=null,pose=null,heading=null,lastTime=0,detached=false;
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
+    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
-    const text=()=>tab==='Help'?INFO_HELP:tab==='Tools'
-        ? (selection?'Edit the selected topic, save your changes, then return here to keep exploring.':'Select a PIM cell to choose the information you want to edit.')+'\n\nRecenter places this panel comfortably to the left of your current view.'
+    const text=()=>tab==='Help'?INFO_HELP:tab==='Settings'
+        ? 'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
-        : identity?'Explore the honeycomb around '+identity.plant+'. Hold any cell until it fills to bring its details here. Categories can also open into more topics.'
-        :'Your plant information will appear here. Follow the welcome panel in front of you to begin exploring.';
-    const pages=()=>infoPages(text(),38,7);
-    const title=()=>tab==='Help'?'Explore at your own pace':tab==='Tools'?'Tools for this selection':selection?.title || (identity?'Choose a topic':'Ready to explore');
+        : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
+        :'Follow the green welcome panel to begin. Select a plant and explore its PIM to bring information here.';
+    const pages=()=>infoPages(text(),largeText?32:38,7);
+    const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection),page,pageCount:pages().length});
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText);
+    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection),page,pageCount:pages().length,height:height(),largeText});
     function act(action){
         const button=controls().find(item=>item.action===action);if(button?.disabled)return;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
-        if(['Details','Tools','Help'].includes(action)){tab=action;page=0;}
+        if(['Details','Help','Settings'].includes(action)){tab=action;page=0;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection)onEdit(record,selection.path || selection.id);
+        if(action==='TextSize'){largeText=!largeText;page=0;}
         if(action==='Recenter'){heading=null;pose=null;}
         render();
     }
@@ -100,16 +103,16 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
     function render(){
         if(detached)return;
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-        element.replaceChildren();element.classList.toggle('is-hidden',hidden);
+        element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
         if(hidden)element.append(makeButton(controls()[0]));
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
             const label=document.createElement('small');label.textContent='CONTROL PANEL';
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'No plant selected';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration companion');
-            header.append(label,makeButton(controls()[0]),plant,scientific);element.append(header);
-            const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Control panel sections');
-            controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));element.append(tabs);
+            header.append(label,plant,scientific);element.append(header);
+            const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
+            controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));tabs.append(makeButton(controls()[0]));element.append(tabs);
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
             const heading=document.createElement('h3');heading.textContent=title();
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'PIM → Details':'';
@@ -122,38 +125,37 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         if(focused)(element.querySelector('[data-info-action="'+focused+'"]') || element.querySelector('button'))?.focus({preventScroll:true});
     }
     element.addEventListener('keydown',event=>{
-        if(event.target.getAttribute('role')!=='tab' || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
-        event.preventDefault();const tabs=['Details','Tools','Help'],index=tabs.indexOf(tab);
-        act(event.key==='Home'?'Details':event.key==='End'?'Help':tabs[(index+(event.key==='ArrowRight'?1:2))%3]);
+        if(event.target.getAttribute('role')!=='tab' || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+        event.preventDefault();const tabs=['Details','Help','Settings'],index=tabs.indexOf(tab);
+        act(event.key==='Home'?'Details':event.key==='End'?'Settings':tabs[(index+(['ArrowRight','ArrowDown'].includes(event.key)?1:2))%3]);
         element.querySelector('[data-info-action="'+tab+'"]')?.focus();
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
     element.addEventListener('pointerdown',event=>event.stopPropagation());
     function canvas(card){
-        const c=document.createElement('canvas');c.width=800;c.height=card.hidden?160:800;const ctx=c.getContext('2d');
-        const gradient=ctx.createLinearGradient(0,0,800,c.height);gradient.addColorStop(0,'rgba(48,53,59,.88)');gradient.addColorStop(1,'rgba(19,24,29,.83)');
-        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,792,c.height-8,14);ctx.fill();ctx.strokeStyle='rgba(220,228,230,.55)';ctx.lineWidth=2;ctx.stroke();ctx.textBaseline='top';
+        const c=document.createElement('canvas');c.width=1000;c.height=card.hidden?160:card.height;const ctx=c.getContext('2d');
+        const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(48,53,59,.90)');gradient.addColorStop(1,'rgba(19,24,29,.85)');
+        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,14);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(220,228,230,.45)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         if(!card.hidden){
-            ctx.fillStyle='rgba(19,24,29,.5)';ctx.fillRect(6,6,788,163);
-            ctx.fillStyle='#b7c5c9';ctx.font='600 22px system-ui';ctx.fillText('CONTROL PANEL',30,30,550);
-            ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,30,79,740);
-            ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,30,133,740);
-            ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,30,271,740);
-            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,30,316,740);
-            ctx.fillStyle='#f1f4f4';ctx.font='400 34px system-ui';card.lines.forEach((line,i)=>ctx.fillText(line,30,359+i*38,740));
-            ctx.fillStyle='#b4c3c7';ctx.font='400 21px system-ui';ctx.fillText(card.metadata,30,653,740);
-            if(card.tab==='Details')ctx.fillText(card.page,350,726,170);
+            ctx.fillStyle='rgba(15,20,23,.48)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(19,24,29,.40)';ctx.fillRect(214,6,780,155);
+            ctx.fillStyle='#b7c5c9';ctx.font='600 21px system-ui';ctx.fillText('CONTROL',24,32,170);ctx.fillText('PANEL',24,61,170);
+            ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
+            ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
+            ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,238,187,732);
+            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,232,732);
+            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 40px':'400 34px')+' system-ui';card.lines.forEach((line,i)=>ctx.fillText(line,238,280+i*(card.largeText?46:38),732));
+            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.metadata,238,card.height-106,600);
+            if(card.tab==='Details')ctx.fillText(card.page,882,card.height-106,88);
         }
         card.controls.forEach(button=>{
-            ctx.fillStyle=button.selected?'rgba(159,187,184,.38)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.13)';
-            ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,7);ctx.fill();
-            if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x+12,button.y+button.height-4,button.width-24,3);}
-            ctx.fillStyle=button.disabled?'#899297':'#f1f4f4';ctx.font='500 26px system-ui';ctx.textAlign='center';
-            ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-20);
+            ctx.fillStyle=button.selected?'rgba(159,187,184,.30)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.12)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,7);ctx.fill();
+            if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}
+            ctx.fillStyle=button.disabled?'#899297':'#f1f4f4';ctx.font='500 25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
         });return c;
     }
-    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.66,height:hidden?.07:.66}]);}
+    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
+        setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         focusPlant(nextRecord,document){
             if(record===nextRecord && identity)return;
             record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || ''};tab='Details';page=0;render();
@@ -161,7 +163,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || ''};tab='Details';hidden=false;page=0;render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
-        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.66,height:hidden?.07:.66,card:cards[0]}]:[]});element.hidden=true;},
+        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now()){
             const next=infoPanelPose(matrix,heading);if(!next)return;heading=next.anchorHeading;
             const amount=pose?1-Math.exp(-Math.min(100,Math.max(0,time-lastTime))/160):1;
@@ -171,10 +173,10 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         recenter(){heading=null;pose=null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,controls:controls(),plant:identity?.plant || selection?.plant || 'No plant selected',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'PIM → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),plant:identity?.plant || selection?.plant || 'No plant selected',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'PIM → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
-        activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*800,y=(.5-target.localY/target.height)*(hidden?160:800);
+        activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());
             const button=controls().find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);if(button)act(button.action);return true;},
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             const transform=event.frame?.getPose(event.inputSource.targetRaySpace,referenceSpace)?.transform.matrix;if(!transform)return;

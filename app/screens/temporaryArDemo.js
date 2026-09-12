@@ -98,6 +98,7 @@ let introControlTextureLabel = '';
 let introPointerTexture = null;
 let introTaglineVisible = true;
 let introKnowledgeVisible = false;
+let introBoardStep = '';
 let introBoardTitle = 'NourishlandXR';
 let introBoardBody = 'A short guided demo of Plant Live Tags and Notes.';
 let placementReady = false;
@@ -146,7 +147,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION';
+const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 // The board is updated only when a new character is ready, so there is no
 // reason to wait for another frame before uploading that character to WebGL.
 // Keeping this at zero prevents Quest refresh rates from making the copy
@@ -722,6 +723,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
     introSceneActive = true;
+    introBoardStep = options.stepLabel || '';
     introBoardTitle = localizedTitle;
     introBoardBody = bodyText;
     introBoardVisibleBody = '';
@@ -895,6 +897,7 @@ function paintWelcomeLayer(now) {
 }
 
 function showArWelcomeShowcase() {
+    introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
@@ -978,7 +981,7 @@ const DEMO_ORIENTATION_STEPS = [
     ]},
     {title:'Two panels. One living world.',button:'Explore a plant',paragraphs:[
         'PIM is the honeycomb you use to explore plant knowledge. Hold any cell until it fills: its details appear in your Control panel, and branches reveal more topics.',
-        'Look left to try Details, Tools and Help. Tools lets you edit a selected topic or recenter the panel. Hide clears your view; Control panel brings it back. Nothing is selected yet—we will choose a plant next.'
+        'Look left to your highlighted Control panel. Details holds the selected topic. Help explains the controls; Settings adjusts reading comfort. Hide clears your view. We will choose a plant next.'
     ]},
     {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. We will start with a Pigeon Pea and explore its relationships, cultivation and uses.',
@@ -987,12 +990,13 @@ const DEMO_ORIENTATION_STEPS = [
 ];
 
 function runArWelcomeTutorial(index=0) {
+    infoPanel?.setGuided(index===1);
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Your controls','Explore'][index]});
 }
 
 function guidePlantConversion(record) {
@@ -2763,14 +2767,14 @@ function drawIntroNoteContent(ctx) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText(demoIntroLabel(), 700, 165);
+    ctx.fillText(demoIntroLabel(), 700, 250);
     ctx.fillStyle = '#fff';
-    let titleSize = 94;
+    let titleSize = 72;
     do {
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
         titleSize -= 4;
     } while (titleSize > 58 && ctx.measureText(introBoardTitle).width > 1120);
-    drawWrappedTextureText(ctx, introBoardTitle, 700, 300, 1120, titleSize + 14, 2);
+    drawWrappedTextureText(ctx, introBoardTitle, 700, 342, 1120, titleSize + 14, 2);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
@@ -2784,9 +2788,9 @@ function drawIntroNoteContent(ctx) {
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
     const visibleParagraphs = typedBody.split(/\n\n/);
-    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 530);
+    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 350);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
-    let paragraphY = 500;
+    let paragraphY = 492;
     bodyLayout.paragraphLines.forEach((completeLines, paragraphIndex) => {
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', 1100);
         visibleLines.forEach((line, lineIndex) => {

@@ -8,7 +8,7 @@ export function drawArWelcomePanel(ctx) {
     ctx.strokeStyle = 'rgba(239,255,229,.82)';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.roundRect(48, 50, 1304, 980, [62, 48, 68, 52]);
+    ctx.roundRect(48, 190, 1304, 700, [62, 48, 68, 52]);
     ctx.fill();
     ctx.stroke();
     const glassLight = ctx.createRadialGradient(280, 130, 20, 350, 190, 520);
@@ -16,6 +16,6 @@ export function drawArWelcomePanel(ctx) {
     glassLight.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = glassLight;
     ctx.beginPath();
-    ctx.roundRect(54, 56, 1292, 968, [58, 44, 64, 48]);
+    ctx.roundRect(54, 196, 1292, 688, [58, 44, 64, 48]);
     ctx.fill();
 }
