@@ -51,6 +51,23 @@
 @media(max-width:600px) { .nlxr-info-panel { left:10px; bottom:88px; width:min(280px,calc(100vw - 20px)); max-height:35vh; padding:12px; } }
 @media(prefers-reduced-motion:reduce) { .nlxr-info-panel { animation:none; } }
 
+/* A quiet control surface; the green front panel retains the guided narrative. */
+.nlxr-info-panel { padding:0 16px 12px; width:min(350px,calc(100vw - 28px)); background:linear-gradient(145deg,#30353be0,#13181dd4); border-color:#dce4e68c; border-radius:10px; box-shadow:0 14px 36px #0005,inset 0 1px #ffffff12; color:#f1f4f4; }
+.nlxr-control-header { padding:14px 0 10px; border-bottom:1px solid #c1cfd22b; }
+.nlxr-control-header > button { float:right; margin-top:-17px; min-height:36px; }
+.nlxr-control-header h2 { margin:12px 0 4px; padding-right:40px; font-size:21px; }
+.nlxr-info-panel .nlxr-control-identity { font:400 12px/1.4 system-ui; color:#bdc9cc; margin:0; }
+.nlxr-info-panel small { color:#b7c5c9; }
+.nlxr-info-panel .nlxr-control-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin:12px 0 18px; }
+.nlxr-info-panel button { color:#f1f4f4; background:#d3dce521; border-color:#c8d3d536; border-radius:5px; }
+.nlxr-info-panel [role=tab][aria-selected=true] { background:#9fbbb461; border-bottom:3px solid #aaccc1; }
+.nlxr-info-panel h3 { color:inherit; font:600 17px/1.3 system-ui; margin:10px 0 6px; }
+.nlxr-info-panel .nlxr-info-body { font-size:15px; line-height:1.5; margin:12px 0; }
+.nlxr-info-panel .nlxr-control-actions { justify-content:space-between; }
+.nlxr-info-panel .nlxr-control-page { text-align:center; }
+.nlxr-info-panel.is-hidden { padding:5px; }
+@media(max-width:600px) { .nlxr-info-panel { width:min(310px,calc(100vw - 20px)); max-height:40vh; padding:0 12px 10px; } .nlxr-info-panel.is-hidden { width:auto; padding:5px; } }
+
 /* Match the shared spatial canvas; isolate old marker typography from cells. */
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile):not(.is-spatial-pim-hit-layer) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell,.plant-knowledge-core) { display:grid; place-items:center; align-content:normal; grid-template-rows:minmax(0,1fr); padding:0; }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell-copy,.plant-knowledge-core-copy) { display:flex; flex-direction:column; align-items:center; justify-content:center; width:74%; max-width:74%; height:78%; max-height:78%; padding:0; gap:5px; }

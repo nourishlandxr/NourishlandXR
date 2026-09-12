@@ -1082,7 +1082,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /font-weight:650/);
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
-    assert.match(source, /showIntroBoard\(\s*'Nourishland XR'/);
+    assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
+    assert.match(source, /Get comfortable in your environment[\s\S]*Two panels\. One living world\.[\s\S]*Meet your first plant/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to the NourishlandXR demo interface/);
     assert.match(source, /Augmented reality\(AR\) & Mixed reality\(XR\) are technologies that can help us better understand and interact with the world around us/);
@@ -1100,7 +1101,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /finishIntroBoard\(\);[\s\S]*suppressSessionSelectUntil = performance\.now\(\) \+ 700;[\s\S]*armDemoPlacement\('plant'\)/);
+    assert.match(source, /suppressSessionSelectUntil=performance\.now\(\)\+700;[\s\S]*finishIntroBoard\(\);clearTimeout\(aimRevealTimer\);armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.match(source, /typingStartDelay = 1800/);
     assert.match(source, /function demoTextTypingDelay\(text, visibleLength\)/);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
@@ -1140,9 +1141,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
-    assert.match(source, /showIntroBoard\(\s*moringa \? 'A SECOND PLANT ORB' : 'What is A plant Orb \?'/);
-    assert.match(source, /A simple Plant orb can become a extended hub of information/);
-    assert.match(source, /A plant Orb is  knowledge stays connected to where a plant grows/);
+    assert.match(source, /showIntroBoard\(\s*moringa \? 'Your second plant' : 'Knowledge connected to this place'/);
+    assert.match(source, /Open its PIM to explore topics and relationships, then read the detail in your Control panel/);
+    assert.match(source, /This orb keeps plant knowledge connected to a place/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /Press the Moringa orb to explore its information tree/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);

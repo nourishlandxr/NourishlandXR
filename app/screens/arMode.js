@@ -4580,6 +4580,7 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
             }
         });
         record.profileExpanded = opening;
+        if(opening) infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));
         record.infoVisible = record.profileExpanded;
         if (opening) {
             ensureSpatialPimPose(record);
