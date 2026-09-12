@@ -1,3 +1,4 @@
+import {welcomeLearningContent} from '../services/welcomeLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
@@ -870,7 +871,12 @@ function welcomeFrames() {
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,arWelcomeHidden);
 }
 
+let selectedWelcomeCell='';
 function toggleWelcomeCell(key) {
+    const node=welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key);
+    if(node){infoPanel?.showLearning(welcomeLearningContent(node.label));}
+    if(selectedWelcomeCell!==key && !arWelcomeHidden.has(key)){selectedWelcomeCell=key;introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;return;}
+    selectedWelcomeCell=key;
     if(arWelcomeHidden.has(key)) arWelcomeHidden.delete(key);
     else arWelcomeHidden.add(key);
     introBoardTextureDirty=true;
@@ -891,12 +897,13 @@ function paintWelcomeLayer(now) {
         if(button){
             button.hidden=node.opacity<=.5;
             button.dataset.welcomeHollow=node.hollow?'true':'false';
-            button.setAttribute('aria-label',`${node.hollow?'Reopen':'Hide'} ${node.label} cell${node.hollow?' and its descendants':''}`);
+            button.setAttribute('aria-label',`${node.hollow?'Reopen and explore':'Explore'} ${node.label} cell${node.hollow?' and its descendants':''}`);
         }
     }
 }
 
 function showArWelcomeShowcase() {
+    selectedWelcomeCell='';
     introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -909,12 +916,12 @@ function showArWelcomeShowcase() {
     introBoardTitle='NourishlandXR';introBoardBody='';introBoardVisibleBody='';
     panel.hidden=true;panel.classList.add('is-live-welcome-copy');
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR. Living knowledge grows from Climate, Food forest, Plant and Pin. Select a cell to hide it and its descendants."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR. Living knowledge grows from Climate, Food forest, Plant and Pin. Select a cell to learn. Select it again to fold its branch."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
         const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;
-        cell.setAttribute('aria-label',`Hide ${node.label} cell and its descendants`);cell.hidden=true;
+        cell.setAttribute('aria-label',`Explore ${node.label}; select again to fold or reopen`);cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
         cell.addEventListener('click',event=>{event.stopPropagation();toggleWelcomeCell(node.key);paintWelcomeLayer(performance.now());});
@@ -979,9 +986,9 @@ const DEMO_ORIENTATION_STEPS = [
         'Welcome to NourishlandXR. Take a moment to look around and settle into your surroundings. You can explore at your own pace.',
         'The green panel in front guides your journey. The charcoal Control panel on your left stays nearby for plant details and useful actions.'
     ]},
-    {title:'Two panels. One living world.',button:'Explore a plant',paragraphs:[
-        'PIM is the honeycomb you use to explore plant knowledge. Hold any cell until it fills: its details appear in your Control panel, and branches reveal more topics.',
-        'Look left to your highlighted Control panel. Details holds the selected topic. Help explains the controls; Settings adjusts reading comfort. Hide clears your view. We will choose a plant next.'
+    {title:'Learn to learn',button:'Explore a plant',paragraphs:[
+        'Try Food forest or Climate around this welcome panel. Select a cell to read its story in Your plant companion. Select it again to fold the branch; the hollow cell lets you reopen it.',
+        'Take your time with the living cells. In AR, the green panel stays in place: moving closer makes its cells appear larger. Your companion stays near your left waist, facing you. Hide clears your view.'
     ]},
     {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. We will start with a Pigeon Pea and explore its relationships, cultivation and uses.',
@@ -996,7 +1003,7 @@ function runArWelcomeTutorial(index=0) {
         suppressSessionSelectUntil=performance.now()+700;
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Your controls','Explore'][index]});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Learn to learn','Explore'][index]});
 }
 
 function guidePlantConversion(record) {
@@ -1033,7 +1040,7 @@ function guidePlantConversion(record) {
         moringa
             ? 'This Moringa orb can carry its own Plant Profile as well and can be linked to other plants. Press the Moringa orb to explore its information tree.'
             : [
-                'This orb keeps plant knowledge connected to a place. Open its PIM to explore topics and relationships, then read the detail in your Control panel.',
+                'This orb keeps plant knowledge connected to a place. Open its honeycomb to explore topics and relationships, then read the detail in your Control panel.',
                 'Our example is Pigeon Pea. Explore its food-forest role, cultivation and uses, and discover how individual topics connect.',
                 'You can grab and hold the Pigeon Pea orb or any Plant marker to position it. Release it when you are ready.',
                 'Press Continue after positioning. Press the orb to open or close its Plant Information Mesh.'

@@ -1,7 +1,7 @@
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 
-export const INFO_HELP = 'Hold a PIM cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; Control panel restores it.';
+export const INFO_HELP = 'Select a learning cell, or hold a plant cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; Control panel restores it.';
 
 // This is a reading projection, never a second store of plant knowledge.
 export function pimInfoContent(document, path) {
@@ -49,8 +49,8 @@ export function infoPanelPose(matrix, heading = null) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    const center={ x: matrix[12] - right.x * .46 + right.z * .62,
-        y: matrix[13] - .30, z: matrix[14] - right.z * .46 - right.x * .62 };
+    const center={ x: matrix[12] - right.x * .66 + right.z * .58,
+        y: matrix[13] - .55, z: matrix[14] - right.z * .66 - right.x * .58 };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
@@ -76,12 +76,12 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         ? 'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
-        :'Follow the green welcome panel to begin. Select a plant and explore its PIM to bring information here.';
+        :'Start with the cells around the green welcome panel. Select Food forest or Climate to read an introduction here. Follow your curiosity before placing a plant.';
     const pages=()=>infoPages(text(),largeText?32:38,7);
     const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText);
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection),page,pageCount:pages().length,height:height(),largeText});
+    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText});
     function act(action){
         const button=controls().find(item=>item.action===action);if(button?.disabled)return;
         if(action==='Restore')hidden=false;
@@ -89,7 +89,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         if(['Details','Help','Settings'].includes(action)){tab=action;page=0;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
-        if(action==='Edit' && selection)onEdit(record,selection.path || selection.id);
+        if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
         if(action==='TextSize'){largeText=!largeText;page=0;}
         if(action==='Recenter'){heading=null;pose=null;}
         render();
@@ -108,14 +108,14 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
             const label=document.createElement('small');label.textContent='CONTROL PANEL';
-            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'No plant selected';
+            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Your plant companion';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration companion');
             header.append(label,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));tabs.append(makeButton(controls()[0]));element.append(tabs);
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
             const heading=document.createElement('h3');heading.textContent=title();
-            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'PIM → Details':'';
+            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);element.append(content);
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Control panel actions');
@@ -155,6 +155,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
+        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false};tab='Details';hidden=false;page=0;render();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         focusPlant(nextRecord,document){
             if(record===nextRecord && identity)return;
@@ -173,7 +174,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         recenter(){heading=null;pose=null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),plant:identity?.plant || selection?.plant || 'No plant selected',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'PIM → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),plant:identity?.plant || selection?.plant || 'Your plant companion',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());
