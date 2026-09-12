@@ -14,6 +14,7 @@ const status=hero.querySelector('[data-status]');
 const media=matchMedia('(prefers-reduced-motion: reduce)');
 const forcedReduce=new URLSearchParams(location.search).get('motion')==='reduce';
 let reduced=media.matches||forcedReduce, paused=false, visible=true, frame=0, previous=0, time=0;
+let velocity=0;
 let roll=0, yaw=0, pitch=0, pointerX=0, pointerY=0, scroll=0, scrollOrigin=0, gesture=null;
 let renderer, resizeObserver, intersectionObserver, renderedFrames=0;
 const scene=new THREE.Scene();
@@ -27,18 +28,18 @@ const wind={value:0};
 function fallback(){hero.dataset.ready='error';hero.querySelector('#nl-instructions').textContent='A living circle of plants, food and connection.';host.removeAttribute('tabindex');cancelAnimationFrame(frame);}
 function requestDraw(){if(!disposed&&!frame&&visible&&!document.hidden&&hero.dataset.ready==='true')frame=requestAnimationFrame(draw);}
 function readScroll(){const box=hero.getBoundingClientRect();scroll=scrollTurn(box.top,box.height,innerHeight);requestDraw();}
-function setMotion(){reduced=media.matches||forcedReduce;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').firstChild.textContent=reduced?'Drag to explore. ':'Drag to explore · Arrow keys to turn. ';scrollOrigin=scroll;requestDraw();}
+function setMotion(){reduced=media.matches||forcedReduce;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').firstChild.textContent='Arrow keys rotate; Space pauses motion. ';scrollOrigin=scroll;requestDraw();}
 function reset(){roll=0;yaw=0;pitch=0;pointerX=0;pointerY=0;scrollOrigin=scroll;status.textContent='Wheel returned to its starting view.';requestDraw();}
 
 try{
  if(new URLSearchParams(location.search).get('renderer')==='fallback')throw new Error('Local fallback preview');
  renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.96;
  renderer.domElement.setAttribute('aria-hidden','true');host.append(renderer.domElement);
  // Broad, neutral fill keeps the botanical forms softly shaded like matte pigment.
- scene.add(new THREE.HemisphereLight(0xfffaf0,0xa0a38d,3));
- const sun=new THREE.DirectionalLight(0xfff3e2,1.65);sun.position.set(-3,5,6);scene.add(sun);
+ scene.add(new THREE.HemisphereLight(0xfffaf0,0xa0a38d,2.1));
+ const sun=new THREE.DirectionalLight(0xfff3e2,1.4);sun.position.set(-3,5,6);scene.add(sun);
  const rim=new THREE.DirectionalLight(0xe4ead9,1.1);rim.position.set(4,1,-4);scene.add(rim);
  const texture=await new THREE.TextureLoader().loadAsync(new URL('../assets/living-wheel.png',import.meta.url).href);if(disposed){texture.dispose();return;}keep(texture);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
  // The original illustration becomes the skin of a solid, irregular torus.
@@ -53,8 +54,8 @@ try{
    vec4 botanical = texture2D(map, vMapUv, 1.6);
    vec3 pigment = mix(vec3(0.25, 0.31, 0.19), botanical.rgb, botanical.a);
    float lightness = dot(pigment, vec3(0.2126, 0.7152, 0.0722));
-   pigment = mix(vec3(lightness), pigment, 0.68);
-   diffuseColor.rgb *= mix(pigment, vec3(0.70, 0.70, 0.58), 0.22);
+   pigment = mix(vec3(lightness), pigment, 0.92);
+   diffuseColor.rgb *= mix(pigment, vec3(0.70, 0.70, 0.58), 0.06);
  `);};
  mesh(core,skin);
  const bark=[material(0x93987b),material(0xb0a58b),material(0x7f927c)];
@@ -64,13 +65,13 @@ try{
  for(let i=0;i<=10;i++){const t=i/10,w=Math.sin(Math.PI*t)*.18,z=Math.sin(Math.PI*t)*.13;positions.push(-w,t*.75,z*.2,0,t*.75,z,w,t*.75,z*.2);}
  for(let i=0;i<10;i++){const a=i*3,b=a+3;indices.push(a,b,a+1,a+1,b,b+1,a+1,b+1,a+2,a+2,b+1,b+2);}
  leaf.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));leaf.setIndex(indices);leaf.computeVertexNormals();
- const leafMats=[0x91a58d,0xb1bd98,0x7f9a88,0xc1c4a2,0x9caf9e].map(c=>material(c,{side:THREE.DoubleSide}));
+ const leafMats=[0x7ca67e,0xafbf83,0x659489,0xb9c98f,0x88b79a].map(c=>material(c,{side:THREE.DoubleSide}));
  for(const mat of leafMats)mat.onBeforeCompile=shader=>{shader.uniforms.uWind=wind;shader.vertexShader='uniform float uWind;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n transformed.z += sin(uWind + position.y * 4.0 + instanceMatrix[3].x * 3.0) * 0.024 * position.y;');};
  const stem=keep(new THREE.CylinderGeometry(.008,.014,.53,4));
  for(let i=0;i<62;i++){const a=i*2.39996323,r=1.48+(i%6)*.082;const sprig=new THREE.Group();sprig.position.set(Math.cos(a)*r,Math.sin(a)*r,Math.sin(i*2.13)*.37);sprig.rotation.set(Math.sin(i)*.65,Math.cos(i*1.2)*.45,a-Math.PI/2);const scale=.7+(i%5)*.1;sprig.scale.setScalar(scale);wheel.add(sprig);const stalk=mesh(stem,bark[0],sprig);stalk.position.y=.22;
  for(let k=0;k<3;k++){const blade=mesh(leaf,leafMats[(i+k)%5],sprig);blade.position.y=k*.13;blade.rotation.z=(k===2?0:k===0?-.6:.7);blade.rotation.y=Math.sin(i+k)*.5;blade.scale.setScalar(k===2?.75:.65);}
  }
- const fruitGeo=keep(new THREE.SphereGeometry(1,20,14));const fruits=[0xc3c69a,0xe0c69c,0xd4ac96,0xa8b59a,0xca9e99].map(c=>material(c));
+ const fruitGeo=keep(new THREE.SphereGeometry(1,20,14));const fruits=[0xbbc97f,0xe7b778,0xd99b83,0x9dbd85,0xd28d9a].map(c=>material(c));
  for(let i=0;i<32;i++){const a=i*2.39996,r=1.6+Math.sin(i)*.24;const fruit=mesh(fruitGeo,fruits[i%5]);fruit.position.set(Math.cos(a)*r,Math.sin(a)*r,.48+Math.cos(i)*.1);fruit.scale.set(.085+(i%4)*.016,.10+(i%4)*.02,.085+(i%4)*.016);}
  // Batch repeated leaves, stems and fruit into GPU instances.
  wheel.updateMatrixWorld(true);
@@ -88,15 +89,15 @@ try{
 function draw(now){
  frame=0;if(!visible||document.hidden||hero.dataset.ready!=='true')return;
  const dt=previous?Math.min((now-previous)/1000,.05):.016;previous=now;
- const live=!paused&&!reduced;if(live)time+=dt;
+ const live=!paused&&!reduced;if(live){time+=dt;if(!gesture){roll+=dt*.12;yaw+=velocity*dt;roll+=velocity*dt*.32;velocity*=Math.exp(-dt*2.2);}}
  const scrollDelta=live?scroll-scrollOrigin:0;
  const targetZ=roll+scrollDelta;
- const targetY=.28+yaw+(live?pointerX*.18+Math.sin(time*.35)*.045+Math.sin(scrollDelta)*.42:0);
+ const targetY=.28+yaw+(live?pointerX*.18+Math.sin(time*.35)*.10+Math.sin(scrollDelta)*.42:0);
  const targetX=-.12+pitch+(live?pointerY*.10:0);
  // Frame-rate-independent easing gives each gesture a soft, unhurried settle.
  const blend=reduced?1:1-Math.exp(-dt*4.2);
  wheel.rotation.x+=(targetX-wheel.rotation.x)*blend;wheel.rotation.y+=(targetY-wheel.rotation.y)*blend;wheel.rotation.z+=(targetZ-wheel.rotation.z)*blend;
- wheel.position.y=live?Math.sin(time*.65)*.035:wheel.position.y;
+ wheel.position.y=live?Math.sin(time*.65)*.08:wheel.position.y;
  if(live)wind.value=time*.8;
  renderer.render(scene,camera);
  const settling=Math.abs(targetX-wheel.rotation.x)+Math.abs(targetY-wheel.rotation.y)+Math.abs(targetZ-wheel.rotation.z)>.0005;
@@ -104,22 +105,22 @@ function draw(now){
  host.dataset.rotation=[wheel.rotation.x,wheel.rotation.y,wheel.rotation.z].map(v=>v.toFixed(3)).join(',');
  host.dataset.drawCalls=renderer.info.render.calls;
  host.dataset.frameCount=String(++renderedFrames);
- if((live&&time<5)||settling)requestDraw();
+ if(live||settling)requestDraw();
 }
 
 listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
- if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy);if(gesture.intent==='rotate'){if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);yaw=clamp(gesture.yaw+dx*.009,-1.5,1.5);roll=gesture.roll+dx*.003;requestDraw();}return;}
+ if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy);if(gesture.intent==='rotate'){if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const step=event.clientX-gesture.lastX,dt=Math.max(.008,(event.timeStamp-gesture.lastAt)/1000);yaw+=step*.012;roll+=step*.004;velocity=reduced?0:clamp(velocity*.5+step*.012/dt*.5,-3,3);gesture.lastX=event.clientX;gesture.lastAt=event.timeStamp;requestDraw();}return;}
  if(event.pointerType==='mouse'){const r=host.getBoundingClientRect();pointerX=(event.clientX-r.left)/r.width*2-1;pointerY=(event.clientY-r.top)/r.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',()=>{pointerX=0;pointerY=0;requestDraw();});
-listen(host,'pointerdown',event=>{if(event.button!==0)return;gesture={id:event.pointerId,x:event.clientX,y:event.clientY,yaw,roll,intent:'pending'};});
-function endGesture(){gesture=null;}
+listen(host,'pointerdown',event=>{if(event.button!==0)return;velocity=0;gesture={lastX:event.clientX,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,yaw,roll,intent:'pending'};});
+function endGesture(event){if(event?.type==='pointercancel')velocity=0;gesture=null;}
 listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
 function turn(direction){roll+=direction*Math.PI/6;status.textContent=direction>0?'Wheel turned right.':'Wheel turned left.';requestDraw();}
-listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch=clamp(pitch+(event.key==='ArrowDown'?.18:-.18),-.65,.65);requestDraw();}});
+listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home',' '].includes(event.key))return;event.preventDefault();if(event.key===' '){paused=!paused;velocity=0;status.textContent=paused?'Motion paused.':'Motion resumed.';requestDraw();return;}if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch=clamp(pitch+(event.key==='ArrowDown'?.18:-.18),-.65,.65);requestDraw();}});
 listen(renderer?.domElement,'webglcontextlost',event=>{event.preventDefault();fallback();});
 listen(window,'pagehide',event=>{cancelAnimationFrame(frame);frame=0;if(event.persisted)return;resizeObserver?.disconnect();intersectionObserver?.disconnect();for(const resource of resources)resource.dispose();renderer?.dispose();});
 listen(window,'pageshow',()=>{previous=0;requestDraw();});

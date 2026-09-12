@@ -272,3 +272,6 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .v2-living-wheel figcaption{text-align:center;font-size:12px;color:#65735d;letter-spacing:.04em}
 .wheel-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @media(max-width:700px){.v2-hero>.v2-living-wheel{width:min(100%,360px);justify-self:center;margin-top:12px}}
+
+.v2-hero>.v2-living-wheel{width:min(100%,290px);justify-self:center;align-self:start;margin-top:24px;background:none}
+@media(max-width:700px){.v2-hero>.v2-living-wheel{width:min(76vw,250px);margin-top:0}}
