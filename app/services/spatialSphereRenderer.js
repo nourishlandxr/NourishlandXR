@@ -70,19 +70,15 @@ export function sphereModelMatrix(position, radius, scale = {}) {
 
 export function createOrbCrownGeometry() {
     const vertices = [], indices = [];
-    // Six hollow hexagonal buds. Real triangles give a stable silhouette in XR.
-    for (let bud = 0; bud < 6; bud++) {
-        const angle = bud * Math.PI / 3 + Math.PI / 6;
-        const cx = Math.cos(angle) * 1.12, cy = Math.sin(angle) * 1.12;
-        for (let edge = 0; edge < 6; edge++) {
-            const a = edge * Math.PI / 3 + Math.PI / 6, b = a + Math.PI / 3;
-            const start = vertices.length / 6;
-            for (const [theta, size] of [[a,.28],[b,.28],[b,.22],[a,.22]]) {
-                vertices.push(cx + Math.cos(theta)*size, cy + Math.sin(theta)*size, .04, 0, 0, 1);
-            }
-            indices.push(start,start+1,start+2,start,start+2,start+3);
-        }
-    }
+    // A continuous witness ring remains readable when motion is disabled.
+    // Three separated light arcs suggest knowledge circulating around the seed.
+    const band=(radius,width,from,to,steps)=>{for(let i=0;i<steps;i++){
+        const a=from+(to-from)*i/steps,b=from+(to-from)*(i+1)/steps,start=vertices.length/6;
+        for(const [angle,r] of [[a,radius-width],[a,radius+width],[b,radius+width],[b,radius-width]])vertices.push(Math.cos(angle)*r,Math.sin(angle)*r,.04,0,0,1);
+        indices.push(start,start+1,start+2,start,start+2,start+3);
+    }};
+    band(1.19,.018,0,Math.PI*2,96);
+    for(let i=0;i<3;i++)band(1.31,.035,i*Math.PI*2/3,i*Math.PI*2/3+1.15,32);
     return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }
 
@@ -94,7 +90,9 @@ export function createSpatialSphereRenderer(gl) {
         uniform mat4 modelView;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
+        varying vec3 localPosition;
         void main() {
+            localPosition = position;
             vec4 viewPosition = modelView * vec4(position, 1.0);
             surfaceNormal = normalize((modelView * vec4(normal, 0.0)).xyz);
             viewDirection = normalize(-viewPosition.xyz);
@@ -105,21 +103,32 @@ export function createSpatialSphereRenderer(gl) {
         precision mediump float;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
+        varying vec3 localPosition;
         uniform vec3 color;
         uniform float alpha;
         uniform float emissive;
+        uniform float haloPass;
+        uniform float livingTime;
         void main() {
+            if(haloPass > .5){
+                float radius=length(localPosition.xy);
+                float arc=step(1.24,radius);
+                float edge=abs(radius-mix(1.19,1.31,arc))/mix(.018,.035,arc);
+                float light=(1.-smoothstep(.45,1.,edge))*(.78+.12*sin(atan(localPosition.y,localPosition.x)*3.-livingTime*.7));
+                vec3 ink=mix(color*.22,mix(color,vec3(.96,.98,.89),.35),light);
+                gl_FragColor=vec4(ink,alpha);return;
+            }
             vec3 normal = normalize(surfaceNormal);
             vec3 viewer = normalize(viewDirection);
             vec3 lightDirection = normalize(vec3(-0.42, 0.72, 0.56));
             float diffuse = max(dot(normal, lightDirection), 0.0);
             float facing = max(dot(normal, viewer), 0.0);
             float rim = pow(1.0 - facing, 2.4);
-            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 38.0);
+            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 20.0);
             float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
-            vec3 shaded = color * (0.4 + diffuse * 0.48);
+            vec3 shaded = color * (0.52 + diffuse * 0.42);
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
-            shaded += vec3(0.34) * highlight;
+            shaded += vec3(0.22) * highlight;
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
             shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
             gl_FragColor = vec4(shaded, alpha * (1.0 - rim * .16));
@@ -139,7 +148,7 @@ export function createSpatialSphereRenderer(gl) {
         throw new Error(message);
     }
 
-    const geometry = createUvSphereGeometry();
+    const geometry = createUvSphereGeometry(24, 32);
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.STATIC_DRAW);
@@ -166,7 +175,8 @@ export function createSpatialSphereRenderer(gl) {
         modelViewLocation: gl.getUniformLocation(program, 'modelView'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         alphaLocation: gl.getUniformLocation(program, 'alpha'),
-        emissiveLocation: gl.getUniformLocation(program, 'emissive')
+        emissiveLocation: gl.getUniformLocation(program, 'emissive'),
+        haloLocation:gl.getUniformLocation(program,'haloPass'),timeLocation:gl.getUniformLocation(program,'livingTime')
     };
 }
 
@@ -176,6 +186,7 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     if (material.billboard) {
         for (let column=0;column<3;column++) for (let row=0;row<3;row++) model[column*4+row]=viewMatrix[row*4+column]*radius;
     }
+    if(material.billboard && material.rotation){const a=material.rotation,c=Math.cos(a),s=Math.sin(a);for(let row=0;row<3;row++){const x=model[row],y=model[4+row];model[row]=x*c+y*s;model[4+row]=y*c-x*s;}}
     const modelView = multiplyMatrices(viewMatrix, model);
     gl.useProgram(renderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
@@ -190,9 +201,12 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     const opacity = Number.isFinite(material.opacity) ? Math.max(0, Math.min(1, material.opacity)) : 1;
     gl.uniform1f(renderer.alphaLocation, (Number.isFinite(material.alpha) ? material.alpha : 0.64) * opacity);
     gl.uniform1f(renderer.emissiveLocation, Number.isFinite(material.emissive) ? material.emissive : 0.12);
+    gl.uniform1f(renderer.haloLocation,material.halo ? 1 : 0);
+    gl.uniform1f(renderer.timeLocation,material.time || 0);
     gl.drawElements(gl.TRIANGLES, renderer.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
+const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 export function drawSpatialOrb(gl, renderer, view, position, radius, options = {}) {
     if (!view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     const plant = options.type === 'plant';
@@ -230,12 +244,13 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
 
     if (plant && options.knowledge?.live) {
         gl.depthMask(false);
+        const time=motionPreference?.matches ? 0 : (options.time ?? performance.now()/1000);
         drawSpatialSphere(gl, { ...renderer, vertexBuffer:renderer.crownVertexBuffer,
             indexBuffer:renderer.crownIndexBuffer, indexCount:renderer.crownIndexCount },
             view.projectionMatrix, view.transform.inverse.matrix, position,
-            radius * (options.knowledge.state === 'expanded' ? 1.08 : 1), {
-                billboard:true, color:options.knowledge.draftOnly ? [.88,.78,.55] : [.79,.94,.82],
-                alpha:.82, emissive:.6, opacity:options.opacity
+            radius * ((options.knowledge.state === 'expanded' ? 1.08 : 1)+Math.sin(time*.8)*.018), {
+                billboard:true, halo:true, time, rotation:time*.12, color:options.knowledge.draftOnly ? [.88,.78,.55] : [.79,.94,.82],
+                alpha:.95, emissive:.6, opacity:options.opacity
             });
         gl.depthMask(true);
     }

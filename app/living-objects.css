@@ -94,3 +94,14 @@
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::before { background:hsla(var(--pim-hue),40%,79%,.75); clip-path:polygon(evenodd,25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%,25% 0,26% 2%,2% 50%,26% 98%,74% 98%,98% 50%,74% 2%,26% 2%); }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after { background:hsla(var(--pim-hue),31%,19%,.22); }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(.is-open,.is-selected)::after { background:hsla(var(--pim-hue),31%,19%,.42); }
+
+/* Living knowledge: a readable rim plus slow circulating light. */
+.nlxr-orb-crown{width:76px;height:76px;border:1.5px solid #e4f0d9;border-radius:50%;box-shadow:0 0 0 1px #17382d99,inset 0 0 9px #d6edcc26;animation:nlxr-orbit-breathe 7s ease-in-out infinite}
+.nlxr-orb-crown i{display:none}
+.nlxr-orb-crown::before{content:"";position:absolute;inset:-7px;border-radius:50%;background:conic-gradient(from 0deg,#ecf6df 0deg 62deg,transparent 66deg 120deg,#ecf6df 120deg 182deg,transparent 186deg 240deg,#ecf6df 240deg 302deg,transparent 306deg);mask:radial-gradient(transparent 65%,#000 67% 72%,transparent 74%);animation:nlxr-orbit-flow 24s linear infinite}
+[data-knowledge-state="expanded"] .nlxr-orb-crown{width:82px;height:82px;box-shadow:0 0 0 1px #17382d99,0 0 15px #d6edcc35}
+@keyframes nlxr-orbit-flow{to{rotate:360deg}}
+@keyframes nlxr-orbit-breathe{50%{scale:1.035}}
+.nlxr-totem-system .tryit-sim-totem-pillar{border-radius:12px 12px 9px 9px;background:linear-gradient(90deg,#354b40,#82927b 20%,#9aa68a 36%,#667b64 77%,#354b40);box-shadow:inset 1px 0 #e6efce80,inset -2px 0 #163b3555,0 16px 24px #172e2440}
+.nlxr-totem-system .tryit-sim-totem-pillar::before{background:linear-gradient(180deg,#edf4d5,#bbd9b4 40%,#688166);box-shadow:0 2px 0 #243f35,0 3px 7px #d1e9c033}
+@media(prefers-reduced-motion:reduce){.nlxr-orb-crown,.nlxr-orb-crown::before{animation:none}}

@@ -43,7 +43,8 @@ export function prismModelMatrix(position, dimensions = {}, rotationY = Math.PI 
 }
 
 export function createBeveledPrismGeometry() {
-    const points = [[-.78,-1],[.78,-1],[1,-.78],[1,.78],[.78,1],[-.78,1],[-1,.78],[-1,-.78]];
+    const points=[];
+    for(let corner=0;corner<4;corner++)for(let step=0;step<6;step++){const a=corner*Math.PI/2+step*Math.PI/10;points.push([Math.cos(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.cos(a)*.28,Math.sin(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.sin(a)*.28]);}
     const rings = [[-1,.82],[-.98,1],[.98,1],[1,.82]];
     const vertices = [];
     const triangle = (a,b,c) => {
@@ -53,13 +54,13 @@ export function createBeveledPrismGeometry() {
         for(const p of [a,b,c]) vertices.push(...p,...n.map(value=>value/length));
     };
     const point=(ring,i)=>[points[i][0]*rings[ring][1],rings[ring][0],points[i][1]*rings[ring][1]];
-    for(let r=0;r<3;r++) for(let i=0;i<8;i++) {
-        const j=(i+1)%8,a=point(r,i),b=point(r+1,i),c=point(r+1,j),d=point(r,j);
+    for(let r=0;r<3;r++) for(let i=0;i<points.length;i++) {
+        const j=(i+1)%points.length,a=point(r,i),b=point(r+1,i),c=point(r+1,j),d=point(r,j);
         triangle(a,b,c);triangle(a,c,d);
     }
-    for(let i=0;i<8;i++) {
-        triangle([0,1,0],point(3,(i+1)%8),point(3,i));
-        triangle([0,-1,0],point(0,i),point(0,(i+1)%8));
+    for(let i=0;i<points.length;i++) {
+        triangle([0,1,0],point(3,(i+1)%points.length),point(3,i));
+        triangle([0,-1,0],point(0,i),point(0,(i+1)%points.length));
     }
     return new Float32Array(vertices);
 }
@@ -86,7 +87,9 @@ export function createSpatialPrismRenderer(gl) {
         uniform vec3 inverseScale;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
+        varying vec3 localPosition;
         void main() {
+            localPosition=position;
             vec4 viewPosition = modelView * vec4(position, 1.0);
             surfaceNormal = normalize((modelView * vec4(normal * inverseScale * inverseScale, 0.0)).xyz);
             viewDirection = normalize(-viewPosition.xyz);
@@ -97,6 +100,7 @@ export function createSpatialPrismRenderer(gl) {
         precision mediump float;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
+        varying vec3 localPosition;
         uniform vec3 color;
         uniform vec3 topColor;
         uniform float alpha;
@@ -107,12 +111,16 @@ export function createSpatialPrismRenderer(gl) {
             float diffuse = max(dot(normal, lightDirection), 0.0);
             float facing = max(dot(normal, viewer), 0.0);
             float topFace = smoothstep(0.72, 0.94, normal.y);
-            float sideShade = 0.42 + diffuse * 0.48 + facing * 0.08;
+            float sideShade = 0.52 + diffuse * 0.38 + facing * 0.08;
             vec3 shaded = color * sideShade;
             shaded = mix(shaded, topColor, topFace);
             float rim = pow(1.0 - facing, 3.0);
             float sheen = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 28.0);
             shaded += vec3(.8,.86,.74) * (sheen * .16 + rim * .07);
+            float collar=smoothstep(.88,.89,localPosition.y)*(1.-smoothstep(.925,.935,localPosition.y));
+            float base=smoothstep(-.95,-.94,localPosition.y)*(1.-smoothstep(-.90,-.89,localPosition.y));
+            shaded=mix(shaded,shaded*.55,base*.65);
+            shaded=mix(shaded,mix(topColor,vec3(.9,.97,.84),.6),collar*.9);
             gl_FragColor = vec4(shaded, alpha);
         }
     `);
