@@ -275,3 +275,12 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 
 .v2-hero>.v2-living-wheel{width:min(100%,290px);justify-self:center;align-self:start;margin-top:24px;background:none}
 @media(max-width:700px){.v2-hero>.v2-living-wheel{width:min(76vw,250px);margin-top:0}}
+
+/* Keep the sculpture beside the title, including on narrow phones. */
+.v2-wheel-hero{grid-template-columns:minmax(0,1fr) minmax(180px,290px);gap:16px 30px;align-items:center}
+.v2-wheel-hero>.v2-hero-heading{grid-column:1;grid-row:1;min-width:0}
+.v2-wheel-hero>.v2-hero-copy{grid-column:1 / -1;grid-row:2;max-width:680px}
+.v2-wheel-hero>.v2-living-wheel{grid-column:2;grid-row:1;margin:0;width:100%;align-self:center}
+#app .v2-wheel-hero h1{font-size:clamp(30px,4.7vw,60px);max-width:none;letter-spacing:-.035em}
+#app .v2-screen .v2-wheel-motion{display:block;margin:0 auto;padding:4px 12px;background:transparent;border:1px solid var(--v2-line);border-radius:99px;color:var(--v2-muted);font-size:12px;white-space:nowrap;min-height:32px}
+@media(max-width:700px){.v2-wheel-hero{grid-template-columns:minmax(0,1fr) minmax(100px,34%);gap:12px}.v2-wheel-hero>.v2-living-wheel{width:100%;margin:0}#app .v2-wheel-hero h1{font-size:clamp(25px,6.2vw,42px);line-height:1.1}.v2-wheel-hero .v2-eyebrow{font-size:9px;letter-spacing:1px}}

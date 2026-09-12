@@ -13,6 +13,7 @@ const host=hero.querySelector('[data-canvas]');
 const status=hero.querySelector('[data-status]');
 const media=matchMedia('(prefers-reduced-motion: reduce)');
 const forcedReduce=new URLSearchParams(location.search).get('motion')==='reduce';
+let motionOverride=false;
 let reduced=media.matches||forcedReduce, paused=false, visible=true, frame=0, previous=0, time=0;
 let velocity=0;
 let roll=0, yaw=0, pitch=0, pointerX=0, pointerY=0, scroll=0, scrollOrigin=0, gesture=null;
@@ -28,7 +29,7 @@ const wind={value:0};
 function fallback(){hero.dataset.ready='error';hero.querySelector('#nl-instructions').textContent='A living circle of plants, food and connection.';host.removeAttribute('tabindex');cancelAnimationFrame(frame);}
 function requestDraw(){if(!disposed&&!frame&&visible&&!document.hidden&&hero.dataset.ready==='true')frame=requestAnimationFrame(draw);}
 function readScroll(){const box=hero.getBoundingClientRect();scroll=scrollTurn(box.top,box.height,innerHeight);requestDraw();}
-function setMotion(){reduced=media.matches||forcedReduce;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').firstChild.textContent='Arrow keys rotate; Space pauses motion. ';scrollOrigin=scroll;requestDraw();}
+function setMotion(){reduced=(media.matches||forcedReduce)&&!motionOverride;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').firstChild.textContent='Arrow keys rotate; Space pauses motion. ';scrollOrigin=scroll;syncMotionButton();requestDraw();}
 function reset(){roll=0;yaw=0;pitch=0;pointerX=0;pointerY=0;scrollOrigin=scroll;status.textContent='Wheel returned to its starting view.';requestDraw();}
 
 try{
@@ -89,7 +90,7 @@ try{
 function draw(now){
  frame=0;if(!visible||document.hidden||hero.dataset.ready!=='true')return;
  const dt=previous?Math.min((now-previous)/1000,.05):.016;previous=now;
- const live=!paused&&!reduced;if(live){time+=dt;if(!gesture){roll+=dt*.12;yaw+=velocity*dt;roll+=velocity*dt*.32;velocity*=Math.exp(-dt*2.2);}}
+ const live=!paused&&!reduced;if(live){time+=dt;if(!gesture){roll+=dt*.24;yaw+=velocity*dt;roll+=velocity*dt*.32;velocity*=Math.exp(-dt*.85);}}
  const scrollDelta=live?scroll-scrollOrigin:0;
  const targetZ=roll+scrollDelta;
  const targetY=.28+yaw+(live?pointerX*.18+Math.sin(time*.35)*.10+Math.sin(scrollDelta)*.42:0);
@@ -112,15 +113,19 @@ listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
- if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy);if(gesture.intent==='rotate'){if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const step=event.clientX-gesture.lastX,dt=Math.max(.008,(event.timeStamp-gesture.lastAt)/1000);yaw+=step*.012;roll+=step*.004;velocity=reduced?0:clamp(velocity*.5+step*.012/dt*.5,-3,3);gesture.lastX=event.clientX;gesture.lastAt=event.timeStamp;requestDraw();}return;}
+ if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy);if(gesture.intent==='rotate'){if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const step=event.clientX-gesture.lastX,dt=Math.max(.008,(event.timeStamp-gesture.lastAt)/1000);yaw+=step*.012;roll+=step*.004;velocity=reduced?0:clamp(velocity*.35+step*.012/dt*.65,-6,6);gesture.lastX=event.clientX;gesture.lastAt=event.timeStamp;requestDraw();}return;}
  if(event.pointerType==='mouse'){const r=host.getBoundingClientRect();pointerX=(event.clientX-r.left)/r.width*2-1;pointerY=(event.clientY-r.top)/r.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',()=>{pointerX=0;pointerY=0;requestDraw();});
 listen(host,'pointerdown',event=>{if(event.button!==0)return;velocity=0;gesture={lastX:event.clientX,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,yaw,roll,intent:'pending'};});
-function endGesture(event){if(event?.type==='pointercancel')velocity=0;gesture=null;}
+function endGesture(event){if(!gesture)return;if(event?.type==='pointercancel'||(event?.timeStamp-gesture.lastAt)>120)velocity=0;gesture=null;requestDraw();}
 listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
+listen(window,'pointerup',endGesture);listen(window,'pointercancel',endGesture);
+function syncMotionButton(){const button=hero.querySelector('[data-wheel-motion]');if(button){button.textContent=paused||reduced?'Spin sculpture':'Pause spin';button.setAttribute('aria-pressed',String(!paused&&!reduced));}}
+function toggleMotion(){if(reduced){motionOverride=true;paused=false;setMotion();}else paused=!paused;velocity=0;syncMotionButton();requestDraw();}
+listen(hero.querySelector('[data-wheel-motion]'),'click',toggleMotion);
 function turn(direction){roll+=direction*Math.PI/6;status.textContent=direction>0?'Wheel turned right.':'Wheel turned left.';requestDraw();}
-listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home',' '].includes(event.key))return;event.preventDefault();if(event.key===' '){paused=!paused;velocity=0;status.textContent=paused?'Motion paused.':'Motion resumed.';requestDraw();return;}if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch=clamp(pitch+(event.key==='ArrowDown'?.18:-.18),-.65,.65);requestDraw();}});
+listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home',' '].includes(event.key))return;event.preventDefault();if(event.key===' '){toggleMotion();status.textContent=paused?'Motion paused.':'Motion resumed.';requestDraw();return;}if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch=clamp(pitch+(event.key==='ArrowDown'?.18:-.18),-.65,.65);requestDraw();}});
 listen(renderer?.domElement,'webglcontextlost',event=>{event.preventDefault();fallback();});
 listen(window,'pagehide',event=>{cancelAnimationFrame(frame);frame=0;if(event.persisted)return;resizeObserver?.disconnect();intersectionObserver?.disconnect();for(const resource of resources)resource.dispose();renderer?.dispose();});
 listen(window,'pageshow',()=>{previous=0;requestDraw();});
