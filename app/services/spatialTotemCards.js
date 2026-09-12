@@ -15,14 +15,17 @@ export function hitTotemSurface(ray, surfaces) {
     if(!ray?.origin || !ray.direction)return null;
     const hits=[];
     for(const surface of surfaces) {
-        const {center,right,width,height}=surface, normal={x:right.z,y:0,z:-right.x};
-        const denominator=ray.direction.x*normal.x+ray.direction.z*normal.z;
+        const {center,width,height}=surface, right={y:0,...surface.right}, up=surface.up || {x:0,y:1,z:0};
+        const normal=surface.normal || {x:right.y*up.z-right.z*up.y,y:right.z*up.x-right.x*up.z,z:right.x*up.y-right.y*up.x};
+        const denominator=ray.direction.x*normal.x+ray.direction.y*normal.y+ray.direction.z*normal.z;
         if(Math.abs(denominator)<1e-6)continue;
-        const distance=((center.x-ray.origin.x)*normal.x+(center.z-ray.origin.z)*normal.z)/denominator;
+        const distance=((center.x-ray.origin.x)*normal.x+(center.y-ray.origin.y)*normal.y+(center.z-ray.origin.z)*normal.z)/denominator;
         if(distance<=0)continue;
         const point={x:ray.origin.x+ray.direction.x*distance,y:ray.origin.y+ray.direction.y*distance,z:ray.origin.z+ray.direction.z*distance};
-        const x=(point.x-center.x)*right.x+(point.z-center.z)*right.z;
-        if(Math.abs(x)<=width/2 && Math.abs(point.y-center.y)<=height/2)hits.push({...surface,distance,point,position:point});
+        const offset={x:point.x-center.x,y:point.y-center.y,z:point.z-center.z};
+        const x=offset.x*right.x+offset.y*right.y+offset.z*right.z;
+        const y=offset.x*up.x+offset.y*up.y+offset.z*up.z;
+        if(Math.abs(x)<=width/2 && Math.abs(y)<=height/2)hits.push({...surface,distance,point,position:point,localX:x,localY:y});
     }
     return hits.sort((a,b)=>a.distance-b.distance)[0]||null;
 }
@@ -63,12 +66,12 @@ function cardCanvas(card, detail, selected) {
 }
 
 export function createSpatialTotemCards(gl, options = {}) {
-    const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 p;uniform mat4 projection;uniform mat4 view;uniform vec3 center;uniform vec3 right;uniform vec2 size;varying vec2 uv;void main(){uv=vec2(p.x+.5,.5-p.y);vec3 world=center+right*p.x*size.x+vec3(0.0,p.y*size.y,0.0);gl_Position=projection*view*vec4(world,1.0);}');
+    const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 p;uniform mat4 projection;uniform mat4 view;uniform vec3 center;uniform vec3 right;uniform vec3 up;uniform vec2 size;varying vec2 uv;void main(){uv=vec2(p.x+.5,.5-p.y);vec3 world=center+right*p.x*size.x+up*p.y*size.y;gl_Position=projection*view*vec4(world,1.0);}');
     const fs=shader(gl,gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D artwork;uniform float opacity;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);if(c.a<.01)discard;gl_FragColor=vec4(c.rgb,c.a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-.5,-.5,.5,-.5,.5,.5,-.5,-.5,.5,.5,-.5,.5]),gl.STATIC_DRAW);
-    const locations=Object.fromEntries(['projection','view','center','right','size','artwork','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const p=gl.getAttribLocation(program,'p'),textures=new Map(),used=new Set();
     let surfaces=[];
     return {
@@ -93,7 +96,8 @@ export function createSpatialTotemCards(gl, options = {}) {
                     entry={texture,content,started:performance.now()};textures.set(key,entry);
                 }
                 used.add(key);surfaces.push({...surface,record});
-                gl.uniform3f(locations.center,surface.center.x,surface.center.y,surface.center.z);gl.uniform3f(locations.right,surface.right.x,0,surface.right.z);
+                gl.uniform3f(locations.center,surface.center.x,surface.center.y,surface.center.z);gl.uniform3f(locations.right,surface.right.x,surface.right.y || 0,surface.right.z);
+                const up=surface.up || {x:0,y:1,z:0};gl.uniform3f(locations.up,up.x,up.y,up.z);
                 gl.uniform2f(locations.size,surface.width,surface.height);
                 const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
                 gl.uniform1f(locations.opacity,reduced ? 1 : Math.min(1,(performance.now()-entry.started)/450));

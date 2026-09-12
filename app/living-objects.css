@@ -35,17 +35,17 @@
 @media(prefers-reduced-motion:reduce) { .nlxr-orb-crown i { transition:none; } .nlxr-totem-detail { animation:none; } }
 
 /* Desktop AR preview only. Immersive sessions use the shared WebGL note. */
-.nlxr-info-panel { position:fixed; z-index:12900; left:18px; bottom:100px; width:min(310px,calc(100vw - 36px)); max-height:58vh; overflow:auto; box-sizing:border-box; padding:18px; border:1px solid #d2efbba6; border-radius:16px; color:#f2fae9; background:linear-gradient(145deg,#679168a8,#123e2ab5); backdrop-filter:blur(14px); box-shadow:0 12px 40px #0d281b38,inset 0 1px #e6ffd430; text-align:left; pointer-events:auto; animation:nlxr-note-arrive .45s ease both; }
+.nlxr-info-panel { position:fixed; z-index:12900; left:18px; bottom:100px; width:min(310px,calc(100vw - 36px)); max-height:58vh; overflow:auto; box-sizing:border-box; padding:18px; border:1px solid #aad8ffa6; border-radius:16px; color:#f2fae9; background:linear-gradient(145deg,#3c70a4d1,#0f2b4fd1); backdrop-filter:blur(14px); box-shadow:0 12px 40px #0d281b38,inset 0 1px #e6ffd430; text-align:left; pointer-events:auto; animation:nlxr-note-arrive .45s ease both; }
 .nlxr-info-panel[hidden] { display:none!important; }
 .nlxr-info-panel h2 { font:600 19px/1.25 system-ui; color:inherit; margin:10px 0; }
-.nlxr-info-panel small { display:block; font:400 11px/1.45 system-ui; color:#e1efd6; }
+.nlxr-info-panel small { display:block; font:400 11px/1.45 system-ui; color:#e2efff; }
 .nlxr-info-panel p { color:inherit; margin:9px 0; }
 .nlxr-info-panel .nlxr-info-trail { font:400 11px/1.4 system-ui; opacity:.85; }
 .nlxr-info-panel .nlxr-info-body { font:400 14px/1.5 system-ui; white-space:pre-wrap; overflow-wrap:anywhere; }
 .nlxr-info-panel nav { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 6px; }
-.nlxr-info-panel button { font:500 12px/1.2 system-ui; min-height:44px; padding:7px 10px; border:1px solid #d8efc66b; border-radius:9px; background:#daf2c520; color:#f2fae9; cursor:pointer; }
+.nlxr-info-panel button { font:500 12px/1.2 system-ui; min-height:44px; padding:7px 10px; border:1px solid #bedfff6b; border-radius:9px; background:#c3e1ff20; color:#f2fae9; cursor:pointer; }
 .nlxr-info-panel button:disabled { opacity:.45; cursor:default; }
-.nlxr-info-panel button:focus-visible { outline:2px solid #f1ffc7; outline-offset:3px; }
+.nlxr-info-panel button:focus-visible { outline:2px solid #b9e3ff; outline-offset:3px; }
 .nlxr-info-panel.is-hidden { width:auto; padding:4px; }
 .nlxr-info-panel.is-hidden nav { margin:0; }
 @media(max-width:600px) { .nlxr-info-panel { left:10px; bottom:88px; width:min(280px,calc(100vw - 20px)); max-height:35vh; padding:12px; } }

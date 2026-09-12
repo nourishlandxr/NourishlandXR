@@ -58,7 +58,8 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
  return {corner,phase,cycle,nodes};
 }
 
-export const AR_WELCOME_CONTINUE_MS = AR_WELCOME_SHOWCASE_DURATION / 2;
+// Protect the first few discoveries without making the full bloom a loading gate.
+export const AR_WELCOME_CONTINUE_MS = 8000;
 export const welcomeCanContinue = elapsed => Number.isFinite(elapsed) && elapsed >= AR_WELCOME_CONTINUE_MS;
 
 // Count presented time rather than time spent in a permission dialog, another

@@ -41,11 +41,11 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');
 });
 
-test('Continue unlocks only at the midpoint of the complete intro',async()=>{
+test('Continue protects an eight-second opening while the full bloom continues',async()=>{
  const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
- assert.equal(AR_WELCOME_CONTINUE_MS,32000);
- for(const elapsed of [-1,0,16000,31999,NaN])assert.equal(welcomeCanContinue(elapsed),false);
- assert.equal(welcomeCanContinue(32000),true);assert.equal(welcomeCanContinue(96000),true);
+ assert.equal(AR_WELCOME_CONTINUE_MS,8000);
+ for(const elapsed of [-1,0,7999,NaN])assert.equal(welcomeCanContinue(elapsed),false);
+ assert.equal(welcomeCanContinue(8000),true);assert.equal(welcomeCanContinue(96000),true);
 });
 
 test('developed corners persist across the midpoint, narration and later demo steps',async()=>{

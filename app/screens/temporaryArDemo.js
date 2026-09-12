@@ -949,7 +949,7 @@ function showArWelcomeShowcase() {
     };
     // Only the explicit Continue action advances the opening animation.
     skipDemoNarration=()=>{};
-    setGuide('Explore the wonders of plants and ecosystems. Continue becomes available halfway through the introduction.');
+    setGuide('Explore the wonders of plants and ecosystems. Continue becomes available after a short opening. The cells keep growing as you explore.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
