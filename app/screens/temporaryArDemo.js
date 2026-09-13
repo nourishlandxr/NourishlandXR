@@ -2938,8 +2938,11 @@ function drawIntroNoteContent(ctx) {
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
     const visibleParagraphs = typedBody.split(/\n\n/);
-    const bodyTop = 532;
-    const bodyBottom = 760;
+    // Keep the first body line clear of the divider and the clipping edge;
+    // its ascenders were previously being cut because the baseline sat too
+    // close to the clip rectangle.
+    const bodyTop = 560;
+    const bodyBottom = 770;
     const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
     let paragraphY = bodyTop;

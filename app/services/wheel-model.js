@@ -16,6 +16,8 @@ export function wheelGestureVelocity(samples,previousVelocity=0,reducedMotion=fa
 }
 export function decayWheelVelocity(velocity,dt,reducedMotion=false){
  if(reducedMotion||!Number.isFinite(velocity)||!Number.isFinite(dt))return 0;
- const next=velocity*Math.exp(-Math.max(0,dt)*1.05);
+ // A slower friction curve gives the botanical wheel a longer, oil-smooth
+ // glide after a flick while still settling naturally at rest.
+ const next=velocity*Math.exp(-Math.max(0,dt)*.48);
  return Math.abs(next)<.012?0:next;
 }
