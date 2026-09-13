@@ -1038,6 +1038,10 @@ function showArWelcomeShowcase() {
         onCancel:()=>{introBoardTextureDirty=true;},
         onComplete:key=>{activateLimCell(key);introBoardTextureDirty=true;}
     });
+    // The XR session is created before the showcase controller. Bind the
+    // session interactions here, once the controller exists, so tracked
+    // pointer holds can reach the companion panel.
+    bindLimSessionInteractions(session);
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
