@@ -18,6 +18,84 @@ export const LIM_GROUPS = Object.freeze([
     ]})
 ]);
 
+// The eight LIM faces are the current public learning structure. The original
+// four groups above remain intact as migration metadata for every authored cell.
+// Faces are presentation and pathway parents; they never become Plant PIM data.
+export const LIM_FACES = Object.freeze([
+    Object.freeze({
+        id: 'climate-place', title: 'Climate and Place', accent: '#6978b8', position: 'north',
+        content: 'Explore climate, seasons, temperature, rainfall, humidity, frost, shelter, exposure, water and the local conditions that shape a place.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-climate-subtropical', children: Object.freeze(['lim-climate-subtropical-temperature', 'lim-climate-subtropical-rainfall']) }),
+            Object.freeze({ id: 'lim-climate-cool', children: Object.freeze(['lim-climate-cool-shelter']) }),
+            Object.freeze({ id: 'lim-climate-dry', children: Object.freeze(['lim-climate-dry-water-needs']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'living-landscapes', title: 'Living Landscapes', accent: '#a06a43', position: 'north-east',
+        content: 'Explore food-forest layers, canopy, understorey, ground cover, roots, light, shade, yield and the functions that create a living landscape.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-food-forest-layers', children: Object.freeze(['lim-food-forest-layers-canopy', 'lim-food-forest-layers-ground-cover']) }),
+            Object.freeze({ id: 'lim-food-forest-function', children: Object.freeze(['lim-food-forest-function-yield']) }),
+            Object.freeze({ id: 'lim-food-forest-light', children: Object.freeze(['lim-food-forest-light-shade']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'plants-life', title: 'Plants and Life', accent: '#719b62', position: 'east',
+        content: 'Explore plant identity, form, life cycle, growth, propagation, harvest and the ways plants change over time.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-plant-identity', children: Object.freeze(['lim-plant-identity-species', 'lim-plant-identity-characteristics']) }),
+            Object.freeze({ id: 'lim-plant-propagation', children: Object.freeze(['lim-plant-propagation-seed', 'lim-plant-propagation-cutting']) }),
+            Object.freeze({ id: 'lim-plant-soil', children: Object.freeze(['lim-plant-soil-moisture']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'place-observation', title: 'Place and Observation', accent: '#9a9460', position: 'south-east',
+        content: 'Explore pins, places, stories, photos, dates, conditions, notes, tasks and observations recorded in the living world.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-pin-place', children: Object.freeze(['lim-pin-place-photo']) }),
+            Object.freeze({ id: 'lim-pin-observation', children: Object.freeze(['lim-pin-observation-date', 'lim-pin-observation-condition']) }),
+            Object.freeze({ id: 'lim-pin-specimen', children: Object.freeze(['lim-pin-specimen-genus']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'uses-making', title: 'Uses and Making', accent: '#bd7659', position: 'south',
+        content: 'Explore food preparation, cultivation methods, harvest, craft, building materials and other practical uses with suitable evidence and safety context.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-plant-harvest', children: Object.freeze(['lim-plant-harvest-fruit', 'lim-plant-harvest-flower']) }),
+            Object.freeze({ id: 'lim-food-forest-function-yield', children: Object.freeze([]) }),
+            Object.freeze({ id: 'lim-pin-specimen-method', children: Object.freeze([]) })
+        ])
+    }),
+    Object.freeze({
+        id: 'origins-culture', title: 'Origins and Culture', accent: '#8d75a5', position: 'south-west',
+        content: 'Explore geographic origins, movement between regions, the communities connected with plants, traditions and cultural histories.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-plant-range', children: Object.freeze(['lim-plant-range-latitude', 'lim-plant-range-exposure']) }),
+            Object.freeze({ id: 'lim-pin-place-story', children: Object.freeze([]) }),
+            Object.freeze({ id: 'lim-climate-tropical', children: Object.freeze(['lim-climate-tropical-rainfall']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'wildlife-relationships', title: 'Wildlife and Relationships', accent: '#5f9681', position: 'west',
+        content: 'Explore birds, insects, pollinators, fungi, soil organisms, seed dispersal and the ecological relationships around plants and places.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-food-forest-ecology', children: Object.freeze(['lim-food-forest-ecology-pollinators', 'lim-food-forest-ecology-companions']) }),
+            Object.freeze({ id: 'lim-food-forest-function-habitat', children: Object.freeze([]) }),
+            Object.freeze({ id: 'lim-food-forest-function-soil-relationships', children: Object.freeze(['lim-food-forest-ecology-soil-life']) })
+        ])
+    }),
+    Object.freeze({
+        id: 'discovery-pathways', title: 'Discovery and Pathways', accent: '#4f879e', position: 'north-west',
+        content: 'Explore how to observe, compare, record, question and connect topics. These connections can later form guided pathways toward a learning goal.',
+        showcase: Object.freeze([
+            Object.freeze({ id: 'lim-pin-note', children: Object.freeze(['lim-pin-note-task', 'lim-pin-note-data']) }),
+            Object.freeze({ id: 'lim-pin-observation-action', children: Object.freeze([]) }),
+            Object.freeze({ id: 'lim-pin-place-learning', children: Object.freeze([]) })
+        ])
+    })
+]);
+
 const lessons = {
     'Food forest': 'A food forest grows useful plants in layers, inspired by a forest. Trees, shrubs, herbs and ground covers share space. Explore Layers to see how height, light and plant relationships shape the garden.',
     'Climate': 'Climate describes the long-term pattern of warmth, rainfall and seasons in a place. It helps us understand which plants may thrive. A sheltered corner can differ from the wider climate: observation matters too.',
@@ -87,10 +165,82 @@ function buildGroupCells(group) {
     });
     return [root, ...buildCells(group, group.children, root.id, [group.title])];
 }
-export const LIM_CELLS = Object.freeze(LIM_GROUPS.flatMap(buildGroupCells));
-export const LIM_CELL_BY_ID = Object.freeze(Object.fromEntries(LIM_CELLS.map(cell => [cell.id, cell])));
-export const LIM_GRAPHS = Object.freeze(LIM_GROUPS.map(group => Object.freeze({ label: group.title, children: group.children })));
-const cellByLabel = new Map(LIM_CELLS.map(cell => [cell.title, cell]));
+const LEGACY_LIM_CELLS = LIM_GROUPS.flatMap(buildGroupCells);
+const belongsTo = (cell, id) => cell.id === id || cell.id.startsWith(id + '-');
+function primaryFaceId(cell) {
+    if (belongsTo(cell, 'lim-pin-note') || ['lim-pin-place-learning', 'lim-pin-observation-action', 'lim-pin-observation-problem'].includes(cell.id)) return 'discovery-pathways';
+    if (belongsTo(cell, 'lim-plant-harvest') || ['lim-food-forest-function-yield', 'lim-pin-specimen-method'].includes(cell.id)) return 'uses-making';
+    if (belongsTo(cell, 'lim-plant-range') || cell.id === 'lim-pin-place-story') return 'origins-culture';
+    if (belongsTo(cell, 'lim-food-forest-ecology') || ['lim-food-forest-function-habitat', 'lim-food-forest-function-soil-relationships', 'lim-plant-soil-soil-life'].includes(cell.id)) return 'wildlife-relationships';
+    if (cell.groupId === 'climate') return 'climate-place';
+    if (cell.groupId === 'food-forest' || belongsTo(cell, 'lim-plant-layer')) return 'living-landscapes';
+    if (cell.groupId === 'plant') return 'plants-life';
+    return 'place-observation';
+}
+const LEGACY_FACE = Object.freeze({ climate: 'climate-place', 'food-forest': 'living-landscapes', plant: 'plants-life', pin: 'place-observation' });
+const RELATED_FACES = Object.freeze({
+    'climate-place': Object.freeze(['plants-life', 'place-observation']),
+    'living-landscapes': Object.freeze(['wildlife-relationships', 'plants-life']),
+    'plants-life': Object.freeze(['living-landscapes', 'uses-making']),
+    'place-observation': Object.freeze(['discovery-pathways', 'origins-culture']),
+    'uses-making': Object.freeze(['plants-life', 'origins-culture']),
+    'origins-culture': Object.freeze(['climate-place', 'place-observation']),
+    'wildlife-relationships': Object.freeze(['living-landscapes', 'climate-place']),
+    'discovery-pathways': Object.freeze(['place-observation'])
+});
+export const LIM_CELLS = Object.freeze(LEGACY_LIM_CELLS.map(cell => {
+    const faceId = primaryFaceId(cell);
+    const face = LIM_FACES.find(item => item.id === faceId);
+    const related = new Set(RELATED_FACES[faceId] || []);
+    if (LEGACY_FACE[cell.groupId] && LEGACY_FACE[cell.groupId] !== faceId) related.add(LEGACY_FACE[cell.groupId]);
+    related.delete(faceId);
+    return Object.freeze({ ...cell,
+        legacyGroupId: cell.groupId,
+        legacyGroup: cell.group,
+        legacyParentId: cell.parentId,
+        legacyAccent: cell.accent,
+        accent: face?.accent || cell.accent,
+        primaryFaceId: faceId,
+        faceParentId: `lim-face-${faceId}`,
+        relatedFaceIds: Object.freeze([...related]),
+        faceMappingStatus: 'provisional'
+    });
+}));
+export const LIM_FACE_CELLS = Object.freeze(LIM_FACES.map(face => Object.freeze({
+    id: `lim-face-${face.id}`,
+    title: face.title,
+    content: face.content,
+    parentId: null,
+    groupId: null,
+    group: 'Learning Information Mesh',
+    accent: face.accent,
+    layoutRole: 'face',
+    tutorialStep: 'welcome',
+    accessibilityLabel: `${face.title} LIM face`,
+    path: [face.title],
+    primaryFaceId: face.id,
+    faceParentId: null,
+    relatedFaceIds: Object.freeze([]),
+    faceMappingStatus: 'authored'
+})));
+export const LIM_ALL_CELLS = Object.freeze([...LIM_FACE_CELLS, ...LIM_CELLS]);
+export const LIM_CELL_BY_ID = Object.freeze(Object.fromEntries(LIM_ALL_CELLS.map(cell => [cell.id, cell])));
+const graphCell = id => {
+    const cell = LIM_CELL_BY_ID[id];
+    return cell ? { id: cell.id, limId: cell.id, label: cell.title, accent: cell.accent, accessibilityLabel: cell.accessibilityLabel, children: [] } : null;
+};
+export const LIM_GRAPHS = Object.freeze(LIM_FACES.map(face => Object.freeze({
+    id: face.id,
+    limId: `lim-face-${face.id}`,
+    label: face.title,
+    accent: face.accent,
+    accessibilityLabel: `${face.title} LIM face`,
+    children: Object.freeze(face.showcase.map(branch => {
+        const node = graphCell(branch.id);
+        return node ? Object.freeze({ ...node, children: Object.freeze(branch.children.map(graphCell).filter(Boolean).map(Object.freeze)) }) : null;
+    }).filter(Boolean))
+})));
+const cellByLabel = new Map(LIM_ALL_CELLS.map(cell => [cell.title, cell]));
 export function limLearningContent(labelOrId) {
     const cell = LIM_CELL_BY_ID[labelOrId] || cellByLabel.get(labelOrId);
     const label = cell?.title || String(labelOrId ?? 'Learning');

@@ -2,16 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
 import {LIM_CELLS} from '../app/services/limLearning.js';
-test('one corner grows through three levels, fades and passes to the next',()=>{
+test('one LIM face grows through three levels, fades and passes around the octagon',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
- assert.equal(welcomeNetworkFrame(3500).nodes.filter(n=>n.opacity>0).length,1);
- const full=welcomeNetworkFrame(14000);assert.equal(full.nodes.length,8);assert.ok(full.nodes.every(n=>n.opacity===1));assert.equal(full.nodes.filter(n=>n.depth===2).length,4);
+ assert.equal(welcomeNetworkFrame(3000).nodes.filter(n=>n.opacity>0).length,1);
+ const full=welcomeNetworkFrame(12000);assert.equal(full.nodes.length,4);assert.ok(full.nodes.every(n=>n.opacity===1));assert.equal(full.nodes.filter(n=>n.depth===2).length,1);
  assert.ok(welcomeNetworkFrame(15999).nodes.every(n=>n.opacity<.00001));
- assert.equal(welcomeNetworkFrame(16000).corner,1);assert.equal(welcomeNetworkFrame(32000).corner,2);assert.equal(welcomeNetworkFrame(48000).corner,3);
+ assert.deepEqual([16000,32000,48000,64000,80000,96000,112000].map(time=>welcomeNetworkFrame(time).corner),[1,2,3,4,5,6,7]);
  assert.ok(welcomeNetworkFrame(AR_WELCOME_SHOWCASE_DURATION).nodes.every(n=>n.opacity===0));
 });
-test('nodes retain parent identity, share a compact honeycomb lattice and avoid the welcome panel',()=>{
- for(let corner=0;corner<4;corner++){const {nodes}=welcomeNetworkFrame(corner*16000+12000);for(const [i,n] of nodes.entries()){
+test('eight face clusters retain parent identity, share edges and avoid the welcome panel',()=>{
+ for(let corner=0;corner<8;corner++){const {nodes}=welcomeNetworkFrame(corner*16000+12000);for(const [i,n] of nodes.entries()){
  assert.ok(n.x-n.radius>0 && n.x+n.radius<2500 && n.y-n.radius>0 && n.y+n.radius<2100);
  assert.ok(n.y+n.radius<=810 || n.y-n.radius>=1310 || n.x+n.radius<=800 || n.x-n.radius>=1700);
  if(n.parent)assert.ok(nodes.find(p=>p.id===n.parent));
@@ -96,14 +96,14 @@ test('welcome clock does not skip the opening after hidden or suspended frames',
 
 test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  const {welcomeExperienceFrames,welcomeCellAtPoint}=await import('../app/services/arWelcomeShowcase.js');
- const hidden=new Set(['0:branch-0','2:root']);
+ const hidden=new Set(['0:branch-0','2:face']);
  const frames=welcomeExperienceFrames(64000,false,undefined,hidden);
  const climate=frames[0].nodes;
  assert.equal(climate.find(n=>n.id==='branch-0').hollow,true);
- for(const id of ['attribute-0','attribute-1'])assert.equal(climate.find(n=>n.id===id).opacity,0);
+ assert.equal(climate.find(n=>n.id==='attribute-0').opacity,0);
  assert.equal(climate.find(n=>n.id==='branch-1').opacity,1);
- assert.equal(frames[2].nodes.find(n=>n.id==='root').hollow,true);
- assert.ok(frames[2].nodes.filter(n=>n.id!=='root').every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
+ assert.equal(frames[2].nodes.find(n=>n.id==='face').hollow,true);
+ assert.ok(frames[2].nodes.filter(n=>n.id!=='face').every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
  const cell=climate.find(n=>n.id==='branch-1');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
  const gone=climate.find(n=>n.id==='branch-0');
  assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y).key,gone.key);

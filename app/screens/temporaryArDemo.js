@@ -1022,12 +1022,12 @@ function showArWelcomeShowcase() {
     introBoardTitle='NourishlandXR';introBoardBody='';introBoardVisibleBody='';
     panel.hidden=true;panel.classList.add('is-live-welcome-copy');
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR. Living knowledge grows from Climate, Food forest, Plant and Pin. Select a cell to learn. Select it again to fold its branch."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR Learning Information Mesh. Eight connected learning faces surround the welcome panel. Hold a cell to explore it."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
         const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;cell.dataset.label=node.label;cell.textContent=node.label;
-        cell.setAttribute('aria-label',`Explore ${node.label} learning cell`);cell.setAttribute('aria-pressed','false');cell.setAttribute('aria-valuemin','0');cell.setAttribute('aria-valuemax','100');cell.setAttribute('aria-valuenow','0');cell.hidden=true;
+        cell.setAttribute('aria-label',node.accessibilityLabel || `Explore ${node.label} learning cell`);cell.setAttribute('aria-pressed','false');cell.setAttribute('aria-valuemin','0');cell.setAttribute('aria-valuemax','100');cell.setAttribute('aria-valuenow','0');cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
         layer.append(cell);
@@ -1055,7 +1055,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
         if(!welcomeCanContinue(arWelcomeClock.elapsed)){arWelcomeUnlockTimer=setTimeout(unlockWelcome,250);return;}
         button.disabled=false;button.hidden=false;
-        setGuide('Continue is now available. Select a cell to hide it and its descendants.');
+        setGuide('Continue is now available. Hold any LIM cell to explore its topic in the companion panel.');
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,AR_WELCOME_CONTINUE_MS);
     button.onclick=()=>{
