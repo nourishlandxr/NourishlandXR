@@ -612,6 +612,17 @@ h1 {
 @keyframes tryit-intro-knowledge-arrive { from { opacity:0; transform:translate(-50%,-42%) scale(.72); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
 .tryit-demo.is-immersive .tryit-stage { pointer-events: none; }
 .tryit-xr-canvas { position: fixed; inset: 0; z-index: 11999; width: 100%; height: 100%; pointer-events: none; }
+.tryit-live-welcome { position:absolute; inset:0; z-index:12001; overflow:hidden; pointer-events:none; }
+.tryit-live-welcome canvas { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:fill; pointer-events:none; }
+.tryit-live-welcome [data-welcome-cell] { position:absolute; display:grid; place-items:center; min-width:48px; min-height:48px; padding:4px; transform:translate(-50%,-50%); border:1px solid rgba(239,255,220,.62); clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%); background:rgba(38,82,52,.82); color:rgba(255,255,245,.98); font:650 clamp(.52rem,1.8vw,.76rem)/1.05 system-ui,sans-serif; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.8); pointer-events:auto; touch-action:manipulation; }
+.tryit-demo.is-immersive .tryit-live-welcome [data-welcome-cell] { border-color:transparent; background:transparent; color:transparent; text-shadow:none; }
+.tryit-live-welcome [data-welcome-cell]:focus-visible { border-color:rgba(239,255,220,.95); outline:3px solid rgba(220,239,149,.42); outline-offset:3px; }
+.tryit-live-welcome [data-welcome-cell][data-welcome-hollow="true"] { border-color:rgba(239,255,220,.42); }
+@media (max-width:620px) {
+    .tryit-live-welcome { inset: max(8px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px)); }
+    .tryit-live-welcome canvas { opacity:.28; }
+    .tryit-live-welcome [data-welcome-cell] { min-width:48px; min-height:48px; }
+}
 .tryit-place { position: fixed; left: var(--aim-x, 50%); top: var(--aim-y, calc(50% + 3.5cm)); z-index: 12002; display: block; width: 116px; height: 116px; padding: 0; transform: translate(-50%, -50%) scale(.78); border: 0; background: transparent; color: #fff; opacity: 0; pointer-events: none; transition: left .8s ease, top .8s ease, opacity .9s ease, transform 1.1s cubic-bezier(.2,.75,.25,1); }
 .tryit-place[hidden] { display: none; }
 .tryit-place.is-revealing { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -11101,6 +11112,37 @@ body:has(.app-surface) {
     border-radius: 14px;
     color: var(--app-ink);
     box-shadow: none;
+}
+
+/* Final cascade for the LIM touch targets. Older demo rules intentionally
+   reset generic buttons; these targets retain the accessible minimum after
+   those compatibility rules while the canvas remains the visual surface. */
+.tryit-live-welcome button[data-welcome-cell] {
+    display:grid; place-items:center; min-width:48px !important; min-height:48px !important;
+    padding:4px !important; border:1px solid rgba(239,255,220,.62) !important;
+    border-radius:0; background:rgba(38,82,52,.82) !important;
+    color:rgba(255,255,245,.98); font:650 clamp(.52rem,1.8vw,.76rem)/1.05 system-ui,sans-serif;
+    text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.8); pointer-events:auto;
+}
+.tryit-demo.is-immersive .tryit-live-welcome button[data-welcome-cell] {
+    border-color:transparent !important; background:transparent !important; color:transparent;
+}
+@media (max-width:620px) {
+    /* Keep the established LIM coordinate map readable on portrait screens.
+       The frame is intentionally wider than the viewport and remains centered;
+       the 2500x2100 canvas therefore keeps a usable cell radius instead of
+       shrinking the honeycomb into overlapping targets. */
+    .tryit-live-welcome {
+        inset:50% auto auto 50%;
+        width:550px;
+        min-width:550px;
+        max-width:none;
+        height:auto;
+        aspect-ratio:2500 / 2100;
+        transform:translate(-50%,-50%);
+        overflow:visible;
+    }
+    .tryit-live-welcome button[data-welcome-cell] { min-width:52px !important; min-height:52px !important; font-size:.68rem; }
 }
 .app-surface-intro .creator-role { border-left: 4px solid #2f754b; background: #e7f2e7; }
 .app-surface-intro .role-card.visitor-role,

@@ -1,33 +1,54 @@
 import {drawArWelcomePanel} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
+import {LIM_CELLS, LIM_GRAPHS, LIM_GROUPS} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
 export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 4;
-const topic = (label, children=[]) => ({label,children:children.map(item=>typeof item==='string'?{label:item,children:[]}:item)});
-export const AR_WELCOME_GRAPHS = [
- topic('Climate',[
-  topic('Subtropical',['Temperature','Rainfall','Frost tolerance','Seasonal growth','Suitable plants','Planting conditions']),
-  topic('Tropical',['Humidity','Rainfall','Growth']),topic('Temperate',['Seasons','Frost','Dormancy']),
-  topic('Cool',['Shelter','Wind exposure']),topic('Dry',['Water needs','Soil cover']),topic('Humid',['Airflow','Cloud cover'])]),
- topic('Food forest',[
-  topic('Layers',['Canopy','Understorey','Shrub','Herb','Ground cover','Climbers','Roots']),
-  topic('Function',['Habitat','Yield','Soil relationships']),topic('Light',['Shade','Height','Growth habit']),
-  topic('Ecology',['Companions','Pollinators','Soil life'])]),
- topic('Plant',[
-  topic('Identity',['Species','Cultivar','Characteristics']),topic('Propagation',['Seed','Cutting','Graft','Marcot','Division']),
-  topic('Range',['Warmth','Latitude','Exposure']),topic('Layer',['Evergreen','Mature size','Form']),
-  topic('Harvest',['Fruit','Flower','Season']),topic('Soil',['Moisture','Soil life'])]),
- topic('Pin',[
-  topic('Place',['Story','Learning','Photo']),topic('Specimen',['Genus','Variety','Canopy layer','Method']),
-  topic('Observation',['Date','Condition','Growth','Fruiting','Problem','Action']),
-  topic('Note',['Task','Data','Learning'])])
-];
-export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map(graph=>({...graph,revealSeed:Math.random()}));
+// Compatibility export for visual showcase callers. The content authority is
+// the separate Learning Information Mesh document.
+export const AR_WELCOME_GRAPHS = LIM_GRAPHS;
+export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map((graph,index)=>({...graph,revealSeed:(index+1)*.173}));
 const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
 export const AR_WELCOME_CANVAS = {width:2500,height:2100};
-// Transparent margins let cells grow OUTSIDE the unchanged welcome glass.
-const positions=[[535,435],[215,338],[408,245],[656,266],[110,112],[309,93],[516,94],[786,105]];
+// LIM uses one flat-top hex lattice. Axial coordinates share full edges when
+// converted with these spacings. Each corner has a deterministic silhouette;
+// no random seed participates in layout or cell identity.
+export const LIM_LAYOUT = Object.freeze({
+ radius: 82,
+ origins: Object.freeze([[760,720],[1740,720],[760,1410],[1740,1410]]),
+ patterns: Object.freeze([
+  Object.freeze([[0,0],[-1,0],[0,-1],[1,-1],[-1,-1],[-1,1],[0,-2],[1,-2]]),
+  Object.freeze([[0,0],[0,-1],[1,-1],[1,0],[0,-2],[1,-2],[2,-1],[2,0]]),
+  Object.freeze([[0,0],[-1,0],[-1,1],[0,1],[-2,0],[-2,1],[-1,2],[0,2]]),
+  Object.freeze([[0,0],[0,1],[1,1],[1,0],[0,2],[1,2],[2,1],[2,0]])
+ ]),
+ reservedRoleOrder: Object.freeze(['root','branch-0','branch-1','branch-2','attribute-0','attribute-1','attribute-2','attribute-3'])
+});
+const axialPoint=(q,r,radius)=>({x:q*radius*1.5,y:(r+q*.5)*radius*Math.sqrt(3)});
+export function limLayoutPoint(corner,slot){
+ const origin=LIM_LAYOUT.origins[corner%LIM_LAYOUT.origins.length]||LIM_LAYOUT.origins[0];
+ const axial=LIM_LAYOUT.patterns[corner%LIM_LAYOUT.patterns.length][slot]||[0,0];
+ const point=axialPoint(axial[0],axial[1],LIM_LAYOUT.radius);
+ return {x:origin[0]+point.x,y:origin[1]+point.y};
+}
+
+// Reserve every authored LIM cell in a stable axial row map. The showcase
+// reveals eight slots per corner, while future cells already have positions and
+// can be faded in without moving any existing cell.
+const reservedAxial=(index)=>{
+ if(index===0)return [0,0];
+ let ring=1,first=1;
+ while(index>=first+ring*6){first+=ring*6;ring++;}
+ let q=0,r=-ring,offset=index-first;
+ const directions=[[1,0],[0,1],[-1,1],[-1,0],[0,-1],[1,-1]];
+ for(const [dq,dr] of directions){const steps=Math.min(ring,offset);q+=dq*steps;r+=dr*steps;offset-=steps;if(!offset)break;}
+ return [q,r];
+};
+export const LIM_RESERVED_POSITIONS = Object.freeze(Object.fromEntries(LIM_CELLS.map((cell,index)=>{
+ const groupIndex=Math.max(0,LIM_GROUPS.findIndex(group=>group.id===cell.groupId));
+ return [cell.id,Object.freeze({group:cell.groupId,corner:groupIndex,axial:Object.freeze(reservedAxial(index)),role:cell.layoutRole})];
+})));
 
 // Derive a bounded, three-level graph for the active corner. Later loops explore
 // different branches instead of crowding the entire knowledge tree onto the panel.
@@ -43,13 +64,15 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
  // First branch demonstrates two descendants; other branches each add one.
  const leaves=[[0,0],[0,1],[1,0],[2,0]];
  leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:8200+i*1300,slot:4+i});});
+ const cellForPath=path=>LIM_CELLS.find(cell=>cell.path.length===path.length&&cell.path.every((label,index)=>label===path[index]));
+ nodes.forEach(node=>{const parent=nodes.find(candidate=>candidate.id===node.parent);const path=parent?[...(parent.path||[tree.label]),node.label]:[tree.label];node.path=path;node.limId=cellForPath(path)?.id||'';});
  const fading=1-smooth(phase,14000,2000);
  for(const node of nodes){
-  const [x,y]=positions[node.slot];node.x=corner%2?2500-x:x;node.y=corner<2?y+140:1960-y;
+  const point=limLayoutPoint(corner,node.slot);node.x=point.x;node.y=point.y;
   node.progress=reducedMotion?1:smooth(phase,node.at,1500+(node.slot%3)*80);
   node.opacity=node.progress*(reducedMotion?1:fading);
-  node.scale=(.38+.62*node.progress)*(reducedMotion?1:.86+.14*fading);
-  node.baseRadius=node.depth?[92,94,90,84,86,82,88][node.slot-1]:104;
+  node.scale=1;
+  node.baseRadius=LIM_LAYOUT.radius;
   node.radius=node.baseRadius*node.scale;
   node.hollow=false;
   node.emphasis=(1-smooth(phase,node.at+1800,1800))*node.progress;
@@ -80,7 +103,7 @@ function revealFrames(graphs) {
  const random=()=>{seed=seed*16807%2147483647;return (seed-1)/2147483646;};
  let at=2200,last=-1;
  // A different corner buds on each beat. Each wave retains parent-before-child
- // order; the per-session seed is stable across draws and hit testing.
+ // order; the deterministic seed is stable across sessions, draws and hit testing.
  for(let slot=0;slot<8;slot++){
   const order=frames.map((_,i)=>i);
   for(let i=order.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
@@ -98,7 +121,9 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
   frame.nodes.forEach(node=>{
    node.progress=smooth(time,node.revealAt,1450);
    node.opacity=node.progress;
-   node.scale=reducedMotion?1:.38+.62*node.progress;
+   // Reveal uses opacity only. The reserved cell footprint never grows or
+   // shifts when another LIM cell is selected or a later step begins.
+   node.scale=1;
    node.radius=node.baseRadius*node.scale;
    node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
    node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
@@ -137,15 +162,14 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  return {lines,font,lineHeight:font*1.12,maxWidth};
 }
 
- function drawGlassCell(ctx,node,hue,elapsed,reducedMotion) {
- const wave=reducedMotion?0:Math.sin(elapsed/2800+node.slot*1.3);
+ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true) {
  const opening=1-node.progress;
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
- ctx.rotate(reducedMotion?0:(opening*-.14+wave*.022));
- ctx.scale(node.scale*(reducedMotion?1:1-opening*.18),node.scale);
+ ctx.rotate(0);
+ ctx.scale(node.scale,node.scale);
  const r=node.baseRadius, thickness=10+(reducedMotion?0:opening*12), hollow=Boolean(node.hollow);
- // Rear rim and connecting facets give the transparent face physical depth.
+ // Rear rim gives the transparent face physical depth without separating cells.
  drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.04)',`hsla(${hue},24%,64%,${hollow?.42:.24})`,2);
  for(let i=0;i<6;i++){
   const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;
@@ -169,8 +193,10 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillStyle='rgba(255,255,245,.98)';
  ctx.shadowColor='rgba(6,28,15,.8)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
- const label=fitWelcomeCellLabel(ctx,node.label,r,node.depth);
- label.lines.forEach((line,i)=>ctx.fillText(line,0,(i-(label.lines.length-1)/2)*label.lineHeight));
+ if(drawLabel){
+  const label=fitWelcomeCellLabel(ctx,node.label,r,node.depth);
+  label.lines.forEach((line,i)=>ctx.fillText(line,0,(i-(label.lines.length-1)/2)*label.lineHeight));
+ }
  ctx.restore();
 }
 
@@ -191,32 +217,10 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden);
  for(const frame of frames){
  const hue=[105,42,165,85][frame.corner];
- const byId=new Map(frame.nodes.map(node=>[node.id,node]));
- // Draw stems first; glass faces sit above their connections.
- for(const node of frame.nodes){
-  const parent=byId.get(node.parent);
-  const anchorX=frame.corner%2?1883:617,anchorY=frame.corner<2?720:1380;
-  const originX=parent?parent.x:anchorX,originY=parent?parent.y:anchorY;
-  const drift=reducedMotion?0:Math.sin(elapsed/2700+node.slot*1.7)*3*node.progress;
-  node.drawX=node.x+(reducedMotion?0:(originX-node.x)*.16*(1-node.progress))+drift;
-  node.drawY=node.y+(reducedMotion?0:(originY-node.y)*.16*(1-node.progress)+Math.cos(elapsed/3300+node.slot)*2*node.progress);
-  if(!node.opacity)continue;
-  const px=parent?parent.drawX:anchorX,py=parent?parent.drawY:anchorY;
-  const dx=node.drawX-px,dy=node.drawY-py,length=Math.hypot(dx,dy)||1;
-  const startRadius=parent?parent.radius:0;
-  const ax=px+dx/length*startRadius,ay=py+dy/length*startRadius;
-  const bx=node.drawX-dx/length*node.radius,by=node.drawY-dy/length*node.radius;
-  const bend=(frame.corner%2?-1:1)*9;
-  const cx=(ax+bx)/2-dy/length*bend,cy=(ay+by)/2+dx/length*bend;
-  ctx.globalAlpha=node.opacity;ctx.strokeStyle=`hsla(${hue},32%,82%,.48)`;ctx.lineWidth=2.4;
-  ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo(cx,cy,bx,by);ctx.stroke();
-  if(!reducedMotion && node.progress<1){
-   const t=node.progress,u=1-t;
-   ctx.globalAlpha=node.opacity*(1-node.progress);ctx.fillStyle='#ecfbd7';
-   ctx.beginPath();ctx.arc(u*u*ax+2*u*t*cx+t*t*bx,u*u*ay+2*u*t*cy+t*t*by,3,0,Math.PI*2);ctx.fill();
-  }
- }
- for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion);
+ // LIM cells are drawn directly on their reserved lattice positions. There
+ // are no connector strokes; shared hex edges provide the relationship cue.
+ for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
+ for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion,options.drawCellLabels!==false);
  }
  ctx.restore();
  return frames;

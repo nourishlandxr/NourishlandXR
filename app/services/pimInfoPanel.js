@@ -1,7 +1,7 @@
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 
-export const INFO_HELP = 'Select a learning cell, or hold a plant cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; Control panel restores it.';
+export const INFO_HELP = 'Select a learning cell, or hold a plant cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; the Companion panel restores it.';
 
 // This is a reading projection, never a second store of plant knowledge.
 export function pimInfoContent(document, path) {
@@ -76,7 +76,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         ? 'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
-        :'Start with the cells around the green welcome panel. Select Food forest or Climate to read an introduction here. Follow your curiosity before placing a plant.';
+        :'Hi! This is your Companion panel. It stays nearby to help you read selected topics and fine-tune your experience.';
     const pages=()=>infoPages(text(),largeText?32:38,7);
     const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
@@ -108,7 +108,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
             const label=document.createElement('small');label.textContent='CONTROL PANEL';
-            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Your plant companion';
+            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Companion panel';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration companion');
             header.append(label,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
@@ -174,7 +174,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         recenter(){heading=null;pose=null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),plant:identity?.plant || selection?.plant || 'Your plant companion',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),plant:identity?.plant || selection?.plant || 'Companion panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());

@@ -1,4 +1,4 @@
-import {welcomeLearningContent} from '../services/welcomeLearning.js';
+import {limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
@@ -80,7 +80,7 @@ let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[
 let arWelcomeClock=createWelcomePresentationClock();
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
-let arWelcomeHidden=new Set();
+let limHiddenCells=new Set();
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardVisible = true;
@@ -321,7 +321,7 @@ function clearSessionState() {
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;
-    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;arWelcomeHidden=new Set();
+    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
     aimRevealTimer = null;
@@ -868,17 +868,17 @@ function useSharedWelcomeBoard(visible) {
 }
 
 function welcomeFrames() {
-    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,arWelcomeHidden);
+    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells);
 }
 
-let selectedWelcomeCell='';
-function toggleWelcomeCell(key) {
+let selectedLimCell='';
+function toggleLimCell(key) {
     const node=welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key);
-    if(node){infoPanel?.showLearning(welcomeLearningContent(node.label));}
-    if(selectedWelcomeCell!==key && !arWelcomeHidden.has(key)){selectedWelcomeCell=key;introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;return;}
-    selectedWelcomeCell=key;
-    if(arWelcomeHidden.has(key)) arWelcomeHidden.delete(key);
-    else arWelcomeHidden.add(key);
+    if(node){infoPanel?.showLearning(limLearningContent(node.limId || node.label));}
+    if(selectedLimCell!==key && !limHiddenCells.has(key)){selectedLimCell=key;introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;return;}
+    selectedLimCell=key;
+    if(limHiddenCells.has(key)) limHiddenCells.delete(key);
+    else limHiddenCells.add(key);
     introBoardTextureDirty=true;
     // The click and any generated XR select must never also advance the demo.
     suppressSessionSelectUntil=performance.now()+700;
@@ -889,8 +889,9 @@ function paintWelcomeLayer(now) {
     arWelcomeClock.tick(now,!document.hidden);
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            hidden:arWelcomeHidden,drawPanel:arWelcomeSharedBoard && introBoardVisible,
-            drawContent:arWelcomeIntroPending?null:drawIntroNoteContent
+            hidden:limHiddenCells,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,
+            drawCellLabels:!(simulatedMode && window.innerWidth<=620)
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
@@ -903,13 +904,13 @@ function paintWelcomeLayer(now) {
 }
 
 function showArWelcomeShowcase() {
-    selectedWelcomeCell='';
+    selectedLimCell='';
     introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
-    arWelcomeClusters=createArWelcomeClusters();arWelcomeHidden=new Set();arWelcomeClock=createWelcomePresentationClock();
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();arWelcomeClock=createWelcomePresentationClock();
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
@@ -920,11 +921,11 @@ function showArWelcomeShowcase() {
     arWelcomeCanvas=layer.querySelector('canvas');
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
-        const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;
+        const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;cell.dataset.label=node.label;cell.textContent=node.label;
         cell.setAttribute('aria-label',`Explore ${node.label}; select again to fold or reopen`);cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
-        cell.addEventListener('click',event=>{event.stopPropagation();toggleWelcomeCell(node.key);paintWelcomeLayer(performance.now());});
+        cell.addEventListener('click',event=>{event.stopPropagation();toggleLimCell(node.key);paintWelcomeLayer(performance.now());});
         layer.append(cell);
     }
     appRoot.querySelector('.tryit-stage').append(layer);
@@ -932,7 +933,7 @@ function showArWelcomeShowcase() {
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeHidden.size,welcomeCanContinue(arWelcomeClock.elapsed)].join('|');
+        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limHiddenCells.size,welcomeCanContinue(arWelcomeClock.elapsed)].join('|');
         if(now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
@@ -978,7 +979,7 @@ function selectWelcomeCell() {
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
     const cell=hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
     if(!cell)return false;
-    toggleWelcomeCell(cell.key);return true;
+    toggleLimCell(cell.key);return true;
 }
 
 const DEMO_ORIENTATION_STEPS = [
@@ -2762,7 +2763,7 @@ function createIntroNoteTexture(texture = null) {
     if(arWelcomeShowcaseActive){label.width=2500;label.height=2100;}
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:arWelcomeHidden,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

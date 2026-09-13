@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {welcomeNetworkFrame,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
+import {LIM_CELLS} from '../app/services/limLearning.js';
 test('one corner grows through three levels, fades and passes to the next',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
  assert.equal(welcomeNetworkFrame(3500).nodes.filter(n=>n.opacity>0).length,1);
@@ -9,13 +10,21 @@ test('one corner grows through three levels, fades and passes to the next',()=>{
  assert.equal(welcomeNetworkFrame(16000).corner,1);assert.equal(welcomeNetworkFrame(32000).corner,2);assert.equal(welcomeNetworkFrame(48000).corner,3);
  assert.ok(welcomeNetworkFrame(AR_WELCOME_SHOWCASE_DURATION).nodes.every(n=>n.opacity===0));
 });
-test('nodes retain parent identity and fit without overlap or central text intrusion',()=>{
+test('nodes retain parent identity, share a compact honeycomb lattice and avoid the welcome panel',()=>{
  for(let corner=0;corner<4;corner++){const {nodes}=welcomeNetworkFrame(corner*16000+12000);for(const [i,n] of nodes.entries()){
  assert.ok(n.x-n.radius>0 && n.x+n.radius<2500 && n.y-n.radius>0 && n.y+n.radius<2100);
- assert.ok(n.y+n.radius<700 || n.y-n.radius>1400 || n.x+n.radius<598 || n.x-n.radius>1902);
+ assert.ok(n.y+n.radius<=810 || n.y-n.radius>=1310 || n.x+n.radius<=800 || n.x-n.radius>=1700);
  if(n.parent)assert.ok(nodes.find(p=>p.id===n.parent));
- for(const other of nodes.slice(i+1))assert.ok(Math.hypot(n.x-other.x,n.y-other.y)>n.radius+other.radius);
+ for(const other of nodes.slice(i+1))assert.ok(Math.hypot(n.x-other.x,n.y-other.y)>=n.radius*1.49);
  }}
+});
+test('all LIM cells have deterministic reserved positions and visible cells use edge-sharing spacing',()=>{
+ assert.equal(Object.keys(LIM_RESERVED_POSITIONS).length,LIM_CELLS.length);
+ const reserved=Object.values(LIM_RESERVED_POSITIONS).map(item=>`${item.corner}:${item.axial.join(',')}`);
+ assert.equal(new Set(reserved).size,LIM_CELLS.length);
+ const first=welcomeNetworkFrame(12000,true).nodes;
+ assert.ok(first.every(node=>node.limId && node.scale===1 && node.radius===LIM_LAYOUT.radius));
+ assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{
  assert.deepEqual(welcomeNetworkFrame(0,true),welcomeNetworkFrame(999999,true));
@@ -24,21 +33,22 @@ test('reduced motion remains static and later loops explore additional branches'
 
 // Exercise the renderer with canvas state restoration, which caused the label bug.
 test('cell labels stay centred and fitted even when the caller uses left-aligned text',()=>{
- const stack=[],labels=[];
+ const stack=[],labels=[];let curves=0;
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
  save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
  restore(){Object.assign(this,stack.pop());},
  measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1]||10)*.56};},
  fillText(text,x,y){labels.push({text,x,y,align:this.textAlign,baseline:this.textBaseline,width:this.measureText(text).width});},
  createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}};
- for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','fill','stroke','roundRect','arc'])ctx[method]=()=>{};
+ for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc'])ctx[method]=()=>{};
+ ctx.quadraticCurveTo=()=>{curves+=1;};
  drawArWelcomeShowcase(ctx,64000,true);
  const frame=welcomeNetworkFrame(12000,true);
  for(const node of frame.nodes){for(const word of node.label.split(' ')){
   const label=labels.find(l=>l.text===word && l.x===0);
   assert.ok(label,`missing cell label: ${word}`);assert.equal(label.align,'center');assert.equal(label.baseline,'middle');assert.ok(label.width<=node.baseRadius*1.48);
  }}
- assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');
+ assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');assert.equal(curves,0);
 });
 
 test('Continue protects an eight-second opening while the full bloom continues',async()=>{
