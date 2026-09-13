@@ -65,7 +65,7 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
  const leaves=[[0,0],[0,1],[1,0],[2,0]];
  leaves.forEach(([parent,index],i)=>{const list=children[parent]?.children || [];if(!list.length)return;const item=list[(index+cycle)%list.length];nodes.push({id:`attribute-${i}`,parent:`branch-${parent}`,label:item.label,depth:2,at:8200+i*1300,slot:4+i});});
  const cellForPath=path=>LIM_CELLS.find(cell=>cell.path.length===path.length&&cell.path.every((label,index)=>label===path[index]));
- nodes.forEach(node=>{const parent=nodes.find(candidate=>candidate.id===node.parent);const path=parent?[...(parent.path||[tree.label]),node.label]:[tree.label];node.path=path;node.limId=cellForPath(path)?.id||'';});
+ nodes.forEach(node=>{const parent=nodes.find(candidate=>candidate.id===node.parent);const path=parent?[...(parent.path||[tree.label]),node.label]:[tree.label];const cell=cellForPath(path);node.path=path;node.limId=cell?.id||'';node.accent=cell?.accent||'';});
  const fading=1-smooth(phase,14000,2000);
  for(const node of nodes){
   const point=limLayoutPoint(corner,node.slot);node.x=point.x;node.y=point.y;
@@ -162,13 +162,22 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  return {lines,font,lineHeight:font*1.12,maxWidth};
 }
 
- function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true) {
+function accentRgba(value,hue,alpha=.7){
+ const match=String(value||'').trim().match(/^#([\da-f]{6})$/i);
+ if(!match)return `hsla(${hue},52%,58%,${alpha})`;
+ const hex=match[1];return `rgba(${parseInt(hex.slice(0,2),16)},${parseInt(hex.slice(2,4),16)},${parseInt(hex.slice(4),16)},${alpha})`;
+}
+
+function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual={}) {
  const opening=1-node.progress;
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
  ctx.rotate(0);
  ctx.scale(node.scale,node.scale);
  const r=node.baseRadius, thickness=10+(reducedMotion?0:opening*12), hollow=Boolean(node.hollow);
+ const activation=Math.max(0,Math.min(1,Number(visual.activation)||0));
+ const selected=Boolean(visual.selected);
+ const accent=node.accent || '';
  // Rear rim gives the transparent face physical depth without separating cells.
  drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.04)',`hsla(${hue},24%,64%,${hollow?.42:.24})`,2);
  for(let i=0;i<6;i++){
@@ -186,9 +195,22 @@ export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  drawHexagon(ctx,0,0,r,glass,rim,hollow?2.5:3);
  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
  drawHexagon(ctx,0,0,r-6,'rgba(255,255,255,0)',`hsla(${hue},28%,91%,${hollow?.4:.16})`,hollow?2:1);
+ if(activation>0){
+  // Centre-out paint is clipped to the fixed hexagon; geometry never scales.
+  ctx.save();ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.clip();
+  const reach=Math.max(1,r*1.48*activation),fill=ctx.createRadialGradient(0,0,0,0,0,reach);
+  fill.addColorStop(0,accentRgba(accent,hue,.78));fill.addColorStop(.72,accentRgba(accent,hue,.58));fill.addColorStop(1,accentRgba(accent,hue,0));
+  ctx.globalAlpha=node.opacity;ctx.fillStyle=fill;ctx.fillRect(-r,-r,r*2,r*2);ctx.restore();
+ }
  // A quiet change in edge light follows the opening, without flashing.
  ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
  ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();
+ if(selected){
+  ctx.globalAlpha=node.opacity*.9;ctx.shadowColor=accentRgba(accent,hue,.55);ctx.shadowBlur=18;ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=5;
+  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
+  ctx.setLineDash([r*.34,r*.18]);ctx.globalAlpha=node.opacity*.65;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.86)';
+  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-8),y=Math.sin(a)*(r-8);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+ }
  ctx.globalAlpha=node.opacity*smooth(node.progress,.35,.65);
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillStyle='rgba(255,255,245,.98)';
@@ -220,7 +242,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // LIM cells are drawn directly on their reserved lattice positions. There
  // are no connector strokes; shared hex edges provide the relationship cue.
  for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
- for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion,options.drawCellLabels!==false);
+ for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:options.selectedKey===node.key?1:0,selected:options.selectedKey===node.key});
  }
  ctx.restore();
  return frames;

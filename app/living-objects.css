@@ -85,6 +85,47 @@
 .nlxr-info-panel.is-guided { border-color:#b7dcc8; box-shadow:0 0 0 2px #b7dcc838,0 14px 36px #0005; }
 @media(max-width:600px) { .nlxr-info-panel { grid-template-columns:78px minmax(0,1fr); gap:0 10px; padding-right:10px; max-height:43vh; } .nlxr-info-panel .nlxr-control-tabs { padding:10px 5px; } .nlxr-info-panel .nlxr-control-tabs button { font-size:11px; padding:7px; } }
 
+/* LIM selection feedback. The button footprint stays fixed while only the
+   accent paint expands from its centre during deliberate activation. */
+.tryit-live-welcome button[data-welcome-cell] {
+    --lim-accent:#719b62; --lim-progress:0;
+    position:absolute; overflow:visible; isolation:isolate;
+    border-color:rgba(239,255,220,.62); transition:border-color .12s ease,box-shadow .12s ease;
+}
+.tryit-live-welcome button[data-welcome-cell]::before {
+    content:''; position:absolute; z-index:-1; inset:2px; clip-path:inherit;
+    background:var(--lim-accent); opacity:.7; transform:scale(var(--lim-progress)); transform-origin:center;
+    transition:transform .08s linear; pointer-events:none;
+}
+.tryit-live-welcome button[data-welcome-cell]::after {
+    content:''; position:absolute; z-index:2; right:8px; top:5px; width:7px; height:7px;
+    border:1px solid rgba(255,255,255,.8); border-radius:50%; background:rgba(255,255,255,.18);
+    opacity:0; pointer-events:none;
+}
+.tryit-live-welcome button[data-welcome-cell].is-lim-holding {
+    border-color:var(--lim-accent) !important; box-shadow:0 0 0 3px rgba(255,255,255,.2),0 0 18px rgba(255,255,255,.22); box-shadow:0 0 0 3px color-mix(in srgb,var(--lim-accent) 38%,transparent),0 0 18px color-mix(in srgb,var(--lim-accent) 45%,transparent);
+}
+.tryit-live-welcome button[data-welcome-cell].is-lim-selected {
+    border:2px solid var(--lim-accent) !important; box-shadow:0 0 0 3px rgba(255,255,255,.28),0 0 20px rgba(255,255,255,.22); box-shadow:0 0 0 3px rgba(255,255,255,.28),0 0 20px color-mix(in srgb,var(--lim-accent) 42%,transparent);
+}
+.tryit-live-welcome button[data-welcome-cell].is-lim-selected::after { opacity:1; }
+.tryit-live-welcome button[data-welcome-cell]:focus-visible { outline:3px solid #fff; outline-offset:4px; }
+@media(prefers-reduced-motion:reduce) {
+    .tryit-live-welcome button[data-welcome-cell]::before { transition:none; }
+    .tryit-live-welcome button[data-welcome-cell] { transition:none; }
+}
+
+/* The existing companion panel receives a quiet LIM accent without changing
+   its geometry, tabs, controls or plant PIM styling. */
+.nlxr-info-panel[data-content-kind="lim"] .nlxr-control-header {
+    border-bottom-color:var(--lim-accent);
+    box-shadow:inset 3px 0 var(--lim-accent);
+    padding-left:10px;
+}
+.nlxr-info-panel[data-content-kind="lim"] .nlxr-control-tabs [role="tab"][aria-selected="true"] {
+    border-left-color:var(--lim-accent);
+}
+
 /* Match the shared spatial canvas; isolate old marker typography from cells. */
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile):not(.is-spatial-pim-hit-layer) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell,.plant-knowledge-core) { display:grid; place-items:center; align-content:normal; grid-template-rows:minmax(0,1fr); padding:0; }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell-copy,.plant-knowledge-core-copy) { display:flex; flex-direction:column; align-items:center; justify-content:center; width:74%; max-width:74%; height:78%; max-height:78%; padding:0; gap:5px; }

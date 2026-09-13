@@ -1,5 +1,6 @@
 import {limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import { createLimActivationController } from '../services/limActivation.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
@@ -62,7 +63,7 @@ let sphereRenderer = null;
 let totemCardsRenderer = null;
 let infoPanel = null;
 let pimHold = null;
-function showDemoInfo(record,path) { infoPanel?.select(record,demoOrbKnowledge(record).document,path); }
+function showDemoInfo(record,path) { clearLimSelection(); infoPanel?.select(record,demoOrbKnowledge(record).document,path); }
 function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 let tetherRenderer = null;
 let prismRenderer = null;
@@ -81,6 +82,9 @@ let arWelcomeClock=createWelcomePresentationClock();
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
+let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
+const limRequestFrame=callback=>typeof requestAnimationFrame==='function'?requestAnimationFrame(callback):setTimeout(()=>callback(performance.now()),16);
+const limCancelFrame=handle=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(handle);else clearTimeout(handle);};
 let introSceneStartedAt = 0;
 let introSceneActive = true;
 let introBoardVisible = true;
@@ -295,6 +299,7 @@ const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
     closeDemoKnowledge(true);
+    limInteractionCleanup();limSessionCleanup();limInteractionCleanup=()=>{};limSessionCleanup=()=>{};limActivation=null;limActivationSessionSuppressUntil=0;
     releaseArScreenRotation();
     hitTestSource?.cancel?.();
     hitTestSource = null;
@@ -321,7 +326,7 @@ function clearSessionState() {
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;
-    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();
+    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limPointerKey='';limPointerId=null;limInputSource=null;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
     aimRevealTimer = null;
@@ -872,33 +877,126 @@ function welcomeFrames() {
 }
 
 let selectedLimCell='';
-function toggleLimCell(key) {
-    const node=welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key);
-    if(node){infoPanel?.showLearning(limLearningContent(node.limId || node.label));}
-    if(selectedLimCell!==key && !limHiddenCells.has(key)){selectedLimCell=key;introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;return;}
+function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
+function clearLimSelection() {
+    if(!selectedLimCell)return;
+    selectedLimCell='';introBoardTextureDirty=true;
+}
+function activateLimCell(key) {
+    const node=limNodeByKey(key);if(!node)return false;
     selectedLimCell=key;
-    if(limHiddenCells.has(key)) limHiddenCells.delete(key);
-    else limHiddenCells.add(key);
-    introBoardTextureDirty=true;
-    // The click and any generated XR select must never also advance the demo.
-    suppressSessionSelectUntil=performance.now()+700;
+    const content=limLearningContent(node.limId || node.label);
+    infoPanel?.showLearning({...content,id:node.limId||key,accent:node.accent||'',mesh:'lim',accessibilityLabel:`${node.label} learning cell`});
+    introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;
+    return true;
+}
+function currentLimPointerCell() {
+    if(!arWelcomeShowcaseActive || !introWorldAnchor)return null;
+    const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
+    return hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
+}
+function tickLimActivation(timestamp) {
+    if(!limActivation?.active)return;
+    const key=limInputSource ? currentLimPointerCell()?.key : limPointerKey;
+    limActivation.tick(key,timestamp);
+}
+function startLimActivationFrame() {
+    if(limActivationFrame || !limActivation?.active)return;
+    const loop=timestamp=>{
+        limActivationFrame=0;
+        if(!limActivation?.active)return;
+        tickLimActivation(timestamp);paintWelcomeLayer(timestamp);
+        if(limActivation.active)limActivationFrame=limRequestFrame(loop);
+    };
+    limActivationFrame=limRequestFrame(loop);
+}
+function toggleLimCell(key) { return activateLimCell(key); }
+
+function bindLimCellInteractions() {
+    if(!arWelcomeLayer || !limActivation)return;
+    const cleanups=[];
+    const cancel=reason=>{limActivation.cancel(reason);limPointerKey='';limPointerId=null;paintWelcomeLayer(performance.now());};
+    arWelcomeLayer.querySelectorAll('[data-welcome-cell]').forEach(button=>{
+        const key=button.dataset.welcomeCell;
+        const pointerDown=event=>{
+            if(event.pointerType==='mouse' && event.button!==0)return;
+            event.preventDefault();event.stopPropagation();limPointerKey=key;limPointerId=event.pointerId;
+            button.setPointerCapture?.(event.pointerId);limActivation.start(key,performance.now(),'pointer');startLimActivationFrame();paintWelcomeLayer(performance.now());
+        };
+        const pointerMove=event=>{
+            if(!limActivation.active || limPointerId!==event.pointerId)return;
+            const rect=button.getBoundingClientRect();
+            if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom)cancel('pointer-left');
+        };
+        const pointerUp=event=>{
+            if(limPointerId!==null && event.pointerId!==limPointerId)return;
+            event.preventDefault();event.stopPropagation();limActivation.end(key,performance.now());limPointerKey='';limPointerId=null;paintWelcomeLayer(performance.now());
+        };
+        const pointerCancel=event=>{if(limPointerId===null || event.pointerId===limPointerId)cancel('pointer-cancelled');};
+        const pointerLeave=event=>{if(limPointerId===event.pointerId && limActivation.active)cancel('pointer-left');};
+        const keyDown=event=>{
+            if(!['Enter',' '].includes(event.key) || event.repeat)return;
+            event.preventDefault();event.stopPropagation();limPointerKey=key;limActivation.activateNow(key,performance.now(),'keyboard');paintWelcomeLayer(performance.now());
+        };
+        const keyUp=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();}};
+        const click=event=>{
+            event.preventDefault();event.stopPropagation();
+            if(limActivation.consumeSyntheticClick(key,performance.now()))return;
+            if(event.detail===0)limActivation.activateNow(key,performance.now(),'assistive-click');
+        };
+        const blur=()=>{if(limPointerId!==null && limPointerKey===key)cancel('blur');};
+        for(const [type,handler] of [['pointerdown',pointerDown],['pointermove',pointerMove],['pointerup',pointerUp],['pointercancel',pointerCancel],['pointerleave',pointerLeave],['keydown',keyDown],['keyup',keyUp],['click',click],['blur',blur]]){button.addEventListener(type,handler);cleanups.push(()=>button.removeEventListener(type,handler));}
+    });
+    const visibility=()=>{if(document.visibilityState!=='visible')cancel('hidden');};
+    const windowBlur=()=>cancel('window-blur');
+    document.addEventListener('visibilitychange',visibility);window.addEventListener('blur',windowBlur);
+    cleanups.push(()=>document.removeEventListener('visibilitychange',visibility),()=>window.removeEventListener('blur',windowBlur));
+    limInteractionCleanup=()=>{cleanups.splice(0).forEach(remove=>remove());limActivation?.cancel('unmount');limCancelFrame(limActivationFrame);limActivationFrame=0;limPointerKey='';limPointerId=null;};
+}
+
+function bindLimSessionInteractions(arSession) {
+    if(!arSession || !limActivation)return;
+    const start=event=>{
+        if(!arWelcomeShowcaseActive || event.inputSource?.targetRayMode!=='tracked-pointer')return;
+        const node=currentLimPointerCell();if(!node)return;
+        event.preventDefault?.();event.stopImmediatePropagation?.();limInputSource=event.inputSource;limActivation.start(node.key,performance.now(),'xr');startLimActivationFrame();
+    };
+    const end=event=>{
+        if(event.inputSource!==limInputSource)return;
+        event.preventDefault?.();event.stopImmediatePropagation?.();limActivation.end(limActivation.activeKey,performance.now());limInputSource=null;limActivationSessionSuppressUntil=performance.now()+450;
+    };
+    const select=event=>{
+        if(event.inputSource===limInputSource || performance.now()<limActivationSessionSuppressUntil || (arWelcomeShowcaseActive && currentLimPointerCell())){event.stopImmediatePropagation?.();}
+    };
+    const visibility=()=>{if(arSession.visibilityState!=='visible')limActivation.cancel('session-hidden');};
+    arSession.addEventListener('selectstart',start,true);arSession.addEventListener('selectend',end,true);arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
+    limSessionCleanup=()=>{arSession.removeEventListener('selectstart',start,true);arSession.removeEventListener('selectend',end,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;};
 }
 
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     arWelcomeClock.tick(now,!document.hidden);
+    const activeKey=limActivation?.activeKey||'';
+    const activeProgress=limActivation?.progress||0;
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
             hidden:limHiddenCells,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,
-            drawCellLabels:!(simulatedMode && window.innerWidth<=620)
+            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
         if(button){
             button.hidden=node.opacity<=.5;
+            const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
+            button.style.setProperty('--lim-accent',node.accent||'#719b62');
+            button.style.setProperty('--lim-progress',String(progress));
+            button.classList.toggle('is-lim-holding',progress>0 && progress<1);
+            button.classList.toggle('is-lim-selected',selectedLimCell===node.key);
+            button.setAttribute('aria-pressed',String(selectedLimCell===node.key));
+            button.setAttribute('aria-valuenow',String(Math.round(progress*100)));
             button.dataset.welcomeHollow=node.hollow?'true':'false';
-            button.setAttribute('aria-label',`${node.hollow?'Reopen and explore':'Explore'} ${node.label} cell${node.hollow?' and its descendants':''}`);
+            button.setAttribute('aria-label',`${node.hollow?'Reopen and explore':'Explore'} ${node.label} cell`);
         }
     }
 }
@@ -911,6 +1009,13 @@ function showArWelcomeShowcase() {
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();arWelcomeClock=createWelcomePresentationClock();
+    limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
+    limActivation=createLimActivationController({
+        onProgress:()=>{introBoardTextureDirty=true;},
+        onStart:()=>{introBoardTextureDirty=true;},
+        onCancel:()=>{introBoardTextureDirty=true;},
+        onComplete:key=>{activateLimCell(key);introBoardTextureDirty=true;}
+    });
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
@@ -922,13 +1027,13 @@ function showArWelcomeShowcase() {
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
         const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;cell.dataset.label=node.label;cell.textContent=node.label;
-        cell.setAttribute('aria-label',`Explore ${node.label}; select again to fold or reopen`);cell.hidden=true;
+        cell.setAttribute('aria-label',`Explore ${node.label} learning cell`);cell.setAttribute('aria-pressed','false');cell.setAttribute('aria-valuemin','0');cell.setAttribute('aria-valuemax','100');cell.setAttribute('aria-valuenow','0');cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
-        cell.addEventListener('click',event=>{event.stopPropagation();toggleLimCell(node.key);paintWelcomeLayer(performance.now());});
         layer.append(cell);
     }
     appRoot.querySelector('.tryit-stage').append(layer);
+    bindLimCellInteractions();
     let last=-Infinity,lastState='';
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
@@ -939,7 +1044,9 @@ function showArWelcomeShowcase() {
         }
         // XRSession frames drive immersive textures; a hidden DOM canvas need
         // not render a second copy. Reduced motion repaints only changed copy.
-        if(simulatedMode)arWelcomeShowcaseFrame=requestAnimationFrame(frame);
+        // The DOM preview and XR overlay both need the same reveal clock. Use
+        // the safe frame fallback even when a host omits window rAF.
+        if(arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
     button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;
@@ -1511,6 +1618,7 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
+        clearLimSelection();
         infoPanel?.focusPlant(record,demoOrbKnowledge(record).document);
         setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
@@ -2763,7 +2871,7 @@ function createIntroNoteTexture(texture = null) {
     if(arWelcomeShowcaseActive){label.width=2500;label.height=2100;}
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
@@ -3354,6 +3462,7 @@ async function startImmersive() {
         allowArScreenRotation();
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
+        bindLimSessionInteractions(session);
         allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
         domOverlayEnabled = Boolean(arSession.domOverlay);
@@ -3376,7 +3485,6 @@ async function startImmersive() {
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
-            if (selectWelcomeCell()) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
             if (activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return;
@@ -3425,6 +3533,7 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
+            tickLimActivation(_time);
             infoPanel?.update(viewerMatrix, _time); pimHold?.tick(_time);
             if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;

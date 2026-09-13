@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {welcomeNetworkFrame,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
 import {LIM_CELLS} from '../app/services/limLearning.js';
 test('one corner grows through three levels, fades and passes to the next',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
@@ -33,14 +33,14 @@ test('reduced motion remains static and later loops explore additional branches'
 
 // Exercise the renderer with canvas state restoration, which caused the label bug.
 test('cell labels stay centred and fitted even when the caller uses left-aligned text',()=>{
- const stack=[],labels=[];let curves=0;
+ const stack=[],labels=[];let curves=0,radials=0;
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
  save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
  restore(){Object.assign(this,stack.pop());},
  measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1]||10)*.56};},
  fillText(text,x,y){labels.push({text,x,y,align:this.textAlign,baseline:this.textBaseline,width:this.measureText(text).width});},
- createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}};
- for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc'])ctx[method]=()=>{};
+ createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){radials+=1;return {addColorStop(){}};}};
+ for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc','clip','fillRect','setLineDash'])ctx[method]=()=>{};
  ctx.quadraticCurveTo=()=>{curves+=1;};
  drawArWelcomeShowcase(ctx,64000,true);
  const frame=welcomeNetworkFrame(12000,true);
@@ -49,6 +49,9 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
   assert.ok(label,`missing cell label: ${word}`);assert.equal(label.align,'center');assert.equal(label.baseline,'middle');assert.ok(label.width<=node.baseRadius*1.48);
  }}
  assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');assert.equal(curves,0);
+ const active=welcomeExperienceFrames(12000,true).flatMap(frame=>frame.nodes)[0];
+ drawArWelcomeShowcase(ctx,64000,true,undefined,{activeKey:active.key,activeProgress:.5,selectedKey:active.key});
+ assert.ok(radials>0,'activation uses a centre-out radial fill');
 });
 
 test('Continue protects an eight-second opening while the full bloom continues',async()=>{
