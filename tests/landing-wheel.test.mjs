@@ -41,6 +41,8 @@ test('landing wheel uses one pointer path and removes obsolete spin controls',()
  assert.match(wheel,/pointercancel/);
  assert.match(wheel,/event\.preventDefault\(\)/);
  assert.match(wheel,/requestAnimationFrame\(draw\)/);
+ assert.match(wheel,/event\.pointerType==='mouse' && event\.button!==0/);
+ assert.match(wheel,/host\.setPointerCapture\?\.\(event\.pointerId\)/);
  assert.match(wheel,/stepY/);
  assert.match(wheel,/pitchVelocity/);
  assert.match(wheel,/wheelGestureVelocity\(gesture\.samples,gesture\.inheritedPitchVelocity,reduced,'y'\)/);

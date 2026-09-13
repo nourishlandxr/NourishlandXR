@@ -116,7 +116,16 @@ listen(host,'pointermove',event=>{
  if(event.pointerType==='mouse'){const r=host.getBoundingClientRect();pointerX=(event.clientX-r.left)/r.width*2-1;pointerY=(event.clientY-r.top)/r.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',event=>{pointerX=0;pointerY=0;if(gesture&&event.pointerId===gesture.id&&!host.hasPointerCapture(event.pointerId))endGesture({type:'pointercancel',timeStamp:event.timeStamp});requestDraw();});
-listen(host,'pointerdown',event=>{if(event.button!==0)return;gesture={lastX:event.clientX,lastY:event.clientY,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:event.timeStamp}]};});
+listen(host,'pointerdown',event=>{
+ // Some mobile browsers report a non-zero/undefined button for touch
+ // contacts. Only gate secondary mouse buttons; touch and pen remain valid
+ // wheel gestures. Capture immediately so a finger leaving the child canvas
+ // cannot drop the active drag before pointermove reaches the host.
+ if(event.pointerType==='mouse' && event.button!==0)return;
+ event.preventDefault?.();
+ host.setPointerCapture?.(event.pointerId);
+ gesture={lastX:event.clientX,lastY:event.clientY,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:event.timeStamp}]};
+});
 function endGesture(event){if(!gesture)return;const active=gesture;if(event?.type==='pointercancel'){velocity=0;pitchVelocity=0;}else if(active.intent==='rotate'&&(event?.timeStamp-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y');}else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}gesture=null;requestDraw();}
 listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
 listen(window,'pointerup',endGesture);listen(window,'pointercancel',endGesture);
