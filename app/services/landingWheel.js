@@ -14,7 +14,7 @@ const status=hero.querySelector('[data-status]');
 const media=matchMedia('(prefers-reduced-motion: reduce)');
 const forcedReduce=new URLSearchParams(location.search).get('motion')==='reduce';
 let reduced=media.matches||forcedReduce, visible=true, frame=0, previous=0, time=0;
-let velocity=0;
+let velocity=0,pitchVelocity=0;
 let roll=0, yaw=0, pitch=0, pointerX=0, pointerY=0, scroll=0, scrollOrigin=0, gesture=null;
 let renderer, resizeObserver, intersectionObserver, renderedFrames=0;
 const scene=new THREE.Scene();
@@ -28,8 +28,8 @@ const wind={value:0};
 function fallback(){hero.dataset.ready='error';hero.querySelector('#nl-instructions').textContent='A living circle of plants, food and connection.';host.removeAttribute('tabindex');cancelAnimationFrame(frame);}
 function requestDraw(){if(!disposed&&!frame&&visible&&!document.hidden&&hero.dataset.ready==='true')frame=requestAnimationFrame(draw);}
 function readScroll(){const box=hero.getBoundingClientRect();scroll=scrollTurn(box.top,box.height,innerHeight);requestDraw();}
-function setMotion(){reduced=media.matches||forcedReduce;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').textContent='Drag horizontally or use the left and right arrow keys to turn the botanical wheel.';scrollOrigin=scroll;if(reduced)velocity=0;requestDraw();}
-function reset(){roll=0;yaw=0;pitch=0;pointerX=0;pointerY=0;scrollOrigin=scroll;status.textContent='Wheel returned to its starting view.';requestDraw();}
+function setMotion(){reduced=media.matches||forcedReduce;hero.dataset.motion=reduced?'reduce':'full';hero.querySelector('#nl-instructions').textContent='Drag in any direction to turn the botanical wheel.';scrollOrigin=scroll;if(reduced){velocity=0;pitchVelocity=0;}requestDraw();}
+function reset(){roll=0;yaw=0;pitch=0;velocity=0;pitchVelocity=0;pointerX=0;pointerY=0;scrollOrigin=scroll;status.textContent='Wheel returned to its starting view.';requestDraw();}
 
 try{
  if(new URLSearchParams(location.search).get('renderer')==='fallback')throw new Error('Local fallback preview');
@@ -89,11 +89,11 @@ try{
 function draw(now){
  frame=0;if(!visible||document.hidden||hero.dataset.ready!=='true')return;
  const dt=previous?Math.min((now-previous)/1000,.05):.016;previous=now;
- const live=!reduced;if(live){time+=dt;if(!gesture){roll+=dt*.24;yaw+=velocity*dt;roll+=velocity*dt*.32;velocity=decayWheelVelocity(velocity,dt,false);}}
+ const live=!reduced;if(live){time+=dt;if(!gesture){roll+=dt*.24;yaw+=velocity*dt;roll+=velocity*dt*.32;velocity=decayWheelVelocity(velocity,dt,false);pitch=clamp(pitch+pitchVelocity*dt,-.85,.85);pitchVelocity=decayWheelVelocity(pitchVelocity,dt,false);}}
  const scrollDelta=live?scroll-scrollOrigin:0;
  const targetZ=roll+scrollDelta;
  const targetY=.28+yaw+(live?pointerX*.18+Math.sin(time*.35)*.10+Math.sin(scrollDelta)*.42:0);
- const targetX=-.12+pitch+(live?pointerY*.10:0);
+ const targetX=clamp(-.12+pitch+(live?pointerY*.10:0),-.95,.95);
  // Frame-rate-independent easing gives each gesture a soft, unhurried settle.
  const blend=reduced?1:1-Math.exp(-dt*4.2);
  wheel.rotation.x+=(targetX-wheel.rotation.x)*blend;wheel.rotation.y+=(targetY-wheel.rotation.y)*blend;wheel.rotation.z+=(targetZ-wheel.rotation.z)*blend;
@@ -112,12 +112,12 @@ listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
- if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy);if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const step=event.clientX-gesture.lastX;yaw+=step*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=step*.004;gesture.lastX=event.clientX;gesture.lastAt=event.timeStamp;gesture.samples.push({x:event.clientX,at:event.timeStamp});gesture.samples=gesture.samples.filter(sample=>event.timeStamp-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced);requestDraw();}return;}
+ if(gesture&&event.pointerId===gesture.id){const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=event.clientX-gesture.lastX,stepY=event.clientY-gesture.lastY;yaw+=stepX*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=stepX*.004;pitch=clamp(pitch+stepY*WHEEL_DRAG_RADIANS_PER_PIXEL*.7,-.85,.85);gesture.lastX=event.clientX;gesture.lastY=event.clientY;gesture.lastAt=event.timeStamp;gesture.samples.push({x:event.clientX,y:event.clientY,at:event.timeStamp});gesture.samples=gesture.samples.filter(sample=>event.timeStamp-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y');requestDraw();}return;}
  if(event.pointerType==='mouse'){const r=host.getBoundingClientRect();pointerX=(event.clientX-r.left)/r.width*2-1;pointerY=(event.clientY-r.top)/r.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',event=>{pointerX=0;pointerY=0;if(gesture&&event.pointerId===gesture.id&&!host.hasPointerCapture(event.pointerId))endGesture({type:'pointercancel',timeStamp:event.timeStamp});requestDraw();});
-listen(host,'pointerdown',event=>{if(event.button!==0)return;gesture={lastX:event.clientX,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',inheritedVelocity:velocity,samples:[{x:event.clientX,at:event.timeStamp}]};});
-function endGesture(event){if(!gesture)return;const active=gesture;if(event?.type==='pointercancel')velocity=0;else if(active.intent==='rotate'&&(event?.timeStamp-active.lastAt)<=160)velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced);else velocity=active.inheritedVelocity;gesture=null;requestDraw();}
+listen(host,'pointerdown',event=>{if(event.button!==0)return;gesture={lastX:event.clientX,lastY:event.clientY,lastAt:event.timeStamp,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:event.timeStamp}]};});
+function endGesture(event){if(!gesture)return;const active=gesture;if(event?.type==='pointercancel'){velocity=0;pitchVelocity=0;}else if(active.intent==='rotate'&&(event?.timeStamp-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y');}else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}gesture=null;requestDraw();}
 listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
 listen(window,'pointerup',endGesture);listen(window,'pointercancel',endGesture);
 function turn(direction){roll+=direction*Math.PI/6;status.textContent=direction>0?'Wheel turned right.':'Wheel turned left.';requestDraw();}

@@ -17,6 +17,13 @@ test('horizontal wheel gestures preserve scrolling intent and calculate flick ve
  assert.equal(wheelGestureVelocity([{x:10,at:0},{x:70,at:60}],2,true),0);
 });
 
+test('vertical and diagonal wheel drags feed the bounded X rotation axis',()=>{
+ assert.equal(gestureIntent(4,20,{allowVertical:true}),'rotate');
+ assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:10,y:80,at:60}],0,false,'y'),8);
+ assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:70,y:80,at:60}],0,false,'x'),8);
+ assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:70,y:80,at:60}],0,false,'y'),8);
+});
+
 test('wheel momentum decelerates gradually and stops for reduced motion',()=>{
  const first=decayWheelVelocity(5,1/60),second=decayWheelVelocity(first,1/60);
  assert.ok(first<5&&first>4.8);
@@ -34,6 +41,13 @@ test('landing wheel uses one pointer path and removes obsolete spin controls',()
  assert.match(wheel,/pointercancel/);
  assert.match(wheel,/event\.preventDefault\(\)/);
  assert.match(wheel,/requestAnimationFrame\(draw\)/);
+ assert.match(wheel,/stepY/);
+ assert.match(wheel,/pitchVelocity/);
+ assert.match(wheel,/wheelGestureVelocity\(gesture\.samples,gesture\.inheritedPitchVelocity,reduced,'y'\)/);
+ assert.match(css,/touch-action:none/);
+ assert.match(wheel,/event\?\.type==='pointercancel'\)\{velocity=0;pitchVelocity=0/);
+ assert.match(wheel,/roll\+=dt\*\.24/);
+ assert.doesNotMatch(css,/body[^{}]*touch-action\s*:\s*none/);
  assert.doesNotMatch(wheel+launch+css,/Spin sculpture|Pause spin|data-wheel-motion|v2-wheel-motion/);
  assert.doesNotMatch(wheel,/Space pauses|toggleMotion|syncMotionButton/);
 });
