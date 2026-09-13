@@ -10,6 +10,19 @@ let session=null, starting=false, resetReadingSpace=null;
 const diagnostics=[];
 export function getArDiagnostics(){return [...diagnostics];}
 export function recordArFailure(error,stage='AR'){diagnostics.push(`${stage}: ${error?.message || error}`);}
+function developerDiagnosticsEnabled(){
+    try { return JSON.parse(localStorage.getItem('nourishland-xr-settings') || '{}').developerDiagnostics === true; }
+    catch { return false; }
+}
+// Structured, opt-in traces share the existing diagnostics copy path. They are
+// intentionally silent during ordinary use and are useful for physical-device
+// LIM/AR reproduction reports.
+export function recordArDiagnostic(stage, details = {}){
+    if(!developerDiagnosticsEnabled())return;
+    let payload='';
+    try { payload=JSON.stringify(details); } catch { payload=String(details); }
+    diagnostics.push(`${stage}: ${payload}`);
+}
 export async function copyArDiagnostics(){await navigator.clipboard.writeText(diagnostics.join('\n') || 'No AR diagnostics recorded.');}
 export function isArActive(){return Boolean(session);}
 export function resetArPlacement(){resetReadingSpace?.();}

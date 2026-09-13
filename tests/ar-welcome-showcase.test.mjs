@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
-import {LIM_CELLS} from '../app/services/limLearning.js';
+import {LIM_ALL_CELLS} from '../app/services/limLearning.js';
+const styles=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
 test('one LIM face grows through three levels, fades and passes around the octagon',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
  assert.equal(welcomeNetworkFrame(3000).nodes.filter(n=>n.opacity>0).length,1);
@@ -19,12 +21,16 @@ test('eight face clusters retain parent identity, share edges and avoid the welc
  }}
 });
 test('all LIM cells have deterministic reserved positions and visible cells use edge-sharing spacing',()=>{
- assert.equal(Object.keys(LIM_RESERVED_POSITIONS).length,LIM_CELLS.length);
+ assert.equal(Object.keys(LIM_RESERVED_POSITIONS).length,LIM_ALL_CELLS.length);
  const reserved=Object.values(LIM_RESERVED_POSITIONS).map(item=>`${item.corner}:${item.axial.join(',')}`);
- assert.equal(new Set(reserved).size,LIM_CELLS.length);
+ assert.equal(new Set(reserved).size,LIM_ALL_CELLS.length);
  const first=welcomeNetworkFrame(12000,true).nodes;
  assert.ok(first.every(node=>node.limId && node.scale===1 && node.radius===LIM_LAYOUT.radius));
  assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
+});
+test('portrait and landscape phones frame the LIM without shrinking its cells',()=>{
+ assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:700px;[\s\S]*min-width:700px;/);
+ assert.match(styles, /orientation:landscape\) and \(max-height:720px\)[\s\S]*inset:44% auto auto 67%;[\s\S]*width:620px;/);
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{
  assert.deepEqual(welcomeNetworkFrame(0,true),welcomeNetworkFrame(999999,true));

@@ -1,4 +1,4 @@
-import {limLearningContent} from '../services/limLearning.js';
+import {LIM_ALL_CELLS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { createLimActivationController } from '../services/limActivation.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
@@ -25,6 +25,7 @@ import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { showArSafetyDialog } from '../services/arOnboarding.js';
+import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
@@ -83,6 +84,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
 let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
+let limPanelDiagnosticRecorded=false;
 const limRequestFrame=callback=>typeof requestAnimationFrame==='function'?requestAnimationFrame(callback):setTimeout(()=>callback(performance.now()),16);
 const limCancelFrame=handle=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(handle);else clearTimeout(handle);};
 let introSceneStartedAt = 0;
@@ -116,6 +118,18 @@ let demoHoldButtonCleanup = null;
 let demoViewportCleanup = null;
 let groundYEstimate = null;
 let demoTutorialStep = DEMO_TUTORIAL_STEPS.WELCOME;
+const limDiagnostic = (stage, details = {}) => recordArDiagnostic(`LIM ${stage}`, details);
+function limDeviceContext(pointerType = 'unknown') {
+    const viewport = demoViewportDimensions();
+    return {
+        device: navigator.userAgentData?.platform || navigator.platform || 'unknown',
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        orientation: viewport.width >= viewport.height ? 'landscape' : 'portrait',
+        pointerType,
+        userAgent: navigator.userAgent
+    };
+}
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
@@ -153,11 +167,10 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
-// The board is updated only when a new character is ready, so there is no
-// reason to wait for another frame before uploading that character to WebGL.
-// Keeping this at zero prevents Quest refresh rates from making the copy
-// appear in word-sized chunks.
-const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0;
+// Canvas texture uploads are expensive on phones. Coalesce the continuously
+// changing welcome copy/mesh into a modest cadence so typing and input stay
+// responsive while the XR frame loop remains free to render at 60fps.
+const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // A paused XR/browser timer must never leave the demo waiting forever for
 // the last character. The copy still types in normally, then completes within
@@ -327,6 +340,7 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limPointerKey='';limPointerId=null;limInputSource=null;
+    limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
     aimRevealTimer = null;
@@ -869,7 +883,10 @@ function showPersistentPimPrompt(record) {
 function useSharedWelcomeBoard(visible) {
     if(!arWelcomeShowcaseActive)return;
     arWelcomeSharedBoard=visible;introBoardTextureDirty=true;
-    appRoot?.querySelector('[data-tryit-guided-choice]')?.classList.toggle('is-live-welcome-copy',visible);
+    // Simulated preview has a CSS-sized DOM card so copy remains readable on
+    // narrow screens. Immersive sessions keep the accessible DOM copy hidden
+    // while the anchored canvas supplies the spatial surface.
+    appRoot?.querySelector('[data-tryit-guided-choice]')?.classList.toggle('is-live-welcome-copy',visible && !simulatedMode);
 }
 
 function welcomeFrames() {
@@ -886,7 +903,9 @@ function activateLimCell(key) {
     const node=limNodeByKey(key);if(!node)return false;
     selectedLimCell=key;
     const content=limLearningContent(node.limId || node.label);
-    infoPanel?.showLearning({...content,id:node.limId||key,accent:node.accent||'',mesh:'lim',accessibilityLabel:`${node.label} learning cell`});
+    infoPanel?.showLearning({...content,mesh:'lim'});
+    limDiagnostic('selected-cell',{cellId:content.id,title:content.title,primaryFaceId:content.primaryFaceId,accent:content.accent});
+    limDiagnostic('companion-panel-position',infoPanel?.getPosition?.() || {status:'not-yet-positioned'});
     introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;
     return true;
 }
@@ -921,6 +940,7 @@ function bindLimCellInteractions() {
         const pointerDown=event=>{
             if(event.pointerType==='mouse' && event.button!==0)return;
             event.preventDefault();event.stopPropagation();limPointerKey=key;limPointerId=event.pointerId;
+            limDiagnostic('pointer',{type:event.pointerType || 'unknown',cellId:key});
             button.setPointerCapture?.(event.pointerId);limActivation.start(key,performance.now(),'pointer');startLimActivationFrame();paintWelcomeLayer(performance.now());
         };
         const pointerMove=event=>{
@@ -1009,6 +1029,8 @@ function showArWelcomeShowcase() {
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();arWelcomeClock=createWelcomePresentationClock();
+    const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
+    limDiagnostic('rendered-cells',{count:reservedCells.length,uniqueIds:new Set(reservedCells.map(node=>node.limId || node.key)).size,reservedCount:LIM_ALL_CELLS.length});
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
     limActivation=createLimActivationController({
         onProgress:()=>{introBoardTextureDirty=true;},
@@ -1086,6 +1108,7 @@ function selectWelcomeCell() {
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
     const cell=hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
     if(!cell)return false;
+    limDiagnostic('hit-target',{cellId:cell.limId || cell.key,pixelX:hit?.pixelX ?? null,pixelY:hit?.pixelY ?? null});
     toggleLimCell(cell.key);return true;
 }
 
@@ -2553,6 +2576,7 @@ function drawDemoKnowledge(view) {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
+    limDiagnostic('layout-recalculation',{reason:'interface-render',simulated,step:demoTutorialStep,...limDeviceContext(simulated && navigator.maxTouchPoints ? 'touch-capable' : simulated ? 'mouse' : 'xr-pointer')});
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
     const questImmersiveMode = Boolean(!simulated && session && sessionMode === 'immersive-vr');
     introSceneStartedAt = performance.now();
@@ -2878,25 +2902,31 @@ function createIntroNoteTexture(texture = null) {
 }
 
 function drawIntroNoteContent(ctx) {
+    // The note is a 900x500 surface at (250,300). Keep every piece of copy
+    // inside that surface; the previous 1,100px text box extended beyond both
+    // edges after the welcome panel was compacted.
+    const contentLeft = 320;
+    const contentWidth = 760;
+    const contentCenter = contentLeft + contentWidth / 2;
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 38px system-ui, sans-serif';
-    ctx.fillText(demoIntroLabel(), 700, 250);
+    ctx.fillText(demoIntroLabel(), contentCenter, 350, contentWidth);
     ctx.fillStyle = '#fff';
     let titleSize = 72;
     do {
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
         titleSize -= 4;
-    } while (titleSize > 58 && ctx.measureText(introBoardTitle).width > 1120);
-    drawWrappedTextureText(ctx, introBoardTitle, 700, 342, 1120, titleSize + 14, 2);
+    } while (titleSize > 52 && ctx.measureText(introBoardTitle).width > contentWidth);
+    drawWrappedTextureText(ctx, introBoardTitle, contentCenter, 410, contentWidth, titleSize + 10, 2);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(150, 430);
-    ctx.lineTo(1250, 430);
+    ctx.moveTo(contentLeft, 500);
+    ctx.lineTo(contentLeft + contentWidth, 500);
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
@@ -2904,16 +2934,27 @@ function drawIntroNoteContent(ctx) {
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌';
     const visibleParagraphs = typedBody.split(/\n\n/);
-    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, 1100, 350);
+    const bodyTop = 532;
+    const bodyBottom = 760;
+    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
-    let paragraphY = 492;
-    bodyLayout.paragraphLines.forEach((completeLines, paragraphIndex) => {
-        const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', 1100);
-        visibleLines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 150, paragraphY + lineIndex * bodyLayout.lineHeight);
-        });
+    let paragraphY = bodyTop;
+    let clipped = false;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(contentLeft, bodyTop - 4, contentWidth, bodyBottom - bodyTop + 8);
+    ctx.clip();
+    outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
+        const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
+        for (const [lineIndex, line] of visibleLines.entries()) {
+            const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
+            if (lineY > bodyBottom) { clipped = true; break outer; }
+            ctx.fillText(line, contentLeft, lineY);
+        }
         paragraphY += completeLines.length * bodyLayout.lineHeight + bodyLayout.paragraphGap;
-    });
+    }
+    if (clipped) ctx.fillText('…', contentLeft, bodyBottom);
+    ctx.restore();
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -3027,7 +3068,10 @@ function introWorldAnchorFromViewer(matrix) {
 
 function drawIntroSpatial(view) {
     if ((!introSceneActive && !arWelcomeShowcaseActive) || !viewerMatrix || !program || !buffer) return;
-    introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
+    if(!introWorldAnchor){
+        introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
+        limDiagnostic('root-placement',{anchor: introWorldAnchor ? Array.from(introWorldAnchor.slice(12,15)) : null,mode:sessionMode});
+    }
     const now = performance.now();
     if(arWelcomeShowcaseActive){
         arWelcomeClock.tick(now,session?.visibilityState==='visible');
@@ -3462,6 +3506,7 @@ async function startImmersive() {
         allowArScreenRotation();
         const arSession = await requestImmersiveArSession(appRoot);
         session = arSession.session;
+        limDiagnostic('AR session start',{mode:arSession.mode || 'immersive-ar',domOverlay:Boolean(arSession.domOverlay),...limDeviceContext('xr-pointer')});
         bindLimSessionInteractions(session);
         allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
@@ -3534,7 +3579,12 @@ async function startImmersive() {
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
             tickLimActivation(_time);
-            infoPanel?.update(viewerMatrix, _time); pimHold?.tick(_time);
+            infoPanel?.update(viewerMatrix, _time);
+            if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
+                limDiagnostic('companion-panel-position',infoPanel.getPosition());
+                limPanelDiagnosticRecorded=true;
+            }
+            pimHold?.tick(_time);
             if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
@@ -3554,7 +3604,8 @@ async function startImmersive() {
         };
         session.requestAnimationFrame(draw);
         return true;
-    } catch {
+    } catch (error) {
+        recordArFailure(error,'Temporary demo');
         const active = session; session = null; clearSessionState(); active?.end().catch(() => {});
         return false;
     }
@@ -3566,6 +3617,7 @@ export function openTemporaryArDemoWindow(app) {
 
 export async function startTemporaryArDemo(app) {
     appRoot = app;
+    limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
     const immersive = await startImmersive();
     renderInterface(!immersive);

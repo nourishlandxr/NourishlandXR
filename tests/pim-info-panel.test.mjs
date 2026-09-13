@@ -45,6 +45,8 @@ test('Control panel tabs and tools share non-overlapping hit rectangles with gat
     assert.equal(controlPanelControls({tab:'Details'}).find(b=>b.action==='Edit').disabled,true);
     assert.equal(controlPanelControls({tab:'Details',selected:true}).find(b=>b.action==='Edit').disabled,false);
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
+    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Learning');
+    assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
 });
 
 test('Side panel faces elevated and moving eyes; pitched controls use the rendered axes',()=>{

@@ -1,6 +1,6 @@
 import {drawArWelcomePanel} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
-import {LIM_CELLS, LIM_FACES, LIM_GRAPHS} from './limLearning.js';
+import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
@@ -11,6 +11,11 @@ export const AR_WELCOME_GRAPHS = LIM_GRAPHS;
 export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map((graph,index)=>({...graph,revealSeed:(index+1)*.173}));
 const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
 export const AR_WELCOME_CANVAS = {width:2500,height:2100};
+// The welcome note uses its original local coordinates inside this centred
+// inset. LIM cells already use full-canvas coordinates, which are also used by
+// DOM and XR hit targets.
+export const WELCOME_PANEL_DRAW_OFFSET = Object.freeze({x:550,y:510});
+export const WELCOME_DRAW_OFFSET = WELCOME_PANEL_DRAW_OFFSET;
 // The eight parent faces sit clockwise around the welcome note. Each local
 // cluster uses one flat-top axial lattice, so neighbouring cells share edges.
 // The eight small pattern variations give the outside of the mesh an organic,
@@ -44,7 +49,7 @@ export function limLayoutPoint(corner,slot){
 }
 
 // Reserve every authored LIM cell in a stable axial row map. The showcase
-// reveals eight slots per corner, while future cells already have positions and
+// reveals a compact sample, while every source cell already has a position and
 // can be faded in without moving any existing cell.
 const reservedAxial=(index)=>{
  if(index===0)return [0,0];
@@ -56,7 +61,7 @@ const reservedAxial=(index)=>{
  return [q,r];
 };
 const reservedCounts=new Map();
-export const LIM_RESERVED_POSITIONS = Object.freeze(Object.fromEntries(LIM_CELLS.map(cell=>{
+export const LIM_RESERVED_POSITIONS = Object.freeze(Object.fromEntries(LIM_ALL_CELLS.map(cell=>{
  const faceIndex=Math.max(0,LIM_FACES.findIndex(face=>face.id===cell.primaryFaceId));
  const faceCount=reservedCounts.get(cell.primaryFaceId)||0;reservedCounts.set(cell.primaryFaceId,faceCount+1);
  return [cell.id,Object.freeze({face:cell.primaryFaceId,faceIndex,corner:faceIndex,axial:Object.freeze(reservedAxial(faceCount)),role:cell.layoutRole})];
@@ -233,7 +238,7 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
 }
 
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
- ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(550,510);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
+ ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
  if(options.drawPanel!==false){
  drawArWelcomePanel(ctx);
  if(options.drawContent){options.drawContent(ctx);}else{

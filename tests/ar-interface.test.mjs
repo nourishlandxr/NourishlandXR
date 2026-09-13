@@ -1233,14 +1233,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardPosition: \[0, 0\.82, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /label\.height = 1080/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, 1100, 350\)/);
-    assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', 1100\)/);
-    assert.match(source, /visibleLines\.forEach/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
+    assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);
+    assert.match(source, /for \(const \[lineIndex, line\] of visibleLines\.entries\(\)/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
-    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 0/);
+    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 220/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);

@@ -54,11 +54,29 @@ export function infoPanelPose(matrix, heading = null) {
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
+// Recover an accidentally lost reading position only when it has left the
+// viewer's safe forward envelope. Selection, tab changes and re-renders keep
+// the existing pose; this check is the boundary for the gentle automatic
+// recovery allowed by the companion-panel contract.
+export function panelPoseOutsideSafeBounds(matrix, panelPose) {
+    if (!matrix || !panelPose?.center) return false;
+    const forwardLength = Math.hypot(Number(matrix[8]) || 0, Number(matrix[10]) || 0) || 1;
+    const rightLength = Math.hypot(Number(matrix[0]) || 0, Number(matrix[2]) || 0) || 1;
+    const forward = {x:-(Number(matrix[8]) || 0) / forwardLength, z:-(Number(matrix[10]) || 0) / forwardLength};
+    const right = {x:(Number(matrix[0]) || 0) / rightLength, z:(Number(matrix[2]) || 0) / rightLength};
+    const dx=panelPose.center.x-(Number(matrix[12]) || 0);
+    const dy=panelPose.center.y-(Number(matrix[13]) || 0);
+    const dz=panelPose.center.z-(Number(matrix[14]) || 0);
+    const forwardDistance=dx*forward.x+dz*forward.z;
+    const lateralDistance=dx*right.x+dz*right.z;
+    return forwardDistance < .16 || forwardDistance > 2.4 || Math.abs(lateralDistance) > 1.45 || Math.abs(dy) > 1.35;
+}
+
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
-export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false}={}) {
+export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim'}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
-    ['Details','Help','Settings'].forEach((label,i)=>buttons.push({action:label,label,kind:'tab',selected:tab===label,x:18,y:148+i*76,width:174,height:62}));
+    ['Details','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
     if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:height-70,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:height-70,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:height-70,width:322,height:48,disabled:!selected});
     if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:height-70,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:height-70,width:362,height:48});
     return buttons;
@@ -81,7 +99,8 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
     const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText);
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText});
+    const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
+    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind()});
     function act(action){
         const button=controls().find(item=>item.action===action);if(button?.disabled)return;
         if(action==='Restore')hidden=false;
@@ -91,7 +110,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
         if(action==='TextSize'){largeText=!largeText;page=0;}
-        if(action==='Recenter'){heading=null;pose=null;}
+        if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         render();
     }
     function makeButton(item){
@@ -104,7 +123,9 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         if(detached)return;
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
-        element.dataset.contentKind=selection?.mesh==='lim'?'lim':'pim';
+        element.dataset.contentKind=contentKind();
+        element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
+        element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
         element.style.setProperty('--lim-accent',selection?.mesh==='lim' ? (selection.accent || '#719b62') : 'transparent');
         if(hidden)element.append(makeButton(controls()[0]));
         else{
@@ -170,12 +191,14 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now()){
+            if(panelPoseOutsideSafeBounds(matrix,pose)){heading=null;pose=null;lastTime=0;}
             const next=infoPanelPose(matrix,heading);if(!next)return;heading=next.anchorHeading;
             const amount=pose?1-Math.exp(-Math.min(100,Math.max(0,time-lastTime))/160):1;
             if(!pose)pose=next;else for(const key of ['x','y','z'])pose.center[key]+=(next.center[key]-pose.center[key])*amount;
             Object.assign(pose,facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]}));lastTime=time;
         },
-        recenter(){heading=null;pose=null;},
+        recenter(){heading=null;pose=null;lastTime=0;},
+        getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Companion panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
