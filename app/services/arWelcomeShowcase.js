@@ -220,6 +220,10 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  // A quiet change in edge light follows the opening, without flashing.
  ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
  ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();
+ if(visual.pathway && !selected){
+  ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
+  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-7),y=Math.sin(a)*(r-7);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+ }
  if(selected){
   ctx.globalAlpha=node.opacity*.9;ctx.shadowColor=accentRgba(accent,hue,.55);ctx.shadowBlur=18;ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=5;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
@@ -257,7 +261,10 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // LIM cells are drawn directly on their reserved lattice positions. There
  // are no connector strokes; shared hex edges provide the relationship cue.
  for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
- for(const node of frame.nodes)if(node.opacity)drawGlassCell(ctx,node,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:options.selectedKey===node.key?1:0,selected:options.selectedKey===node.key});
+ for(const node of frame.nodes){
+  const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
+  if(current.opacity)drawGlassCell(ctx,current,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:options.selectedKey===node.key?1:0,selected:options.selectedKey===node.key,pathway});
+ }
  }
  ctx.restore();
  return frames;

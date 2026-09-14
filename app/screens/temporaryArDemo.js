@@ -1,6 +1,7 @@
-import {LIM_ALL_CELLS,limLearningContent} from '../services/limLearning.js';
+import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { createLimActivationController } from '../services/limActivation.js';
+import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
@@ -84,6 +85,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
 let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
+let limPathwayState=idleLimPathwayState(), pathwayNotePlacementPending=false;
 let limPanelDiagnosticRecorded=false;
 const limRequestFrame=callback=>typeof requestAnimationFrame==='function'?requestAnimationFrame(callback):setTimeout(()=>callback(performance.now()),16);
 const limCancelFrame=handle=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(handle);else clearTimeout(handle);};
@@ -444,6 +446,7 @@ function demoTextTypingDelay(text, visibleLength) {
 }
 
 function showDemoAction(nextStage) {
+    if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
     const messages = {
         plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
         note: ['Add one observation', 'Both plants now carry their own knowledge. Add a Note beside them to remember what you saw in this place.']
@@ -897,6 +900,50 @@ function welcomeFrames() {
 
 let selectedLimCell='';
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
+const understandPlacePathway=()=>LIM_PATHWAYS.find(pathway=>pathway.id==='lim-path-understand-place');
+const currentPathwayCellId=()=>understandPlacePathway()?.orderedCellIds[limPathwayState.currentStepIndex] || '';
+const currentPathwayNode=()=>welcomeFrames().flatMap(frame=>frame.nodes).find(node=>(node.limId || node.label)===currentPathwayCellId()) || null;
+function persistLimPathway(){saveLimPathwayState(window.localStorage,limPathwayState);}
+function updateLimPathway(next){limPathwayState=next;persistLimPathway();introBoardTextureDirty=true;}
+function pathwayContext(selectedId=''){
+    const pathway=understandPlacePathway();if(!pathway)return null;
+    const stepId=currentPathwayCellId(),step=LIM_CELL_BY_ID[stepId],number=limPathwayState.currentStepIndex+1;
+    if(limPathwayState.status==='completed')return {mode:'completed',title:pathway.title,progress:'Path completed',explanation:`You’ve completed this learning path. ${limPathwayState.observationNoteStatus==='placed'?'Your observation Note was placed.':'Continue exploring, revisit a topic or record something you noticed about this place.'}`,actions:[{action:'PathContinue',label:'Explore freely',primary:true},{action:'PathRestart',label:'Restart path'},{action:'PathClose',label:'Close LIM'}]};
+    if(limPathwayState.status==='paused')return {mode:'paused',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length}`,explanation:'Your place is saved. Resume when you choose, restart this path, or continue exploring freely.',actions:[{action:'PathResume',label:'Resume',primary:true},{action:'PathRestart',label:'Restart'},{action:'PathExplore',label:'Explore freely'}]};
+    if(limPathwayState.status!=='active')return {mode:'landing',title:'Learning Paths',preview:true,progress:'Optional guided exploration',explanation:'Follow a gentle sequence of connected topics, or continue exploring freely. More paths are being developed.',actions:[{action:'PathExplore',label:'Explore freely',primary:true},{action:'PathPreview',label:'Try Understand This Place'}]};
+    if(selectedId && selectedId!==stepId)return {mode:'off-path',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length}`,explanation:'You’re exploring beyond the path.',actions:[{action:'PathReturn',label:'Return to path',primary:true},{action:'PathLeave',label:'Leave path'}]};
+    const final=number===pathway.orderedCellIds.length && limPathwayState.completedStepIds.includes(stepId);
+    if(final)return {mode:'final',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length}`,explanation:'Take a moment to record something you noticed about this place. Your observation can become a Note that you return to later.',actions:[{action:'PathBack',label:'Back'},{action:'PathPlaceNote',label:'Place observation Note',primary:true},{action:'PathComplete',label:'Complete without Note'}]};
+    return {mode:'active',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length} · ${step?.title || 'Topic'}`,explanation:pathway.suggestedBranches[number-1],actions:[{action:'PathBack',label:'Back',disabled:number===1},{action:'PathNext',label:'Next',primary:true,disabled:!limPathwayState.completedStepIds.includes(stepId)},{action:'PathLeave',label:'Leave path'}]};
+}
+function showLearningPathLanding(){infoPanel?.setPathwayContext(pathwayContext());}
+function selectCurrentPathwayCell(){const node=currentPathwayNode();if(node)activateLimCell(node.key);}
+function completeLearningPath(noteStatus){updateLimPathway(completeLimPathway(limPathwayState,noteStatus));infoPanel?.setPathwayContext(pathwayContext());}
+function handlePathwayAction(action){
+    const pathway=understandPlacePathway();if(!pathway)return;
+    if(action==='PathExplore'){if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));infoPanel?.setPathwayContext(null);return;}
+    if(action==='PathPreview'){infoPanel?.setPathwayContext({mode:'introduction',title:pathway.title,progress:'Optional guided exploration',explanation:'Understand This Place offers an optional route through seven connected LIM topics. You can leave the path, explore any other cell and return whenever you choose.',actions:[{action:'PathBegin',label:'Begin path',primary:true},{action:'PathExplore',label:'Explore freely'}]});return;}
+    if(action==='PathBegin' || action==='PathRestart'){updateLimPathway(startLimPathway(pathway));selectCurrentPathwayCell();return;}
+    if(action==='PathResume'){updateLimPathway(resumeLimPathway(limPathwayState));selectCurrentPathwayCell();return;}
+    if(action==='PathLeave'){updateLimPathway(pauseLimPathway(limPathwayState));infoPanel?.setPathwayContext(pathwayContext());return;}
+    if(action==='PathReturn'){selectCurrentPathwayCell();return;}
+    if(action==='PathBack'){updateLimPathway(backLimPathway(limPathwayState));selectCurrentPathwayCell();return;}
+    if(action==='PathNext'){const next=advanceLimPathway(limPathwayState,pathway);if(next!==limPathwayState){updateLimPathway(next);selectCurrentPathwayCell();}return;}
+    if(action==='PathComplete'){completeLearningPath('skipped');return;}
+    if(action==='PathPlaceNote'){
+        if(markers.some(record=>record.demoType==='note')){completeLearningPath('placed');return;}
+        pathwayNotePlacementPending=true;
+        infoPanel?.setPathwayContext({mode:'note-placement',title:pathway.title,progress:'Final observation',explanation:'Aim beside the place and press the circle once. You can cancel and return to the path.',actions:[{action:'PathCancelNote',label:'Cancel Note'}]});
+        armDemoPlacement('note',{explained:true});return;
+    }
+    if(action==='PathCancelNote'){
+        pathwayNotePlacementPending=false;placementReady=false;clearTimeout(aimRevealTimer);
+        const pointer=appRoot?.querySelector('[data-tryit-place]');pointer?.setAttribute('hidden','');pointer?.classList.remove('is-revealing','is-ready','is-pressed');
+        infoPanel?.setPathwayContext(pathwayContext(currentPathwayCellId()));return;
+    }
+    if(action==='PathContinue'){infoPanel?.setPathwayContext(null);return;}
+    if(action==='PathClose')returnToWelcome();
+}
 function clearLimSelection() {
     if(!selectedLimCell)return;
     selectedLimCell='';introBoardTextureDirty=true;
@@ -906,6 +953,12 @@ function activateLimCell(key) {
     selectedLimCell=key;
     const content=limLearningContent(node.limId || node.label);
     infoPanel?.showLearning({...content,mesh:'lim'});
+    const pathway=understandPlacePathway();
+    if(limPathwayState.status==='active' && pathway){
+        const next=visitLimPathwayCell(limPathwayState,pathway,content.id);
+        if(next!==limPathwayState)updateLimPathway(next);
+        infoPanel?.setPathwayContext(pathwayContext(content.id));
+    }
     limDiagnostic('selected-cell',{cellId:content.id,title:content.title,primaryFaceId:content.primaryFaceId,accent:content.accent});
     limDiagnostic('companion-panel-position',infoPanel?.getPosition?.() || {status:'not-yet-positioned'});
     introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;
@@ -1008,17 +1061,19 @@ function paintWelcomeLayer(now) {
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
             hidden:limHiddenCells,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,
-            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell
+            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
         if(button){
-            button.hidden=node.opacity<=.5;
+            const pathwayCurrent=(node.limId || node.label)===currentPathwayCellId() && ['active','paused'].includes(limPathwayState.status);
+            button.hidden=node.opacity<=.5 && !pathwayCurrent;
             const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
             button.style.setProperty('--lim-accent',node.accent||'#719b62');
             button.style.setProperty('--lim-progress',String(progress));
             button.classList.toggle('is-lim-holding',progress>0 && progress<1);
             button.classList.toggle('is-lim-selected',selectedLimCell===node.key);
+            button.classList.toggle('is-lim-pathway-current',pathwayCurrent);
             button.setAttribute('aria-pressed',String(selectedLimCell===node.key));
             button.setAttribute('aria-valuenow',String(Math.round(progress*100)));
             button.dataset.welcomeHollow=node.hollow?'true':'false';
@@ -1035,6 +1090,8 @@ function showArWelcomeShowcase() {
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();arWelcomeClock=createWelcomePresentationClock();
+    limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
+    if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
     const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
     limDiagnostic('rendered-cells',{count:reservedCells.length,uniqueIds:new Set(reservedCells.map(node=>node.limId || node.key)).size,reservedCount:LIM_ALL_CELLS.length});
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
@@ -1127,11 +1184,9 @@ const DEMO_ORIENTATION_STEPS = [
         'Welcome to NourishlandXR. Take a moment to look around and settle into your surroundings. You can explore at your own pace.',
         'The green panel in front guides your journey. The charcoal Control panel on your left stays nearby for plant details and useful actions.'
     ]},
-    {title:'Choose your own starting point',button:'Continue to a plant',paragraphs:[
-        'The Learning Information Mesh is optional. Follow any cell that interests you, or continue when you are ready to meet a plant.',
-        'Planning a small temperate food forest? Begin with Climate and Place, then Living Landscapes.',
-        'Wondering what will grow in a subtropical backyard? Connect Climate and Place with Plants and Life.',
-        'Regenerating a creek with native plants? Begin with Place and Observation, then Wildlife and Relationships.'
+    {title:'Explore the Learning Information Mesh',button:'Continue to a plant',paragraphs:[
+        'Explore any topic that interests you, or try a guided path through a few connected ideas.',
+        'Free exploration remains available at every point. Your Companion panel offers the optional path quietly alongside the normal LIM content.'
     ]},
     {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. We will start with a Pigeon Pea and explore its relationships, cultivation and uses.',
@@ -1141,10 +1196,15 @@ const DEMO_ORIENTATION_STEPS = [
 
 function runArWelcomeTutorial(index=0) {
     infoPanel?.setGuided(index===1);
+    if(index===1)showLearningPathLanding();
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
-        if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
+        if(index<DEMO_ORIENTATION_STEPS.length-1){
+            if(index===1 && limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
+            if(index===1)infoPanel?.setPathwayContext(null);
+            runArWelcomeTutorial(index+1);return;
+        }
         finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
     },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Optional LIM','Explore'][index]});
 }
@@ -1394,6 +1454,12 @@ function guideNoteConversion(record) {
     record.revealTitle = true;
     record.revealLines = 3;
     refreshDemoRecord(record);
+    if(pathwayNotePlacementPending){
+        pathwayNotePlacementPending=false;placementReady=false;
+        setGuide('Your observation Note is anchored to this place.');
+        completeLearningPath('placed');
+        return;
+    }
     setGuide('Your observation is anchored beside the plants.');
     showIntroBoard(
         'Your Note is in place',
@@ -2592,7 +2658,7 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
-    infoPanel?.destroy(); infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true)});
+    infoPanel?.destroy(); infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction});
     if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
@@ -2904,7 +2970,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

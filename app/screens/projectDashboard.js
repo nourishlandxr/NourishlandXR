@@ -1273,6 +1273,7 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <section>
                     <h2>How it works</h2>
                     <p>Every plant, note or checkpoint belongs to a Location and Area. The same content works in both content mode (on-screen) and AR mode (in the landscape), so you can enter data efficiently and explore it spatially when you're ready.</p>
+                    <p>The Learning Information Mesh supports open exploration through connected topics. An early Learning Paths preview also offers an optional route toward a particular learning goal.</p>
                 </section>
                 <section>
                     <h2>Built for food literacy</h2>

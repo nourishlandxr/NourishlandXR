@@ -370,7 +370,34 @@ export const LIM_PATHWAY_SCHEMA = Object.freeze({
     version: 1,
     fields: Object.freeze(['id','title','learningGoal','description','orderedCellIds','suggestedBranches','completionState','version'])
 });
-export const LIM_PATHWAYS = Object.freeze([]);
+export const LIM_PATHWAYS = Object.freeze([
+    Object.freeze({
+        id: 'lim-path-understand-place',
+        title: 'Understand This Place',
+        learningGoal: 'Notice the conditions, living structures and relationships that shape a place.',
+        description: 'An optional route through seven connected LIM topics.',
+        orderedCellIds: Object.freeze([
+            'lim-pin-place',
+            'lim-climate',
+            'lim-food-forest',
+            'lim-plant',
+            'lim-wildlife-relationships',
+            'lim-pin-observation',
+            'lim-pin-observation-action'
+        ]),
+        suggestedBranches: Object.freeze([
+            'Begin with what can be directly located and observed.',
+            'Notice the climate and local conditions acting on the place.',
+            'Read the place as a connected living structure.',
+            'Look at how plants participate in that structure.',
+            'Follow relationships with wildlife and other living systems.',
+            'Return to direct observation before deciding what it means.',
+            'Connect what you noticed with a careful next action or Note.'
+        ]),
+        completionState: 'completed',
+        version: 1
+    })
+]);
 export const LIM_LEGACY_FACE_MIGRATION = Object.freeze(Object.fromEntries(LIM_FACES.flatMap(face => [
     [face.id, face.id], ...face.legacyAliases.map(alias => [alias, face.id])
 ])));

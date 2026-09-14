@@ -5,8 +5,12 @@ const GUIDE_FAQ = Object.freeze([
     ['Getting Started', 'What is a NourishlandXR project?', 'A project brings together the areas, plants, observations and spatial information belonging to one garden, farm or landscape.'],
     ['Projects and Areas', 'What is an area?', 'An area is a defined part of the project, such as an orchard, nursery, garden bed or food-forest zone.'],
     ['Projects and Areas', 'What is Home?', 'Home is the project’s default area. Plants and entries without another assigned area can remain there until organised.'],
+    ['Learning and LIM', 'What is the Learning Information Mesh?', 'The LIM connects general learning topics about places, plants, living systems and observation. It remains separate from the information attached to a particular plant.'],
     ['Plants and PIM', 'What is the Plant Information Mesh?', 'The PIM is an expandable knowledge system connecting a plant’s uses, ecological relationships, cultivation, propagation, history and verified scientific information.'],
-    ['Totems and Alignment', 'What is a Totem?', 'A Totem represents a known spatial reference for an area. It can help organise AR content and may later be associated with physical visual markers or spatial positioning.'],
+    ['Learning and LIM', 'What is a Learning Path?', 'A Learning Path is an optional sequence through existing LIM topics. Understand This Place is available as an early preview; free exploration remains available throughout.'],
+    ['Totems and Alignment', 'What is a Totem?', 'A Totem is an Area’s information centre and spatial reference. It keeps that Area’s plants, Notes and local information together.'],
+    ['Projects and Areas', 'What is a Note?', 'A Note records an observation, memory, task or other information connected to a place.'],
+    ['Projects and Areas', 'What is a Route?', 'A Route links Areas so visitors can understand where a connection leads. It does not merge the Areas or their information.'],
     ['Plants and PIM', 'What is a Plant Live Tag?', 'A Plant Live Tag connects a specific real plant with its digital profile and spatial content.'],
     ['AR Mode', 'Why does AR request camera permission?', 'AR uses the camera to place digital information within the surrounding environment. Camera access begins only after the user grants permission.'],
     ['Totems and Alignment', 'Why might an AR object need realignment?', 'Browser-based tracking can drift as the device moves or loses visual reference points. A Totem or recognised marker can provide a known alignment checkpoint.'],
@@ -16,7 +20,7 @@ const GUIDE_FAQ = Object.freeze([
     ['Troubleshooting', 'What should I do if a feature is unavailable?', 'Use the established Content, Area, Plant and AR actions for confirmed work. Available, Experimental and Planned labels identify what is operational.']
 ]);
 
-const GUIDE_CATEGORIES = Object.freeze(['All', 'Getting Started', 'Projects and Areas', 'Plants and PIM', 'AR Mode', 'Totems and Alignment', 'Mapping and Export', 'Troubleshooting']);
+const GUIDE_CATEGORIES = Object.freeze(['All', 'Getting Started', 'Learning and LIM', 'Projects and Areas', 'Plants and PIM', 'AR Mode', 'Totems and Alignment', 'Mapping and Export', 'Troubleshooting']);
 
 const GUIDE_PREVIEW_TOPICS = Object.freeze([
     ['The Project Map', 'The Project Map shows how project areas relate to one another, where plants have been placed and which parts of the landscape still need mapping or alignment.'],
@@ -52,7 +56,7 @@ export function renderProjectGuide(app, encodedProjectId = '', returnTo = 'creat
     const topicHtml = GUIDE_PREVIEW_TOPICS.map(([title, body], index) => `<details class="project-guide-preview-topic"><summary><span>${escapeHtml(title)}</span><b class="project-guide-topic-status is-${topicStatus[index].toLocaleLowerCase()}">${topicStatus[index]}</b><i aria-hidden="true">+</i></summary><p>${escapeHtml(body)}</p></details>`).join('');
 
     app.innerHTML = `<div class="screen project-guide-screen">
-        <header class="project-guide-header"><button class="ghost project-guide-back" type="button" onclick="${backAction}">← Back</button><p class="project-guide-eyebrow">NOURISHLANDXR</p><h1>Project Guide</h1><p class="subtitle">Fast answers for projects, plants, PIM and spatial work.</p></header>
+        <header class="project-guide-header"><button class="ghost project-guide-back" type="button" onclick="${backAction}">← Back</button><p class="project-guide-eyebrow">NOURISHLANDXR</p><h1>Project Guide</h1><p class="subtitle">Fast answers for learning, projects, plants and spatial work.</p></header>
         <section class="project-guide-faq-section" aria-labelledby="projectGuideFaqTitle"><div class="project-guide-section-heading"><div><p class="project-guide-eyebrow">QUICK ANSWERS</p><h2 id="projectGuideFaqTitle">Project Guide FAQ</h2></div><span class="project-guide-count">${GUIDE_FAQ.length} answers</span></div><div class="project-guide-search"><span aria-hidden="true">⌕</span><input id="projectGuideSearch" type="search" placeholder="Search the guide" aria-label="Search the guide" autocomplete="off" /></div><div class="project-guide-category-row" role="group" aria-label="Guide categories">${GUIDE_CATEGORIES.map((category, index) => `<button type="button" class="${index === 0 ? 'is-active' : ''}" data-guide-filter="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join('')}</div><div class="project-guide-faq-list">${faqHtml}</div><p class="project-guide-empty" data-guide-empty hidden>No guide answers match that search.</p></section>
         <section class="project-guide-v2-section" aria-labelledby="projectGuideMapTitle"><div class="project-guide-v2-heading"><div><p class="project-guide-eyebrow">SPATIAL WORKSPACE</p><h2 id="projectGuideMapTitle">Project Map</h2></div></div><p>The Project Map is the shared spatial foundation for projects. Available tools use real project records; Experimental and Planned topics are labelled so they are never mistaken for working features.</p>${guidePreviewArt()}<button type="button" class="project-guide-open-v2" onclick="${dashboardAction}">Open Project Dashboard <span aria-hidden="true">›</span></button><div class="project-guide-preview-topics" aria-label="Project Map topics">${topicHtml}</div></section>
     </div>`;

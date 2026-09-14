@@ -617,6 +617,7 @@ h1 {
 .tryit-live-welcome [data-welcome-cell] { position:absolute; display:grid; place-items:center; min-width:48px; min-height:48px; padding:4px; transform:translate(-50%,-50%); border:1px solid rgba(239,255,220,.62); clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%); background:rgba(38,82,52,.82); color:rgba(255,255,245,.98); font:650 clamp(.52rem,1.8vw,.76rem)/1.05 system-ui,sans-serif; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.8); pointer-events:auto; touch-action:manipulation; }
 .tryit-demo.is-immersive .tryit-live-welcome [data-welcome-cell] { border-color:transparent; background:transparent; color:transparent; text-shadow:none; }
 .tryit-live-welcome [data-welcome-cell]:focus-visible { border-color:rgba(239,255,220,.95); outline:3px solid rgba(220,239,149,.42); outline-offset:3px; }
+.tryit-live-welcome [data-welcome-cell].is-lim-pathway-current { outline:2px dashed rgba(255,255,255,.82); outline-offset:-7px; }
 .tryit-live-welcome [data-welcome-cell][data-welcome-hollow="true"] { border-color:rgba(239,255,220,.42); }
 @media (max-width:620px) {
     .tryit-live-welcome { inset: max(8px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px)); }

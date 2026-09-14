@@ -14,7 +14,7 @@ The demo should feel like one journey through a place:
 
 The quick fixes implement the copy, palette and pacing needed for this story. They preserve the existing spatial models and tutorial state.
 
-## Optional LIM entry paths
+## Phase 10A: pathway discovery
 
 The LIM introduces a new way to learn, so it should offer direction without forcing a sequence. The welcome step now suggests three questions:
 
@@ -22,13 +22,25 @@ The LIM introduces a new way to learn, so it should offer direction without forc
 - **Discovering plants for a subtropical backyard?** Connect Climate and Place with Plants and Life.
 - **Regenerating a creek with native plants?** Begin with Place and Observation, then Wildlife and Relationships.
 
-These are suggested routes through the same stable mesh. Choosing a route should highlight useful starting cells and recommend a related next cell. It should never hide, rearrange or filter out the rest of the LIM. Free exploration and Continue remain available at every point.
+These questions established the direction for gentle routes through the same stable mesh. Free exploration remains the primary LIM experience.
 
-## Recommended guided-learning model
+## Phase 10B: Understand This Place
 
-A future `LIM_PATHWAYS` data layer can define each pathway using existing stable cell IDs, a short goal, an ordered set of suggestions and an optional completion message. The companion panel can show one small “Related next” action after a cell is read. Progress should be visible and resumable, while the LIM remains a spatial map rather than a checklist.
+The early Learning Paths preview now includes one functional path, `lim-path-understand-place`, version 1. It follows these existing cells without copying or moving them:
 
-The next content review should confirm that each suggested cell contains enough practical guidance for the named scenario, especially native creek restoration. Regional advice must identify its location and source so a general learning path is not mistaken for site-specific planting advice.
+1. `lim-pin-place`
+2. `lim-climate`
+3. `lim-food-forest`
+4. `lim-plant`
+5. `lim-wildlife-relationships`
+6. `lim-pin-observation`
+7. `lim-pin-observation-action`
+
+Its state is `idle`, `active`, `paused` or `completed`. Progress, timestamps and optional observation-Note status persist locally. Invalid saved state returns safely to idle. Selecting another cell preserves progress and offers a quiet return action. Note placement reuses the existing Note workflow.
+
+## Future creator-authored paths
+
+Creator-authored paths are a direction being explored. Creator tools, personalisation and adaptive recommendations are not implemented or promised. Any future path should reuse stable LIM cells, identify its learning goal and preserve free exploration.
 
 ## Experience principles
 

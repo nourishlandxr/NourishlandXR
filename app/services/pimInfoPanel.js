@@ -73,20 +73,21 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
 }
 
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
-export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim'}={}) {
+export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
     ['Details','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
     if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:height-70,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:height-70,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:height-70,width:322,height:48,disabled:!selected});
     if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:height-70,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:height-70,width:362,height:48});
+    pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:height-132,width:226,height:48}));
     return buttons;
 }
-export function controlPanelHeight(lines,largeText=false){return Math.max(560,390+Math.min(7,lines)*(largeText?46:38));}
+export function controlPanelHeight(lines,largeText=false,pathway=false){return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0));}
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
+export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
-    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false;
+    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
@@ -95,12 +96,12 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
         :'Hi! This is your Companion panel. It stays nearby to help you read selected topics and fine-tune your experience.';
-    const pages=()=>infoPages(text(),largeText?32:38,7);
+    const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
     const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext));
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind()});
+    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || []});
     function act(action){
         const button=controls().find(item=>item.action===action);if(button?.disabled)return;
         if(action==='Restore')hidden=false;
@@ -111,6 +112,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
         if(action==='TextSize'){largeText=!largeText;page=0;}
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
+        if(action.startsWith('Path')){onPathwayAction(action);return;}
         render();
     }
     function makeButton(item){
@@ -126,6 +128,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
+        element.dataset.pathwayMode=pathwayContext?.mode || '';
         element.style.setProperty('--lim-accent',selection?.mesh==='lim' ? (selection.accent || '#719b62') : 'transparent');
         if(hidden)element.append(makeButton(controls()[0]));
         else{
@@ -136,6 +139,17 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
             header.append(label,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));tabs.append(makeButton(controls()[0]));element.append(tabs);
+            if(pathwayContext){
+                const pathway=document.createElement('section');pathway.className='nlxr-pathway-context';pathway.setAttribute('aria-live','polite');
+                const heading=document.createElement('div');heading.className='nlxr-pathway-heading';
+                const name=document.createElement('strong');name.textContent=pathwayContext.title || 'Learning Paths';heading.append(name);
+                if(pathwayContext.preview){const badge=document.createElement('small');badge.textContent='Preview';heading.append(badge);}
+                const progress=document.createElement('span');progress.textContent=pathwayContext.progress || '';
+                const explanation=document.createElement('p');explanation.textContent=pathwayContext.explanation || '';
+                const actions=document.createElement('nav');actions.setAttribute('aria-label','Learning Path actions');
+                controls().filter(item=>item.kind==='pathway').forEach(item=>actions.append(makeButton(item)));
+                pathway.append(heading,progress,explanation,actions);element.append(pathway);
+            }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
             const heading=document.createElement('h3');heading.textContent=title();
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
@@ -164,13 +178,19 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
             ctx.fillStyle='#b7c5c9';ctx.font='600 21px system-ui';ctx.fillText('CONTROL',24,32,170);ctx.fillText('PANEL',24,61,170);
             ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
             ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
-            const titleX=card.accent?258:238,titleWidth=card.accent?712:732;
-            if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(238,180,7,42);ctx.globalAlpha=1;}
-            ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,titleX,187,titleWidth);
-            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,232,732);
-            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 40px':'400 34px')+' system-ui';card.lines.forEach((line,i)=>ctx.fillText(line,238,280+i*(card.largeText?46:38),732));
-            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.metadata,238,card.height-106,600);
-            if(card.tab==='Details')ctx.fillText(card.page,882,card.height-106,88);
+            const contentTop=card.pathway?292:187,titleX=card.accent?258:238,titleWidth=card.accent?712:732;
+            if(card.pathway){
+                ctx.fillStyle='#aaccc1';ctx.font='600 22px system-ui';ctx.fillText(card.pathway.title+(card.pathway.preview?' · PREVIEW':''),238,178,560);
+                ctx.fillStyle='#b7c5c9';ctx.font='500 19px system-ui';ctx.fillText(card.pathway.progress,790,180,180);ctx.font='400 19px system-ui';
+                infoPages(card.pathway.explanation,72,2)[0].forEach((line,index)=>ctx.fillText(line,238,218+index*24,732));
+            }
+            if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(238,contentTop-7,7,42);ctx.globalAlpha=1;}
+            ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,titleX,contentTop,titleWidth);
+            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,contentTop+45,732);
+            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 40px':'400 34px')+' system-ui';card.lines.forEach((line,i)=>ctx.fillText(line,238,contentTop+93+i*(card.largeText?46:38),732));
+            const footerY=card.pathway?card.height-218:card.height-106;
+            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.metadata,238,footerY,600);
+            if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }
         card.controls.forEach(button=>{
             ctx.fillStyle=button.selected?'rgba(159,187,184,.30)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.12)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,7);ctx.fill();
@@ -181,6 +201,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
         showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab='Details';hidden=false;page=0;render();},
+        setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;render();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         focusPlant(nextRecord,document){
             if(record===nextRecord && identity)return;
@@ -201,7 +222,7 @@ export function createPimInfoPanel({ root, onEdit = () => {} } = {}) {
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Companion panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Companion panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());
