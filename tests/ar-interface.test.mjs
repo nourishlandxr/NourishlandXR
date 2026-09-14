@@ -1083,7 +1083,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Get comfortable in your environment[\s\S]*Learn to learn[\s\S]*Meet your first plant/);
+    assert.match(source, /Get comfortable in your environment[\s\S]*Choose your own starting point[\s\S]*Meet your first plant/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to the NourishlandXR demo interface/);
     assert.match(source, /Augmented reality\(AR\) & Mixed reality\(XR\) are technologies that can help us better understand and interact with the world around us/);
@@ -1137,7 +1137,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.demoInteractive = true/);
     assert.match(styles, /\.tryit-sim-marker\.is-arriving \{ pointer-events:none; \}/);
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
-    assert.match(source, /\}, 360\)/);
+    assert.match(source, /const placementDelay = demoStage === 'note' \? 120 : 360/);
+    assert.match(source, /\}, placementDelay\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
@@ -1420,7 +1421,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Garden plaque/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /Each Totem represents an Area/);
+    assert.match(source, /A Totem is an Area’s home marker/);
+    assert.match(source, /A link creates a visitor route between Areas/);
     assert.match(source, /tutorialStage: 'totem'/);
     assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 4\.14, y: 3\.8 \}\)/);
     assert.match(source, /const noteScale = noteSign \? DEMO_NOTE_IMMERSIVE_SCALE : null/);

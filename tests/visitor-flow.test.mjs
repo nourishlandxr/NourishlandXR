@@ -45,6 +45,22 @@ test('welcome exploration steps share one fading stage without layout movement',
  assert.match(styles,/prefers-reduced-motion:reduce\)\{\.v2-intro-sequence article\{opacity:0;transform:none;animation:v2-intro-step-reduced 18s step-end infinite!important/);
 });
 
+test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{
+ const source=fs.readFileSync(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
+ const styles=fs.readFileSync(path.join(root,'app/style.css'),'utf8');
+ assert.match(source,/The Learning Information Mesh is optional/);
+ assert.match(source,/Planning a small temperate food forest/);
+ assert.match(source,/Wondering what will grow in a subtropical backyard/);
+ assert.match(source,/Regenerating a creek with native plants/);
+ assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
+ assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : 360/);
+ assert.match(source,/Your Note is in place/);
+ assert.match(source,/Why link Areas\?/);
+ assert.match(source,/does not merge their content/);
+ assert.match(styles,/\.tryit-sim-totem-pillar[^\n]*background: #70875b/);
+ assert.match(styles,/\.tryit-sim-marker-zone:not\(\.is-expanded\)[^\n]*background:#70875b/);
+});
+
 test('About This Tool explains the concept without tutorial instructions', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/projectDashboard.js'), 'utf8');
     const aboutStart = source.indexOf("if (feature === 'About This Tool')");
@@ -518,7 +534,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.doesNotMatch(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /'Add a Note'/);
+    assert.match(source, /'Add one observation'/);
     assert.match(source, /const directType = type === 'note' \? 'note' : 'sub_checkpoint'/);
     assert.doesNotMatch(source, /record\.type = 'note'/);
     assert.match(source, /markers\.length >= DEMO_SEQUENCE\.length/);
@@ -532,7 +548,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /Each Totem represents an Area/);
+    assert.match(source, /A Totem is an Area’s home marker/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.match(source, /const DEMO_TOTEM_STYLES/);
     assert.match(source, /function cycleDemoTotemStyle\(record\)/);

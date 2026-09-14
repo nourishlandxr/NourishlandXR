@@ -1277,7 +1277,7 @@ function createDemoTotemExample() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('This Totem represents the Food Forest Area and keeps its knowledge anchored to place. Press Continue to add a second Area.');
+    setGuide('This Totem is the home marker for the Food Forest Area. Add a second Totem to see how visitors move between Areas.');
     showSceneContinue('Add second Totem', createDemoSecondTotem);
 }
 
@@ -1334,8 +1334,8 @@ function createDemoSecondTotem() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('Two Totems now represent two Areas. Tap the second Totem model control to cycle Simple Totem, Light Bulb and Disk Totem.');
-    showSceneContinue('Explain linked Areas', showLinkedTotemsIntroduction);
+    setGuide('Each Totem keeps its own Area information. The link is a route between them; it does not merge their content.');
+    showSceneContinue('Why link Areas?', showLinkedTotemsIntroduction);
 }
 
 function cycleDemoTotemStyle(record) {
@@ -1351,12 +1351,11 @@ function cycleDemoTotemStyle(record) {
 
 function showLinkedTotemsIntroduction() {
     showIntroBoard(
-        'Linked Areas',
+        'Why link Areas?',
         [
-            'Each Totem represents one Area: a place where local plants, observations, and Area information can live together.',
-            'Linking two Totems creates a visible bridge between Areas. The direction sign names the other Area so visitors can follow the connection.',
-            'In a real project, selecting that sign can move from one Area to the next — for example, from a living room Area to a kitchen Area.',
-            'The second Totem can use a Simple Totem, Light Bulb, or Disk Totem model while keeping the same Area link and information.'
+            'Each Totem is the home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
+            'A link creates a visitor route between Areas. Here it connects the Food Forest with the Kitchen Garden without mixing their information.',
+            'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
         'Continue',
         showDemoClosingMessage
@@ -1365,14 +1364,12 @@ function showLinkedTotemsIntroduction() {
 
 function showTotemIntroduction() {
     showIntroBoard(
-        'Totem Markers',
+        'Area Totems',
         [
-            'Each Totem represents an Area: a real place where plant orbs, observations, and local knowledge live together.',
-            'Totems carry information about guilds, microclimates, and curiosities for that specific Area.',
-            'Two Totems can be linked to create a bridge between Areas, such as a Living Room Area and a Kitchen Area.',
-            'Press Continue to place the first Area Totem, then add a second one and see the link.'
+            'A Totem is an Area’s home marker. It gathers the plants, Notes and local knowledge that belong to that part of a project.',
+            'We will place one for the Food Forest and one for the Kitchen Garden, then show the route between them.'
         ],
-        'Continue',
+        'Place first Totem',
         () => {
             finishIntroBoard();
             createDemoTotemExample();
@@ -1382,9 +1379,9 @@ function showTotemIntroduction() {
 
 function showSpatialGardenSummary() {
     showIntroBoard(
-        'Your spatial garden information  is starting to become alive.',
-        'You placed two Plant Live Tags, opened their Plant Profiles, and added a Note.',
-        'Continue',
+        'Your place is becoming connected',
+        'Two different Plant orbs now hold their own profiles, and one Note records an observation beside them. Next, see how Area Totems organise this information across a larger place.',
+        'Meet Area Totems',
         showTotemIntroduction
     );
 }
@@ -1461,7 +1458,7 @@ function armDemoPlacement(type, {explained=false}={}) {
             'To do so ,use the round pointer that will appear on your screen. Position it where you’d like your marker to appear, then tap it to create what we call a Plant Orb. Please press Continue..'
         ]],
         plant2: ['Let’s try another plant . A Moringa plant orb', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
-        note: ['Next, place a simple Note nearby.', 'Move to a different nearby spot. Let the scene settle before the aiming circle appears again.']
+        note: ['Add one observation', 'Aim beside the plants and press the circle once to anchor a seasonal Note in this place.']
     };
     const [title, introduction] = introductions[type];
     const startPlacement = () => {
@@ -2523,12 +2520,13 @@ function pressPlacementPointer(event) {
     suppressSessionSelectUntil = performance.now() + 1000;
     const place = event?.currentTarget || appRoot?.querySelector('[data-tryit-place]');
     place?.classList.add('is-pressed');
-    setGuide('Placing Plant orb…');
+    setGuide(demoStage === 'note' ? 'Placing Note…' : 'Placing Plant orb…');
+    const placementDelay = demoStage === 'note' ? 120 : 360;
     pointerPressTimer = setTimeout(() => {
         place?.classList.remove('is-pressed');
         pointerPressTimer = null;
         placeMarker();
-    }, 360);
+    }, placementDelay);
 }
 
 function closeDemoKnowledge(force=false) {
@@ -3256,15 +3254,15 @@ function createMarkerTexture(record) {
         ctx.arc(108, 105, 18, 0, Math.PI * 2);
         ctx.fill();
     } else if (record.demoType === 'zone') {
-        ctx.fillStyle = 'rgba(77,174,174,.98)';
+        ctx.fillStyle = 'rgba(112,135,91,.98)';
         ctx.beginPath();
         ctx.moveTo(68, 30); ctx.lineTo(158, 42); ctx.lineTo(158, 238); ctx.lineTo(68, 226); ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = 'rgba(22,91,108,.98)';
+        ctx.fillStyle = 'rgba(61,82,56,.98)';
         ctx.beginPath();
         ctx.moveTo(158, 42); ctx.lineTo(194, 24); ctx.lineTo(194, 218); ctx.lineTo(158, 238); ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = 'rgba(132,226,215,.98)';
+        ctx.fillStyle = 'rgba(183,200,148,.98)';
         ctx.beginPath();
         ctx.moveTo(68, 30); ctx.lineTo(104, 12); ctx.lineTo(194, 24); ctx.lineTo(158, 42); ctx.closePath();
         ctx.fill();

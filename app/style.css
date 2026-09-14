@@ -826,9 +826,9 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-totem-system { width: min(88vw, 390px); height: min(68vh, 500px); border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; backdrop-filter: none; }
 .tryit-sim-totem-branches { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .tryit-sim-totem-branches path { fill: none; stroke: rgba(220,248,241,.72); stroke-width: 1.7; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(136,220,209,.3)); }
-.tryit-sim-totem-pillar { position: absolute; left: 44%; top: 35%; z-index:2; width: 12%; height: 63%; border: 0; border-radius: 0; background: #4daead; box-shadow: 0 14px 25px rgba(0,0,0,.2); }
-.tryit-sim-totem-pillar::before { content:""; position:absolute; left:0; top:-12px; width:126%; height:12px; background:#9ce8d9; clip-path:polygon(0 42%,22% 0,100% 20%,79% 100%); }
-.tryit-sim-totem-pillar::after { content:""; position:absolute; left:100%; top:-9px; width:26%; height:calc(100% + 9px); background:#175b70; clip-path:polygon(0 1%,100% 0,100% 96%,0 100%); }
+.tryit-sim-totem-pillar { position: absolute; left: 44%; top: 35%; z-index:2; width: 12%; height: 63%; border: 0; border-radius: 0; background: #70875b; box-shadow: 0 14px 25px rgba(0,0,0,.2); }
+.tryit-sim-totem-pillar::before { content:""; position:absolute; left:0; top:-12px; width:126%; height:12px; background:#b7c894; clip-path:polygon(0 42%,22% 0,100% 20%,79% 100%); }
+.tryit-sim-totem-pillar::after { content:""; position:absolute; left:100%; top:-9px; width:26%; height:calc(100% + 9px); background:#3d5238; clip-path:polygon(0 1%,100% 0,100% 96%,0 100%); }
 .tryit-sim-totem-card { position: absolute; display: grid; place-items: center; box-sizing: border-box; width: 31%; min-height: 68px; padding: 10px 11px; border: 1px solid rgba(226,255,249,.82); border-radius: 32% 23% 35% 25% / 25% 34% 24% 37%; background: radial-gradient(circle at 24% 16%,rgba(117,169,148,.3),transparent 38%),linear-gradient(145deg,rgba(24,73,59,.92),rgba(7,34,29,.9)); color: #fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 8px 22px rgba(0,0,0,.18); font-size: clamp(.62rem, 2.35vw, .78rem); font-weight: 800; line-height: 1.22; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.98), 0 0 6px rgba(0,0,0,.88); backdrop-filter: blur(7px); }
 .tryit-sim-totem-card::after { content:""; position:absolute; width:7px; height:7px; border:1px solid rgba(226,255,249,.78); border-radius:50%; background:rgba(25,76,62,.96); box-shadow:0 0 7px rgba(175,235,220,.32); }
 .tryit-sim-totem-card-1 { left: 1%; top: 4%; }
@@ -839,7 +839,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-totem-card-1::after,.tryit-sim-totem-card-2::after { left:50%; bottom:-4px; transform:translateX(-50%); }
 .tryit-sim-totem-card-3::after,.tryit-sim-totem-card-5::after { left:-4px; top:50%; transform:translateY(-50%); }
 .tryit-sim-totem-card-4::after { right:-4px; top:50%; transform:translateY(-50%); }
-.tryit-sim-area-link-line { position:fixed; z-index:12000; height:3px; transform-origin:0 50%; border-radius:999px; background:linear-gradient(90deg,rgba(117,201,182,.28),rgba(220,255,186,.95),rgba(117,201,182,.28)); box-shadow:0 0 12px rgba(117,201,182,.58); pointer-events:none; }
+.tryit-sim-area-link-line { position:fixed; z-index:12000; height:3px; transform-origin:0 50%; border-radius:999px; background:linear-gradient(90deg,rgba(143,165,106,.28),rgba(226,239,179,.95),rgba(143,165,106,.28)); box-shadow:0 0 12px rgba(143,165,106,.58); pointer-events:none; }
 .tryit-sim-area-link-line::after { content:""; position:absolute; right:-3px; top:50%; width:10px; height:10px; transform:translateY(-50%) rotate(45deg); border-top:3px solid #dfffbf; border-right:3px solid #dfffbf; }
 .tryit-sim-area-link-label { position:fixed; z-index:12004; transform:translate(-50%,-50%); padding:5px 10px; border:1px solid rgba(220,255,186,.7); border-radius:999px; background:rgba(9,43,29,.9); color:#eaffc8; box-shadow:0 5px 16px rgba(0,0,0,.2); font-size:.61rem; font-weight:900; letter-spacing:.08em; white-space:nowrap; pointer-events:none; }
 .tryit-sim-totem-link-label { position:absolute; left:50%; top:74%; z-index:7; transform:translateX(-50%); width:max-content; max-width:92%; padding:6px 10px; border:1px solid rgba(220,255,186,.78); border-radius:999px; background:rgba(8,48,31,.92); color:#eaffc8; box-shadow:0 4px 13px rgba(0,0,0,.24); font-size:clamp(.58rem,2vw,.7rem); font-weight:900; letter-spacing:.04em; white-space:nowrap; pointer-events:none; }
@@ -892,9 +892,9 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-marker-note:not(.is-expanded) { width:min(78vw,248px); height:102px; min-height:102px; padding:15px 19px; }
 .tryit-sim-marker-note { --note-board-color:#9a6b50; --spatial-note-color:var(--note-board-color); display:grid; place-content:center; gap:4px; overflow:hidden; font-family:Inter,"Aptos","Segoe UI",system-ui,sans-serif; text-align:center; cursor:pointer; }
 .tryit-sim-marker-note::before,.tryit-sim-marker-note::after { display:none; }
-.tryit-sim-marker-zone:not(.is-expanded) { width: 64px; height: 150px; border:0; border-radius:0; overflow:visible; background:#4daead; box-shadow:0 12px 22px rgba(0,0,0,.2); backdrop-filter:none; }
-.tryit-sim-marker-zone:not(.is-expanded)::before { content:""; position:absolute; left:0; top:-12px; width:126%; height:12px; background:#9ce8d9; clip-path:polygon(0 42%,22% 0,100% 20%,79% 100%); pointer-events:none; }
-.tryit-sim-marker-zone:not(.is-expanded)::after { content:""; position:absolute; left:100%; top:-9px; width:26%; height:calc(100% + 9px); background:#175b70; clip-path:polygon(0 1%,100% 0,100% 96%,0 100%); pointer-events:none; }
+.tryit-sim-marker-zone:not(.is-expanded) { width: 64px; height: 150px; border:0; border-radius:0; overflow:visible; background:#70875b; box-shadow:0 12px 22px rgba(0,0,0,.2); backdrop-filter:none; }
+.tryit-sim-marker-zone:not(.is-expanded)::before { content:""; position:absolute; left:0; top:-12px; width:126%; height:12px; background:#b7c894; clip-path:polygon(0 42%,22% 0,100% 20%,79% 100%); pointer-events:none; }
+.tryit-sim-marker-zone:not(.is-expanded)::after { content:""; position:absolute; left:100%; top:-9px; width:26%; height:calc(100% + 9px); background:#3d5238; clip-path:polygon(0 1%,100% 0,100% 96%,0 100%); pointer-events:none; }
 .tryit-sim-marker-note:not(.is-expanded) strong { display:block; color:#fff; font-size:.88rem; font-weight:800; line-height:1.2; white-space:normal; }
 .tryit-sim-marker-note:not(.is-expanded) small { display:block; max-height:1.35em; overflow:hidden; color:rgba(255,255,255,.82); font-size:.62rem; font-weight:650; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
 .tryit-sim-marker-area.is-expanded { border-color: rgba(137,200,239,.72); }
