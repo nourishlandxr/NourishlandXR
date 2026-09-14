@@ -122,6 +122,7 @@ listen(host,'pointerdown',event=>{
  // wheel gestures. Capture immediately so a finger leaving the child canvas
  // cannot drop the active drag before pointermove reaches the host.
  if(event.pointerType==='mouse' && event.button!==0)return;
+ if(gesture)return;
  event.preventDefault?.();
  host.setPointerCapture?.(event.pointerId);
  const now=performance.now();
@@ -130,6 +131,29 @@ listen(host,'pointerdown',event=>{
 function endGesture(event){if(!gesture)return;const active=gesture,now=performance.now();if(event?.type==='pointercancel'){velocity=0;pitchVelocity=0;}else if(active.intent==='rotate'&&(now-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y');}else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}gesture=null;requestDraw();}
 listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
 listen(window,'pointerup',endGesture);listen(window,'pointercancel',endGesture);
+// Older mobile WebViews can expose touch events without delivering a usable
+// PointerEvent stream. Keep the same gesture state and velocity model as the
+// pointer path, and ignore the compatibility pointer events while active.
+const touchPoint=event=>event?.changedTouches?.[0] || event?.touches?.[0];
+listen(host,'touchstart',event=>{
+ const point=touchPoint(event);if(!point || gesture)return;
+ event.preventDefault();const now=performance.now();
+ gesture={lastX:point.clientX,lastY:point.clientY,lastAt:now,id:point.identifier,x:point.clientX,y:point.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:point.clientX,y:point.clientY,at:now}],touch:true};
+ requestDraw();
+ },{passive:false});
+listen(host,'touchmove',event=>{
+ if(!gesture?.touch)return;const point=[...event.touches].find(item=>item.identifier===gesture.id);if(!point)return;
+ const now=performance.now(),dx=point.clientX-gesture.x,dy=point.clientY-gesture.y;
+ if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true});
+ if(gesture.intent==='rotate'){
+  event.preventDefault();const stepX=point.clientX-gesture.lastX,stepY=point.clientY-gesture.lastY;
+  yaw+=stepX*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=stepX*.004;pitch=clamp(pitch+stepY*WHEEL_DRAG_RADIANS_PER_PIXEL*.7,-.85,.85);
+  gesture.lastX=point.clientX;gesture.lastY=point.clientY;gesture.lastAt=now;gesture.samples.push({x:point.clientX,y:point.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);
+  velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y');requestDraw();
+ }
+},{passive:false});
+listen(host,'touchend',event=>{if(gesture?.touch)endGesture({type:'touchend'});},{passive:false});
+listen(host,'touchcancel',event=>{if(gesture?.touch)endGesture({type:'pointercancel'});},{passive:false});
 function turn(direction){roll+=direction*Math.PI/6;status.textContent=direction>0?'Wheel turned right.':'Wheel turned left.';requestDraw();}
 listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch=clamp(pitch+(event.key==='ArrowDown'?.18:-.18),-.65,.65);requestDraw();}});
 listen(renderer?.domElement,'webglcontextlost',event=>{event.preventDefault();fallback();});

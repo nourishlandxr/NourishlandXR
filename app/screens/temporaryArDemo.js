@@ -171,6 +171,8 @@ const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTROD
 // changing welcome copy/mesh into a modest cadence so typing and input stay
 // responsive while the XR frame loop remains free to render at 60fps.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
+const DEMO_LIM_TEXTURE_INTERVAL_MS = 96;
+const AR_WELCOME_SETTLED_MS = 64000;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // A paused XR/browser timer must never leave the demo waiting forever for
 // the last character. The copy still types in normally, then completes within
@@ -962,7 +964,7 @@ function bindLimCellInteractions() {
         const click=event=>{
             event.preventDefault();event.stopPropagation();
             if(limActivation.consumeSyntheticClick(key,performance.now()))return;
-            if(event.detail===0)limActivation.activateNow(key,performance.now(),'assistive-click');
+            limActivation.activateNow(key,performance.now(),event.detail===0?'assistive-click':'click');
         };
         const blur=()=>{if(limPointerId!==null && limPointerKey===key)cancel('blur');};
         for(const [type,handler] of [['pointerdown',pointerDown],['pointermove',pointerMove],['pointerup',pointerUp],['pointercancel',pointerCancel],['pointerleave',pointerLeave],['keydown',keyDown],['keyup',keyUp],['click',click],['blur',blur]]){button.addEventListener(type,handler);cleanups.push(()=>button.removeEventListener(type,handler));}
@@ -986,6 +988,10 @@ function bindLimSessionInteractions(arSession) {
         event.preventDefault?.();event.stopImmediatePropagation?.();limActivation.end(limActivation.activeKey,performance.now());limInputSource=null;limActivationSessionSuppressUntil=performance.now()+450;
     };
     const select=event=>{
+        if(event.inputSource?.targetRayMode==='screen' && arWelcomeShowcaseActive){
+            const node=currentLimPointerCell();
+            if(node){event.preventDefault?.();event.stopImmediatePropagation?.();activateLimCell(node.key);limActivationSessionSuppressUntil=performance.now()+450;return;}
+        }
         if(event.inputSource===limInputSource || performance.now()<limActivationSessionSuppressUntil || (arWelcomeShowcaseActive && currentLimPointerCell())){event.stopImmediatePropagation?.();}
     };
     const visibility=()=>{if(arSession.visibilityState!=='visible')limActivation.cancel('session-hidden');};
@@ -1065,14 +1071,14 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limHiddenCells.size,welcomeCanContinue(arWelcomeClock.elapsed)].join('|');
-        if(now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || state!==lastState)){
+        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
         // XRSession frames drive immersive textures; a hidden DOM canvas need
         // not render a second copy. Reduced motion repaints only changed copy.
         // The DOM preview and XR overlay both need the same reveal clock. Use
         // the safe frame fallback even when a host omits window rAF.
-        if(arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
+        if(simulatedMode && arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
     button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;
@@ -2894,9 +2900,9 @@ function canvasTexture(label, texture = null, flipY = false) {
 
 function createIntroNoteTexture(texture = null) {
     const label = introNoteCanvas ||= document.createElement('canvas');
-    label.width = 1400;
-    label.height = 1080;
-    if(arWelcomeShowcaseActive){label.width=2500;label.height=2100;}
+    const width=arWelcomeShowcaseActive?2500:1400,height=arWelcomeShowcaseActive?2100:1080;
+    if(label.width!==width)label.width=width;
+    if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
     if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell});return canvasTexture(label,texture);}
@@ -3082,9 +3088,11 @@ function drawIntroSpatial(view) {
     const now = performance.now();
     if(arWelcomeShowcaseActive){
         arWelcomeClock.tick(now,session?.visibilityState==='visible');
-        if(arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || !window.matchMedia('(prefers-reduced-motion: reduce)').matches)introBoardTextureDirty=true;
+        if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS)introBoardTextureDirty=true;
     }
-    if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS && introTextureFrameToken !== introFrameToken))) {
+    const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
+    const textureInterval=limActivation?.active || textIsTyping ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
         introTextureUploadedAt = now;
