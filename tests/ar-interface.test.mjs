@@ -1232,7 +1232,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
     assert.match(source, /boardPosition: \[0, 0\.82, -2\.8\]/);
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
-    assert.match(source, /label\.height = 1080/);
+    assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
+    assert.match(source, /if\(label\.height!==height\)label\.height=height/);
     assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);
     assert.match(source, /for \(const \[lineIndex, line\] of visibleLines\.entries\(\)/);
@@ -1245,7 +1246,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /label\.height = 220/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.match(source, /radius: \.96/);
-    assert.match(source, /introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS/);
+    assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 96/);
+    assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /plant: \{ x: 34,[\s\S]*plant2: \{ x: 66,[\s\S]*note: \{ x: 50,/);
     assert.match(source, /place\.dataset\.aimX = String\(stageAim\.x\)/);

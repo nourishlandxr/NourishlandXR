@@ -34,5 +34,18 @@ test('Phase 6 panel recovery keeps the southwest pose until it leaves the safe f
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.match(demoSource, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
-    assert.match(demoSource, /introTextureUploadedAt >= DEMO_TEXT_TEXTURE_INTERVAL_MS/);
+    assert.match(demoSource, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 96/);
+    assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
+    assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
+    assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);
+    assert.match(demoSource, /if\(label\.height!==height\)label\.height=height/);
+    assert.match(demoSource, /arWelcomeClock\.elapsed<AR_WELCOME_SETTLED_MS/);
+});
+
+test('phone screen selection activates LIM once and keeps the hidden DOM layer idle in immersive AR', () => {
+    assert.match(demoSource, /event\.inputSource\?\.targetRayMode==='screen' && arWelcomeShowcaseActive/);
+    assert.match(demoSource, /activateLimCell\(node\.key\)/);
+    assert.match(demoSource, /event\.detail===0\?'assistive-click':'click'/);
+    assert.match(demoSource, /if\(simulatedMode && now-last>=50/);
+    assert.match(demoSource, /if\(simulatedMode && arWelcomeLayer\)arWelcomeShowcaseFrame=limRequestFrame\(frame\)/);
 });

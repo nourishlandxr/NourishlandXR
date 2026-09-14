@@ -200,10 +200,10 @@ const DEMO_ORB_MATERIALS = Object.freeze({
         style: '--demo-orb-size:78px;--demo-orb-light:#c3e0b1;--demo-orb-mid:#427d4f;--demo-orb-dark:#112f1e;--demo-orb-core-light:#dcefc5;--demo-orb-core-mid:#5a9a5b;--demo-orb-core-dark:#1d5331'
     },
     green: {
-        shell: [0.34, 0.72, 0.28],
-        core: [0.75, 0.95, 0.42],
+        shell: [0.58, 0.38, 0.12],
+        core: [0.87, 0.68, 0.25],
         radius: 0.074,
-        style: '--demo-orb-size:62px;--demo-orb-light:#efffd8;--demo-orb-mid:#79ad65;--demo-orb-dark:#315d3c;--demo-orb-core-light:#f2ffd9;--demo-orb-core-mid:#b9e66f;--demo-orb-core-dark:#3f7f38'
+        style: '--demo-orb-size:62px;--demo-orb-light:#fff0b5;--demo-orb-mid:#b47a27;--demo-orb-dark:#5b3612;--demo-orb-core-light:#fff5c9;--demo-orb-core-mid:#d6a83c;--demo-orb-core-dark:#76501b'
     }
 });
 const BIOMAP_CATEGORIES = Object.freeze({
@@ -226,7 +226,7 @@ const DEMO_CONTENT = Object.freeze({
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: {
         title: 'Food Forest Totem',
-        accent: '#75c9b6',
+        accent: '#8fa56a',
         bubbles: [
             'FOOD FOREST AREA',
             'Pigeon Pea + Moringa guild',
@@ -237,7 +237,7 @@ const DEMO_CONTENT = Object.freeze({
     },
     zoneTwo: {
         title: 'Kitchen Garden Totem',
-        accent: '#b7e895',
+        accent: '#b58a5e',
         bubbles: [
             'KITCHEN GARDEN AREA',
             'Seed-to-table plants',
@@ -446,11 +446,11 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     const messages = {
         plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
-        note: ['Two living profiles', 'Both Plants now carry their own spatial knowledge.']
+        note: ['Add one observation', 'Both plants now carry their own knowledge. Add a Note beside them to remember what you saw in this place.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
-        if (choice === 'continue') armDemoPlacement(nextStage);
+        if (choice === 'continue') armDemoPlacement(nextStage,{explained:nextStage==='note'});
     });
 }
 
@@ -1127,9 +1127,11 @@ const DEMO_ORIENTATION_STEPS = [
         'Welcome to NourishlandXR. Take a moment to look around and settle into your surroundings. You can explore at your own pace.',
         'The green panel in front guides your journey. The charcoal Control panel on your left stays nearby for plant details and useful actions.'
     ]},
-    {title:'Learn to learn',button:'Explore a plant',paragraphs:[
-        'Try Food forest or Climate around this welcome panel. Select a cell to read its story in Your plant companion. Select it again to fold the branch; the hollow cell lets you reopen it.',
-        'Take your time with the living cells. In AR, the green panel stays in place: moving closer makes its cells appear larger. Your companion stays near your left waist, facing you. Hide clears your view.'
+    {title:'Choose your own starting point',button:'Continue to a plant',paragraphs:[
+        'The Learning Information Mesh is optional. Follow any cell that interests you, or continue when you are ready to meet a plant.',
+        'Planning a small temperate food forest? Begin with Climate and Place, then Living Landscapes.',
+        'Wondering what will grow in a subtropical backyard? Connect Climate and Place with Plants and Life.',
+        'Regenerating a creek with native plants? Begin with Place and Observation, then Wildlife and Relationships.'
     ]},
     {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. We will start with a Pigeon Pea and explore its relationships, cultivation and uses.',
@@ -1144,7 +1146,7 @@ function runArWelcomeTutorial(index=0) {
         suppressSessionSelectUntil=performance.now()+700;
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Learn to learn','Explore'][index]});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Optional LIM','Explore'][index]});
 }
 
 function guidePlantConversion(record) {
@@ -1391,19 +1393,18 @@ function guideNoteConversion(record) {
     const pointer = appRoot?.querySelector('[data-tryit-place]');
     pointer?.setAttribute('hidden', '');
     pointer?.classList.remove('is-revealing', 'is-ready', 'is-pressed');
-    setGuide('Your Note is placed.');
+    record.demoExpanded = false;
+    record.revealTitle = true;
+    record.revealLines = 3;
+    refreshDemoRecord(record);
+    setGuide('Your observation is anchored beside the plants.');
     showIntroBoard(
-        'Add a Note',
-        'A Note is a soft, flat information bubble attached to its place. Use it for an observation, guidance, memory, or anything worth noticing again.',
-        'Continue',
+        'Your Note is in place',
+        'Notes keep a short observation, image, memory or task connected to the place where it matters. This example records a seasonal change beside the two plants.',
+        'Continue to Areas',
         () => {
             finishIntroBoard();
-            record.demoExpanded = false;
-            record.revealTitle = true;
-            record.revealLines = 3;
-            refreshDemoRecord(record);
-            setGuide('The Note remains at Creator Mode size and in its placed position. Tap it to preview another Note type, or press Continue.');
-            showSceneContinue('Continue', showSpatialGardenSummary);
+            showSpatialGardenSummary();
         }
     );
 }

@@ -29,8 +29,20 @@ test('V2 welcome gives exploration priority while preserving creator and AR entr
  assert.match(app.innerHTML,/openTemporaryArDemoWindow/);
  assert.match(app.innerHTML,/About Nourishland XR/);
  assert.match(app.innerHTML,/welcome-version-badge/);
+ assert.match(app.innerHTML,/v2-intro-sequence/);
+ assert.doesNotMatch(app.innerHTML,/v2-intro-grid/);
  assert.ok(app.innerHTML.indexOf('renderV1Explorer') < app.innerHTML.indexOf('renderDemoProjects'));
  assert.doesNotMatch(app.innerHTML,/requestSession|geolocation/);
+});
+
+test('welcome exploration steps share one fading stage without layout movement',()=>{
+ const styles=fs.readFileSync(path.join(root,'app/product-v2.css'),'utf8');
+ assert.match(styles,/\.v2-intro-sequence\{display:grid;grid-template-areas:"step";min-height:132px/);
+ assert.match(styles,/@keyframes v2-intro-step/);
+ assert.match(styles,/article:nth-child\(2\)\{animation-delay:6s\}/);
+ assert.match(styles,/article:nth-child\(3\)\{animation-delay:12s\}/);
+ assert.match(styles,/@keyframes v2-intro-step-reduced/);
+ assert.match(styles,/prefers-reduced-motion:reduce\)\{\.v2-intro-sequence article\{opacity:0;transform:none;animation:v2-intro-step-reduced 18s step-end infinite!important/);
 });
 
 test('About This Tool explains the concept without tutorial instructions', () => {

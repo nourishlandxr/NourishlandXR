@@ -24,9 +24,9 @@ test('the public LIM uses eight canonical parents while retaining all 93 source 
  for(const id of FACE_IDS)assert.equal(LIM_FACE_CELLS.filter(cell=>cell.id===id).length,1);
 });
 
-test('the 93 stable IDs and companion texts remain unchanged through face mapping',()=>{
+test('the 93 stable IDs remain unchanged through face mapping',()=>{
  const digest=crypto.createHash('sha256').update(JSON.stringify(LIM_CELLS.map(({id,content})=>[id,content]))).digest('hex');
- assert.equal(digest,'0a248673870ef12c09ec120be8ff3769a9347019668cb87b47a4dac5adf5da15');
+ assert.equal(digest,'723324bda562e47db6ce0d1f91ee7c17bf5f64e626af2bf3e28abc97a26d355d');
  const faceIds=new Set(FACE_IDS),reviewIds=new Set(LIM_MAPPING_REVIEW.map(item=>item.cellId));
  const counts={};
  for(const cell of LIM_CELLS){
@@ -47,6 +47,19 @@ test('the 93 stable IDs and companion texts remain unchanged through face mappin
  assert.equal(Object.values(LIM_FACE_MEMBERS).flat().length,93);
  assert.equal(LIM_CELLS.filter(cell=>cell.relatedFaceIds.length).length,64);
  assert.equal(LIM_CELLS.reduce((total,cell)=>total+cell.relatedFaceIds.length,0),84);
+});
+
+test('all 97 companion entries have topic-specific Phase 9 content',()=>{
+ assert.equal(LIM_ALL_CELLS.length,97);
+ for(const cell of LIM_ALL_CELLS){
+  assert.ok(cell.content.trim(),`${cell.id} has companion content`);
+  assert.doesNotMatch(cell.content,/as part of this living place\. Notice what changes between plants, locations and seasons/i,cell.id);
+  assert.doesNotMatch(cell.content,/has not been provided/i,cell.id);
+ }
+ assert.notEqual(LIM_CELL_BY_ID['lim-climate-subtropical-rainfall'].content,LIM_CELL_BY_ID['lim-climate-tropical-rainfall'].content);
+ assert.notEqual(LIM_CELL_BY_ID['lim-climate-tropical-growth'].content,LIM_CELL_BY_ID['lim-pin-observation-growth'].content);
+ assert.notEqual(LIM_CELL_BY_ID['lim-pin-place-learning'].content,LIM_CELL_BY_ID['lim-pin-note-learning'].content);
+ assert.notEqual(LIM_CELL_BY_ID['lim-food-forest-ecology-soil-life'].content,LIM_CELL_BY_ID['lim-plant-soil-soil-life'].content);
 });
 
 test('Phase 8 confirms all six editorial mappings and clears the review queue',()=>{
