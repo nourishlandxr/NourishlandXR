@@ -2,9 +2,10 @@ import { loadProjects, loadProjectSites, loadSitePlaces, loadPlantProfile } from
 import { loadGuide } from './fieldGuide.js';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
-import { html, key, safeImage, specimenKey, searchSpecimens, leafArtwork, productHeader, bindProductHeader, visitorNavigation, arReadiness } from '../services/productExperience.js';
+import { html, key, safeImage, specimenKey, searchSpecimens, productHeader, bindProductHeader, visitorNavigation, arReadiness } from '../services/productExperience.js';
 import { detectWebXRSessionSupport } from '../services/webxrSession.js';
 import { startArNote } from '../services/arNote.js';
+import { physicalMarkerLabel, physicalMarkerSvg } from '../services/physicalAnchor.js';
 
 let generation = 0;
 let reader = null;
@@ -15,6 +16,67 @@ const areaKey = plant => JSON.stringify([plant.siteId,plant.placeId]);
 const opening = () => `<div class="screen v2-screen">${productHeader()}<p class="v2-eyebrow">Nourishland XR</p><h1>Opening this place…</h1><p class="v2-status" role="status">Loading published knowledge</p></div>`;
 const header = (project,active) => `${productHeader()}<div class="v2-context"><button data-all-places>All places</button><span> / ${html(project.name)}</span></div>${visitorNavigation(active)}`;
 const card = plant => `<button class="v2-card" data-specimen="${html(specimenKey(plant))}">${safeImage(plant.image || plant.photo) ? `<img class="v2-card-image" src="${html(safeImage(plant.image || plant.photo))}" alt="" loading="lazy" />` : '<span class="v2-card-glyph" aria-hidden="true">↟</span>'}<strong>${html(plant.commonName || 'Plant')}</strong>${plant.scientificName ? `<em>${html(plant.scientificName)}</em>` : ''}<small>${html(plant.placeName || 'Location within this place not recorded')}${plant.layer ? ` · ${html(plant.layer)}` : ''}</small></button>`;
+
+const visitorProjectState = project => {
+    const state = ['under_construction','demo','ready'].includes(project?.projectStatus)
+        ? project.projectStatus
+        : project?.visibility === 'draft' ? 'under_construction' : 'ready';
+    return {
+        state,
+        label: ({ under_construction: 'In development', demo: 'Demo experience', ready: 'Ready to explore' })[state]
+    };
+};
+const hasPublishedAreaAnchor = marker => {
+    const markerId = Number(marker?.physicalAnchor?.markerId);
+    const family = marker?.physicalAnchor?.markerFamily;
+    return marker?.physicalAnchor?.enabled === true
+        && (!family || family === 'aruco-original-5x5')
+        && Number.isInteger(markerId) && markerId >= 1 && markerId <= 10;
+};
+
+export function visitorPlaceWelcomeModel({ project = {}, plants = [], siteGroups = [] } = {}) {
+    const areas = siteGroups.flatMap(siteGroup => (siteGroup.placeGroups || []).map(placeGroup => ({
+        siteId: siteGroup.site?.id || '',
+        siteName: siteGroup.site?.name || '',
+        placeId: placeGroup.place?.id || '',
+        name: placeGroup.place?.name || 'Area',
+        count: (placeGroup.plants || []).length,
+        totems: placeGroup.totems || []
+    })));
+    const anchoredArea = areas.find(area => area.totems.some(hasPublishedAreaAnchor));
+    const entranceArea = anchoredArea || areas.find(area => area.totems.length) || areas.find(area => area.count) || areas[0] || null;
+    const entranceMarker = entranceArea?.totems.find(hasPublishedAreaAnchor) || null;
+    const markerId = entranceMarker ? Number(entranceMarker.physicalAnchor.markerId) : null;
+    return {
+        project,
+        introduction: project.description || `Welcome to ${project.name || 'this place'}. Explore its plants, Areas and the relationships growing between them.`,
+        status: visitorProjectState(project),
+        areaCount: areas.length,
+        plantCount: plants.length,
+        anchoredAreaCount: areas.filter(area => area.totems.some(hasPublishedAreaAnchor)).length,
+        areas: areas.slice(0, 4),
+        featuredPlants: plants.slice(0, 3),
+        entrance: entranceArea ? {
+            ...entranceArea,
+            markerId,
+            markerLabel: markerId ? physicalMarkerLabel(markerId) : '',
+            markerSvg: markerId ? physicalMarkerSvg(markerId) : ''
+        } : null
+    };
+}
+
+export function visitorPlaceWelcomeMarkup(guide) {
+    const model = visitorPlaceWelcomeModel(guide);
+    const { project, status, entrance } = model;
+    const cover = safeImage(project.coverImage)
+        ? `<img class="v2-place-welcome-cover" src="${html(safeImage(project.coverImage))}" alt="${html(project.name)}" />`
+        : '';
+    const markerPanel = entrance?.markerSvg
+        ? `<aside class="v2-place-entry-marker" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-code">${entrance.markerSvg}</div><div><p class="v2-eyebrow">Start in ${html(entrance.name)}</p><h2 id="placeEntryMarkerTitle">Scan ${html(entrance.markerLabel)} to start</h2><p>Find this ArUco marker at the place. Scanning it connects the AR experience to ${html(entrance.name)}.</p><small>${html(entrance.siteName || project.name)} · Area entrance</small><button class="v2-primary" type="button" data-visitor-view="ar">Prepare AR</button></div></aside>`
+        : `<aside class="v2-place-entry-marker is-pending" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-placeholder" aria-hidden="true"><span>⌖</span></div><div><p class="v2-eyebrow">Suggested beginning</p><h2 id="placeEntryMarkerTitle">${html(entrance?.name || 'Explore this place')}</h2><p>${entrance ? `This Area is the suggested starting point. Its physical ArUco entrance marker has not been published yet.` : 'An Area entrance is still being prepared for this place.'}</p><button class="v2-secondary" type="button" data-visitor-view="plants">Browse without a marker</button></div></aside>`;
+    const areaTeasers = model.areas.map(area => `<button type="button" class="v2-place-area-teaser" data-area-filter="${html(JSON.stringify([area.siteId,area.placeId]))}"><span>${html(area.name)}</span><small>${area.count} ${area.count === 1 ? 'plant' : 'plants'}</small></button>`).join('');
+    return `<section class="v2-place-welcome-board"><div class="v2-place-welcome-intro"><p class="v2-eyebrow">Welcome to</p><h1>${html(project.name)}</h1><p class="v2-lead">${html(model.introduction)}</p><p class="v2-place-state is-${html(status.state)}"><span aria-hidden="true"></span>Current state <strong>${html(status.label)}</strong></p>${cover}</div>${markerPanel}</section><section class="v2-place-teaser" aria-labelledby="placeTeaserTitle"><header><div><p class="v2-eyebrow">A glimpse of this place</p><h2 id="placeTeaserTitle">What you may discover</h2><p>Begin with an Area, meet a few plants and follow their connected knowledge.</p></div><dl><div><dt>Areas</dt><dd>${model.areaCount}</dd></div><div><dt>Plants</dt><dd>${model.plantCount}</dd></div><div><dt>AR entrances</dt><dd>${model.anchoredAreaCount}</dd></div></dl></header>${areaTeasers ? `<div class="v2-place-area-list" aria-label="Areas in this place">${areaTeasers}</div>` : ''}<div class="v2-grid">${model.featuredPlants.map(card).join('') || '<p class="v2-notice">Plant knowledge is still being prepared for this place.</p>'}</div><div class="v2-actions"><button class="v2-secondary" type="button" data-visitor-view="plants">Browse all plants</button><button class="v2-secondary" type="button" data-visitor-view="map">See the Areas</button></div></section>`;
+}
 
 function bind(root, projectId) {
     bindProductHeader(root);
@@ -64,7 +126,7 @@ export async function renderVisitorExperience(app, view='places', projectId='', 
         rememberPlace(project);
         const places = siteGroups.flatMap(g=>g.placeGroups.map(p=>({...p.place,siteId:g.site.id,count:p.plants.length})));
         if (view === 'place') {
-            app.innerHTML=`<div class="screen v2-screen">${header(project,'place')}<section class="v2-hero"><div><p class="v2-eyebrow">Welcome to</p><h1>${html(project.name)}</h1><p class="v2-lead">${html(project.description || 'Look closer. Every plant has a story, and every story belongs to a place.')}</p><div class="v2-actions"><button class="v2-primary" data-visitor-view="plants">Discover ${plants.length || ''} plants</button><button class="v2-secondary" data-visitor-view="ar">Explore in AR</button></div><p class="v2-reading-label">The field guide works without camera or location access.</p></div>${safeImage(project.coverImage)?`<img class="v2-map-image" src="${html(safeImage(project.coverImage))}" alt="${html(project.name)}"/>`:leafArtwork()}</section><section><p class="v2-eyebrow">Start with a plant</p><div class="v2-grid">${plants.slice(0,3).map(card).join('') || '<p class="v2-notice">Plant knowledge is still being prepared for this place.</p>'}</div></section></div>`;
+            app.innerHTML=`<div class="screen v2-screen v2-place-entry">${header(project,'place')}${visitorPlaceWelcomeMarkup(guide)}</div>`;
         } else if (view === 'plants') {
             const state=guideState.get(projectId) || {query:'',area:'',layer:'',limit:36};
             app.innerHTML=`<div class="screen v2-screen">${header(project,'plants')}<p class="v2-eyebrow">${html(project.name)} · Field guide</p><h1>Meet the plants.</h1><p class="v2-lead">Find a name, a forest layer, or a use. Open a plant to follow its knowledge.</p><form class="v2-search" role="search"><label>Search plants in this place<input type="search" name="query" value="${html(state.query)}" placeholder="Common name, scientific name or use" /></label><label>Where<select name="area"><option value="">Everywhere</option>${places.map(p=>`<option value="${html(JSON.stringify([p.siteId,p.id]))}" ${state.area===JSON.stringify([p.siteId,p.id])?'selected':''}>${html(p.name)}</option>`).join('')}</select></label><label>Forest layer<select name="layer"><option value="">All layers</option>${[...new Set(plants.map(p=>p.layer).filter(Boolean))].sort().map(l=>`<option ${l===state.layer?'selected':''}>${html(l)}</option>`).join('')}</select></label></form><p class="v2-result-count" role="status" aria-live="polite" data-result-count></p><div class="v2-grid" data-plant-results></div><div class="v2-actions"><button class="v2-secondary" data-more-plants>Show more plants</button></div><div class="v2-empty" data-empty hidden><h2>No plants match yet</h2><p>Try a shorter name or widen your filters.</p><button class="v2-secondary" data-clear-filter>Clear filters</button></div></div>`;
