@@ -29,7 +29,7 @@ test('long detail is paginated without dropping words, including unbroken text',
 
 test('waist companion follows translation but remains reachable when looking left',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
-    const first=infoPanelPose(matrix); assert.equal(first.center.y,1.05); assert.ok(first.center.x<0);
+    const first=infoPanelPose(matrix); assert.ok(Math.abs(first.center.y-.97)<1e-10); assert.ok(first.center.x<0);
     assert.ok(Math.hypot(first.center.x,first.center.y-1.6,first.center.z)<1.1);
     const turned=[0,0,1,0,0,1,0,0,-1,0,0,0,2,1.6,3,1];
     const next=infoPanelPose(turned,first.anchorHeading);
@@ -47,6 +47,9 @@ test('Control panel tabs and tools share non-overlapping hit rectangles with gat
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
     assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Learning');
     assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
+    const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});
+    assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:continue','Utility:recenter']);
+    for(const [i,a] of utilities.entries())for(const b of utilities.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
 });
 
 test('Side panel faces elevated and moving eyes; pitched controls use the rendered axes',()=>{

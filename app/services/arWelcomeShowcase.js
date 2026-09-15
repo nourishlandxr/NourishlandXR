@@ -256,6 +256,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  }
  ctx.restore();
  const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden);
+ if(options.drawCells===false){ctx.restore();return frames;}
  for(const frame of frames){
   const hue=[226,34,105,56,17,273,157,198][frame.corner];
  // LIM cells are drawn directly on their reserved lattice positions. There

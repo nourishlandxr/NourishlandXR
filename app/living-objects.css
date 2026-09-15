@@ -68,7 +68,7 @@
 .nlxr-info-panel.is-hidden { padding:5px; }
 @media(max-width:600px) { .nlxr-info-panel { width:min(310px,calc(100vw - 20px)); max-height:40vh; padding:0 12px 10px; } .nlxr-info-panel.is-hidden { width:auto; padding:5px; } }
 
-.nlxr-info-panel { display:grid; grid-template-columns:104px minmax(0,1fr); grid-template-areas:"rail header" "rail content" "rail actions" "rail page"; width:min(340px,calc(100vw - 20px)); padding:0 16px 10px 0; gap:0 16px; max-height:58vh; }
+.nlxr-info-panel { display:grid; grid-template-columns:104px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr) auto auto auto; grid-template-areas:"rail header" "rail content" "rail actions" "rail utilities" "rail page"; width:min(340px,calc(100vw - 20px)); height:min(58vh,560px); padding:0 16px 10px 0; gap:0 16px; overflow:hidden; }
 .nlxr-control-header { grid-area:header; }
 .nlxr-control-header h2 { padding-right:0; font-size:20px; }
 .nlxr-control-header>small { font-size:10px; letter-spacing:.08em; }
@@ -76,12 +76,14 @@
 .nlxr-info-panel .nlxr-control-tabs button { min-height:46px; text-align:left; padding:9px; }
 .nlxr-info-panel .nlxr-control-tabs [data-info-action=Hide] { margin-top:auto; }
 .nlxr-info-panel [role=tab][aria-selected=true] { border-bottom:1px solid #c8d3d536; border-left:3px solid #aaccc1; background:#9fbbb43b; }
-.nlxr-info-panel>[role=tabpanel] { grid-area:content; min-width:0; }
+.nlxr-info-panel>[role=tabpanel] { grid-area:content; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; }
 .nlxr-info-panel .nlxr-control-actions { grid-area:actions; margin:8px 0 0; gap:5px; }
 .nlxr-info-panel .nlxr-control-actions button { font-size:11px; padding:7px; }
+.nlxr-info-panel .nlxr-control-utilities { grid-area:utilities; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin:8px 0 0; padding-top:8px; border-top:1px solid #c1cfd22b; }
+.nlxr-info-panel .nlxr-control-utilities button { min-width:0; min-height:42px; padding:6px; font-size:10px; }
 .nlxr-info-panel .nlxr-control-page { grid-area:page; }
 .nlxr-info-panel.is-large-text .nlxr-info-body { font-size:18px; }
-.nlxr-info-panel.is-hidden { display:block; width:auto; padding:5px; }
+.nlxr-info-panel.is-hidden { display:block; width:auto; height:auto; padding:5px; overflow:visible; }
 .nlxr-info-panel.is-guided { border-color:#b7dcc8; box-shadow:0 0 0 2px #b7dcc838,0 14px 36px #0005; }
 .nlxr-pathway-context { grid-area:content; align-self:start; margin:0 0 12px; padding:9px 10px; border:1px solid #aaccc138; border-radius:8px; background:#aaccc10d; }
 .nlxr-pathway-context + [role=tabpanel] { margin-top:118px; }
@@ -93,7 +95,7 @@
 .nlxr-info-panel .nlxr-pathway-context nav { margin:7px 0 0; gap:5px; }
 .nlxr-info-panel .nlxr-pathway-context button { min-height:38px; font-size:10px; }
 .nlxr-info-panel .nlxr-pathway-context button:first-child { border-color:#aaccc16b; }
-@media(max-width:600px) { .nlxr-info-panel { grid-template-columns:78px minmax(0,1fr); gap:0 10px; padding-right:10px; max-height:43vh; } .nlxr-info-panel .nlxr-control-tabs { padding:10px 5px; } .nlxr-info-panel .nlxr-control-tabs button { font-size:11px; padding:7px; } }
+@media(max-width:600px) { .nlxr-info-panel { grid-template-columns:78px minmax(0,1fr); gap:0 10px; padding-right:10px; height:min(43vh,430px); } .nlxr-info-panel .nlxr-control-tabs { padding:10px 5px; } .nlxr-info-panel .nlxr-control-tabs button { font-size:11px; padding:7px; } }
 
 /* LIM selection feedback. The button footprint stays fixed while only the
    accent paint expands from its centre during deliberate activation. */

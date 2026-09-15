@@ -84,6 +84,7 @@ let arWelcomeClock=createWelcomePresentationClock();
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
+let limMeshVisible=true;
 let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
 let limPathwayState=idleLimPathwayState(), pathwayNotePlacementPending=false;
 let limPanelDiagnosticRecorded=false;
@@ -120,6 +121,7 @@ let demoHoldButtonCleanup = null;
 let demoViewportCleanup = null;
 let groundYEstimate = null;
 let demoTutorialStep = DEMO_TUTORIAL_STEPS.WELCOME;
+let demoOrientationStep=-1,demoPanelControlsCleanup=()=>{},demoPanelActionSignature='';
 const limDiagnostic = (stage, details = {}) => recordArDiagnostic(`LIM ${stage}`, details);
 function limDeviceContext(pointerType = 'unknown') {
     const viewport = demoViewportDimensions();
@@ -316,6 +318,7 @@ const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
     closeDemoKnowledge(true);
+    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';demoOrientationStep=-1;limMeshVisible=true;
     limInteractionCleanup();limSessionCleanup();limInteractionCleanup=()=>{};limSessionCleanup=()=>{};limActivation=null;limActivationSessionSuppressUntil=0;
     releaseArScreenRotation();
     hitTestSource?.cancel?.();
@@ -417,6 +420,58 @@ function setGuide(message) {
     if (guide) guide.textContent = message;
 }
 
+function demoControlIsVisible(selector) {
+    const element=appRoot?.querySelector(selector);
+    return Boolean(element && !element.hidden && !element.disabled);
+}
+
+function demoPanelActions() {
+    const actions=[];
+    if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue'});
+    if(demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
+    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Back'});
+    if(demoControlIsVisible('[data-tryit-skip]'))actions.push({id:'skip',label:'Skip'});
+    if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide LIM':'Show LIM'});
+    actions.push({id:'recenter',label:'Recenter panel'},{id:'close',label:'Close demo'});
+    return actions.slice(0,6);
+}
+
+function syncDemoPanelActions() {
+    if(!infoPanel)return;
+    const actions=demoPanelActions(),signature=JSON.stringify(actions);
+    if(signature===demoPanelActionSignature)return;
+    demoPanelActionSignature=signature;
+    infoPanel.setUtilityActions(actions);
+    appRoot?.querySelector('.tryit-demo')?.classList.add('has-companion-actions');
+}
+
+function setLimMeshVisible(visible) {
+    limMeshVisible=Boolean(visible);
+    introBoardTextureDirty=true;
+    paintWelcomeLayer(performance.now());
+    syncDemoPanelActions();
+}
+
+function handleDemoPanelAction(action) {
+    if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
+    if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
+    if(action==='back' && demoOrientationStep>0){runArWelcomeTutorial(demoOrientationStep-1);return;}
+    if(action==='skip'){skipDemoNarration?.();return;}
+    if(action==='lim-visibility'){setLimMeshVisible(!limMeshVisible);return;}
+    if(action==='recenter'){infoPanel?.recenter();return;}
+    if(action==='close')returnToWelcome();
+}
+
+function bindDemoPanelActions() {
+    demoPanelControlsCleanup();
+    const taskbar=appRoot?.querySelector('.tryit-demo-taskbar');
+    if(!taskbar)return;
+    const observer=new MutationObserver(()=>queueMicrotask(syncDemoPanelActions));
+    observer.observe(taskbar,{subtree:true,attributes:true,attributeFilter:['hidden','disabled'],childList:true,characterData:true});
+    demoPanelControlsCleanup=()=>observer.disconnect();
+    syncDemoPanelActions();
+}
+
 function setDemoTutorialStep(step) {
     const controls = demoTutorialControlsForStep(step);
     demoTutorialStep = controls.step;
@@ -429,6 +484,7 @@ function setDemoTutorialStep(step) {
     }
     const footer = appRoot?.querySelector('.tryit-demo-footer');
     if (footer) footer.hidden = !controls.showPersistentControls;
+    queueMicrotask(syncDemoPanelActions);
     return controls;
 }
 
@@ -895,6 +951,7 @@ function useSharedWelcomeBoard(visible) {
 }
 
 function welcomeFrames() {
+    if(!limMeshVisible)return [];
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells);
 }
 
@@ -965,7 +1022,7 @@ function activateLimCell(key) {
     return true;
 }
 function currentLimPointerCell() {
-    if(!arWelcomeShowcaseActive || !introWorldAnchor)return null;
+    if(!arWelcomeShowcaseActive || !limMeshVisible || !introWorldAnchor)return null;
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
     return hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
 }
@@ -1059,7 +1116,7 @@ function paintWelcomeLayer(now) {
     const activeProgress=limActivation?.progress||0;
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            hidden:limHiddenCells,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,
             drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''
         });
@@ -1067,7 +1124,7 @@ function paintWelcomeLayer(now) {
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
         if(button){
             const pathwayCurrent=(node.limId || node.label)===currentPathwayCellId() && ['active','paused'].includes(limPathwayState.status);
-            button.hidden=node.opacity<=.5 && !pathwayCurrent;
+            button.hidden=!limMeshVisible || (node.opacity<=.5 && !pathwayCurrent);
             const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
             button.style.setProperty('--lim-accent',node.accent||'#719b62');
             button.style.setProperty('--lim-progress',String(progress));
@@ -1089,7 +1146,7 @@ function showArWelcomeShowcase() {
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
-    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();arWelcomeClock=createWelcomePresentationClock();
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limMeshVisible=true;arWelcomeClock=createWelcomePresentationClock();
     limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
     if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
     const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
@@ -1106,6 +1163,7 @@ function showArWelcomeShowcase() {
     // pointer holds can reach the companion panel.
     bindLimSessionInteractions(session);
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
+    syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardTitle='NourishlandXR';introBoardBody='';introBoardVisibleBody='';
@@ -1195,6 +1253,8 @@ const DEMO_ORIENTATION_STEPS = [
 ];
 
 function runArWelcomeTutorial(index=0) {
+    demoOrientationStep=index;
+    syncDemoPanelActions();
     infoPanel?.setGuided(index===1);
     if(index===1)showLearningPathLanding();
     const step=DEMO_ORIENTATION_STEPS[index];
@@ -1205,7 +1265,7 @@ function runArWelcomeTutorial(index=0) {
             if(index===1)infoPanel?.setPathwayContext(null);
             runArWelcomeTutorial(index+1);return;
         }
-        finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
+        demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
     },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:(index+1)+' of 3 · '+['Settle in','Optional LIM','Explore'][index]});
 }
 
@@ -2658,7 +2718,7 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
-    infoPanel?.destroy(); infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction});
+    infoPanel?.destroy(); demoPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
@@ -2673,6 +2733,7 @@ function renderInterface(simulated) {
     skipButton.setAttribute('aria-label', 'Skip the current narration');
     const liveTagButton = appRoot.querySelector('[data-tryit-open-live-tag]');
     liveTagButton.setAttribute('aria-label', 'Open Plant Live Tag');
+    bindDemoPanelActions();
     appRoot.querySelector('[data-tryit-safety-help]')?.addEventListener('click', () => showArSafetyDialog(appRoot.querySelector('.tryit-demo')));
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
@@ -2970,7 +3031,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:arWelcomeIntroPending?null:drawIntroNoteContent,activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

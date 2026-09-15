@@ -716,6 +716,11 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.doesNotMatch(arSource, /button\.dataset\.arPlacedType/);
     assert.doesNotMatch(arSource, /One tap completes this Marker/);
     assert.match(arSource, /creator-ar-control-dock/);
+    assert.match(arSource, /function creatorPanelActions\(\)/);
+    assert.match(arSource, /onUtilityAction:handleCreatorPanelAction/);
+    assert.match(arSource, /id:'plant',label:'Add Plant'/);
+    assert.match(arSource, /id:'recenter-area',label:'Recenter Area'/);
+    assert.match(styles, /\.creator-ar-overlay\.has-companion-actions \.creator-ar-taskbar \{ display:none !important; \}/);
     assert.doesNotMatch(arSource, /data-ar-import-marker/);
     assert.doesNotMatch(arSource, /Import Marker \/ Plant/);
     assert.doesNotMatch(arSource, /data-ar-toggle-structural/);
@@ -1212,6 +1217,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introTextureFrameToken !== introFrameToken/);
     assert.match(source, /introFrameToken = _time/);
     assert.match(styles, /\.tryit-demo\.uses-webgl-controls \.tryit-demo-footer \{ display:none !important; \}/);
+    assert.match(styles, /\.tryit-demo\.has-companion-actions \.tryit-demo-footer \{ display:none !important; \}/);
+    assert.match(source, /function demoPanelActions\(\)/);
+    assert.match(source, /onUtilityAction:handleDemoPanelAction/);
+    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide LIM':'Show LIM'/);
+    assert.match(source, /id:'recenter',label:'Recenter panel'/);
+    assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Back'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
     const immersiveSelectStartHandler = source.slice(

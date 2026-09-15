@@ -130,6 +130,7 @@ let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
 let totemCardsRenderer = null;
 let infoPanel = null;
+let creatorPanelControlsCleanup=()=>{},creatorPanelActionSignature='';
 let pimHold = null;
 const handPimHold = createPimHold({activate:activateSpatialPimTarget,progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}});
 function showCreatorInfo(record, path) { infoPanel?.select(record, creatorKnowledgeDocument(record), path); }
@@ -1204,6 +1205,7 @@ function updateReadyPlacementControl() {
     if (guideLabel && readyPlacementType) guideLabel.textContent = `Place ${readyPlacementLabel(readyPlacementType)}`;
     updateNotePlacementPreview();
     updateContextToolbar();
+    queueMicrotask(syncCreatorPanelActions);
 }
 
 function updateNotePlacementPreview() {
@@ -1534,6 +1536,56 @@ function updateInteractionControls() {
     overlayRoot?.classList.toggle('is-hold-mode', interactionMode === 'grab');
     overlayRoot?.classList.toggle('is-select-mode', interactionMode === 'select');
     updateControllerHud();
+    queueMicrotask(syncCreatorPanelActions);
+}
+
+function creatorPanelActions() {
+    if(!overlayRoot)return [];
+    const placement=Boolean(readyPlacementType);
+    if(placement)return [
+        {id:'place',label:`Place ${readyPlacementLabel(readyPlacementType)}`},
+        {id:'cancel-place',label:'Cancel placement'},
+        {id:'inspect',label:interactionMode==='select'?'Inspecting':'Inspect'},
+        {id:'knowledge',label:'Plant knowledge'},
+        {id:'workspace',label:'Project workspace'},
+        {id:'exit',label:'Exit AR'}
+    ];
+    const actions=[
+        {id:'plant',label:'Add Plant'},
+        {id:'note',label:'Add Note'},
+        {id:'totem',label:'Totem tools'},
+        {id:'inspect',label:interactionMode==='select'?'Inspecting':'Inspect'},
+        {id:'knowledge',label:'Plant knowledge'},
+        {id:'workspace',label:'Project workspace'}
+    ];
+    const recenter=overlayRoot.querySelector('[data-ar-recenter-area]');
+    if(recenter && !recenter.hidden)actions.push({id:'recenter-area',label:'Recenter Area',disabled:recenter.disabled});
+    actions.push({id:'exit',label:'Exit AR'});
+    return actions.slice(0,8);
+}
+
+function syncCreatorPanelActions() {
+    if(!infoPanel || !overlayRoot)return;
+    const actions=creatorPanelActions(),signature=JSON.stringify(actions);
+    if(signature===creatorPanelActionSignature)return;
+    creatorPanelActionSignature=signature;
+    infoPanel.setUtilityActions(actions);
+    overlayRoot.classList.add('has-companion-actions');
+}
+
+function handleCreatorPanelAction(action) {
+    const selectors={plant:'[data-ar-add-plant]',note:'[data-ar-add-note]',totem:'[data-ar-add-special]',inspect:'[data-ar-select-mode]',knowledge:'[data-ar-knowledge-open]',workspace:'[data-ar-web-return]',place:'[data-ar-confirm-place]','cancel-place':'[data-ar-cancel-place]','recenter-area':'[data-ar-recenter-area]',exit:'[data-ar-exit-session]'};
+    overlayRoot?.querySelector(selectors[action])?.click();
+}
+
+function bindCreatorPanelActions() {
+    creatorPanelControlsCleanup();
+    const dock=overlayRoot?.querySelector('.creator-ar-control-dock');
+    if(!dock)return;
+    const observer=new MutationObserver(()=>queueMicrotask(syncCreatorPanelActions));
+    observer.observe(dock,{subtree:true,attributes:true,attributeFilter:['hidden','disabled','aria-pressed'],childList:true,characterData:true});
+    creatorPanelControlsCleanup=()=>observer.disconnect();
+    syncCreatorPanelActions();
 }
 
 function activateQuestHeadsetFromInput(source) {
@@ -5512,7 +5564,9 @@ function createOverlay() {
     updateInteractionControls();
     document.body.append(overlayRoot);
     infoPanel?.destroy();
-    infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true})});
+    creatorPanelActionSignature='';
+    infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+    bindCreatorPanelActions();
     bindCreatorViewportReflow();
     updateLocationNote();
     updatePlantEditorPreviewBanner();
@@ -5520,6 +5574,7 @@ function createOverlay() {
 
 function cleanup() {
     closeCreatorKnowledge({force:true});
+    creatorPanelControlsCleanup();creatorPanelControlsCleanup=()=>{};creatorPanelActionSignature='';
     creatorViewportCleanup?.();
     releaseArScreenRotation();
     clearControllerMarkerPress();

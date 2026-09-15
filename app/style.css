@@ -721,6 +721,8 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .tryit-guided-choice.is-welcome-board p { width:100%; max-width:none; color:rgba(255,255,255,.94); font-size:clamp(1.08rem,min(3.2vw,2.55vh),1.55rem); font-weight:580; line-height:1.38; text-wrap:pretty; }
 .tryit-demo.is-immersive .tryit-guided-choice.is-welcome-board { display:none; }
 .tryit-demo.uses-webgl-controls .tryit-demo-footer { display:none !important; }
+.tryit-demo.has-companion-actions .tryit-demo-footer { display:none !important; }
+.creator-ar-overlay.has-companion-actions .creator-ar-taskbar { display:none !important; }
 .tryit-demo.is-immersive > .tryit-place.creator-ar-placement-guide { z-index:12021; }
 .tryit-intro-continue[hidden] { display:none; }
 @media (max-width:620px) {

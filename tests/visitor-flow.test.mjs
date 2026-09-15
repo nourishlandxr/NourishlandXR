@@ -37,12 +37,14 @@ test('V2 welcome gives exploration priority while preserving creator and AR entr
 
 test('welcome exploration steps share one fading stage without layout movement',()=>{
  const styles=fs.readFileSync(path.join(root,'app/product-v2.css'),'utf8');
+ const launch=fs.readFileSync(path.join(root,'app/screens/launch.js'),'utf8');
  assert.match(styles,/\.v2-intro-sequence\{display:grid;grid-template-areas:"step";min-height:132px/);
- assert.match(styles,/@keyframes v2-intro-step/);
- assert.match(styles,/article:nth-child\(2\)\{animation-delay:6s\}/);
- assert.match(styles,/article:nth-child\(3\)\{animation-delay:12s\}/);
- assert.match(styles,/@keyframes v2-intro-step-reduced/);
- assert.match(styles,/prefers-reduced-motion:reduce\)\{\.v2-intro-sequence article\{opacity:0;transform:none;animation:v2-intro-step-reduced 18s step-end infinite!important/);
+ assert.match(styles,/\.v2-intro-sequence article\.is-active\{opacity:1;transform:translateY\(0\);pointer-events:auto/);
+ assert.match(styles,/prefers-reduced-motion:reduce\)\{\.v2-intro-sequence article\{transform:none;transition:none!important/);
+ assert.match(launch,/function mountLandingSteps\(root\)/);
+ assert.match(launch,/step\.classList\.toggle\('is-active',active\)/);
+ assert.match(launch,/step\.setAttribute\('aria-hidden',String\(!active\)\)/);
+ assert.match(launch,/timer=setTimeout\(\(\)=>\{show\(index\+1\);schedule\(\);\},6000\)/);
 });
 
 test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{

@@ -56,7 +56,7 @@ try{
  const shadowMaterial=keep(new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv;void main(){vec2 p=(vUv-.5)*vec2(5.,8.);float a=exp(-dot(p,p))*.24;gl_FragColor=vec4(.12,.18,.10,a);}'}));
  const shadow=new THREE.Mesh(keep(new THREE.PlaneGeometry(4.8,2)),shadowMaterial);shadow.rotation.x=-Math.PI/2;shadow.position.set(0,-2.08,.15);scene.add(shadow);
 
- function resize(){const width=host.clientWidth,height=host.clientHeight;if(!width||!height)return;renderer.setSize(width,height,false);camera.aspect=width/height;camera.position.set(0,.12,Math.max(6.8,2.52/(Math.tan(Math.PI/10)*Math.min(1,camera.aspect))));camera.lookAt(0,0,0);camera.updateProjectionMatrix();requestDraw();}
+ function resize(){const width=host.clientWidth,height=host.clientHeight;if(!width||!height)return;renderer.setSize(width,height,false);camera.aspect=width/height;camera.position.set(0,.12,Math.max(5.9,2.18/(Math.tan(Math.PI/10)*Math.min(1,camera.aspect))));camera.lookAt(0,0,0);camera.updateProjectionMatrix();requestDraw();}
  resizeObserver=new ResizeObserver(resize);resizeObserver.observe(host);
  intersectionObserver=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;if(visible){previous=0;requestDraw();}else{cancelAnimationFrame(frame);frame=0;}},{threshold:0});intersectionObserver.observe(host);
  hero.dataset.ready='true';setMotion();resize();readScroll();
@@ -66,7 +66,7 @@ function draw(now){
  frame=0;if(!visible||document.hidden||hero.dataset.ready!=='true')return;
  const dt=previous?Math.min((now-previous)/1000,.05):.016;previous=now;
  const live=!reduced;
- if(live){time+=dt;if(!gesture){roll+=dt*.24;yaw+=velocity*dt;velocity=decayWheelVelocity(velocity,dt,false);pitch+=pitchVelocity*dt;pitchVelocity=decayWheelVelocity(pitchVelocity,dt,false);}}
+ if(live){time+=dt;if(!gesture){roll+=dt*.14;yaw+=velocity*dt;velocity=decayWheelVelocity(velocity,dt,false);pitch+=pitchVelocity*dt;pitchVelocity=decayWheelVelocity(pitchVelocity,dt,false);}}
  const scrollDelta=live?scroll-scrollOrigin:0;
  const targetZ=roll+scrollDelta;
  const targetY=yaw+(live?pointerX*.12+Math.sin(time*.35)*.08+Math.sin(scrollDelta)*.36:0);
@@ -85,11 +85,13 @@ listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
+ if(event.pointerType==='touch')return;
  if(gesture&&event.pointerId===gesture.id){const now=performance.now(),dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=event.clientX-gesture.lastX,stepY=event.clientY-gesture.lastY;yaw+=stepX*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=stepX*.004;pitch+=stepY*WHEEL_DRAG_RADIANS_PER_PIXEL*.7;gesture.lastX=event.clientX;gesture.lastY=event.clientY;gesture.lastAt=now;gesture.samples.push({x:event.clientX,y:event.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y');requestDraw();}return;}
  if(event.pointerType==='mouse'){const bounds=host.getBoundingClientRect();pointerX=(event.clientX-bounds.left)/bounds.width*2-1;pointerY=(event.clientY-bounds.top)/bounds.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',event=>{pointerX=0;pointerY=0;if(gesture&&event.pointerId===gesture.id&&!host.hasPointerCapture(event.pointerId))endGesture({type:'pointercancel',timeStamp:event.timeStamp});requestDraw();});
 listen(host,'pointerdown',event=>{
+ if(event.pointerType==='touch')return;
  if(event.pointerType==='mouse' && event.button!==0)return;
  if(gesture)return;
  event.preventDefault?.();host.setPointerCapture?.(event.pointerId);
@@ -103,8 +105,9 @@ function endGesture(event){
  else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}
  gesture=null;requestDraw();
 }
-listen(host,'pointerup',endGesture);listen(host,'pointercancel',endGesture);listen(host,'lostpointercapture',endGesture);
-listen(window,'pointerup',endGesture);listen(window,'pointercancel',endGesture);
+const endPointerGesture=event=>{if(!gesture?.touch)endGesture(event);};
+listen(host,'pointerup',endPointerGesture);listen(host,'pointercancel',endPointerGesture);listen(host,'lostpointercapture',endPointerGesture);
+listen(window,'pointerup',endPointerGesture);listen(window,'pointercancel',endPointerGesture);
 
 const touchPoint=event=>event?.changedTouches?.[0]||event?.touches?.[0];
 listen(host,'touchstart',event=>{const point=touchPoint(event);if(!point||gesture)return;event.preventDefault();const now=performance.now();gesture={lastX:point.clientX,lastY:point.clientY,lastAt:now,id:point.identifier,x:point.clientX,y:point.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:point.clientX,y:point.clientY,at:now}],touch:true};requestDraw();},{passive:false});
