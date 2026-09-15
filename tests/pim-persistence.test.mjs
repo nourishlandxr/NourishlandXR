@@ -136,12 +136,17 @@ test('new projects seed a complete Pigeon Pea template in Home', async () => {
     const home = places.find(place => place.systemKey === 'home');
     assert.ok(home);
     const markers = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers`)).json();
+    assert.equal(markers.filter(marker => marker.name === 'Pigeon Pea').length, 1);
     const pigeonPea = markers.find(marker => marker.name === 'Pigeon Pea');
     assert.ok(pigeonPea);
+    assert.equal(pigeonPea.type, 'plant');
+    assert.equal(pigeonPea.plantId, 'cajanus-cajan');
     const profile = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers/${pigeonPea.id}/plant-profile`)).json();
     assert.equal(profile.template_id, 'pigeon-pea-reference');
     assert.equal(profile.spm_enabled, true);
     assert.equal(profile.pim_document.nodes.length, PIGEON_PEA_PIM.nodes.length);
+    const reopenedMarkers = await (await fetch(`${baseUrl}/api/projects/${project.id}/sites/${sites[0].id}/places/${home.id}/markers`)).json();
+    assert.equal(reopenedMarkers.filter(marker => marker.template_id === 'pigeon-pea-reference').length, 1);
 });
 
 test('new projects fall back to Main Location when site suggestions are unusable', async () => {

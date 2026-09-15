@@ -450,6 +450,18 @@ window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContex
     return openProjectEntry(app, projectId, markerId, returnToAr, returnContext, initialState).catch(error => window.alert(error.message));
 };
 window.openProjectPim = (projectId, markerId, returnToAr = false, returnContext = '') => window.openProjectEntry(projectId, markerId, returnToAr, returnContext, { workspace: 'pim' });
+// Plant Editor preview opens a focused AR view of the plant being
+// edited.  Keep the Area and site IDs explicit so the preview resolves the
+// same saved spatial context as the editor without creating a new placement.
+window.startPlantEditorPreview = (projectId, siteId, areaId, markerId) => window.startArMode(
+    projectId,
+    areaId,
+    '',
+    '',
+    markerId,
+    `plant-editor-preview:${markerId}`,
+    siteId
+);
 window.saveProjectEntryChanges = saveProjectEntryChanges;
 window.deleteProjectEntry = (projectId, markerId) => deleteProjectEntry(projectId, markerId).catch(error => window.alert(`Delete failed: ${error.message}`));
 window.renderFirstSteps = () => renderFirstSteps(app);

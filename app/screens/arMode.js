@@ -78,6 +78,15 @@ let checkpointSessionOrigin = null;
 let interactionMode = 'neutral';
 let suspendedInteractionMode = '';
 let sessionMarkers = [];
+// The seeded Pigeon Pea is intentionally unplaced until an explorer chooses a
+// saved spatial position.  Keep its one-session preview separate from saved
+// anchors so a fabricated session-local pose is never persisted as a world
+// location.
+let defaultPigeonPeaPreviewId = '';
+// A Plant Editor preview is a session-only, focused view of one plant.  The
+// context token is deliberately separate from `web-marker:` so ordinary AR
+// editing and its return behavior remain unchanged.
+let plantEditorPreviewId = '';
 let dragState = null;
 let markerHoldGesture = null;
 let readyPlacementType = '';
@@ -151,6 +160,12 @@ let locationNoteVisible = false;
 let latestNotePlacementPoint = null;
 let creatorViewportCleanup = null;
 const hiddenStructuralMarkerIds = new Set();
+
+const PLANT_EDITOR_PREVIEW_PREFIX = 'plant-editor-preview:';
+const isPlantEditorPreviewContext = (context = arReturnContext) => String(context || '').startsWith(PLANT_EDITOR_PREVIEW_PREFIX);
+const plantEditorPreviewMarkerId = (context = arReturnContext) => isPlantEditorPreviewContext(context)
+    ? String(context).slice(PLANT_EDITOR_PREVIEW_PREFIX.length)
+    : '';
 
 const markerLabel = type => ({ plant: 'plant live tag', sub_checkpoint: 'marker', note: 'note', intro_checkpoint: 'trail entrance gateway', area_checkpoint: 'totem marker' })[type] || 'item';
 const markerIcon = type => ({ plant: '&#x1F331;', sub_checkpoint: '&#x2691;', note: '&#x270E;', intro_checkpoint: '&#x2316;', area_checkpoint: '&#x2316;' })[type] || '&#x25C6;';
@@ -456,6 +471,13 @@ function updateLocationNote() {
     if (area) area.textContent = `AREA · ${areaName}`;
 }
 
+function updatePlantEditorPreviewBanner() {
+    const banner = overlayRoot?.querySelector('[data-ar-plant-editor-banner]');
+    if (!banner) return;
+    const area = banner.querySelector('[data-ar-plant-editor-area]');
+    if (area) area.textContent = activeAreaName || DEFAULT_HOME_AREA_NAME;
+}
+
 function updateAreaLens() {
     const lens = overlayRoot?.querySelector('[data-ar-area-lens]');
     if (!lens) return;
@@ -514,6 +536,67 @@ async function openAreaLens() {
 
 function activeAreaMarkers() {
     return sessionMarkers.filter(record => record.areaId === activeAreaId);
+}
+
+function isDefaultPigeonPeaMarker(marker) {
+    return marker?.template_id === 'pigeon-pea-reference'
+        || marker?.plantId === 'cajanus-cajan'
+        || String(marker?.name || '').trim().toLocaleLowerCase() === 'pigeon pea';
+}
+
+function previewDefaultPigeonPeaInView() {
+    if (defaultPigeonPeaPreviewId || !latestViewerMatrix) return false;
+    const record = activeAreaMarkers().find(candidate => candidate?.unplaced === true
+        && !hasRenderableSpatialPosition(candidate)
+        && isDefaultPigeonPeaMarker(candidate.marker));
+    if (!record) return false;
+
+    // Reuse the normal placement ray and ground estimate used by the Add
+    // Plant flow.  This is only an in-session preview; the explorer can move
+    // and save it through the established placement controls.
+    const target = placementPoint('plant');
+    if (!target) return false;
+    const ground = currentGroundY();
+    const x = Number(target.x);
+    const y = Number.isFinite(ground) ? ground + .62 : Number(target.y);
+    const z = Number(target.z);
+    if (![x, y, z].every(Number.isFinite)) return false;
+    record.position = {
+        x,
+        y,
+        z
+    };
+    record.spawnedAt = performance.now();
+    defaultPigeonPeaPreviewId = record.marker.id;
+    renderSessionMarkers();
+    return true;
+}
+
+function previewPlantEditorMarkerInView() {
+    const markerId = plantEditorPreviewMarkerId();
+    if (!markerId || plantEditorPreviewId === markerId || !latestViewerMatrix) return false;
+    const record = activeAreaMarkers().find(candidate => candidate?.marker?.id === markerId);
+    if (!record || record.marker.type !== 'plant' || hasRenderableSpatialPosition(record)) {
+        if (record) plantEditorPreviewId = markerId;
+        return false;
+    }
+    // Use the same viewer ray and ground estimate as normal plant placement.
+    // The pose is session-only: previewing an unplaced plant must not create a
+    // saved anchor or alter the plant's Area association.
+    const target = placementPoint('plant');
+    if (!target) return false;
+    const ground = currentGroundY();
+    const position = {
+        x: Number(target.x),
+        y: Number.isFinite(ground) ? ground + .62 : Number(target.y),
+        z: Number(target.z)
+    };
+    if (!Object.values(position).every(Number.isFinite)) return false;
+    record.position = position;
+    record.spawnedAt = performance.now();
+    plantEditorPreviewId = markerId;
+    renderSessionMarkers();
+    return true;
 }
 
 function linkedTotemAreas(record) {
@@ -635,6 +718,8 @@ function activateArea(area) {
     const nextAreaId = area?.id || '';
     if (activeAreaId !== nextAreaId) {
         sessionMarkers = [];
+        defaultPigeonPeaPreviewId = '';
+        plantEditorPreviewId = '';
         locatedTotemRecord = null;
         activeCheckpointId = '';
         checkpointSessionOrigin = null;
@@ -649,6 +734,7 @@ function activateArea(area) {
     activeAreaName = isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : area?.name || '';
     activeAreaDescription = String(area?.description || '').trim();
     updateLocationNote();
+    updatePlantEditorPreviewBanner();
     updateAreaLens();
 }
 
@@ -1617,7 +1703,7 @@ function openSpatialWebWindow() {
         renderProjectHome: projectId => renderIntoWindow(renderProjectHome, projectId),
         renderFieldGuide: (projectId, creator) => renderIntoWindow(renderFieldGuide, projectId, creator),
         renderProjectAreaDashboard: (projectId, areaId, options) => renderIntoWindow(renderProjectAreaDashboard, projectId, areaId, options),
-        openProjectEntry: (projectId, markerId, returnToAr, returnContext) => renderIntoWindow(openProjectEntry, projectId, markerId, returnToAr, returnContext)
+        openProjectEntry: (projectId, markerId, returnToAr, returnContext, initialState) => renderIntoWindow(openProjectEntry, projectId, markerId, returnToAr, returnContext, initialState)
     };
     spatialWebWindow.querySelector('[data-spatial-web-close]').addEventListener('click', closeSpatialWebWindow);
     controllerMenuActive = true;
@@ -4815,13 +4901,17 @@ async function restoreRecordedMarkers(operation = captureArOperationContext(), g
     };
     if (!isArOperationCurrent(restoreOperation, guardOptions)) return;
     const savedMarkers = await loadPlaceMarkers(operation.projectId, siteId, area.id).catch(() => []);
+    const previewMarkerId = plantEditorPreviewMarkerId();
+    const markersForSession = previewMarkerId
+        ? savedMarkers.filter(savedMarker => savedMarker?.id === previewMarkerId)
+        : savedMarkers;
     const areaLinks = normalizeAreaLinks(area, areas)
         .map(link => ({
             ...link,
             target_area_name: areas.find(candidate => candidate.id === link?.toAreaId)?.name || link?.toAreaId || 'Linked Area'
         }))
         .filter(link => link?.toAreaId && link.destinationExists !== false && link.enabled);
-    const restored = await Promise.all(savedMarkers.map(async savedMarker => {
+    const restored = await Promise.all(markersForSession.map(async savedMarker => {
         const marker = normalizeSpatialMarker(savedMarker);
         const [anchor, plantProfile] = await Promise.all([
             loadMarkerAnchor(operation.projectId, siteId, area.id, marker.id).catch(() => null),
@@ -4901,9 +4991,18 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         return false;
     }
     const focusedRecord = sessionMarkers.find(record => record.marker.id === marker.id);
+    const plantEditorPreview = isPlantEditorPreviewContext();
+    if (plantEditorPreview && marker.type !== 'plant') {
+        setPlacementStatus('Plant Editor preview is available for Plants only.');
+        return false;
+    }
+    if (plantEditorPreview && !focusedRecord) {
+        setPlacementStatus('The Plant could not be loaded in its saved Area for preview.');
+        return false;
+    }
     const returningToWebMarker = String(arReturnContext).startsWith('web-marker:');
-    const focusedProfileView = marker.type === 'plant' && hasPlantProfile(focusedRecord) && returningToWebMarker;
-    if (focusedRecord && returningToWebMarker) {
+    const focusedProfileView = marker.type === 'plant' && hasPlantProfile(focusedRecord) && (returningToWebMarker || plantEditorPreview);
+    if (focusedRecord && (returningToWebMarker || plantEditorPreview)) {
         sessionMarkers = [focusedRecord];
         focusedRecord.profileExpanded = focusedProfileView;
         focusedRecord.infoVisible = true;
@@ -4911,7 +5010,9 @@ async function prepareExistingMarkerPlacement(markerId, operation = captureArOpe
         readyPlacementType = '';
         updateReadyPlacementControl();
         renderSessionMarkers();
-        setPlacementStatus('');
+        setPlacementStatus(plantEditorPreview
+            ? `Plant Editor preview · ${activeAreaName || DEFAULT_HOME_AREA_NAME} · ${marker.name}`
+            : '');
         return true;
     }
     sessionMarkers = sessionMarkers.filter(record => record.marker.id !== marker.id);
@@ -5304,7 +5405,11 @@ function createOverlay() {
     overlayRoot = document.createElement('div');
     overlayRoot.id = 'creatorArOverlay';
     overlayRoot.className = 'creator-ar-overlay';
+    const plantEditorPreviewBanner = isPlantEditorPreviewContext()
+        ? `<aside class="creator-ar-plant-editor-banner" data-ar-plant-editor-banner aria-label="Plant Editor AR preview"><span>PLANT EDITOR</span><strong data-ar-plant-editor-area>${escapeHtml(activeAreaName || DEFAULT_HOME_AREA_NAME)}</strong></aside>`
+        : '';
     overlayRoot.innerHTML = `
+        ${plantEditorPreviewBanner}
         <p class="creator-ar-status" data-ar-placement-status role="status" aria-live="polite">${initialStatus}</p>
         <div class="creator-ar-utility-controls" aria-label="AR safety">
           <button type="button" data-ar-safety-help aria-label="Show AR safety">Safety</button>
@@ -5410,6 +5515,7 @@ function createOverlay() {
     infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true})});
     bindCreatorViewportReflow();
     updateLocationNote();
+    updatePlantEditorPreviewBanner();
 }
 
 function cleanup() {
@@ -5456,6 +5562,7 @@ function cleanup() {
     interactionMode = 'neutral';
     suspendedInteractionMode = '';
     sessionMarkers = [];
+    defaultPigeonPeaPreviewId = '';
     readyPlacementType = '';
     readySpecialMarker = null;
     pendingPlacementAppearance = null;
@@ -5524,6 +5631,7 @@ function cleanup() {
     runtimeTotemLinkCalibrations = new Map();
     pendingExistingMarkerId = '';
     arReturnContext = '';
+    plantEditorPreviewId = '';
     locationNoteAnchor = null;
     referenceSpaceHasFloor = false;
     sessionMode = 'immersive-ar';
@@ -5560,7 +5668,10 @@ async function resolveAreaIdForExit(projectId, siteId, areaId, areaName) {
 function navigateAfterAr(projectId, areaId, returnContext) {
     if (!projectId) return;
     queueMicrotask(() => {
-        if (String(returnContext || '').startsWith('web-marker:')) {
+        if (String(returnContext || '').startsWith('plant-editor-preview:')) {
+            const markerId = String(returnContext).slice('plant-editor-preview:'.length);
+            window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(markerId), false, 'plant-editor-preview', { workspace: 'pim' });
+        } else if (String(returnContext || '').startsWith('web-marker:')) {
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-marker:'.length)), true);
         } else if (String(returnContext || '').startsWith('web-totem:')) {
             window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
@@ -5701,6 +5812,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
     locationNoteConfig = normalizedLocationNote();
     locationNoteVisible = false;
     pendingExistingMarkerId = existingMarkerId || '';
+    plantEditorPreviewId = '';
     arReturnContext = returnContext || '';
     const questBrowser = isQuestHeadsetBrowser();
     questHeadsetSession = questBrowser;
@@ -5795,6 +5907,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
             latestView = pose.views[0] || null;
+            previewPlantEditorMarkerInView();
+            previewDefaultPigeonPeaInView();
             // The DOM taskbar is the safe fallback until the world-locked
             // WebGL belt has completed its first draw.
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');

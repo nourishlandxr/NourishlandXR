@@ -87,6 +87,18 @@
 
 .pim-web-heading-tools { display:flex; align-items:center; gap:8px; }
 .pim-web-standalone-directions { position:static; }
+.pim-web-mode-label { display:inline-flex; align-items:center; min-height:34px; padding:7px 10px; border:1px solid #c7d6bf; border-radius:10px; background:#f4f8ee; color:#315e45; font-size:11px; font-weight:700; letter-spacing:.04em; }
+.pim-web-advanced-toggle { display:grid; gap:1px; min-height:42px; padding:7px 12px; border:1px solid #b9ccb2; border-radius:11px; background:#fffef7; color:#315e45; text-align:left; cursor:pointer; }
+.pim-web-advanced-toggle strong { font-size:12px; }
+.pim-web-advanced-toggle span { color:#6a7966; font-size:11px; }
+.pim-web.is-basic-mode .pim-web-advanced-toggle { background:#eaf2e4; }
+.pim-basic-cell-actions { display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:4px; }
+.pim-basic-cell-actions button { min-width:84px; }
+@media(max-width:760px) {
+    .pim-web.is-basic-mode .pim-web-heading { align-items:stretch; flex-direction:column; }
+    .pim-web.is-basic-mode .pim-web-heading-tools { flex-wrap:wrap; }
+    .pim-web.is-basic-mode .pim-web-advanced-toggle { margin-left:auto; }
+}
 
 .pim-web-info-overlay {
     position: fixed;

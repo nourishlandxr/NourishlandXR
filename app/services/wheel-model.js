@@ -3,6 +3,14 @@ export function scrollTurn(top,height,viewport){return clamp(-top/Math.max(1,hei
 export function gestureIntent(dx,dy,options={}){if(Math.max(Math.abs(dx),Math.abs(dy))<10)return 'pending';if(options?.allowVertical)return 'rotate';return Math.abs(dx)>Math.abs(dy)?'rotate':'scroll';}
 
 export const WHEEL_DRAG_RADIANS_PER_PIXEL=.012;
+export function discoveryOrientation(seed=.5){
+ const normalized=Number.isFinite(seed)?seed-Math.floor(seed):.5;
+ return {yaw:normalized*Math.PI*2,pitch:(normalized-.5)*.9};
+}
+export function discoveryMomentumFactor(seed=.5){
+ const normalized=Number.isFinite(seed)?seed-Math.floor(seed):.5;
+ return .94+normalized*.12;
+}
 export function wheelGestureVelocity(samples,previousVelocity=0,reducedMotion=false,axis='x'){
  if(reducedMotion)return 0;
  const recent=(samples||[]).filter(sample=>Number.isFinite(sample?.[axis])&&Number.isFinite(sample?.at));

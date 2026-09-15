@@ -48,15 +48,14 @@ test('welcome exploration steps share one fading stage without layout movement',
 test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{
  const source=fs.readFileSync(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
  const styles=fs.readFileSync(path.join(root,'app/style.css'),'utf8');
- assert.match(source,/The Learning Information Mesh is optional/);
- assert.match(source,/Planning a small temperate food forest/);
- assert.match(source,/Wondering what will grow in a subtropical backyard/);
- assert.match(source,/Regenerating a creek with native plants/);
+ assert.match(source,/Free exploration remains available at every point/);
+ assert.match(source,/More paths are being developed/);
+ assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
  assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : 360/);
  assert.match(source,/Your Note is in place/);
  assert.match(source,/Why link Areas\?/);
- assert.match(source,/does not merge their content/);
+ assert.match(source,/without mixing their information/);
  assert.match(styles,/\.tryit-sim-totem-pillar[^\n]*background: #70875b/);
  assert.match(styles,/\.tryit-sim-marker-zone:not\(\.is-expanded\)[^\n]*background:#70875b/);
 });

@@ -47,7 +47,7 @@ test('embedded visitor PIM retains search and six categories without creator rev
  assert.match(markup,/data-pim-search-form/);
  assert.doesNotMatch(markup,/data-pim-add-observation/);
  for(const id of ['food-forest','cultivation','propagation','uses','historical-data','scientific-information'])assert.ok(markup.includes(`data-pim-node-id="${id}"`));
- const creator=plantInformationWebMarkup(PIGEON_PEA_PIM,{}, {editable:true});
+ const creator=plantInformationWebMarkup(PIGEON_PEA_PIM,{advancedOpen:true}, {editable:true});
  assert.match(creator,/data-pim-add-observation/);
  assert.match(creator,/publication|publish when ready/);
 });

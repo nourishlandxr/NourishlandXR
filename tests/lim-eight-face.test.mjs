@@ -122,9 +122,12 @@ test('legacy four-group and interim face state adapts without mutating saved dat
  assert.deepEqual(migrateLegacyLimState(migrated),migrated);
 });
 
-test('future pathways have a versioned empty model without imposing progression',()=>{
+test('the optional Understand This Place pathway has a versioned non-blocking model',()=>{
  assert.equal(LIM_PATHWAY_SCHEMA.version,1);
- assert.deepEqual(LIM_PATHWAYS,[]);
+ assert.equal(LIM_PATHWAYS.length,1);
+ assert.equal(LIM_PATHWAYS[0].id,'lim-path-understand-place');
+ assert.equal(LIM_PATHWAYS[0].orderedCellIds.length,7);
+ assert.equal(LIM_PATHWAYS[0].completionState,'completed');
  for(const field of ['id','title','learningGoal','description','orderedCellIds','suggestedBranches','completionState','version'])assert.ok(LIM_PATHWAY_SCHEMA.fields.includes(field));
  assert.ok(LIM_CELLS.every(cell=>Array.isArray(cell.pathwayRefs) && cell.pathwayRefs.length===0));
 });

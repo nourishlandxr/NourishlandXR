@@ -178,6 +178,9 @@ function normalizedState(state = {}) {
         // The readable hierarchy is the safe first view. Diagram mode remains
         // an intentional visual exploration mode selected by the user.
         viewMode: state.viewMode === 'compass' ? 'compass' : 'list',
+        // Editable PIM surfaces start in a deliberately small basic mode. The
+        // deeper review/search/import tools remain available behind Advanced.
+        advancedOpen: state.advancedOpen === true,
         editorMode: state.editorMode === 'edit' ? 'edit' : state.editorMode === 'add' ? 'add' : '',
         editorParentId: String(state.editorParentId || ''),
         editorNodeId: String(state.editorNodeId || ''),
@@ -187,9 +190,15 @@ function normalizedState(state = {}) {
     };
 }
 
-export function createPlantInformationWebState(document, initialState = {}) {
+export function createPlantInformationWebState(document, initialState = {}, options = {}) {
     const source = normalizeDocument(document);
-    const state = normalizedState(initialState);
+    const requestedDefaultView = options.defaultViewMode === 'compass' || options.defaultViewMode === 'list'
+        ? options.defaultViewMode
+        : '';
+    const state = normalizedState({
+        ...(requestedDefaultView && !Object.prototype.hasOwnProperty.call(initialState, 'viewMode') ? { viewMode: requestedDefaultView } : {}),
+        ...initialState
+    });
     const requestedPath = String(initialState.path || initialState.selectedPath || '');
     const requestedNode = source.nodes.find(node => node.path === requestedPath || node.id === requestedPath);
     if (!requestedNode) return state;
@@ -621,9 +630,15 @@ function honeycombMarkup(document, state, options) {
     const canvasWidth = Math.max(width,bounds.right*width/100+24)+offsetX;
     const canvasHeight = Math.max(height,bounds.bottom*height/100+24)+offsetY;
     const branches = selected ? childrenOf(document,selected.id) : [];
-    return `<section class="pim-honeycomb" data-pim-compass-view aria-label="Honeycomb knowledge explorer"><header class="pim-honeycomb-toolbar"><div><strong>Follow a living connection</strong><p>Select a cell to reveal its branches. Read the selected topic below.</p></div><div role="group" aria-label="Diagram zoom"><button type="button" data-pim-zoom="out" aria-label="Zoom out"${state.meshZoom <= 1 ? ' disabled' : ''}>−</button><span>${Math.round(state.meshZoom*100)}%</span><button type="button" data-pim-zoom="in" aria-label="Zoom in"${state.meshZoom >= 2.5 ? ' disabled' : ''}>+</button><button type="button" data-pim-mesh-reset>Reset mesh</button></div></header>
+    const basicActions = selected && options.editable
+        ? `<div class="pim-basic-cell-actions" role="group" aria-label="Cell actions"><button type="button" data-pim-add-parent-id="${attribute(selected.id)}">Add child</button><button type="button" data-pim-edit-node-id="${attribute(selected.id)}">Edit</button><button type="button" data-pim-archive-node-id="${attribute(selected.id)}">Delete</button></div>`
+        : '';
+    const selectedActions = selected && options.editable
+        ? basicActions
+        : selected ? `<button type="button" data-pim-related-node-id="${attribute(selected.id)}">Read topic</button>${options.editable ? `<button type="button" data-pim-add-parent-id="${attribute(selected.id)}">Grow this branch</button>` : ''}` : '';
+    return `<section class="pim-honeycomb" data-pim-compass-view aria-label="Honeycomb knowledge explorer"><header class="pim-honeycomb-toolbar"><div><strong>${options.editable && options.basicMode ? 'Edit the plant knowledge mesh' : 'Follow a living connection'}</strong><p>${options.editable && options.basicMode ? 'Select a cell, then add, edit or delete it.' : 'Select a cell to reveal its branches. Read the selected topic below.'}</p></div><div role="group" aria-label="Diagram zoom"><button type="button" data-pim-zoom="out" aria-label="Zoom out"${state.meshZoom <= 1 ? ' disabled' : ''}>−</button><span>${Math.round(state.meshZoom*100)}%</span><button type="button" data-pim-zoom="in" aria-label="Zoom in"${state.meshZoom >= 2.5 ? ' disabled' : ''}>+</button><button type="button" data-pim-mesh-reset>Reset mesh</button></div></header>
         <div class="pim-honeycomb-viewport" tabindex="0" aria-label="Scrollable honeycomb diagram"><div class="pim-honeycomb-size" data-offset-x="${offsetX}" data-offset-y="${offsetY}" data-zoom="${state.meshZoom}" style="width:${canvasWidth*state.meshZoom}px;height:${canvasHeight*state.meshZoom}px"><div class="pim-honeycomb-plane" style="left:${offsetX*state.meshZoom}px;top:${offsetY*state.meshZoom}px;width:${width}px;height:${height}px;transform:scale(${state.meshZoom})">${mesh}</div></div></div>
-        <section class="pim-honeycomb-reading" aria-label="Selected diagram topic"><div><small>${selected ? escapeHtml(plantInformationWebPath(document,selected.id)) : 'SIX CONNECTED WAYS TO KNOW A PLANT'}</small><h2>${escapeHtml(selected?.title || document.identity.commonName || 'Plant knowledge')}</h2><p>${escapeHtml(selected?.preview || selected?.question || 'Begin with a category. The centre keeps the plant in view as its knowledge grows.')}</p>${selected ? `<span>${escapeHtml(scopeLabel(selected))} · ${escapeHtml(evidenceLabel(selected.evidenceStatus))}</span>` : ''}</div><div>${selected ? `<button type="button" data-pim-related-node-id="${attribute(selected.id)}">Read topic</button>${options.editable ? `<button type="button" data-pim-add-parent-id="${attribute(selected.id)}">Grow this branch</button>` : ''}` : ''}</div>${branches.length ? `<nav aria-label="Topics in selected branch">${branches.map(node=>`<button type="button" data-pim-diagram-select="${attribute(node.id)}">${escapeHtml(node.title)}</button>`).join('')}</nav>` : ''}</section>
+        <section class="pim-honeycomb-reading" aria-label="Selected diagram topic"><div><small>${selected ? escapeHtml(plantInformationWebPath(document,selected.id)) : 'SIX CONNECTED WAYS TO KNOW A PLANT'}</small><h2>${escapeHtml(selected?.title || document.identity.commonName || 'Plant knowledge')}</h2><p>${escapeHtml(selected?.preview || selected?.question || 'Begin with a category. The centre keeps the plant in view as its knowledge grows.')}</p>${selected ? `<span>${escapeHtml(scopeLabel(selected))} · ${escapeHtml(evidenceLabel(selected.evidenceStatus))}</span>` : ''}</div><div>${selectedActions}</div>${branches.length ? `<nav aria-label="Topics in selected branch">${branches.map(node=>`<button type="button" data-pim-diagram-select="${attribute(node.id)}">${escapeHtml(node.title)}</button>`).join('')}</nav>` : ''}</section>
         ${customRootsMarkup(document,state,options)}</section>`;
 }
 
@@ -631,23 +646,33 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const current = normalizedState(state);
     const source = PimModel.pimReadingDocument(document, { editable: options.editable === true, scope: current.knowledgeScope });
     const renderOptions = { ...options, editable: options.editable === true };
+    const basicMode = renderOptions.editable && !current.advancedOpen;
+    const renderState = basicMode ? { ...current, viewMode: 'compass' } : current;
     const showIdentity = options.showIdentity !== false;
     const visualIdentity = showIdentity ? identityMarkup(source, current, 'visual', renderOptions) : '';
     const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
-    const standaloneDirections = directionsInfoMarkup(source);
-    const compassView = current.viewMode === 'compass'
-        ? `${visualIdentity}${knowledgeToolbar(source,current,renderOptions)}${honeycombMarkup(source,current,renderOptions)}`
+    const standaloneDirections = basicMode ? '' : directionsInfoMarkup(source);
+    const compassView = renderState.viewMode === 'compass'
+        ? `${basicMode ? '' : visualIdentity}${basicMode ? '' : knowledgeToolbar(source,current,renderOptions)}${honeycombMarkup(source,renderState,{ ...renderOptions, basicMode })}`
         : '';
-    const listView = current.viewMode === 'list'
+    const listView = renderState.viewMode === 'list'
         ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${knowledgeToolbar(source, current, renderOptions)}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
-    return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
-        <header class="pim-web-heading">${options.embedded ? '<h2>Plant knowledge</h2>' : '<h1>Plant Information Mesh</h1>'}<div class="pim-web-heading-tools"><div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>${renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : ''}${standaloneDirections}</div></header>${renderOptions.editable ? `<aside class="v2-review-path"><strong>Grow this plant’s knowledge</strong><p>Bring in source material → review suggestions → save a draft → publish when ready. Local observations belong to a specimen and stay separate from species knowledge.</p><button type="button" data-pim-add-observation>Add a local observation</button></aside>` : ''}
+    const advancedToggle = renderOptions.editable
+        ? `<button type="button" class="pim-web-advanced-toggle" data-pim-advanced-toggle aria-expanded="${current.advancedOpen}"><strong>${current.advancedOpen ? 'Basic mode' : 'Advanced'}</strong><span>${current.advancedOpen ? 'Return to cell editing' : 'Search, sources and review'}</span></button>`
+        : '';
+    const viewSwitch = !renderOptions.editable || current.advancedOpen
+        ? `<div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>`
+        : '<span class="pim-web-mode-label">BASIC MODE · Cell diagram</span>';
+    const advancedTools = renderOptions.editable && !current.advancedOpen ? '' : (renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : '');
+    const reviewPath = renderOptions.editable && !basicMode ? `<aside class="v2-review-path"><strong>Grow this plant’s knowledge</strong><p>Bring in source material → review suggestions → save a draft → publish when ready. Local observations belong to a specimen and stay separate from species knowledge.</p><button type="button" data-pim-add-observation>Add a local observation</button></aside>` : '';
+    return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}${basicMode ? ' is-basic-mode' : ''}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
+        <header class="pim-web-heading">${options.embedded ? '<h2>Plant knowledge</h2>' : '<h1>Plant Information Mesh</h1>'}<div class="pim-web-heading-tools">${viewSwitch}${advancedTools}${standaloneDirections}${advancedToggle}</div></header>${reviewPath}
         ${compassView}
         ${listView}
         ${detailMarkup(source, current, renderOptions)}
         ${editorMarkup(source, current, renderOptions)}
-        ${importReviewMarkup(source, current, renderOptions)}
+        ${basicMode ? '' : importReviewMarkup(source, current, renderOptions)}
     </article>`;
 }
 
@@ -737,9 +762,9 @@ export function applyPlantInformationImportReview(staging, itemId, decision, pat
 export function mountPlantInformationWeb(container, options = {}) {
     if (!container || typeof container.addEventListener !== 'function') throw new TypeError('A mount container is required.');
     let document = normalizeDocument(options.document || {});
-    let state = createPlantInformationWebState(document, options.initialState || {});
-    let importReview = options.importReview || document.importReview || document.importStaging || null;
     const editable = options.editable === true;
+    let state = createPlantInformationWebState(document, options.initialState || {}, { defaultViewMode: editable ? 'compass' : '' });
+    let importReview = options.importReview || document.importReview || document.importStaging || null;
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const listenerOptions = controller ? { signal: controller.signal } : undefined;
 
@@ -856,6 +881,11 @@ export function mountPlantInformationWeb(container, options = {}) {
             const relatedId = button.dataset.pimRelatedNodeId;
             const next = togglePlantInformationWebNode(document, state, relatedId);
             commit({ ...next, detailNodeId: relatedId }, relatedId);
+            return;
+        }
+        if (button.matches('[data-pim-advanced-toggle]')) {
+            const advancedOpen = !state.advancedOpen;
+            commit({ ...state, advancedOpen, viewMode: advancedOpen ? state.viewMode : 'compass' }, '', false);
             return;
         }
         if (button.matches('[data-pim-view]')) {

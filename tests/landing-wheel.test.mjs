@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import {decayWheelVelocity,gestureIntent,wheelGestureVelocity} from '../app/services/wheel-model.js';
+import {decayWheelVelocity,discoveryMomentumFactor,discoveryOrientation,gestureIntent,wheelGestureVelocity} from '../app/services/wheel-model.js';
 
 const root=path.resolve(import.meta.dirname,'..');
 
@@ -32,6 +32,16 @@ test('wheel momentum decelerates gradually and stops for reduced motion',()=>{
  assert.equal(decayWheelVelocity(5,1/60,true),0);
 });
 
+test('discovery die varies its starting face and release without becoming erratic',()=>{
+ assert.deepEqual(discoveryOrientation(0),{yaw:0,pitch:-.45});
+ assert.deepEqual(discoveryOrientation(1.25),discoveryOrientation(.25));
+ assert.ok(discoveryOrientation(.99).yaw<Math.PI*2);
+ assert.equal(discoveryMomentumFactor(0),.94);
+ assert.equal(discoveryMomentumFactor(.5),1);
+ assert.equal(discoveryMomentumFactor(1),.94);
+ assert.ok(discoveryMomentumFactor(.999)<1.06);
+});
+
 test('landing wheel uses one pointer path and removes obsolete spin controls',()=>{
  const wheel=fs.readFileSync(path.join(root,'app/services/landingWheel.js'),'utf8');
  const launch=fs.readFileSync(path.join(root,'app/screens/launch.js'),'utf8');
@@ -49,6 +59,11 @@ test('landing wheel uses one pointer path and removes obsolete spin controls',()
  assert.match(css,/touch-action:none/);
  assert.match(wheel,/event\?\.type==='pointercancel'\)\{velocity=0;pitchVelocity=0/);
  assert.match(wheel,/roll\+=dt\*\.24/);
+ assert.match(wheel,/new THREE\.SphereGeometry\(1\.72,12,6\)/);
+ assert.match(wheel,/host\.dataset\.faceCount/);
+ assert.match(wheel,/living-knowledge-seed-atlas\.png/);
+ assert.match(launch,/Interactive 120-faced botanical discovery die/);
+ assert.doesNotMatch(wheel,/TorusGeometry|seed-core|central seedling|central chamber/);
  assert.doesNotMatch(css,/body[^{}]*touch-action\s*:\s*none/);
  assert.doesNotMatch(wheel+launch+css,/Spin sculpture|Pause spin|data-wheel-motion|v2-wheel-motion/);
  assert.doesNotMatch(wheel,/Space pauses|toggleMotion|syncMotionButton/);

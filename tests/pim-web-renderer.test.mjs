@@ -255,7 +255,7 @@ test('editing adds a structured child without mutating or deleting legacy docume
 
 test('editing and import review controls appear only for editable Creator profiles', () => {
     const document = referenceDocument();
-    const initial = createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'uses' });
+    const initial = createPlantInformationWebState(document, { advancedOpen: true, editorMode: 'add', editorParentId: 'uses' });
     const staging = {
         items: [{
             id: 'import-family',
@@ -279,6 +279,24 @@ test('editing and import review controls appear only for editable Creator profil
 
     const visitor = plantInformationWebMarkup(document, initial, { editable: false, importReview: staging });
     assert.doesNotMatch(visitor, /Structured PIM editor|Add information|Staged plant data|Edit information/);
+});
+
+test('editable PIM opens in basic diagram mode with cell actions behind a clear Advanced toggle', () => {
+    const document = referenceDocument();
+    const state = createPlantInformationWebState(document, {}, { defaultViewMode: 'compass' });
+    const basic = plantInformationWebMarkup(document, { ...state, highlightedNodeId: 'uses' }, { editable: true, showSearch: true });
+    assert.match(basic, /class="pim-web[^\"]*is-basic-mode/);
+    assert.match(basic, /BASIC MODE · Cell diagram/);
+    assert.match(basic, /data-pim-advanced-toggle/);
+    assert.match(basic, /data-pim-add-parent-id="uses"/);
+    assert.match(basic, /data-pim-edit-node-id="uses"/);
+    assert.match(basic, /data-pim-archive-node-id="uses"/);
+    assert.doesNotMatch(basic, /data-pim-search-form|v2-review-path|Staged plant data/);
+
+    const advanced = plantInformationWebMarkup(document, { ...state, advancedOpen: true, highlightedNodeId: 'uses' }, { editable: true, showSearch: true, importReview: { items: [] } });
+    assert.match(advanced, /<button type="button" class="pim-web-advanced-toggle"[^>]*aria-expanded="true"/);
+    assert.match(advanced, /data-pim-view="list"/);
+    assert.match(advanced, /Grow this plant’s knowledge/);
 });
 
 test('approved staged imports leave the pending review surface while remaining in the PIM document', () => {

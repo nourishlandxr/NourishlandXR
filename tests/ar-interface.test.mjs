@@ -1007,6 +1007,38 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /contextToolbarRecord\)[\s\S]*openContextInWebMode\(\)/);
 });
 
+test('the default Pigeon Pea receives a viewer-relative AR preview without a Totem', () => {
+    const source = read('app/screens/arMode.js');
+    assert.match(source, /function isDefaultPigeonPeaMarker\(marker\)/);
+    assert.match(source, /candidate\?\.unplaced === true[\s\S]*isDefaultPigeonPeaMarker\(candidate\.marker\)/);
+    assert.match(source, /const target = placementPoint\('plant'\)/);
+    assert.match(source, /const y = Number\.isFinite\(ground\) \? ground \+ \.62/);
+    assert.match(source, /defaultPigeonPeaPreviewId = record\.marker\.id/);
+    assert.match(source, /latestView = pose\.views\[0\] \|\| null;[\s\S]*previewDefaultPigeonPeaInView\(\)/);
+    assert.match(source, /defaultPigeonPeaPreviewId = ''/);
+});
+
+test('Plant Editor preview isolates the edited plant and returns to its PIM workspace', () => {
+    const arSource = read('app/screens/arMode.js');
+    const dashboardSource = read('app/screens/projectDashboard.js');
+    const mainSource = read('app/main.js');
+    const styles = read('app/style.css');
+    assert.match(mainSource, /window\.startPlantEditorPreview = \(projectId, siteId, areaId, markerId\)/);
+    assert.match(mainSource, /plant-editor-preview:\$\{markerId\}/);
+    assert.match(dashboardSource, /Preview in AR/);
+    assert.match(dashboardSource, /PLANT EDITOR <span aria-hidden="true">·<\/span>/);
+    assert.match(arSource, /const PLANT_EDITOR_PREVIEW_PREFIX = 'plant-editor-preview:'/);
+    assert.match(arSource, /savedMarkers\.filter\(savedMarker => savedMarker\?\.id === previewMarkerId\)/);
+    assert.match(arSource, /if \(plantEditorPreview && marker\.type !== 'plant'\)/);
+    assert.match(arSource, /sessionMarkers = \[focusedRecord\]/);
+    assert.match(arSource, /function previewPlantEditorMarkerInView\(\)/);
+    assert.match(arSource, /Plant Editor preview · \$\{activeAreaName \|\| DEFAULT_HOME_AREA_NAME\}/);
+    assert.match(arSource, /data-ar-plant-editor-banner/);
+    assert.match(arSource, /openProjectEntry: \(projectId, markerId, returnToAr, returnContext, initialState\)/);
+    assert.match(arSource, /window\.openProjectEntry\?\.\(encodeURIComponent\(projectId\), encodeURIComponent\(markerId\), false, 'plant-editor-preview', \{ workspace: 'pim' \}\)/);
+    assert.match(styles, /\.creator-ar-plant-editor-banner/);
+});
+
 test('Creator AR falls back to setup when WebXR cannot start', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
     assert.match(dashboardSource, /const started = await window\.startArMode/);
@@ -1083,7 +1115,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Get comfortable in your environment[\s\S]*Choose your own starting point[\s\S]*Meet your first plant/);
+    assert.match(source, /Get comfortable in your environment[\s\S]*Explore the Learning Information Mesh[\s\S]*Meet your first plant/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to the NourishlandXR demo interface/);
     assert.match(source, /Augmented reality\(AR\) & Mixed reality\(XR\) are technologies that can help us better understand and interact with the world around us/);
