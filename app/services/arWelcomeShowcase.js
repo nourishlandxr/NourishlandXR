@@ -112,20 +112,49 @@ export function createWelcomePresentationClock() {
 }
 
 function revealFrames(graphs) {
- const frames=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
- let seed=Math.floor((graphs[0]?.revealSeed ?? .3721)*2147483646)+1;
- const random=()=>{seed=seed*16807%2147483647;return (seed-1)/2147483646;};
- let at=2200,last=-1;
- // A different face buds on each beat. Each wave retains parent-before-child
- // order; the deterministic seed is stable across sessions, draws and hit testing.
- const slotCount=Math.max(0,...frames.map(frame=>frame.nodes.length));
- for(let slot=0;slot<slotCount;slot++){
-  const order=frames.map((_,i)=>i);
-  for(let i=order.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
-  if(order[0]===last && order.length>1)[order[0],order[1]]=[order[1],order[0]];
-  for(const corner of order){const node=frames[corner].nodes[slot];if(!node)continue;node.revealAt=at;at+=1350+random()*400;last=corner;}
- }
- return frames;
+ const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
+ const archetypes=[
+  {id:'analysis',label:'Analysis',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:2800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
+  {id:'literacy',label:'Literacy',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:3600,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
+  {id:'food-forest',label:'Food forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:4400,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
+  {id:'smart',label:'Smart',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:5200,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
+ ];
+ const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',x:1250,y:1550,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
+ const slots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
+ const point=(quadrant,slot)=>{
+  const [column,row]=slots[slot]||slots.at(-1),topY=160+row*159+(column%2)*79;
+  const leftX=220+column*138;
+  return {x:quadrant===1||quadrant===2?2500-leftX:leftX,y:quadrant>=2?2150-topY:topY};
+ };
+ const frames=archetypes.map((archetype,corner)=>{
+  const nodes=[];
+  const rootPoint=point(archetype.quadrant,0);
+  nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at});
+  archetype.children.forEach(([label,limId],index)=>{
+   const position=point(archetype.quadrant,index+1);
+   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:archetype.accent,accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at+1800+index*700});
+  });
+  let slot=5;
+  archetype.legacy.forEach((legacyCorner,legacyIndex)=>{
+   const source=legacy[legacyCorner],foundationParent=archetype.legacyParents[legacyIndex];
+   // Keep the established four-cell showcase sample for each LIM face. The
+   // complete LIM stays available through limLearningContent; presenting all
+   // authored records at once would crowd the spatial board and create the
+   // overlaps this fixed lattice is intended to prevent.
+   const sourceCells=source.nodes;
+   const idMap=new Map(sourceCells.map(cell=>[cell.id,`legacy-${legacyCorner}-${cell.id}`]));
+   const foundation=nodes.find(node=>node.id===foundationParent);
+   const faceAt=Math.max(archetype.at+6500+(legacyIndex*2100),foundation.revealAt+1700);
+   sourceCells.forEach((cell,nodeIndex)=>{
+    const position=point(archetype.quadrant,slot++),id=idMap.get(cell.id);
+    const parent=cell.parent===null?foundationParent:(idMap.get(cell.parent)||foundationParent);
+    const parentNode=nodes.find(item=>item.id===parent);
+    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:cell.accent||archetype.accent,accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
+   });
+  });
+  return {corner,phase:0,cycle:0,nodes};
+ });
+ return [vision,...frames];
 }
 
 // Keep developed cells in place. Dismissal uses stable corner/node identities,

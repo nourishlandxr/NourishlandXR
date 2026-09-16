@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import {decayWheelVelocity,discoveryMomentumFactor,discoveryOrientation,gestureIntent,wheelGestureVelocity} from '../app/services/wheel-model.js';
+import {decayWheelVelocity,discoveryMomentumFactor,discoveryOrientation,gestureIntent,wheelGestureVelocity,WHEEL_TOUCH_RADIANS_PER_PIXEL} from '../app/services/wheel-model.js';
 
 const root=path.resolve(import.meta.dirname,'..');
 
@@ -19,9 +19,12 @@ test('horizontal wheel gestures preserve scrolling intent and calculate flick ve
 
 test('vertical and diagonal wheel drags feed the bounded X rotation axis',()=>{
  assert.equal(gestureIntent(4,20,{allowVertical:true}),'rotate');
+ assert.equal(gestureIntent(4,4,{allowVertical:true,threshold:5}),'pending');
+ assert.equal(gestureIntent(6,4,{allowVertical:true,threshold:5}),'rotate');
  assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:10,y:80,at:60}],0,false,'y'),6);
  assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:70,y:80,at:60}],0,false,'x'),6);
  assert.equal(wheelGestureVelocity([{x:10,y:20,at:0},{x:70,y:80,at:60}],0,false,'y'),6);
+ assert.ok(Math.abs(wheelGestureVelocity([{x:10,at:0},{x:15,at:100}],0,false,'x',WHEEL_TOUCH_RADIANS_PER_PIXEL)-.85)<.0001);
 });
 
 test('wheel momentum decelerates gradually and stops for reduced motion',()=>{
@@ -52,13 +55,18 @@ test('landing wheel uses one pointer path and removes obsolete spin controls',()
  assert.match(wheel,/event\.preventDefault\(\)/);
  assert.match(wheel,/requestAnimationFrame\(draw\)/);
  assert.match(wheel,/event\.pointerType==='mouse' && event\.button!==0/);
- assert.match(wheel,/event\.pointerType==='touch'\)return/);
+ assert.match(wheel,/touch\?5:10/);
+ assert.match(wheel,/touch\?WHEEL_TOUCH_RADIANS_PER_PIXEL:WHEEL_DRAG_RADIANS_PER_PIXEL/);
+ assert.match(wheel,/gesture\?18:4\.2/);
+ assert.match(wheel,/getCoalescedEvents/);
+ assert.doesNotMatch(wheel,/touchstart|touchmove|touchend/);
  assert.match(wheel,/endPointerGesture/);
  assert.match(wheel,/host\.setPointerCapture\?\.\(event\.pointerId\)/);
  assert.match(wheel,/stepY/);
  assert.match(wheel,/pitchVelocity/);
- assert.match(wheel,/wheelGestureVelocity\(gesture\.samples,gesture\.inheritedPitchVelocity,reduced,'y'\)/);
+ assert.match(wheel,/wheelGestureVelocity\(gesture\.samples,gesture\.inheritedPitchVelocity,reduced,'y',gesture\.sensitivity\)/);
  assert.match(css,/touch-action:none/);
+ assert.match(css,/overscroll-behavior:contain/);
  assert.match(wheel,/event\?\.type==='pointercancel'\)\{velocity=0;pitchVelocity=0/);
  assert.match(wheel,/roll\+=dt\*\.14/);
  assert.match(wheel,/new THREE\.SphereGeometry\(1\.72,12,6\)/);

@@ -37,7 +37,7 @@ test('waist companion follows translation but remains reachable when looking lef
 });
 
 test('Control panel tabs and tools share non-overlapping hit rectangles with gated editing',()=>{
-    for(const tab of ['Details','Help','Settings']){
+    for(const tab of ['Details','Modules','Help','Settings']){
         const buttons=controlPanelControls({tab});
         assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,1);
         for(const [i,a] of buttons.entries())for(const b of buttons.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
@@ -48,8 +48,11 @@ test('Control panel tabs and tools share non-overlapping hit rectangles with gat
     assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Learning');
     assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
     const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});
-    assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:continue','Utility:recenter']);
+    assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:recenter','Utility:continue']);
     for(const [i,a] of utilities.entries())for(const b of utilities.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
+    const modules=controlPanelControls({tab:'Modules',height:760,moduleActions:[{id:'food-forest',label:'Create a food forest'},{id:'native-forest',label:'Identify a native forest'}]});
+    assert.deepEqual(modules.filter(button=>button.kind==='module').map(button=>button.action),['Module:food-forest','Module:native-forest']);
+    for(const [i,a] of modules.entries())for(const b of modules.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
 });
 
 test('Side panel faces elevated and moving eyes; pitched controls use the rendered axes',()=>{

@@ -321,7 +321,7 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 
 /* The 120-face botanical discovery die replaces only the landing illustration. */
 .v2-living-wheel{margin:0;min-width:0;position:relative;background:radial-gradient(ellipse at center,rgba(190,210,160,.22),transparent 68%)}
-.v2-living-wheel [data-canvas]{position:relative;width:100%;aspect-ratio:1;touch-action:none;cursor:grab;outline-offset:4px}
+.v2-living-wheel [data-canvas]{position:relative;width:100%;aspect-ratio:1;touch-action:none;overscroll-behavior:contain;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:grab;outline-offset:4px}
 .v2-living-wheel [data-canvas]:active{cursor:grabbing}
 .v2-living-wheel [data-canvas]:focus-visible{outline:2px solid #667b51}
 .v2-living-wheel canvas,.v2-living-wheel img{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 16px 13px rgba(38,51,34,.22))}.v2-living-wheel canvas{object-fit:contain}.v2-living-wheel img{visibility:hidden;object-fit:cover;border-radius:46%;clip-path:polygon(50% 0,68% 3%,84% 13%,95% 29%,100% 49%,96% 68%,85% 85%,69% 96%,50% 100%,31% 96%,15% 85%,4% 69%,0 50%,4% 31%,15% 15%,32% 4%)}.v2-living-wheel[data-ready="error"] img{visibility:visible}

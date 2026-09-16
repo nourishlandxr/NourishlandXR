@@ -71,21 +71,24 @@ test('developed corners persist across the midpoint, narration and later demo st
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
  const early=welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
  const middle=welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
- assert.ok(early>0 && early<middle && middle<32);
- const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,32);
+ assert.ok(early>0 && early<middle && middle===53);
+ const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,53);
  assert.deepEqual(welcomeExperienceFrames(640000),settled);
  assert.ok(welcomeExperienceFrames(0,true).flatMap(f=>f.nodes).every(n=>n.opacity===0));
  assert.deepEqual(welcomeExperienceFrames(64000,true),settled);
 });
 
-test('welcome buds alternate corners, preserve ancestry, and fade progressively in reduced motion',async()=>{
+test('Vision opens first, then four archetypes preserve ancestry and spacing',async()=>{
  const {welcomeExperienceFrames,createArWelcomeClusters}=await import('../app/services/arWelcomeShowcase.js');
  const graphs=createArWelcomeClusters();
  const nodes=welcomeExperienceFrames(0,false,graphs).flatMap(f=>f.nodes);
  assert.ok(nodes.every(n=>n.opacity===0));
  const order=[...nodes].sort((a,b)=>a.revealAt-b.revealAt);
- for(let i=1;i<order.length;i++)assert.notEqual(order[i].key[0],order[i-1].key[0]);
- for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(node.revealAt>parent.revealAt+1450);}
+ assert.equal(order[0].label,'Vision');
+ assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Analysis','Literacy','Food forest','Smart']);
+ for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
+ for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
+ assert.ok(nodes.every(node=>node.y+node.radius<=810 || node.y-node.radius>=1310 || node.x+node.radius<=800 || node.x-node.radius>=1700));
  const opening=welcomeExperienceFrames(order[0].revealAt+700,true,graphs).flatMap(f=>f.nodes).find(n=>n.key===order[0].key);
  assert.ok(opening.opacity>0 && opening.opacity<1);assert.equal(opening.scale,1);
  assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
@@ -102,16 +105,17 @@ test('welcome clock does not skip the opening after hidden or suspended frames',
 
 test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  const {welcomeExperienceFrames,welcomeCellAtPoint}=await import('../app/services/arWelcomeShowcase.js');
- const hidden=new Set(['0:branch-0','2:face']);
+ const hidden=new Set(['0:lim-intro-analysis-climate','2:food-forest']);
  const frames=welcomeExperienceFrames(64000,false,undefined,hidden);
- const climate=frames[0].nodes;
- assert.equal(climate.find(n=>n.id==='branch-0').hollow,true);
- assert.equal(climate.find(n=>n.id==='attribute-0').opacity,0);
- assert.equal(climate.find(n=>n.id==='branch-1').opacity,1);
- assert.equal(frames[2].nodes.find(n=>n.id==='face').hollow,true);
- assert.ok(frames[2].nodes.filter(n=>n.id!=='face').every(n=>n.opacity===0));assert.ok(frames[3].nodes.every(n=>n.opacity===1));
- const cell=climate.find(n=>n.id==='branch-1');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
- const gone=climate.find(n=>n.id==='branch-0');
+ const analysis=frames.find(frame=>frame.corner===0),food=frames.find(frame=>frame.corner===2),smart=frames.find(frame=>frame.corner===3);
+ const hiddenClimate=analysis.nodes.find(n=>n.id==='lim-intro-analysis-climate');
+ assert.equal(hiddenClimate.hollow,true);
+ assert.ok(analysis.nodes.filter(n=>n.parent===hiddenClimate.id).every(n=>n.opacity===0));
+ assert.equal(analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography').opacity,1);
+ assert.equal(food.nodes.find(n=>n.id==='food-forest').hollow,true);
+ assert.ok(food.nodes.filter(n=>n.id!=='food-forest').every(n=>n.opacity===0));assert.ok(smart.nodes.every(n=>n.opacity===1));
+ const cell=analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
+ const gone=hiddenClimate;
  assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y).key,gone.key);
  assert.equal(gone.hollow,true);
  assert.equal(welcomeCellAtPoint(frames,1250,1050),null);

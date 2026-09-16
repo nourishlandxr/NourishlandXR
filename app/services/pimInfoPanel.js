@@ -1,7 +1,7 @@
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 
-export const INFO_HELP = 'Select a learning cell, or hold a plant cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; the Companion panel restores it.';
+export const INFO_HELP = 'Select a learning cell, or hold a plant cell to read its details here. Edit information opens the selected topic. Settings adjusts text size or recenters this panel. Hide clears your view; Control panel restores it.';
 
 // This is a reading projection, never a second store of plant knowledge.
 export function pimInfoContent(document, path) {
@@ -73,53 +73,63 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
 }
 
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
-export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],utilityActions=[]}={}) {
+export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
-    const utilities=utilityActions.slice(0,8),utilityRows=Math.ceil(utilities.length/2),actionY=height-70-utilityRows*58;
+    const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue'),secondary=utilities.filter(item=>item!==primary);
+    const secondaryRows=Math.ceil(secondary.length/2),utilityRows=secondaryRows+(primary?1:0),moduleRows=tab==='Modules'?moduleActions.length:0,actionY=height-70-(utilityRows+moduleRows)*58;
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
-    ['Details','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
+    ['Details','Modules','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action==='Modules'?'Learning modules':action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
     if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:actionY,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:actionY,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:actionY,width:322,height:48,disabled:!selected});
     if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:actionY,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:actionY,width:362,height:48});
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-62,width:226,height:48}));
-    utilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:height-70-(utilityRows-1-Math.floor(index/2))*58,width:index%2?362:350,height:48}));
+    if(tab==='Modules')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY+index*58,width:732,height:48}));
+    secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:height-70-(primary?1:0)*58-(secondaryRows-1-Math.floor(index/2))*58,width:index%2?362:350,height:48}));
+    if(primary)buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238,y:height-70,width:732,height:48});
     return buttons;
 }
-export function controlPanelHeight(lines,largeText=false,pathway=false,utilityCount=0){return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+Math.ceil(Math.min(8,utilityCount)/2)*58;}
+export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
+    const items=Array.isArray(utilities)?utilities.slice(0,8):[],count=items.length || Math.min(8,Number(utilities)||0);
+    const hasPrimary=items.some(item=>item.primary || item.id==='continue');
+    const rows=Math.ceil((count-(hasPrimary?1:0))/2)+(hasPrimary?1:0);
+    return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+(rows+moduleCount)*58;
+}
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {}, onUtilityAction = () => {} } = {}) {
+export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
-    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,utilityActions=[];
+    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,moduleContext=null,utilityActions=[];
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
-    const text=()=>tab==='Help'?INFO_HELP:tab==='Settings'
+    const text=()=>tab==='Modules'?(moduleContext?.body || 'Choose a short learning module. It will guide you through a few cells and return you to the demo when you end learning.') : tab==='Help'?INFO_HELP:tab==='Settings'
         ? 'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
-        :'Hi! This is your Companion panel. It stays nearby to help you read selected topics and fine-tune your experience.';
+        :'This is your Control panel. It stays nearby to help you read selected topics, follow the tutorial and adjust the experience.';
     const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
-    const title=()=>tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
+    const title=()=>tab==='Modules'?(moduleContext?.title || 'Learning modules'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions.length);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],utilityActions});
+    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
     function act(action){
         const button=controls().find(item=>item.action===action);if(button?.disabled)return;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
-        if(['Details','Help','Settings'].includes(action)){tab=action;page=0;}
+        if(['Details','Modules','Help','Settings'].includes(action)){tab=action;page=0;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
         if(action==='TextSize'){largeText=!largeText;page=0;}
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
+        if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
         render();
     }
     function makeButton(item){
         const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.infoAction=item.action;button.disabled=Boolean(item.disabled);
+        button.dataset.controlKind=item.kind || 'action';button.classList.toggle('is-primary-action',Boolean(item.primary) || ['Next','PathNext'].includes(item.action));
         button.setAttribute('aria-label',item.action==='Restore'?'Restore Control panel':item.label);
         if(item.kind==='tab'){button.setAttribute('role','tab');button.setAttribute('aria-selected',String(item.selected));button.setAttribute('aria-controls',contentId);button.id=contentId+'-'+item.action;button.tabIndex=item.selected?0:-1;}
         button.addEventListener('click',event=>{event.stopPropagation();act(item.action);});return button;
@@ -137,8 +147,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
             const label=document.createElement('small');label.textContent='CONTROL PANEL';
-            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Companion panel';
-            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration companion');
+            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';
+            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
             header.append(label,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));tabs.append(makeButton(controls()[0]));element.append(tabs);
@@ -159,7 +169,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);element.append(content);
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Control panel actions');
-            controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));element.append(nav);
+            controls().filter(item=>(!item.kind || item.kind==='module') && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));element.append(nav);
             if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));element.append(utilities);}
             if(tab==='Details'){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
         }
@@ -167,8 +177,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     }
     element.addEventListener('keydown',event=>{
         if(event.target.getAttribute('role')!=='tab' || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
-        event.preventDefault();const tabs=['Details','Help','Settings'],index=tabs.indexOf(tab);
-        act(event.key==='Home'?'Details':event.key==='End'?'Settings':tabs[(index+(['ArrowRight','ArrowDown'].includes(event.key)?1:2))%3]);
+        event.preventDefault();const tabs=['Details','Modules','Help','Settings'],index=tabs.indexOf(tab);
+        act(event.key==='Home'?'Details':event.key==='End'?'Settings':tabs[(index+(['ArrowRight','ArrowDown'].includes(event.key)?1:tabs.length-1))%tabs.length]);
         element.querySelector('[data-info-action="'+tab+'"]')?.focus();
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
@@ -197,14 +207,15 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }
         card.controls.forEach(button=>{
-            ctx.fillStyle=button.selected?'rgba(159,187,184,.30)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.12)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,7);ctx.fill();
+            ctx.fillStyle=button.primary?'rgba(190,222,164,.88)':button.selected?'rgba(159,187,184,.30)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.12)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,button.kind==='tab'?7:3);ctx.fill();
             if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}
-            ctx.fillStyle=button.disabled?'#899297':'#f1f4f4';ctx.font='500 25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
+            ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':'#f1f4f4';ctx.font=(button.primary?'700 ':'500 ')+'25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
-        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab='Details';hidden=false;page=0;render();},
+        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab=moduleContext?'Modules':'Details';hidden=false;page=0;render();},
+        setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         recenter(){heading=null;pose=null;lastTime=0;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;render();},
@@ -228,7 +239,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Companion panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration companion'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());

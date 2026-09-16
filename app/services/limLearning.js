@@ -431,10 +431,37 @@ export const LIM_GRAPHS = Object.freeze(LIM_FACES.map(face => Object.freeze({
         return node ? Object.freeze({ ...node, children: Object.freeze(branch.children.map(graphCell).filter(Boolean).map(Object.freeze)) }) : null;
     }).filter(Boolean))
 })));
+// The pitch-deck opening uses a small conceptual layer before revealing the
+// full LIM. These cells introduce the learning philosophy without changing or
+// replacing any of the 97 authored LIM cells below them.
+export const LIM_INTRO_CELLS = Object.freeze([
+    {id:'lim-intro-vision',title:'Vision',accent:'#dcef95',content:'NourishlandXR begins with a vision: use technology to help people notice, understand and care for living systems. The mesh turns that broad intention into connected ways of seeing, learning, designing and acting.'},
+    {id:'lim-intro-analysis',title:'Analysis',accent:'#6978b8',content:'Analysis reads the conditions already shaping a place. Climate, topography and landscape patterns help reveal constraints and opportunities before a strategy is chosen.'},
+    {id:'lim-intro-analysis-climate',title:'Climate',accent:'#6978b8',content:'Climate describes recurring patterns of temperature, rainfall, season and exposure. Compare broad climate knowledge with the small local differences you can observe on site.'},
+    {id:'lim-intro-analysis-topography',title:'Topography',accent:'#6978b8',content:'Topography is the shape and slope of land. It influences water movement, sun, wind, access and where different growing conditions form.'},
+    {id:'lim-intro-analysis-landscape',title:'Landscape',accent:'#6978b8',content:'Landscape brings landform, water, soil, vegetation, built elements and people into one view. Read their relationships before isolating a single feature.'},
+    {id:'lim-intro-analysis-strategy',title:'Strategy',accent:'#6978b8',content:'Strategy connects what a place is now with careful next steps. Useful strategies respond to evidence, available care and the way conditions may change over time.'},
+    {id:'lim-intro-literacy',title:'Literacy',accent:'#719b62',content:'Literacy builds the ability to read plants and living relationships. Identification, guilds, growth and harvest become a practical language for exploring a place.'},
+    {id:'lim-intro-literacy-plants',title:'Plants',accent:'#719b62',content:'Plants can be read through identity, form, life cycle, needs and relationships. Begin with direct observation and keep uncertainty visible while knowledge grows.'},
+    {id:'lim-intro-literacy-guilds',title:'Guilds',accent:'#719b62',content:'A guild is a useful way to explore plants that may support shared functions. Treat each proposed relationship as something to observe in its real place and climate.'},
+    {id:'lim-intro-literacy-grow',title:'Grow',accent:'#719b62',content:'Growing knowledge joins propagation, establishment, seasonal care and long-term observation. The method should suit the species, place and people caring for it.'},
+    {id:'lim-intro-literacy-fruit',title:'Fruit',accent:'#719b62',content:'Fruit connects plant identity with flowering, pollination, season, harvest and use. A harvest is also evidence of how a plant responds to its place.'},
+    {id:'lim-intro-food-forest',title:'Food forest',accent:'#a06a43',content:'A food forest uses ecological patterns to create productive living landscapes. Layers, relationships and succession guide design while observation keeps it grounded in place.'},
+    {id:'lim-intro-food-function',title:'Function',accent:'#a06a43',content:'Function asks what each element contributes: food, shade, habitat, shelter, access, fertility or another role. One element may perform several functions.'},
+    {id:'lim-intro-food-energy',title:'Energy',accent:'#a06a43',content:'Sunlight, water, wind, organic matter and human effort move through a food forest. Good design notices where energy arrives, where it is stored and where it is lost.'},
+    {id:'lim-intro-food-design',title:'Design',accent:'#a06a43',content:'Design arranges plants, paths, water and access around real goals and conditions. It grows stronger through observation, testing and adjustment.'},
+    {id:'lim-intro-food-succession',title:'Succession',accent:'#a06a43',content:'Succession is change through time. Early plants prepare conditions for later ones, while a food forest shifts in shade, structure and care as it matures.'},
+    {id:'lim-intro-smart',title:'Smart',accent:'#4f879e',content:'Smart tools help turn observations into useful decisions. Clear goals, measurable outcomes and honest limits keep technology connected to the living place it serves.'},
+    {id:'lim-intro-smart-goals',title:'Goals',accent:'#4f879e',content:'Goals describe the change a project is trying to create. A clear goal makes it easier to choose what to observe, build and measure.'},
+    {id:'lim-intro-smart-outcomes',title:'Outcomes',accent:'#4f879e',content:'Outcomes are the changes that follow from action. Compare intended results with what actually happens, including effects that were not expected.'},
+    {id:'lim-intro-smart-limitations',title:'Limitations',accent:'#4f879e',content:'Every tool and dataset has limits. Naming missing evidence, uncertain identification and technical constraints makes the knowledge more useful and trustworthy.'},
+    {id:'lim-intro-smart-challenges',title:'Challenges',accent:'#4f879e',content:'Challenges reveal where more observation, support or experimentation is needed. They can become learning questions instead of hidden failures.'}
+].map(cell=>Object.freeze({...cell,primaryFaceId:cell.id,relatedFaceIds:Object.freeze([]),accessibilityLabel:`${cell.title} introductory learning cell`,layoutRole:'intro'})));
+export const LIM_INTRO_CELL_BY_ID = Object.freeze(Object.fromEntries(LIM_INTRO_CELLS.map(cell=>[cell.id,cell])));
 const cellByLabel = new Map(LIM_ALL_CELLS.map(cell => [cell.title, cell]));
 const LEGACY_LABEL_IDS = Object.freeze({Climate:'lim-climate','Food forest':'lim-food-forest',Plant:'lim-plant',Pin:'lim-pin'});
 export function limLearningContent(labelOrId) {
-    const cell = LIM_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[LEGACY_LABEL_IDS[labelOrId]] || cellByLabel.get(labelOrId);
+    const cell = LIM_INTRO_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[LEGACY_LABEL_IDS[labelOrId]] || cellByLabel.get(labelOrId);
     const label = cell?.title || String(labelOrId ?? 'Learning');
     const face = LIM_FACES.find(item => item.id === cell?.primaryFaceId);
     return {

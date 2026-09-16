@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import {scrollTurn,gestureIntent,wheelGestureVelocity,decayWheelVelocity,WHEEL_DRAG_RADIANS_PER_PIXEL,discoveryOrientation,discoveryMomentumFactor} from './wheel-model.js';
+import {scrollTurn,gestureIntent,wheelGestureVelocity,decayWheelVelocity,WHEEL_DRAG_RADIANS_PER_PIXEL,WHEEL_TOUCH_RADIANS_PER_PIXEL,discoveryOrientation,discoveryMomentumFactor} from './wheel-model.js';
 
 export async function mountLandingWheel(hero){
 if(!hero?.isConnected)return;
@@ -71,7 +71,9 @@ function draw(now){
  const targetZ=roll+scrollDelta;
  const targetY=yaw+(live?pointerX*.12+Math.sin(time*.35)*.08+Math.sin(scrollDelta)*.36:0);
  const targetX=pitch+(live?pointerY*.08:0);
- const blend=reduced?1:1-Math.exp(-dt*4.2);
+ // During a drag, stay close to the finger. The gentler idle response remains
+ // after release so the sculpture still settles like a soft physical object.
+ const blend=reduced?1:1-Math.exp(-dt*(gesture?18:4.2));
  wheel.rotation.x+=(targetX-wheel.rotation.x)*blend;wheel.rotation.y+=(targetY-wheel.rotation.y)*blend;wheel.rotation.z+=(targetZ-wheel.rotation.z)*blend;
  wheel.position.y=live?Math.sin(time*.65)*.045:0;
  renderer.render(scene,camera);
@@ -85,40 +87,27 @@ listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
- if(event.pointerType==='touch')return;
- if(gesture&&event.pointerId===gesture.id){const now=performance.now(),dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=event.clientX-gesture.lastX,stepY=event.clientY-gesture.lastY;yaw+=stepX*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=stepX*.004;pitch+=stepY*WHEEL_DRAG_RADIANS_PER_PIXEL*.7;gesture.lastX=event.clientX;gesture.lastY=event.clientY;gesture.lastAt=now;gesture.samples.push({x:event.clientX,y:event.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y');requestDraw();}return;}
+ if(gesture&&event.pointerId===gesture.id){const point=event.getCoalescedEvents?.()?.at(-1)||event,now=performance.now(),dx=point.clientX-gesture.x,dy=point.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true,threshold:gesture.threshold});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=point.clientX-gesture.lastX,stepY=point.clientY-gesture.lastY;yaw+=stepX*gesture.sensitivity;roll+=stepX*gesture.sensitivity/3;pitch+=stepY*gesture.sensitivity*.7;gesture.lastX=point.clientX;gesture.lastY=point.clientY;gesture.lastAt=now;gesture.samples.push({x:point.clientX,y:point.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x',gesture.sensitivity);pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y',gesture.sensitivity);requestDraw();}return;}
  if(event.pointerType==='mouse'){const bounds=host.getBoundingClientRect();pointerX=(event.clientX-bounds.left)/bounds.width*2-1;pointerY=(event.clientY-bounds.top)/bounds.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',event=>{pointerX=0;pointerY=0;if(gesture&&event.pointerId===gesture.id&&!host.hasPointerCapture(event.pointerId))endGesture({type:'pointercancel',timeStamp:event.timeStamp});requestDraw();});
 listen(host,'pointerdown',event=>{
- if(event.pointerType==='touch')return;
  if(event.pointerType==='mouse' && event.button!==0)return;
  if(gesture)return;
  event.preventDefault?.();host.setPointerCapture?.(event.pointerId);
- const now=performance.now();gesture={lastX:event.clientX,lastY:event.clientY,lastAt:now,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:now}]};
+ const now=performance.now(),touch=event.pointerType==='touch';gesture={lastX:event.clientX,lastY:event.clientY,lastAt:now,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',threshold:touch?5:10,sensitivity:touch?WHEEL_TOUCH_RADIANS_PER_PIXEL:WHEEL_DRAG_RADIANS_PER_PIXEL,inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:now}]};requestDraw();
 });
 function endGesture(event){
  if(!gesture)return;
  const active=gesture,now=performance.now();
  if(event?.type==='pointercancel'){velocity=0;pitchVelocity=0;}
- else if(active.intent==='rotate'&&(now-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y');const variation=discoveryMomentumFactor(Math.random());velocity*=variation;pitchVelocity*=2-variation;}
+ else if(active.intent==='rotate'&&(now-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x',active.sensitivity);pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y',active.sensitivity);const variation=discoveryMomentumFactor(Math.random());velocity*=variation;pitchVelocity*=2-variation;}
  else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}
  gesture=null;requestDraw();
 }
-const endPointerGesture=event=>{if(!gesture?.touch)endGesture(event);};
+const endPointerGesture=event=>endGesture(event);
 listen(host,'pointerup',endPointerGesture);listen(host,'pointercancel',endPointerGesture);listen(host,'lostpointercapture',endPointerGesture);
 listen(window,'pointerup',endPointerGesture);listen(window,'pointercancel',endPointerGesture);
-
-const touchPoint=event=>event?.changedTouches?.[0]||event?.touches?.[0];
-listen(host,'touchstart',event=>{const point=touchPoint(event);if(!point||gesture)return;event.preventDefault();const now=performance.now();gesture={lastX:point.clientX,lastY:point.clientY,lastAt:now,id:point.identifier,x:point.clientX,y:point.clientY,intent:'pending',inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:point.clientX,y:point.clientY,at:now}],touch:true};requestDraw();},{passive:false});
-listen(host,'touchmove',event=>{
- if(!gesture?.touch)return;const point=[...event.touches].find(item=>item.identifier===gesture.id);if(!point)return;
- const now=performance.now(),dx=point.clientX-gesture.x,dy=point.clientY-gesture.y;
- if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true});
- if(gesture.intent==='rotate'){event.preventDefault();const stepX=point.clientX-gesture.lastX,stepY=point.clientY-gesture.lastY;yaw+=stepX*WHEEL_DRAG_RADIANS_PER_PIXEL;roll+=stepX*.004;pitch+=stepY*WHEEL_DRAG_RADIANS_PER_PIXEL*.7;gesture.lastX=point.clientX;gesture.lastY=point.clientY;gesture.lastAt=now;gesture.samples.push({x:point.clientX,y:point.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x');pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y');requestDraw();}
-},{passive:false});
-listen(host,'touchend',()=>{if(gesture?.touch)endGesture({type:'touchend'});},{passive:false});
-listen(host,'touchcancel',()=>{if(gesture?.touch)endGesture({type:'pointercancel'});},{passive:false});
 function turn(direction){yaw+=direction*Math.PI/6;status.textContent=direction>0?'Discovery die turned right.':'Discovery die turned left.';requestDraw();}
 listen(host,'keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();if(event.key==='Home')reset();else if(event.key==='ArrowLeft'||event.key==='ArrowRight')turn(event.key==='ArrowRight'?1:-1);else{pitch+=event.key==='ArrowDown'?.18:-.18;requestDraw();}});
 listen(renderer?.domElement,'webglcontextlost',event=>{event.preventDefault();fallback();});

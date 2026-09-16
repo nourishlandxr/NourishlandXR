@@ -1120,7 +1120,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Get comfortable in your environment[\s\S]*Explore the Learning Information Mesh[\s\S]*Meet your first plant/);
+    assert.match(source, /Get comfortable in your environment[\s\S]*Vision becomes a living map[\s\S]*Learn through four archetypes[\s\S]*Meet your first plant/);
+    assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
+    assert.match(source, /Complete the opening introduction to unlock these optional packages/);
+    assert.match(source, /Learning module · \$\{learningModuleStep/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to the NourishlandXR demo interface/);
     assert.match(source, /Augmented reality\(AR\) & Mixed reality\(XR\) are technologies that can help us better understand and interact with the world around us/);
@@ -1220,7 +1223,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.has-companion-actions \.tryit-demo-footer \{ display:none !important; \}/);
     assert.match(source, /function demoPanelActions\(\)/);
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
-    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide LIM':'Show LIM'/);
+    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
     assert.match(source, /id:'recenter',label:'Recenter panel'/);
     assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Back'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
