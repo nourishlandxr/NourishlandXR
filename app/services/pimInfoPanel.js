@@ -207,7 +207,15 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }
         card.controls.forEach(button=>{
-            ctx.fillStyle=button.primary?'rgba(190,222,164,.88)':button.selected?'rgba(159,187,184,.30)':button.disabled?'rgba(211,220,225,.04)':'rgba(211,220,225,.12)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,button.kind==='tab'?7:3);ctx.fill();
+            const radius=button.kind==='tab'?7:9;
+            if(button.kind!=='tab' && !button.disabled){ctx.fillStyle='rgba(4,9,12,.46)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
+            const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
+            if(button.primary){face.addColorStop(0,'rgba(232,246,189,.98)');face.addColorStop(.55,'rgba(183,215,151,.96)');face.addColorStop(1,'rgba(135,178,114,.98)');}
+            else if(button.selected){face.addColorStop(0,'rgba(174,202,197,.42)');face.addColorStop(1,'rgba(87,109,108,.4)');}
+            else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
+            else {face.addColorStop(0,'rgba(132,149,151,.52)');face.addColorStop(.5,'rgba(61,72,78,.82)');face.addColorStop(1,'rgba(30,37,42,.94)');}
+            ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
+            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle='rgba(232,244,240,.42)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(button.x+radius,button.y+2,button.width-radius*2,1.5);}
             if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}
             ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':'#f1f4f4';ctx.font=(button.primary?'700 ':'500 ')+'25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
         });return c;

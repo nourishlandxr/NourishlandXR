@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
-import {LIM_ALL_CELLS} from '../app/services/limLearning.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
+import {LIM_ALL_CELLS,LIM_INTRO_CELLS,limLearningContent} from '../app/services/limLearning.js';
 const styles=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
 test('one LIM face grows through three levels, fades and passes around the octagon',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
@@ -49,33 +49,40 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc','clip','fillRect','setLineDash'])ctx[method]=()=>{};
  ctx.quadraticCurveTo=()=>{curves+=1;};
  drawArWelcomeShowcase(ctx,64000,true);
- const frame=welcomeNetworkFrame(12000,true);
- for(const node of frame.nodes){for(const word of node.label.split(' ')){
+ const frame=welcomeExperienceFrames(64000,true).flatMap(frame=>frame.nodes).filter(node=>node.opacity>0);
+ for(const node of frame){for(const word of node.label.split(' ')){
   const label=labels.find(l=>l.text===word && l.x===0);
   assert.ok(label,`missing cell label: ${word}`);assert.equal(label.align,'center');assert.equal(label.baseline,'middle');assert.ok(label.width<=node.baseRadius*1.48);
  }}
  assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');assert.equal(curves,0);
- const active=welcomeExperienceFrames(12000,true).flatMap(frame=>frame.nodes)[0];
+ const active=welcomeExperienceFrames(12000,true).flatMap(frame=>frame.nodes).find(node=>node.opacity>0);
  drawArWelcomeShowcase(ctx,64000,true,undefined,{activeKey:active.key,activeProgress:.5,selectedKey:active.key});
  assert.ok(radials>0,'activation uses a centre-out radial fill');
 });
 
-test('Continue protects an eight-second opening while the full bloom continues',async()=>{
- const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
+test('Continue protects the legacy opening and waits for the Vision-led reveal',async()=>{
+ const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS,AR_WELCOME_POST_VISION_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
  assert.equal(AR_WELCOME_CONTINUE_MS,8000);
+ assert.equal(AR_WELCOME_POST_VISION_CONTINUE_MS,4200);
  for(const elapsed of [-1,0,7999,NaN])assert.equal(welcomeCanContinue(elapsed),false);
  assert.equal(welcomeCanContinue(8000),true);assert.equal(welcomeCanContinue(96000),true);
+ assert.equal(welcomeCanContinue(10000,NaN),false);
+ assert.equal(welcomeCanContinue(5199,1000),false);
+ assert.equal(welcomeCanContinue(5200,1000),true);
 });
 
-test('developed corners persist across the midpoint, narration and later demo steps',async()=>{
+test('archetypes stay calm until a selected parent opens a deeper branch',async()=>{
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
  const early=welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
  const middle=welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
- assert.ok(early>0 && early<middle && middle===53);
- const settled=welcomeExperienceFrames(64000);assert.equal(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,53);
- assert.deepEqual(welcomeExperienceFrames(640000),settled);
+ assert.equal(early,21);assert.equal(middle,21);
+ const expandedIds=['lim-intro-analysis-climate','lim-intro-food-function'];
+ const settled=welcomeExperienceFrames(64000,false,undefined,new Set(),{expandedLimIds:expandedIds});
+ assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length>21);
+ assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.depth>=2 && n.opacity>0).every(n=>expandedIds.some(id=>n.parent===id || n.limId===id || n.parent?.includes(id))));
+ assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,new Set(),{expandedLimIds:expandedIds}),settled);
  assert.ok(welcomeExperienceFrames(0,true).flatMap(f=>f.nodes).every(n=>n.opacity===0));
- assert.deepEqual(welcomeExperienceFrames(64000,true),settled);
+ assert.equal(welcomeExperienceFrames(64000,true).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,21);
 });
 
 test('Vision opens first, then four archetypes preserve ancestry and spacing',async()=>{
@@ -92,6 +99,28 @@ test('Vision opens first, then four archetypes preserve ancestry and spacing',as
  const opening=welcomeExperienceFrames(order[0].revealAt+700,true,graphs).flatMap(f=>f.nodes).find(n=>n.key===order[0].key);
  assert.ok(opening.opacity>0 && opening.opacity<1);assert.equal(opening.scale,1);
  assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
+});
+
+test('Vision is the only live cell until activation releases the four archetypes',()=>{
+ const graphs=createArWelcomeClusters(),activationAt=5000;
+ const waiting=welcomeExperienceFrames(30000,false,graphs,new Set(),{visionActivated:false,visionActivatedAt:NaN}).flatMap(frame=>frame.nodes);
+ assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Vision']);
+ const opening=welcomeExperienceFrames(activationAt+1800,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
+ assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Analysis']);
+ const foundations=welcomeExperienceFrames(activationAt+7200,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
+ assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Analysis','Literacy','Food forest','Smart']);
+ assert.ok(foundations.some(node=>node.depth===1 && node.opacity>0));
+});
+
+test('every pitch-deck cell carries a deep learning prompt without changing its identity',()=>{
+ for(const cell of LIM_INTRO_CELLS){
+  const content=limLearningContent(cell.id);
+  assert.equal(content.id,cell.id);
+  assert.match(content.body,/Look for ·/);
+  assert.match(content.body,/Ask ·/);
+  assert.match(content.body,/Next ·/);
+  assert.ok(content.body.length>420,`${cell.id} needs a fuller learning body`);
+ }
 });
 
 test('welcome clock does not skip the opening after hidden or suspended frames',async()=>{
@@ -113,7 +142,7 @@ test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  assert.ok(analysis.nodes.filter(n=>n.parent===hiddenClimate.id).every(n=>n.opacity===0));
  assert.equal(analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography').opacity,1);
  assert.equal(food.nodes.find(n=>n.id==='food-forest').hollow,true);
- assert.ok(food.nodes.filter(n=>n.id!=='food-forest').every(n=>n.opacity===0));assert.ok(smart.nodes.every(n=>n.opacity===1));
+ assert.ok(food.nodes.filter(n=>n.id!=='food-forest').every(n=>n.opacity===0));assert.ok(smart.nodes.filter(n=>n.depth<2).every(n=>n.opacity===1));
  const cell=analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
  const gone=hiddenClimate;
  assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y).key,gone.key);

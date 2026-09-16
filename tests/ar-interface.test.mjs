@@ -1328,7 +1328,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /font-size:clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\)/);
     assert.match(source, /for \(let fontSize = 52; fontSize >= 26; fontSize -= 2\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
-    assert.match(source, /setTimeout\(showArWelcomeShowcase, 700\)/);
+    assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
+    assert.match(source, /arWelcomeVisionActivated=false/);
+    assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*visionActivated:arWelcomeVisionActivated/);
+    assert.match(source, /Select the Vision cell at the bottom of the green panel/);
+    assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);

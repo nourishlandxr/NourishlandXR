@@ -97,7 +97,12 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
 
 // Protect the first few discoveries without making the full bloom a loading gate.
 export const AR_WELCOME_CONTINUE_MS = 8000;
-export const welcomeCanContinue = elapsed => Number.isFinite(elapsed) && elapsed >= AR_WELCOME_CONTINUE_MS;
+export const AR_WELCOME_POST_VISION_CONTINUE_MS = 4200;
+export function welcomeCanContinue(elapsed,visionActivatedAt){
+ if(!Number.isFinite(elapsed))return false;
+ if(visionActivatedAt===undefined)return elapsed>=AR_WELCOME_CONTINUE_MS;
+ return Number.isFinite(visionActivatedAt) && elapsed-visionActivatedAt>=AR_WELCOME_POST_VISION_CONTINUE_MS;
+}
 
 // Count presented time rather than time spent in a permission dialog, another
 // tab, or a suspended XR session. Multiple eyes share the same clock.
@@ -114,10 +119,10 @@ export function createWelcomePresentationClock() {
 function revealFrames(graphs) {
  const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
  const archetypes=[
-  {id:'analysis',label:'Analysis',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:2800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
-  {id:'literacy',label:'Literacy',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:3600,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
-  {id:'food-forest',label:'Food forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:4400,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
-  {id:'smart',label:'Smart',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:5200,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
+  {id:'analysis',label:'Analysis',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
+  {id:'literacy',label:'Literacy',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:1400,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
+  {id:'food-forest',label:'Food forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:2000,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
+  {id:'smart',label:'Smart',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
  ];
  const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',x:1250,y:1550,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
  const slots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
@@ -159,9 +164,14 @@ function revealFrames(graphs) {
 
 // Keep developed cells in place. Dismissal uses stable corner/node identities,
 // so hidden branches stay hidden while the rest of the demo continues.
-export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set()) {
+export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set(),progression={}) {
  return revealFrames(graphs).map(frame=>{
-  const corner=frame.corner,time=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
+  const corner=frame.corner,totalTime=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
+  const isVision=frame.nodes[0]?.id==='vision';
+  const visionActivated=progression?.visionActivated!==false;
+  const visionActivatedAt=Number.isFinite(progression?.visionActivatedAt)?progression.visionActivatedAt:0;
+  const time=isVision?totalTime:visionActivated?Math.max(0,totalTime-visionActivatedAt):0;
+  const expanded=new Set(Array.isArray(progression?.expandedLimIds)?progression.expandedLimIds:[]);
   frame.nodes.forEach(node=>{
    node.progress=smooth(time,node.revealAt,1450);
    node.opacity=node.progress;
@@ -171,6 +181,14 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
    node.radius=node.baseRadius*node.scale;
    node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
    node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
+   // Deeper records are invitations, not ambient clutter. A branch becomes
+   // visible when its immediate parent has been selected, which keeps the
+   // four archetypes calm while still allowing an open-ended learning trail.
+   if(node.depth>=2){
+    const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
+    const parentExpanded=expanded.has(node.parent)||expanded.has(parent?.limId);
+    if(!parentExpanded){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
+   }
   });
   const dismissed=new Set();
   for(const node of frame.nodes){
@@ -284,7 +302,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  }
  }
  ctx.restore();
- const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden);
+ const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden,options.progression);
  if(options.drawCells===false){ctx.restore();return frames;}
  for(const frame of frames){
   const hue=[226,34,105,56,17,273,157,198][frame.corner];

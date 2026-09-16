@@ -132,12 +132,15 @@
 .nlxr-info-panel .nlxr-control-actions button,
 .nlxr-info-panel .nlxr-control-utilities button,
 .nlxr-info-panel .nlxr-pathway-context button {
-    min-height:44px;
-    border:1px solid rgba(201,218,218,.34);
-    border-radius:4px;
-    background:linear-gradient(180deg,rgba(90,105,107,.34),rgba(37,46,51,.66));
-    box-shadow:inset 0 1px rgba(255,255,255,.09),0 3px 8px rgba(0,0,0,.18);
-    font-weight:650;
+    min-height:46px;
+    border:1px solid rgba(214,230,228,.46);
+    border-radius:8px;
+    background:linear-gradient(180deg,rgba(118,134,136,.5) 0%,rgba(55,66,72,.88) 52%,rgba(29,36,41,.96) 100%);
+    box-shadow:inset 0 1px rgba(255,255,255,.22),inset 0 -2px rgba(7,13,16,.42),0 3px 0 rgba(7,13,16,.52),0 7px 14px rgba(0,0,0,.2);
+    font-weight:700;
+    letter-spacing:.01em;
+    transform:translateY(0);
+    transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease,background .14s ease;
 }
 .nlxr-info-panel .nlxr-control-actions button:hover,
 .nlxr-info-panel .nlxr-control-actions button:focus-visible,
@@ -146,9 +149,17 @@
 .nlxr-info-panel .nlxr-pathway-context button:hover,
 .nlxr-info-panel .nlxr-pathway-context button:focus-visible {
     border-color:rgba(220,239,210,.72);
-    background:linear-gradient(180deg,rgba(105,126,119,.56),rgba(43,59,55,.82));
+    background:linear-gradient(180deg,rgba(131,153,143,.7),rgba(42,58,55,.94));
     outline:2px solid rgba(220,239,149,.24);
     outline-offset:2px;
+    transform:translateY(-1px);
+    box-shadow:inset 0 1px rgba(255,255,255,.28),inset 0 -2px rgba(7,13,16,.38),0 4px 0 rgba(7,13,16,.48),0 9px 16px rgba(0,0,0,.24);
+}
+.nlxr-info-panel .nlxr-control-actions button:active,
+.nlxr-info-panel .nlxr-control-utilities button:active,
+.nlxr-info-panel .nlxr-pathway-context button:active {
+    transform:translateY(2px);
+    box-shadow:inset 0 2px 4px rgba(5,10,12,.42),0 1px 0 rgba(7,13,16,.6),0 3px 8px rgba(0,0,0,.2);
 }
 .nlxr-info-panel .nlxr-control-utilities .is-primary-action,
 .nlxr-info-panel .nlxr-control-actions .is-primary-action {
@@ -156,8 +167,8 @@
     order:99;
     color:#16281d;
     border-color:rgba(231,247,206,.9);
-    background:linear-gradient(180deg,#dcefae,#a8cd8f);
-    box-shadow:inset 0 1px rgba(255,255,255,.72),0 4px 12px rgba(9,27,18,.28);
+    background:linear-gradient(180deg,#e8f6bd 0%,#b7d797 55%,#8eb879 100%);
+    box-shadow:inset 0 1px rgba(255,255,255,.82),inset 0 -2px rgba(42,83,54,.24),0 3px 0 #567d52,0 8px 16px rgba(9,27,18,.3);
 }
 
 /* The existing companion panel receives a quiet LIM accent without changing
@@ -191,3 +202,12 @@
 .nlxr-totem-system .tryit-sim-totem-pillar{border-radius:12px 12px 9px 9px;background:linear-gradient(90deg,#354b40,#82927b 20%,#9aa68a 36%,#667b64 77%,#354b40);box-shadow:inset 1px 0 #e6efce80,inset -2px 0 #163b3555,0 16px 24px #172e2440}
 .nlxr-totem-system .tryit-sim-totem-pillar::before{background:linear-gradient(180deg,#edf4d5,#bbd9b4 40%,#688166);box-shadow:0 2px 0 #243f35,0 3px 7px #d1e9c033}
 @media(prefers-reduced-motion:reduce){.nlxr-orb-crown,.nlxr-orb-crown::before{animation:none}}
+
+/* In the phone demo the Control panel is a companion surface, not the
+   welcome board itself. Keep it in the upper-left rail so Vision's
+   bottom-centre entry cell stays visible and tappable. Spatial AR keeps the
+   waist-level pose supplied by pimInfoPanel.js. */
+.nlxr-info-panel.is-demo-panel { left:10px; right:auto; top:12px; bottom:auto; width:min(226px,calc(100vw - 20px)); height:min(42vh,390px); max-height:42vh; }
+@media(max-width:600px) {
+    .nlxr-info-panel.is-demo-panel { left:8px; top:10px; bottom:auto; width:min(224px,calc(100vw - 16px)); height:min(42vh,360px); max-height:42vh; }
+}
