@@ -1110,9 +1110,10 @@ function activateLimCell(key) {
     if(content.id==='lim-intro-vision' && !arWelcomeVisionActivated){
         arWelcomeVisionActivated=true;arWelcomeVisionActivatedAt=arWelcomeClock.elapsed;
         appRoot?.querySelector('.tryit-demo')?.setAttribute('data-welcome-vision','true');
-        setGuide('Vision selected. Place, Life, Forest and Purpose are now unfolding around the welcome panel.');
+        setGuide('Vision selected. Read the Place, Understand Life, Design the Forest and Shape the Outcome are now unfolding around the welcome panel.');
     }
     infoPanel?.showLearning({...content,mesh:'lim'});
+    infoPanel?.setCompact(false);
     if(learningModule){
         const step=learningModule.steps[learningModuleStep];
         if(step?.cellId===content.id){learningModuleStep+=1;paintLearningModuleBoard();}
@@ -1289,15 +1290,48 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody='NourishlandXR is a learning platform and spatial information hub connecting plants, knowledge and place.\n\nExplore at your own pace. Your Control panel holds guidance and details. Use the round Continue trigger at the bottom centre when you are ready.';
-    introBoardVisibleBody=introBoardBody;
+    introBoardBody='NourishlandXR connects plants, knowledge and place through a spatial learning platform.\n\nUse the Control panel for guidance and detail. Continue when ready, or select Vision to explore.';
+    introBoardVisibleBody='';
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected cell details here. The round trigger controls immediate progress. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
-    panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${introBoardBody.split('\n\n').map(paragraph=>`<p>${paragraph}</p>`).join('')}</div>`;
+    const openingParagraphs=introBoardBody.split('\n\n');
+    panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
     setIntroBoardNextGuide('Press the round Continue trigger; Vision is optional.');
-    panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');
-    panel.classList.remove('is-live-welcome-copy','is-typing');
+    panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface','is-typing');
+    panel.classList.remove('is-live-welcome-copy');
+    clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
+    let openingTypedLength=0,openingTyping=true;
+    const openingTextWindow=panel.querySelector('.tryit-board-text-window');
+    const paintOpeningCopy=visibleText=>{
+        const paragraphs=[...panel.querySelectorAll('.tryit-board-text-window p:not(.tryit-board-next)')];
+        let start=0;
+        openingParagraphs.forEach((paragraph,index)=>{
+            const end=start+paragraph.length;
+            if(paragraphs[index]){
+                paragraphs[index].textContent=visibleText.slice(start,end);
+                paragraphs[index].classList.toggle('is-current',visibleText.length>=start && visibleText.length<=end);
+            }
+            start=end+2;
+        });
+        if(openingTextWindow)openingTextWindow.scrollTop=openingTextWindow.scrollHeight;
+    };
+    const finishOpeningCopy=()=>{
+        if(!openingTyping)return;
+        openingTyping=false;clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
+        introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
+        panel.classList.remove('is-typing');panel.querySelector('.tryit-board-next')?.removeAttribute('hidden');
+    };
+    const typeOpeningCopy=()=>{
+        if(!openingTyping || !arWelcomeShowcaseActive)return;
+        openingTypedLength=nextDemoTextLength(introBoardBody,openingTypedLength);
+        introBoardVisibleBody=introBoardBody.slice(0,openingTypedLength);paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
+        if(openingTypedLength>=introBoardBody.length){finishOpeningCopy();return;}
+        boardTypingTimer=setTimeout(typeOpeningCopy,demoTextTypingDelay(introBoardBody,openingTypedLength));
+    };
+    boardTypingTimer=setTimeout(typeOpeningCopy,320);
+    boardTypingWatchdogTimer=setTimeout(finishOpeningCopy,Math.max(DEMO_BOARD_TYPING_SAFETY_MS,1200+introBoardBody.length*60));
+    skipDemoNarration=finishOpeningCopy;
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
     layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR learning cells. Vision appears first; selecting it reveals four optional paths around the welcome panel."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
@@ -1375,7 +1409,7 @@ const DEMO_ORIENTATION_STEPS = [
         'Try its Help or Settings tabs at any time. Use the round Continue trigger at the bottom centre when you are ready.'
     ]},
     {title:'Read a living place',button:'Continue',nextGuide:'Choose a cell to explore, or press the round Continue trigger at the bottom centre.',paragraphs:[
-        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Place, Life, Forest and Purpose.',
+        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Read the Place, Understand Life, Design the Forest and Shape the Outcome.',
         'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
     ]},
     {title:'Knowledge in the landscape',button:'Continue',nextGuide:'Press the round Continue trigger at the bottom centre to meet your first plant.',paragraphs:[
@@ -2872,6 +2906,7 @@ function renderInterface(simulated) {
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
+    if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
     if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);

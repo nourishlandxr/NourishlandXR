@@ -29,8 +29,8 @@ test('long detail is paginated without dropping words, including unbroken text',
 
 test('waist companion follows translation but remains reachable when looking left',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
-    const first=infoPanelPose(matrix); assert.ok(Math.abs(first.center.y-.97)<1e-10); assert.ok(first.center.x<0);
-    assert.ok(Math.hypot(first.center.x,first.center.y-1.6,first.center.z)<1.1);
+    const first=infoPanelPose(matrix); assert.ok(Math.abs(first.center.y-.9)<1e-10); assert.ok(first.center.x<0);
+    assert.ok(Math.hypot(first.center.x,first.center.y-1.6,first.center.z)<1.2);
     const turned=[0,0,1,0,0,1,0,0,-1,0,0,0,2,1.6,3,1];
     const next=infoPanelPose(turned,first.anchorHeading);
     assert.deepEqual(next.anchorHeading,first.anchorHeading); assert.equal(next.center.x-first.center.x,2); assert.equal(next.center.z-first.center.z,3);

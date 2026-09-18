@@ -1,6 +1,6 @@
 import {drawArWelcomePanel,welcomeBoundary} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
-import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS} from './limLearning.js';
+import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
@@ -171,17 +171,21 @@ function revealFrames(graphs) {
  const cached=settledLayouts.get(graphs);
  if(cached)return cached.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
  const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
- const archetypes=[
-  {id:'analysis',label:'Place',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
-  {id:'literacy',label:'Life',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:1400,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
-  {id:'food-forest',label:'Forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:2000,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
-  {id:'smart',label:'Purpose',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
+ const archetypeConfig=[
+  {id:'analysis',limId:'lim-intro-analysis',quadrant:0,at:800,legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
+  {id:'literacy',limId:'lim-intro-literacy',quadrant:1,at:1400,legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
+  {id:'food-forest',limId:'lim-intro-food-forest',quadrant:2,at:2000,legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
+  {id:'smart',limId:'lim-intro-smart',quadrant:3,at:2600,legacy:[7],legacyParents:['lim-intro-smart-goals']}
  ];
+ const archetypes=archetypeConfig.map(config=>{
+  const branch=LIM_INTRO_BRANCHES.find(item=>item.id===config.limId);
+  return {...config,label:branch?.displayLabel||branch?.title||config.id,accent:branch?.accent||'#dcef95',children:(branch?.children||[]).map(child=>[child.title,child.id])};
+ });
  const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',...attachedRoot(Math.PI/2),baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
  // These are forward/side distances in the root's own direction of growth.
  // Their slight unevenness keeps the branch cellular and connected without
  // arranging every family into the same mechanical honeycomb.
- const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154]];
+ const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154],[438,18],[292,238]];
  const foundationPoint=(quadrant,slot,root)=>{
   const [forward,side]=foundationOffsets[slot]||foundationOffsets.at(-1);
   const angle=root.growthAngle;

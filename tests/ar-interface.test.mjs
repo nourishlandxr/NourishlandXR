@@ -1130,7 +1130,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /NourishLandXR is a portal for plant-related information, a plant mapping tool and a experience editor/);
     assert.match(source, /few examples of how information can be mapped real places/);
     assert.match(source, /plant: \['Virtual markers for Plants', \[/);
-    assert.match(source, /To do so ,use the round pointer that will appear on your screen/);
+    assert.match(source, /Use the round Place a plant orb trigger at the bottom centre when it appears/);
     assert.doesNotMatch(source, /Press it to create a Plant orb\. Press Continue to load your pointer/);
     assert.doesNotMatch(source, /gentle introduction/);
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
@@ -1155,7 +1155,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
     assert.match(source, /You can grab and hold the Pigeon Pea orb or any Plant marker to position it/);
-    assert.match(source, /Press Continue after positioning/);
+    assert.match(source, /Use the round Continue trigger at the bottom centre after positioning/);
     assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
     assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
@@ -1234,7 +1234,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
-    assert.match(source, /Press Continue to load the aim\.[\s\S]*press the aim yourself to place the Moringa orb/);
+    assert.match(source, /Press the round Place a plant orb trigger at the bottom centre to load the aim\.[\s\S]*press the visible aiming circle to place the Moringa orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);

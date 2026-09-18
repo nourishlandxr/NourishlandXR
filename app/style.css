@@ -8825,12 +8825,27 @@ button.ar-square-action::before { display: none !important; }
     padding:20px 22px;
     transform:translateX(-50%);
     overflow:hidden;
+    z-index:12010;
     border-radius:24px 20px 28px 18px;
+    border-color:rgba(240,255,232,.86);
+    background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.24),transparent 35%),linear-gradient(145deg,rgba(54,109,73,.94),rgba(8,37,24,.91));
+    box-shadow:0 24px 64px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.24);
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {
-    font-size:clamp(.98rem,3.6vw,1.18rem);
-    line-height:1.45;
+    font-size:clamp(1.12rem,3.9vw,1.42rem);
+    line-height:1.42;
+    color:#fff;
+    text-shadow:0 2px 8px rgba(0,0,0,.46);
 }
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board h2 { font-size:clamp(2rem,5.4vw,3.35rem); }
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
+    scrollbar-width:thin;
+    scrollbar-color:rgba(220,239,149,.54) rgba(10,32,21,.18);
+    scroll-behavior:smooth;
+}
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board .tryit-board-text-window::-webkit-scrollbar { width:7px; }
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board .tryit-board-text-window::-webkit-scrollbar-track { background:rgba(10,32,21,.18); border-radius:999px; }
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board .tryit-board-text-window::-webkit-scrollbar-thumb { background:rgba(220,239,149,.54); border-radius:999px; }
 @media (max-width:620px) {
     .tryit-demo.is-simulated .tryit-place.creator-ar-placement-guide {
         top:var(--aim-y,43%);
@@ -11232,8 +11247,8 @@ body:has(.app-surface) {
        shrinking the honeycomb into overlapping targets. */
     .tryit-live-welcome {
         inset:50% auto auto 50%;
-        width:550px;
-        min-width:550px;
+        width:690px;
+        min-width:690px;
         max-width:none;
         height:auto;
         aspect-ratio:2500 / 2100;
@@ -11248,8 +11263,8 @@ body:has(.app-surface) {
        centre beside the companion panel instead of shrinking the octagon. */
     .tryit-live-welcome {
         inset:44% auto auto 67%;
-        width:620px;
-        min-width:620px;
+        width:720px;
+        min-width:720px;
         max-width:none;
         height:auto;
         aspect-ratio:2500 / 2100;

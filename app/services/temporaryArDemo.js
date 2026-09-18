@@ -1068,7 +1068,7 @@ function activateLimCell(key) {
     if(content.id==='lim-intro-vision' && !arWelcomeVisionActivated){
         arWelcomeVisionActivated=true;arWelcomeVisionActivatedAt=arWelcomeClock.elapsed;
         appRoot?.querySelector('.tryit-demo')?.setAttribute('data-welcome-vision','true');
-        setGuide('Vision selected. Place, Life, Forest and Purpose are now unfolding around the welcome panel.');
+        setGuide('Vision selected. Read the Place, Understand Life, Design the Forest and Shape the Outcome are now unfolding around the welcome panel.');
     }
     infoPanel?.showLearning({...content,mesh:'lim'});
     if(learningModule){
@@ -1322,7 +1322,7 @@ const DEMO_ORIENTATION_STEPS = [
         'Try its Help or Settings tabs at any time. Use Continue below to move on when you are ready.'
     ]},
     {title:'Read a living place',button:'Continue',paragraphs:[
-        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Place, Life, Forest and Purpose.',
+        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Read the Place, Understand Life, Design the Forest and Shape the Outcome.',
         'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
     ]},
     {title:'Knowledge in the landscape',button:'Continue',paragraphs:[

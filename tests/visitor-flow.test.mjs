@@ -527,7 +527,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /To do so ,use the round pointer that will appear on your screen/);
+    assert.match(source, /Use the round Place a plant orb trigger at the bottom centre when it appears/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);

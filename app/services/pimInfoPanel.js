@@ -49,8 +49,8 @@ export function infoPanelPose(matrix, heading = null) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    const center={ x: matrix[12] - right.x * .52 + right.z * .52,
-        y: matrix[13] - .63, z: matrix[14] - right.z * .52 - right.x * .52 };
+    const center={ x: matrix[12] - right.x * .64 + right.z * .58,
+        y: matrix[13] - .70, z: matrix[14] - right.z * .64 - right.x * .58 };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
@@ -158,7 +158,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         if(detached)return;
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
-        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.toggle('is-tools-collapsed',toolsCollapsed);element.classList.toggle('has-media',showPlantPreview());
+        const showMediaWing=showPlantPreview() || element.classList.contains('is-demo-panel');
+        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.toggle('is-tools-collapsed',toolsCollapsed);element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
@@ -173,7 +174,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='Move';moveButton.setAttribute('aria-label','Hold and move Control panel');bindPanelMove(moveButton);
             header.append(hideButton,moveButton,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
-            tabs.append(makePanelToggle(railCollapsed?'›':'‹','nlxr-rail-toggle',()=>{railCollapsed=!railCollapsed;},!railCollapsed));
+            tabs.append(makePanelToggle(railCollapsed?'Menu ›':'‹ Menu','nlxr-rail-toggle',()=>{railCollapsed=!railCollapsed;if(!railCollapsed)element.classList.remove('is-opening-compact');},!railCollapsed));
             controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));
             const closeControl=controls().find(item=>item.kind==='utility' && item.action==='Utility:close');
             if(closeControl){const closeButton=makeButton(closeControl);closeButton.classList.add('is-panel-close');tabs.append(closeButton);}
@@ -194,10 +195,11 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);element.append(content);
-            if(showPlantPreview()){
+            if(showMediaWing){
                 const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label','Plant media');
-                const mediaToggle=makePanelToggle(mediaCollapsed?'Image ‹':'Image ›','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;},!mediaCollapsed);media.append(mediaToggle);
-                if(!mediaCollapsed){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=identity.plant+' · reference image';figure.append(image,caption);media.append(figure);}
+                const mediaToggle=makePanelToggle(mediaCollapsed?'Media ‹':'Media ›','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;},!mediaCollapsed);media.append(mediaToggle);
+                if(!mediaCollapsed && showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=identity.plant+' · reference image';figure.append(image,caption);media.append(figure);}
+                else if(!mediaCollapsed){const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
                 element.append(media);
             }
             const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
@@ -268,6 +270,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};mediaImage=null;mediaLoadToken++;tab='Details';hidden=false;page=0;render();},
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
+        setCompact(value=true){const compact=Boolean(value);railCollapsed=compact;toolsCollapsed=compact;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);render();},
         recenter(){heading=null;pose=null;lastTime=0;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;render();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
