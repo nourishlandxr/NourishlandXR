@@ -545,7 +545,7 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
     const messages = {
-        plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Continue, then let’s try Moringa.'],
+        plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Use the round trigger to continue, then let’s try Moringa.'],
         note: ['Add one observation', 'Both plants now carry their own knowledge. Add a Note beside them to remember what you saw in this place.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
@@ -757,7 +757,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
-    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Choose ${choiceLabels[0]} in the Control panel.`:'Choose an option in the Control panel.'),{reveal:false});
+    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Press the round ${choiceLabels[0]} trigger at the bottom centre.`:'Choose an option on the green panel.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
@@ -907,7 +907,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
-        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Press ${demoLocalizedText(buttonLabel)} in the Control panel.`:'Explore the visible cells for more detail.'),{reveal:false});
+        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Press the round ${demoLocalizedText(buttonLabel)} trigger at the bottom centre.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');
@@ -920,7 +920,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if (continueButton && buttonLabel) {
         continueButton.textContent = demoLocalizedText(buttonLabel);
         // The next step is a choice, not a typing-speed gate. The narration
-        // continues while the Control panel already offers a real Continue.
+        // continues while the round trigger remains available at the bottom centre.
         continueButton.hidden = false;
         continueButton.disabled = false;
         continueButton.onclick = () => {
@@ -961,14 +961,14 @@ function showPersistentPimPrompt(record) {
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
     if (record?.demoProfileInteracted) {
-        setGuide(`${record.name || 'Plant'} Plant Information Mesh is ready. Continue with the next demo step.`);
+        setGuide(`${record.name || 'Plant'} Plant Information Mesh is ready. Use the round Continue trigger at the bottom centre for the next demo step.`);
         return;
     }
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Plant Information Mesh');
-    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Press Continue after you have explored the Plant Information Mesh.`);
+    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Use the round Continue trigger at the bottom centre after you have explored the Plant Information Mesh.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide('Explore a plant cell, then press the round Continue trigger.');
+    setIntroBoardNextGuide('Explore a plant cell, then press the round Continue trigger at the bottom centre.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1083,7 +1083,7 @@ function paintLearningModuleBoard(){
     introBoardStep=`Learning module · ${learningModuleStep>=learningModule.steps.length?'Complete':`Micro step ${learningModuleStep+1} of ${learningModule.steps.length}`}`;
     introBoardTitle=board.title;introBoardBody=board.body;introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');}
-    setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue, or end learning in the Control panel.`:'Press End learning in the Control panel to return to the demo.');
+    setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue. To finish, open Tools in the Control panel and choose End learning.` :'Open Tools in the Control panel and choose End learning to return to the demo.');
     infoPanel?.setLearningModules(board,{open:true});
     selectedLimCell='';
     if(step){const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===step.cellId);if(node)selectedLimCell=node.key;}
@@ -1289,7 +1289,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody='NourishlandXR is a learning platform and spatial information hub connecting plants, knowledge and place.\n\nExplore at your own pace. Your Control panel holds guidance and details. Use the round trigger below to continue when you are ready.';
+    introBoardBody='NourishlandXR is a learning platform and spatial information hub connecting plants, knowledge and place.\n\nExplore at your own pace. Your Control panel holds guidance and details. Use the round Continue trigger at the bottom centre when you are ready.';
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected cell details here. The round trigger controls immediate progress. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
@@ -1346,7 +1346,7 @@ function showArWelcomeShowcase() {
     };
     // Only the explicit Continue action advances the opening animation.
     skipDemoNarration=()=>{};
-    setGuide('Welcome to NourishlandXR. Continue is in the Control panel; Vision is available for optional exploration.');
+    setGuide('Welcome to NourishlandXR. Use the round Continue trigger at the bottom centre when ready; Vision is available for optional exploration.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1370,21 +1370,21 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Meet your Control panel',button:'Continue',nextGuide:'Press the round Continue trigger to meet the learning cells.',paragraphs:[
+    {title:'Meet your Control panel',button:'Continue',nextGuide:'Press the round Continue trigger at the bottom centre to meet the learning cells.',paragraphs:[
         'The green panel introduces each part of the experience. Your Control panel stays beside you for guidance, selected details and useful actions.',
-        'Try its Help or Settings tabs at any time. Use Continue below to move on when you are ready.'
+        'Try its Help or Settings tabs at any time. Use the round Continue trigger at the bottom centre when you are ready.'
     ]},
-    {title:'Read a living place',button:'Continue',nextGuide:'Choose a cell to explore, or press the round Continue trigger.',paragraphs:[
+    {title:'Read a living place',button:'Continue',nextGuide:'Choose a cell to explore, or press the round Continue trigger at the bottom centre.',paragraphs:[
         'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Place, Life, Forest and Purpose.',
         'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
     ]},
-    {title:'Knowledge in the landscape',button:'Continue',nextGuide:'Press the round Continue trigger to meet your first plant.',paragraphs:[
+    {title:'Knowledge in the landscape',button:'Continue',nextGuide:'Press the round Continue trigger at the bottom centre to meet your first plant.',paragraphs:[
         'NourishlandXR connects ideas to the places and plants they describe. A cell offers a quick doorway; the Control panel gives you the deeper explanation.',
         'Free exploration remains available at every point. The learning cells can stay open as you move ahead, or you can hide them. Guided learning modules are available separately when you choose them.'
     ]},
-    {title:'Meet your first plant',button:'Place a plant orb',nextGuide:'Press the round Place a plant orb trigger to reveal the aim.',paragraphs:[
+    {title:'Meet your first plant',button:'Place a plant orb',nextGuide:'Press the round Place a plant orb trigger at the bottom centre to reveal the aim.',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. Start with a Pigeon Pea and explore its relationships, cultivation and uses.',
-        'Choose Place a plant orb. Aim at a comfortable location, then press to place it. You can hold the orb to reposition it.'
+        'Press the round Place a plant orb trigger at the bottom centre. Aim at a comfortable location, then press the visible aiming circle to place it. You can hold the orb to reposition it.'
     ]}
 ];
 
@@ -1441,7 +1441,7 @@ function guidePlantConversion(record) {
                 'This orb keeps plant knowledge connected to a place. Open its honeycomb to explore topics and relationships, then read the detail in your Control panel.',
                 'Our example is Pigeon Pea. Explore its food-forest role, cultivation and uses, and discover how individual topics connect.',
                 'You can grab and hold the Pigeon Pea orb or any Plant marker to position it. Release it when you are ready.',
-                'Press Continue after positioning. Press the orb to open or close its Plant Information Mesh.'
+                'Use the round Continue trigger at the bottom centre after positioning. Press the orb to open or close its Plant Information Mesh.'
             ],
         'Continue',
         () => {
@@ -1721,9 +1721,9 @@ function armDemoPlacement(type, {explained=false}={}) {
     const introductions = {
         plant: ['Virtual markers for Plants', [
             'Let’s start with placing a simple marker.',
-            'To do so ,use the round pointer that will appear on your screen. Position it where you’d like your marker to appear, then tap it to create what we call a Plant Orb. Please press Continue..'
+            'Use the round Place a plant orb trigger at the bottom centre when it appears. Position the visible aiming circle where you’d like your marker to appear, then press it to create what we call a Plant Orb.'
         ]],
-        plant2: ['Let’s try another plant . A Moringa plant orb', 'Press Continue to load the aim. Then choose another nearby position and press the aim yourself to place the Moringa orb.'],
+        plant2: ['Let’s try another plant · a Moringa plant orb', 'Press the round Place a plant orb trigger at the bottom centre to load the aim. Then choose another nearby position and press the visible aiming circle to place the Moringa orb.'],
         note: ['Add one observation', 'Aim beside the plants and press the circle once to anchor a seasonal Note in this place.']
     };
     const [title, introduction] = introductions[type];
