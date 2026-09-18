@@ -1,11 +1,10 @@
 // One shared silhouette for the AR surface and attached LIM roots.
-export const WELCOME_SHAPE = Object.freeze({cx:700,cy:550,rx:590,ry:410,sides:64});
+export const WELCOME_SHAPE = Object.freeze({cx:700,cy:550,radius:520,sides:16});
 export function welcomeBoundary(angle) {
- const {cx,cy,rx,ry}=WELCOME_SHAPE;
- const organic=1+.018*Math.sin(3*angle+.4)+.012*Math.cos(5*angle-.7);
- return {x:cx+rx*organic*Math.cos(angle),y:cy+ry*organic*Math.sin(angle)};
+ const {cx,cy,radius}=WELCOME_SHAPE;
+ return {x:cx+radius*Math.cos(angle),y:cy+radius*Math.sin(angle)};
 }
-export const WELCOME_SHAPE_POINTS=Object.freeze(Array.from({length:64},(_,i)=>Object.freeze(welcomeBoundary(i*Math.PI/32))));
+export const WELCOME_SHAPE_POINTS=Object.freeze(Array.from({length:WELCOME_SHAPE.sides},(_,i)=>Object.freeze(welcomeBoundary(-Math.PI/2+i*Math.PI*2/WELCOME_SHAPE.sides))));
 function outline(ctx) {
  ctx.beginPath();
  WELCOME_SHAPE_POINTS.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));

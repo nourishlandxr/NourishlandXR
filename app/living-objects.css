@@ -238,4 +238,12 @@
    upper field while its Control panel sits at waist level below it. */
 @media(max-width:600px) {
     .tryit-live-welcome { inset:28% auto auto 50%; }
+    .tryit-demo[data-lim-focus="0"] .tryit-live-welcome,
+    .tryit-demo[data-lim-focus="3"] .tryit-live-welcome {
+        left:calc(50% + 72px);
+    }
+    .tryit-demo[data-lim-focus="1"] .tryit-live-welcome,
+    .tryit-demo[data-lim-focus="2"] .tryit-live-welcome {
+        left:calc(50% - 72px);
+    }
 }

@@ -11187,8 +11187,8 @@ body:has(.app-surface) {
        shrinking the honeycomb into overlapping targets. */
     .tryit-live-welcome {
         inset:50% auto auto 50%;
-        width:600px;
-        min-width:600px;
+        width:550px;
+        min-width:550px;
         max-width:none;
         height:auto;
         aspect-ratio:2500 / 2100;

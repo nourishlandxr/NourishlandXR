@@ -29,7 +29,7 @@ test('all LIM cells have deterministic reserved positions and visible cells use 
  assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
 });
 test('portrait and landscape phones frame the LIM without shrinking its cells',()=>{
- assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:600px;[\s\S]*min-width:600px;/);
+ assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:550px;[\s\S]*min-width:550px;/);
  assert.match(styles, /orientation:landscape\) and \(max-height:720px\)[\s\S]*inset:44% auto auto 67%;[\s\S]*width:620px;/);
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{
@@ -156,4 +156,4 @@ test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden,progression),frames);
 });
 
-test('shared welcome silhouette has exactly 64 distinct vertices',async()=>{const {WELCOME_SHAPE_POINTS}=await import('../app/services/arWelcomePanel.js');assert.equal(WELCOME_SHAPE_POINTS.length,64);assert.equal(new Set(WELCOME_SHAPE_POINTS.map(p=>p.x+','+p.y)).size,64);});
+test('shared welcome silhouette matches the regular 16-sided reference',async()=>{const {WELCOME_SHAPE_POINTS,WELCOME_SHAPE}=await import('../app/services/arWelcomePanel.js');assert.equal(WELCOME_SHAPE_POINTS.length,16);assert.equal(new Set(WELCOME_SHAPE_POINTS.map(p=>p.x+','+p.y)).size,16);assert.ok(WELCOME_SHAPE_POINTS.every(point=>Math.abs(Math.hypot(point.x-WELCOME_SHAPE.cx,point.y-WELCOME_SHAPE.cy)-WELCOME_SHAPE.radius)<.001));});

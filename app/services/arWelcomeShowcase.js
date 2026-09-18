@@ -122,6 +122,7 @@ function attachedRoot(angle) {
  // Fixed root footprint just outside the shared board perimeter.
  return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*94,
   y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*94,
+  growthAngle:angle,
   attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
 }
 function revealFrames(graphs) {
@@ -133,14 +134,19 @@ function revealFrames(graphs) {
   {id:'smart',label:'Purpose',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
  ];
  const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',...attachedRoot(Math.PI/2),baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
- const foundationOffsets=[[0,0],[0,-159],[138,-80],[138,80],[0,159]];
+ // These are forward/side distances in the root's own direction of growth.
+ // Their slight unevenness keeps the branch cellular and connected without
+ // arranging every family into the same mechanical honeycomb.
+ const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154]];
  const foundationPoint=(quadrant,slot,root)=>{
-  const [dx,dy]=foundationOffsets[slot]||foundationOffsets.at(-1);
-  const mirrorX=quadrant===1||quadrant===2?-1:1;
-  const mirrorY=quadrant>=2?-1:1;
-  return {x:root.x+dx*mirrorX,y:root.y+dy*mirrorY};
+  const [forward,side]=foundationOffsets[slot]||foundationOffsets.at(-1);
+  const angle=root.growthAngle;
+  const drift=((quadrant*11+slot*7)%13)-6;
+  return {x:root.x+Math.cos(angle)*(forward+drift)-Math.sin(angle)*(side-drift*.45),
+   y:root.y+Math.sin(angle)*(forward+drift)+Math.cos(angle)*(side-drift*.45)};
  };
- const reservedSlots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
+ const reservedSlots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3],
+  [5,0],[5,1],[5,2],[5,3],[6,0],[6,1],[6,2],[6,3]];
  const reservedPoint=(quadrant,slot)=>{
   const [column,row]=reservedSlots[slot]||reservedSlots.at(-1),topY=160+row*159+(column%2)*79;
   const leftX=220+column*138;
