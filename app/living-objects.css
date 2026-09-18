@@ -207,7 +207,29 @@
    welcome board itself. Keep it in the upper-left rail so Vision's
    bottom-centre entry cell stays visible and tappable. Spatial AR keeps the
    waist-level pose supplied by pimInfoPanel.js. */
-.nlxr-info-panel.is-demo-panel { left:10px; right:auto; top:12px; bottom:auto; width:min(226px,calc(100vw - 20px)); height:min(42vh,390px); max-height:42vh; }
+.nlxr-info-panel.is-demo-panel {
+    left:10px; right:auto; top:12px; bottom:auto;
+    width:min(360px,calc(100vw - 20px)); height:min(78dvh,580px); max-height:78dvh;
+}
+.nlxr-info-panel.is-demo-panel .nlxr-control-utilities button {
+    min-height:50px; padding:9px 8px; border-radius:11px; font-size:12px; line-height:1.15;
+}
+.nlxr-info-panel.is-demo-panel .nlxr-control-utilities .is-primary-action {
+    min-height:62px; border-radius:15px; font-size:15px; letter-spacing:.02em;
+}
 @media(max-width:600px) {
-    .nlxr-info-panel.is-demo-panel { left:8px; top:10px; bottom:auto; width:min(224px,calc(100vw - 16px)); height:min(42vh,360px); max-height:42vh; }
+    .nlxr-info-panel.is-demo-panel {
+        left:8px; top:8px; bottom:auto; width:min(280px,calc(100vw - 16px));
+        height:min(58dvh,360px); max-height:58dvh; grid-template-columns:90px minmax(0,1fr);
+        gap:0 9px; padding-right:9px;
+    }
+    .nlxr-info-panel.is-demo-panel .nlxr-control-header {padding:8px 0 6px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-header h2 {margin:4px 0 0;font-size:16px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-identity {display:none;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-tabs {padding:8px 5px;gap:4px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-tabs button {min-height:39px;padding:6px;font-size:10px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-utilities {margin-top:4px;padding-top:5px;gap:4px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-utilities button {min-height:44px;padding:5px;font-size:10px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-control-utilities .is-primary-action {min-height:54px;font-size:13px;}
+    .nlxr-info-panel.is-demo-panel .nlxr-info-body {font-size:12px;line-height:1.3;}
 }

@@ -1120,7 +1120,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Get comfortable in your environment[\s\S]*Vision becomes a living map[\s\S]*Learn through four archetypes[\s\S]*Meet your first plant/);
+    assert.match(source, /Meet your Control panel[\s\S]*Read a living place[\s\S]*Knowledge in the landscape[\s\S]*Meet your first plant/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1224,8 +1224,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function demoPanelActions\(\)/);
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
     assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
-    assert.match(source, /id:'recenter',label:'Recenter panel'/);
-    assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Back'/);
+    assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
+    assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Previous'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
     const immersiveSelectStartHandler = source.slice(
@@ -1331,7 +1331,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.match(source, /arWelcomeVisionActivated=false/);
     assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*visionActivated:arWelcomeVisionActivated/);
-    assert.match(source, /Select the Vision cell at the bottom of the green panel/);
+    assert.match(source, /Vision is an optional doorway into four ways of seeing a place/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);

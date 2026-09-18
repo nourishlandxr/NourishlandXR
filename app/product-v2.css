@@ -311,6 +311,44 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .tryit-demo .tryit-guided-choice.is-live-welcome-copy {position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important;}
 .tryit-demo.is-immersive .tryit-live-welcome {display:none;}
 
+/* The existing green welcome board is the readable presentation surface in
+   the phone/desktop preview. The canvas continues to draw only its cells. */
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+    top:48%; bottom:auto; left:50%; width:min(50vw,510px); height:min(38dvh,280px);
+    min-height:0; max-height:none; padding:22px 28px; row-gap:9px;
+    transform:translate(-50%,-50%); border-radius:32px 25px 36px 28px;
+    overflow:hidden; pointer-events:none;
+}
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-entering {
+    animation:tryit-centered-board-arrive 1.1s cubic-bezier(.2,.72,.2,1) both;
+}
+@keyframes tryit-centered-board-arrive {
+    from {opacity:0;transform:translate(-50%,calc(-50% + 14px)) scale(.97);filter:blur(3px)}
+    to {opacity:1;transform:translate(-50%,-50%) scale(1);filter:blur(0)}
+}
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board h2 {font-size:clamp(22px,2.2vw,30px);line-height:1.12;}
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {font-size:clamp(13px,1.25vw,16px);line-height:1.4;font-weight:520;}
+.tryit-demo.is-simulated .tryit-board-text-window {padding-top:8px;gap:7px;overflow:auto;}
+@media(min-width:621px) {
+    .tryit-demo.is-simulated[data-welcome-vision="true"] .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+        width:min(34vw,360px);height:min(30dvh,220px);padding:14px 18px;
+        transition:width .8s ease,height .8s ease,padding .8s ease;
+    }
+    .tryit-demo.is-simulated[data-welcome-vision="true"] .tryit-guided-choice.is-welcome-board.is-persistent-demo-board h2 {font-size:20px;}
+    .tryit-demo.is-simulated[data-welcome-vision="true"] .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {font-size:12px;line-height:1.35;}
+}
+@media(max-width:620px) {
+    .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+        top:auto; bottom:8px; width:calc(100vw - 20px); height:min(32dvh,240px);
+        padding:14px 17px; transform:translateX(-50%); border-radius:22px;
+    }
+    .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-entering {animation:tryit-mobile-board-arrive 1.1s ease-out both;}
+    @keyframes tryit-mobile-board-arrive {from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+    .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board h2 {font-size:20px;}
+    .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {font-size:12px;line-height:1.32;}
+    .tryit-demo.is-simulated .tryit-board-text-window {padding-top:6px;gap:5px;}
+}
+
 /* Topic detail is a quiet side note in AR: the world and PIM stay visible. */
 .creator-ar-knowledge-workspace.is-ar-pim-side-note,
 .demo-knowledge-workspace.is-ar-pim-side-note {left:24px;right:auto;top:50%;bottom:auto;width:min(52vw,520px);max-height:70vh;transform:translateY(-50%);animation:ar-pim-side-note-in .42s ease-out both;}

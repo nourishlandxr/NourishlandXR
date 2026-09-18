@@ -88,7 +88,7 @@ let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
 // catalogue dumping onto the spatial board.
-let limExpandedCells=new Set();
+let limExpandedCells=new Set(),limExpandedAt=new Map();
 let limMeshVisible=true;
 let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
 let limPathwayState=idleLimPathwayState(), pathwayNotePlacementPending=false, learningModule=null, learningModuleStep=0;
@@ -351,7 +351,7 @@ function clearSessionState() {
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
-    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limPointerKey='';limPointerId=null;limInputSource=null;
+    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -433,10 +433,9 @@ function demoControlIsVisible(selector) {
 function demoPanelActions() {
     const actions=[];
     if(demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
-    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Back'});
-    if(demoControlIsVisible('[data-tryit-skip]'))actions.push({id:'skip',label:'Skip'});
+    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
     if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
-    actions.push({id:'recenter',label:'Recenter panel'},{id:'close',label:'Close demo'});
+    actions.push({id:'close',label:'Close demo'});
     if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
     return actions.slice(-8);
 }
@@ -844,7 +843,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board?.classList.add('is-copy-ready');
         board?.classList.remove('is-typing');
         typing = false;
-        if (continueButton && buttonLabel) continueButton.hidden = false;
+        if (continueButton && buttonLabel) {continueButton.hidden = false;syncDemoPanelActions();}
         if (!completionNotified) {
             completionNotified = true;
             options.onTextComplete?.();
@@ -878,7 +877,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     finalActions?.setAttribute('hidden', '');
     if (continueButton && buttonLabel) {
         continueButton.textContent = demoLocalizedText(buttonLabel);
-        continueButton.hidden = true;
+        // The next step is a choice, not a typing-speed gate. The narration
+        // continues while the Control panel already offers a real Continue.
+        continueButton.hidden = false;
+        continueButton.disabled = false;
         continueButton.onclick = () => {
             suppressSessionSelectUntil = performance.now() + 700;
             onContinue();
@@ -887,6 +889,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.hidden = true;
         continueButton.onclick = null;
     }
+    syncDemoPanelActions();
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
     boardTypingWatchdogTimer = setTimeout(
         finishTyping,
@@ -957,7 +960,7 @@ function useSharedWelcomeBoard(visible) {
 
 function welcomeFrames() {
     if(!limMeshVisible)return [];
-    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells]});
+    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
 const welcomeSequenceCanContinue=()=>welcomeCanContinue(arWelcomeClock.elapsed,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
 
@@ -1058,10 +1061,12 @@ function activateLimCell(key) {
     const content=limLearningContent(node.limId || node.label);
     // A selected cell becomes a doorway to its own descendants. Other
     // archetypes remain quiet until the visitor chooses to open them.
+    if(!limExpandedCells.has(content.id))limExpandedAt.set(content.id,arWelcomeClock.elapsed);
     limExpandedCells.add(content.id);
     if(content.id==='lim-intro-vision' && !arWelcomeVisionActivated){
         arWelcomeVisionActivated=true;arWelcomeVisionActivatedAt=arWelcomeClock.elapsed;
-        setGuide('Vision selected. Analysis, Literacy, Food forest and Smart are now unfolding around the welcome panel.');
+        appRoot?.querySelector('.tryit-demo')?.setAttribute('data-welcome-vision','true');
+        setGuide('Vision selected. Place, Life, Forest and Purpose are now unfolding around the welcome panel.');
     }
     infoPanel?.showLearning({...content,mesh:'lim'});
     if(learningModule){
@@ -1176,9 +1181,9 @@ function paintWelcomeLayer(now) {
     const activeProgress=limActivation?.progress||0;
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
-            drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells]},
-            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''
+            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible && !simulatedMode,
+            drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
+            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:['active','paused'].includes(limPathwayState.status)?currentPathwayNode()?.key || '':''
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
@@ -1206,7 +1211,8 @@ function showArWelcomeShowcase() {
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
-    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limMeshVisible=true;arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-vision');
     limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
     if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
     const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
@@ -1226,15 +1232,18 @@ function showArWelcomeShowcase() {
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
-    introBoardStep='WELCOME TO THE NOURISHLANDXR DEMO';
-    introBoardTitle='Learn to see living systems';
-    introBoardBody='Explore plants and ecosystems through a living field of connected knowledge.\n\nBegin with the Vision cell below. Select it to reveal four ways of reading a place.';
+    introBoardStep='A LIVING INTRODUCTION';
+    introBoardTitle='Welcome to NourishlandXR';
+    introBoardBody='NourishlandXR is a learning platform and spatial information hub connecting plants, knowledge and place.\n\nExplore at your own pace. Your Control panel holds guidance and details. Press Continue there when you are ready.';
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-vision-guide',title:'Begin with Vision',body:'Select and hold the Vision cell at the bottom of the green panel. The four foundational cells will then unfold around it.',accent:'#dcef95',mesh:'lim',editable:false});
-    panel.hidden=true;panel.classList.add('is-live-welcome-copy');
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control panel',body:'Read guidance and selected cell details here. Press Continue below to begin. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
+    panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${introBoardBody.split('\n\n').map(paragraph=>`<p>${paragraph}</p>`).join('')}</div>`;
+    prepareTutorialBoard(panel);
+    panel.classList.add('is-copy-ready','is-persistent-demo-board');
+    panel.classList.remove('is-live-welcome-copy','is-typing');
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR Learning Information Mesh. Eight connected learning faces surround the welcome panel. Hold a cell to explore it."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR learning cells. Vision appears first; selecting it reveals four optional paths around the welcome panel."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
@@ -1261,13 +1270,14 @@ function showArWelcomeShowcase() {
         if(simulatedMode && arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
-    button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;
+    button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;syncDemoPanelActions();
     if(skip)skip.hidden=true;
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
         if(!welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
         button.disabled=false;button.hidden=false;
-        setGuide('Continue is now available at the bottom of the Control panel. Hold any learning cell to explore its topic there.');
+        syncDemoPanelActions();
+        setGuide('Press Continue in the Control panel when ready. You may also select Vision to open four optional learning paths.');
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     button.onclick=()=>{
@@ -1280,7 +1290,7 @@ function showArWelcomeShowcase() {
     };
     // Only the explicit Continue action advances the opening animation.
     skipDemoNarration=()=>{};
-    setGuide('Select the Vision cell at the bottom of the green panel. The four foundational cells will unfold from it; guidance and Continue stay in the Control panel.');
+    setGuide('Welcome to NourishlandXR. Continue is in the Control panel; Vision is available for optional exploration.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1304,20 +1314,20 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Get comfortable in your environment',button:'Meet your Control panel',paragraphs:[
-        'Welcome to NourishlandXR. Take a moment to look around and settle into your surroundings. You can explore at your own pace.',
-        'The green panel in front guides your journey. The charcoal Control panel on your left stays nearby for plant details and useful actions.'
+    {title:'Meet your Control panel',button:'Continue',paragraphs:[
+        'The green panel introduces each part of the experience. Your Control panel stays beside you for guidance, selected details and useful actions.',
+        'Try its Help or Settings tabs at any time. Use Continue below to move on when you are ready.'
     ]},
-    {title:'Vision becomes a living map',button:'Meet the archetypes',paragraphs:[
-        'Vision is the seed. From it, four foundational ways of seeing emerge: Analysis, Literacy, Food forest and Smart.',
-        'Their cells open in a deliberate sequence. Hold any visible cell to bring its introduction into the Control panel.'
+    {title:'Read a living place',button:'Continue',paragraphs:[
+        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Place, Life, Forest and Purpose.',
+        'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
     ]},
-    {title:'Learn through four archetypes',button:'Continue to a plant',paragraphs:[
-        'Analysis reads climate, topography, landscape and strategy. Literacy follows plants, guilds, growing and fruit. Food forest explores function, energy, design and succession. Smart connects goals, outcomes, limitations and challenges.',
-        'More learning cells grow from these foundations. Free exploration remains available at every point. Use an optional learning path, or hide the learning cells from the Control panel.'
+    {title:'Knowledge in the landscape',button:'Continue',paragraphs:[
+        'NourishlandXR connects ideas to the places and plants they describe. A cell offers a quick doorway; the Control panel gives you the deeper explanation.',
+        'Free exploration remains available at every point. The learning cells can stay open as you move ahead, or you can hide them. Guided learning modules are available separately when you choose them.'
     ]},
     {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
-        'A plant orb connects knowledge to a plant in this place. We will start with a Pigeon Pea and explore its relationships, cultivation and uses.',
+        'A plant orb connects knowledge to a plant in this place. Start with a Pigeon Pea and explore its relationships, cultivation and uses.',
         'Choose Place a plant orb. Aim at a comfortable location, then press to place it. You can hold the orb to reposition it.'
     ]}
 ];
@@ -1326,17 +1336,12 @@ function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
     syncDemoPanelActions();
     infoPanel?.setGuided(index===1 || index===2);
-    if(index===2)showLearningPathLanding();
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
-        if(index<DEMO_ORIENTATION_STEPS.length-1){
-            if(index===2 && limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
-            if(index===2)infoPanel?.setPathwayContext(null);
-            runArWelcomeTutorial(index+1);return;
-        }
+        if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Tutorial stage '+(index+1)+' of 4 · '+['Settle in','Vision','Learn','Explore'][index]});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Tutorial stage '+(index+1)+' of 4 · '+['Control panel','Explore','Place','Plant'][index]});
 }
 
 function guidePlantConversion(record) {
@@ -3103,7 +3108,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells]},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:currentPathwayNode()?.key || ''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:['active','paused'].includes(limPathwayState.status)?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

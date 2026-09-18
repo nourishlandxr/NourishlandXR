@@ -96,12 +96,13 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
 }
 
 // Protect the first few discoveries without making the full bloom a loading gate.
-export const AR_WELCOME_CONTINUE_MS = 8000;
-export const AR_WELCOME_POST_VISION_CONTINUE_MS = 4200;
+export const AR_WELCOME_CONTINUE_MS = 2200;
+export const AR_WELCOME_POST_VISION_CONTINUE_MS = 0;
 export function welcomeCanContinue(elapsed,visionActivatedAt){
  if(!Number.isFinite(elapsed))return false;
- if(visionActivatedAt===undefined)return elapsed>=AR_WELCOME_CONTINUE_MS;
- return Number.isFinite(visionActivatedAt) && elapsed-visionActivatedAt>=AR_WELCOME_POST_VISION_CONTINUE_MS;
+ // The cells are optional exploration. The welcome panel can advance after
+ // its short entrance, whether or not Vision has been selected.
+ return elapsed>=AR_WELCOME_CONTINUE_MS;
 }
 
 // Count presented time rather than time spent in a permission dialog, another
@@ -119,17 +120,23 @@ export function createWelcomePresentationClock() {
 function revealFrames(graphs) {
  const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
  const archetypes=[
-  {id:'analysis',label:'Analysis',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
-  {id:'literacy',label:'Literacy',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:1400,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
-  {id:'food-forest',label:'Food forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:2000,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
-  {id:'smart',label:'Smart',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
+  {id:'analysis',label:'Place',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
+  {id:'literacy',label:'Life',limId:'lim-intro-literacy',accent:'#719b62',quadrant:1,at:1400,children:[['Plants','lim-intro-literacy-plants'],['Guilds','lim-intro-literacy-guilds'],['Grow','lim-intro-literacy-grow'],['Fruit','lim-intro-literacy-fruit']],legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
+  {id:'food-forest',label:'Forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:2000,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
+  {id:'smart',label:'Purpose',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
  ];
- const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',x:1250,y:1550,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
+ const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',x:1250,y:1750,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
  const slots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
  const point=(quadrant,slot)=>{
   const [column,row]=slots[slot]||slots.at(-1),topY=160+row*159+(column%2)*79;
   const leftX=220+column*138;
-  return {x:quadrant===1||quadrant===2?2500-leftX:leftX,y:quadrant>=2?2150-topY:topY};
+  // A stable asymmetry keeps the four families spatially distinct without
+  // moving targets between frames or disrupting their touch footprints.
+  const offsets=[[65,-28],[22,15],[48,12],[65,-18]];
+  const [shiftX,shiftY]=offsets[quadrant];
+  const seed=(quadrant*37+slot*19)%17-8;
+  return {x:(quadrant===1||quadrant===2?2500-leftX:leftX)+shiftX+seed,
+   y:(quadrant>=2?2150-topY:topY)+shiftY+((quadrant*11+slot*13)%17-8)};
  };
  const frames=archetypes.map((archetype,corner)=>{
   const nodes=[];
@@ -172,6 +179,7 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
   const visionActivatedAt=Number.isFinite(progression?.visionActivatedAt)?progression.visionActivatedAt:0;
   const time=isVision?totalTime:visionActivated?Math.max(0,totalTime-visionActivatedAt):0;
   const expanded=new Set(Array.isArray(progression?.expandedLimIds)?progression.expandedLimIds:[]);
+  const expandedAt=progression?.expandedAt || {};
   frame.nodes.forEach(node=>{
    node.progress=smooth(time,node.revealAt,1450);
    node.opacity=node.progress;
@@ -181,13 +189,22 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
    node.radius=node.baseRadius*node.scale;
    node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
    node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
-   // Deeper records are invitations, not ambient clutter. A branch becomes
-   // visible when its immediate parent has been selected, which keeps the
-   // four archetypes calm while still allowing an open-ended learning trail.
-   if(node.depth>=2){
+   // Every branch is an invitation, not ambient clutter. Vision reveals only
+   // the four archetypes. Selecting an archetype or child then blooms its
+   // immediate children in a short, staggered sequence.
+   if(node.depth>=1){
     const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
-    const parentExpanded=expanded.has(node.parent)||expanded.has(parent?.limId);
+    const parentId=parent?.limId || node.parent;
+    const parentExpanded=expanded.has(node.parent)||expanded.has(parentId);
     if(!parentExpanded){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
+    else if(Number.isFinite(expandedAt[parentId])){
+     const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
+     const siblingIndex=Math.max(0,siblings.indexOf(node));
+     const branchTime=Math.max(0,totalTime-expandedAt[parentId]);
+     node.progress=smooth(branchTime,180+siblingIndex*430,900);
+     node.opacity=node.progress;node.emphasis=reducedMotion?0:(1-smooth(branchTime,1180+siblingIndex*430,950))*node.progress;
+     node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
+    }
    }
   });
   const dismissed=new Set();

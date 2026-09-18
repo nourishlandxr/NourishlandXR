@@ -60,29 +60,29 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  assert.ok(radials>0,'activation uses a centre-out radial fill');
 });
 
-test('Continue protects the legacy opening and waits for the Vision-led reveal',async()=>{
+test('Continue unlocks after the welcome entrance without requiring Vision',async()=>{
  const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS,AR_WELCOME_POST_VISION_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
- assert.equal(AR_WELCOME_CONTINUE_MS,8000);
- assert.equal(AR_WELCOME_POST_VISION_CONTINUE_MS,4200);
- for(const elapsed of [-1,0,7999,NaN])assert.equal(welcomeCanContinue(elapsed),false);
- assert.equal(welcomeCanContinue(8000),true);assert.equal(welcomeCanContinue(96000),true);
- assert.equal(welcomeCanContinue(10000,NaN),false);
- assert.equal(welcomeCanContinue(5199,1000),false);
- assert.equal(welcomeCanContinue(5200,1000),true);
+ assert.equal(AR_WELCOME_CONTINUE_MS,2200);
+ assert.equal(AR_WELCOME_POST_VISION_CONTINUE_MS,0);
+ for(const elapsed of [-1,0,2199,NaN])assert.equal(welcomeCanContinue(elapsed),false);
+ assert.equal(welcomeCanContinue(2200),true);
+ assert.equal(welcomeCanContinue(2200,NaN),true);
+ assert.equal(welcomeCanContinue(2200,1000),true);
+ assert.equal(welcomeCanContinue(96000),true);
 });
 
 test('archetypes stay calm until a selected parent opens a deeper branch',async()=>{
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
  const early=welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
  const middle=welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
- assert.equal(early,21);assert.equal(middle,21);
- const expandedIds=['lim-intro-analysis-climate','lim-intro-food-function'];
+ assert.equal(early,5);assert.equal(middle,5);
+ const expandedIds=['lim-intro-analysis','lim-intro-analysis-climate','lim-intro-food-forest','lim-intro-food-function'];
  const settled=welcomeExperienceFrames(64000,false,undefined,new Set(),{expandedLimIds:expandedIds});
- assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length>21);
+ assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length>5);
  assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.depth>=2 && n.opacity>0).every(n=>expandedIds.some(id=>n.parent===id || n.limId===id || n.parent?.includes(id))));
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,new Set(),{expandedLimIds:expandedIds}),settled);
  assert.ok(welcomeExperienceFrames(0,true).flatMap(f=>f.nodes).every(n=>n.opacity===0));
- assert.equal(welcomeExperienceFrames(64000,true).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,21);
+ assert.equal(welcomeExperienceFrames(64000,true).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,5);
 });
 
 test('Vision opens first, then four archetypes preserve ancestry and spacing',async()=>{
@@ -92,7 +92,7 @@ test('Vision opens first, then four archetypes preserve ancestry and spacing',as
  assert.ok(nodes.every(n=>n.opacity===0));
  const order=[...nodes].sort((a,b)=>a.revealAt-b.revealAt);
  assert.equal(order[0].label,'Vision');
- assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Analysis','Literacy','Food forest','Smart']);
+ assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Place','Life','Forest','Purpose']);
  for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
  assert.ok(nodes.every(node=>node.y+node.radius<=810 || node.y-node.radius>=1310 || node.x+node.radius<=800 || node.x-node.radius>=1700));
@@ -106,10 +106,13 @@ test('Vision is the only live cell until activation releases the four archetypes
  const waiting=welcomeExperienceFrames(30000,false,graphs,new Set(),{visionActivated:false,visionActivatedAt:NaN}).flatMap(frame=>frame.nodes);
  assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Vision']);
  const opening=welcomeExperienceFrames(activationAt+1800,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Analysis']);
+ assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Place']);
  const foundations=welcomeExperienceFrames(activationAt+7200,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Analysis','Literacy','Food forest','Smart']);
- assert.ok(foundations.some(node=>node.depth===1 && node.opacity>0));
+ assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Place','Life','Forest','Purpose']);
+ assert.ok(foundations.every(node=>node.depth===0 || node.opacity===0));
+ const branching=welcomeExperienceFrames(activationAt+9000,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt,expandedLimIds:['lim-intro-analysis'],expandedAt:{'lim-intro-analysis':activationAt+7200}}).flatMap(frame=>frame.nodes);
+ assert.ok(branching.some(node=>node.depth===1 && node.opacity>0));
+ assert.ok(branching.filter(node=>node.depth===1 && node.opacity>0).every(node=>node.primaryFaceId===undefined || node.key.startsWith('0:')));
 });
 
 test('every pitch-deck cell carries a deep learning prompt without changing its identity',()=>{
@@ -135,18 +138,19 @@ test('welcome clock does not skip the opening after hidden or suspended frames',
 test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  const {welcomeExperienceFrames,welcomeCellAtPoint}=await import('../app/services/arWelcomeShowcase.js');
  const hidden=new Set(['0:lim-intro-analysis-climate','2:food-forest']);
- const frames=welcomeExperienceFrames(64000,false,undefined,hidden);
+ const progression={expandedLimIds:['lim-intro-analysis','lim-intro-food-forest']};
+ const frames=welcomeExperienceFrames(64000,false,undefined,hidden,progression);
  const analysis=frames.find(frame=>frame.corner===0),food=frames.find(frame=>frame.corner===2),smart=frames.find(frame=>frame.corner===3);
  const hiddenClimate=analysis.nodes.find(n=>n.id==='lim-intro-analysis-climate');
  assert.equal(hiddenClimate.hollow,true);
  assert.ok(analysis.nodes.filter(n=>n.parent===hiddenClimate.id).every(n=>n.opacity===0));
  assert.equal(analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography').opacity,1);
  assert.equal(food.nodes.find(n=>n.id==='food-forest').hollow,true);
- assert.ok(food.nodes.filter(n=>n.id!=='food-forest').every(n=>n.opacity===0));assert.ok(smart.nodes.filter(n=>n.depth<2).every(n=>n.opacity===1));
+ assert.ok(food.nodes.filter(n=>n.id!=='food-forest').every(n=>n.opacity===0));assert.equal(smart.nodes.find(n=>n.id==='smart').opacity,1);
  const cell=analysis.nodes.find(n=>n.id==='lim-intro-analysis-topography');assert.equal(welcomeCellAtPoint(frames,cell.x,cell.y).key,cell.key);
  const gone=hiddenClimate;
  assert.equal(welcomeCellAtPoint(frames,gone.x,gone.y).key,gone.key);
  assert.equal(gone.hollow,true);
  assert.equal(welcomeCellAtPoint(frames,1250,1050),null);
- assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden),frames);
+ assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden,progression),frames);
 });

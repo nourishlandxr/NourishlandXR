@@ -76,22 +76,24 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue'),secondary=utilities.filter(item=>item!==primary);
-    const secondaryRows=Math.ceil(secondary.length/2),utilityRows=secondaryRows+(primary?1:0),moduleRows=tab==='Modules'?moduleActions.length:0,actionY=height-70-(utilityRows+moduleRows)*58;
+    const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Modules'?moduleActions.length:0;
+    const primaryY=height-22-primaryHeight,secondaryStart=primaryY-secondaryRows*62;
+    const actionY=secondaryStart-moduleRows*58-62;
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
     ['Details','Modules','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action==='Modules'?'Learning modules':action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
     if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:actionY,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:actionY,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:actionY,width:322,height:48,disabled:!selected});
     if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:actionY,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:actionY,width:362,height:48});
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-62,width:226,height:48}));
     if(tab==='Modules')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY+index*58,width:732,height:48}));
-    secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:height-70-(primary?1:0)*58-(secondaryRows-1-Math.floor(index/2))*58,width:index%2?362:350,height:48}));
-    if(primary)buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238,y:height-70,width:732,height:48});
+    secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
+    if(primary)buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238,y:primaryY,width:732,height:68});
     return buttons;
 }
 export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
     const items=Array.isArray(utilities)?utilities.slice(0,8):[],count=items.length || Math.min(8,Number(utilities)||0);
     const hasPrimary=items.some(item=>item.primary || item.id==='continue');
     const rows=Math.ceil((count-(hasPrimary?1:0))/2)+(hasPrimary?1:0);
-    return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+(rows+moduleCount)*58;
+    return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+(rows+moduleCount)*62+(hasPrimary?10:0);
 }
 
 let panelInstance=0;
@@ -222,7 +224,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
-        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab=moduleContext?'Modules':'Details';hidden=false;page=0;render();},
+        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab='Details';hidden=false;page=0;render();},
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         recenter(){heading=null;pose=null;lastTime=0;render();},
