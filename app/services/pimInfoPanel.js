@@ -101,6 +101,7 @@ let panelInstance=0;
 export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
     let mediaImage=null,mediaLoadToken=0;
+    let railCollapsed=globalThis.matchMedia?.('(max-width:600px)').matches || false,mediaCollapsed=railCollapsed,toolsCollapsed=false;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,moduleContext=null,utilityActions=[];
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -113,8 +114,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
     const title=()=>tab==='Modules'?(moduleContext?.title || 'Learning modules'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const showPlantPreview=()=>Boolean(tab==='Details' && !selection && identity?.media?.image);
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0)+(showPlantPreview()?170:0);
+    const showPlantPreview=()=>Boolean(identity?.media?.image);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
     function act(action){
@@ -139,10 +140,25 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         if(item.kind==='tab'){button.setAttribute('role','tab');button.setAttribute('aria-selected',String(item.selected));button.setAttribute('aria-controls',contentId);button.id=contentId+'-'+item.action;button.tabIndex=item.selected?0:-1;}
         button.addEventListener('click',event=>{event.stopPropagation();act(item.action);});return button;
     }
+    function makePanelToggle(label,className,onClick,expanded){
+        const button=document.createElement('button');button.type='button';button.className=className;button.textContent=label;button.setAttribute('aria-expanded',String(expanded));
+        button.addEventListener('click',event=>{event.stopPropagation();onClick();render();});return button;
+    }
+    function bindPanelMove(handle){
+        handle.addEventListener('pointerdown',event=>{
+            if(event.button!==0 && event.pointerType==='mouse')return;
+            event.preventDefault();event.stopPropagation();const rect=element.getBoundingClientRect(),dx=event.clientX-rect.left,dy=event.clientY-rect.top;
+            handle.setPointerCapture?.(event.pointerId);
+            const move=next=>{const left=Math.max(8,Math.min(window.innerWidth-element.offsetWidth-8,next.clientX-dx)),top=Math.max(8,Math.min(window.innerHeight-element.offsetHeight-8,next.clientY-dy));element.style.left=left+'px';element.style.top=top+'px';element.style.right='auto';element.style.bottom='auto';};
+            const end=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',end);handle.removeEventListener('pointercancel',end);};
+            handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+        });
+    }
     function render(){
         if(detached)return;
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
+        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.toggle('is-tools-collapsed',toolsCollapsed);element.classList.toggle('has-media',showPlantPreview());
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
@@ -154,8 +170,10 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
             const hideButton=makeButton(controls()[0]);hideButton.classList.add('is-panel-hide');
-            header.append(hideButton,plant,scientific);element.append(header);
+            const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='Move';moveButton.setAttribute('aria-label','Hold and move Control panel');bindPanelMove(moveButton);
+            header.append(hideButton,moveButton,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
+            tabs.append(makePanelToggle(railCollapsed?'›':'‹','nlxr-rail-toggle',()=>{railCollapsed=!railCollapsed;},!railCollapsed));
             controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));
             const closeControl=controls().find(item=>item.kind==='utility' && item.action==='Utility:close');
             if(closeControl){const closeButton=makeButton(closeControl);closeButton.classList.add('is-panel-close');tabs.append(closeButton);}
@@ -172,18 +190,21 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
                 pathway.append(heading,progress,explanation,actions);element.append(pathway);
             }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
-            if(showPlantPreview()){
-                const figure=document.createElement('figure');figure.className='nlxr-plant-preview';
-                const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';
-                figure.append(image);content.append(figure);
-            }
             const heading=document.createElement('h3');heading.textContent=title();
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);element.append(content);
-            const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Control panel actions');
-            controls().filter(item=>(!item.kind || item.kind==='module') && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));element.append(nav);
-            if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility' && item.action!=='Utility:close').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)element.append(utilities);}
+            if(showPlantPreview()){
+                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label','Plant media');
+                const mediaToggle=makePanelToggle(mediaCollapsed?'Image ‹':'Image ›','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;},!mediaCollapsed);media.append(mediaToggle);
+                if(!mediaCollapsed){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=identity.plant+' · reference image';figure.append(image,caption);media.append(figure);}
+                element.append(media);
+            }
+            const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
+            tools.append(makePanelToggle(toolsCollapsed?'Tools ↑':'Tools ↓','nlxr-tools-toggle',()=>{toolsCollapsed=!toolsCollapsed;},!toolsCollapsed));
+            if(!toolsCollapsed){const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>(!item.kind || item.kind==='module') && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
+                if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility' && item.action!=='Utility:close').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}}
+            element.append(tools);
             if(tab==='Details'){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
         }
         if(focused)(element.querySelector('[data-info-action="'+focused+'"]') || element.querySelector('button'))?.focus({preventScroll:true});
@@ -214,8 +235,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
                 const imageTop=contentTop-8,imageHeight=145,imageWidth=732;
                 ctx.save();ctx.beginPath();ctx.roundRect(238,imageTop,imageWidth,imageHeight,14);ctx.clip();
                 const naturalWidth=card.image.naturalWidth || imageWidth,naturalHeight=card.image.naturalHeight || imageHeight;
-                const scale=Math.max(imageWidth/naturalWidth,imageHeight/naturalHeight),sourceWidth=imageWidth/scale,sourceHeight=imageHeight/scale;
-                ctx.drawImage(card.image,(naturalWidth-sourceWidth)/2,(naturalHeight-sourceHeight)/2,sourceWidth,sourceHeight,238,imageTop,imageWidth,imageHeight);
+                const scale=Math.min(imageWidth/naturalWidth,imageHeight/naturalHeight),drawWidth=naturalWidth*scale,drawHeight=naturalHeight*scale;
+                ctx.fillStyle='rgba(233,239,228,.92)';ctx.fillRect(238,imageTop,imageWidth,imageHeight);ctx.drawImage(card.image,238+(imageWidth-drawWidth)/2,imageTop+(imageHeight-drawHeight)/2,drawWidth,drawHeight);
                 ctx.restore();ctx.strokeStyle='rgba(210,232,215,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(238,imageTop,imageWidth,imageHeight,14);ctx.stroke();
                 contentTop+=165;
             }

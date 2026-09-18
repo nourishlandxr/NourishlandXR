@@ -211,7 +211,7 @@
    bottom-centre entry cell stays visible and tappable. Spatial AR keeps the
    waist-level pose supplied by pimInfoPanel.js. */
 .nlxr-info-panel.is-demo-panel {
-    left:10px; right:auto; top:auto; bottom:88px;
+    left:10px; right:auto; top:auto; bottom:132px;
     width:min(360px,calc(100vw - 20px)); height:min(78dvh,580px); max-height:78dvh;
 }
 .nlxr-info-panel.is-demo-panel .nlxr-control-utilities button {
@@ -344,4 +344,74 @@
 .nlxr-info-panel .nlxr-control-utilities {
     border-top-color:rgba(205,229,202,.18);
     gap:7px;
+}
+
+/* Modular XR workstation inspired by spatial media consoles: navigation wing,
+   central reading surface, optional media wing and collapsible tool shelf. */
+.nlxr-info-panel.is-demo-panel {
+    grid-template-columns:148px minmax(290px,1fr) 42px;
+    grid-template-rows:auto minmax(0,1fr) auto auto;
+    grid-template-areas:"rail header media" "rail content media" "rail tools media" "rail page media";
+    width:min(760px,calc(100vw - 28px));
+    height:min(62vh,610px);
+    bottom:132px;
+    gap:0 14px;
+    padding:0 0 8px;
+    overflow:hidden;
+    border-radius:12px;
+    background:linear-gradient(155deg,rgba(48,54,61,.97),rgba(18,23,28,.96));
+    border-color:rgba(196,207,213,.42);
+    box-shadow:0 20px 52px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.12);
+}
+.nlxr-info-panel.is-demo-panel.has-media:not(.is-media-collapsed) { grid-template-columns:148px minmax(290px,1fr) minmax(210px,260px); }
+.nlxr-info-panel.is-demo-panel.is-rail-collapsed { grid-template-columns:44px minmax(290px,1fr) 42px; }
+.nlxr-info-panel.is-demo-panel.is-rail-collapsed.has-media:not(.is-media-collapsed) { grid-template-columns:44px minmax(290px,1fr) minmax(210px,260px); }
+.nlxr-info-panel.is-demo-panel .nlxr-control-header { padding:14px 100px 11px 4px; }
+.nlxr-info-panel.is-demo-panel .nlxr-control-header h2 { font-size:clamp(19px,2.2vw,25px); }
+.nlxr-info-panel.is-demo-panel .nlxr-control-header .is-panel-hide { right:4px; }
+.nlxr-info-panel.is-demo-panel .nlxr-panel-move { position:absolute; top:10px; right:56px; min-width:44px; min-height:38px; padding:6px; cursor:grab; touch-action:none; }
+.nlxr-info-panel.is-demo-panel .nlxr-panel-move:active { cursor:grabbing; }
+.nlxr-info-panel.is-demo-panel .nlxr-control-tabs { padding:12px 9px; background:rgba(23,28,35,.86); border-right:1px solid rgba(215,224,228,.18); }
+.nlxr-info-panel.is-demo-panel .nlxr-control-tabs button {
+    border-color:rgba(204,216,225,.2);
+    background:linear-gradient(155deg,rgba(91,103,114,.46),rgba(44,52,61,.72));
+    color:#edf2f4;
+    box-shadow:inset 0 1px rgba(255,255,255,.09),0 4px 10px rgba(0,0,0,.18);
+}
+.nlxr-info-panel.is-demo-panel .nlxr-control-tabs button:hover,
+.nlxr-info-panel.is-demo-panel .nlxr-control-tabs button:focus-visible { background:linear-gradient(155deg,rgba(112,127,139,.58),rgba(50,60,69,.8)); }
+.nlxr-info-panel.is-demo-panel .nlxr-control-tabs [role="tab"][aria-selected="true"] {
+    border-left-color:#8fc4d9;
+    background:linear-gradient(155deg,rgba(78,113,130,.72),rgba(43,60,69,.82));
+}
+.nlxr-info-panel.is-demo-panel .nlxr-rail-toggle,
+.nlxr-info-panel.is-demo-panel .nlxr-media-toggle,
+.nlxr-info-panel.is-demo-panel .nlxr-tools-toggle { min-height:38px; border-color:rgba(197,211,218,.32); background:rgba(117,129,139,.22); }
+.nlxr-info-panel.is-demo-panel.is-rail-collapsed .nlxr-control-tabs { padding:10px 4px; }
+.nlxr-info-panel.is-demo-panel.is-rail-collapsed .nlxr-control-tabs > :not(.nlxr-rail-toggle) { display:none; }
+.nlxr-info-panel.is-demo-panel > [role="tabpanel"] { padding:4px 4px 0; }
+.nlxr-info-panel.is-demo-panel h3 { font-size:clamp(19px,2vw,24px); }
+.nlxr-info-panel.is-demo-panel .nlxr-info-body { font-size:clamp(16px,1.55vw,19px); line-height:1.56; }
+.nlxr-info-panel.is-demo-panel .nlxr-info-trail { font-size:12px; }
+.nlxr-info-panel.is-demo-panel .nlxr-media-wing { grid-area:media; min-width:0; padding:11px 9px; overflow:hidden; background:rgba(22,27,34,.9); border-left:1px solid rgba(215,224,228,.17); }
+.nlxr-info-panel.is-demo-panel.is-media-collapsed .nlxr-media-wing { padding:10px 3px; }
+.nlxr-info-panel.is-demo-panel .nlxr-media-toggle { width:100%; margin:0 0 10px; writing-mode:horizontal-tb; }
+.nlxr-info-panel.is-demo-panel.is-media-collapsed .nlxr-media-toggle { height:100%; padding:6px 2px; writing-mode:vertical-rl; }
+.nlxr-info-panel.is-demo-panel .nlxr-plant-preview { display:grid; grid-template-rows:minmax(0,1fr) auto; width:100%; height:calc(100% - 50px); margin:0; aspect-ratio:auto; border-radius:8px; background:rgba(236,241,232,.96); }
+.nlxr-info-panel.is-demo-panel .nlxr-plant-preview::after { display:none; }
+.nlxr-info-panel.is-demo-panel .nlxr-plant-preview img { min-height:0; object-fit:contain; object-position:center; }
+.nlxr-info-panel.is-demo-panel .nlxr-plant-preview figcaption { padding:8px 9px; color:#29352f; background:#dfe8dc; font:600 11px/1.3 system-ui; }
+.nlxr-info-panel.is-demo-panel .nlxr-tools-dock { grid-area:tools; display:flex; align-items:stretch; gap:7px; min-width:0; margin-top:6px; padding:7px 4px 2px; border-top:1px solid rgba(210,221,225,.18); background:rgba(12,17,21,.24); }
+.nlxr-info-panel.is-demo-panel .nlxr-tools-dock > nav { display:flex; flex:1; flex-wrap:wrap; gap:6px; margin:0; padding:0; border:0; }
+.nlxr-info-panel.is-demo-panel .nlxr-tools-dock button { min-height:42px; }
+.nlxr-info-panel.is-demo-panel .nlxr-tools-toggle { flex:0 0 auto; min-width:70px; }
+.nlxr-info-panel.is-demo-panel.is-tools-collapsed .nlxr-tools-dock { justify-content:center; }
+.nlxr-info-panel.is-demo-panel.is-tools-collapsed .nlxr-tools-toggle { width:100%; }
+@media(max-width:700px) {
+    .nlxr-info-panel.is-demo-panel { left:3vw; right:auto; top:auto; bottom:124px; grid-template-columns:44px minmax(0,1fr) 38px; width:min(94vw,430px); height:min(40vh,420px); max-height:40vh; gap:0 7px; }
+    .nlxr-info-panel.is-demo-panel.has-media:not(.is-media-collapsed) { grid-template-columns:44px minmax(0,1fr) 38px; }
+    .nlxr-info-panel.is-demo-panel .nlxr-media-wing { position:absolute; z-index:5; top:0; right:0; bottom:0; width:min(72vw,300px); box-sizing:border-box; box-shadow:-12px 0 28px rgba(0,0,0,.42); }
+    .nlxr-info-panel.is-demo-panel.is-media-collapsed .nlxr-media-wing { position:static; width:auto; box-shadow:none; }
+    .nlxr-info-panel.is-demo-panel .nlxr-control-header { padding-right:96px; }
+    .nlxr-info-panel.is-demo-panel .nlxr-info-body { font-size:16px; line-height:1.48; }
 }

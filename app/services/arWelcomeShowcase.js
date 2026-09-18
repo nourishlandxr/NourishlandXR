@@ -9,6 +9,12 @@ export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
 // the separate Learning Information Mesh document.
 export const AR_WELCOME_GRAPHS = LIM_GRAPHS;
 export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map((graph,index)=>({...graph,revealSeed:(index+1)*.173}));
+// First cross-branch prototype. These two foundations describe one practical
+// relationship: guild design gives plant functions a place in the system.
+export const LIM_RELATION_PROTOTYPES = Object.freeze([
+ Object.freeze({ids:Object.freeze(['lim-intro-literacy-guilds','lim-intro-food-function']),accent:'#9fbd78',label:'Guilds connect plant relationships with useful forest functions'})
+]);
+export function welcomeRelationshipFor(limId){return LIM_RELATION_PROTOTYPES.find(item=>item.ids.includes(limId)) || null;}
 const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
 export const AR_WELCOME_CANVAS = {width:2500,height:2100};
 // The welcome note uses its original local coordinates inside this centred
@@ -140,7 +146,9 @@ function settleWelcomeLayout(frames) {
   const seeded=Math.atan2(node.y-parent.y,node.x-parent.x);
   const base=node.depth===1?outward:seeded;
   let best=null;
-  const radii=node.depth===1?[190,198,206,214,224]:[190,198,206,220,238,258,282,310,344,382,424];
+  // Begin at the shared-edge distance and widen only when another cell truly
+  // occupies that space. Extra candidates prevent the old fallback overlap.
+  const radii=node.depth===1?[186,192,200,210,222,238,258,282,310,344]:[186,192,200,210,222,238,258,282,310,344,382,424,470,520,580,640];
   for(const distance of radii){
    for(const step of angleSteps){
     const angle=base+step*Math.PI/12;
@@ -384,6 +392,18 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.restore();
  const frames=welcomeExperienceFrames(elapsed,reducedMotion,graphs,options.hidden,options.progression);
  if(options.drawCells===false){ctx.restore();return frames;}
+ const allNodes=frames.flatMap(frame=>frame.nodes);
+ const selectedNode=allNodes.find(node=>node.key===options.selectedKey);
+ const relationship=welcomeRelationshipFor(selectedNode?.limId);
+ const linkedNodes=relationship?relationship.ids.map(id=>allNodes.find(node=>node.limId===id && node.opacity>.55)).filter(Boolean):[];
+ const linkedKeys=new Set(linkedNodes.map(node=>node.key));
+ if(linkedNodes.length===2){
+  const [from,to]=linkedNodes,dx=to.x-from.x,dy=to.y-from.y,distance=Math.hypot(dx,dy)||1;
+  const nx=-dy/distance,ny=dx/distance,bend=Math.min(150,distance*.16),pulse=reducedMotion?.72:.58+Math.sin(elapsed/520)*.14;
+  ctx.save();ctx.globalAlpha=pulse;ctx.strokeStyle=relationship.accent;ctx.lineWidth=5;ctx.setLineDash([18,13]);
+  ctx.shadowColor=relationship.accent;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(from.x,from.y);
+  ctx.quadraticCurveTo((from.x+to.x)/2+nx*bend,(from.y+to.y)/2+ny*bend,to.x,to.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+ }
  for(const frame of frames){
   const hue=[226,34,105,56,17,273,157,198][frame.corner];
  // LIM cells are drawn directly on their reserved lattice positions. There
@@ -404,7 +424,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  }
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
-  if(current.opacity)drawGlassCell(ctx,current,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:options.selectedKey===node.key?1:0,selected:options.selectedKey===node.key,pathway});
+  const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
+  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:(options.selectedKey===node.key||linked)?1:0,selected:options.selectedKey===node.key||linked,pathway});
  }
  }
  ctx.restore();
