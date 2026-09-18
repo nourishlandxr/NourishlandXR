@@ -100,6 +100,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 let panelInstance=0;
 export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
+    let mediaImage=null,mediaLoadToken=0;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,moduleContext=null,utilityActions=[];
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -112,7 +113,8 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
     const title=()=>tab==='Modules'?(moduleContext?.title || 'Learning modules'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
+    const showPlantPreview=()=>Boolean(tab==='Details' && !selection && identity?.media?.image);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0)+(showPlantPreview()?170:0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
     function act(action){
@@ -170,6 +172,11 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
                 pathway.append(heading,progress,explanation,actions);element.append(pathway);
             }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
+            if(showPlantPreview()){
+                const figure=document.createElement('figure');figure.className='nlxr-plant-preview';
+                const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';
+                figure.append(image);content.append(figure);
+            }
             const heading=document.createElement('h3');heading.textContent=title();
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
@@ -197,11 +204,20 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
             ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
             ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
-            const contentTop=card.pathway?292:187,titleX=card.accent?258:238,titleWidth=card.accent?712:732;
+            let contentTop=card.pathway?292:187;const titleX=card.accent?258:238,titleWidth=card.accent?712:732;
             if(card.pathway){
                 ctx.fillStyle='#aaccc1';ctx.font='600 22px system-ui';ctx.fillText(card.pathway.title+(card.pathway.preview?' · PREVIEW':''),238,178,560);
                 ctx.fillStyle='#b7c5c9';ctx.font='500 19px system-ui';ctx.fillText(card.pathway.progress,790,180,180);ctx.font='400 19px system-ui';
                 infoPages(card.pathway.explanation,72,2)[0].forEach((line,index)=>ctx.fillText(line,238,218+index*24,732));
+            }
+            if(card.image){
+                const imageTop=contentTop-8,imageHeight=145,imageWidth=732;
+                ctx.save();ctx.beginPath();ctx.roundRect(238,imageTop,imageWidth,imageHeight,14);ctx.clip();
+                const naturalWidth=card.image.naturalWidth || imageWidth,naturalHeight=card.image.naturalHeight || imageHeight;
+                const scale=Math.max(imageWidth/naturalWidth,imageHeight/naturalHeight),sourceWidth=imageWidth/scale,sourceHeight=imageHeight/scale;
+                ctx.drawImage(card.image,(naturalWidth-sourceWidth)/2,(naturalHeight-sourceHeight)/2,sourceWidth,sourceHeight,238,imageTop,imageWidth,imageHeight);
+                ctx.restore();ctx.strokeStyle='rgba(210,232,215,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(238,imageTop,imageWidth,imageHeight,14);ctx.stroke();
+                contentTop+=165;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(238,contentTop-7,7,42);ctx.globalAlpha=1;}
             ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,titleX,contentTop,titleWidth);
@@ -228,17 +244,21 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
     const api={element,
-        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};tab='Details';hidden=false;page=0;render();},
+        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};mediaImage=null;mediaLoadToken++;tab='Details';hidden=false;page=0;render();},
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         recenter(){heading=null;pose=null;lastTime=0;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;render();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
-        focusPlant(nextRecord,document){
-            if(record===nextRecord && identity)return;
-            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || ''};tab='Details';page=0;render();
+        focusPlant(nextRecord,document,media=null){
+            const previousMedia=record===nextRecord ? identity?.media : null;
+            const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || '')} : previousMedia;
+            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia};mediaImage=null;
+            const token=++mediaLoadToken;
+            if(nextMedia?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token!==mediaLoadToken)return;mediaImage=image;render();};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=nextMedia.image;}
+            tab='Details';page=0;render();
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || ''};tab='Details';hidden=false;page=0;render();return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const media=record===nextRecord?identity?.media:null;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media};tab='Details';hidden=false;page=0;render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
@@ -253,7 +273,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,image:showPlantPreview()?mediaImage:null,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());
@@ -264,6 +284,6 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             if(hit(ray)){event.stopImmediatePropagation();if(event.type==='select')api.activate(ray);}
         };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
             removeXrControls=()=>{for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
-        destroy(){removeXrControls();renderer?.destroy();renderer=null;element.remove();}
+        destroy(){mediaLoadToken++;mediaImage=null;removeXrControls();renderer?.destroy();renderer=null;element.remove();}
     };render();return api;
 }

@@ -23,7 +23,7 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
-import { requestImmersiveArSession } from '../services/webxrSession.js';
+import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
@@ -34,6 +34,7 @@ import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
+const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
@@ -59,6 +60,7 @@ let marker = null;
 let markerType = 'marker';
 let markers = [];
 let simulatedMode = false;
+let questLaunchPending = false;
 let program = null;
 let buffer = null;
 let sphereRenderer = null;
@@ -116,6 +118,7 @@ let introKnowledgeVisible = false;
 let introBoardStep = '';
 let introBoardTitle = 'NourishlandXR';
 let introBoardBody = 'A short guided demo of Plant Live Tags and Notes.';
+let introBoardNextGuide = '';
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -371,6 +374,7 @@ function clearSessionState() {
     introNoteTexture = null;
     introNoteCanvas = null;
     introBoardVisibleBody = '';
+    introBoardNextGuide = '';
     introBoardTextureDirty = true;
     introTextureUploadedAt = 0;
     introFrameToken = 0;
@@ -425,6 +429,18 @@ function setGuide(message) {
     if (guide) guide.textContent = message;
 }
 
+function setIntroBoardNextGuide(message,{reveal=true}={}) {
+    introBoardNextGuide=String(message||'').trim();
+    introBoardTextureDirty=true;
+    const textWindow=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
+    if(!textWindow)return;
+    let cue=textWindow.querySelector('.tryit-board-next');
+    if(!introBoardNextGuide){cue?.remove();return;}
+    if(!cue){cue=document.createElement('p');cue.className='tryit-board-next';textWindow.append(cue);}
+    cue.textContent=`Next · ${introBoardNextGuide}`;
+    cue.hidden=!reveal;
+}
+
 function demoControlIsVisible(selector) {
     const element=appRoot?.querySelector(selector);
     return Boolean(element && !element.hidden && !element.disabled);
@@ -435,6 +451,7 @@ function demoPanelActions() {
     if(demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
     if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
+    if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Quest 3…':'Enter Quest 3',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
     return actions.slice(-8);
@@ -462,8 +479,21 @@ function handleDemoPanelAction(action) {
     if(action==='back' && demoOrientationStep>0){runArWelcomeTutorial(demoOrientationStep-1);return;}
     if(action==='skip'){skipDemoNarration?.();return;}
     if(action==='lim-visibility'){setLimMeshVisible(!limMeshVisible);return;}
+    if(action==='quest'){void retryQuestImmersive();return;}
     if(action==='recenter'){infoPanel?.recenter();return;}
     if(action==='close')returnToWelcome();
+}
+
+async function retryQuestImmersive() {
+    if(questLaunchPending || !simulatedMode)return;
+    questLaunchPending=true;syncDemoPanelActions();setGuide('Opening Quest 3 immersive mode…');
+    const immersive=await startImmersive();
+    questLaunchPending=false;
+    renderInterface(!immersive);
+    if(!immersive){
+        viewerMatrix=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+        setGuide('Quest 3 immersive mode was not available. Preview mode remains open.');
+    }
 }
 
 function bindDemoPanelActions() {
@@ -719,6 +749,8 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     }
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
+    const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
+    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Choose ${choiceLabels[0]} in the Control panel.`:'Choose an option in the Control panel.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
@@ -763,6 +795,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         typing = false;
         revealTargets.forEach(target => target.classList.remove('is-awaiting-text'));
         panel.classList.remove('is-typing');
+        panel.querySelector('.tryit-board-next')?.removeAttribute('hidden');
         revealControls();
         if (!completionNotified) {
             completionNotified = true;
@@ -823,7 +856,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     let typing = true;
     let completionNotified = false;
     const paintBoardParagraphs = visibleText => {
-        const paragraphElements = [...(board?.querySelectorAll('.tryit-board-text-window p') || [])];
+        const paragraphElements = [...(board?.querySelectorAll('.tryit-board-text-window p:not(.tryit-board-next)') || [])];
         let start = 0;
         paragraphs.forEach((paragraph, index) => {
             const end = start + paragraph.length;
@@ -842,6 +875,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         paintBoardParagraphs(bodyText);
         board?.classList.add('is-copy-ready');
         board?.classList.remove('is-typing');
+        board?.querySelector('.tryit-board-next')?.removeAttribute('hidden');
         typing = false;
         if (continueButton && buttonLabel) {continueButton.hidden = false;syncDemoPanelActions();}
         if (!completionNotified) {
@@ -866,6 +900,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
+        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Press ${demoLocalizedText(buttonLabel)} in the Control panel.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');
@@ -926,6 +961,7 @@ function showPersistentPimPrompt(record) {
     const title = demoLocalizedText('Plant Information Mesh');
     const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Press Continue after you have explored the Plant Information Mesh.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
+    setIntroBoardNextGuide('Explore a plant cell, then press Continue in the Control panel.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1040,6 +1076,7 @@ function paintLearningModuleBoard(){
     introBoardStep=`Learning module · ${learningModuleStep>=learningModule.steps.length?'Complete':`Micro step ${learningModuleStep+1} of ${learningModule.steps.length}`}`;
     introBoardTitle=board.title;introBoardBody=board.body;introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');}
+    setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue, or end learning in the Control panel.`:'Press End learning in the Control panel to return to the demo.');
     infoPanel?.setLearningModules(board,{open:true});
     selectedLimCell='';
     if(step){const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===step.cellId);if(node)selectedLimCell=node.key;}
@@ -1189,7 +1226,9 @@ function paintWelcomeLayer(now) {
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
         if(button){
             const pathwayCurrent=(node.limId || node.label)===currentPathwayCellId() && ['active','paused'].includes(limPathwayState.status);
-            button.hidden=!limMeshVisible || node.opacity<=.5;
+            button.hidden=!limMeshVisible || node.opacity<=.01;
+            button.style.opacity=String(node.opacity);
+            button.style.pointerEvents=node.opacity>=.85?'':'none';
             const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
             button.style.setProperty('--lim-accent',node.accent||'#719b62');
             button.style.setProperty('--lim-progress',String(progress));
@@ -1240,6 +1279,7 @@ function showArWelcomeShowcase() {
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected cell details here. Press Continue below to begin. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${introBoardBody.split('\n\n').map(paragraph=>`<p>${paragraph}</p>`).join('')}</div>`;
     prepareTutorialBoard(panel);
+    setIntroBoardNextGuide('Press Continue in the Control panel; Vision is optional.');
     panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');
     panel.classList.remove('is-live-welcome-copy','is-typing');
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
@@ -1314,19 +1354,19 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Meet your Control panel',button:'Continue',paragraphs:[
+    {title:'Meet your Control panel',button:'Continue',nextGuide:'Press Continue in the Control panel to meet the learning cells.',paragraphs:[
         'The green panel introduces each part of the experience. Your Control panel stays beside you for guidance, selected details and useful actions.',
         'Try its Help or Settings tabs at any time. Use Continue below to move on when you are ready.'
     ]},
-    {title:'Read a living place',button:'Continue',paragraphs:[
+    {title:'Read a living place',button:'Continue',nextGuide:'Choose a cell to explore, or press Continue in the Control panel.',paragraphs:[
         'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Place, Life, Forest and Purpose.',
         'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
     ]},
-    {title:'Knowledge in the landscape',button:'Continue',paragraphs:[
+    {title:'Knowledge in the landscape',button:'Continue',nextGuide:'Press Continue in the Control panel to meet your first plant.',paragraphs:[
         'NourishlandXR connects ideas to the places and plants they describe. A cell offers a quick doorway; the Control panel gives you the deeper explanation.',
         'Free exploration remains available at every point. The learning cells can stay open as you move ahead, or you can hide them. Guided learning modules are available separately when you choose them.'
     ]},
-    {title:'Meet your first plant',button:'Place a plant orb',paragraphs:[
+    {title:'Meet your first plant',button:'Place a plant orb',nextGuide:'Press Place a plant orb in the Control panel to reveal the aim.',paragraphs:[
         'A plant orb connects knowledge to a plant in this place. Start with a Pigeon Pea and explore its relationships, cultivation and uses.',
         'Choose Place a plant orb. Aim at a comfortable location, then press to place it. You can hold the orb to reposition it.'
     ]}
@@ -1341,7 +1381,7 @@ function runArWelcomeTutorial(index=0) {
         suppressSessionSelectUntil=performance.now()+700;
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Tutorial stage '+(index+1)+' of 4 · '+['Control panel','Explore','Place','Plant'][index]});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Tutorial stage '+(index+1)+' of 4 · '+['Control panel','Explore','Place','Plant'][index],nextGuide:step.nextGuide});
 }
 
 function guidePlantConversion(record) {
@@ -1371,6 +1411,10 @@ function guidePlantConversion(record) {
         pointer?.setAttribute('hidden', '');
         pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
+        if(!moringa)infoPanel?.focusPlant(record,PIGEON_PEA_PIM,{
+            image:PIGEON_PEA_CONTROL_IMAGE,
+            alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas'
+        });
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     showIntroBoard(
@@ -1632,11 +1676,16 @@ function armDemoPlacement(type, {explained=false}={}) {
     const place = appRoot?.querySelector('[data-tryit-place]');
     if (place && simulatedMode) {
         const comfortOffsetPercent = AR_PHONE_COMFORT.pointerOffsetPixels / Math.max(320, window.innerHeight || 640) * 100;
-        const stageAim = {
+        const compactAim = window.innerWidth <= 600;
+        const stageAim = (compactAim ? {
+            plant: { x: 78, y: 43 },
+            plant2: { x: 22, y: 43 },
+            note: { x: 50, y: 44 }
+        } : {
             plant: { x: 34, y: Math.min(78, 50 + comfortOffsetPercent) },
             plant2: { x: 66, y: Math.min(78, 50 + comfortOffsetPercent) },
             note: { x: 50, y: Math.min(86, 58 + comfortOffsetPercent) }
-        }[type] || { x: 50, y: Math.min(86, 50 + comfortOffsetPercent) };
+        })[type] || { x: 50, y: Math.min(86, 50 + comfortOffsetPercent) };
         place.dataset.aimX = String(stageAim.x);
         place.dataset.aimY = String(stageAim.y);
         place.style.setProperty('--aim-x', `${stageAim.x}%`);
@@ -1665,6 +1714,18 @@ function armDemoPlacement(type, {explained=false}={}) {
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
+        const placementCopy = type === 'plant'
+            ? {title:'Place your first plant orb',body:'Pigeon Pea will anchor the first example of living plant knowledge in this place.',next:'Press the visible aiming circle to place Pigeon Pea.'}
+            : type === 'plant2'
+                ? {title:'Place a second plant',body:'Choose a nearby position for Moringa and notice how two plant stories can share a place.',next:'Press the visible aiming circle to place Moringa.'}
+                : {title:'Place an observation',body:'A Note can hold something you noticed at this point in the landscape.',next:'Press the visible aiming circle to place the Note.'};
+        introBoardTitle=placementCopy.title;
+        introBoardBody=placementCopy.body;
+        introBoardVisibleBody=placementCopy.body;
+        introBoardTextureDirty=true;
+        const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+        if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${placementCopy.title}</h2><div class="tryit-board-text-window"><p>${placementCopy.body}</p></div>`;board.classList.add('is-copy-ready');board.classList.remove('is-typing');}
+        setIntroBoardNextGuide(placementCopy.next);
         setGuide(type === 'plant'
             ? 'Press the aiming circle to place the example Plant orb.'
             : type === 'plant2'
@@ -3151,7 +3212,7 @@ function drawIntroNoteContent(ctx) {
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
     const bodyTop = 535;
-    const bodyBottom = 775;
+    const bodyBottom = introBoardNextGuide ? 700 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
     let paragraphY = bodyTop;
@@ -3172,6 +3233,14 @@ function drawIntroNoteContent(ctx) {
     }
     if (clipped) ctx.fillText('…', contentLeft, bodyBottom);
     ctx.restore();
+    }
+    if(introBoardNextGuide){
+        ctx.strokeStyle='rgba(220,239,149,.45)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(contentLeft,725);ctx.lineTo(contentLeft+contentWidth,725);ctx.stroke();
+        ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
+        ctx.font='italic 27px Georgia, serif';
+        const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
+        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentLeft,738+index*31));
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;

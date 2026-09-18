@@ -125,7 +125,43 @@ function attachedRoot(angle) {
   growthAngle:angle,
   attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
 }
+const settledLayouts=new WeakMap();
+function settleWelcomeLayout(frames) {
+ const placed=frames.flatMap(frame=>frame.nodes.filter(node=>node.depth===0));
+ const byId=new Map(frames.flatMap(frame=>frame.nodes.map(node=>[`${frame.corner}:${node.id}`,node])));
+ const moving=frames.flatMap(frame=>frame.nodes.filter(node=>node.depth>0).map(node=>({frame,node})))
+  .sort((a,b)=>a.node.depth-b.node.depth||a.node.revealAt-b.node.revealAt||a.frame.corner-b.frame.corner);
+ const minGap=LIM_LAYOUT.radius*2+12;
+ const angleSteps=[0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7,8,-8,9,-9,10,-10,11,-11,12];
+ for(const {frame,node} of moving){
+  const parent=byId.get(`${frame.corner}:${node.parent}`);
+  if(!parent)continue;
+  const outward=parent.growthAngle??Math.atan2(parent.y-1050,parent.x-1250);
+  const seeded=Math.atan2(node.y-parent.y,node.x-parent.x);
+  const base=node.depth===1?outward:seeded;
+  let best=null;
+  const radii=node.depth===1?[190,198,206,214,224]:[190,198,206,220,238,258,282,310,344,382,424];
+  for(const distance of radii){
+   for(const step of angleSteps){
+    const angle=base+step*Math.PI/12;
+    const x=parent.x+Math.cos(angle)*distance,y=parent.y+Math.sin(angle)*distance;
+    if(x<105||x>2395||y<105||y>1995)continue;
+    const boardX=Math.max(800,Math.min(1700,x)),boardY=Math.max(810,Math.min(1310,y));
+    if(Math.hypot(x-boardX,y-boardY)<LIM_LAYOUT.radius*.78)continue;
+    if(placed.some(other=>Math.hypot(other.x-x,other.y-y)<minGap))continue;
+    const angleCost=Math.abs(step)*3,seedCost=Math.hypot(node.x-x,node.y-y)*.08;
+    const cost=distance+angleCost+seedCost;
+    if(!best||cost<best.cost)best={x,y,cost};
+   }
+   if(best)break;
+  }
+  if(best){node.x=best.x;node.y=best.y;}
+  placed.push(node);
+ }
+}
 function revealFrames(graphs) {
+ const cached=settledLayouts.get(graphs);
+ if(cached)return cached.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
  const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
  const archetypes=[
   {id:'analysis',label:'Place',limId:'lim-intro-analysis',accent:'#6978b8',quadrant:0,at:800,children:[['Climate','lim-intro-analysis-climate'],['Topography','lim-intro-analysis-topography'],['Landscape','lim-intro-analysis-landscape'],['Strategy','lim-intro-analysis-strategy']],legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
@@ -190,7 +226,10 @@ function revealFrames(graphs) {
   });
   return {corner,phase:0,cycle:0,nodes};
  });
- return [vision,...frames];
+ const layout=[vision,...frames];
+ settleWelcomeLayout(layout);
+ settledLayouts.set(graphs,layout);
+ return layout.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
 }
 
 // Keep developed cells in place. Dismissal uses stable corner/node identities,

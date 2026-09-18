@@ -63,6 +63,9 @@
 .nlxr-info-panel [role=tab][aria-selected=true] { background:#9fbbb461; border-bottom:3px solid #aaccc1; }
 .nlxr-info-panel h3 { color:inherit; font:600 17px/1.3 system-ui; margin:10px 0 6px; }
 .nlxr-info-panel .nlxr-info-body { font-size:15px; line-height:1.5; margin:12px 0; }
+.nlxr-info-panel .nlxr-plant-preview { position:relative; margin:6px 0 12px; aspect-ratio:16/7; overflow:hidden; border:1px solid #c9dec866; border-radius:10px; background:#111915; box-shadow:inset 0 1px #ffffff26,0 8px 20px #0004; }
+.nlxr-info-panel .nlxr-plant-preview::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,transparent 55%,#10201966); }
+.nlxr-info-panel .nlxr-plant-preview img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
 .nlxr-info-panel .nlxr-control-actions { justify-content:space-between; }
 .nlxr-info-panel .nlxr-control-page { text-align:center; }
 .nlxr-info-panel.is-hidden { padding:5px; }
