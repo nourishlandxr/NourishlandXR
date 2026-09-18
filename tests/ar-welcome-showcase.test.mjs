@@ -29,7 +29,7 @@ test('all LIM cells have deterministic reserved positions and visible cells use 
  assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
 });
 test('portrait and landscape phones frame the LIM without shrinking its cells',()=>{
- assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:700px;[\s\S]*min-width:700px;/);
+ assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:600px;[\s\S]*min-width:600px;/);
  assert.match(styles, /orientation:landscape\) and \(max-height:720px\)[\s\S]*inset:44% auto auto 67%;[\s\S]*width:620px;/);
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{
@@ -95,7 +95,8 @@ test('Vision opens first, then four archetypes preserve ancestry and spacing',as
  assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Place','Life','Forest','Purpose']);
  for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
- assert.ok(nodes.every(node=>node.y+node.radius<=810 || node.y-node.radius>=1310 || node.x+node.radius<=800 || node.x-node.radius>=1700));
+ assert.ok(nodes.every(node=>node.x-node.radius>0 && node.x+node.radius<2500 && node.y-node.radius>0 && node.y+node.radius<2100));
+ for(const node of nodes.filter(node=>node.depth===0)){assert.ok(node.attachment);assert.ok(Math.abs(Math.hypot(node.x-node.attachment.x,node.y-node.attachment.y)-94)<.001);}
  const opening=welcomeExperienceFrames(order[0].revealAt+700,true,graphs).flatMap(f=>f.nodes).find(n=>n.key===order[0].key);
  assert.ok(opening.opacity>0 && opening.opacity<1);assert.equal(opening.scale,1);
  assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
@@ -154,3 +155,5 @@ test('hiding a cell removes only its descendants and stays dismissed',async()=>{
  assert.equal(welcomeCellAtPoint(frames,1250,1050),null);
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,hidden,progression),frames);
 });
+
+test('shared welcome silhouette has exactly 64 distinct vertices',async()=>{const {WELCOME_SHAPE_POINTS}=await import('../app/services/arWelcomePanel.js');assert.equal(WELCOME_SHAPE_POINTS.length,64);assert.equal(new Set(WELCOME_SHAPE_POINTS.map(p=>p.x+','+p.y)).size,64);});

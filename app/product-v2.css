@@ -379,3 +379,11 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .v2-wheel-hero>.v2-living-wheel{grid-column:2;grid-row:1;margin:0;width:100%;align-self:center}
 #app .v2-wheel-hero h1{font-size:clamp(30px,4.7vw,60px);max-width:none;letter-spacing:-.035em}
 @media(max-width:700px){.v2-wheel-hero{grid-template-columns:minmax(0,.95fr) minmax(150px,1.05fr);gap:6px}.v2-wheel-hero>.v2-living-wheel{width:100%;margin:0}#app .v2-wheel-hero h1{font-size:clamp(20px,5.4vw,34px);line-height:1.08;letter-spacing:-.6px}.v2-wheel-hero .v2-eyebrow{font-size:8px;letter-spacing:.8px}}
+
+/* The canvas owns both the LIM centre and cells, keeping their coordinates shared. */
+.tryit-demo .tryit-guided-choice.is-lim-shared-surface {
+ position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;
+ padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;
+ pointer-events:none!important;
+}
+.tryit-live-welcome button[data-welcome-cell][hidden] {display:none!important;}

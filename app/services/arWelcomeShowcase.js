@@ -1,4 +1,4 @@
-import {drawArWelcomePanel} from './arWelcomePanel.js';
+import {drawArWelcomePanel,welcomeBoundary} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS} from './limLearning.js';
 
@@ -117,6 +117,13 @@ export function createWelcomePresentationClock() {
  }};
 }
 
+function attachedRoot(angle) {
+ const edge=welcomeBoundary(angle);
+ // Fixed root footprint just outside the shared board perimeter.
+ return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*94,
+  y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*94,
+  attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
+}
 function revealFrames(graphs) {
  const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
  const archetypes=[
@@ -125,28 +132,39 @@ function revealFrames(graphs) {
   {id:'food-forest',label:'Forest',limId:'lim-intro-food-forest',accent:'#a06a43',quadrant:2,at:2000,children:[['Function','lim-intro-food-function'],['Energy','lim-intro-food-energy'],['Design','lim-intro-food-design'],['Succession','lim-intro-food-succession']],legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
   {id:'smart',label:'Purpose',limId:'lim-intro-smart',accent:'#4f879e',quadrant:3,at:2600,children:[['Goals','lim-intro-smart-goals'],['Outcomes','lim-intro-smart-outcomes'],['Limitations','lim-intro-smart-limitations'],['Challenges','lim-intro-smart-challenges']],legacy:[7],legacyParents:['lim-intro-smart-goals']}
  ];
- const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',x:1250,y:1750,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
- const slots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
- const point=(quadrant,slot)=>{
-  const [column,row]=slots[slot]||slots.at(-1),topY=160+row*159+(column%2)*79;
+ const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',...attachedRoot(Math.PI/2),baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
+ const foundationOffsets=[[0,0],[0,-159],[138,-80],[138,80],[0,159]];
+ const foundationPoint=(quadrant,slot,root)=>{
+  const [dx,dy]=foundationOffsets[slot]||foundationOffsets.at(-1);
+  const mirrorX=quadrant===1||quadrant===2?-1:1;
+  const mirrorY=quadrant>=2?-1:1;
+  return {x:root.x+dx*mirrorX,y:root.y+dy*mirrorY};
+ };
+ const reservedSlots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3]];
+ const reservedPoint=(quadrant,slot)=>{
+  const [column,row]=reservedSlots[slot]||reservedSlots.at(-1),topY=160+row*159+(column%2)*79;
   const leftX=220+column*138;
-  // A stable asymmetry keeps the four families spatially distinct without
-  // moving targets between frames or disrupting their touch footprints.
   const offsets=[[65,-28],[22,15],[48,12],[65,-18]];
-  const [shiftX,shiftY]=offsets[quadrant];
-  const seed=(quadrant*37+slot*19)%17-8;
+  const [shiftX,shiftY]=offsets[quadrant],seed=(quadrant*37+slot*19)%17-8;
   return {x:(quadrant===1||quadrant===2?2500-leftX:leftX)+shiftX+seed,
    y:(quadrant>=2?2150-topY:topY)+shiftY+((quadrant*11+slot*13)%17-8)};
  };
  const frames=archetypes.map((archetype,corner)=>{
   const nodes=[];
-  const rootPoint=point(archetype.quadrant,0);
+  const rootPoint=attachedRoot([3.92,5.48,.73,2.43][archetype.quadrant]);
   nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at});
   archetype.children.forEach(([label,limId],index)=>{
-   const position=point(archetype.quadrant,index+1);
+   const position=foundationPoint(archetype.quadrant,index+1,rootPoint);
    nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:archetype.accent,accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at+1800+index*700});
   });
   let slot=5;
+  const nextReservedPosition=()=>{
+   while(slot<reservedSlots.length){
+    const candidate=reservedPoint(archetype.quadrant,slot++);
+    if(nodes.every(node=>Math.hypot(node.x-candidate.x,node.y-candidate.y)>=LIM_LAYOUT.radius*1.49))return candidate;
+   }
+   return reservedPoint(archetype.quadrant,slot++);
+  };
   archetype.legacy.forEach((legacyCorner,legacyIndex)=>{
    const source=legacy[legacyCorner],foundationParent=archetype.legacyParents[legacyIndex];
    // Keep the established four-cell showcase sample for each LIM face. The
@@ -158,7 +176,7 @@ function revealFrames(graphs) {
    const foundation=nodes.find(node=>node.id===foundationParent);
    const faceAt=Math.max(archetype.at+6500+(legacyIndex*2100),foundation.revealAt+1700);
    sourceCells.forEach((cell,nodeIndex)=>{
-    const position=point(archetype.quadrant,slot++),id=idMap.get(cell.id);
+    const position=nextReservedPosition(),id=idMap.get(cell.id);
     const parent=cell.parent===null?foundationParent:(idMap.get(cell.parent)||foundationParent);
     const parentNode=nodes.find(item=>item.id===parent);
     nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:cell.accent||archetype.accent,accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
@@ -326,6 +344,19 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // LIM cells are drawn directly on their reserved lattice positions. There
  // are no connector strokes; shared hex edges provide the relationship cue.
  for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
+ for(const node of frame.nodes){
+  if(node.opacity>0){
+   const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
+   const start=parent && parent.opacity>0?parent:node.attachment;
+   if(start){
+    const dx=node.x-start.x,dy=node.y-start.y,length=Math.hypot(dx,dy)||1;
+    const inset=parent?parent.radius*.88:0,endInset=node.radius*.88;
+    ctx.save();ctx.globalAlpha=node.opacity*.55;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(start.x+dx/length*inset,start.y+dy/length*inset);
+    ctx.lineTo(node.x-dx/length*endInset,node.y-dy/length*endInset);ctx.stroke();ctx.restore();
+   }
+  }
+ }
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
   if(current.opacity)drawGlassCell(ctx,current,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:options.selectedKey===node.key?1:0,selected:options.selectedKey===node.key,pathway});

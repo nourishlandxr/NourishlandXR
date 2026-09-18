@@ -11177,14 +11177,18 @@ body:has(.app-surface) {
     border-color:transparent !important; background:transparent !important; color:transparent;
 }
 @media (max-width:620px) {
+    .tryit-ar-safety-control {
+        left:50%; right:auto;
+        transform:translateX(-50%);
+    }
     /* Keep the established LIM coordinate map readable on portrait screens.
        The frame is intentionally wider than the viewport and remains centered;
        the 2500x2100 canvas therefore keeps a usable cell radius instead of
        shrinking the honeycomb into overlapping targets. */
     .tryit-live-welcome {
         inset:50% auto auto 50%;
-        width:700px;
-        min-width:700px;
+        width:600px;
+        min-width:600px;
         max-width:none;
         height:auto;
         aspect-ratio:2500 / 2100;

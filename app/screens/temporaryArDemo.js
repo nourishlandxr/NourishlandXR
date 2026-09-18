@@ -1039,7 +1039,7 @@ function paintLearningModuleBoard(){
     const board=learningModuleBoard(),step=learningModule.steps[learningModuleStep];
     introBoardStep=`Learning module · ${learningModuleStep>=learningModule.steps.length?'Complete':`Micro step ${learningModuleStep+1} of ${learningModule.steps.length}`}`;
     introBoardTitle=board.title;introBoardBody=board.body;introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
-    const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board');}
+    const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');}
     infoPanel?.setLearningModules(board,{open:true});
     selectedLimCell='';
     if(step){const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===step.cellId);if(node)selectedLimCell=node.key;}
@@ -1181,15 +1181,15 @@ function paintWelcomeLayer(now) {
     const activeProgress=limActivation?.progress||0;
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible && !simulatedMode,
+            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
-            drawCellLabels:!(simulatedMode && window.innerWidth<=620),activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:['active','paused'].includes(limPathwayState.status)?currentPathwayNode()?.key || '':''
+            drawCellLabels:true,activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
         });
     for(const frame of frames)for(const node of frame.nodes){
         const button=arWelcomeLayer.querySelector(`[data-welcome-cell="${node.key}"]`);
         if(button){
             const pathwayCurrent=(node.limId || node.label)===currentPathwayCellId() && ['active','paused'].includes(limPathwayState.status);
-            button.hidden=!limMeshVisible || (node.opacity<=.5 && !pathwayCurrent);
+            button.hidden=!limMeshVisible || node.opacity<=.5;
             const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
             button.style.setProperty('--lim-accent',node.accent||'#719b62');
             button.style.setProperty('--lim-progress',String(progress));
@@ -1240,7 +1240,7 @@ function showArWelcomeShowcase() {
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control panel',body:'Read guidance and selected cell details here. Press Continue below to begin. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${introBoardBody.split('\n\n').map(paragraph=>`<p>${paragraph}</p>`).join('')}</div>`;
     prepareTutorialBoard(panel);
-    panel.classList.add('is-copy-ready','is-persistent-demo-board');
+    panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');
     panel.classList.remove('is-live-welcome-copy','is-typing');
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
     layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR learning cells. Vision appears first; selecting it reveals four optional paths around the welcome panel."></canvas>';
@@ -3108,7 +3108,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:['active','paused'].includes(limPathwayState.status)?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
