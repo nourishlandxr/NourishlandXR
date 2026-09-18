@@ -75,12 +75,13 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
-    const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue'),secondary=utilities.filter(item=>item!==primary);
+    const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue'),secondary=utilities.filter(item=>item!==primary && item.id!=='close');
     const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Modules'?moduleActions.length:0;
     const primaryY=height-22-primaryHeight,secondaryStart=primaryY-secondaryRows*62;
     const actionY=secondaryStart-moduleRows*58-62;
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
     ['Details','Modules','Help','Settings'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Learning'):action==='Modules'?'Learning modules':action,kind:'tab',selected:tab===action,x:18,y:148+i*76,width:174,height:62}));
+    if(utilities.some(item=>item.id==='close'))buttons.push({action:'Utility:close',label:'Close demo',kind:'utility',x:18,y:452,width:174,height:62});
     if(tab==='Details')buttons.push({action:'Previous',label:'Previous',x:238,y:actionY,width:150,height:48,disabled:page===0},{action:'Next',label:'Next',x:408,y:actionY,width:150,height:48,disabled:page>=pageCount-1},{action:'Edit',label:'Edit information',x:648,y:actionY,width:322,height:48,disabled:!selected});
     if(tab==='Settings')buttons.push({action:'TextSize',label:largeText?'Standard text':'Larger text',x:238,y:actionY,width:350,height:48},{action:'Recenter',label:'Recenter panel',x:608,y:actionY,width:362,height:48});
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-62,width:226,height:48}));
@@ -148,12 +149,15 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         if(hidden)element.append(makeButton(controls()[0]));
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
-            const label=document.createElement('small');label.textContent='CONTROL PANEL';
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
-            header.append(label,plant,scientific);element.append(header);
+            const hideButton=makeButton(controls()[0]);hideButton.classList.add('is-panel-hide');
+            header.append(hideButton,plant,scientific);element.append(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
-            controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));tabs.append(makeButton(controls()[0]));element.append(tabs);
+            controls().filter(item=>item.kind==='tab').forEach(item=>tabs.append(makeButton(item)));
+            const closeControl=controls().find(item=>item.kind==='utility' && item.action==='Utility:close');
+            if(closeControl){const closeButton=makeButton(closeControl);closeButton.classList.add('is-panel-close');tabs.append(closeButton);}
+            element.append(tabs);
             if(pathwayContext){
                 const pathway=document.createElement('section');pathway.className='nlxr-pathway-context';pathway.setAttribute('aria-live','polite');
                 const heading=document.createElement('div');heading.className='nlxr-pathway-heading';
@@ -172,7 +176,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);element.append(content);
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Control panel actions');
             controls().filter(item=>(!item.kind || item.kind==='module') && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));element.append(nav);
-            if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));element.append(utilities);}
+            if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility' && item.action!=='Utility:close').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)element.append(utilities);}
             if(tab==='Details'){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
         }
         if(focused)(element.querySelector('[data-info-action="'+focused+'"]') || element.querySelector('button'))?.focus({preventScroll:true});
@@ -187,11 +191,10 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     element.addEventListener('pointerdown',event=>event.stopPropagation());
     function canvas(card){
         const c=document.createElement('canvas');c.width=1000;c.height=card.hidden?160:card.height;const ctx=c.getContext('2d');
-        const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(48,53,59,.90)');gradient.addColorStop(1,'rgba(19,24,29,.85)');
-        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,14);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(220,228,230,.45)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
+        const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(53,75,62,.92)');gradient.addColorStop(1,'rgba(19,34,28,.88)');
+        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,22);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(205,229,202,.42)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         if(!card.hidden){
-            ctx.fillStyle='rgba(15,20,23,.48)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(19,24,29,.40)';ctx.fillRect(214,6,780,155);
-            ctx.fillStyle='#b7c5c9';ctx.font='600 21px system-ui';ctx.fillText('CONTROL',24,32,170);ctx.fillText('PANEL',24,61,170);
+            ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
             ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
             ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
             const contentTop=card.pathway?292:187,titleX=card.accent?258:238,titleWidth=card.accent?712:732;
@@ -209,13 +212,14 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }
         card.controls.forEach(button=>{
-            const radius=button.kind==='tab'?7:9;
+            const radius=button.kind==='tab'?13:15;
             if(button.kind!=='tab' && !button.disabled){ctx.fillStyle='rgba(4,9,12,.46)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
             const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
             if(button.primary){face.addColorStop(0,'rgba(232,246,189,.98)');face.addColorStop(.55,'rgba(183,215,151,.96)');face.addColorStop(1,'rgba(135,178,114,.98)');}
-            else if(button.selected){face.addColorStop(0,'rgba(174,202,197,.42)');face.addColorStop(1,'rgba(87,109,108,.4)');}
+            else if(button.selected){face.addColorStop(0,'rgba(185,216,177,.44)');face.addColorStop(1,'rgba(88,124,94,.36)');}
             else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
-            else {face.addColorStop(0,'rgba(132,149,151,.52)');face.addColorStop(.5,'rgba(61,72,78,.82)');face.addColorStop(1,'rgba(30,37,42,.94)');}
+            else if(button.action==='Utility:close'){face.addColorStop(0,'rgba(159,101,82,.44)');face.addColorStop(1,'rgba(94,51,45,.38)');}
+            else {face.addColorStop(0,'rgba(151,180,145,.32)');face.addColorStop(.5,'rgba(70,94,75,.66)');face.addColorStop(1,'rgba(35,56,43,.82)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle='rgba(232,244,240,.42)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(button.x+radius,button.y+2,button.width-radius*2,1.5);}
             if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}

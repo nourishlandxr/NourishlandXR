@@ -1237,7 +1237,7 @@ function showArWelcomeShowcase() {
     introBoardBody='NourishlandXR is a learning platform and spatial information hub connecting plants, knowledge and place.\n\nExplore at your own pace. Your Control panel holds guidance and details. Press Continue there when you are ready.';
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control panel',body:'Read guidance and selected cell details here. Press Continue below to begin. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected cell details here. Press Continue below to begin. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${introBoardBody.split('\n\n').map(paragraph=>`<p>${paragraph}</p>`).join('')}</div>`;
     prepareTutorialBoard(panel);
     panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');
