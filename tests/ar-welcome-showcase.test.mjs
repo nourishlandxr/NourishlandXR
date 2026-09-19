@@ -1,7 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+
+test('a late cell selection keeps repainting until its children finish fading',()=>{
+ const selectedAt=AR_WELCOME_SHOWCASE_DURATION+20000;
+ assert.equal(welcomeRevealIsAnimating(selectedAt+100,[selectedAt]),true);
+ assert.equal(welcomeRevealIsAnimating(selectedAt+4400,[selectedAt]),true);
+ assert.equal(welcomeRevealIsAnimating(selectedAt+4500,[selectedAt]),false);
+ const progression={visionActivated:true,visionActivatedAt:0,expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':selectedAt}};
+ const first=welcomeExperienceFrames(selectedAt+1000,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
+ const later=welcomeExperienceFrames(selectedAt+2500,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
+ assert.ok(first.some(node=>node.opacity>0 && node.opacity<1));
+ assert.ok(later.filter(node=>node.opacity>0).length>first.filter(node=>node.opacity>0).length);
+});
 import {LIM_ALL_CELLS,LIM_INTRO_CELLS,LIM_INTRO_BRANCHES,limLearningContent} from '../app/services/limLearning.js';
 const styles=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
 test('one LIM face grows through three levels, fades and passes around the octagon',()=>{

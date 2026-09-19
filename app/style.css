@@ -8832,7 +8832,7 @@ button.ar-square-action::before { display: none !important; }
     box-shadow:0 24px 64px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.24);
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {
-    font-size:clamp(1.12rem,3.9vw,1.42rem);
+    font-size:clamp(1.35rem,4.4vw,1.7rem);
     line-height:1.42;
     color:#fff;
     text-shadow:0 2px 8px rgba(0,0,0,.46);
@@ -8874,7 +8874,7 @@ button.ar-square-action::before { display: none !important; }
 .tryit-context-trigger:hover,.tryit-context-trigger:focus-visible { outline:3px solid rgba(220,239,149,.42); outline-offset:5px; filter:brightness(1.08); }
 .tryit-context-trigger:active { transform:translate(-50%,2px); background:rgba(50,82,57,.34); }
 .tryit-context-trigger[hidden] { display:none!important; }
-.tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.05rem,3.2vw,1.28rem); line-height:1.48; }
+.tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.3rem,3.7vw,1.7rem); line-height:1.4; }
 @media(max-width:600px) { .tryit-context-trigger { width:88px; height:88px; padding:10px; font-size:11px; } }
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,

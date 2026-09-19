@@ -5,6 +5,10 @@ import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLea
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
 export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
+export const LIM_REVEAL_ANIMATION_MS = 4500;
+export function welcomeRevealIsAnimating(elapsed,expandedTimes=[],visionAt=NaN){
+ return [visionAt,...expandedTimes].some(start=>Number.isFinite(start)&&elapsed>=start&&elapsed-start<LIM_REVEAL_ANIMATION_MS);
+}
 // Compatibility export for visual showcase callers. The content authority is
 // the separate Learning Information Mesh document.
 export const AR_WELCOME_GRAPHS = LIM_GRAPHS;

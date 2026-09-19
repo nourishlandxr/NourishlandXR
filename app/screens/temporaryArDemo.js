@@ -7,7 +7,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -1138,6 +1138,9 @@ function activateLimCell(key) {
     introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;
     return true;
 }
+function limRevealIsAnimating(){
+    return welcomeRevealIsAnimating(arWelcomeClock.elapsed,limExpandedAt.values(),arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
+}
 function currentLimPointerCell() {
     if(!arWelcomeShowcaseActive || !limMeshVisible || !introWorldAnchor)return null;
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
@@ -1357,7 +1360,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeVisionActivated,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
-        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || state!==lastState)){
+        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
         // XRSession frames drive immersive textures; a hidden DOM canvas need
@@ -3143,7 +3146,7 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 52; fontSize >= 26; fontSize -= 2) {
+    for (let fontSize = 60; fontSize >= 26; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
         ctx.font = `650 ${fontSize}px system-ui, sans-serif`;
@@ -3271,8 +3274,8 @@ function drawIntroNoteContent(ctx) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(contentLeft, 500);
-    ctx.lineTo(contentLeft + contentWidth, 500);
+    ctx.moveTo(contentLeft, 478);
+    ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
@@ -3283,8 +3286,8 @@ function drawIntroNoteContent(ctx) {
     // Keep the first body line clear of the divider and the clipping edge;
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
-    const bodyTop = 535;
-    const bodyBottom = introBoardNextGuide ? 700 : 775;
+    const bodyTop = 498;
+    const bodyBottom = introBoardNextGuide ? 710 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
     let paragraphY = bodyTop;
@@ -3308,11 +3311,11 @@ function drawIntroNoteContent(ctx) {
     }
     if(introBoardNextGuide){
         ctx.strokeStyle='rgba(220,239,149,.45)';ctx.lineWidth=2;
-        ctx.beginPath();ctx.moveTo(contentLeft,725);ctx.lineTo(contentLeft+contentWidth,725);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(contentLeft,724);ctx.lineTo(contentLeft+contentWidth,724);ctx.stroke();
         ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
-        ctx.font='italic 27px Georgia, serif';
+        ctx.font='italic 30px Georgia, serif';
         const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
-        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentLeft,738+index*31));
+        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentLeft,736+index*29));
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -3433,7 +3436,7 @@ function drawIntroSpatial(view) {
     const now = performance.now();
     if(arWelcomeShowcaseActive){
         arWelcomeClock.tick(now,session?.visibilityState==='visible');
-        if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS)introBoardTextureDirty=true;
+        if(limRevealIsAnimating() || (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS))introBoardTextureDirty=true;
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const textureInterval=limActivation?.active || textIsTyping ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
