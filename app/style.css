@@ -8832,7 +8832,7 @@ button.ar-square-action::before { display: none !important; }
     box-shadow:0 24px 64px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.24);
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {
-    font-size:clamp(1.35rem,4.4vw,1.7rem);
+    font-size:clamp(1.42rem,4.6vw,1.82rem);
     line-height:1.42;
     color:#fff;
     text-shadow:0 2px 8px rgba(0,0,0,.46);
@@ -8882,7 +8882,7 @@ button.ar-square-action::before { display: none !important; }
     color:rgba(231,245,187,.86); font:600 clamp(.68rem,1.8vw,.82rem)/1.2 system-ui,sans-serif;
     letter-spacing:.02em; pointer-events:none;
 }
-.tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.3rem,3.7vw,1.7rem); line-height:1.4; }
+.tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.4rem,3.9vw,1.8rem); line-height:1.4; }
 @media(max-width:600px) { .tryit-context-trigger { width:88px; height:88px; padding:10px; font-size:11px; } }
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,

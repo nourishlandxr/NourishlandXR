@@ -9,7 +9,7 @@ const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', i
 const styles = fs.readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
 
 test('Phase 6 welcome copy is bounded to the compact note and scrolls only in the DOM copy', () => {
-    assert.match(demoSource, /const contentWidth = 760/);
+    assert.match(demoSource, /const contentWidth = 800/);
     assert.match(demoSource, /ctx\.rect\(contentLeft, bodyTop - 8, contentWidth, bodyBottom - bodyTop \+ 12\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \.tryit-board-text-window[\s\S]*overflow-y:auto/);
 });

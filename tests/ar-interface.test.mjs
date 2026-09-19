@@ -770,7 +770,7 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     assert.match(html2canvasSource, /color: cssColor/);
     assert.match(html2canvasLicense, /Permission is hereby granted, free of charge/);
     assert.match(hostedBuildSource, /'vendor'/);
-    assert.match(hostedBuildSource, /style\\\.css\(\?:\\\?v=\[\^"\]\*\)\?/);
+    assert.match(hostedBuildSource, /style\|pim\|product-v2\|living-objects/);
     assert.match(hostedBuildSource, /main\\\.js\(\?:\\\?v=\[\^"\]\*\)\?/);
     assert.doesNotMatch(mirrorSource, /XMLSerializer|<foreignObject/);
     assert.doesNotMatch(arSource, /QUEST_SPATIAL_DASHBOARD_CONTROLS|dashboard-home|dashboard-area/);
@@ -1282,6 +1282,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
     assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
+    assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
+    assert.match(source, /function revealIntroBoardNextGuide\(\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);
     assert.match(source, /for \(const \[lineIndex, line\] of visibleLines\.entries\(\)/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);

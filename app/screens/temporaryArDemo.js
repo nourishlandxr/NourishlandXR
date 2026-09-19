@@ -121,6 +121,7 @@ let introBoardStep = '';
 let introBoardTitle = 'NourishlandXR';
 let introBoardBody = 'A short guided demo of Plant Live Tags and Notes.';
 let introBoardNextGuide = '';
+let introBoardNextGuideVisible = false;
 let placementReady = false;
 let demoHeldIndex = -1;
 let suppressDemoMarkerClick = false;
@@ -377,6 +378,7 @@ function clearSessionState() {
     introNoteCanvas = null;
     introBoardVisibleBody = '';
     introBoardNextGuide = '';
+    introBoardNextGuideVisible = false;
     introBoardTextureDirty = true;
     introTextureUploadedAt = 0;
     introFrameToken = 0;
@@ -440,6 +442,7 @@ function questControlGuide(message){
 
 function setIntroBoardNextGuide(message,{reveal=true}={}) {
     introBoardNextGuide=questControlGuide(message).trim();
+    introBoardNextGuideVisible=Boolean(reveal && introBoardNextGuide);
     introBoardTextureDirty=true;
     const textWindow=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
     if(!textWindow)return;
@@ -448,6 +451,11 @@ function setIntroBoardNextGuide(message,{reveal=true}={}) {
     if(!cue){cue=document.createElement('p');cue.className='tryit-board-next';textWindow.append(cue);}
     cue.textContent=`Next · ${introBoardNextGuide}`;
     cue.hidden=!reveal;
+}
+function revealIntroBoardNextGuide(){
+    if(!introBoardNextGuide)return;
+    introBoardNextGuideVisible=true;introBoardTextureDirty=true;
+    appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-next')?.removeAttribute('hidden');
 }
 
 function demoControlIsVisible(selector) {
@@ -812,7 +820,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         typing = false;
         revealTargets.forEach(target => target.classList.remove('is-awaiting-text'));
         panel.classList.remove('is-typing');
-        panel.querySelector('.tryit-board-next')?.removeAttribute('hidden');
+        revealIntroBoardNextGuide();
         revealControls();
         if (!completionNotified) {
             completionNotified = true;
@@ -892,7 +900,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         paintBoardParagraphs(bodyText);
         board?.classList.add('is-copy-ready');
         board?.classList.remove('is-typing');
-        board?.querySelector('.tryit-board-next')?.removeAttribute('hidden');
+        revealIntroBoardNextGuide();
         typing = false;
         if (continueButton && buttonLabel) {continueButton.hidden = false;syncDemoPanelActions();}
         if (!completionNotified) {
@@ -2927,7 +2935,7 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:questImmersiveMode,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -3267,8 +3275,8 @@ function drawIntroNoteContent(ctx) {
     // The note is a 900x500 surface at (250,300). Keep every piece of copy
     // inside that surface; the previous 1,100px text box extended beyond both
     // edges after the welcome panel was compacted.
-    const contentLeft = 320;
-    const contentWidth = 760;
+    const contentLeft = 300;
+    const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
     if(arWelcomeIntroPending){
         ctx.save();ctx.globalAlpha=.82;ctx.textAlign='right';ctx.textBaseline='middle';
@@ -3327,7 +3335,7 @@ function drawIntroNoteContent(ctx) {
     if (clipped) ctx.fillText('…', contentLeft, bodyBottom);
     ctx.restore();
     }
-    if(introBoardNextGuide){
+    if(introBoardNextGuideVisible && introBoardNextGuide){
         ctx.strokeStyle='rgba(220,239,149,.45)';ctx.lineWidth=2;
         ctx.beginPath();ctx.moveTo(contentLeft,724);ctx.lineTo(contentLeft+contentWidth,724);ctx.stroke();
         ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
