@@ -7,7 +7,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -86,6 +86,7 @@ let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[
 let arWelcomeClock=createWelcomePresentationClock();
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let arWelcomeVisionActivated=false, arWelcomeVisionActivatedAt=NaN;
+let limMeshActivatedAt=NaN,arWelcomePreludeActive=false;
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
@@ -354,7 +355,7 @@ function clearSessionState() {
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
-    clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;limMeshActivatedAt=NaN;arWelcomePreludeActive=false;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
@@ -458,7 +459,7 @@ function demoPanelActions() {
     const actions=[];
     if(demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
-    if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
+    if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Activate learning cells'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Quest 3…':'Enter Quest 3',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
@@ -481,7 +482,9 @@ function syncDemoPanelActions() {
 }
 
 function setLimMeshVisible(visible) {
+    if(visible && !limMeshVisible)limMeshActivatedAt=arWelcomeClock.elapsed;
     limMeshVisible=Boolean(visible);
+    if(limMeshVisible)infoPanel?.showLearning({id:'lim-vision-invitation',title:'Learning cells are active',body:'Select the Vision cell to explore four optional learning paths. You can keep using the demo and return to these cells at any time.',accent:'#dcef95',mesh:'lim',editable:false});
     introBoardTextureDirty=true;
     paintWelcomeLayer(performance.now());
     syncDemoPanelActions();
@@ -1010,9 +1013,9 @@ function useSharedWelcomeBoard(visible) {
 
 function welcomeFrames() {
     if(!limMeshVisible)return [];
-    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
+    return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
-const welcomeSequenceCanContinue=()=>welcomeCanContinue(arWelcomeClock.elapsed,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
+const welcomeSequenceCanContinue=()=>!arWelcomePreludeActive && welcomeCanContinue(arWelcomeClock.elapsed-AR_WELCOME_PRELUDE_MS,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
 
 let selectedLimCell='';
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
@@ -1139,7 +1142,7 @@ function activateLimCell(key) {
     return true;
 }
 function limRevealIsAnimating(){
-    return welcomeRevealIsAnimating(arWelcomeClock.elapsed,limExpandedAt.values(),arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
+    return welcomeRevealIsAnimating(arWelcomeClock.elapsed,[limMeshActivatedAt,...limExpandedAt.values()],arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
 }
 function currentLimPointerCell() {
     if(!arWelcomeShowcaseActive || !limMeshVisible || !introWorldAnchor)return null;
@@ -1240,8 +1243,8 @@ function paintWelcomeLayer(now) {
     if(contextTrigger)contextTrigger.style.setProperty('--hold-progress',`${Math.round((contextCellKey?activeProgress:0)*100)}%`);
     const frames=drawArWelcomeShowcase(arWelcomeCanvas.getContext('2d'),arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
-            drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
+            prelude:arWelcomePreludeActive,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
             drawCellLabels:true,activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
         });
     const selectedNode=frames.flatMap(frame=>frame.nodes).find(node=>node.key===selectedLimCell);
@@ -1277,7 +1280,7 @@ function showArWelcomeShowcase() {
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel || !button)return;
-    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=false;limMeshActivatedAt=NaN;arWelcomePreludeActive=true;arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-vision');
     limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
     if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
@@ -1296,20 +1299,23 @@ function showArWelcomeShowcase() {
     bindLimSessionInteractions(session);
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
     syncDemoPanelActions();
-    introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
+    introSceneActive=true;introBoardVisible=false;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody='NourishlandXR connects plants, knowledge and place through a spatial learning platform.\n\nUse the Control panel for guidance and detail. Continue when ready, or select Vision to explore.';
+    introBoardBody='Explore plants, knowledge and place through NourishlandXR.\n\nThe Control panel offers guidance and details as you go.\n\nPress Continue when ready. Vision is optional; activate learning cells in the Control panel at any time.';
     introBoardVisibleBody='';
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected cell details here. The round trigger controls immediate progress. Vision is an optional doorway into four ways of seeing a place.',accent:'#dcef95',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected details here. Continue when ready. Activate learning cells from this panel whenever you want to explore Vision.',accent:'#dcef95',mesh:'lim',editable:false});
+    infoPanel?.suspend(true);
     const openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
-    setIntroBoardNextGuide('Press the round Continue trigger; Vision is optional.');
+    setIntroBoardNextGuide('');
     panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface','is-typing');
     panel.classList.remove('is-live-welcome-copy');
+    panel.hidden=true;
+    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-prelude','true');
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
     let openingTypedLength=0,openingTyping=true;
     const openingTextWindow=panel.querySelector('.tryit-board-text-window');
@@ -1330,7 +1336,7 @@ function showArWelcomeShowcase() {
         if(!openingTyping)return;
         openingTyping=false;clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
         introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
-        panel.classList.remove('is-typing');panel.querySelector('.tryit-board-next')?.removeAttribute('hidden');
+        panel.classList.remove('is-typing');
     };
     const typeOpeningCopy=()=>{
         if(!openingTyping || !arWelcomeShowcaseActive)return;
@@ -1339,11 +1345,18 @@ function showArWelcomeShowcase() {
         if(openingTypedLength>=introBoardBody.length){finishOpeningCopy();return;}
         boardTypingTimer=setTimeout(typeOpeningCopy,demoTextTypingDelay(introBoardBody,openingTypedLength));
     };
-    boardTypingTimer=setTimeout(typeOpeningCopy,320);
-    boardTypingWatchdogTimer=setTimeout(finishOpeningCopy,Math.max(DEMO_BOARD_TYPING_SAFETY_MS,1200+introBoardBody.length*60));
+    const beginOpeningCopy=()=>{
+        if(!arWelcomeShowcaseActive)return;
+        arWelcomePreludeActive=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-prelude');
+        infoPanel?.suspend(false);syncDemoPanelActions();
+        boardTypingTimer=setTimeout(typeOpeningCopy,320);
+        boardTypingWatchdogTimer=setTimeout(finishOpeningCopy,Math.max(DEMO_BOARD_TYPING_SAFETY_MS,1200+introBoardBody.length*60));
+    };
+    boardTypingTimer=setTimeout(beginOpeningCopy,AR_WELCOME_PRELUDE_MS);
     skipDemoNarration=finishOpeningCopy;
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR learning cells. Vision appears first; selecting it reveals four optional paths around the welcome panel."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR learning cells. The opening shows the scope of LIM; activate learning cells in the Control panel to reveal Vision and optional paths."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
@@ -1359,7 +1372,7 @@ function showArWelcomeShowcase() {
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeVisionActivated,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
+        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeVisionActivated,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
         if(simulatedMode && now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
@@ -1377,7 +1390,7 @@ function showArWelcomeShowcase() {
         if(!welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
         button.disabled=false;button.hidden=false;
         syncDemoPanelActions();
-        setGuide('Press the round Continue trigger when ready. You may also select Vision to open four optional learning paths.');
+        setGuide('Press Continue when ready. Activate learning cells in the Control panel whenever you want to explore Vision.');
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     button.onclick=()=>{
@@ -1390,7 +1403,7 @@ function showArWelcomeShowcase() {
     };
     // Only the explicit Continue action advances the opening animation.
     skipDemoNarration=()=>{};
-    setGuide('Welcome to NourishlandXR. Use the round Continue trigger at the bottom centre when ready; Vision is available for optional exploration.');
+    setGuide('Welcome to NourishlandXR. The introduction will begin shortly.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -3244,7 +3257,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{prelude:arWelcomePreludeActive,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
@@ -3257,6 +3270,11 @@ function drawIntroNoteContent(ctx) {
     const contentLeft = 320;
     const contentWidth = 760;
     const contentCenter = contentLeft + contentWidth / 2;
+    if(arWelcomeIntroPending){
+        ctx.save();ctx.globalAlpha=.82;ctx.textAlign='right';ctx.textBaseline='middle';
+        ctx.fillStyle='#e7f5bb';ctx.font='600 23px system-ui, sans-serif';
+        ctx.fillText('↙ Control panel',292,700,190);ctx.restore();
+    }
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';

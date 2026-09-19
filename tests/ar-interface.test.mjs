@@ -1223,7 +1223,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.has-companion-actions \.tryit-demo-footer \{ display:none !important; \}/);
     assert.match(source, /function demoPanelActions\(\)/);
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
-    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
+    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Activate learning cells'/);
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
     assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Previous'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
@@ -1331,7 +1331,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.match(source, /arWelcomeVisionActivated=false/);
     assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*visionActivated:arWelcomeVisionActivated/);
-    assert.match(source, /Vision is an optional doorway into four ways of seeing a place/);
+    assert.match(source, /Activate learning cells from this panel whenever you want to explore Vision/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);

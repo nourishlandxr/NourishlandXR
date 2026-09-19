@@ -8874,6 +8874,14 @@ button.ar-square-action::before { display: none !important; }
 .tryit-context-trigger:hover,.tryit-context-trigger:focus-visible { outline:3px solid rgba(220,239,149,.42); outline-offset:5px; filter:brightness(1.08); }
 .tryit-context-trigger:active { transform:translate(-50%,2px); background:rgba(50,82,57,.34); }
 .tryit-context-trigger[hidden] { display:none!important; }
+.tryit-demo.has-companion-actions:not(.uses-webgl-controls) .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { opacity:0; pointer-events:none; }
+.tryit-demo[data-lim-prelude="true"] [data-tryit-guided-choice] { display:none!important; }
+.tryit-demo[data-lim-prelude="true"] .tryit-live-welcome canvas { opacity:1; }
+.tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
+    content:"↙ Control panel"; position:absolute; left:20px; bottom:14px;
+    color:rgba(231,245,187,.86); font:600 clamp(.68rem,1.8vw,.82rem)/1.2 system-ui,sans-serif;
+    letter-spacing:.02em; pointer-events:none;
+}
 .tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.3rem,3.7vw,1.7rem); line-height:1.4; }
 @media(max-width:600px) { .tryit-context-trigger { width:88px; height:88px; padding:10px; font-size:11px; } }
 /* Web Hub redesign -------------------------------------------------------

@@ -1,7 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,drawArWelcomeShowcase,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,drawArWelcomeShowcase,drawWelcomeScopePrelude,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+
+test('opening prelude paints every authored cell before the main text',()=>{
+ const labels=[];
+ const ctx={clearRect(){},save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},roundRect(){},fillText(value){labels.push(value);}};
+ drawWelcomeScopePrelude(ctx,3900);
+ assert.equal(labels.length,LIM_ALL_CELLS.length+1);
+ assert.equal(labels.at(-1),'Welcome to NourishlandXR');
+ assert.equal(AR_WELCOME_PRELUDE_MS,5400);
+});
+
+test('Vision fades in after learning cells are activated late in the demo',()=>{
+ const activatedAt=90000,progression={cellsActivatedAt:activatedAt,visionActivated:false};
+ const before=welcomeExperienceFrames(activatedAt,false,undefined,new Set(),progression)[0].nodes[0];
+ const fading=welcomeExperienceFrames(activatedAt+1400,false,undefined,new Set(),progression)[0].nodes[0];
+ const settled=welcomeExperienceFrames(activatedAt+3000,false,undefined,new Set(),progression)[0].nodes[0];
+ assert.equal(before.opacity,0);
+ assert.ok(fading.opacity>0&&fading.opacity<1);
+ assert.equal(settled.opacity,1);
+});
 
 test('a late cell selection keeps repainting until its children finish fading',()=>{
  const selectedAt=AR_WELCOME_SHOWCASE_DURATION+20000;

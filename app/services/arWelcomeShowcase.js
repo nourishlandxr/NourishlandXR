@@ -5,6 +5,7 @@ import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLea
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
 export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
+export const AR_WELCOME_PRELUDE_MS = 5400;
 export const LIM_REVEAL_ANIMATION_MS = 4500;
 export function welcomeRevealIsAnimating(elapsed,expandedTimes=[],visionAt=NaN){
  return [visionAt,...expandedTimes].some(start=>Number.isFinite(start)&&elapsed>=start&&elapsed-start<LIM_REVEAL_ANIMATION_MS);
@@ -261,7 +262,8 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
   const isVision=frame.nodes[0]?.id==='vision';
   const visionActivated=progression?.visionActivated!==false;
   const visionActivatedAt=Number.isFinite(progression?.visionActivatedAt)?progression.visionActivatedAt:0;
-  const time=isVision?totalTime:visionActivated?Math.max(0,totalTime-visionActivatedAt):0;
+  const cellsActivatedAt=Number.isFinite(progression?.cellsActivatedAt)?progression.cellsActivatedAt:0;
+  const time=isVision?Math.max(0,totalTime-cellsActivatedAt):visionActivated?Math.max(0,totalTime-visionActivatedAt):0;
   const expanded=new Set(Array.isArray(progression?.expandedLimIds)?progression.expandedLimIds:[]);
   const expandedAt=progression?.expandedAt || {};
   frame.nodes.forEach(node=>{
@@ -389,7 +391,35 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  ctx.restore();
 }
 
+const scopeSlots=[];
+for(let row=0;row<13;row++)for(let column=0;column<18;column++){
+ const x=145+column*130+(row%2)*65,y=130+row*145;
+ if(x>680&&x<1820&&y>670&&y<1430)continue;
+ scopeSlots.push({x,y});
+}
+const scopeCells=LIM_ALL_CELLS.map((cell,index)=>({cell,point:scopeSlots[Math.floor(index*scopeSlots.length/LIM_ALL_CELLS.length)]}));
+export function drawWelcomeScopePrelude(ctx,elapsed){
+ const fadeOut=1-smooth(elapsed,4250,1150);
+ ctx.clearRect(0,0,2500,2100);
+ scopeCells.forEach(({cell,point},index)=>{
+  const opacity=smooth(elapsed,450+index*27,850)*fadeOut;
+  if(opacity<=0)return;
+  ctx.save();ctx.globalAlpha=opacity*.78;
+  drawHexagon(ctx,point.x,point.y,53,'rgba(34,85,57,.22)','rgba(207,238,177,.75)',2);
+  ctx.fillStyle='rgba(244,255,232,.9)';ctx.font='500 16px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(cell.displayLabel||cell.title||'',point.x,point.y,94);
+  ctx.restore();
+ });
+ ctx.save();ctx.globalAlpha=smooth(elapsed,350,900)*fadeOut;
+ ctx.fillStyle='rgba(21,62,39,.84)';ctx.strokeStyle='rgba(219,245,196,.76)';ctx.lineWidth=3;
+ ctx.beginPath();ctx.roundRect(640,858,1220,340,42);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#f5ffeb';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 74px system-ui';
+ ctx.fillText('Welcome to NourishlandXR',1250,1028,1100);
+ ctx.restore();
+}
+
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
+ if(options.prelude){drawWelcomeScopePrelude(ctx,elapsed);return [];}
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
  if(options.drawPanel!==false){
  drawArWelcomePanel(ctx);
