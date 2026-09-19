@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPimDocument, pimAddNode } from '../app/services/pimModel.js';
-import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, controlPanelControls } from '../app/services/pimInfoPanel.js';
+import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
+
+test('Quest Control panel collapses its side regions while keeping Continue reachable', () => {
+    const items=controlPanelControls({height:850,utilityActions:[{id:'continue',label:'Continue',primary:true},{id:'close',label:'Close demo'}]});
+    const open=spatialPanelControls({height:1050,items});
+    const folded=spatialPanelControls({height:1050,items,railCollapsed:true,mediaCollapsed:true,toolsCollapsed:true});
+    assert.ok(open.some(item=>item.kind==='tab'));
+    assert.ok(!folded.some(item=>item.kind==='tab'));
+    for(const action of ['ToggleMenu','ToggleMedia','ToggleTools','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
+    assert.ok(folded.find(item=>item.action==='Utility:continue').y>folded.find(item=>item.action==='ToggleTools').y);
+});
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
 import { createPimHold, bindSpatialPimHold } from '../app/services/pimActivationHold.js';
 import { creatorKnowledgeState } from '../app/services/creatorArKnowledge.js';

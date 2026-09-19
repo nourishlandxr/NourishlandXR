@@ -427,11 +427,18 @@ function returnToWelcome() {
 
 function setGuide(message) {
     const guide = appRoot?.querySelector('[data-tryit-guide]');
-    if (guide) guide.textContent = message;
+    if (guide) guide.textContent = questControlGuide(message);
+}
+
+function questControlGuide(message){
+    const copy=String(message||'');
+    return sessionMode==='immersive-vr'
+        ? copy.replace(/(?:the )?round (Continue|Place a plant orb) trigger(?: at the bottom centre)?/gi,(_match,label)=>`${label} in the Control panel`)
+        : copy;
 }
 
 function setIntroBoardNextGuide(message,{reveal=true}={}) {
-    introBoardNextGuide=String(message||'').trim();
+    introBoardNextGuide=questControlGuide(message).trim();
     introBoardTextureDirty=true;
     const textWindow=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
     if(!textWindow)return;
@@ -692,7 +699,7 @@ function activateImmersiveDemoControl() {
             if(arWelcomeIntroPending && !welcomeSequenceCanContinue())return false;
             // DOM-overlay buttons handle their own clicks. Controller-only AR
             // must hit the drawn Continue control instead of accepting any tap.
-            if(domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,[0,-.16,-2.8]),1.85,.78,900,220))return false;
+            if(sessionMode==='immersive-vr' || domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,[0,-.16,-2.8]),1.85,.78,900,220))return false;
         }
         continueButton.click();
         return true;
@@ -2904,7 +2911,7 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:questImmersiveMode,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -3317,18 +3324,18 @@ function createIntroControlTexture(labelText, texture = null) {
     label.height = 220;
     const ctx = label.getContext('2d');
     const panel = ctx.createLinearGradient(50, 24, 850, 196);
-    panel.addColorStop(0, 'rgba(113,157,91,.96)');
-    panel.addColorStop(1, 'rgba(32,77,49,.96)');
+    panel.addColorStop(0, 'rgba(113,157,91,.25)');
+    panel.addColorStop(1, 'rgba(32,77,49,.18)');
     ctx.fillStyle = panel;
-    ctx.strokeStyle = 'rgba(240,255,224,.94)';
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(240,255,224,.42)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(12, 12, 876, 196, 78);
     ctx.fill();
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
     ctx.shadowColor = 'rgba(0,0,0,.7)';
     ctx.shadowBlur = 7;
     ctx.font = '800 58px system-ui, sans-serif';
@@ -3471,7 +3478,7 @@ function drawIntroSpatial(view) {
         );
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
+    const controlLabel = session && !domOverlayEnabled && continueButton && sessionMode !== 'immersive-vr' && !continueButton.hidden
         ? (continueButton.textContent || 'Continue').trim()
         : '';
     if (controlLabel) {
@@ -3821,7 +3828,7 @@ function demoLaserSubjects() {
         if (point) subjects.push({ position: point, radius: .38 });
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
+    const controlLabel = session && !domOverlayEnabled && continueButton && sessionMode !== 'immersive-vr' && !continueButton.hidden
         ? (continueButton.textContent || 'Continue').trim()
         : '';
     if (controlLabel && introWorldAnchor) {

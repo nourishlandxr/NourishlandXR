@@ -143,19 +143,24 @@ function settleWelcomeLayout(frames) {
   const parent=byId.get(`${frame.corner}:${node.parent}`);
   if(!parent)continue;
   const outward=parent.growthAngle??Math.atan2(parent.y-1050,parent.x-1250);
+  const root=frame.nodes[0];
+  const rootDirection={x:Math.cos(root.growthAngle),y:Math.sin(root.growthAngle)};
   const seeded=Math.atan2(node.y-parent.y,node.x-parent.x);
   const base=node.depth===1?outward:seeded;
   let best=null;
   // Begin at the shared-edge distance and widen only when another cell truly
   // occupies that space. Extra candidates prevent the old fallback overlap.
-  const radii=node.depth===1?[186,192,200,210,222,238,258,282,310,344]:[186,192,200,210,222,238,258,282,310,344,382,424,470,520,580,640];
+  const radii=[186,192,200,210,222,238,258,282,310,344,382,424,470,520,580,640,720,800,900,1000];
   for(const distance of radii){
    for(const step of angleSteps){
     const angle=base+step*Math.PI/12;
     const x=parent.x+Math.cos(angle)*distance,y=parent.y+Math.sin(angle)*distance;
     if(x<105||x>2395||y<105||y>1995)continue;
+    // Every descendant stays on the outside of its root and clears the
+    // welcome note by a full cell radius, including its glass rim.
+    if((x-root.x)*rootDirection.x+(y-root.y)*rootDirection.y<0)continue;
     const boardX=Math.max(800,Math.min(1700,x)),boardY=Math.max(810,Math.min(1310,y));
-    if(Math.hypot(x-boardX,y-boardY)<LIM_LAYOUT.radius*.78)continue;
+    if(Math.hypot(x-boardX,y-boardY)<LIM_LAYOUT.radius+20)continue;
     if(placed.some(other=>Math.hypot(other.x-x,other.y-y)<minGap))continue;
     const angleCost=Math.abs(step)*3,seedCost=Math.hypot(node.x-x,node.y-y)*.08;
     const cost=distance+angleCost+seedCost;

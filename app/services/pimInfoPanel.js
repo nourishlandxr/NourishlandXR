@@ -45,12 +45,13 @@ export function facePanelTowardEyes(center, eyes) {
     return {right,up,normal};
 }
 
-export function infoPanelPose(matrix, heading = null) {
+export function infoPanelPose(matrix, heading = null, headset = false) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    const center={ x: matrix[12] - right.x * .64 + right.z * .58,
-        y: matrix[13] - .70, z: matrix[14] - right.z * .64 - right.x * .58 };
+    const side=headset ? .43 : .64,forward=headset ? 1.05 : .58,drop=headset ? .30 : .70;
+    const center={ x: matrix[12] - right.x * side + right.z * forward,
+        y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
@@ -97,11 +98,39 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
     return Math.max(pathway?760:560,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+(rows+moduleCount)*62+(hasPrimary?10:0);
 }
 
+// The headset uses the same actions as the screen panel, but lays them out in
+// three independently collapsible regions. These rectangles also drive ray hits.
+export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,toolsCollapsed=false,items=[]}={}){
+    if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
+    const rail=railCollapsed?62:200,media=mediaCollapsed?62:230;
+    const left=rail+22,width=1000-rail-media-44;
+    const button=(item,x,y,w,h)=>({...item,x,y,width:w,height:h});
+    const result=[button({action:'Hide',label:'Hide'},828,24,136,48),
+        button({action:'ToggleMenu',label:railCollapsed?'☰':'‹ Menu',kind:'toggle'},12,128,rail-24,50),
+        button({action:'ToggleMedia',label:mediaCollapsed?'M':'Media ›',kind:'toggle'},1000-media+8,128,media-20,50)];
+    if(!railCollapsed)items.filter(item=>item.kind==='tab').forEach((item,index)=>result.push(button(item,18,196+index*70,rail-36,56)));
+    const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
+    const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
+    const reading=items.filter(item=>['Previous','Next','Edit','TextSize','Recenter'].includes(item.action));
+    const module=items.filter(item=>item.kind==='module'),pathway=items.filter(item=>item.kind==='pathway');
+    const primaryY=primary?height-82:height-26;
+    if(primary)result.push(button(primary,left,primaryY,width,56));
+    const rows=toolsCollapsed?0:Math.ceil(secondary.length/2);
+    const toolsY=primaryY-(toolsCollapsed?58:58+rows*54+reading.length*54+module.length*54+pathway.length*54);
+    result.push(button({action:'ToggleTools',label:toolsCollapsed?'Tools ↑':'Tools ↓',kind:'toggle'},left,toolsY,width,48));
+    if(!toolsCollapsed){
+        let y=toolsY+56;
+        for(const group of [pathway,module,reading])for(const item of group){result.push(button(item,left,y,width,48));y+=54;}
+        secondary.forEach((item,index)=>result.push(button(item,left+(index%2)*(width/2+4),y+Math.floor(index/2)*54,width/2-4,48)));
+    }
+    return result;
+}
+
 let panelInstance=0;
-export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
     let mediaImage=null,mediaLoadToken=0;
-    let railCollapsed=globalThis.matchMedia?.('(max-width:600px)').matches || false,mediaCollapsed=railCollapsed,toolsCollapsed=false;
+    let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed,toolsCollapsed=false;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,moduleContext=null,utilityActions=[];
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -118,8 +147,13 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
+    const spatialHeight=()=>headset?Math.max(850,height()+190):height();
+    const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,toolsCollapsed,items:controls()});
     function act(action){
-        const button=controls().find(item=>item.action===action);if(button?.disabled)return;
+        const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
+        if(action==='ToggleMenu')railCollapsed=!railCollapsed;
+        if(action==='ToggleMedia')mediaCollapsed=!mediaCollapsed;
+        if(action==='ToggleTools')toolsCollapsed=!toolsCollapsed;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
         if(['Details','Modules','Help','Settings'].includes(action)){tab=action;page=0;}
@@ -223,7 +257,38 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         const c=document.createElement('canvas');c.width=1000;c.height=card.hidden?160:card.height;const ctx=c.getContext('2d');
         const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(53,75,62,.92)');gradient.addColorStop(1,'rgba(19,34,28,.88)');
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,22);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(205,229,202,.42)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
-        if(!card.hidden){
+        if(card.headset && !card.hidden){
+            const rail=card.railCollapsed?62:200,media=card.mediaCollapsed?62:230;
+            const left=rail+22,right=1000-media-22,width=right-left;
+            const tools=card.controls.find(item=>item.action==='ToggleTools');
+            ctx.fillStyle='rgba(11,25,20,.44)';ctx.fillRect(6,115,rail,c.height-122);
+            ctx.fillStyle='rgba(14,29,24,.48)';ctx.fillRect(1000-media,115,media-6,c.height-122);
+            ctx.fillStyle='#f1f4f4';ctx.font='600 35px system-ui';ctx.fillText(card.plant,left,28,Math.max(100,width-150));
+            ctx.fillStyle='#bdc9cc';ctx.font='400 21px system-ui';ctx.fillText(card.scientific,left,79,width);
+            let y=156;
+            if(card.pathway){
+                ctx.fillStyle='#badbc1';ctx.font='600 24px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=35;
+                ctx.fillStyle='#b7c5c9';ctx.font='400 19px system-ui';ctx.fillText(card.pathway.progress,left,y,width);y+=30;
+                infoPages(card.pathway.explanation,Math.max(26,Math.floor(width/13)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=24;});y+=16;
+            }
+            if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,6,34);}
+            ctx.fillStyle='#f1f4f4';ctx.font='600 30px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=46;
+            ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.trail,left,y,width);y+=40;
+            const contentBottom=(tools?.y||card.height-90)-22;
+            ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
+            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 26px')+' system-ui';
+            const lineHeight=card.largeText?39:34;
+            card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
+            if(!card.mediaCollapsed){
+                const imageX=1000-media+12,imageY=206,imageWidth=media-28,imageHeight=180;
+                if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight);
+                    ctx.fillStyle='rgba(233,239,228,.92)';ctx.fillRect(imageX,imageY,imageWidth,imageHeight);
+                    ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
+                }else{ctx.fillStyle='#bdc9cc';ctx.font='400 20px system-ui';infoPages('Plant media appears here when a plant is selected.',18,4)[0].forEach((line,index)=>ctx.fillText(line,imageX,imageY+index*27,imageWidth));}
+            }
+            ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.metadata,left,card.height-20,width);
+            if(card.tab==='Details')ctx.fillText(card.page,right-65,card.height-20,65);
+        }else if(!card.hidden){
             ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
             ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
             ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
@@ -265,7 +330,7 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
             ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':'#f1f4f4';ctx.font=(button.primary?'700 ':'500 ')+'25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
         });return c;
     }
-    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82}]);}
+    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:spatialHeight()/1000*.82}]);}
     const api={element,
         showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};mediaImage=null;mediaLoadToken++;tab='Details';hidden=false;page=0;render();},
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
@@ -285,10 +350,10 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const media=record===nextRecord?identity?.media:null;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media};tab='Details';hidden=false;page=0;render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
-        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:height()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
+        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:spatialHeight()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now()){
             if(panelPoseOutsideSafeBounds(matrix,pose)){heading=null;pose=null;lastTime=0;}
-            const next=infoPanelPose(matrix,heading);if(!next)return;heading=next.anchorHeading;
+            const next=infoPanelPose(matrix,heading,headset);if(!next)return;heading=next.anchorHeading;
             const amount=pose?1-Math.exp(-Math.min(100,Math.max(0,time-lastTime))/160):1;
             if(!pose)pose=next;else for(const key of ['x','y','z'])pose.center[key]+=(next.center[key]-pose.center[key])*amount;
             Object.assign(pose,facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]}));lastTime=time;
@@ -297,11 +362,11 @@ export function createPimInfoPanel({ root, onEdit = () => {}, onPathwayAction = 
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',hidden,tab,height:height(),largeText,guided,controls:controls(),pathway:pathwayContext,image:showPlantPreview()?mediaImage:null,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,image:showPlantPreview()?mediaImage:null,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,[card],'');renderer.end();
         },hit,
-        activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:height());
-            const button=controls().find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);if(button)act(button.action);return true;},
+        activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());
+            const button=(headset?spatialControls():controls()).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);if(button)act(button.action);return true;},
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             const transform=event.frame?.getPose(event.inputSource.targetRaySpace,referenceSpace)?.transform.matrix;if(!transform)return;
             const ray={origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
