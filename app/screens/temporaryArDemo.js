@@ -1,5 +1,6 @@
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
 import { createLimActivationController } from '../services/limActivation.js';
 import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
@@ -563,8 +564,8 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
     const messages = {
-        plant2: ['A living Plant Profile', 'The first orb now carries a hub of information in real space. Use the round trigger to continue, then let’s try Moringa.'],
-        note: ['Add one observation', 'Both plants now carry their own knowledge. Add a Note beside them to remember what you saw in this place.']
+        plant2: ['A second plant story', 'Pigeon Pea now has a place and a profile. Moringa will bring a different plant story into the same space.'],
+        note: ['Add one observation', 'The two plants share this place but hold different knowledge. A Note can keep a local observation alongside them.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
@@ -633,7 +634,7 @@ function advancePastVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
-    showGuidedChoice('<h2>Live Tags</h2><p>This Plant Profile also has a full, view-only page in Web Mode. You will be able to place a real tag on your plant to open the plant profile.</p>', () => {}, {
+    showGuidedChoice('<h2>One plant, two ways to read it</h2><p>Pigeon Pea’s full profile is also available in Web Mode. Open it for a closer read, or continue to meet a second plant in this place.</p>', () => {}, {
         persistent: true,
         tutorialStep: DEMO_TUTORIAL_STEPS.LIVE_TAG
     });
@@ -1311,10 +1312,10 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody='Explore plants, knowledge and place through NourishlandXR.\n\nThe Control panel offers guidance and details as you go.\n\nPress Continue when ready. Vision is optional; activate learning cells in the Control panel at any time.';
+    introBoardBody='A place can hold more than we first see.\n\nNourishlandXR connects plants, observations and knowledge to the places they describe.\n\nThis short journey follows one plant outward into a food forest. The learning cells around you are there to explore whenever you choose.';
     introBoardVisibleBody='';
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Read guidance and selected details here. Continue when ready. Activate learning cells from this panel whenever you want to explore Vision.',accent:'#dcef95',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
     infoPanel?.suspend(true);
     const openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
@@ -1435,21 +1436,21 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Meet your Control panel',button:'Continue',nextGuide:'Press the round Continue trigger at the bottom centre to meet the learning cells.',paragraphs:[
-        'The green panel introduces each part of the experience. Your Control panel stays beside you for guidance, selected details and useful actions.',
-        'Try its Help or Settings tabs at any time. Use the round Continue trigger at the bottom centre when you are ready.'
+    {title:'A place full of stories',button:'Continue',nextGuide:'Press Continue to see how the stories in this place connect.',paragraphs:[
+        'Imagine standing in a food forest. Some relationships are easy to see; others become clear when we look closer.',
+        'Here, what you learn stays connected to the place it describes.'
     ]},
-    {title:'Read a living place',button:'Continue',nextGuide:'Choose a cell to explore, or press the round Continue trigger at the bottom centre.',paragraphs:[
-        'The Vision cell below is an invitation, not a required step. Select it and four paths gradually unfold: Read the Place, Understand Life, Design the Forest and Shape the Outcome.',
-        'Select any visible cell to read more in your Control panel. You can keep exploring while this introduction moves forward.'
+    {title:'Connections begin to appear',button:'Continue',nextGuide:'Explore a learning cell if you wish, or press Continue to follow the story.',paragraphs:[
+        'The floating learning cells connect questions about place, plants, life and design.',
+        'They offer ways to explore. You can follow a connection now or return to these cells later.'
     ]},
-    {title:'Knowledge in the landscape',button:'Continue',nextGuide:'Press the round Continue trigger at the bottom centre to meet your first plant.',paragraphs:[
-        'NourishlandXR connects ideas to the places and plants they describe. A cell offers a quick doorway; the Control panel gives you the deeper explanation.',
-        'Free exploration remains available at every point. The learning cells can stay open as you move ahead, or you can hide them. Guided learning modules are available separately when you choose them.'
+    {title:'Knowledge belongs to a place',button:'Continue',nextGuide:'Press Continue to meet the first plant in this place.',paragraphs:[
+        'An idea becomes more useful when it connects to a particular plant and the place where it grows.',
+        'A Plant orb gives one plant a location in the scene and opens its profile there.'
     ]},
-    {title:'Meet your first plant',button:'Place a plant orb',nextGuide:'Press the round Place a plant orb trigger at the bottom centre to reveal the aim.',paragraphs:[
-        'A plant orb connects knowledge to a plant in this place. Start with a Pigeon Pea and explore its relationships, cultivation and uses.',
-        'Press the round Place a plant orb trigger at the bottom centre. Aim at a comfortable location, then press the visible aiming circle to place it. You can hold the orb to reposition it.'
+    {title:'Begin with Pigeon Pea',button:'Place Pigeon Pea',nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.',paragraphs:[
+        'Pigeon Pea is our first example. Its profile brings together the plant’s roles, growing needs and uses.',
+        'Giving its orb a place in the scene lets us explore that knowledge where the plant belongs.'
     ]}
 ];
 
@@ -1462,7 +1463,7 @@ function runArWelcomeTutorial(index=0) {
         suppressSessionSelectUntil=performance.now()+700;
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Tutorial stage '+(index+1)+' of 4 · '+['Control panel','Explore','Place','Plant'][index],nextGuide:step.nextGuide});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of 4 · '+['Place','Connections','Knowledge','Pigeon Pea'][index],nextGuide:step.nextGuide});
 }
 
 function guidePlantConversion(record) {
@@ -1499,14 +1500,13 @@ function guidePlantConversion(record) {
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     showIntroBoard(
-        moringa ? 'Your second plant' : 'Knowledge connected to this place',
+        moringa ? 'Moringa joins the place' : 'A story anchored here',
         moringa
-            ? 'This Moringa orb can carry its own Plant Profile as well and can be linked to other plants. Press the Moringa orb to explore its information tree.'
+            ? 'Moringa now has its own Plant Profile. Together, the two orbs show distinct plant stories within one food forest.'
             : [
-                'This orb keeps plant knowledge connected to a place. Open its honeycomb to explore topics and relationships, then read the detail in your Control panel.',
-                'Our example is Pigeon Pea. Explore its food-forest role, cultivation and uses, and discover how individual topics connect.',
-                'You can grab and hold the Pigeon Pea orb or any Plant marker to position it. Release it when you are ready.',
-                'Use the round Continue trigger at the bottom centre after positioning. Press the orb to open or close its Plant Information Mesh.'
+                'Pigeon Pea now has a place in the scene. Its orb opens a profile of the plant’s roles, care and uses.',
+                'The Control panel holds the detail as you explore connected topics.',
+                'The orb can be moved later if its position needs adjusting.'
             ],
         'Continue',
         () => {
@@ -1549,8 +1549,8 @@ function showDemoClosingMessage() {
     showIntroBoard(
         'NourishlandXR',
         [
-            'We hope NourishlandXR gives teachers and educators an engaging way to share knowledge, inspire curiosity, and help people reconnect with nature and the systems that produce our food.',
-            'Together, we can create new ways to explore, learn from, share, and care for the living world around us.'
+            'From one Pigeon Pea, we followed knowledge through two plants, an observation and connected Areas.',
+            'NourishlandXR helps people explore living places, share what they learn and care for them together. Back at the welcome screen, you can explore a place or begin creating your own.'
         ],
         'Finish demo',
         returnToWelcome
@@ -1597,8 +1597,8 @@ function createDemoTotemExample() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('This Totem is the home marker for the Food Forest Area. Add a second Totem to see how visitors move between Areas.');
-    showSceneContinue('Add second Totem', createDemoSecondTotem);
+    setGuide('The Food Forest Totem marks one Area. Show the Kitchen Garden Totem to see a route between Areas.');
+    showSceneContinue('Show Kitchen Garden Totem', createDemoSecondTotem);
 }
 
 function createDemoSecondTotem() {
@@ -1687,9 +1687,9 @@ function showTotemIntroduction() {
         'Area Totems',
         [
             'A Totem is an Area’s home marker. It gathers the plants, Notes and local knowledge that belong to that part of a project.',
-            'We will place one for the Food Forest and one for the Kitchen Garden, then show the route between them.'
+            'This example reveals a Food Forest Area and a Kitchen Garden Area, then shows the route between them.'
         ],
-        'Place first Totem',
+        'Show Food Forest Totem',
         () => {
             finishIntroBoard();
             createDemoTotemExample();
@@ -1700,8 +1700,8 @@ function showTotemIntroduction() {
 function showSpatialGardenSummary() {
     showIntroBoard(
         'Your place is becoming connected',
-        'Two different Plant orbs now hold their own profiles, and one Note records an observation beside them. Next, see how Area Totems organise this information across a larger place.',
-        'Meet Area Totems',
+        'This place now holds two plant profiles and one observation. Area Totems show how those pieces belong to larger parts of the landscape.',
+        'See Area Totems',
         showTotemIntroduction
     );
 }
@@ -1723,7 +1723,7 @@ function guideNoteConversion(record) {
     setGuide('Your observation is anchored beside the plants.');
     showIntroBoard(
         'Your Note is in place',
-        'Notes keep a short observation, image, memory or task connected to the place where it matters. This example records a seasonal change beside the two plants.',
+        'This Note records a seasonal change beside the plants. A Note can also hold an image, memory or task that someone may return to here.',
         'Continue to Areas',
         () => {
             finishIntroBoard();
@@ -1749,6 +1749,30 @@ function shiftSimulatedSceneForStage(type) {
     if (simulatedMode) updateSimulatedMarkers();
 }
 
+function demoControlPanelRect() {
+    const panel = infoPanel?.element;
+    if (!simulatedMode || !panel || !panel.getClientRects().length) return null;
+    return panel.getBoundingClientRect();
+}
+
+function keepDemoAnchorClear(anchor, radius) {
+    const { width, height } = demoViewportDimensions();
+    return avoidDemoPanelOverlap(anchor, radius, demoControlPanelRect(), width, height);
+}
+
+function refreshSimulatedPlacementAim() {
+    if (!simulatedMode) return;
+    const place = appRoot?.querySelector('[data-tryit-place]');
+    if (!place || !place.dataset.preferredAimX) return;
+    const preferred = { x: Number(place.dataset.preferredAimX), y: Number(place.dataset.preferredAimY) };
+    const radius = place.offsetWidth / 2 || (window.innerWidth <= 620 ? 44 : 58);
+    const aim = keepDemoAnchorClear(preferred, radius);
+    place.dataset.aimX = String(aim.x);
+    place.dataset.aimY = String(aim.y);
+    place.style.setProperty('--aim-x', `${aim.x}%`);
+    place.style.setProperty('--aim-y', `${aim.y}%`);
+}
+
 function armDemoPlacement(type, {explained=false}={}) {
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
@@ -1767,10 +1791,9 @@ function armDemoPlacement(type, {explained=false}={}) {
             plant2: { x: 66, y: Math.min(78, 50 + comfortOffsetPercent) },
             note: { x: 50, y: Math.min(86, 58 + comfortOffsetPercent) }
         })[type] || { x: 50, y: Math.min(86, 50 + comfortOffsetPercent) };
-        place.dataset.aimX = String(stageAim.x);
-        place.dataset.aimY = String(stageAim.y);
-        place.style.setProperty('--aim-x', `${stageAim.x}%`);
-        place.style.setProperty('--aim-y', `${stageAim.y}%`);
+        place.dataset.preferredAimX = String(stageAim.x);
+        place.dataset.preferredAimY = String(stageAim.y);
+        refreshSimulatedPlacementAim();
     } else if (place) {
         place.style.setProperty('--aim-x', '50%');
         place.style.setProperty('--aim-y', `calc(50% + ${AR_PHONE_COMFORT.pointerOffsetCss})`);
@@ -1784,22 +1807,22 @@ function armDemoPlacement(type, {explained=false}={}) {
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : 'Take in the space before choosing the next position.');
     const introductions = {
-        plant: ['Virtual markers for Plants', [
-            'Let’s start with placing a simple marker.',
-            'Use the round Place a plant orb trigger at the bottom centre when it appears. Position the visible aiming circle where you’d like your marker to appear, then press it to create what we call a Plant Orb.'
+        plant: ['A plant story in this place', [
+            'A Plant orb gives a plant’s profile a location in the scene.',
+            'Pigeon Pea will be our first example.'
         ]],
-        plant2: ['Let’s try another plant · a Moringa plant orb', 'Press the round Place a plant orb trigger at the bottom centre to load the aim. Then choose another nearby position and press the visible aiming circle to place the Moringa orb.'],
-        note: ['Add one observation', 'Aim beside the plants and press the circle once to anchor a seasonal Note in this place.']
+        plant2: ['A second plant story', 'Moringa will have its own orb and profile beside Pigeon Pea. Together, they show how different plants share a place.'],
+        note: ['Add one observation', 'A Note can keep something observed in this part of the landscape beside the plants it relates to.']
     };
     const [title, introduction] = introductions[type];
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const placementCopy = type === 'plant'
-            ? {title:'Place your first plant orb',body:'Pigeon Pea will anchor the first example of living plant knowledge in this place.',next:'Press the visible aiming circle to place Pigeon Pea.'}
+            ? {title:'Place Pigeon Pea',body:'This spot will anchor Pigeon Pea’s profile in the scene.',next:'Press the visible aiming circle to place Pigeon Pea.'}
             : type === 'plant2'
-                ? {title:'Place a second plant',body:'Choose a nearby position for Moringa and notice how two plant stories can share a place.',next:'Press the visible aiming circle to place Moringa.'}
-                : {title:'Place an observation',body:'A Note can hold something you noticed at this point in the landscape.',next:'Press the visible aiming circle to place the Note.'};
+                ? {title:'Place Moringa',body:'This second orb will show how two distinct plant profiles can share a place.',next:'Press the visible aiming circle to place Moringa.'}
+                : {title:'Place an observation',body:'A Note gives an observation a location beside the plants.',next:'Press the visible aiming circle to place the Note.'};
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
         introBoardVisibleBody=placementCopy.body;
@@ -1814,6 +1837,7 @@ function armDemoPlacement(type, {explained=false}={}) {
                 : 'Tap the circle to place a Note.');
         placementReady = true;
         place?.removeAttribute('hidden');
+        refreshSimulatedPlacementAim();
         requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
     };
     if(explained){startPlacement();return;}
@@ -1841,12 +1865,13 @@ function simulatedAnchorStyle(anchor) {
     return `--marker-x:${Number(anchor.x).toFixed(2)}%;--marker-y:${Number(anchor.y).toFixed(2)}%`;
 }
 
-function simulatedAnchorFromPointer(startAnchor, startX, startY, event) {
+function simulatedAnchorFromPointer(startAnchor, startX, startY, event, markerRadius = 32) {
     const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
-    return {
+    const anchor = {
         x: Math.max(8, Math.min(92, Number(startAnchor?.x) + ((event.clientX - startX) / viewportWidth) * 100)),
         y: Math.max(12, Math.min(88, Number(startAnchor?.y) + ((event.clientY - startY) / viewportHeight) * 100))
     };
+    return keepDemoAnchorClear(anchor, markerRadius);
 }
 
 function applySimulatedMarkerAnchor(layer, index, anchor) {
@@ -2271,7 +2296,9 @@ function bindSimulatedInformationPanels(layer) {
         compactMarker.addEventListener('pointermove', event => {
             if (demoHeldIndex !== index || event.pointerId !== holdGesture?.pointerId) return;
             if (simulatedMode) {
-                record.simulatedAnchor = simulatedAnchorFromPointer(holdGesture.startAnchor, holdGesture.startX, holdGesture.startY, event);
+                const orbRadius = record.demoType === 'plant'
+                    ? Math.max(32, compactMarker.offsetWidth * (record.demoDepthScale || 1) / 2 + 8) : 32;
+                record.simulatedAnchor = simulatedAnchorFromPointer(holdGesture.startAnchor, holdGesture.startX, holdGesture.startY, event, orbRadius);
                 applySimulatedMarkerAnchor(layer, index, record.simulatedAnchor);
             }
             const verticalTravel = holdGesture.startY - event.clientY;
@@ -2935,7 +2962,7 @@ function renderInterface(simulated) {
     introSceneActive = true;
     introBoardHasEntered = false;
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -2989,12 +3016,17 @@ function renderInterface(simulated) {
             record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, record.demoPanelOffset || { x: 0, y: 0 });
         });
         updateSimulatedMarkers();
+        refreshSimulatedPlacementAim();
     };
     window.addEventListener('resize', reflowDemoViewport, { passive: true });
     window.visualViewport?.addEventListener('resize', reflowDemoViewport, { passive: true });
+    const panelResizeObserver = simulated && typeof ResizeObserver === 'function'
+        ? new ResizeObserver(refreshSimulatedPlacementAim) : null;
+    if (panelResizeObserver) panelResizeObserver.observe(infoPanel.element);
     demoViewportCleanup = () => {
         window.removeEventListener('resize', reflowDemoViewport);
         window.visualViewport?.removeEventListener('resize', reflowDemoViewport);
+        panelResizeObserver?.disconnect();
     };
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
     appRoot.querySelector('.tryit-demo')?.append(placementPointer);

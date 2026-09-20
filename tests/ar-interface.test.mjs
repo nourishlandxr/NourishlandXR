@@ -15,6 +15,7 @@ import {
     selectGuidedDemoOrb
 } from '../app/screens/temporaryArDemo.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
+import { avoidDemoPanelOverlap } from '../app/services/demoPanelGeometry.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
 import { normalizeTotemHeightPreset, normalizeTotemStyle, totemHeightPreset, totemHeightScale, totemStylePreset } from '../app/services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../app/services/totemLinkCalibration.js';
@@ -1012,6 +1013,45 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /contextToolbarRecord\)[\s\S]*openContextInWebMode\(\)/);
 });
 
+test('demo placement stays clear of the Control panel at desktop and narrow widths', () => {
+    const cases = [
+        { viewport: [800, 720], panel: { left: 10, top: 8, right: 370, bottom: 588 }, aim: { x: 34, y: 78 } },
+        { viewport: [390, 844], panel: { left: 8, top: 556, right: 288, bottom: 836 }, aim: { x: 55, y: 75 } }
+    ];
+    for (const { viewport: [width, height], panel, aim } of cases) {
+        const resolved = avoidDemoPanelOverlap(aim, 58, panel, width, height);
+        const x = resolved.x * width / 100;
+        const y = resolved.y * height / 100;
+        assert.ok(x >= 58 && x <= width - 58, 'placement target remains on screen');
+        assert.ok(y >= 58 && y <= height - 58, 'placement target remains on screen');
+        assert.ok(
+            x <= panel.left - 70 || x >= panel.right + 70 ||
+            y <= panel.top - 70 || y >= panel.bottom + 70,
+            'the entire 116px placement target and 12px gutter stay clear of the panel'
+        );
+    }
+});
+
+test('demo panel avoidance preserves clear orb positions and moves obscured dragged orbs', () => {
+    const width = 1024;
+    const height = 768;
+    const panel = { left: 550, top: 150, right: 750, bottom: 500 };
+    const clear = { x: 25, y: 40 };
+    assert.deepEqual(avoidDemoPanelOverlap(clear, 32, panel, width, height), clear);
+
+    const obscured = { x: 55, y: 40 };
+    const resolved = avoidDemoPanelOverlap(obscured, 32, panel, width, height);
+    const x = resolved.x * width / 100;
+    const y = resolved.y * height / 100;
+    assert.ok(
+        x <= panel.left - 44 || x >= panel.right + 44 ||
+        y <= panel.top - 44 || y >= panel.bottom + 44,
+        'the dragged orb remains visible after crossing the panel'
+    );
+    assert.ok(Math.hypot(x - obscured.x * width / 100, y - obscured.y * height / 100) < 100,
+        'the orb moves to a nearby clear point rather than jumping across the scene');
+});
+
 test('the default Pigeon Pea receives a viewer-relative AR preview without a Totem', () => {
     const source = read('app/screens/arMode.js');
     assert.match(source, /function isDefaultPigeonPeaMarker\(marker\)/);
@@ -1120,7 +1160,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Meet your Control panel[\s\S]*Read a living place[\s\S]*Knowledge in the landscape[\s\S]*Meet your first plant/);
+    assert.match(source, /A place full of stories[\s\S]*Connections begin to appear[\s\S]*Knowledge belongs to a place[\s\S]*Begin with Pigeon Pea/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1129,8 +1169,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Augmented reality\(AR\) & Mixed reality\(XR\) are technologies that can help us better understand and interact with the world around us/);
     assert.match(source, /NourishLandXR is a portal for plant-related information, a plant mapping tool and a experience editor/);
     assert.match(source, /few examples of how information can be mapped real places/);
-    assert.match(source, /plant: \['Virtual markers for Plants', \[/);
-    assert.match(source, /Use the round Place a plant orb trigger at the bottom centre when it appears/);
+    assert.match(source, /plant: \['A plant story in this place', \[/);
+    assert.match(source, /nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.'/);
     assert.doesNotMatch(source, /Press it to create a Plant orb\. Press Continue to load your pointer/);
     assert.doesNotMatch(source, /gentle introduction/);
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
@@ -1154,8 +1194,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /You can grab and hold the Pigeon Pea orb or any Plant marker to position it/);
-    assert.match(source, /Use the round Continue trigger at the bottom centre after positioning/);
+    assert.match(source, /The orb can be moved later if its position needs adjusting/);
+    assert.match(source, /button:'Place Pigeon Pea'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
     assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
@@ -1182,11 +1222,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
-    assert.match(source, /showIntroBoard\(\s*moringa \? 'Your second plant' : 'Knowledge connected to this place'/);
-    assert.match(source, /Open its honeycomb to explore topics and relationships, then read the detail in your Control panel/);
-    assert.match(source, /This orb keeps plant knowledge connected to a place/);
+    assert.match(source, /showIntroBoard\(\s*moringa \? 'Moringa joins the place' : 'A story anchored here'/);
+    assert.match(source, /The Control panel holds the detail as you explore connected topics/);
+    assert.match(source, /Pigeon Pea now has a place in the scene/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(source, /Press the Moringa orb to explore its information tree/);
+    assert.match(source, /Moringa now has its own Plant Profile/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
@@ -1234,7 +1274,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
-    assert.match(source, /Press the round Place a plant orb trigger at the bottom centre to load the aim\.[\s\S]*press the visible aiming circle to place the Moringa orb/);
+    assert.match(source, /plant2: \['A second plant story'[\s\S]*next:'Press the visible aiming circle to place Moringa.'/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);
@@ -1299,7 +1339,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /plant: \{ x: 34,[\s\S]*plant2: \{ x: 66,[\s\S]*note: \{ x: 50,/);
-    assert.match(source, /place\.dataset\.aimX = String\(stageAim\.x\)/);
+    assert.match(source, /place\.dataset\.preferredAimX = String\(stageAim\.x\)/);
+    assert.match(source, /place\.dataset\.aimX = String\(aim\.x\)/);
     assert.doesNotMatch(source, /simulatedSceneShifts/);
     assert.match(source, /50 \+ comfortOffsetPercent/);
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
