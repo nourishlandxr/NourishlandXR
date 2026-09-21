@@ -8,7 +8,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
-import {createWelcomePresentationClock,createWelcomePreludePlan,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,AR_WELCOME_REDUCED_PRELUDE_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -87,7 +87,7 @@ let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[
 let arWelcomeClock=createWelcomePresentationClock();
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let arWelcomeVisionActivated=false, arWelcomeVisionActivatedAt=NaN;
-let limMeshActivatedAt=NaN,arWelcomePreludeActive=false,arWelcomePreludeDuration=AR_WELCOME_PRELUDE_MS,arWelcomePreludePlan=null;
+let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
@@ -188,7 +188,7 @@ const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTROD
 // responsive while the XR frame loop remains free to render at 60fps.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
 const DEMO_LIM_TEXTURE_INTERVAL_MS = 96;
-const DEMO_LIM_PRELUDE_CANVAS = Object.freeze({width:1600,height:1344});
+const DEMO_LIM_SURFACE_CANVAS = Object.freeze({width:1600,height:1344});
 const AR_WELCOME_SETTLED_MS = 64000;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // A paused XR/browser timer must never leave the demo waiting forever for
@@ -358,7 +358,7 @@ function clearSessionState() {
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
-    clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;limMeshActivatedAt=NaN;arWelcomePreludeActive=false;arWelcomePreludeDuration=AR_WELCOME_PRELUDE_MS;arWelcomePreludePlan=null;
+    clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
@@ -1025,7 +1025,7 @@ function welcomeFrames() {
     if(!limMeshVisible)return [];
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
-const welcomeSequenceCanContinue=()=>!arWelcomePreludeActive && welcomeCanContinue(arWelcomeClock.elapsed-arWelcomePreludeDuration,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
+const welcomeSequenceCanContinue=()=>!arWelcomeOpeningActive && welcomeCanContinue(arWelcomeClock.elapsed-arWelcomeOpeningDuration,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
 
 let selectedLimCell='';
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
@@ -1256,7 +1256,7 @@ function paintWelcomeLayer(now) {
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            prelude:arWelcomePreludeActive,preludePlan:arWelcomePreludePlan,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            opening:arWelcomeOpeningActive,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
             drawCellLabels:true,activeKey,activeProgress,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
         });
@@ -1297,7 +1297,7 @@ function showArWelcomeShowcase() {
     const reducedOpening=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const seedBytes=new Uint32Array(1);
     if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seedBytes);else seedBytes[0]=Math.floor(Math.random()*0xffffffff);
-    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=false;limMeshActivatedAt=NaN;arWelcomePreludeActive=true;arWelcomePreludeDuration=reducedOpening?AR_WELCOME_REDUCED_PRELUDE_MS:AR_WELCOME_PRELUDE_MS;arWelcomePreludePlan=createWelcomePreludePlan(seedBytes[0]);arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-vision');
     limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
     if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
@@ -1316,7 +1316,7 @@ function showArWelcomeShowcase() {
     bindLimSessionInteractions(session);
     arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
     syncDemoPanelActions();
-    introSceneActive=true;introBoardVisible=false;introKnowledgeVisible=false;introBoardHasEntered=true;
+    introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='NourishlandXR';
@@ -1332,7 +1332,7 @@ function showArWelcomeShowcase() {
     panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface','is-typing');
     panel.classList.remove('is-live-welcome-copy');
     panel.hidden=true;
-    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-prelude','true');
+    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-opening','true');
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
     let openingTypedLength=0,openingTyping=true;
     const openingTextWindow=panel.querySelector('.tryit-board-text-window');
@@ -1364,27 +1364,26 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomePreludeActive=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
-        if(simulatedMode && arWelcomeCanvas && arWelcomeCanvas.width!==2500){arWelcomeCanvas.width=2500;arWelcomeCanvas.height=2100;}
-        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-prelude');
+        arWelcomeOpeningActive=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         infoPanel?.suspend(false);syncDemoPanelActions();
         boardTypingTimer=setTimeout(typeOpeningCopy,320);
         boardTypingWatchdogTimer=setTimeout(finishOpeningCopy,Math.max(DEMO_BOARD_TYPING_SAFETY_MS,1200+introBoardBody.length*60));
     };
     const waitForOpeningCopy=()=>{
-        if(!arWelcomeShowcaseActive || !arWelcomePreludeActive)return;
-        if(arWelcomeClock.elapsed>=arWelcomePreludeDuration){beginOpeningCopy();return;}
+        if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
+        if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){beginOpeningCopy();return;}
         boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     };
     boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     skipDemoNarration=()=>{
-        if(arWelcomePreludeActive){arWelcomePreludeDuration=arWelcomeClock.elapsed;beginOpeningCopy();return;}
+        if(arWelcomeOpeningActive){arWelcomeOpeningDuration=arWelcomeClock.elapsed;beginOpeningCopy();return;}
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
     layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="Welcome to Nourishland. A Living Information Mesh grows from Vision into four branching paths before introducing NourishlandXR."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
-    if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_PRELUDE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_PRELUDE_CANVAS.height;}
+    if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_SURFACE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_SURFACE_CANVAS.height;}
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
         const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;cell.dataset.label=node.label;cell.textContent=node.label;
@@ -1400,7 +1399,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,arWelcomeVisionActivated,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
-        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
+        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
         // XRSession frames drive immersive textures; a hidden DOM canvas need
@@ -1414,7 +1413,7 @@ function showArWelcomeShowcase() {
     if(skip)skip.hidden=true;
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
-        if(!welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
+        if(arWelcomeOpeningActive || !welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
         button.disabled=false;button.hidden=false;
         syncDemoPanelActions();
         setGuide('Press Continue when ready. Activate learning cells in the Control panel whenever you want to explore Vision.');
@@ -3314,7 +3313,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{prelude:arWelcomePreludeActive,preludePlan:arWelcomePreludePlan,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

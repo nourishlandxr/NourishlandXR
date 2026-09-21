@@ -251,12 +251,10 @@
     }
 }
 
-/* The opening organism is a full-scene film, not the later interactive LIM
-   map. Give it its own centred frame so phones do not shrink 2500 canvas
-   units into an unreadable 96vw strip or leave the deliberately open centre
-   as the only visible area. The normal LIM geometry resumes after the data
-   attribute is removed. */
-.tryit-demo[data-lim-prelude="true"] .tryit-live-welcome {
+/* The LIM opening uses the same live green-screen surface as the settled
+   mesh. Keep that one surface legible on phones without introducing a second
+   animation composition. */
+.tryit-demo[data-lim-opening="true"] .tryit-live-welcome {
     inset:0 !important;
     width:100% !important;
     min-width:0 !important;
@@ -266,7 +264,7 @@
     transform:none !important;
     overflow:hidden;
 }
-.tryit-demo[data-lim-prelude="true"] .tryit-live-welcome canvas {
+.tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
     inset:50% auto auto 50%;
     width:min(96vw,1100px,calc((100dvh - 28px) * 2500 / 2100));
     height:auto;
@@ -277,13 +275,13 @@
     filter:saturate(1.08) drop-shadow(0 22px 42px rgba(4,24,14,.2));
 }
 @media(max-width:620px) and (orientation:portrait) {
-    .tryit-demo[data-lim-prelude="true"] .tryit-live-welcome canvas {
+    .tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
         width:min(178vw,760px);
         max-width:none;
     }
 }
 @media(orientation:landscape) and (max-height:720px) {
-    .tryit-demo[data-lim-prelude="true"] .tryit-live-welcome canvas {
+    .tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
         inset:50% auto auto 50%;
         width:min(74vw,620px);
         min-width:0;

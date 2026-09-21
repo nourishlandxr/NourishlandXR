@@ -1,63 +1,52 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,AR_WELCOME_REDUCED_PRELUDE_MS,drawArWelcomeShowcase,drawWelcomeScopePrelude,createArWelcomeClusters,createWelcomePreludePlan,welcomePreludeFrame,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeOpeningFrames,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
 
-test('organic prelude covers the authored intro mesh with seeded parent-first succession',()=>{
- const first=createWelcomePreludePlan(73421),repeat=createWelcomePreludePlan(73421),variation=createWelcomePreludePlan(73422);
- assert.equal(AR_WELCOME_PRELUDE_MS,9800);
- assert.equal(AR_WELCOME_REDUCED_PRELUDE_MS,1400);
- assert.equal(first.nodes.length,27);
- assert.equal(first.nodes.length,LIM_INTRO_CELLS.length);
- assert.deepEqual(new Set(first.nodes.map(node=>node.id)),new Set(LIM_INTRO_CELLS.map(cell=>cell.id)));
- assert.deepEqual(first,repeat,'one opening keeps a stable seeded organism');
+test('the opening uses the existing LIM mesh with seeded parent-first succession',()=>{
+ const first=welcomeOpeningFrames(0,73421),repeat=welcomeOpeningFrames(0,73421),variation=welcomeOpeningFrames(0,73422);
+ assert.equal(AR_WELCOME_OPENING_MS,9800);
+ assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1400);
+ assert.equal(first.reduce((count,frame)=>count+frame.nodes.length,0),59);
+ assert.deepEqual(first,repeat,'one opening keeps a stable seeded LIM route');
  assert.notDeepEqual(first,variation,'a new seed changes the organic route and timing');
- const byId=new Map(first.nodes.map(node=>[node.id,node]));
- for(const node of first.nodes.filter(node=>node.parentId)){
-  const parent=byId.get(node.parentId);
-  assert.ok(parent,`${node.id} keeps its authored parent`);
-  assert.ok(node.growAt>parent.bloomAt+parent.bloomDuration,`${node.id} waits for ${parent.id} to finish blooming`);
+ const nodes=first.flatMap(frame=>frame.nodes),byId=new Map(nodes.map(node=>[node.id,node]));
+ for(const node of nodes.filter(item=>item.openingParentId)){
+  const parent=byId.get(node.openingParentId);
+  assert.ok(parent,`${node.id} keeps an opening parent`);
+  assert.ok(node.openingMeta.openAt>=parent.openingMeta.bloomAt,`${node.id} waits for ${parent.id} to bloom`);
  }
 });
 
-test('organic prelude grows progressively then hands the scene from title to network to brand',()=>{
- const plan=createWelcomePreludePlan(73421);
- const early=welcomePreludeFrame(1200,plan),middle=welcomePreludeFrame(3000,plan),full=welcomePreludeFrame(7600,plan);
- const visible=frame=>frame.nodes.filter(node=>node.opacity>0).length;
- assert.ok(visible(early)>0 && visible(early)<plan.nodes.length);
- assert.ok(visible(middle)>visible(early) && visible(middle)<plan.nodes.length);
- assert.equal(visible(full),plan.nodes.length);
-
- const title=welcomePreludeFrame(600,plan),network=welcomePreludeFrame(3000,plan);
- const handoff=welcomePreludeFrame(8800,plan),brand=welcomePreludeFrame(9400,plan);
- assert.equal(title.phase,'welcome');assert.ok(title.welcomeOpacity>.9);assert.equal(title.brandOpacity,0);
- assert.equal(network.phase,'growing');assert.equal(network.organismOpacity,1);assert.ok(network.kickerOpacity>.9);assert.equal(network.brandOpacity,0);
- assert.equal(handoff.phase,'dissolving');assert.ok(handoff.organismOpacity>0 && handoff.organismOpacity<1);assert.ok(handoff.brandOpacity>0 && handoff.brandOpacity<1);
- assert.equal(brand.phase,'brand');assert.equal(brand.organismOpacity,0);assert.equal(brand.brandOpacity,1);
+test('existing LIM cells reveal progressively and settle on their authored positions',()=>{
+ const early=welcomeOpeningFrames(1800,73421),middle=welcomeOpeningFrames(5200,73421),full=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
+ const visible=frames=>frames.flatMap(frame=>frame.nodes).filter(node=>node.opacity>0).length;
+ assert.ok(visible(early)>0 && visible(early)<59);
+ assert.ok(visible(middle)>visible(early) && visible(middle)<59);
+ assert.equal(visible(full),59);
+ const settled=full.flatMap(frame=>frame.nodes);
+ assert.ok(settled.every(node=>node.drawX===node.x && node.drawY===node.y));
 });
 
-test('reduced-motion prelude is never blank and resolves quickly to the brand',()=>{
- const plan=createWelcomePreludePlan(73421);
- const opening=welcomePreludeFrame(0,plan,true),handoff=welcomePreludeFrame(800,plan,true);
- const brand=welcomePreludeFrame(AR_WELCOME_REDUCED_PRELUDE_MS,plan,true);
- assert.ok(opening.welcomeOpacity>0 || opening.nodes.some(node=>node.opacity>0));
- assert.ok(handoff.organismOpacity>0 && handoff.brandOpacity>0);
- assert.equal(brand.organismOpacity,0);assert.equal(brand.brandOpacity,1);
+test('reduced motion composes the complete LIM surface immediately',()=>{
+ const opening=welcomeOpeningFrames(0,73421,AR_WELCOME_REDUCED_OPENING_MS,true);
+ const nodes=opening.flatMap(frame=>frame.nodes);
+ assert.equal(nodes.length,59);
+ assert.ok(nodes.every(node=>node.opacity===1 && node.drawX===node.x && node.drawY===node.y));
 });
 
-test('organic prelude renderer draws curved tendrils between parent blooms',()=>{
- let beziers=0,quadratics=0;
+test('main LIM renderer draws curved tendrils while retaining existing cell labels',()=>{
+ let beziers=0;
  const stack=[];
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
   save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
   restore(){Object.assign(this,stack.pop());},
   measureText(text){return {width:text.length*10};},
-  createRadialGradient(){return {addColorStop(){}};},
-  bezierCurveTo(){beziers+=1;},quadraticCurveTo(){quadratics+=1;}};
- for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','arc','fillText'])ctx[method]=()=>{};
- const frame=drawWelcomeScopePrelude(ctx,3000,false,createWelcomePreludePlan(73421));
- assert.ok(frame.nodes.some(node=>node.pathProgress>0 && node.parentId));
+  createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},
+  bezierCurveTo(){beziers+=1;}};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+ const frame=drawArWelcomeShowcase(ctx,3000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421});
+ assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),59);
  assert.ok(beziers>0,'parent-child tendrils use cubic curves');
- assert.ok(quadratics>0,'cell membranes keep an organic curved outline');
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{
