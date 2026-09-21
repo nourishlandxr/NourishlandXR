@@ -1,11 +1,12 @@
 import {drawArWelcomePanel,welcomeBoundary} from './arWelcomePanel.js';
 import {drawHexagon} from './plantInformationMeshCanvas.js';
-import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
+import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES, LIM_INTRO_CELLS} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
 export const AR_WELCOME_CORNER_MS = 16000;
 export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
-export const AR_WELCOME_PRELUDE_MS = 5400;
+export const AR_WELCOME_PRELUDE_MS = 9800;
+export const AR_WELCOME_REDUCED_PRELUDE_MS = 1400;
 export const LIM_REVEAL_ANIMATION_MS = 4500;
 export function welcomeRevealIsAnimating(elapsed,expandedTimes=[],visionAt=NaN){
  return [visionAt,...expandedTimes].some(start=>Number.isFinite(start)&&elapsed>=start&&elapsed-start<LIM_REVEAL_ANIMATION_MS);
@@ -391,35 +392,179 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  ctx.restore();
 }
 
-const scopeSlots=[];
-for(let row=0;row<13;row++)for(let column=0;column<18;column++){
- const x=145+column*130+(row%2)*65,y=130+row*145;
- if(x>680&&x<1820&&y>670&&y<1430)continue;
- scopeSlots.push({x,y});
+const PRELUDE_CENTRE=Object.freeze({x:1250,y:1060});
+const clamp01=value=>Math.min(1,Math.max(0,value));
+const seededRandom=seed=>{
+ let state=(Number(seed)>>>0)||0x7f4a7c15;
+ return ()=>{
+  state+=0x6d2b79f5;
+  let value=state;value=Math.imul(value^(value>>>15),value|1);value^=value+Math.imul(value^(value>>>7),value|61);
+  return ((value^(value>>>14))>>>0)/4294967296;
+ };
+};
+const shuffled=(items,random)=>{
+ const result=[...items];
+ for(let index=result.length-1;index>0;index--){const next=Math.floor(random()*(index+1));[result[index],result[next]]=[result[next],result[index]];}
+ return result;
+};
+const organicCurve=(from,to,random,bendScale=.24)=>{
+ const dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1,nx=-dy/length,ny=dx/length;
+ const firstBend=(random()-.5)*length*bendScale,secondBend=(random()-.5)*length*bendScale*.82;
+ return {from:{...from},c1:{x:from.x+dx*(.2+random()*.12)+nx*firstBend,y:from.y+dy*(.2+random()*.12)+ny*firstBend},
+  c2:{x:from.x+dx*(.66+random()*.12)+nx*secondBend,y:from.y+dy*(.66+random()*.12)+ny*secondBend},to:{...to}};
+};
+const blobProfile=random=>Array.from({length:12},()=>.84+random()*.28);
+
+// One plan is created for each welcome. Its authored parentage is stable, but
+// sibling order, pauses and curves vary with the seed so the organism never
+// performs the same mechanical sequence twice.
+export function createWelcomePreludePlan(seed=0x4e4c5852){
+ const random=seededRandom(seed),byId=new Map(LIM_INTRO_CELLS.map(cell=>[cell.id,cell]));
+ const rootCell=byId.get('lim-intro-vision')||LIM_INTRO_CELLS[0];
+ const root={id:rootCell.id,parentId:null,label:rootCell.title,accent:rootCell.accent,depth:0,x:PRELUDE_CENTRE.x,y:PRELUDE_CENTRE.y,
+  radius:142,rotation:(random()-.5)*.18,growAt:720,travelDuration:0,bloomAt:760,bloomDuration:940,showLabel:true,layer:0,blob:blobProfile(random)};
+ const nodes=[root],families=LIM_INTRO_CELLS.filter(cell=>cell.parentId===rootCell.id);
+ const revealOrder=shuffled(families.map((_,index)=>index),random),spatialOrder=shuffled([0,1,2,3],random);
+ const angleSlots=[-2.42,-.72,.7,2.43];
+ for(const [familyIndex,cell] of families.entries()){
+  const revealRank=revealOrder.indexOf(familyIndex),slot=spatialOrder[familyIndex%spatialOrder.length];
+  const angle=angleSlots[slot]+(random()-.5)*.3,distance=455+random()*105;
+  const position={x:PRELUDE_CENTRE.x+Math.cos(angle)*distance,y:PRELUDE_CENTRE.y+Math.sin(angle)*distance*.84};
+  const growAt=1880+revealRank*570+random()*130,travelDuration=900+random()*260;
+  const family={id:cell.id,parentId:root.id,label:cell.title,accent:cell.accent,depth:1,x:position.x,y:position.y,radius:104+random()*13,
+   rotation:(random()-.5)*.28,growAt,travelDuration,bloomAt:growAt+travelDuration*.68,bloomDuration:670+random()*130,showLabel:true,
+   layer:random()-.5,blob:blobProfile(random),curve:organicCurve(root,position,random,.34),angle};
+  nodes.push(family);
+  const children=LIM_INTRO_CELLS.filter(candidate=>candidate.parentId===cell.id);
+  const childOrder=shuffled(children.map((_,index)=>index),random);
+  const fanSlots=children.length<=4?[-.58,-.18,.2,.59]:[-.72,-.44,-.15,.13,.42,.7];
+  const positionOrder=shuffled(fanSlots.slice(0,children.length),random);
+  for(const [childIndex,child] of children.entries()){
+   const sequence=childOrder.indexOf(childIndex),childAngle=angle+positionOrder[childIndex]+(random()-.5)*.12;
+   const reach=220+random()*105;
+   const childPosition={x:Math.max(420,Math.min(2080,family.x+Math.cos(childAngle)*reach)),y:Math.max(220,Math.min(1890,family.y+Math.sin(childAngle)*reach*.88))};
+   const childGrowAt=family.bloomAt+family.bloomDuration+120+sequence*(145+random()*70)+random()*90;
+   const childTravel=500+random()*230;
+   nodes.push({id:child.id,parentId:family.id,label:child.title,accent:child.accent,depth:2,x:childPosition.x,y:childPosition.y,
+    radius:59+random()*13,rotation:(random()-.5)*.46,growAt:childGrowAt,travelDuration:childTravel,bloomAt:childGrowAt+childTravel*.62,
+    bloomDuration:430+random()*120,showLabel:sequence<2,layer:family.layer+(random()-.5)*.5,blob:blobProfile(random),
+    curve:organicCurve(family,childPosition,random,.5),angle:childAngle});
+  }
+ }
+ const particles=Array.from({length:42},()=>({x:500+random()*1500,y:260+random()*1580,radius:2+random()*5,phase:random()*Math.PI*2,speed:.35+random()*.8,drift:(random()-.5)*32}));
+ const focusCandidates=nodes.filter(node=>node.depth===2).sort((a,b)=>a.bloomAt-b.bloomAt);
+ return {seed:Number(seed)>>>0,centre:{...PRELUDE_CENTRE},nodes,particles,focusId:focusCandidates[Math.floor(focusCandidates.length*.46)]?.id||root.id};
 }
-const scopeCells=LIM_ALL_CELLS.map((cell,index)=>({cell,point:scopeSlots[Math.floor(index*scopeSlots.length/LIM_ALL_CELLS.length)]}));
-export function drawWelcomeScopePrelude(ctx,elapsed){
- const fadeOut=1-smooth(elapsed,4250,1150);
- ctx.clearRect(0,0,2500,2100);
- scopeCells.forEach(({cell,point},index)=>{
-  const opacity=smooth(elapsed,450+index*27,850)*fadeOut;
-  if(opacity<=0)return;
-  ctx.save();ctx.globalAlpha=opacity*.78;
-  drawHexagon(ctx,point.x,point.y,53,'rgba(34,85,57,.22)','rgba(207,238,177,.75)',2);
-  ctx.fillStyle='rgba(244,255,232,.9)';ctx.font='500 16px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(cell.displayLabel||cell.title||'',point.x,point.y,94);
-  ctx.restore();
+
+const DEFAULT_WELCOME_PRELUDE_PLAN=createWelcomePreludePlan();
+const cubicPoint=(curve,t)=>{
+ const inverse=1-t,a=inverse*inverse*inverse,b=3*inverse*inverse*t,c=3*inverse*t*t,d=t*t*t;
+ return {x:a*curve.from.x+b*curve.c1.x+c*curve.c2.x+d*curve.to.x,y:a*curve.from.y+b*curve.c1.y+c*curve.c2.y+d*curve.to.y};
+};
+const partialCubic=(curve,t)=>{
+ const mix=(a,b)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+ const p01=mix(curve.from,curve.c1),p12=mix(curve.c1,curve.c2),p23=mix(curve.c2,curve.to),p012=mix(p01,p12),p123=mix(p12,p23);
+ return {from:curve.from,c1:p01,c2:p012,to:mix(p012,p123)};
+};
+const bloomScale=progress=>{
+ const value=clamp01(progress),offset=value-1;
+ return .08+.92*(1+2.2*offset*offset*offset+1.2*offset*offset);
+};
+
+export function welcomePreludeFrame(elapsed,plan=DEFAULT_WELCOME_PRELUDE_PLAN,reducedMotion=false){
+ const rawTime=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
+ const time=reducedMotion?7600:rawTime;
+ const fade=reducedMotion?1-smooth(rawTime,680,460):1-smooth(rawTime,8120,1180);
+ const focus=plan.nodes.find(node=>node.id===plan.focusId)||plan.nodes[0];
+ const zoomIn=reducedMotion?0:smooth(time,4050,900)*(1-smooth(time,6660,860)),pullBack=reducedMotion?0:smooth(time,7100,950);
+ const camera={zoom:1+zoomIn*.105-pullBack*.045,focusX:PRELUDE_CENTRE.x+(focus.x-PRELUDE_CENTRE.x)*zoomIn*.18,focusY:PRELUDE_CENTRE.y+(focus.y-PRELUDE_CENTRE.y)*zoomIn*.18};
+ const nodes=plan.nodes.map(node=>{
+  const pathProgress=node.parentId?smooth(time,node.growAt,node.travelDuration):1;
+  const bloomProgress=smooth(time,node.bloomAt,node.bloomDuration);
+  return {...node,pathProgress,bloomProgress,scale:bloomScale(bloomProgress),opacity:bloomProgress*fade,tip:node.curve?cubicPoint(node.curve,pathProgress):{x:node.x,y:node.y}};
  });
- ctx.save();ctx.globalAlpha=smooth(elapsed,350,900)*fadeOut;
- ctx.fillStyle='rgba(21,62,39,.84)';ctx.strokeStyle='rgba(219,245,196,.76)';ctx.lineWidth=3;
- ctx.beginPath();ctx.roundRect(640,858,1220,340,42);ctx.fill();ctx.stroke();
- ctx.fillStyle='#f5ffeb';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 74px system-ui';
- ctx.fillText('Welcome to NourishlandXR',1250,1028,1100);
+ return {time,nodes,camera,organismOpacity:fade,
+  welcomeOpacity:reducedMotion?(1-smooth(rawTime,180,320)):smooth(rawTime,100,560)*(1-smooth(rawTime,1260,720)),
+  kickerOpacity:reducedMotion?(1-smooth(rawTime,640,300)):smooth(rawTime,1650,650)*(1-smooth(rawTime,7700,720)),
+  rangeOpacity:reducedMotion?0:smooth(rawTime,6250,620)*(1-smooth(rawTime,7900,480)),
+  brandOpacity:reducedMotion?smooth(rawTime,620,440):smooth(rawTime,8220,800),phase:rawTime<1500?'welcome':rawTime<8120?'growing':rawTime<9300?'dissolving':'brand'};
+}
+
+function drawOrganicBlobPath(ctx,node,radius){
+ const points=node.blob.map((factor,index)=>{const angle=index*Math.PI*2/node.blob.length+node.rotation;return {x:Math.cos(angle)*radius*factor,y:Math.sin(angle)*radius*factor};});
+ const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2}),first=mid(points.at(-1),points[0]);
+ ctx.beginPath();ctx.moveTo(first.x,first.y);
+ for(let index=0;index<points.length;index++){const point=points[index],next=points[(index+1)%points.length],nextMid=mid(point,next);ctx.quadraticCurveTo(point.x,point.y,nextMid.x,nextMid.y);}
+ ctx.closePath();
+}
+
+function drawOrganicTendril(ctx,node,parent,frame,reducedMotion){
+ if(!node.curve || node.pathProgress<=0)return;
+ const curve=partialCubic(node.curve,node.pathProgress),depthFade=node.depth===1?1:.78;
+ ctx.save();ctx.globalAlpha=frame.organismOpacity*depthFade*(.35+node.pathProgress*.55);ctx.lineCap='round';
+ ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.bezierCurveTo(curve.c1.x,curve.c1.y,curve.c2.x,curve.c2.y,curve.to.x,curve.to.y);
+ ctx.strokeStyle='rgba(7,31,20,.38)';ctx.lineWidth=node.depth===1?19:11;ctx.shadowColor=accentRgba(node.accent,108,.52);ctx.shadowBlur=reducedMotion?0:18;ctx.stroke();
+ ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.bezierCurveTo(curve.c1.x,curve.c1.y,curve.c2.x,curve.c2.y,curve.to.x,curve.to.y);
+ ctx.strokeStyle=accentRgba(node.accent,108,node.depth===1?.72:.6);ctx.lineWidth=node.depth===1?7:4;ctx.shadowBlur=0;ctx.stroke();
+ if(node.pathProgress<.995){
+  const tip=cubicPoint(node.curve,node.pathProgress),pulse=reducedMotion?1:.88+Math.sin(frame.time/170+node.rotation*9)*.12;
+  ctx.globalAlpha=frame.organismOpacity*(.7+node.pathProgress*.3);ctx.fillStyle='#efffcf';ctx.shadowColor=node.accent;ctx.shadowBlur=reducedMotion?0:24;
+  ctx.beginPath();ctx.arc(tip.x,tip.y,(node.depth===1?13:8)*pulse,0,Math.PI*2);ctx.fill();
+ }
  ctx.restore();
 }
 
+function drawOrganicCell(ctx,node,frame,reducedMotion){
+ if(node.opacity<=0)return;
+ const hue=node.depth===0?83:node.depth===1?112:128,radius=node.radius;
+ const position=node.pathProgress<1?node.tip:node;
+ ctx.save();ctx.globalAlpha=node.opacity;ctx.translate(position.x,position.y);ctx.rotate(node.rotation*.35);ctx.scale(node.scale,node.scale);
+ ctx.shadowColor=accentRgba(node.accent,hue,.62);ctx.shadowBlur=reducedMotion?8:22+Math.sin(frame.time/520+node.rotation*13)*5;ctx.shadowOffsetY=7;
+ drawOrganicBlobPath(ctx,node,radius);
+ const membrane=ctx.createRadialGradient(-radius*.26,-radius*.3,radius*.08,0,0,radius*1.08);
+ membrane.addColorStop(0,'rgba(247,255,224,.86)');membrane.addColorStop(.2,accentRgba(node.accent,hue,.72));membrane.addColorStop(.72,'rgba(32,91,57,.44)');membrane.addColorStop(1,'rgba(8,35,23,.3)');
+ ctx.fillStyle=membrane;ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='rgba(231,252,210,.82)';ctx.lineWidth=node.depth===0?5:3;ctx.stroke();
+ drawOrganicBlobPath(ctx,node,radius*.78);ctx.strokeStyle='rgba(242,255,224,.2)';ctx.lineWidth=2;ctx.stroke();
+ const nucleusRadius=radius*(node.depth===2?.18:.22);ctx.fillStyle='rgba(239,255,206,.52)';ctx.beginPath();ctx.arc(-radius*.08,-radius*.05,nucleusRadius,0,Math.PI*2);ctx.fill();
+ const microOpacity=smooth(node.bloomProgress,.55,.45);ctx.globalAlpha=node.opacity*microOpacity*.7;
+ for(let index=0;index<3;index++){
+  const angle=node.rotation+index*Math.PI*2/3+frame.time*(reducedMotion?0:.00008),orbit=radius*(.42+index*.045);
+  ctx.beginPath();ctx.arc(Math.cos(angle)*orbit,Math.sin(angle)*orbit,radius*(.055+index*.008),0,Math.PI*2);ctx.fillStyle='rgba(242,255,218,.72)';ctx.fill();
+ }
+ if(node.showLabel){
+  ctx.globalAlpha=node.opacity*smooth(node.bloomProgress,.38,.52);ctx.fillStyle='#fbfff3';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='rgba(2,20,10,.88)';ctx.shadowBlur=6;ctx.shadowOffsetY=1;
+  const fitted=fitWelcomeCellLabel(ctx,node.label,radius,node.depth);fitted.lines.forEach((line,index)=>ctx.fillText(line,0,(index-(fitted.lines.length-1)/2)*fitted.lineHeight,radius*1.5));
+ }
+ ctx.restore();
+}
+
+export function drawWelcomeScopePrelude(ctx,elapsed,reducedMotion=false,plan=DEFAULT_WELCOME_PRELUDE_PLAN){
+ const frame=welcomePreludeFrame(elapsed,plan,reducedMotion),parents=new Map(frame.nodes.map(node=>[node.id,node]));
+ ctx.clearRect(0,0,AR_WELCOME_CANVAS.width,AR_WELCOME_CANVAS.height);
+ ctx.save();
+ const atmosphere=ctx.createRadialGradient(PRELUDE_CENTRE.x,PRELUDE_CENTRE.y,80,PRELUDE_CENTRE.x,PRELUDE_CENTRE.y,1060);
+ atmosphere.addColorStop(0,'rgba(151,196,111,.2)');atmosphere.addColorStop(.55,'rgba(27,79,48,.1)');atmosphere.addColorStop(1,'rgba(4,25,16,0)');
+ ctx.fillStyle=atmosphere;ctx.fillRect(0,0,AR_WELCOME_CANVAS.width,AR_WELCOME_CANVAS.height);
+ ctx.globalAlpha=frame.organismOpacity*.5;
+ for(const particle of plan.particles){
+  const rise=reducedMotion?0:(frame.time*.012*particle.speed)%120,drift=Math.sin(frame.time*.00035*particle.speed+particle.phase)*particle.drift;
+  ctx.fillStyle='rgba(229,248,194,.55)';ctx.beginPath();ctx.arc(particle.x+drift,particle.y-rise,particle.radius,0,Math.PI*2);ctx.fill();
+ }
+ ctx.translate(PRELUDE_CENTRE.x,PRELUDE_CENTRE.y);ctx.scale(frame.camera.zoom,frame.camera.zoom);ctx.translate(-frame.camera.focusX,-frame.camera.focusY);
+ for(const node of [...frame.nodes].sort((a,b)=>a.layer-b.layer||a.depth-b.depth))drawOrganicTendril(ctx,node,parents.get(node.parentId),frame,reducedMotion);
+ for(const node of [...frame.nodes].sort((a,b)=>a.layer-b.layer||a.depth-b.depth))drawOrganicCell(ctx,node,frame,reducedMotion);
+ ctx.restore();
+ ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+ if(frame.welcomeOpacity>0){ctx.globalAlpha=frame.welcomeOpacity;ctx.fillStyle='#f5ffe8';ctx.shadowColor='rgba(3,25,13,.72)';ctx.shadowBlur=24;ctx.font='600 106px Fraunces, Georgia, serif';ctx.fillText('Welcome to Nourishland.',1250,400,1900);}
+ if(frame.kickerOpacity>0){ctx.globalAlpha=frame.kickerOpacity;ctx.fillStyle='rgba(235,250,207,.88)';ctx.shadowColor='rgba(3,25,13,.76)';ctx.shadowBlur=12;ctx.font='700 29px Montserrat, system-ui, sans-serif';ctx.fillText('LIVING INFORMATION MESH',1250,1915,1100);}
+ if(frame.rangeOpacity>0){ctx.globalAlpha=frame.rangeOpacity;ctx.fillStyle='rgba(248,255,235,.9)';ctx.font='500 34px Montserrat, system-ui, sans-serif';ctx.fillText('one vision  ·  four paths  ·  knowledge without edges',1250,1980,1600);}
+ if(frame.brandOpacity>0){ctx.globalAlpha=frame.brandOpacity;ctx.fillStyle='#f7ffe9';ctx.shadowColor='rgba(3,25,13,.9)';ctx.shadowBlur=28;ctx.font='700 126px Fraunces, Georgia, serif';ctx.fillText('NourishlandXR',1250,1055,1800);ctx.fillStyle='#dcef95';ctx.font='600 30px Montserrat, system-ui, sans-serif';ctx.fillText('KNOWLEDGE GROWS THROUGH RELATIONSHIPS',1250,1170,1500);}
+ ctx.restore();
+ return frame;
+}
+
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
- if(options.prelude){drawWelcomeScopePrelude(ctx,elapsed);return [];}
+ if(options.prelude){drawWelcomeScopePrelude(ctx,elapsed,reducedMotion,options.preludePlan);return [];}
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
  if(options.drawPanel!==false){
  drawArWelcomePanel(ctx);

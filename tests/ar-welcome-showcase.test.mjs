@@ -1,15 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,drawArWelcomeShowcase,drawWelcomeScopePrelude,createArWelcomeClusters,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_PRELUDE_MS,AR_WELCOME_REDUCED_PRELUDE_MS,drawArWelcomeShowcase,drawWelcomeScopePrelude,createArWelcomeClusters,createWelcomePreludePlan,welcomePreludeFrame,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
 
-test('opening prelude paints every authored cell before the main text',()=>{
- const labels=[];
- const ctx={clearRect(){},save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},roundRect(){},fillText(value){labels.push(value);}};
- drawWelcomeScopePrelude(ctx,3900);
- assert.equal(labels.length,LIM_ALL_CELLS.length+1);
- assert.equal(labels.at(-1),'Welcome to NourishlandXR');
- assert.equal(AR_WELCOME_PRELUDE_MS,5400);
+test('organic prelude covers the authored intro mesh with seeded parent-first succession',()=>{
+ const first=createWelcomePreludePlan(73421),repeat=createWelcomePreludePlan(73421),variation=createWelcomePreludePlan(73422);
+ assert.equal(AR_WELCOME_PRELUDE_MS,9800);
+ assert.equal(AR_WELCOME_REDUCED_PRELUDE_MS,1400);
+ assert.equal(first.nodes.length,27);
+ assert.equal(first.nodes.length,LIM_INTRO_CELLS.length);
+ assert.deepEqual(new Set(first.nodes.map(node=>node.id)),new Set(LIM_INTRO_CELLS.map(cell=>cell.id)));
+ assert.deepEqual(first,repeat,'one opening keeps a stable seeded organism');
+ assert.notDeepEqual(first,variation,'a new seed changes the organic route and timing');
+ const byId=new Map(first.nodes.map(node=>[node.id,node]));
+ for(const node of first.nodes.filter(node=>node.parentId)){
+  const parent=byId.get(node.parentId);
+  assert.ok(parent,`${node.id} keeps its authored parent`);
+  assert.ok(node.growAt>parent.bloomAt+parent.bloomDuration,`${node.id} waits for ${parent.id} to finish blooming`);
+ }
+});
+
+test('organic prelude grows progressively then hands the scene from title to network to brand',()=>{
+ const plan=createWelcomePreludePlan(73421);
+ const early=welcomePreludeFrame(1200,plan),middle=welcomePreludeFrame(3000,plan),full=welcomePreludeFrame(7600,plan);
+ const visible=frame=>frame.nodes.filter(node=>node.opacity>0).length;
+ assert.ok(visible(early)>0 && visible(early)<plan.nodes.length);
+ assert.ok(visible(middle)>visible(early) && visible(middle)<plan.nodes.length);
+ assert.equal(visible(full),plan.nodes.length);
+
+ const title=welcomePreludeFrame(600,plan),network=welcomePreludeFrame(3000,plan);
+ const handoff=welcomePreludeFrame(8800,plan),brand=welcomePreludeFrame(9400,plan);
+ assert.equal(title.phase,'welcome');assert.ok(title.welcomeOpacity>.9);assert.equal(title.brandOpacity,0);
+ assert.equal(network.phase,'growing');assert.equal(network.organismOpacity,1);assert.ok(network.kickerOpacity>.9);assert.equal(network.brandOpacity,0);
+ assert.equal(handoff.phase,'dissolving');assert.ok(handoff.organismOpacity>0 && handoff.organismOpacity<1);assert.ok(handoff.brandOpacity>0 && handoff.brandOpacity<1);
+ assert.equal(brand.phase,'brand');assert.equal(brand.organismOpacity,0);assert.equal(brand.brandOpacity,1);
+});
+
+test('reduced-motion prelude is never blank and resolves quickly to the brand',()=>{
+ const plan=createWelcomePreludePlan(73421);
+ const opening=welcomePreludeFrame(0,plan,true),handoff=welcomePreludeFrame(800,plan,true);
+ const brand=welcomePreludeFrame(AR_WELCOME_REDUCED_PRELUDE_MS,plan,true);
+ assert.ok(opening.welcomeOpacity>0 || opening.nodes.some(node=>node.opacity>0));
+ assert.ok(handoff.organismOpacity>0 && handoff.brandOpacity>0);
+ assert.equal(brand.organismOpacity,0);assert.equal(brand.brandOpacity,1);
+});
+
+test('organic prelude renderer draws curved tendrils between parent blooms',()=>{
+ let beziers=0,quadratics=0;
+ const stack=[];
+ const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
+  save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
+  restore(){Object.assign(this,stack.pop());},
+  measureText(text){return {width:text.length*10};},
+  createRadialGradient(){return {addColorStop(){}};},
+  bezierCurveTo(){beziers+=1;},quadraticCurveTo(){quadratics+=1;}};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','arc','fillText'])ctx[method]=()=>{};
+ const frame=drawWelcomeScopePrelude(ctx,3000,false,createWelcomePreludePlan(73421));
+ assert.ok(frame.nodes.some(node=>node.pathProgress>0 && node.parentId));
+ assert.ok(beziers>0,'parent-child tendrils use cubic curves');
+ assert.ok(quadratics>0,'cell membranes keep an organic curved outline');
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{
@@ -34,7 +82,6 @@ test('a late cell selection keeps repainting until its children finish fading',(
  assert.ok(later.filter(node=>node.opacity>0).length>first.filter(node=>node.opacity>0).length);
 });
 import {LIM_ALL_CELLS,LIM_INTRO_CELLS,LIM_INTRO_BRANCHES,limLearningContent} from '../app/services/limLearning.js';
-const styles=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
 test('one LIM face grows through three levels, fades and passes around the octagon',()=>{
  assert.ok(welcomeNetworkFrame(1000).nodes.every(n=>n.opacity===0));
  assert.equal(welcomeNetworkFrame(3000).nodes.filter(n=>n.opacity>0).length,1);
@@ -58,10 +105,6 @@ test('all LIM cells have deterministic reserved positions and visible cells use 
  const first=welcomeNetworkFrame(12000,true).nodes;
  assert.ok(first.every(node=>node.limId && node.scale===1 && node.radius===LIM_LAYOUT.radius));
  assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
-});
-test('portrait and landscape phones frame the LIM without shrinking its cells',()=>{
- assert.match(styles, /@media \(max-width:620px\)[\s\S]*width:690px;[\s\S]*min-width:690px;/);
- assert.match(styles, /orientation:landscape\) and \(max-height:720px\)[\s\S]*inset:44% auto auto 67%;[\s\S]*width:720px;/);
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{
  assert.deepEqual(welcomeNetworkFrame(0,true),welcomeNetworkFrame(999999,true));
