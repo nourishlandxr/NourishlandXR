@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
+import { extractZipArchive } from '../tools/zipArchive.mjs';
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..');
 const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nourishland-pim-persistence-'));
@@ -58,6 +59,7 @@ before(async () => {
     writeJson(path.join(workspaceDir, projectId, 'sites', siteId, 'site.json'), { id: siteId, name: 'Main', visibility: 'public' });
     writeJson(path.join(workspaceDir, projectId, 'sites', siteId, 'places', placeId, 'place.json'), { id: placeId, name: 'Orchard', visibility: 'public' });
     writeJson(path.join(markerDir, 'marker.json'), { id: markerId, name: 'Pigeon Pea', type: 'plant', visibility: 'public' });
+    writeJson(path.join(markerDir, 'anchor.json'), { type: 'gps', latitude: -28.691, longitude: 153.003 });
     writeJson(path.join(markerDir, 'plant_profile.json'), {
         common_name: 'Pigeon Pea',
         scientific_name: 'Cajanus cajan',
@@ -116,10 +118,55 @@ test('PIM-only saves preserve plant identity fields', async () => {
     assert.equal(saved.pim.explorationVersion, 2);
 });
 
+test('plant profile revisions reject a stale competing save', async () => {
+    const original = await (await fetch(`${baseUrl}${profilePath}`)).json();
+    const firstResponse = await fetch(`${baseUrl}${profilePath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'first revision', _expectedRevision: original.revision })
+    });
+    const first = await firstResponse.json();
+    assert.equal(firstResponse.status, 200);
+    assert.equal(first.revision, Number(original.revision || 0) + 1);
+    assert.equal('_expectedRevision' in first, false);
+
+    const staleResponse = await fetch(`${baseUrl}${profilePath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'stale revision', _expectedRevision: original.revision })
+    });
+    assert.equal(staleResponse.status, 409);
+    const persisted = await (await fetch(`${baseUrl}${profilePath}`)).json();
+    assert.equal(persisted.notes, 'first revision');
+});
+
+test('project export builds hosted indexes on a copy without rewriting source data', async () => {
+    const projectFile = path.join(workspaceDir, projectId, 'project.json');
+    const before = fs.readFileSync(projectFile, 'utf8');
+    const response = await fetch(`${baseUrl}/api/projects/${projectId}/export`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/zip');
+    assert.equal(fs.readFileSync(projectFile, 'utf8'), before);
+
+    const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nourishland-export-check-'));
+    try {
+        const archive = path.join(temporaryRoot, 'project.zip');
+        fs.writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
+        extractZipArchive(archive, path.join(temporaryRoot, 'extracted'));
+        const exported = JSON.parse(fs.readFileSync(path.join(temporaryRoot, 'extracted', projectId, 'project.json'), 'utf8'));
+        assert.equal(exported.id, projectId);
+        assert.equal(exported.sites[0].id, siteId);
+    } finally {
+        fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    }
+});
+
 test('visitor deep reads enforce the full public hierarchy', async () => {
     writeJson(path.join(workspaceDir, projectId, 'sites', siteId, 'places', placeId, 'place.json'), { id: placeId, name: 'Orchard', visibility: 'draft' });
     const response = await fetch(`${baseUrl}${profilePath}?view=visitor`);
     assert.equal(response.status, 404);
+    const anchorResponse = await fetch(`${baseUrl}${profilePath.replace('/plant-profile', '/anchor')}?view=visitor`);
+    assert.equal(anchorResponse.status, 404);
 });
 
 test('new projects seed a complete Pigeon Pea template in Home', async () => {

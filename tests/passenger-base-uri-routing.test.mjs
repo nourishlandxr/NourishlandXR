@@ -10,6 +10,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, '..');
 const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nourishland-passenger-routing-'));
 const projectDir = path.join(workspaceDir, 'Hillyards');
 const sitesDir = path.join(projectDir, 'sites', 'main_food_forest');
+const legacyPrivateDir = path.join(workspaceDir, 'legacy_private');
 let serverProcess;
 let baseUrl;
 
@@ -61,6 +62,11 @@ before(async () => {
         visibility: 'public'
     });
     fs.mkdirSync(path.join(sitesDir, 'places'), { recursive: true });
+    writeJson(path.join(legacyPrivateDir, 'project.json'), {
+        id: 'legacy_private',
+        name: 'Legacy record without publication state'
+    });
+    fs.mkdirSync(path.join(legacyPrivateDir, 'sites'), { recursive: true });
 
     const port = await reservePort();
     baseUrl = `http://127.0.0.1:${port}`;
@@ -102,3 +108,16 @@ for (const requestPath of [
         }]);
     });
 }
+
+test('visitor project lists fail closed when visibility is absent', async () => {
+    const response = await fetch(`${baseUrl}/api/projects?view=visitor`);
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).map(project => project.id), ['Hillyards']);
+});
+
+test('visitor list requests do not run workspace migrations', async () => {
+    const placesDir = path.join(sitesDir, 'places');
+    assert.deepEqual(fs.readdirSync(placesDir), []);
+    await fetch(`${baseUrl}/api/projects/Hillyards/sites?view=visitor`);
+    assert.deepEqual(fs.readdirSync(placesDir), []);
+});

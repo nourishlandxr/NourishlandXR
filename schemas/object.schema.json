@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/object.schema.json",
+  "title": "NourishlandXR Marker",
+  "type": "object",
+  "required": ["id", "name", "type", "visibility"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "type": { "enum": ["plant", "note", "sub_checkpoint", "intro_checkpoint", "area_checkpoint"] },
+    "description": { "type": "string", "maxLength": 20000 },
+    "visibility": { "enum": ["draft", "public", "hidden"], "default": "draft" },
+    "status": { "type": "string", "maxLength": 80 },
+    "plantId": { "type": "string", "maxLength": 160 },
+    "relationships": { "type": "array", "items": { "$ref": "relationship.schema.json" } },
+    "created": { "type": "string", "format": "date-time" },
+    "modified": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

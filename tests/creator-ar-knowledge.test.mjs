@@ -14,9 +14,9 @@ test('AR projection retains specimen, evidence, publication and custom root iden
  assert.equal(projected.categories.length,6);assert.equal(projected.customCategories[0].id,'custom-notebook');assert.equal(JSON.stringify(doc),before);
  assert.equal(pimToArKnowledge(doc,{includeDraft:false}).categories.flatMap(n=>n.children).some(n=>n.id==='observed'),false);
 });
-test('creator AR saves retain fresh profile fields and reject a detected competing knowledge edit',async()=>{
- let fresh={pim_document:fixture(),notes:'original'},writes=0;const profile=structuredClone(fresh);
- const save=createCreatorPimSave({context:['p','s','a','m'],profile,load:async()=>fresh,save:async(...args)=>{fresh=args.at(-1);writes++;}});
+test('creator AR saves retain fresh profile fields, send revisions and reject a detected competing knowledge edit',async()=>{
+ let fresh={pim_document:fixture(),notes:'original',revision:4},writes=0;const profile=structuredClone(fresh);
+ const save=createCreatorPimSave({context:['p','s','a','m'],profile,load:async()=>fresh,save:async(...args)=>{const request=args.at(-1);assert.equal(request._expectedRevision,fresh.revision);fresh={...request,revision:fresh.revision+1};delete fresh._expectedRevision;writes++;return fresh;}});
  fresh.notes='updated elsewhere';const changed=pimAddNode(profile.pim_document,{id:'new',parentId:'uses',title:'New draft'});await save(changed);
  assert.equal(fresh.notes,'updated elsewhere');assert.equal(fresh.pim_document.nodes.find(n=>n.id==='observed').specimenId,'project/site/area/specimen-a');assert.equal(writes,1);
  fresh.pim_document=pimAddNode(fresh.pim_document,{id:'other',parentId:'uses',title:'Competing edit'});

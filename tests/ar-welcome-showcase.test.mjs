@@ -17,12 +17,13 @@ test('the opening uses the existing LIM mesh with seeded parent-first succession
  }
 });
 
-test('existing LIM cells reveal progressively and settle on their authored positions',()=>{
- const early=welcomeOpeningFrames(1800,73421),middle=welcomeOpeningFrames(5200,73421),full=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
+test('existing LIM cells reveal progressively, settle, then fade before copy begins',()=>{
+ const early=welcomeOpeningFrames(1800,73421),middle=welcomeOpeningFrames(5200,73421),full=welcomeOpeningFrames(8000,73421),faded=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
  const visible=frames=>frames.flatMap(frame=>frame.nodes).filter(node=>node.opacity>0).length;
  assert.ok(visible(early)>0 && visible(early)<59);
  assert.ok(visible(middle)>visible(early) && visible(middle)<59);
  assert.equal(visible(full),59);
+ assert.equal(visible(faded),0);
  const settled=full.flatMap(frame=>frame.nodes);
  assert.ok(settled.every(node=>node.drawX===node.x && node.drawY===node.y));
 });
@@ -223,6 +224,11 @@ test('welcome clock does not skip the opening after hidden or suspended frames',
  assert.equal(clock.tick(74100),100);assert.equal(clock.tick(74200),200);
  assert.equal(clock.tick(74300,false),200);assert.equal(clock.tick(74400),300);
  assert.equal(clock.tick(74400),300);
+ const slowVisibleClock=createWelcomePresentationClock();
+ assert.equal(slowVisibleClock.tick(1000),0);assert.equal(slowVisibleClock.tick(1950),950);
+ const interleavedClock=createWelcomePresentationClock();
+ assert.equal(interleavedClock.tick(1000),0);assert.equal(interleavedClock.tick(1100),100);
+ assert.equal(interleavedClock.tick(1050),100);assert.equal(interleavedClock.tick(1200),200);
 });
 
 test('hiding a cell removes only its descendants and stays dismissed',async()=>{

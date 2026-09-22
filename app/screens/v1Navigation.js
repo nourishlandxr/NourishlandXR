@@ -43,7 +43,7 @@ export async function openHillyardsMarkerActions(app, markerId) {
             const profileButton = draft.type === 'plant'
                 ? `<button class="menu-card primary" onclick="window.editDraftPlantProfile('${draft.id}')"><strong>Make / Edit Plant Profile</strong></button>`
                 : '';
-            app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>${draft.name}</h1><p class="subtitle">${markerTypeLabel(draft.type)} Â· Draft</p></div><div class="menu-stack"><button class="menu-card" onclick="window.editDraftMarker('${draft.id}')"><strong>Edit Marker</strong></button>${profileButton}<button class="menu-card danger" onclick="window.deleteDraftMarker('${draft.id}')"><strong>Delete</strong></button></div></div>`;
+            app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderHillyardsProject()">Back</button><h1>${draft.name}</h1><p class="subtitle">${markerTypeLabel(draft.type)} · Draft</p></div><div class="menu-stack"><button class="menu-card" onclick="window.editDraftMarker('${draft.id}')"><strong>Edit Marker</strong></button>${profileButton}<button class="menu-card danger" onclick="window.deleteDraftMarker('${draft.id}')"><strong>Delete</strong></button></div></div>`;
             return;
         }
         const { place } = await hillyardsContext();

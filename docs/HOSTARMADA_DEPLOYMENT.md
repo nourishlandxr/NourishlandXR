@@ -37,21 +37,9 @@ Production frontend updates are normally built by GitHub Actions with `npm run b
 
 Passenger supplies `PORT`; do not hard-code a public port. The API validates path identifiers, accepts JSON bodies up to 1 MB, authenticates Creator access with a secure signed cookie, writes through temporary files, and retains the previous 20 versions beside each JSON file in a `.backups` directory.
 
-## Temporary Creator authentication bypass for hosted testing
+## Production authentication requirement
 
-Authentication remains enabled by default. To opt into the temporary hosted testing mode:
-
-1. Build the full application with `npm run build`.
-2. In cPanel **Setup Node.js App**, open the existing `/xr-api` application. Upload the new `dist/xr-api/server.mjs` to `/home/CPANEL_USER/nourishland-xr-api/server.mjs`. This is a deliberate one-time API code update; the GitHub frontend workflow never deploys or deletes `/xr-api`.
-3. In that Node application's **Environment variables** section, add `NOURISHLAND_CREATOR_AUTH_DISABLED` with the exact value `true`.
-4. Keep `NOURISHLAND_CREATOR_PASSWORD` and `NOURISHLAND_SESSION_SECRET` configured. Do not replace them with blank values.
-5. Restart the Node application.
-6. Open `https://nourishland.org/xr-api/auth/session` and confirm it returns `{"authenticated":true,"required":false,"authDisabled":true}`.
-7. Open Creator. It must open without a password prompt and display **Creator authentication disabled — testing mode**. Confirm a read and a save through `/xr-api` both work.
-
-To restore normal authentication, delete `NOURISHLAND_CREATOR_AUTH_DISABLED` from the same cPanel Node application (or set it to `false`), restart the application, and confirm `/xr-api/auth/session` again returns `"required":true`. Creator must prompt for the configured password and the testing warning must disappear.
-
-Never leave the bypass enabled after hosted testing. The server accepts the bypass only when the environment variable is explicitly set to `true`; there is no hard-coded password or permanent browser-only bypass.
+Creator authentication cannot be disabled in production. The server deliberately refuses to start when `NODE_ENV=production` and `NOURISHLAND_CREATOR_AUTH_DISABLED=true`. Keep a strong `NOURISHLAND_CREATOR_PASSWORD` and a unique `NOURISHLAND_SESSION_SECRET` configured in cPanel. Authentication bypass is for local development only.
 
 ## Deploy the frontend
 
@@ -68,14 +56,14 @@ Copy the repository `workspace/` directory once to `/home/CPANEL_USER/nourishlan
 ## Verification
 
 1. Open `https://nourishland.org/xr-api/health`; expect JSON containing `{ "ok": true }`, the registered authentication routes, and `Cache-Control: no-store`.
-2. Open `https://nourishland.org/xr-api/auth/session`; normally expect JSON such as `{ "authenticated": false, "required": true, "authDisabled": false }`. During the explicit temporary test mode, expect `{ "authenticated": true, "required": false, "authDisabled": true }`. If WordPress HTML appears, the request is not reaching Passenger: repair the cPanel application URL/mount and verify the Passenger directives before testing the application code.
-3. Open `https://nourishland.org/xr/` and choose Creator. In normal mode, enter the configured password. In temporary testing mode, confirm there is no prompt and the testing warning is visible.
+2. Open `https://nourishland.org/xr-api/auth/session`; expect JSON such as `{ "authenticated": false, "required": true, "authDisabled": false }`. If WordPress HTML appears, the request is not reaching Passenger: repair the cPanel application URL/mount and verify the Passenger directives before testing the application code.
+3. Open `https://nourishland.org/xr/` and choose Creator, then enter the configured password.
 4. Save a public plant under Hillyards `2R1`.
 5. Open Visitor Field Guide in a private browser, refresh it, and confirm the plant is present.
 6. Edit the description in Creator, save, refresh Visitor, and confirm the change.
 7. Change visibility to `draft`, save, and confirm Visitor no longer receives it while Creator still does.
-8. After normal authentication has been restored, request a Creator API URL in the private browser without `?view=visitor`; expect HTTP 401.
-9. After normal authentication has been restored, attempt a Visitor write request; expect HTTP 401.
+8. Request a Creator API URL in the private browser without `?view=visitor`; expect HTTP 401.
+9. Attempt a Visitor write request; expect HTTP 401.
 10. Rebuild and redeploy only `dist/xr/`; confirm the saved project data remains intact.
 
 The local workflow remains `node tools/persistence-server.mjs` with `http://127.0.0.1:8000/app/`; local development does not require hosted authentication.

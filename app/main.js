@@ -255,11 +255,11 @@ async function bootstrap() {
 
 window.renderLaunchScreen = () => { forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); renderLaunchScreen(app); };
 window.renderHillyardsDemo = () => renderDemoHome(app);
-window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${error.message}</p></div>`; }); };
-window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${error.message}</p></div>`; });
-window.renderAnalogPlace = placeId => renderAnalogPlace(app, placeId).catch(error => { app.innerHTML = `<div class="screen"><p>Area unavailable: ${error.message}</p></div>`; });
-window.renderAnalogPlant = instanceId => renderAnalogPlant(app, instanceId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${error.message}</p></div>`; });
-window.renderAnalogLibraryPlant = plantId => renderAnalogLibraryPlant(app, plantId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${error.message}</p></div>`; });
+window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${escapeMainHtml(error.message)}</p></div>`; }); };
+window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogPlace = placeId => renderAnalogPlace(app, placeId).catch(error => { app.innerHTML = `<div class="screen"><p>Area unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogPlant = instanceId => renderAnalogPlant(app, instanceId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogLibraryPlant = plantId => renderAnalogLibraryPlant(app, plantId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
 window.applyAnalogFilters = applyAnalogFilters;
 window.renderDemoProjects = async () => {
     try {
@@ -468,10 +468,10 @@ window.renderFirstSteps = () => renderFirstSteps(app);
 window.renderHillyardsProject = () => renderHillyardsProject(app);
 window.renderHillyardsGuidelines = () => renderHillyardsGuidelines(app);
 window.renderGlobalPlantList = () => renderFieldGuide(app, encodeURIComponent('Hillyards'), true);
-window.renderMarkerFirst = (type) => renderMarkerFirst(app, type).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.renderMarkerFirst = (type) => renderMarkerFirst(app, type).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 window.captureMarkerLocation = () => captureMarkerLocation();
 window.saveMarkerFirst = (event) => saveMarkerFirst(event);
-window.openMarkerFirstEditor = (markerId) => renderMarkerFirstEditor(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.openMarkerFirstEditor = (markerId) => renderMarkerFirstEditor(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 window.saveMarkerFirstEditor = (event, markerId, type) => saveMarkerFirstEditor(event, markerId, type);
 window.renderCheckpointForm = (type) => renderCheckpointForm(app, type);
 window.saveCheckpoint = (event, type) => saveCheckpoint(event, type);
@@ -479,19 +479,19 @@ window.renderComingSoon = (feature, purpose, how, example, backAction) => render
 window.openHillyardsPlantProfileEditor = () => openHillyardsPlantProfileEditor();
 window.openHillyardsEntry = (markerId) => openHillyardsEntry(markerId);
 window.openHillyardsMarkerActions = (markerId) => openHillyardsMarkerActions(app, markerId);
-window.openMarkerPlantProfile = (markerId) => openMarkerPlantProfile(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
-window.deleteHillyardsMarker = (markerId) => deleteHillyardsMarker(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.openMarkerPlantProfile = (markerId) => openMarkerPlantProfile(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.deleteHillyardsMarker = (markerId) => deleteHillyardsMarker(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 
-window.editDraftMarker = (markerId) => editDraftMarker(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.editDraftMarker = (markerId) => editDraftMarker(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 window.saveDraftMarker = (event, markerId) => saveDraftMarker(event, markerId).catch(error => window.alert(`Save failed: ${error.message}`));
-window.editDraftPlantProfile = (markerId) => editDraftPlantProfile(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.editDraftPlantProfile = (markerId) => editDraftPlantProfile(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 window.saveDraftPlantProfile = (event, markerId) => saveDraftPlantProfile(event, markerId).catch(error => window.alert(`Profile save failed: ${error.message}`));
 window.deleteDraftMarker = (markerId) => deleteDraftMarker(markerId).catch(error => window.alert(`Delete failed: ${error.message}`));
 window.renderStudio = () => renderStudio(app);
 window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, place, marker);
 window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
 window.openFieldTestExplorer = (url) => { window.location.href = url; };
-window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false, preferredAreaId = '') => {
     const decodedProjectId = decodeURIComponent(projectId);
     const project = (await loadProjects().catch(() => [])).find(item => item.id === decodedProjectId);
@@ -751,7 +751,7 @@ window.renderV1General = (site, place, asset) => {
     app.innerHTML = renderV1General(site, place, asset);
 };
 window.renderV1PlantProfile = (site, place, asset) => {
-    renderV1PlantProfile(site, place, asset).then(html => { app.innerHTML = html; }).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+    renderV1PlantProfile(site, place, asset).then(html => { app.innerHTML = html; }).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 };
 window.savePlantProfile = async (site, place, asset) => {
     const keys = ['common_name','scientific_name','overview','identification','edible_uses','propagation','growing_conditions','notes','references'];
@@ -761,7 +761,7 @@ window.savePlantProfile = async (site, place, asset) => {
     try { await savePlantProfile(site.projectId, site.id, place.id, asset.id, profile); window.renderAssetWorkspace(site, place, asset); } catch (failure) { error.textContent = `Save failed: ${failure.message}`; }
 };
 window.renderV1Anchors = (site, place, asset) => {
-    renderV1Anchors(site, place, asset).then(html => { app.innerHTML = html; window.updateAnchorFields(); }).catch(error => { app.innerHTML = `<div class="screen"><p>${error.message}</p></div>`; });
+    renderV1Anchors(site, place, asset).then(html => { app.innerHTML = html; window.updateAnchorFields(); }).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
 };
 window.updateAnchorFields = () => {
     const gps = document.getElementById('anchor_type').value === 'gps';
@@ -788,7 +788,7 @@ window.saveMarkerAnchor = async (site, place, asset) => {
     const latitude = Number(anchor.latitude), longitude = Number(anchor.longitude);
     if (type === 'gps' && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180)) { error.textContent = 'Enter latitude (-90 to 90) and longitude (-180 to 180).'; return; }
     if (type === 'qr' && !anchor.qr_code.trim()) { error.textContent = 'QR Code is required.'; return; }
-    try { await saveMarkerAnchor(site.projectId, site.id, place.id, asset.id, anchor); error.textContent = `Saved ${anchor.latitude}, ${anchor.longitude} Â· accuracy ${anchor.accuracy || 'not available'} m Â· ${asset.name} at ${place.name}.`; } catch (failure) { error.textContent = `Save failed: ${failure.message}`; }
+    try { await saveMarkerAnchor(site.projectId, site.id, place.id, asset.id, anchor); error.textContent = `Saved ${anchor.latitude}, ${anchor.longitude} · accuracy ${anchor.accuracy || 'not available'} m · ${asset.name} at ${place.name}.`; } catch (failure) { error.textContent = `Save failed: ${failure.message}`; }
 };
 window.renderLocationForm = (site, location) => renderLocationFormScreen(app, site, location);
 window.renderLocationDetail = (site, location) => renderLocationDetailScreen(app, site, location);

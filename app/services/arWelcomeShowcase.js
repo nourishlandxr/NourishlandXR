@@ -126,8 +126,16 @@ export function createWelcomePresentationClock() {
  let previous=null,elapsed=0;
  return {get elapsed(){return elapsed;},tick(now,visible=true){
   if(!Number.isFinite(now))return elapsed;
-  const delta=previous===null?0:now-previous;previous=now;
-  if(visible && delta>=0 && delta<500)elapsed+=delta;
+  if(previous===null){previous=now;return elapsed;}
+  // A DOM rAF timestamp can be slightly older than performance.now() from
+  // the XR renderer. Never rewind the reference point or the same rendering
+  // work is counted twice and the opening races ahead.
+  if(now<previous)return elapsed;
+  const delta=now-previous;previous=now;
+  // Visible phone and embedded-browser frames can occasionally arrive a
+  // second apart. Count those frames so the opening does not crawl, while a
+  // permission dialog or suspended tab still cannot skip the sequence.
+  if(visible && delta>=0 && delta<2000)elapsed+=delta;
   return elapsed;
  }};
 }
@@ -455,7 +463,7 @@ function prepareOrganicOpeningFrames(frames,elapsed,seed,duration,reducedMotion)
   const random=seededRandom((Number(seed)>>>0)^openingHash(node.key||node.id));
   const parent=node.id==='vision'?null:(node.parent?byId.get(node.parent):vision);
   const openingDepth=parent?(node.depth===0?1:node.depth):0;
-  let openAt=420+(Number(node.revealAt)||0)/maxReveal*(duration*0.72)+(random()-.5)*240;
+  let openAt=420+(Number(node.revealAt)||0)/maxReveal*(duration*0.58)+(random()-.5)*240;
   if(parent)openAt=Math.max(openAt,(meta.get(parent.id)?.bloomAt||0)+230+random()*180);
   const travel=parent?Math.round(540+random()*260):0;
   const bloomAt=openAt+travel*.72;
@@ -464,7 +472,8 @@ function prepareOrganicOpeningFrames(frames,elapsed,seed,duration,reducedMotion)
   meta.set(node.id,{parent,openingDepth,openAt,travel,bloomAt,bloomDuration,curve});
  }
  const time=reducedMotion?duration*4:Math.max(0,Number(elapsed)||0);
- const openingFrame={time,organismOpacity:1};
+ const openingOpacity=reducedMotion?1:1-smooth(time,duration-1400,1200);
+ const openingFrame={time,organismOpacity:openingOpacity};
  for(const node of allNodes){
   const entry=meta.get(node.id),parent=entry?.parent;
   const openingPathProgress=parent?smooth(time,entry.openAt,entry.travel):1;
@@ -475,7 +484,8 @@ function prepareOrganicOpeningFrames(frames,elapsed,seed,duration,reducedMotion)
   node.openingPathProgress=openingPathProgress;
   node.openingBloomProgress=bloomProgress;
   node.progress=bloomProgress;
-  node.opacity=bloomProgress;
+  node.opacity=bloomProgress*openingOpacity;
+  node.openingOpacity=openingOpacity;
   node.emphasis=reducedMotion?0:(1-smooth(time,entry.bloomAt+900,1200))*bloomProgress;
   node.scale=bloomScale(bloomProgress);
   const position=entry?.curve&&openingPathProgress<1?cubicPoint(entry.curve,openingPathProgress):node;

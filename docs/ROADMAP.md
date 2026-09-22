@@ -1,5 +1,7 @@
 # Nourishland XR Studio Roadmap
 
+> Historical planning document. The application has already implemented substantial portions of the milestones below, including structured persistence, Creator and Visitor workflows, publishing visibility, LIM/PIM knowledge interfaces, and AR placement. Use `docs/ARCHITECTURE.md` and the current tests as the source of truth for implemented behavior.
+
 This roadmap outlines the next 12 milestones required to evolve Nourishland XR Studio from a prototype into a production-ready authoring platform. The sequence is intentionally Studio-first and keeps AR out of scope until the Studio can reliably manage Sites, Locations, Assets, Experiences, and Publishing.
 
 ## Milestone 1 — Studio shell and navigation foundation

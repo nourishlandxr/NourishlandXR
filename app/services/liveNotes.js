@@ -1,9 +1,27 @@
 // Shared, bounded honeycomb disclosures for the demo and opt-in creator notes.
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const LIVE_NOTE_TOPIC_LIMIT = 12;
 export function liveNoteTopics(text, previous = []) {
-    return String(text || '').split(/\r?\n/).filter(line => line.trim()).slice(0, 12).map((line, index) => {
+    const previousByTitle = new Map();
+    previous.forEach(topic => {
+        const key = String(topic?.title || '').trim().toLocaleLowerCase();
+        if (!key) return;
+        previousByTitle.set(key, [...(previousByTitle.get(key) || []), topic]);
+    });
+    const usedIds = new Set();
+    return String(text || '').split(/\r?\n/).filter(line => line.trim()).slice(0, LIVE_NOTE_TOPIC_LIMIT).map((line, index) => {
         const [title, ...body] = line.split('|');
-        return {id: previous[index]?.id || `topic-${index + 1}`, title:title.trim().slice(0,80), body:body.join('|').trim().slice(0,4000)};
+        const safeTitle = title.trim().slice(0,80);
+        const key = safeTitle.toLocaleLowerCase();
+        const matched = previousByTitle.get(key)?.find(topic => !usedIds.has(topic.id))
+            || (!previous[index]?.title && previous[index]?.id && !usedIds.has(previous[index].id) ? previous[index] : null);
+        const slug = safeTitle.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const baseId = matched?.id || `topic-${slug || index + 1}`;
+        let id = baseId;
+        let suffix = 2;
+        while (usedIds.has(id)) id = `${baseId}-${suffix++}`;
+        usedIds.add(id);
+        return {id, title:safeTitle, body:body.join('|').trim().slice(0,4000)};
     });
 }
 export const liveNoteEnabled = marker => marker?.type === 'note' && marker?.appearance?.live_note?.enabled === true;

@@ -30,7 +30,9 @@ async function requestJson(url, options = {}) {
     }
 
     if (!response.ok) {
-        throw new Error(data?.error || `Request failed (${response.status})`);
+        const error = new Error(data?.error || `Request failed (${response.status})`);
+        error.status = response.status;
+        throw error;
     }
 
     return data;

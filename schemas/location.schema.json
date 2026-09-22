@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/location.schema.json",
+  "title": "NourishlandXR Area",
+  "type": "object",
+  "required": ["id", "name", "visibility"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "type": { "type": "string", "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 10000 },
+    "visibility": { "enum": ["draft", "public", "hidden"], "default": "draft" },
+    "systemKey": { "type": "string", "maxLength": 80 },
+    "created": { "type": "string", "format": "date-time" },
+    "modified": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

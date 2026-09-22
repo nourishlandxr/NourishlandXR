@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/relationship.schema.json",
+  "title": "NourishlandXR Relationship",
+  "type": "object",
+  "required": ["type", "targetId"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "type": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "sourceId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "targetId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "direction": { "enum": ["one-way", "two-way", "left", "right"] },
+    "status": { "enum": ["draft", "confirmed", "hidden"], "default": "draft" },
+    "description": { "type": "string", "maxLength": 10000 }
+  },
+  "additionalProperties": true
+}

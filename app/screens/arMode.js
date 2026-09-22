@@ -505,7 +505,7 @@ async function openAreaLens() {
     }
     areaLensOpen = true;
     panel.hidden = false;
-    panel.innerHTML = '<p>Loading Areasâ€¦</p>';
+    panel.innerHTML = '<p>Loading Areas…</p>';
     const operation = captureArOperationContext();
     try {
         const areas = await loadPlacementAreas(operation);
@@ -518,7 +518,7 @@ async function openAreaLens() {
         }));
         panel.innerHTML = `<div class="creator-ar-area-lens-heading"><strong>AREAS IN THIS PROJECT</strong><button type="button" data-ar-close-lens aria-label="Close Area lens">&times;</button></div>
             <p class="creator-ar-area-lens-help">Stay in the current Area, or choose another Area to load its saved Totem, Plants and Notes.</p>
-            <div class="creator-ar-area-lens-options">${choices.map(({ area, current, label, description }) => `<button type="button" data-ar-lens-area="${escapeHtml(area.id)}"${current ? ' disabled aria-current="true"' : ''}><span class="creator-ar-area-lens-totem" aria-hidden="true">⌖</span><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}${current ? ' Â· CURRENT' : ''}</small></span></button>`).join('')}</div>`;
+            <div class="creator-ar-area-lens-options">${choices.map(({ area, current, label, description }) => `<button type="button" data-ar-lens-area="${escapeHtml(area.id)}"${current ? ' disabled aria-current="true"' : ''}><span class="creator-ar-area-lens-totem" aria-hidden="true">⌖</span><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}${current ? ' · CURRENT' : ''}</small></span></button>`).join('')}</div>`;
         panel.querySelector('[data-ar-close-lens]')?.addEventListener('click', closeAreaLens);
         panel.querySelectorAll('[data-ar-lens-area]').forEach(button => button.addEventListener('click', async () => {
             const area = areas.find(candidate => candidate.id === button.dataset.arLensArea);

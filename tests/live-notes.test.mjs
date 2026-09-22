@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {liveNoteTopics,liveNoteEnabled,liveNoteTree,INTRO_GROVES} from '../app/services/liveNotes.js';
+import {liveNoteTopics,liveNoteEnabled,liveNoteTree,INTRO_GROVES,LIVE_NOTE_TOPIC_LIMIT} from '../app/services/liveNotes.js';
 test('Live Notes are opt-in and preserve note identity and original content',()=>{
  const note={id:'original',type:'note',name:'Guild',description:'Original',appearance:{color:'#ffffff'}};
  assert.equal(liveNoteEnabled(note),false);
@@ -12,7 +12,9 @@ test('Live Notes are opt-in and preserve note identity and original content',()=
 test('Topic parsing preserves stable IDs, separator text and bounds',()=>{
  const topics=liveNoteTopics('Guild | A | B\nTechnique | Observe', [{id:'saved-id'}]);
  assert.equal(topics[0].id,'saved-id');assert.equal(topics[0].body,'A | B');assert.equal(topics[1].title,'Technique');
- assert.equal(liveNoteTopics(Array(30).fill('A | B').join('\n')).length,12);
+ assert.equal(liveNoteTopics(Array(30).fill('A | B').join('\n')).length,LIVE_NOTE_TOPIC_LIMIT);
+ const reordered=liveNoteTopics('Technique | Changed\nGuild | Changed',[{id:'guild-id',title:'Guild'},{id:'technique-id',title:'Technique'}]);
+ assert.deepEqual(reordered.map(topic=>topic.id),['technique-id','guild-id']);
 });
 test('Intro examples are separate from stored plant knowledge and have bounded branches',()=>{
  assert.deepEqual(INTRO_GROVES.map(n=>n.title),['Climate','Food forest','Landscape']);

@@ -1,5 +1,7 @@
 # Nourishland XR Project Summary
 
+> This early prototype inventory is retained for history. It no longer describes the current application. See `docs/ARCHITECTURE.md` for the implemented runtime, persistence, publication, security, build, and deployment model.
+
 ## 1. Current architecture
 
 The project is currently a lightweight prototype for a spatial learning platform. The visible application is a static browser experience built with plain HTML, CSS, and JavaScript in the app folder. The UI is split into a simple launch experience and a Studio-oriented workspace, with the Platform treated as a placeholder for future development.

@@ -1203,7 +1203,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
     assert.match(source, /const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800/);
-    assert.match(source, /function simulatedAnchorFromPointer\(startAnchor, startX, startY, event\)/);
+    assert.match(source, /function simulatedAnchorFromPointer\(startAnchor, startX, startY, event, markerRadius = 32\)/);
     assert.match(source, /record\.simulatedAnchor = simulatedAnchorFromPointer\(/);
     assert.match(source, /function applySimulatedMarkerAnchor\(layer, index, anchor\)/);
     assert.match(source, /compactMarker\.addEventListener\('pointercancel', \(\) => \{[\s\S]*releaseHeldDemoRecord\(\)/);
@@ -1374,7 +1374,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.match(source, /arWelcomeVisionActivated=false/);
     assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*visionActivated:arWelcomeVisionActivated/);
-    assert.match(source, /Activate learning cells from this panel whenever you want to explore Vision/);
+    assert.match(source, /Activate learning cells in the Control panel whenever you want to explore Vision/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);

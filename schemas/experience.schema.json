@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/experience.schema.json",
+  "title": "NourishlandXR Experience",
+  "type": "object",
+  "required": ["id", "name", "visibility"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "maxLength": 20000 },
+    "visibility": { "enum": ["draft", "public", "hidden"], "default": "draft" },
+    "markerIds": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }, "uniqueItems": true },
+    "steps": { "type": "array", "items": { "type": "object" } },
+    "created": { "type": "string", "format": "date-time" },
+    "modified": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

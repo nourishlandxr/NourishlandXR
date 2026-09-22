@@ -13,6 +13,20 @@ const hasPlacement = anchor => Boolean(anchor?.type || anchor?.qr_code || hasGps
 const safeDate = value => String(value || '').trim();
 const activityDate = item => safeDate(item?.modified || item?.created);
 
+export async function mapConcurrent(items, limit, worker) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    const run = async () => {
+        while (nextIndex < items.length) {
+            const index = nextIndex;
+            nextIndex += 1;
+            results[index] = await worker(items[index], index);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length) }, run));
+    return results;
+}
+
 function relativeDate(value) {
     if (!value) return 'No date';
     const date = new Date(value);
@@ -68,16 +82,22 @@ export async function loadProjectDashboardV2Model(projectId) {
     const site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
     const places = site ? await loadSitePlaces(project.id, site.id) : [];
     const loadWarnings = [];
-    const groups = await Promise.all(places.map(async place => {
+    const groups = await mapConcurrent(places, 8, async place => {
         try { return {place,markers:site ? await loadPlaceMarkers(project.id,site.id,place.id) : []}; }
         catch(error) { loadWarnings.push({areaId:place.id,name:place.name,message:error.message}); return {place,markers:[]}; }
-    }));
+    });
     if (places.length && loadWarnings.length === places.length) throw new Error('Area content could not be loaded. Please retry.');
     const entries = groups.flatMap(group => group.markers.map(marker => ({ marker, place: group.place })));
-    const placements = await Promise.all(entries.map(async entry => ({
-        ...entry,
-        anchor: site ? await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id).catch(() => null) : null
-    })));
+    const placements = await mapConcurrent(entries, 8, async entry => {
+        if (!site) return { ...entry, anchor: null };
+        try {
+            return { ...entry, anchor: await loadMarkerAnchor(project.id, site.id, entry.place.id, entry.marker.id) };
+        } catch (error) {
+            if (error?.status === 404) return { ...entry, anchor: null };
+            loadWarnings.push({ areaId: entry.place.id, markerId: entry.marker.id, name: entry.marker.name, message: error.message });
+            return { ...entry, anchor: null, anchorLoadFailed: true };
+        }
+    });
     placements.forEach(entry => { entry.isPlaced = hasPlacement(entry.anchor); });
 
     const plantEntries = placements.filter(entry => effectiveMarkerType(entry.marker) === 'plant');

@@ -26,8 +26,8 @@ export function creatorKnowledgeState(document, { path = '', observation = false
             editorSeed: { templateId: 'custom', informationType: 'local_observation', knowledgeScope: 'specimen', status: 'draft' } } : {}) };
 }
 
-// Preserve fresh non-PIM profile fields and reject a detected competing PIM edit.
-// This is a client-side conflict guard; the existing API is not an atomic revision store.
+// Preserve fresh non-PIM profile fields and send the revision used to build this edit.
+// The API performs the final atomic comparison immediately before writing.
 export function createCreatorPimSave({ context, profile, load = loadPlantProfile, save = savePlantProfile, onSaved = () => {} }) {
     let baseline = JSON.stringify([profile?.pim_document ?? null, profile?.pim_import_review ?? null]);
     return async (document, review) => {
@@ -36,11 +36,12 @@ export function createCreatorPimSave({ context, profile, load = loadPlantProfile
             throw new Error('This plant’s knowledge changed elsewhere. Close and reopen knowledge before saving your changes.');
         const next = { ...fresh, spm_enabled: true, profile_enabled: true,
             pim_document: normalizePimDocument(document),
-            ...(review ? { pim_import_review: review } : {}) };
-        await save(...context, next);
-        baseline = JSON.stringify([next.pim_document ?? null, next.pim_import_review ?? null]);
-        onSaved(next);
-        return next.pim_document;
+            ...(review ? { pim_import_review: review } : {}),
+            _expectedRevision: Number(fresh?.revision || 0) };
+        const saved = await save(...context, next) || next;
+        baseline = JSON.stringify([saved.pim_document ?? null, saved.pim_import_review ?? null]);
+        onSaved(saved);
+        return saved.pim_document;
     };
 }
 

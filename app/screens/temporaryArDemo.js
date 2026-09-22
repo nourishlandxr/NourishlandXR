@@ -1246,7 +1246,7 @@ function bindLimSessionInteractions(arSession) {
 
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
-    arWelcomeClock.tick(now,!document.hidden);
+    arWelcomeClock.tick(Date.now(),!document.hidden);
     const activeKey=limActivation?.activeKey||'';
     const activeProgress=limActivation?.progress||0;
     const contextTrigger=appRoot?.querySelector('[data-tryit-context-trigger]');
@@ -1319,7 +1319,7 @@ function showArWelcomeShowcase() {
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
-    introBoardTitle='NourishlandXR';
+    introBoardTitle='Welcome to Nourishland';
     introBoardBody='A place can hold more than we first see.\n\nNourishlandXR connects plants, observations and knowledge to the places they describe.\n\nThis short journey follows one plant outward into a food forest. The learning cells around you are there to explore whenever you choose.';
     introBoardVisibleBody='';
     infoPanel?.setLearningModules(null);
@@ -1364,9 +1364,9 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomeOpeningActive=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        arWelcomeOpeningActive=false;limMeshVisible=false;introBoardTitle='NourishlandXR';panel.querySelector('h2')?.replaceChildren(introBoardTitle);panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
-        infoPanel?.suspend(false);syncDemoPanelActions();
+        syncDemoPanelActions();
         boardTypingTimer=setTimeout(typeOpeningCopy,320);
         boardTypingWatchdogTimer=setTimeout(finishOpeningCopy,Math.max(DEMO_BOARD_TYPING_SAFETY_MS,1200+introBoardBody.length*60));
     };
@@ -1422,6 +1422,7 @@ function showArWelcomeShowcase() {
     button.onclick=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
         arWelcomeIntroPending=false;introBoardTextureDirty=true;
+        infoPanel?.suspend(false);
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
@@ -3509,7 +3510,7 @@ function drawIntroSpatial(view) {
     }
     const now = performance.now();
     if(arWelcomeShowcaseActive){
-        arWelcomeClock.tick(now,session?.visibilityState==='visible');
+        arWelcomeClock.tick(Date.now(),session?.visibilityState==='visible');
         if(limRevealIsAnimating() || (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS))introBoardTextureDirty=true;
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);

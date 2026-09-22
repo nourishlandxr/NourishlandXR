@@ -8,5 +8,6 @@ dist/
 workspace/*
 !workspace/hilyards_food_forest/
 !workspace/hilyards_food_forest/**
+workspace/**/.backups/
 workspace.zip
 nourishland-data/

@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { createZipArchive, extractZipArchive } from './zipArchive.mjs';
 import { createProjectSpatialData } from '../app/services/spatialDataModel.js';
 import { createPigeonPeaTemplateProfile } from '../app/services/pigeonPeaTemplate.js';
 import { PIGEON_PEA_EXAMPLE } from '../app/services/pigeonPeaExample.js';
@@ -308,7 +308,7 @@ function ensureDefaultHomeArea(projectId, siteId) {
             modified: existing.modified || now,
             created: existing.created || now
         };
-        writeJson(placeFile, home);
+        if (JSON.stringify(existing) !== JSON.stringify(home)) writeJson(placeFile, home);
         fs.mkdirSync(path.join(placesDir, existingEntry.name, 'markers'), { recursive: true });
         return home;
     }
@@ -334,16 +334,6 @@ function ensureDefaultHomeAreas(projectId) {
     for (const site of fs.readdirSync(sitesDir, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
         ensureDefaultHomeArea(projectId, site.name);
     }
-}
-
-function runPowerShell(command) {
-    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { encoding: 'utf8' });
-    if (result.status !== 0) throw new Error(result.stderr || 'Archive operation failed');
-}
-
-function validateImportArchive(archivePath) {
-    const script = `Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive = [IO.Compression.ZipFile]::OpenRead('${escapePs(archivePath)}'); try { $entries = @($archive.Entries); if ($entries.Count -gt ${MAX_IMPORT_FILES}) { throw 'ZIP contains too many files' }; [int64]$total = 0; foreach ($entry in $entries) { if ([IO.Path]::IsPathRooted($entry.FullName) -or $entry.FullName -match '(^|[\\/])\.\.([\\/]|$)') { throw 'ZIP contains an unsafe path' }; $total += [int64]$entry.Length; if ($total -gt ${MAX_IMPORT_UNCOMPRESSED_BYTES}) { throw 'ZIP expands beyond the allowed size' } } } finally { $archive.Dispose() }`;
-    runPowerShell(script);
 }
 
 function resolveWorkspaceProject(projectId) {
@@ -392,15 +382,13 @@ function buildHostedIndexes(projectDir) {
     }) : []; writeJson(projectFile, project);
 }
 
-function escapePs(value) { return value.replace(/'/g, "''"); }
-
 function normalizeVisibility(value, fallback = 'draft') {
     const visibility = String(value || fallback).toLowerCase();
     if (!VISIBILITY_VALUES.has(visibility)) throw new Error('Visibility must be draft, public or hidden');
     return visibility;
 }
 
-function isPublic(record) { return Boolean(record) && !['draft', 'hidden'].includes(record.visibility); }
+function isPublic(record) { return Boolean(record) && String(record.visibility || '').toLowerCase() === 'public'; }
 function isVisitorRequest(url) { return url.searchParams.get('view') === 'visitor'; }
 
 function isPublicHierarchy(projectId, siteId = '', placeId = '') {
@@ -621,10 +609,7 @@ function listProjects(visitor = false) {
     const priority = ['hillyards', 'frankendael'];
     return fs.readdirSync(workspaceDir, { withFileTypes: true })
         .filter(entry => entry.isDirectory())
-        .map(entry => {
-            migrateProject(entry.name);
-            return readJson(path.join(workspaceDir, entry.name, 'project.json'), { id: entry.name, name: entry.name });
-        })
+        .map(entry => readJson(path.join(workspaceDir, entry.name, 'project.json'), { id: entry.name, name: entry.name }))
         .filter(project => !visitor || isPublic(project))
         .sort((left, right) => {
             const leftPriority = priority.indexOf(String(left.id).toLowerCase());
@@ -635,8 +620,8 @@ function listProjects(visitor = false) {
 }
 
 function listProjectSites(projectId, visitor = false) {
-    migrateProject(projectId);
     const sitesDir = path.join(workspaceDir, projectId, 'sites');
+    if (!fs.existsSync(sitesDir)) return [];
     return fs.readdirSync(sitesDir, { withFileTypes: true })
         .filter(entry => entry.isDirectory())
         .map(entry => ({ ...readJson(path.join(sitesDir, entry.name, 'site.json'), {}), id: entry.name, projectId }))
@@ -724,6 +709,7 @@ function renameProject(projectId, projectData) {
     if (!fs.existsSync(currentDir)) {
         throw new Error('Project not found');
     }
+    migrateProject(projectId);
     if (projectData.theme !== undefined && !PROJECT_THEMES.has(projectData.theme)) {
         throw new Error('Unsupported project theme');
     }
@@ -1211,9 +1197,11 @@ function handleApi(req, res) {
             try {
                 const archivePath = path.join(tempDir, 'project.zip');
                 fs.writeFileSync(archivePath, Buffer.concat(chunks));
-                validateImportArchive(archivePath);
                 const extractDir = path.join(tempDir, 'extracted');
-                runPowerShell(`Expand-Archive -LiteralPath '${escapePs(archivePath)}' -DestinationPath '${escapePs(extractDir)}' -Force`);
+                extractZipArchive(archivePath, extractDir, {
+                    maxFiles: MAX_IMPORT_FILES,
+                    maxUncompressedBytes: MAX_IMPORT_UNCOMPRESSED_BYTES
+                });
                 const entries = fs.readdirSync(extractDir, { withFileTypes: true }).filter(entry => entry.isDirectory());
                 if (entries.length !== 1) throw new Error('ZIP must contain exactly one project folder');
                 const extractionRoot = path.resolve(extractDir);
@@ -1249,9 +1237,11 @@ function handleApi(req, res) {
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nourishland-export-'));
         try {
             validateProjectDirectory(projectDir);
-            buildHostedIndexes(projectDir);
+            const exportProjectDir = path.join(tempDir, projectId);
+            fs.cpSync(projectDir, exportProjectDir, { recursive: true, errorOnExist: true });
+            buildHostedIndexes(exportProjectDir);
             const archivePath = path.join(tempDir, `${projectId}.zip`);
-            runPowerShell(`Compress-Archive -LiteralPath '${escapePs(projectDir)}' -DestinationPath '${escapePs(archivePath)}' -Force`);
+            createZipArchive(exportProjectDir, archivePath);
             res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="${projectId}.zip"` });
             res.end(fs.readFileSync(archivePath));
         } catch (error) { sendJson(res, 400, { error: error.message }); }
@@ -1280,11 +1270,11 @@ function handleApi(req, res) {
     const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);
     if (projectMatch && req.method === 'GET') {
         const projectId = decodeURIComponent(projectMatch[1]);
-        if (!isSafeProjectId(projectId) || !fs.existsSync(getSitePath(projectId))) {
+        const projectFile = isSafeProjectId(projectId) ? path.join(getSitePath(projectId), 'project.json') : '';
+        if (!isSafeProjectId(projectId) || !fs.existsSync(projectFile)) {
             sendJson(res, 404, { error: 'Project not found' });
         } else {
-            migrateProject(projectId);
-            const project = readJson(path.join(getSitePath(projectId), 'project.json'), { id: projectId, name: projectId });
+            const project = readJson(projectFile, { id: projectId, name: projectId });
             if (visitor && !isPublic(project)) sendJson(res, 404, { error: 'Public project not found' });
             else sendJson(res, 200, project);
         }
@@ -1567,21 +1557,36 @@ function handleApi(req, res) {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
-            const [ , projectId, siteId, placeId, markerId ] = plantProfileMatch;
-            const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
-            const marker = readJson(path.join(markerDir, 'marker.json'), null);
-            const data = JSON.parse(body || '{}');
-            if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant Live Tag not found' });
-            const existing = readJson(path.join(markerDir, 'plant_profile.json'), {});
-            const profile = {
-                ...existing,
-                ...data,
-                common_name: Object.hasOwn(data, 'common_name') ? String(data.common_name || '').trim() : String(existing.common_name || '').trim(),
-                scientific_name: Object.hasOwn(data, 'scientific_name') ? String(data.scientific_name || '').trim() : String(existing.scientific_name || '').trim(),
-                modified: new Date().toISOString()
-            };
-            writeJson(path.join(markerDir, 'plant_profile.json'), profile);
-            sendJson(res, 200, profile);
+            try {
+                const [ , projectId, siteId, placeId, markerId ] = plantProfileMatch;
+                const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
+                const marker = readJson(path.join(markerDir, 'marker.json'), null);
+                const data = JSON.parse(body || '{}');
+                if (!marker || marker.type !== 'plant') return sendJson(res, 404, { error: 'Plant Live Tag not found' });
+                const profileFile = path.join(markerDir, 'plant_profile.json');
+                const existing = readJson(profileFile, {});
+                const currentRevision = Number(existing.revision || 0);
+                if (Object.hasOwn(data, '_expectedRevision') && Number(data._expectedRevision) !== currentRevision) {
+                    return sendJson(res, 409, {
+                        error: 'This plant profile changed elsewhere. Reload it before saving.',
+                        expectedRevision: Number(data._expectedRevision),
+                        currentRevision
+                    });
+                }
+                const { _expectedRevision, ...changes } = data;
+                const profile = {
+                    ...existing,
+                    ...changes,
+                    common_name: Object.hasOwn(changes, 'common_name') ? String(changes.common_name || '').trim() : String(existing.common_name || '').trim(),
+                    scientific_name: Object.hasOwn(changes, 'scientific_name') ? String(changes.scientific_name || '').trim() : String(existing.scientific_name || '').trim(),
+                    revision: currentRevision + 1,
+                    modified: new Date().toISOString()
+                };
+                writeJson(profileFile, profile);
+                sendJson(res, 200, profile);
+            } catch (error) {
+                sendJson(res, 400, { error: error.message });
+            }
         });
         return true;
     }
@@ -1589,10 +1594,13 @@ function handleApi(req, res) {
     const anchorMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sites\/([^/]+)\/places\/([^/]+)\/markers\/([^/]+)\/anchor$/);
     if (anchorMatch && req.method === 'GET') {
         const [ , projectId, siteId, placeId, markerId ] = anchorMatch;
-        const markerDir = path.join(getCanonicalSitePath(decodeURIComponent(projectId), decodeURIComponent(siteId)), 'places', decodeURIComponent(placeId), 'markers', decodeURIComponent(markerId));
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        const decodedPlaceId = decodeURIComponent(placeId);
+        const markerDir = path.join(getCanonicalSitePath(decodedProjectId, decodedSiteId), 'places', decodedPlaceId, 'markers', decodeURIComponent(markerId));
         const marker = readJson(path.join(markerDir, 'marker.json'), null);
         const anchorFile = path.join(markerDir, 'anchor.json');
-        if (visitor && !isPublic(marker)) return sendJson(res, 404, { error: 'Public marker not found' });
+        if (visitor && (!isPublicHierarchy(decodedProjectId, decodedSiteId, decodedPlaceId) || !isPublic(marker))) return sendJson(res, 404, { error: 'Public marker not found' });
         if (!fs.existsSync(anchorFile)) return sendJson(res, 404, { error: 'Anchor not found' });
         sendJson(res, 200, readJson(anchorFile, {}));
         return true;

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/site.schema.json",
+  "title": "NourishlandXR Site",
+  "type": "object",
+  "required": ["id", "name", "visibility"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "projectId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "maxLength": 10000 },
+    "visibility": { "enum": ["draft", "public", "hidden"], "default": "draft" },
+    "created": { "type": "string", "format": "date-time" },
+    "modified": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}
