@@ -573,6 +573,9 @@ h1 {
 .tryit-demo { position: fixed; inset: 0; z-index: 12000; overflow: hidden; background: #183426; }
 .tryit-demo.is-immersive, .tryit-demo.is-immersive .tryit-stage, body:has(.tryit-demo.is-immersive), body:has(.tryit-demo.is-immersive) #app { background: transparent !important; }
 .tryit-stage { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, rgba(150,202,130,.48), transparent 34%), linear-gradient(#8db59a, #55745e 50%, #334d38 51%, #1d3324); }
+.tryit-demo.is-simulated .tryit-stage::before { content:""; position:fixed; inset:-15% 0 0; z-index:0; pointer-events:none; background-image:radial-gradient(1px 11px at 22px 26px,rgba(232,246,240,.3) 20%,transparent 100%),radial-gradient(1px 8px at 104px 72px,rgba(225,242,239,.24) 20%,transparent 100%),radial-gradient(1px 13px at 168px 139px,rgba(236,249,245,.2) 20%,transparent 100%); background-size:241px 331px,317px 397px,283px 373px; opacity:.38; animation:tryit-soft-rain 12s linear infinite; }
+@keyframes tryit-soft-rain { from { background-position:0 0,0 0,0 0; } to { background-position:0 331px,0 397px,0 373px; } }
+@media (prefers-reduced-motion:reduce) { .tryit-demo.is-simulated .tryit-stage::before { display:none; } }
 .tryit-spatial-intro { position: fixed; inset: 0; z-index: 12000; overflow: hidden; perspective: 900px; pointer-events: none; }
 .tryit-spatial-intro[hidden] { display: none; }
 .tryit-demo.is-immersive .tryit-spatial-intro { display: none !important; }

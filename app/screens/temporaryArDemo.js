@@ -56,6 +56,8 @@ let gl = null;
 let referenceSpace = null;
 let hitTestSource = null;
 let viewerMatrix = null;
+let rainOrigin = null;
+let lastViewerPoseAt = 0;
 let latestDemoView = null;
 let hitMatrix = null;
 let latestControllerRay = null;
@@ -379,6 +381,8 @@ function clearSessionState() {
     hitTestSource = null;
     referenceSpace = null;
     viewerMatrix = null;
+    rainOrigin = null;
+    lastViewerPoseAt = 0;
     latestDemoView = null;
     hitMatrix = null;
     latestControllerRay = null;
@@ -1184,6 +1188,7 @@ function handleLearningModuleAction(action){
 }
 function activateLimCell(key) {
     const node=limNodeByKey(key);if(!node)return false;
+    appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
     selectedLimCell=key;
     const content=limLearningContent(node.limId || node.label);
     // A selected cell becomes a doorway to its own descendants. Other
@@ -1345,10 +1350,12 @@ function showArWelcomeShowcase() {
     introBoardTitle='NourishlandXR';
     introBoardBody=demoLocalizedText('Welcome to NourishlandXR. Imagine walking through a garden where every plant has a story to share.\n\nHere, digital information can meet you where plants grow. XR makes those connections possible while the living landscape stays at the centre.');
     introBoardVisibleBody=introBoardBody;
+    limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'Your companion for the journey. Selected topics and plant information appear here, while the garden stays in view. Use the side controls to explore sections, open imagery and adjust the panel to your comfort.',accent:'#83c5e8',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
-    infoPanel?.suspend(true);
+    infoPanel?.suspend(false);
+    infoPanel?.setIntroduction(true);
     const openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
@@ -1390,7 +1397,7 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomeOpeningActive=false;limMeshVisible=true;introBoardTitle='NourishlandXR';panel.querySelector('h2')?.replaceChildren(introBoardTitle);panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        arWelcomeOpeningActive=false;limMeshVisible=false;introBoardTitle='NourishlandXR';panel.querySelector('h2')?.replaceChildren(introBoardTitle);panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
         paintOpeningCopy(introBoardBody);panel.classList.remove('is-typing');
@@ -1434,25 +1441,23 @@ function showArWelcomeShowcase() {
         if(simulatedMode && arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
-    button.textContent=demoLocalizedText('Explore the pathways');button.hidden=true;button.disabled=true;syncDemoPanelActions();
+    button.textContent=demoLocalizedText('Meet the Control Panel');button.hidden=true;button.disabled=true;syncDemoPanelActions();
     if(skip)skip.hidden=true;
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
         if(arWelcomeOpeningActive || !welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
         button.disabled=false;button.hidden=false;
         syncDemoPanelActions();
-        setGuide('Press Explore the pathways when ready. The four learning cells can then be opened in any order.');
+        setGuide('Press Meet the Control Panel when ready. The four pathways will follow after its introduction.');
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     button.onclick=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
         arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
-        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
-        limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SHOWCASE_DURATION;
-        limMeshVisible=true;
+        limMeshVisible=false;
         runArWelcomeTutorial(0);
     };
     // Only the explicit Continue action advances beyond the introduction.
@@ -1484,13 +1489,13 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Four ways to explore',button:'Meet your companion',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Control panel when you are ready.',paragraphs:[
+    {title:'Your Control Panel',button:'Explore the pathways',nextGuide:'The Control Panel is your companion. Continue to bring the four pathways into view.',paragraphs:[
+        'The Control Panel is your companion for this journey. Choose a living cell and its story appears here, while the garden stays in view.',
+        'Use its sections to explore, open the side dot for imagery, and move the panel to a comfortable position. Next, the four pathways will appear on the green introduction screen.'
+    ]},
+    {title:'Four ways to explore',button:'Meet the Plant Orb',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Plant Orb when you are ready.',paragraphs:[
         'Choose the question that interests you. All four pathways remain available as you explore.',
         'Read Nature observes a place. Understand the Land explores living relationships. Design the Forest imagines how plants work together. Shape the Outcome considers care and change over time.'
-    ]},
-    {title:'Your companion panel',button:'Meet the Plant Orb',nextGuide:'The Control panel stays with you as you explore. Press Meet the Plant Orb when you are ready.',paragraphs:[
-        'The Control panel is your companion for this journey, not another place you must visit. It stays nearby as the landscape remains in view.',
-        'Choose a living cell to read its story here. Open the side dots for sections or imagery, and move the panel wherever it feels comfortable.'
     ]},
     {title:'Meet the Plant Orb',button:'Explore Areas',nextGuide:'Press Explore Areas after learning how a Plant Orb connects to a real plant.',paragraphs:[
         'A Plant Orb belongs at a real plant and opens that plant’s information there.',
@@ -1508,17 +1513,27 @@ const DEMO_ORIENTATION_STEPS = [
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
-    limMeshVisible=index===0;
+    limMeshVisible=index>0;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
     infoPanel?.setGuided(index===0);
+    if(index===0)infoPanel?.setIntroduction(true);
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
+        if(index===0){
+            infoPanel?.setIntroduction(false);
+            limMeshVisible=true;
+            limMeshActivatedAt=arWelcomeClock.elapsed;
+            introBoardTextureDirty=true;
+            runArWelcomeTutorial(index+1);
+            return;
+        }
         if(index===3){introducePigeonPeaExample();return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
+        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Pathways','Control panel','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
 }
 
 function guidePlantConversion(record) {
@@ -1872,8 +1887,11 @@ function armDemoPlacement(type, {explained=false}={}) {
     clearTimeout(aimRevealTimer);
     place?.setAttribute('hidden', '');
     place?.classList.remove('is-revealing', 'is-ready');
-    const label = place?.querySelector('strong');
-    if (label) label.textContent = '';
+    const label = place?.querySelector('.creator-ar-placement-guide-label');
+    if (label) label.textContent = type === 'plant' ? 'Place Orb' : type === 'plant2' ? 'Place Orb' : 'Place Note';
+    place?.setAttribute('aria-label', type === 'plant'
+        ? 'Place the Pigeon Pea Plant Orb'
+        : type === 'plant2' ? 'Place the Moringa Plant Orb' : 'Place a Note');
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : 'Take in the space before choosing the next position.');
@@ -3085,6 +3103,7 @@ function renderInterface(simulated) {
     contextTrigger.addEventListener('pointercancel',()=>{limActivation?.cancel('context-cancelled');limPointerKey='';limPointerId=null;paintWelcomeLayer(performance.now());});
     contextTrigger.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(contextTrigger.dataset.contextMode!=='hold')handleDemoPanelAction(contextTrigger.dataset.contextMode);});
     bindDemoPanelActions();
+    infoPanel?.suspend(true);
     appRoot.querySelector('[data-tryit-safety-help]')?.addEventListener('click', () => showArSafetyDialog(appRoot.querySelector('.tryit-demo')));
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
@@ -3441,9 +3460,10 @@ function drawIntroNoteContent(ctx) {
     const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
     ctx.save();
-    if(arWelcomeIntroPending){
+    const gentleIntroFade=arWelcomeIntroPending || (arWelcomeShowcaseActive && demoOrientationStep>=0 && demoOrientationStep<=1 && !selectedLimCell);
+    if(gentleIntroFade){
         const elapsed=arWelcomeClock?.elapsed || 0;
-        ctx.globalAlpha*=.34+.66*(.5+.5*Math.sin(elapsed/1750));
+        ctx.globalAlpha*=.72+.28*(.5+.5*Math.sin(elapsed/2400));
     }
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
@@ -3860,6 +3880,35 @@ function createMarkerTexture(record) {
     return markerTexture;
 }
 
+function drawSpatialRain(view, time) {
+    if (!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix
+        || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    rainOrigin ||= { x: viewerMatrix[12], y: viewerMatrix[13], z: viewerMatrix[14] };
+    const vertices = new Float32Array(24 * 6);
+    for (let index = 0; index < 24; index += 1) {
+        const x = rainOrigin.x + (((index * 73) % 97) / 97 - .5) * 4.6;
+        const z = rainOrigin.z + (((index * 43) % 89) / 89 - .5) * 4.6;
+        const fall = ((time * .00065 + index * .173) % 1) * 2.5;
+        const y = rainOrigin.y + .95 - fall;
+        vertices.set([x, y, z, x + .008, y - .07, z], index * 6);
+    }
+    gl.useProgram(tetherRenderer.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, tetherRenderer.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(tetherRenderer.positionLocation);
+    gl.vertexAttribPointer(tetherRenderer.positionLocation, 3, gl.FLOAT, false, 12, 0);
+    gl.uniformMatrix4fv(tetherRenderer.projectionLocation, false, view.projectionMatrix);
+    gl.uniformMatrix4fv(tetherRenderer.viewLocation, false, view.transform.inverse.matrix);
+    gl.uniform4fv(tetherRenderer.colorLocation, [.83, .94, .91, .14]);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+    gl.depthMask(true);
+}
+
 function drawMarker(view) {
     if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer) return;
     gl.enable(gl.DEPTH_TEST);
@@ -4159,8 +4208,17 @@ async function startImmersive() {
             session.requestAnimationFrame(draw);
             introFrameToken = _time;
             const pose = frame.getViewerPose(referenceSpace);
-            viewerMatrix = pose ? Float32Array.from(pose.transform.matrix) : null;
-            latestDemoView = pose?.views?.[0] || null;
+            if (pose) {
+                viewerMatrix = Float32Array.from(pose.transform.matrix);
+                latestDemoView = pose.views?.[0] || null;
+                lastViewerPoseAt = _time;
+            } else if (_time - lastViewerPoseAt > 1200) {
+                // Brief tracking dropouts are common while a visitor is aiming.
+                // Keep the last valid placement frame briefly so a tap does not
+                // silently lose the Plant Orb placement target.
+                viewerMatrix = null;
+                latestDemoView = null;
+            }
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
@@ -4187,6 +4245,7 @@ async function startImmersive() {
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                drawSpatialRain(view, _time);
                 drawMarker(view);
                 drawDemoKnowledge(view);
                 infoPanel?.draw(view);

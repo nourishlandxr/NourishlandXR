@@ -99,14 +99,14 @@ export function createSpatialTotemCards(gl, options = {}) {
                     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,(options.canvas || cardCanvas)(surface.card,surface.detail,selectedId===surface.card.id));
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-                    entry={texture,content,started:performance.now()};textures.set(key,entry);
+                    entry={texture,content,started:entry?.started ?? performance.now(),fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? 450};textures.set(key,entry);
                 }
                 used.add(key);surfaces.push({...surface,record});
                 gl.uniform3f(locations.center,surface.center.x,surface.center.y,surface.center.z);gl.uniform3f(locations.right,surface.right.x,surface.right.y || 0,surface.right.z);
                 const up=surface.up || {x:0,y:1,z:0};gl.uniform3f(locations.up,up.x,up.y,up.z);
                 gl.uniform2f(locations.size,surface.width,surface.height);
                 const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-                gl.uniform1f(locations.opacity,reduced ? 1 : Math.min(1,(performance.now()-entry.started)/450));
+                gl.uniform1f(locations.opacity,reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);
