@@ -49,7 +49,10 @@ export function infoPanelPose(matrix, heading = null, headset = false) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    const side=headset ? .68 : .64,forward=headset ? 1.12 : .58,drop=headset ? .34 : .70;
+    // In a headset this is a true left-side companion: near the board's
+    // reading height, laterally separated, and still inside easy controller
+    // reach. Phone/Web mode keeps its lower compact position.
+    const side=headset ? 1.04 : .64,forward=headset ? 1.36 : .58,drop=headset ? .06 : .70;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};

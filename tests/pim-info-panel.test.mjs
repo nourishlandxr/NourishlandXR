@@ -46,6 +46,14 @@ test('waist companion follows translation but remains reachable when looking lef
     assert.deepEqual(next.anchorHeading,first.anchorHeading); assert.equal(next.center.x-first.center.x,2); assert.equal(next.center.z-first.center.z,3);
 });
 
+test('Quest Control panel begins beside the welcome board instead of below it',()=>{
+    const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
+    const pose=infoPanelPose(matrix,null,true);
+    assert.ok(pose.center.x<=-1,'panel has a clear left-side offset');
+    assert.ok(Math.abs(pose.center.y-1.54)<1e-10,'panel stays near reading height');
+    assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
+});
+
 test('Control panel keeps navigation separate from experience actions',()=>{
     for(const tab of ['Details','Modules','Help','Settings']){
         const buttons=controlPanelControls({tab});

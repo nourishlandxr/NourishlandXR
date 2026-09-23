@@ -77,15 +77,22 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  assert.ok(lines>0,'the four primary cells retain their hexagon outlines');
+ const expansion={...pacing,progression:{expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':22000}}};
+ const softChildren=drawArWelcomeShowcase(ctx,22500,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
+ assert.ok(softChildren.some(node=>node.opacity>0 && node.opacity<1),'selected pathway introduces its children with opacity');
+ const settledChildren=drawArWelcomeShowcase(ctx,25000,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
+ assert.ok(settledChildren.some(node=>node.opacity>.9),'child cells remain after the soft reveal');
  assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
 });
 
 test('LIM cells distinguish idle, hover and selected without a progress fill',()=>{
  assert.doesNotMatch(showcaseSource,/Rear rim gives the transparent face physical depth/);
  assert.doesNotMatch(showcaseSource,/ctx\.lineTo\(x\+5,y\+thickness\)/);
+ assert.doesNotMatch(showcaseSource,/ctx\.moveTo\(-r,0\)/);
+ assert.doesNotMatch(showcaseSource,/r\*\.34,r\*\.18/);
  assert.doesNotMatch(showcaseSource,/Centre-out paint|const activation=/);
  assert.match(showcaseSource,/accentRgba\(accent,hue,hoverOnly\?\.24:\.28\)/);
- assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?10:6/);
+ assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?5:4/);
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{

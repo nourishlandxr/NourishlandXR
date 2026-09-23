@@ -356,9 +356,6 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  // Keep cells deliberately flat in XR: one face and one outline, with no
  // false rear rim, bevel, perspective edge or drop shadow.
  drawHexagon(ctx,0,0,r,accentRgba(accent,hue,hollow?.035:.10),`hsla(${hue},30%,86%,${hollow?.46:.62})`,hollow?2.5:3);
- // A quiet change in edge light follows the opening, without flashing.
- ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
- ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();
  if(visual.pathway && !selected){
   ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-7),y=Math.sin(a)*(r-7);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
@@ -366,10 +363,8 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
   drawHexagon(ctx,0,0,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);
-  ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?24:18;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?10:6;
+  ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?18:14;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?5:4;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
-  ctx.setLineDash([r*.34,r*.18]);ctx.globalAlpha=node.opacity*.65;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.86)';
-  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-8),y=Math.sin(a)*(r-8);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
  }
  ctx.globalAlpha=node.opacity*smooth(node.progress,.35,.65);
  ctx.textAlign='center';ctx.textBaseline='middle';
@@ -507,12 +502,24 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  if(options.minimalIntro){
   const roots=frames.flatMap(frame=>frame.nodes).filter(node=>node.depth===0 && node.id!=='vision');
   const order=new Map(roots.map((node,index)=>[node.key,index]));
-  frames=frames.map(frame=>({...frame,nodes:frame.nodes.filter(node=>order.has(node.key)).map(node=>{
-   const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,interval=Number(options.minimalInterval)||1800,revealDuration=Number(options.minimalRevealDuration)||1100;
-   const progress=reducedMotion?1:opening?smooth(elapsed,start+index*interval,revealDuration):1;
-   const scale=.84+progress*.16;
-   return {...node,progress,opacity:progress,scale,radius:node.baseRadius*scale,drawX:node.x,drawY:node.y,
-    emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
+  const expanded=new Set(options.progression?.expandedLimIds || []),expandedAt=options.progression?.expandedAt || {};
+  frames=frames.map(frame=>({...frame,nodes:frame.nodes.filter(node=>{
+   if(order.has(node.key))return true;
+   const parent=frame.nodes.find(candidate=>candidate.id===node.parent),parentId=parent?.limId || node.parent;
+   return expanded.has(node.parent) || expanded.has(parentId);
+  }).map(node=>{
+   if(order.has(node.key)){
+    const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,interval=Number(options.minimalInterval)||1800,revealDuration=Number(options.minimalRevealDuration)||1100;
+    const progress=reducedMotion?1:opening?smooth(elapsed,start+index*interval,revealDuration):1;
+    return {...node,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,
+     emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
+   }
+   const parent=frame.nodes.find(candidate=>candidate.id===node.parent),parentId=parent?.limId || node.parent;
+   const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent),siblingIndex=Math.max(0,siblings.indexOf(node));
+   const branchStartedAt=Number(expandedAt[parentId]);
+   const branchElapsed=Math.max(0,elapsed-(Number.isFinite(branchStartedAt)?branchStartedAt:elapsed));
+   const progress=reducedMotion?1:smooth(branchElapsed,180+siblingIndex*430,900);
+   return {...node,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,emphasis:0};
   })})).filter(frame=>frame.nodes.length);
  }
  if(options.drawCells===false){ctx.restore();return frames;}
@@ -549,6 +556,16 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
      ctx.lineTo(node.x-dx/length*endInset,node.y-dy/length*endInset);ctx.stroke();ctx.restore();
     }
    }
+  }
+ } else {
+  for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
+  for(const node of frame.nodes.filter(node=>node.depth>=1 && node.opacity>0)){
+   const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
+   if(!parent || parent.opacity<=0)continue;
+   const dx=node.x-parent.x,dy=node.y-parent.y,length=Math.hypot(dx,dy)||1;
+   ctx.save();ctx.globalAlpha=Math.min(parent.opacity,node.opacity)*.42;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(parent.x+dx/length*parent.radius*.94,parent.y+dy/length*parent.radius*.94);
+   ctx.lineTo(node.x-dx/length*node.radius*.94,node.y-dy/length*node.radius*.94);ctx.stroke();ctx.restore();
   }
  }
  for(const node of frame.nodes){
