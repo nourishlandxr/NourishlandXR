@@ -193,10 +193,11 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:demoLocalizedText('XR connects digital information to the real world around you.'),accent:'#dcef95'}),
-    Object.freeze({at:5200,text:demoLocalizedText('The living landscape stays at the centre of the experience.'),accent:'#7fa7e8'}),
-    Object.freeze({at:10400,text:demoLocalizedText('Four pathways invite you to explore plants, places, design and change.'),accent:'#8fc77a'}),
-    Object.freeze({at:14800,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#e7b45f'}),
+    Object.freeze({at:0,text:demoLocalizedText('Welcome to NourishlandXR. Imagine walking through a garden where every plant has a story to share.'),accent:'#dcef95'}),
+    Object.freeze({at:6000,text:demoLocalizedText('What if those stories could meet you right where the plants grow?'),accent:'#7fa7e8'}),
+    Object.freeze({at:12000,text:demoLocalizedText('XR connects digital information to the real world around you.'),accent:'#8fc77a'}),
+    Object.freeze({at:18000,text:demoLocalizedText('Four pathways invite you to explore plants, places, design and change.'),accent:'#e7b45f'}),
+    Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'}),
     Object.freeze({at:28200,text:demoLocalizedText('When ready, explore the four pathways.'),accent:'#dcef95'})
 ]);
 const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
@@ -1335,7 +1336,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='NourishlandXR';
-    introBoardBody='XR connects digital information to the real world around you. In NourishlandXR, you can discover the stories of plants and places while the living landscape stays at the centre.';
+    introBoardBody=demoLocalizedText('Welcome to NourishlandXR. Imagine walking through a garden where every plant has a story to share.\n\nHere, digital information can meet you where plants grow. XR makes those connections possible while the living landscape stays at the centre.');
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
@@ -2321,6 +2322,10 @@ function bindSimulatedInformationPanels(layer) {
         const index = Number(compactMarker.dataset.demoMarkerIndex);
         const record = markers[index];
         if (!record || record.demoInteractive === false) return;
+        if(record.demoType==='plant'){
+            compactMarker.addEventListener('pointerenter',()=>compactMarker.classList.add('is-pointer-hover'));
+            compactMarker.addEventListener('pointerleave',()=>compactMarker.classList.remove('is-pointer-hover'));
+        }
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
@@ -3846,6 +3851,7 @@ function drawMarker(view) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    const hoveredPlant=latestControllerRay ? demoRecordAtPointer()?.record : null;
     markers.forEach(record => {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
         if (!orbType) return;
@@ -3869,7 +3875,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1),
-            { type: orbType, color: material?.shell, coreColor: material?.core, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null }
+            { type: orbType, color: material?.shell, coreColor: material?.core, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {

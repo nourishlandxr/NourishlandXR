@@ -258,8 +258,10 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     // which made a hovered Quest marker look faded instead of selected.
     if (options.highlighted) {
         gl.depthMask(false);
-        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * 1.22, {
-            color: [0.82, 1, 0.28], alpha: 0.22, emissive: 1, opacity: options.opacity
+        const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        const pulse=reducedMotion ? 0 : Math.sin((options.time ?? performance.now()/1000)*3.2);
+        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * (1.2+.045*pulse), {
+            color: plant ? [0.9, 0.84, 0.58] : [0.82, 1, 0.28], alpha:plant ? .22+.06*pulse : .22, emissive: 1, opacity: options.opacity
         });
         gl.depthMask(true);
     }

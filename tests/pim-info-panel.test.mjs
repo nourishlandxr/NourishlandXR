@@ -135,3 +135,36 @@ test('XR cell holds consume their select event without blocking later object sel
 });
 
 test('compact panel grows with content and keeps settings controls inside its surface',async()=>{const {controlPanelHeight}=await import('../app/services/pimInfoPanel.js');assert.ok(controlPanelHeight(2)<controlPanelHeight(7));assert.ok(controlPanelHeight(7,true)>controlPanelHeight(7));for(const large of [false,true]){const height=controlPanelHeight(7,large);for(const button of controlPanelControls({tab:'Settings',height,largeText:large})){assert.ok(button.y+button.height<=height);assert.ok(button.x+button.width<=1000);}}});
+
+test('side dots reveal mounted wings without rebuilding or resizing the panel',()=>{
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
+    assert.match(panel,/onClick\(\);syncPanelWings\(\)/);
+    assert.doesNotMatch(panel,/onClick\(\);render\(\)/);
+    assert.match(panel,/if\(showPlantPreview\(\)\)\{const figure=/);
+    assert.match(styles,/\.is-media-collapsed :is\(\.nlxr-plant-preview,\.nlxr-media-empty\) \{ display:none; \}/);
+    assert.match(styles,/:not\(\.is-media-collapsed\) \.nlxr-media-wing \{ position:absolute/);
+    assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
+});
+
+test('cell selection patches the existing reading surface without remounting the panel',()=>{
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
+    const update=panel.slice(panel.indexOf('function updateReading()'),panel.indexOf('function updatePathway()'));
+    assert.match(update,/content\.querySelector\('\.nlxr-info-body'\)\.textContent=/);
+    assert.match(update,/if\(image\.getAttribute\('src'\)!==preview\.image\)image\.src=preview\.image/);
+    assert.doesNotMatch(update,/replaceChildren\(\)/);
+    assert.match(panel,/tab='Details';hidden=false;page=0;if\(wasDetails\)updateReading\(\);else render\(\)/);
+    assert.match(panel,/suspend\(value\).*updateReading\(\);updatePathway\(\)/);
+    assert.doesNotMatch(styles,/\.is-opening-compact \{ height:/);
+});
+
+test('ordinary control actions retain the panel shell and device treatment',()=>{
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
+    assert.match(panel,/if\(!force && !hidden && !needsMediaWing && element\.querySelector\('\.nlxr-control-header'\)\)/);
+    assert.match(panel,/nav\.replaceChildren\(\.\.\.controls\(\)\.filter/);
+    assert.match(panel,/tabs\.scrollTop=railScroll/);
+    assert.match(styles,/A persistent instrument beside the experience/);
+    assert.match(styles,/"Cascadia Code","Segoe UI Variable",ui-monospace,monospace/);
+});

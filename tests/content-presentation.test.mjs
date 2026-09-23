@@ -31,6 +31,23 @@ test('XR introduction holds four explorable archetypes before Orb and placement 
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });
 
+test('demo welcomes visitors and invites imagination before defining XR', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
+    assert.ok(opening.indexOf('Welcome to NourishlandXR') < opening.indexOf('XR connects digital information'));
+    assert.ok(opening.indexOf('What if those stories') < opening.indexOf('XR connects digital information'));
+    assert.match(demo, /introBoardBody=demoLocalizedText\('Welcome to NourishlandXR/);
+});
+
+test('Plant Orb responds to pointer contact in preview and immersive mode', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/living-objects.css');
+    assert.match(demo, /compactMarker\.addEventListener\('pointerenter'.*is-pointer-hover/);
+    assert.match(demo, /highlighted:orbType==='plant' && hoveredPlant===record/);
+    assert.match(styles, /nlxr-orb-hover-pulse/);
+    assert.match(styles, /nlxr-orb-hover-orbit/);
+});
+
 test('each archetype opens its ordered illustration in the shared control panel', () => {
     const ordered = [
         ['lim-intro-analysis', 'archetype-read-nature.jpg'],
@@ -46,7 +63,7 @@ test('each archetype opens its ordered illustration in the shared control panel'
     }
     const panel = read('app/services/pimInfoPanel.js');
     assert.match(panel, /selection\?\.mesh==='lim' && selection\.image/);
-    assert.match(panel, /mediaCollapsed=!content\?\.image/);
+    assert.match(panel, /if\(content\?\.image && !mediaTouched\)mediaCollapsed=false/);
     assert.match(panel, /Pathway illustration/);
 });
 
