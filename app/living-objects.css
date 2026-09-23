@@ -274,10 +274,27 @@
     color:transparent !important;
     text-shadow:none !important;
 }
+/* Reserve a clear lane beneath the green surface for the main Continue orb. */
+.tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome,
+.tryit-demo.is-simulated[data-lim-surface="true"] ~ .tryit-context-trigger {
+    --demo-lim-screen-width:min(96vw,1100px,calc((100dvh - 190px) * 2500 / 2100));
+}
+.tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome {
+    inset:calc(50% - 55px) auto auto 50% !important;
+    width:var(--demo-lim-screen-width) !important;
+}
+.tryit-demo.is-simulated[data-lim-surface="true"] ~ .tryit-context-trigger:not([hidden]) {
+    top:calc(50% - 45px + var(--demo-lim-screen-width) * .42);
+    bottom:auto;
+}
 @media(max-width:620px) and (orientation:portrait) {
     .tryit-demo[data-lim-surface="true"] .tryit-live-welcome {
         width:min(178vw,760px);
         max-width:none;
+    }
+    .tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome,
+    .tryit-demo.is-simulated[data-lim-surface="true"] ~ .tryit-context-trigger {
+        --demo-lim-screen-width:min(178vw,760px,calc((100dvh - 190px) * 2500 / 2100));
     }
 }
 @media(orientation:landscape) and (max-height:720px) {
@@ -285,6 +302,10 @@
         inset:50% auto auto 50%;
         width:min(74vw,620px);
         min-width:0;
+    }
+    .tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome,
+    .tryit-demo.is-simulated[data-lim-surface="true"] ~ .tryit-context-trigger {
+        --demo-lim-screen-width:min(74vw,620px,calc((100dvh - 190px) * 2500 / 2100));
     }
 }
 

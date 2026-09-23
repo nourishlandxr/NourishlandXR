@@ -20,13 +20,13 @@ test('XR introduction holds four explorable archetypes before Orb and placement 
     const demo = read('app/screens/temporaryArDemo.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
     assert.match(demo, /XR connects digital information to the real world around you/);
-    assert.match(demo, /button\.textContent=demoLocalizedText\('Explore the pathways'\)/);
-    assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed-AR_WELCOME_SHOWCASE_DURATION/);
+    assert.match(demo, /button\.textContent=demoLocalizedText\('Meet the Control Panel'\)/);
+    assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
     assert.ok(guide.indexOf('Four ways to explore') < guide.indexOf('Meet the Plant Orb'));
     assert.ok(guide.indexOf('Meet the Plant Orb') < guide.indexOf('Areas and Totems'));
     assert.ok(guide.indexOf('Areas and Totems') < guide.indexOf('Begin with Pigeon Pea'));
-    assert.match(demo, /limMeshVisible=index===0/);
+    assert.match(demo, /limMeshVisible=index>0/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });
@@ -46,9 +46,9 @@ test('pathways follow their spoken invitation, copy fades, and the companion pan
     assert.match(demo,/at:18000,text:demoLocalizedText\('Four pathways invite/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/Your companion panel[\s\S]*The Control panel is your companion/);
+    assert.match(demo,/Your Control Panel[\s\S]*The Control Panel is your companion/);
     assert.match(panel,/const spatialHeight=\(\)=>headset\?1250:height\(\)/);
-    assert.match(styles,/100cqh - 12px/);
+    assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
 });
 
@@ -93,7 +93,7 @@ test('Area Totem examples show distinct colours and welcoming, orientation, inte
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const showcase = read('app/services/arWelcomeShowcase.js');
-    assert.match(demo, /ctx\.globalAlpha\*=\.34\+\.66\*\(\.5\+\.5\*Math\.sin\(elapsed\/1750\)\)/);
+    assert.match(demo, /ctx\.globalAlpha\*=\.72\+\.28\*\(\.5\+\.5\*Math\.sin\(elapsed\/2400\)\)/);
     assert.match(showcase, /openingOpacity=reducedMotion\?1:1-smooth\(time,duration-3000,2600\)/);
     assert.doesNotMatch(showcase, /Explore the wonders of plants and ecosystems in an immersive, interactive way/);
 });

@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createUvSphereGeometry, sphereModelMatrix } from '../app/services/spatialSphereRenderer.js';
 import { createGroundArrowPathGeometry, createTetherRibbonGeometry } from '../app/services/spatialTetherRenderer.js';
+import { spatialPanelControls } from '../app/services/pimInfoPanel.js';
 import { createPrismGeometry, prismModelMatrix } from '../app/services/spatialPrismRenderer.js';
 import { createTrianglePrismGeometry } from '../app/services/spatialTriangleRenderer.js';
 import {
@@ -12,7 +13,9 @@ import {
     demoPointerScreenPoint,
     preservePlacedDemoPlants,
     selectDemoPlantRecord,
-    selectGuidedDemoOrb
+    selectGuidedDemoOrb,
+    welcomeNarrative,
+    demoRainProgress
 } from '../app/screens/temporaryArDemo.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
 import { avoidDemoPanelOverlap } from '../app/services/demoPanelGeometry.js';
@@ -30,6 +33,34 @@ import {
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+test('welcome narrative finishes without restarting and rain grows after XR is introduced', () => {
+    assert.match(welcomeNarrative(0).text, /Welcome to NourishlandXR/);
+    assert.match(welcomeNarrative(12000).text, /XR connects/);
+    assert.match(welcomeNarrative(18000).text, /Four pathways/);
+    assert.equal(welcomeNarrative(30000).text, welcomeNarrative(90000).text);
+    assert.equal(welcomeNarrative(90000).alpha, 1);
+    assert.equal(demoRainProgress(11999), 0);
+    assert.ok(demoRainProgress(14000) > 0 && demoRainProgress(14000) < 1);
+    assert.equal(demoRainProgress(17000), 1);
+    assert.equal(demoRainProgress(90000), 1);
+    const styles = read('app/style.css');
+    assert.match(styles, /data-rain-stage="first-drops"/);
+    assert.match(styles, /data-rain-stage="mist"/);
+    assert.match(styles, /z-index:12002; pointer-events:none/);
+});
+
+test('spatial Control Panel keeps its reading actions clear of the open photo wing', () => {
+    const actions = spatialPanelControls({
+        mediaCollapsed: false,
+        items: [{ action: 'Utility:continue', kind: 'utility', primary: true, label: 'Continue' }]
+    });
+    const continueAction = actions.find(action => action.action === 'Utility:continue');
+    const mediaToggle = actions.find(action => action.action === 'ToggleMedia');
+    assert.ok(continueAction.x + continueAction.width < mediaToggle.x);
+    assert.match(read('app/services/pimInfoPanel.js'), /const imageX=1000-media\+12/);
+    assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
+});
 
 test('Try It Now immersive placement resolves the shared AR distance without stalling', () => {
     const viewer = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 1.5, 4, 1]);
@@ -1340,7 +1371,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0, -0\.58, -2\.72\]\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
+    assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(false\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=30000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
@@ -1395,7 +1426,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);
     assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*expandedLimIds:\[\.\.\.limExpandedCells\]/);
-    assert.match(source, /The four learning cells can then be opened in any order/);
+    assert.match(source, /All four pathways remain available as you explore/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);

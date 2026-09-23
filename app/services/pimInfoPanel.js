@@ -118,7 +118,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
-    const rail=railCollapsed?62:200,media=62;
+    const rail=railCollapsed?62:200,media=mediaCollapsed?62:350;
     const left=rail+22,width=1000-rail-media-44;
     const button=(item,x,y,w,h)=>({...item,x,y,width:w,height:h});
     const result=[button({action:'MovePanel',label:'●',ariaLabel:'Grab and move Control panel',kind:'handle'},744,24,62,48),
@@ -156,7 +156,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
         :'This is your Control panel. It stays nearby to help you read selected topics, follow the tutorial and adjust the experience.';
-    const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
+    const pages=()=>infoPages(text(),headset?(mediaCollapsed?(largeText?27:31):(largeText?18:22)):(largeText?32:38),pathwayContext?4:7);
     const title=()=>tab==='Modules'?(moduleContext?.title || 'Guides'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && selection.image
@@ -368,7 +368,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(53,75,62,.74)');gradient.addColorStop(1,'rgba(19,34,28,.66)');
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,22);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(205,229,202,.42)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         if(card.headset && !card.hidden){
-            const rail=card.railCollapsed?62:200,media=62;
+            const rail=card.railCollapsed?62:200,media=card.mediaCollapsed?62:350;
             const left=rail+22,right=1000-media-22,width=right-left;
             ctx.fillStyle='rgba(11,25,20,.25)';ctx.fillRect(6,115,rail,c.height-122);
             ctx.fillStyle='rgba(14,29,24,.28)';ctx.fillRect(1000-media,115,media-6,c.height-122);
@@ -390,10 +390,10 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const lineHeight=card.largeText?46:41;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(!card.mediaCollapsed){
-                // Media opens over the reading bay. Its size follows panel height,
-                // not the narrow collapsed media rail or the source thumbnail.
-                const imageX=rail+12,imageY=194,imageWidth=1000-imageX-18,imageHeight=card.height-300;
-                ctx.fillStyle='rgba(12,22,31,.97)';ctx.fillRect(imageX-8,imageY-8,imageWidth+16,imageHeight+16);
+                // The media wing owns the right-hand column; it never covers
+                // the central reading bay or its controls.
+                const imageX=1000-media+12,imageY=194,imageWidth=media-30,imageHeight=card.height-300;
+                ctx.fillStyle='rgba(12,22,31,.9)';ctx.fillRect(imageX-8,imageY-8,imageWidth+16,imageHeight+16);
                 if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight);
                     ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
                 }else{ctx.fillStyle='#bdc9cc';ctx.font='400 20px system-ui';infoPages('Plant media appears here when a plant is selected.',18,4)[0].forEach((line,index)=>ctx.fillText(line,imageX,imageY+index*27,imageWidth));}

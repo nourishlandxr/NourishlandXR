@@ -56,7 +56,6 @@ let gl = null;
 let referenceSpace = null;
 let hitTestSource = null;
 let viewerMatrix = null;
-let rainOrigin = null;
 let lastViewerPoseAt = 0;
 let latestDemoView = null;
 let hitMatrix = null;
@@ -202,16 +201,16 @@ const WELCOME_NARRATIVE = Object.freeze([
     Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'}),
     Object.freeze({at:28200,text:demoLocalizedText('When ready, explore the four pathways.'),accent:'#dcef95'})
 ]);
-const welcomeNarrative=elapsed=>{
-    const phase=elapsed%DEMO_WELCOME_CONTINUE_MS;
-    const index=WELCOME_NARRATIVE.findLastIndex(item=>phase>=item.at);
+export const welcomeNarrative=elapsed=>{
+    const index=WELCOME_NARRATIVE.findLastIndex(item=>elapsed>=item.at);
     const item=WELCOME_NARRATIVE[Math.max(0,index)];
-    const nextAt=WELCOME_NARRATIVE[index+1]?.at ?? DEMO_WELCOME_CONTINUE_MS;
-    const alpha=Math.max(0,Math.min(1,(phase-item.at)/900,(nextAt-phase)/900));
+    const nextAt=WELCOME_NARRATIVE[index+1]?.at;
+    const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
     return {...item,alpha};
 };
 const DEMO_WELCOME_OPENING_MS=30000;
 const DEMO_WELCOME_CONTINUE_MS=30000;
+export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
 const DEMO_ARCHETYPE_START_MS=20500;
 const DEMO_ARCHETYPE_INTERVAL_MS=2500;
 const DEMO_ARCHETYPE_REVEAL_MS=1400;
@@ -381,7 +380,6 @@ function clearSessionState() {
     hitTestSource = null;
     referenceSpace = null;
     viewerMatrix = null;
-    rainOrigin = null;
     lastViewerPoseAt = 0;
     latestDemoView = null;
     hitMatrix = null;
@@ -1283,6 +1281,9 @@ function bindLimSessionInteractions(arSession) {
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     arWelcomeClock.tick(Date.now(),!document.hidden);
+    const rainStage=demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
+    const demoRoot=appRoot?.querySelector('.tryit-demo');
+    if(demoRoot && demoRoot.dataset.rainStage!==rainStage)demoRoot.dataset.rainStage=rainStage;
     const context=arWelcomeCanvas.getContext('2d');
     context.save();
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
@@ -3883,14 +3884,20 @@ function createMarkerTexture(record) {
 function drawSpatialRain(view, time) {
     if (!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix
         || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    rainOrigin ||= { x: viewerMatrix[12], y: viewerMatrix[13], z: viewerMatrix[14] };
-    const vertices = new Float32Array(24 * 6);
-    for (let index = 0; index < 24; index += 1) {
-        const x = rainOrigin.x + (((index * 73) % 97) / 97 - .5) * 4.6;
-        const z = rainOrigin.z + (((index * 43) % 89) / 89 - .5) * 4.6;
+    const rainProgress=demoRainProgress(arWelcomeClock.elapsed);
+    if(rainProgress<=0)return;
+    // A world-up field surrounds the viewer in every direction, rather than
+    // occupying a small forward-facing patch that disappears at the FOV edge.
+    const dropCount=Math.round(12+220*rainProgress);
+    const vertices = new Float32Array(dropCount * 6);
+    for (let index = 0; index < dropCount; index += 1) {
+        const angle=index*2.399963229728653;
+        const radius=.85+(((index*67)%229)/229)*7.15;
+        const x=viewerMatrix[12]+Math.cos(angle)*radius;
+        const z=viewerMatrix[14]+Math.sin(angle)*radius;
         const fall = ((time * .00065 + index * .173) % 1) * 2.5;
-        const y = rainOrigin.y + .95 - fall;
-        vertices.set([x, y, z, x + .008, y - .07, z], index * 6);
+        const y = viewerMatrix[13] + .95 - fall;
+        vertices.set([x, y, z, x + .012, y - .09, z], index * 6);
     }
     gl.useProgram(tetherRenderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, tetherRenderer.buffer);
@@ -3899,7 +3906,7 @@ function drawSpatialRain(view, time) {
     gl.vertexAttribPointer(tetherRenderer.positionLocation, 3, gl.FLOAT, false, 12, 0);
     gl.uniformMatrix4fv(tetherRenderer.projectionLocation, false, view.projectionMatrix);
     gl.uniformMatrix4fv(tetherRenderer.viewLocation, false, view.transform.inverse.matrix);
-    gl.uniform4fv(tetherRenderer.colorLocation, [.83, .94, .91, .14]);
+    gl.uniform4fv(tetherRenderer.colorLocation, [.81, .92, .90, .12+.17*rainProgress]);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
