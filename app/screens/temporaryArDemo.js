@@ -17,6 +17,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
+import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -95,6 +96,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
+let ambientCanvas=null,ambientGrowth={progress:0,lastElapsed:0},ambientGrowthTarget=0,ambientSeedStartedAt=NaN,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -198,8 +200,7 @@ const WELCOME_NARRATIVE = Object.freeze([
     Object.freeze({at:6000,text:demoLocalizedText('What if those stories could meet you right where the plants grow?'),accent:'#7fa7e8'}),
     Object.freeze({at:12000,text:demoLocalizedText('XR connects digital information to the real world around you.'),accent:'#8fc77a'}),
     Object.freeze({at:18000,text:demoLocalizedText('Four pathways invite you to explore plants, places, design and change.'),accent:'#e7b45f'}),
-    Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'}),
-    Object.freeze({at:28200,text:demoLocalizedText('When ready, explore the four pathways.'),accent:'#dcef95'})
+    Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'})
 ]);
 export const welcomeNarrative=elapsed=>{
     const index=WELCOME_NARRATIVE.findLastIndex(item=>elapsed>=item.at);
@@ -210,6 +211,7 @@ export const welcomeNarrative=elapsed=>{
 };
 const DEMO_WELCOME_OPENING_MS=30000;
 const DEMO_WELCOME_CONTINUE_MS=30000;
+export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
 const DEMO_ARCHETYPE_START_MS=20500;
 const DEMO_ARCHETYPE_INTERVAL_MS=2500;
@@ -403,6 +405,7 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
+    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -1317,6 +1320,30 @@ function paintWelcomeLayer(now) {
     }
 }
 
+function tickDemoAmbientLife(){
+    if(!Number.isFinite(ambientSeedStartedAt) && arWelcomeClock.elapsed>=12000){
+        ambientSeedStartedAt=arWelcomeClock.elapsed;
+        ambientGrowthTarget=Math.max(ambientGrowthTarget,.22);
+    }
+    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    ambientGrowth=reducedMotion
+        ? {progress:ambientGrowthTarget,lastElapsed:arWelcomeClock.elapsed}
+        : advanceAmbientGrowth(ambientGrowth,arWelcomeClock.elapsed,ambientGrowthTarget,ambientSeedStartedAt);
+}
+
+function paintDemoAmbientLife(now){
+    if(!ambientCanvas || now-ambientLastPaint<33)return;
+    ambientLastPaint=now;
+    tickDemoAmbientLife();
+    if(!Number.isFinite(ambientSeedStartedAt))return;
+    const width=window.innerWidth,height=window.innerHeight,ratio=Math.min(window.devicePixelRatio||1,1.5);
+    if(ambientCanvas.width!==Math.round(width*ratio))ambientCanvas.width=Math.round(width*ratio);
+    if(ambientCanvas.height!==Math.round(height*ratio))ambientCanvas.height=Math.round(height*ratio);
+    const context=ambientCanvas.getContext('2d');
+    context.setTransform(ratio,0,0,ratio,0,0);
+    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
+}
+
 function showArWelcomeShowcase() {
     selectedLimCell='';
     introBoardStep='';
@@ -1435,6 +1462,7 @@ function showArWelcomeShowcase() {
         if(simulatedMode && now-last>=50 && (!reduced || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
+        if(simulatedMode)paintDemoAmbientLife(now);
         // XRSession frames drive immersive textures; a hidden DOM canvas need
         // not render a second copy. Reduced motion repaints only changed copy.
         // The DOM preview and XR overlay both need the same reveal clock. Use
@@ -1444,16 +1472,9 @@ function showArWelcomeShowcase() {
     frame(performance.now());
     button.textContent=demoLocalizedText('Meet the Control Panel');button.hidden=true;button.disabled=true;syncDemoPanelActions();
     if(skip)skip.hidden=true;
-    const unlockWelcome=()=>{
-        if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
-        if(arWelcomeOpeningActive || !welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
-        button.disabled=false;button.hidden=false;
-        syncDemoPanelActions();
-        setGuide('Press Meet the Control Panel when ready. The four pathways will follow after its introduction.');
-    };
-    arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    button.onclick=()=>{
+    const advanceWelcome=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
+        clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
@@ -1461,7 +1482,19 @@ function showArWelcomeShowcase() {
         limMeshVisible=false;
         runArWelcomeTutorial(0);
     };
-    // Only the explicit Continue action advances beyond the introduction.
+    const unlockWelcome=()=>{
+        if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
+        if(!arWelcomeOpeningActive && welcomeSequenceCanContinue()){
+            if(button.disabled){button.disabled=false;button.hidden=false;syncDemoPanelActions();}
+            if(welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+                advanceWelcome();return;
+            }
+        }
+        arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
+    };
+    arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
+    button.onclick=advanceWelcome;
+    // The control is an optional shortcut; the guided flow continues by itself.
     setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
 }
 
@@ -1514,6 +1547,11 @@ const DEMO_ORIENTATION_STEPS = [
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
+    if(index>=1){
+        if(!Number.isFinite(ambientSeedStartedAt))ambientSeedStartedAt=arWelcomeClock.elapsed;
+        ambientGrowthTarget=Math.max(ambientGrowthTarget,[0,.37,.53,.68,.78][index] || 0);
+    }
+    if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=index>0;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
@@ -1626,6 +1664,7 @@ function cycleDemoNoteTemplate(record) {
 }
 
 function showDemoClosingMessage() {
+    ambientGrowthTarget=1;
     showIntroBoard(
         'NourishlandXR',
         [
@@ -1769,6 +1808,7 @@ function showLinkedTotemsIntroduction() {
 }
 
 function showTotemIntroduction() {
+    ambientGrowthTarget=1;
     showIntroBoard(
         'Area Totems',
         [
@@ -1785,6 +1825,7 @@ function showTotemIntroduction() {
 }
 
 function showSpatialGardenSummary() {
+    ambientGrowthTarget=Math.max(ambientGrowthTarget,.95);
     showIntroBoard(
         'Your place is becoming connected',
         'This place now holds two plant profiles and one observation. NourishlandXR maps them into Areas; each Area can have a welcoming Totem that connects plants, stories and visitor guidance.',
@@ -1861,6 +1902,7 @@ function refreshSimulatedPlacementAim() {
 }
 
 function armDemoPlacement(type, {explained=false}={}) {
+    ambientGrowthTarget=Math.max(ambientGrowthTarget,type==='plant'? .82:type==='plant2'? .88:.92);
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     placementReady = false;
@@ -3070,7 +3112,9 @@ function renderInterface(simulated) {
     introSceneStartedAt = performance.now();
     introSceneActive = true;
     introBoardHasEntered = false;
-    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${INTRO_KNOWLEDGE_KEYWORDS.map((keyword, index) => `<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length ? `<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child => `<span>${child}</span>`).join('')}</span>` : ''}</span>`).join('')}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    const biomapMarkup=INTRO_KNOWLEDGE_KEYWORDS.map((keyword,index)=>`<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length?`<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child=>`<span>${child}</span>`).join('')}</span>`:''}</span>`).join('');
+    appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><canvas class="tryit-ambient-life" data-demo-ambient aria-hidden="true"></canvas><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${biomapMarkup}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
     infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
@@ -3881,6 +3925,49 @@ function createMarkerTexture(record) {
     return markerTexture;
 }
 
+function drawDemoAmbientLines(view,vertices,color){
+    if(!vertices.length || !tetherRenderer)return;
+    gl.useProgram(tetherRenderer.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER,tetherRenderer.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(tetherRenderer.positionLocation);
+    gl.vertexAttribPointer(tetherRenderer.positionLocation,3,gl.FLOAT,false,12,0);
+    gl.uniformMatrix4fv(tetherRenderer.projectionLocation,false,view.projectionMatrix);
+    gl.uniformMatrix4fv(tetherRenderer.viewLocation,false,view.transform.inverse.matrix);
+    gl.uniform4fv(tetherRenderer.colorLocation,color);
+    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);gl.drawArrays(gl.LINES,0,vertices.length/3);gl.depthMask(true);
+}
+
+function drawSpatialAmbientLife(view){
+    if(!sphereRenderer || !prismRenderer || !viewerMatrix || !Number.isFinite(ambientSeedStartedAt) || ambientGrowth.progress<.01)return;
+    if(!ambientWorldAnchor){
+        const rightLength=Math.hypot(viewerMatrix[0],viewerMatrix[2])||1;
+        const rightX=viewerMatrix[0]/rightLength,rightZ=viewerMatrix[2]/rightLength;
+        const forwardX=-viewerMatrix[8],forwardZ=-viewerMatrix[10];
+        ambientWorldAnchor={x:viewerMatrix[12]+rightX*.95+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.95+forwardZ*2.4};
+    }
+    const base=ambientWorldAnchor,growth=ambientGrowth.progress,height=.12+growth*1.12;
+    drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.007+growth*.015,halfHeight:height/2,halfDepth:.008+growth*.014,color:[.27,.36,.21],topColor:[.42,.53,.31],alpha:.55});
+    const canopy=Math.max(0,Math.min(1,(growth-.25)/.5));
+    if(canopy>0){
+        for(const side of [-1,1])drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.17*canopy,y:base.y+height*(side<0?.77:.86),z:base.z},(.08+.22*canopy),{scale:{x:1.1,y:.7,z:.8},color:[.35,.57,.33],alpha:.19+.08*canopy,emissive:.07});
+    }
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const wings=[];
+    for(let index=0;index<2;index++){
+        const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index);
+        if(!bee)continue;
+        const position={x:base.x+(bee.x-.79)*3,y:base.y+Math.max(.5,height*.66)+(bee.y-.62)*2,z:base.z+bee.depth};
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
+        const flap=.025+Math.abs(bee.wing)*.013;
+        wings.push(position.x-.008,position.y,position.z,position.x-.025,position.y+flap,position.z,
+            position.x+.008,position.y,position.z,position.x+.025,position.y+flap,position.z);
+    }
+    drawDemoAmbientLines(view,wings,[.9,.97,.93,.53]);
+}
+
 function drawSpatialRain(view, time) {
     if (!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix
         || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
@@ -4242,6 +4329,7 @@ async function startImmersive() {
             }
             pimHold?.tick(_time);
             if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
+            tickDemoAmbientLife();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
@@ -4253,6 +4341,7 @@ async function startImmersive() {
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialRain(view, _time);
+                drawSpatialAmbientLife(view);
                 drawMarker(view);
                 drawDemoKnowledge(view);
                 infoPanel?.draw(view);

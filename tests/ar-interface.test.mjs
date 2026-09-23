@@ -15,7 +15,8 @@ import {
     selectDemoPlantRecord,
     selectGuidedDemoOrb,
     welcomeNarrative,
-    demoRainProgress
+    demoRainProgress,
+    welcomeAutoAdvanceReady
 } from '../app/screens/temporaryArDemo.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
 import { avoidDemoPanelOverlap } from '../app/services/demoPanelGeometry.js';
@@ -44,6 +45,10 @@ test('welcome narrative finishes without restarting and rain grows after XR is i
     assert.ok(demoRainProgress(14000) > 0 && demoRainProgress(14000) < 1);
     assert.equal(demoRainProgress(17000), 1);
     assert.equal(demoRainProgress(90000), 1);
+    assert.equal(welcomeAutoAdvanceReady(30000), false);
+    assert.equal(welcomeAutoAdvanceReady(32500), true);
+    assert.equal(welcomeAutoAdvanceReady(1600, true), false);
+    assert.equal(welcomeAutoAdvanceReady(4100, true), true);
     const styles = read('app/style.css');
     assert.match(styles, /data-rain-stage="first-drops"/);
     assert.match(styles, /data-rain-stage="mist"/);
