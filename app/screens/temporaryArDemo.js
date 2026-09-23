@@ -200,11 +200,18 @@ const WELCOME_NARRATIVE = Object.freeze([
     Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'}),
     Object.freeze({at:28200,text:demoLocalizedText('When ready, explore the four pathways.'),accent:'#dcef95'})
 ]);
-const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
+const welcomeNarrative=elapsed=>{
+    const phase=elapsed%DEMO_WELCOME_CONTINUE_MS;
+    const index=WELCOME_NARRATIVE.findLastIndex(item=>phase>=item.at);
+    const item=WELCOME_NARRATIVE[Math.max(0,index)];
+    const nextAt=WELCOME_NARRATIVE[index+1]?.at ?? DEMO_WELCOME_CONTINUE_MS;
+    const alpha=Math.max(0,Math.min(1,(phase-item.at)/900,(nextAt-phase)/900));
+    return {...item,alpha};
+};
 const DEMO_WELCOME_OPENING_MS=30000;
 const DEMO_WELCOME_CONTINUE_MS=30000;
-const DEMO_ARCHETYPE_START_MS=16000;
-const DEMO_ARCHETYPE_INTERVAL_MS=4000;
+const DEMO_ARCHETYPE_START_MS=20500;
+const DEMO_ARCHETYPE_INTERVAL_MS=2500;
 const DEMO_ARCHETYPE_REVEAL_MS=1400;
 // Canvas texture uploads are expensive on phones. Coalesce the continuously
 // changing welcome copy/mesh into a modest cadence so typing and input stay
@@ -1351,6 +1358,7 @@ function showArWelcomeShowcase() {
     panel.hidden=true;
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-opening','true');
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-surface','true');
+    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-intro-pending','true');
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
     let openingTypedLength=introBoardBody.length,openingTyping=false;
     const openingTextWindow=panel.querySelector('.tryit-board-text-window');
@@ -1439,6 +1447,7 @@ function showArWelcomeShowcase() {
     button.onclick=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
         arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
+        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
@@ -1475,9 +1484,13 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Four ways to explore',button:'Meet the Plant Orb',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Plant Orb when you are ready.',paragraphs:[
+    {title:'Four ways to explore',button:'Meet your companion',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Control panel when you are ready.',paragraphs:[
         'Choose the question that interests you. All four pathways remain available as you explore.',
         'Read Nature observes a place. Understand the Land explores living relationships. Design the Forest imagines how plants work together. Shape the Outcome considers care and change over time.'
+    ]},
+    {title:'Your companion panel',button:'Meet the Plant Orb',nextGuide:'The Control panel stays with you as you explore. Press Meet the Plant Orb when you are ready.',paragraphs:[
+        'The Control panel is your companion for this journey, not another place you must visit. It stays nearby as the landscape remains in view.',
+        'Choose a living cell to read its story here. Open the side dots for sections or imagery, and move the panel wherever it feels comfortable.'
     ]},
     {title:'Meet the Plant Orb',button:'Explore Areas',nextGuide:'Press Explore Areas after learning how a Plant Orb connects to a real plant.',paragraphs:[
         'A Plant Orb belongs at a real plant and opens that plant’s information there.',
@@ -1502,10 +1515,10 @@ function runArWelcomeTutorial(index=0) {
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
-        if(index===2){introducePigeonPeaExample();return;}
+        if(index===3){introducePigeonPeaExample();return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of 4 · '+['Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Pathways','Control panel','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
 }
 
 function guidePlantConversion(record) {
@@ -3461,10 +3474,12 @@ function drawIntroNoteContent(ctx) {
     const narrative = isOpeningStatement ? welcomeNarrative(arWelcomeClock.elapsed) : null;
     ctx.textAlign = isOpeningStatement ? 'center' : 'left';
     if(narrative){
-        ctx.save();ctx.globalAlpha=.18;
+        ctx.save();ctx.globalAlpha*=.18*narrative.alpha;
         const glow=ctx.createRadialGradient(contentCenter,610,10,contentCenter,610,360);
         glow.addColorStop(0,narrative.accent);glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(contentLeft,480,contentWidth,290);ctx.restore();
     }
+    ctx.save();
+    if(narrative)ctx.globalAlpha*=narrative.alpha;
     ctx.fillStyle = narrative?.accent || 'rgba(255,255,255,.96)';
     const typedBody = narrative?.text || (introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
@@ -3495,6 +3510,7 @@ function drawIntroNoteContent(ctx) {
         paragraphY += completeLines.length * bodyLayout.lineHeight + bodyLayout.paragraphGap;
     }
     if (clipped) ctx.fillText('…', bodyX, bodyBottom);
+    ctx.restore();
     ctx.restore();
     }
     if(introBoardNextGuideVisible && introBoardNextGuide){

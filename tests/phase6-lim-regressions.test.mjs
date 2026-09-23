@@ -29,13 +29,16 @@ test('LIM hit targets use cell coordinates while the welcome panel keeps its own
     assert.equal(welcomeCellAtPoint(welcomeExperienceFrames(64000, true), node.x, node.y).key, node.key);
 });
 
-test('Phase 6 panel recovery keeps the southwest pose until it leaves the safe forward envelope', () => {
+test('spatial panel keeps its pose through head turns and only moves on grab or explicit recenter', () => {
     const matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,1.6,0,1];
     const pose = infoPanelPose(matrix);
     assert.equal(panelPoseOutsideSafeBounds(matrix, pose), false);
     const turned = [0,0,1,0, 0,1,0,0, -1,0,0,0, 0,1.6,0,1];
     assert.equal(panelPoseOutsideSafeBounds(turned, pose), true);
-    assert.match(panelSource, /panelPoseOutsideSafeBounds\(matrix,pose\)/);
+    assert.doesNotMatch(panelSource, /if\(!manuallyPositioned && panelPoseOutsideSafeBounds\(matrix,pose\)\)/);
+    assert.doesNotMatch(panelSource, /Object\.assign\(pose,facePanelTowardEyes\(pose\.center/);
+    assert.match(panelSource, /else if\(!pose\)pose=next/);
+    assert.match(panelSource, /const spatialHeight=\(\)=>headset\?1250:height\(\)/);
 });
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {

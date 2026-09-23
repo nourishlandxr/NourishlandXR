@@ -1343,7 +1343,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=30000/);
-    assert.match(source, /const DEMO_ARCHETYPE_START_MS=16000/);
+    assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
     assert.match(source, /XR connects digital information to the real world around you/);
     assert.match(source, /Four pathways invite you to explore plants, places, design and change/);

@@ -118,7 +118,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
-    const rail=railCollapsed?62:200,media=mediaCollapsed?62:230;
+    const rail=railCollapsed?62:200,media=62;
     const left=rail+22,width=1000-rail-media-44;
     const button=(item,x,y,w,h)=>({...item,x,y,width:w,height:h});
     const result=[button({action:'MovePanel',label:'●',ariaLabel:'Grab and move Control panel',kind:'handle'},744,24,62,48),
@@ -166,7 +166,8 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
-    const spatialHeight=()=>headset?Math.max(850,height()+190):height();
+    // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
+    const spatialHeight=()=>headset?1250:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
     function act(action){
         const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
@@ -367,7 +368,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(53,75,62,.74)');gradient.addColorStop(1,'rgba(19,34,28,.66)');
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,22);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(205,229,202,.42)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         if(card.headset && !card.hidden){
-            const rail=card.railCollapsed?62:200,media=card.mediaCollapsed?62:230;
+            const rail=card.railCollapsed?62:200,media=62;
             const left=rail+22,right=1000-media-22,width=right-left;
             ctx.fillStyle='rgba(11,25,20,.25)';ctx.fillRect(6,115,rail,c.height-122);
             ctx.fillStyle='rgba(14,29,24,.28)';ctx.fillRect(1000-media,115,media-6,c.height-122);
@@ -389,9 +390,11 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const lineHeight=card.largeText?46:41;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(!card.mediaCollapsed){
-                const imageX=1000-media+12,imageY=206,imageWidth=media-28,imageHeight=Math.max(180,card.height-300);
+                // Media opens over the reading bay. Its size follows panel height,
+                // not the narrow collapsed media rail or the source thumbnail.
+                const imageX=rail+12,imageY=194,imageWidth=1000-imageX-18,imageHeight=card.height-300;
+                ctx.fillStyle='rgba(12,22,31,.97)';ctx.fillRect(imageX-8,imageY-8,imageWidth+16,imageHeight+16);
                 if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight);
-                    ctx.fillStyle='rgba(233,239,228,.92)';ctx.fillRect(imageX,imageY,imageWidth,imageHeight);
                     ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
                 }else{ctx.fillStyle='#bdc9cc';ctx.font='400 20px system-ui';infoPages('Plant media appears here when a plant is selected.',18,4)[0].forEach((line,index)=>ctx.fillText(line,imageX,imageY+index*27,imageWidth));}
             }
@@ -474,7 +477,6 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
-            if(!manuallyPositioned && panelPoseOutsideSafeBounds(matrix,pose)){heading=null;pose=null;lastTime=0;}
             const next=infoPanelPose(matrix,heading,headset);if(!next)return;heading=next.anchorHeading;
             let heldTransform=null;
             if(spatialMove && xrFrame?.getPose && spatialMove.source?.targetRaySpace && spatialMove.referenceSpace){
@@ -485,11 +487,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
                 pose ||= next;
                 pose.center=panelCenterFromGrab(heldRay,spatialMove,pose);
                 manuallyPositioned=true;
-            }else if(!manuallyPositioned){
-                const amount=pose?1-Math.exp(-Math.min(100,Math.max(0,time-lastTime))/160):1;
-                if(!pose)pose=next;else for(const key of ['x','y','z'])pose.center[key]+=(next.center[key]-pose.center[key])*amount;
-            }
-            if(!spatialMove)Object.assign(pose,facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]}));
+            }else if(!pose)pose=next;
             lastTime=time;
         },
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;spatialMove=null;},

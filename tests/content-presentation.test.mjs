@@ -39,6 +39,19 @@ test('demo welcomes visitors and invites imagination before defining XR', () => 
     assert.match(demo, /introBoardBody=demoLocalizedText\('Welcome to NourishlandXR/);
 });
 
+test('pathways follow their spoken invitation, copy fades, and the companion panel is introduced', () => {
+    const demo=read('app/screens/temporaryArDemo.js');
+    const panel=read('app/services/pimInfoPanel.js');
+    const styles=read('app/living-objects.css');
+    assert.match(demo,/at:18000,text:demoLocalizedText\('Four pathways invite/);
+    assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
+    assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
+    assert.match(demo,/Your companion panel[\s\S]*The Control panel is your companion/);
+    assert.match(panel,/const spatialHeight=\(\)=>headset\?1250:height\(\)/);
+    assert.match(styles,/100cqh - 12px/);
+    assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
+});
+
 test('Plant Orb responds to pointer contact in preview and immersive mode', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
