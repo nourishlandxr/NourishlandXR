@@ -1335,7 +1335,8 @@ function showArWelcomeShowcase() {
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
-    infoPanel?.suspend(true);
+    infoPanel?.setCompact(true);
+    infoPanel?.suspend(false);
     const openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);

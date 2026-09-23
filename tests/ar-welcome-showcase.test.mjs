@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeOpeningFrames,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+import fs from 'node:fs';
+
+const showcaseSource=fs.readFileSync(new URL('../app/services/arWelcomeShowcase.js',import.meta.url),'utf8');
 
 test('the opening uses the existing LIM mesh with seeded parent-first succession',()=>{
  const first=welcomeOpeningFrames(0,73421),repeat=welcomeOpeningFrames(0,73421),variation=welcomeOpeningFrames(0,73422);
@@ -55,6 +58,8 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
  assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),59);
  assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
  assert.ok(lines>0,'parent-child relationships retain a simple line');
+ assert.match(showcaseSource,/startInset=parent\?\.isAttachment\?0:/);
+ assert.match(showcaseSource,/endInset=\(node\.baseRadius\|\|0\)\*\(node\.scale\|\|0\)\*\.94/);
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{

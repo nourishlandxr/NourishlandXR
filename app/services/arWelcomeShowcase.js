@@ -441,11 +441,17 @@ function openingHash(value){
 function drawOrganicTendril(ctx,node,frame){
  if(!node.openingCurve || node.openingPathProgress<=0)return;
  const curve=partialCubic(node.openingCurve,node.openingPathProgress);
+ const dx=curve.to.x-curve.from.x,dy=curve.to.y-curve.from.y,length=Math.hypot(dx,dy)||1;
+ const parent=node.openingMeta?.parent;
+ const startInset=parent?.isAttachment?0:(parent?.baseRadius||0)*(parent?.scale||0)*.94;
+ const endInset=(node.baseRadius||0)*(node.scale||0)*.94;
+ if(length<=startInset+endInset)return;
+ const start={x:curve.from.x+dx/length*startInset,y:curve.from.y+dy/length*startInset};
+ const end={x:curve.to.x-dx/length*endInset,y:curve.to.y-dy/length*endInset};
  // One quiet connection is enough to explain the relationship. Keeping it
- // below the cell pass avoids the doubled glow, animated tip and shadow work
- // that made the Quest opening visually busy and expensive to repaint.
+ // strictly edge-to-edge avoids hidden line segments beneath either cell.
  ctx.save();ctx.globalAlpha=frame.organismOpacity*(.22+node.openingPathProgress*.34);ctx.lineCap='round';
- ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.lineTo(curve.to.x,curve.to.y);
+ ctx.beginPath();ctx.moveTo(start.x,start.y);ctx.lineTo(end.x,end.y);
  ctx.strokeStyle=accentRgba(node.accent,108,.58);ctx.lineWidth=node.openingDepth===1?4:3;ctx.stroke();
  ctx.restore();
 }
