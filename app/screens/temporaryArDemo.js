@@ -1137,7 +1137,7 @@ function activateLimCell(key) {
     if(content.id==='lim-intro-vision' && !arWelcomeVisionActivated){
         arWelcomeVisionActivated=true;arWelcomeVisionActivatedAt=arWelcomeClock.elapsed;
         appRoot?.querySelector('.tryit-demo')?.setAttribute('data-welcome-vision','true');
-        setGuide('Vision selected. Read the Place, Understand Life, Design the Forest and Shape the Outcome are now unfolding around the welcome panel.');
+        setGuide('Vision selected. Read Nature, Understand the Land, Design the Forest and Shape the Outcome are now unfolding around the welcome panel.');
     }
     infoPanel?.showLearning({...content,mesh:'lim'});
     infoPanel?.suspend(false);

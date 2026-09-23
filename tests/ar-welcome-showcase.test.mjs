@@ -69,7 +69,7 @@ test('minimal introduction reveals only four coloured primary pathways without c
  for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
  const frames=drawArWelcomeShowcase(ctx,12000,false,createArWelcomeClusters(),{opening:true,minimalIntro:true,openingSeed:73421,drawPanel:false});
  const nodes=frames.flatMap(frame=>frame.nodes);
- assert.deepEqual(nodes.map(node=>node.label),['Read the Place','Understand Life','Design the Forest','Shape the Outcome']);
+ assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  assert.ok(lines>0,'the four primary cells retain their hexagon outlines');
  assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
 });
@@ -180,7 +180,7 @@ test('Vision opens first, then four archetypes preserve ancestry and spacing',as
  assert.ok(nodes.every(n=>n.opacity===0));
  const order=[...nodes].sort((a,b)=>a.revealAt-b.revealAt);
  assert.equal(order[0].label,'Vision');
- assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Read the Place','Understand Life','Design the Forest','Shape the Outcome']);
+ assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
  assert.ok(nodes.every(node=>node.x-node.radius>0 && node.x+node.radius<2500 && node.y-node.radius>0 && node.y+node.radius<2100));
@@ -195,9 +195,9 @@ test('Vision is the only live cell until activation releases the four archetypes
  const waiting=welcomeExperienceFrames(30000,false,graphs,new Set(),{visionActivated:false,visionActivatedAt:NaN}).flatMap(frame=>frame.nodes);
  assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Vision']);
  const opening=welcomeExperienceFrames(activationAt+1800,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Read the Place']);
+ assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Read Nature']);
  const foundations=welcomeExperienceFrames(activationAt+7200,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Read the Place','Understand Life','Design the Forest','Shape the Outcome']);
+ assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  assert.ok(foundations.every(node=>node.depth===0 || node.opacity===0));
  const branching=welcomeExperienceFrames(activationAt+9000,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt,expandedLimIds:['lim-intro-analysis'],expandedAt:{'lim-intro-analysis':activationAt+7200}}).flatMap(frame=>frame.nodes);
  assert.ok(branching.some(node=>node.depth===1 && node.opacity>0));
@@ -206,7 +206,7 @@ test('Vision is the only live cell until activation releases the four archetypes
 
 test('expanded LIM content forms a logical four-branch learning cycle',()=>{
  assert.equal(LIM_INTRO_CELLS.length,27);
- assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.title),['Read the Place','Understand Life','Design the Forest','Shape the Outcome']);
+ assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.title),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.children.length),[4,6,6,6]);
  const ids=new Set(LIM_INTRO_CELLS.map(cell=>cell.id));
  assert.equal(ids.size,LIM_INTRO_CELLS.length);
@@ -226,7 +226,7 @@ test('expanded LIM content forms a logical four-branch learning cycle',()=>{
  assert.ok(settledChildren.every(node=>node.opacity===1),'all six children eventually settle');
  const feedback=limLearningContent('lim-intro-smart-feedback');
  assert.match(feedback.body,/Explore · Observe · Record · Compare · Learn · Adjust · Return to place/);
- assert.match(feedback.body,/Next · Return to Read the Place/);
+ assert.match(feedback.body,/Next · Return to Read Nature/);
 });
 
 test('every pitch-deck cell carries a deep learning prompt without changing its identity',()=>{
