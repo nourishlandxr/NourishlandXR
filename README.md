@@ -1,4 +1,4 @@
-# NourishlandXR v0.9100
+# NourishlandXR v0.9101
 
 A place-based learning platform with a browser Creator workspace, a public visitor experience, and optional AR modes. Content is stored as structured project, site, area, marker, anchor, and plant-profile records.
 

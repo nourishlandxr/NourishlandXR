@@ -49,7 +49,7 @@ export function infoPanelPose(matrix, heading = null, headset = false) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    const side=headset ? .43 : .64,forward=headset ? 1.05 : .58,drop=headset ? .30 : .70;
+    const side=headset ? .68 : .64,forward=headset ? 1.12 : .58,drop=headset ? .34 : .70;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
@@ -280,7 +280,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const lineHeight=card.largeText?39:34;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(!card.mediaCollapsed){
-                const imageX=1000-media+12,imageY=206,imageWidth=media-28,imageHeight=180;
+                const imageX=1000-media+12,imageY=206,imageWidth=media-28,imageHeight=Math.max(180,card.height-300);
                 if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight);
                     ctx.fillStyle='rgba(233,239,228,.92)';ctx.fillRect(imageX,imageY,imageWidth,imageHeight);
                     ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
@@ -330,7 +330,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':'#f1f4f4';ctx.font=(button.primary?'700 ':'500 ')+'25px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-30)/2,button.width-16);
         });return c;
     }
-    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.30:.82,height:hidden?.07:spatialHeight()/1000*.82}]);}
+    function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66}]);}
     const api={element,
         showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};mediaImage=null;mediaLoadToken++;tab='Details';hidden=false;page=0;render();},
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
@@ -343,6 +343,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const previousMedia=record===nextRecord ? identity?.media : null;
             const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || '')} : previousMedia;
             record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia};mediaImage=null;
+            if(nextMedia?.image)mediaCollapsed=false;
             const token=++mediaLoadToken;
             if(nextMedia?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token!==mediaLoadToken)return;mediaImage=image;render();};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=nextMedia.image;}
             tab='Details';page=0;render();
@@ -350,7 +351,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const media=record===nextRecord?identity?.media:null;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media};tab='Details';hidden=false;page=0;render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
-        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.30:.82,height:hidden?.07:spatialHeight()/1000*.82,card:cards[0]}]:[]});element.hidden=true;},
+        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now()){
             if(panelPoseOutsideSafeBounds(matrix,pose)){heading=null;pose=null;lastTime=0;}
             const next=infoPanelPose(matrix,heading,headset);if(!next)return;heading=next.anchorHeading;

@@ -6,10 +6,10 @@ import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLea
 export const AR_WELCOME_CORNER_MS = 16000;
 export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
 // The opening is rendered on the same LIM surface as the settled mesh. It is
-// deliberately short enough to feel like an arrival, while still leaving
-// time for the authored parent/child sequence to travel across the board.
-export const AR_WELCOME_OPENING_MS = 9800;
-export const AR_WELCOME_REDUCED_OPENING_MS = 1400;
+// deliberately unhurried so the authored parent/child sequence can be read
+// as it travels around the protected welcome surface.
+export const AR_WELCOME_OPENING_MS = 18000;
+export const AR_WELCOME_REDUCED_OPENING_MS = 1800;
 export const LIM_REVEAL_ANIMATION_MS = 4500;
 export function welcomeRevealIsAnimating(elapsed,expandedTimes=[],visionAt=NaN){
  return [visionAt,...expandedTimes].some(start=>Number.isFinite(start)&&elapsed>=start&&elapsed-start<LIM_REVEAL_ANIMATION_MS);
@@ -386,8 +386,9 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
   ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-7),y=Math.sin(a)*(r-7);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
  }
- if(selected){
-  ctx.globalAlpha=node.opacity*.9;ctx.shadowColor=accentRgba(accent,hue,.55);ctx.shadowBlur=18;ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=5;
+ if(selected || visual.hovered){
+  const hoverOnly=visual.hovered && !selected;
+  ctx.globalAlpha=node.opacity*(hoverOnly?.76:.9);ctx.shadowColor=accentRgba(accent,hue,.55);ctx.shadowBlur=hoverOnly?12:18;ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?4:5;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
   ctx.setLineDash([r*.34,r*.18]);ctx.globalAlpha=node.opacity*.65;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.86)';
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-8),y=Math.sin(a)*(r-8);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
@@ -461,18 +462,21 @@ function prepareOrganicOpeningFrames(frames,elapsed,seed,duration,reducedMotion)
  const meta=new Map();
  for(const node of openingNodes){
   const random=seededRandom((Number(seed)>>>0)^openingHash(node.key||node.id));
-  const parent=node.id==='vision'?null:(node.parent?byId.get(node.parent):vision);
+  // Root branches grow outward from their own edge attachment. Connecting
+  // every root back to Vision sent long tendrils through the central welcome
+  // surface, especially in the wide Quest view.
+  const parent=node.id==='vision'?null:(node.parent?byId.get(node.parent):(node.attachment?{...node.attachment,id:`attachment-${node.id}`,isAttachment:true}:vision));
   const openingDepth=parent?(node.depth===0?1:node.depth):0;
-  let openAt=420+(Number(node.revealAt)||0)/maxReveal*(duration*0.58)+(random()-.5)*240;
-  if(parent)openAt=Math.max(openAt,(meta.get(parent.id)?.bloomAt||0)+230+random()*180);
-  const travel=parent?Math.round(540+random()*260):0;
+  let openAt=700+(Number(node.revealAt)||0)/maxReveal*(duration*0.60)+(random()-.5)*280;
+  if(parent && !parent.isAttachment)openAt=Math.max(openAt,(meta.get(parent.id)?.bloomAt||0)+360+random()*260);
+  const travel=parent?Math.round((parent.isAttachment?760:820)+random()*420):0;
   const bloomAt=openAt+travel*.72;
-  const bloomDuration=parent?Math.round(480+random()*180):760;
-  const curve=parent?organicCurve(parent,node,random,.17+random()*.18):null;
+  const bloomDuration=parent?Math.round(760+random()*320):1100;
+  const curve=parent?organicCurve(parent,node,random,parent.isAttachment?.08:.14+random()*.14):null;
   meta.set(node.id,{parent,openingDepth,openAt,travel,bloomAt,bloomDuration,curve});
  }
- const time=reducedMotion?duration*4:Math.max(0,Number(elapsed)||0);
- const openingOpacity=reducedMotion?1:1-smooth(time,duration-1400,1200);
+ const time=reducedMotion?duration*32:Math.max(0,Number(elapsed)||0);
+ const openingOpacity=reducedMotion?1:1-smooth(time,duration-3000,2600);
  const openingFrame={time,organismOpacity:openingOpacity};
  for(const node of allNodes){
   const entry=meta.get(node.id),parent=entry?.parent;
@@ -559,7 +563,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
   const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
-  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:(options.selectedKey===node.key||linked)?1:0,selected:options.selectedKey===node.key||linked,pathway});
+  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:(options.selectedKey===node.key||linked)?1:0,selected:options.selectedKey===node.key||linked,hovered:options.hoverKey===node.key,pathway});
  }
  }
  ctx.restore();

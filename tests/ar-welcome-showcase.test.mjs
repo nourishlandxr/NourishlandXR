@@ -4,21 +4,26 @@ import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION
 
 test('the opening uses the existing LIM mesh with seeded parent-first succession',()=>{
  const first=welcomeOpeningFrames(0,73421),repeat=welcomeOpeningFrames(0,73421),variation=welcomeOpeningFrames(0,73422);
- assert.equal(AR_WELCOME_OPENING_MS,9800);
- assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1400);
+ assert.equal(AR_WELCOME_OPENING_MS,18000);
+ assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1800);
  assert.equal(first.reduce((count,frame)=>count+frame.nodes.length,0),59);
  assert.deepEqual(first,repeat,'one opening keeps a stable seeded LIM route');
  assert.notDeepEqual(first,variation,'a new seed changes the organic route and timing');
  const nodes=first.flatMap(frame=>frame.nodes),byId=new Map(nodes.map(node=>[node.id,node]));
  for(const node of nodes.filter(item=>item.openingParentId)){
   const parent=byId.get(node.openingParentId);
-  assert.ok(parent,`${node.id} keeps an opening parent`);
-  assert.ok(node.openingMeta.openAt>=parent.openingMeta.bloomAt,`${node.id} waits for ${parent.id} to bloom`);
+  if(node.openingParentId.startsWith('attachment-')){
+   assert.equal(node.depth,0,`${node.id} starts at its protected panel edge`);
+   assert.deepEqual({x:node.openingCurve.from.x,y:node.openingCurve.from.y},node.attachment);
+  }else{
+   assert.ok(parent,`${node.id} keeps an opening parent`);
+   assert.ok(node.openingMeta.openAt>=parent.openingMeta.bloomAt,`${node.id} waits for ${parent.id} to bloom`);
+  }
  }
 });
 
 test('existing LIM cells reveal progressively, settle, then fade before copy begins',()=>{
- const early=welcomeOpeningFrames(1800,73421),middle=welcomeOpeningFrames(5200,73421),full=welcomeOpeningFrames(8000,73421),faded=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
+ const early=welcomeOpeningFrames(3500,73421),middle=welcomeOpeningFrames(8000,73421),full=welcomeOpeningFrames(14000,73421),faded=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
  const visible=frames=>frames.flatMap(frame=>frame.nodes).filter(node=>node.opacity>0).length;
  assert.ok(visible(early)>0 && visible(early)<59);
  assert.ok(visible(middle)>visible(early) && visible(middle)<59);

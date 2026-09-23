@@ -254,34 +254,40 @@
 /* The LIM opening uses the same live green-screen surface as the settled
    mesh. Keep that one surface legible on phones without introducing a second
    animation composition. */
-.tryit-demo[data-lim-opening="true"] .tryit-live-welcome {
-    inset:0 !important;
-    width:100% !important;
+.tryit-demo[data-lim-surface="true"] .tryit-live-welcome {
+    inset:50% auto auto 50% !important;
+    width:min(96vw,1100px,calc((100dvh - 28px) * 2500 / 2100)) !important;
     min-width:0 !important;
     max-width:none !important;
-    height:100% !important;
-    aspect-ratio:auto !important;
-    transform:none !important;
+    height:auto !important;
+    aspect-ratio:2500 / 2100 !important;
+    transform:translate(-50%,-50%) !important;
     overflow:hidden;
 }
-.tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
-    inset:50% auto auto 50%;
-    width:min(96vw,1100px,calc((100dvh - 28px) * 2500 / 2100));
-    height:auto;
-    aspect-ratio:2500 / 2100;
-    transform:translate(-50%,-50%);
+.tryit-demo[data-lim-surface="true"] .tryit-live-welcome canvas {
+    inset:0;
+    width:100%;
+    height:100%;
+    aspect-ratio:auto;
+    transform:none;
     opacity:1;
     object-fit:fill;
     filter:saturate(1.08) drop-shadow(0 22px 42px rgba(4,24,14,.2));
 }
+.tryit-demo[data-lim-surface="true"] .tryit-live-welcome button[data-welcome-cell] {
+    border-color:transparent !important;
+    background:transparent !important;
+    color:transparent !important;
+    text-shadow:none !important;
+}
 @media(max-width:620px) and (orientation:portrait) {
-    .tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
+    .tryit-demo[data-lim-surface="true"] .tryit-live-welcome {
         width:min(178vw,760px);
         max-width:none;
     }
 }
 @media(orientation:landscape) and (max-height:720px) {
-    .tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas {
+    .tryit-demo[data-lim-surface="true"] .tryit-live-welcome {
         inset:50% auto auto 50%;
         width:min(74vw,620px);
         min-width:0;
@@ -394,9 +400,11 @@
     grid-template-columns:148px minmax(290px,1fr) 42px;
     grid-template-rows:auto minmax(0,1fr) auto auto;
     grid-template-areas:"rail header media" "rail content media" "rail tools media" "rail page media";
-    width:min(760px,calc(100vw - 28px));
-    height:min(62vh,610px);
-    bottom:132px;
+    left:12px;
+    right:auto;
+    width:min(560px,calc(100vw - 24px));
+    height:min(48vh,460px);
+    bottom:104px;
     gap:0 14px;
     padding:0 0 8px;
     overflow:hidden;
@@ -405,9 +413,9 @@
     border-color:rgba(196,207,213,.42);
     box-shadow:0 20px 52px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.12);
 }
-.nlxr-info-panel.is-demo-panel.has-media:not(.is-media-collapsed) { grid-template-columns:148px minmax(290px,1fr) minmax(210px,260px); }
+.nlxr-info-panel.is-demo-panel.has-media:not(.is-media-collapsed) { grid-template-columns:96px minmax(190px,1fr) minmax(180px,220px); }
 .nlxr-info-panel.is-demo-panel.is-rail-collapsed { grid-template-columns:72px minmax(290px,1fr) 42px; }
-.nlxr-info-panel.is-demo-panel.is-rail-collapsed.has-media:not(.is-media-collapsed) { grid-template-columns:72px minmax(290px,1fr) minmax(210px,260px); }
+.nlxr-info-panel.is-demo-panel.is-rail-collapsed.has-media:not(.is-media-collapsed) { grid-template-columns:62px minmax(190px,1fr) minmax(180px,220px); }
 .nlxr-info-panel.is-demo-panel .nlxr-control-header { padding:14px 100px 11px 4px; }
 .nlxr-info-panel.is-demo-panel .nlxr-control-header h2 { font-size:clamp(19px,2.2vw,25px); }
 .nlxr-info-panel.is-demo-panel .nlxr-control-header .is-panel-hide { right:4px; }
@@ -432,7 +440,7 @@
 .nlxr-info-panel.is-demo-panel.is-rail-collapsed .nlxr-control-tabs { padding:10px 4px; }
 .nlxr-info-panel.is-demo-panel.is-rail-collapsed .nlxr-control-tabs > :not(.nlxr-rail-toggle) { display:none; }
 .nlxr-info-panel.is-demo-panel.is-rail-collapsed .nlxr-rail-toggle { writing-mode:vertical-rl; letter-spacing:.06em; font-weight:700; }
-.nlxr-info-panel.is-demo-panel.is-opening-compact { height:min(42vh,390px); }
+.nlxr-info-panel.is-demo-panel.is-opening-compact { height:min(36vh,330px); }
 .nlxr-info-panel.is-demo-panel > [role="tabpanel"] {
     scrollbar-width:thin;
     scrollbar-color:rgba(173,197,187,.48) rgba(11,18,21,.22);
