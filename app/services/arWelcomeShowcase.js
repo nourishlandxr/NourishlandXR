@@ -8,8 +8,8 @@ export const AR_WELCOME_SHOWCASE_DURATION = AR_WELCOME_CORNER_MS * 8;
 // The opening is rendered on the same LIM surface as the settled mesh. It is
 // deliberately unhurried so the authored parent/child sequence can be read
 // as it travels around the protected welcome surface.
-export const AR_WELCOME_OPENING_MS = 18000;
-export const AR_WELCOME_REDUCED_OPENING_MS = 1800;
+export const AR_WELCOME_OPENING_MS = 16000;
+export const AR_WELCOME_REDUCED_OPENING_MS = 1600;
 export const LIM_REVEAL_ANIMATION_MS = 4500;
 export function welcomeRevealIsAnimating(elapsed,expandedTimes=[],visionAt=NaN){
  return [visionAt,...expandedTimes].some(start=>Number.isFinite(start)&&elapsed>=start&&elapsed-start<LIM_REVEAL_ANIMATION_MS);
@@ -111,7 +111,7 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
 }
 
 // Protect the first few discoveries without making the full bloom a loading gate.
-export const AR_WELCOME_CONTINUE_MS = 2200;
+export const AR_WELCOME_CONTINUE_MS = 0;
 export const AR_WELCOME_POST_VISION_CONTINUE_MS = 0;
 export function welcomeCanContinue(elapsed,visionActivatedAt){
  if(!Number.isFinite(elapsed))return false;
@@ -525,7 +525,17 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  const opening=Boolean(options.opening);
  const baseFrames=welcomeExperienceFrames(opening?AR_WELCOME_SHOWCASE_DURATION:elapsed,reducedMotion,graphs,options.hidden,opening?{...options.progression,opening:true}:options.progression);
  const openingState=opening?prepareOrganicOpeningFrames(baseFrames,elapsed,options.openingSeed||0x4e4c5852,options.openingDuration||AR_WELCOME_OPENING_MS,reducedMotion):null;
- const frames=openingState?.frames||baseFrames;
+ let frames=openingState?.frames||baseFrames;
+ if(options.minimalIntro){
+  const roots=frames.flatMap(frame=>frame.nodes).filter(node=>node.depth===0 && node.id!=='vision');
+  const order=new Map(roots.map((node,index)=>[node.key,index]));
+  frames=frames.map(frame=>({...frame,nodes:frame.nodes.filter(node=>order.has(node.key)).map(node=>{
+   const index=order.get(node.key),progress=reducedMotion?1:opening?smooth(elapsed,4800+index*1800,1100):1;
+   const scale=.84+progress*.16;
+   return {...node,progress,opacity:progress,scale,radius:node.baseRadius*scale,drawX:node.x,drawY:node.y,
+    emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
+  })})).filter(frame=>frame.nodes.length);
+ }
  if(options.drawCells===false){ctx.restore();return frames;}
  const allNodes=frames.flatMap(frame=>frame.nodes);
  const selectedNode=allNodes.find(node=>node.key===options.selectedKey);
@@ -544,9 +554,9 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // The opening keeps these same authored LIM cells and positions, but lets
  // each daughter travel along a seeded curved hypha before blooming. Once the
  // opening settles, the familiar straight LIM relationships return.
- if(opening){
+ if(opening && !options.minimalIntro){
   for(const node of frame.nodes)drawOrganicTendril(ctx,node,openingState.frame);
- } else {
+ } else if(!options.minimalIntro) {
   for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
   for(const node of frame.nodes){
    if(node.opacity>0){

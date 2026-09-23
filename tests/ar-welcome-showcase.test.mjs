@@ -7,8 +7,8 @@ const showcaseSource=fs.readFileSync(new URL('../app/services/arWelcomeShowcase.
 
 test('the opening uses the existing LIM mesh with seeded parent-first succession',()=>{
  const first=welcomeOpeningFrames(0,73421),repeat=welcomeOpeningFrames(0,73421),variation=welcomeOpeningFrames(0,73422);
- assert.equal(AR_WELCOME_OPENING_MS,18000);
- assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1800);
+ assert.equal(AR_WELCOME_OPENING_MS,16000);
+ assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1600);
  assert.equal(first.reduce((count,frame)=>count+frame.nodes.length,0),59);
  assert.deepEqual(first,repeat,'one opening keeps a stable seeded LIM route');
  assert.notDeepEqual(first,variation,'a new seed changes the organic route and timing');
@@ -60,6 +60,18 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
  assert.ok(lines>0,'parent-child relationships retain a simple line');
  assert.match(showcaseSource,/startInset=parent\?\.isAttachment\?0:/);
  assert.match(showcaseSource,/endInset=\(node\.baseRadius\|\|0\)\*\(node\.scale\|\|0\)\*\.94/);
+});
+
+test('minimal introduction reveals only four coloured primary pathways without connectors',()=>{
+ let lines=0;
+ const stack=[];
+ const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},restore(){Object.assign(this,stack.pop());},measureText(text){return {width:text.length*10};},createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},lineTo(){lines+=1;}};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+ const frames=drawArWelcomeShowcase(ctx,12000,false,createArWelcomeClusters(),{opening:true,minimalIntro:true,openingSeed:73421,drawPanel:false});
+ const nodes=frames.flatMap(frame=>frame.nodes);
+ assert.deepEqual(nodes.map(node=>node.label),['Read the Place','Understand Life','Design the Forest','Shape the Outcome']);
+ assert.ok(lines>0,'the four primary cells retain their hexagon outlines');
+ assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{
@@ -138,12 +150,12 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
 
 test('Continue unlocks after the welcome entrance without requiring Vision',async()=>{
  const {welcomeCanContinue,AR_WELCOME_CONTINUE_MS,AR_WELCOME_POST_VISION_CONTINUE_MS}=await import('../app/services/arWelcomeShowcase.js');
- assert.equal(AR_WELCOME_CONTINUE_MS,2200);
+ assert.equal(AR_WELCOME_CONTINUE_MS,0);
  assert.equal(AR_WELCOME_POST_VISION_CONTINUE_MS,0);
- for(const elapsed of [-1,0,2199,NaN])assert.equal(welcomeCanContinue(elapsed),false);
- assert.equal(welcomeCanContinue(2200),true);
- assert.equal(welcomeCanContinue(2200,NaN),true);
- assert.equal(welcomeCanContinue(2200,1000),true);
+ for(const elapsed of [-1,NaN])assert.equal(welcomeCanContinue(elapsed),false);
+ assert.equal(welcomeCanContinue(0),true);
+ assert.equal(welcomeCanContinue(0,NaN),true);
+ assert.equal(welcomeCanContinue(0,1000),true);
  assert.equal(welcomeCanContinue(96000),true);
 });
 
