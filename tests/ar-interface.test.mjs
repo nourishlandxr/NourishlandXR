@@ -1097,6 +1097,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const pimViewSource = read('app/services/plantInformationMeshView.js');
     const webxrSource = read('app/services/webxrSession.js');
     const styles = read('app/style.css');
+    const livingStyles = read('app/living-objects.css');
     assert.match(source, /function demoPointerWorldRay\(\)/);
     assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\), demoPointerWorldOrigin\(\)\)/);
     assert.match(source, /if \(latestControllerRay\) return latestControllerRay\.direction/);
@@ -1341,6 +1342,16 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
+    assert.match(source, /const DEMO_WELCOME_OPENING_MS=30000/);
+    assert.match(source, /const DEMO_ARCHETYPE_START_MS=16000/);
+    assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
+    assert.match(source, /XR means extended reality: digital learning placed into the space around you/);
+    assert.match(source, /AR keeps the real landscape visible while adding useful guidance/);
+    assert.match(source, /function introducePigeonPeaExample\(\)/);
+    assert.match(source, /Why begin with Pigeon Pea\?/);
+    assert.match(source, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
+    assert.doesNotMatch(source, /Hold to open selected learning cell/);
+    assert.doesNotMatch(livingStyles, /--lim-progress|is-lim-holding/);
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);

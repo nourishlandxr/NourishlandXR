@@ -67,17 +67,24 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const stack=[];
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},restore(){Object.assign(this,stack.pop());},measureText(text){return {width:text.length*10};},createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},lineTo(){lines+=1;}};
  for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
- const frames=drawArWelcomeShowcase(ctx,12000,false,createArWelcomeClusters(),{opening:true,minimalIntro:true,openingSeed:73421,drawPanel:false});
+ const pacing={opening:true,minimalIntro:true,openingSeed:73421,openingDuration:30000,minimalStartAt:16000,minimalInterval:4000,minimalRevealDuration:1400,drawPanel:false};
+ const visibleAt=time=>drawArWelcomeShowcase(ctx,time,false,createArWelcomeClusters(),pacing).flatMap(frame=>frame.nodes).filter(node=>node.opacity>.5);
+ assert.equal(visibleAt(15999).length,0);
+ assert.equal(visibleAt(17800).length,1);
+ assert.equal(visibleAt(21800).length,2);
+ assert.equal(visibleAt(25800).length,3);
+ const frames=drawArWelcomeShowcase(ctx,29800,false,createArWelcomeClusters(),pacing);
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  assert.ok(lines>0,'the four primary cells retain their hexagon outlines');
  assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
 });
 
-test('LIM cells use a flat face with an obvious hover fill',()=>{
+test('LIM cells distinguish idle, hover and selected without a progress fill',()=>{
  assert.doesNotMatch(showcaseSource,/Rear rim gives the transparent face physical depth/);
  assert.doesNotMatch(showcaseSource,/ctx\.lineTo\(x\+5,y\+thickness\)/);
- assert.match(showcaseSource,/if\(hoverOnly\)drawHexagon\(ctx,0,0,r-4,accentRgba\(accent,hue,\.34\)/);
+ assert.doesNotMatch(showcaseSource,/Centre-out paint|const activation=/);
+ assert.match(showcaseSource,/accentRgba\(accent,hue,hoverOnly\?\.24:\.28\)/);
  assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?10:6/);
 });
 

@@ -7,8 +7,8 @@ const read = file => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'ut
 test('Phase 8 physical-device checklist covers the required LIM checks', () => {
     const checklist = read('docs/LIM_PHYSICAL_DEVICE_TEST.md');
     for (const phrase of [
-        'portrait', 'landscape', 'less than 0.5 seconds', '0.5 seconds',
-        'centre-out fill', 'Learning and Plant tabs', 'Reposition', 'hero-wheel',
+        'portrait', 'landscape', 'bright hover outline', 'stable accent tint',
+        'Selected topic and Plant views', 'Reposition', 'hero-wheel',
         'Samsung S25', 'Xiaomi device', 'Meta Quest 3', 'exact reproduction steps'
     ]) assert.match(checklist, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
 });

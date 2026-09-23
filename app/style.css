@@ -8861,17 +8861,15 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-demo .tryit-demo-taskbar button:focus-visible { outline:2px solid #dcef95; outline-offset:2px; }
 
-/* Immediate progress belongs to one central trigger, separate from the
-   information workstation. Holding a LIM cell reuses this same control. */
+/* One central action trigger stays separate from the information panel. */
 .tryit-context-trigger {
-    --hold-progress:0%; position:fixed; z-index:13040; left:50%; bottom:max(18px,env(safe-area-inset-bottom));
+    position:fixed; z-index:13040; left:50%; bottom:max(18px,env(safe-area-inset-bottom));
     display:grid; place-items:center; width:104px; height:104px; padding:13px; transform:translateX(-50%);
     border:1px solid rgba(235,246,224,.36); border-radius:50%; color:rgba(246,250,239,.82);
     background:radial-gradient(circle at 34% 24%,rgba(204,231,184,.18),rgba(58,88,68,.20) 52%,rgba(20,31,27,.26) 72%);
     box-shadow:inset 0 1px rgba(255,255,255,.12),0 4px 14px rgba(0,0,0,.16);
     font:750 13px/1.16 system-ui,sans-serif; text-align:center; cursor:pointer; touch-action:none;
 }
-.tryit-context-trigger::before { content:""; position:absolute; inset:6px; border-radius:50%; background:conic-gradient(#dcef95 var(--hold-progress),transparent 0); mask:radial-gradient(transparent 63%,#000 65%); pointer-events:none; }
 .tryit-context-trigger:hover,.tryit-context-trigger:focus-visible { outline:3px solid rgba(220,239,149,.42); outline-offset:5px; filter:brightness(1.08); }
 .tryit-context-trigger:active { transform:translate(-50%,2px); background:rgba(50,82,57,.34); }
 .tryit-context-trigger[hidden] { display:none!important; }

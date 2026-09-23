@@ -45,9 +45,9 @@ test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.match(demoSource, /arWelcomeClock\.elapsed<AR_WELCOME_SETTLED_MS/);
 });
 
-test('phone screen selection activates LIM once and keeps the hidden DOM layer idle in immersive AR', () => {
-    assert.match(demoSource, /event\.inputSource\?\.targetRayMode==='screen' && arWelcomeShowcaseActive/);
-    assert.match(demoSource, /activateLimCell\(node\.key\)/);
+test('screen and tracked-pointer selection activate LIM once while the hidden DOM layer stays idle', () => {
+    assert.match(demoSource, /\['screen','tracked-pointer'\]\.includes\(event\.inputSource\?\.targetRayMode\)/);
+    assert.match(demoSource, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
     assert.match(demoSource, /event\.detail===0\?'assistive-click':'click'/);
     assert.match(demoSource, /if\(simulatedMode && now-last>=50/);
     assert.match(demoSource, /if\(simulatedMode && arWelcomeLayer\)arWelcomeShowcaseFrame=limRequestFrame\(frame\)/);

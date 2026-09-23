@@ -346,25 +346,16 @@ function accentRgba(value,hue,alpha=.7){
 }
 
 function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual={}) {
- const opening=1-node.progress;
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
  ctx.rotate(0);
  ctx.scale(node.scale,node.scale);
  const r=node.baseRadius, hollow=Boolean(node.hollow);
- const activation=Math.max(0,Math.min(1,Number(visual.activation)||0));
  const selected=Boolean(visual.selected);
  const accent=node.accent || '';
  // Keep cells deliberately flat in XR: one face and one outline, with no
  // false rear rim, bevel, perspective edge or drop shadow.
- drawHexagon(ctx,0,0,r,accentRgba(accent,hue,hollow?.035:.16),`hsla(${hue},30%,86%,${hollow?.46:.72})`,hollow?2.5:3);
- if(activation>0){
-  // Centre-out paint is clipped to the fixed hexagon; geometry never scales.
-  ctx.save();ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.clip();
-  const reach=Math.max(1,r*1.48*activation),fill=ctx.createRadialGradient(0,0,0,0,0,reach);
-  fill.addColorStop(0,accentRgba(accent,hue,.78));fill.addColorStop(.72,accentRgba(accent,hue,.58));fill.addColorStop(1,accentRgba(accent,hue,0));
-  ctx.globalAlpha=node.opacity;ctx.fillStyle=fill;ctx.fillRect(-r,-r,r*2,r*2);ctx.restore();
- }
+ drawHexagon(ctx,0,0,r,accentRgba(accent,hue,hollow?.035:.10),`hsla(${hue},30%,86%,${hollow?.46:.62})`,hollow?2.5:3);
  // A quiet change in edge light follows the opening, without flashing.
  ctx.globalAlpha=node.opacity*(.12+node.emphasis*.3);ctx.strokeStyle='#efffe2';ctx.lineWidth=2;
  ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(-r/2,-r*.866);ctx.lineTo(r/2,-r*.866);ctx.stroke();
@@ -374,7 +365,7 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  }
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
-  if(hoverOnly)drawHexagon(ctx,0,0,r-4,accentRgba(accent,hue,.34),'rgba(255,255,255,0)',0);
+  drawHexagon(ctx,0,0,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);
   ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?24:18;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?10:6;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
   ctx.setLineDash([r*.34,r*.18]);ctx.globalAlpha=node.opacity*.65;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.86)';
@@ -517,7 +508,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   const roots=frames.flatMap(frame=>frame.nodes).filter(node=>node.depth===0 && node.id!=='vision');
   const order=new Map(roots.map((node,index)=>[node.key,index]));
   frames=frames.map(frame=>({...frame,nodes:frame.nodes.filter(node=>order.has(node.key)).map(node=>{
-   const index=order.get(node.key),progress=reducedMotion?1:opening?smooth(elapsed,4800+index*1800,1100):1;
+   const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,interval=Number(options.minimalInterval)||1800,revealDuration=Number(options.minimalRevealDuration)||1100;
+   const progress=reducedMotion?1:opening?smooth(elapsed,start+index*interval,revealDuration):1;
    const scale=.84+progress*.16;
    return {...node,progress,opacity:progress,scale,radius:node.baseRadius*scale,drawX:node.x,drawY:node.y,
     emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
@@ -562,7 +554,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
   const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
-  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{activation:options.activeKey===node.key?options.activeProgress:(options.selectedKey===node.key||linked)?1:0,selected:options.selectedKey===node.key||linked,hovered:options.hoverKey===node.key,pathway});
+  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway});
  }
  }
  ctx.restore();

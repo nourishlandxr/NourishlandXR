@@ -100,33 +100,25 @@
 .nlxr-info-panel .nlxr-pathway-context button:first-child { border-color:#aaccc16b; }
 @media(max-width:600px) { .nlxr-info-panel { grid-template-columns:78px minmax(0,1fr); gap:0 10px; padding-right:10px; height:min(43vh,430px); } .nlxr-info-panel .nlxr-control-tabs { padding:10px 5px; } .nlxr-info-panel .nlxr-control-tabs button { font-size:11px; padding:7px; } }
 
-/* LIM selection feedback. The button footprint stays fixed while only the
-   accent paint expands from its centre during deliberate activation. */
+/* LIM selection feedback mirrors the spatial canvas: quiet at rest, a clear
+   outline on hover, then one stable accent tint for the selected topic. */
 .tryit-live-welcome button[data-welcome-cell] {
-    --lim-accent:#719b62; --lim-progress:0;
+    --lim-accent:#719b62;
     position:absolute; overflow:visible; isolation:isolate;
-    border-color:rgba(239,255,220,.62); transition:border-color .12s ease,box-shadow .12s ease;
+    border-color:rgba(239,255,220,.52); background:transparent;
+    transition:border-color .12s ease,box-shadow .12s ease,background-color .12s ease;
 }
-.tryit-live-welcome button[data-welcome-cell]::before {
-    content:''; position:absolute; z-index:-1; inset:2px; clip-path:inherit;
-    background:var(--lim-accent); opacity:.7; transform:scale(var(--lim-progress)); transform-origin:center;
-    transition:transform .08s linear; pointer-events:none;
-}
-.tryit-live-welcome button[data-welcome-cell]::after {
-    content:''; position:absolute; z-index:2; right:8px; top:5px; width:7px; height:7px;
-    border:1px solid rgba(255,255,255,.8); border-radius:50%; background:rgba(255,255,255,.18);
-    opacity:0; pointer-events:none;
-}
-.tryit-live-welcome button[data-welcome-cell].is-lim-holding {
-    border-color:var(--lim-accent) !important; box-shadow:0 0 0 3px rgba(255,255,255,.2),0 0 18px rgba(255,255,255,.22); box-shadow:0 0 0 3px color-mix(in srgb,var(--lim-accent) 38%,transparent),0 0 18px color-mix(in srgb,var(--lim-accent) 45%,transparent);
+.tryit-live-welcome button[data-welcome-cell]:hover {
+    border-color:#f4ffe7 !important;
+    box-shadow:0 0 0 4px rgba(255,255,255,.24),0 0 22px color-mix(in srgb,var(--lim-accent) 48%,transparent);
 }
 .tryit-live-welcome button[data-welcome-cell].is-lim-selected {
-    border:2px solid var(--lim-accent) !important; box-shadow:0 0 0 3px rgba(255,255,255,.28),0 0 20px rgba(255,255,255,.22); box-shadow:0 0 0 3px rgba(255,255,255,.28),0 0 20px color-mix(in srgb,var(--lim-accent) 42%,transparent);
+    border:2px solid var(--lim-accent) !important;
+    background:rgba(113,155,98,.22);background:color-mix(in srgb,var(--lim-accent) 24%,transparent);
+    box-shadow:0 0 0 3px rgba(255,255,255,.22),0 0 18px color-mix(in srgb,var(--lim-accent) 36%,transparent);
 }
-.tryit-live-welcome button[data-welcome-cell].is-lim-selected::after { opacity:1; }
 .tryit-live-welcome button[data-welcome-cell]:focus-visible { outline:3px solid #fff; outline-offset:4px; }
 @media(prefers-reduced-motion:reduce) {
-    .tryit-live-welcome button[data-welcome-cell]::before { transition:none; }
     .tryit-live-welcome button[data-welcome-cell] { transition:none; }
 }
 

@@ -188,15 +188,18 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:'A place for learning and mapping nature.',accent:'#dcef95'}),
-    Object.freeze({at:4800,text:'Notice what is already here.',accent:'#7fa7e8'}),
-    Object.freeze({at:6600,text:'See how living patterns connect.',accent:'#8fc77a'}),
-    Object.freeze({at:8400,text:'Imagine what could grow.',accent:'#e7b45f'}),
-    Object.freeze({at:10200,text:'Turn learning into care.',accent:'#d68bb8'}),
-    Object.freeze({at:12400,text:'Choose a pathway or Continue.',accent:'#dcef95'})
+    Object.freeze({at:0,text:'NourishlandXR connects knowledge about nature to the places where it lives.',accent:'#dcef95'}),
+    Object.freeze({at:5200,text:'XR means extended reality: digital learning placed into the space around you.',accent:'#7fa7e8'}),
+    Object.freeze({at:10400,text:'AR keeps the real landscape visible while adding useful guidance.',accent:'#8fc77a'}),
+    Object.freeze({at:14800,text:'Four pathways offer different ways to explore a living place.',accent:'#e7b45f'}),
+    Object.freeze({at:28200,text:'Choose a pathway, or continue into a guided example.',accent:'#dcef95'})
 ]);
 const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
-const DEMO_WELCOME_CONTINUE_MS=8000;
+const DEMO_WELCOME_OPENING_MS=30000;
+const DEMO_WELCOME_CONTINUE_MS=30000;
+const DEMO_ARCHETYPE_START_MS=16000;
+const DEMO_ARCHETYPE_INTERVAL_MS=4000;
+const DEMO_ARCHETYPE_REVEAL_MS=1400;
 // Canvas texture uploads are expensive on phones. Coalesce the continuously
 // changing welcome copy/mesh into a modest cadence so typing and input stay
 // responsive while the XR frame loop remains free to render at 60fps.
@@ -498,7 +501,7 @@ function syncDemoPanelActions() {
     const primary=actions.find(item=>item.primary || item.id==='continue');
     const externalTrigger=simulatedMode || domOverlayEnabled;
     const trigger=appRoot?.querySelector('[data-tryit-context-trigger]');
-    if(trigger){const hold=Boolean(contextCellKey);trigger.hidden=!(hold || (externalTrigger && primary));trigger.disabled=Boolean(!hold && primary?.disabled);trigger.dataset.contextMode=hold?'hold':primary?.id || '';trigger.textContent=hold?'Hold':primary?.label || '';trigger.setAttribute('aria-label',hold?'Hold to open selected learning cell':primary?.label || 'Context action');}
+    if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');}
     const panelActions=externalTrigger && primary?actions.filter(item=>item!==primary):actions;
     if(signature===demoPanelActionSignature && JSON.stringify(panelActions)===elementPanelActionSignature)return;
     demoPanelActionSignature=signature;
@@ -1042,7 +1045,7 @@ function welcomeFrames() {
     if(arWelcomeIntroPending && arWelcomeRenderedFrames.length)return arWelcomeRenderedFrames;
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
-const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=DEMO_WELCOME_CONTINUE_MS;
+const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=(window.matchMedia('(prefers-reduced-motion: reduce)').matches?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS);
 
 let selectedLimCell='';
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
@@ -1203,86 +1206,48 @@ function toggleLimCell(key) { return activateLimCell(key); }
 function bindLimCellInteractions() {
     if(!arWelcomeLayer || !limActivation)return;
     const cleanups=[];
-    const cancel=reason=>{limActivation.cancel(reason);limPointerKey='';limPointerId=null;paintWelcomeLayer(performance.now());};
     arWelcomeLayer.querySelectorAll('[data-welcome-cell]').forEach(button=>{
         const key=button.dataset.welcomeCell;
         const point=()=>{contextCellKey=key;syncDemoPanelActions();};
-        const unpoint=()=>{if(!limActivation.active && contextCellKey===key){contextCellKey='';syncDemoPanelActions();}};
-        const pointerDown=event=>{
-            if(event.pointerType==='mouse' && event.button!==0)return;
-            event.preventDefault();event.stopPropagation();limPointerKey=key;limPointerId=event.pointerId;
-            limDiagnostic('pointer',{type:event.pointerType || 'unknown',cellId:key});
-            button.setPointerCapture?.(event.pointerId);limActivation.start(key,performance.now(),'pointer');startLimActivationFrame();paintWelcomeLayer(performance.now());
-        };
-        const pointerMove=event=>{
-            if(!limActivation.active || limPointerId!==event.pointerId)return;
-            const rect=button.getBoundingClientRect();
-            if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom)cancel('pointer-left');
-        };
-        const pointerUp=event=>{
-            if(limPointerId!==null && event.pointerId!==limPointerId)return;
-            event.preventDefault();event.stopPropagation();limActivation.end(key,performance.now());limPointerKey='';limPointerId=null;paintWelcomeLayer(performance.now());
-        };
-        const pointerCancel=event=>{if(limPointerId===null || event.pointerId===limPointerId)cancel('pointer-cancelled');};
-        const pointerLeave=event=>{if(limPointerId===event.pointerId && limActivation.active)cancel('pointer-left');unpoint();};
+        const unpoint=()=>{if(contextCellKey===key){contextCellKey='';syncDemoPanelActions();}};
         const keyDown=event=>{
             if(!['Enter',' '].includes(event.key) || event.repeat)return;
-            event.preventDefault();event.stopPropagation();limPointerKey=key;limActivation.activateNow(key,performance.now(),'keyboard');paintWelcomeLayer(performance.now());
+            event.preventDefault();event.stopPropagation();limActivation.activateNow(key,performance.now(),'keyboard');paintWelcomeLayer(performance.now());
         };
         const keyUp=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();}};
         const click=event=>{
             event.preventDefault();event.stopPropagation();
-            if(limActivation.consumeSyntheticClick(key,performance.now()))return;
             limActivation.activateNow(key,performance.now(),event.detail===0?'assistive-click':'click');
         };
-        const blur=()=>{if(limPointerId!==null && limPointerKey===key)cancel('blur');};
-        for(const [type,handler] of [['pointerenter',point],['focus',point],['pointerdown',pointerDown],['pointermove',pointerMove],['pointerup',pointerUp],['pointercancel',pointerCancel],['pointerleave',pointerLeave],['keydown',keyDown],['keyup',keyUp],['click',click],['blur',blur]]){button.addEventListener(type,handler);cleanups.push(()=>button.removeEventListener(type,handler));}
+        for(const [type,handler] of [['pointerenter',point],['focus',point],['pointerleave',unpoint],['blur',unpoint],['keydown',keyDown],['keyup',keyUp],['click',click]]){button.addEventListener(type,handler);cleanups.push(()=>button.removeEventListener(type,handler));}
     });
-    const visibility=()=>{if(document.visibilityState!=='visible')cancel('hidden');};
-    const windowBlur=()=>cancel('window-blur');
-    document.addEventListener('visibilitychange',visibility);window.addEventListener('blur',windowBlur);
-    cleanups.push(()=>document.removeEventListener('visibilitychange',visibility),()=>window.removeEventListener('blur',windowBlur));
     limInteractionCleanup=()=>{cleanups.splice(0).forEach(remove=>remove());limActivation?.cancel('unmount');limCancelFrame(limActivationFrame);limActivationFrame=0;limPointerKey='';limPointerId=null;};
 }
 
 function bindLimSessionInteractions(arSession) {
     if(!arSession || !limActivation)return;
-    const start=event=>{
-        if(!arWelcomeShowcaseActive || event.inputSource?.targetRayMode!=='tracked-pointer')return;
-        const node=currentLimPointerCell();if(!node)return;
-        event.preventDefault?.();event.stopImmediatePropagation?.();limInputSource=event.inputSource;limActivation.start(node.key,performance.now(),'xr');startLimActivationFrame();
-    };
-    const end=event=>{
-        if(event.inputSource!==limInputSource)return;
-        event.preventDefault?.();event.stopImmediatePropagation?.();limActivation.end(limActivation.activeKey,performance.now());limInputSource=null;limActivationSessionSuppressUntil=performance.now()+450;
-    };
     const select=event=>{
-        if(event.inputSource?.targetRayMode==='screen' && arWelcomeShowcaseActive){
-            const node=currentLimPointerCell();
-            if(node){event.preventDefault?.();event.stopImmediatePropagation?.();activateLimCell(node.key);limActivationSessionSuppressUntil=performance.now()+450;return;}
-        }
-        if(event.inputSource===limInputSource || performance.now()<limActivationSessionSuppressUntil || (arWelcomeShowcaseActive && currentLimPointerCell())){event.stopImmediatePropagation?.();}
+        if(!arWelcomeShowcaseActive || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
+        const node=currentLimPointerCell();
+        if(node){event.preventDefault?.();event.stopImmediatePropagation?.();limActivation.activateNow(node.key,performance.now(),'xr-select');limActivationSessionSuppressUntil=performance.now()+450;return;}
+        if(performance.now()<limActivationSessionSuppressUntil)event.stopImmediatePropagation?.();
     };
     const visibility=()=>{if(arSession.visibilityState!=='visible')limActivation.cancel('session-hidden');};
-    arSession.addEventListener('selectstart',start,true);arSession.addEventListener('selectend',end,true);arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
-    limSessionCleanup=()=>{arSession.removeEventListener('selectstart',start,true);arSession.removeEventListener('selectend',end,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;};
+    arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
+    limSessionCleanup=()=>{arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;};
 }
 
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     arWelcomeClock.tick(Date.now(),!document.hidden);
-    const activeKey=limActivation?.activeKey||'';
-    const activeProgress=limActivation?.progress||0;
-    const contextTrigger=appRoot?.querySelector('[data-tryit-context-trigger]');
-    if(contextTrigger)contextTrigger.style.setProperty('--hold-progress',`${Math.round((contextCellKey?activeProgress:0)*100)}%`);
     const context=arWelcomeCanvas.getContext('2d');
     context.save();
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
-            drawCellLabels:true,activeKey,activeProgress,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
+            drawCellLabels:true,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
         });
     arWelcomeRenderedFrames=frames;
     context.restore();
@@ -1296,16 +1261,12 @@ function paintWelcomeLayer(now) {
             button.hidden=!limMeshVisible || node.opacity<=.01;
             button.style.opacity=String(node.opacity);
             button.style.pointerEvents=node.opacity>=.85?'':'none';
-            const progress=activeKey===node.key?activeProgress:selectedLimCell===node.key?1:0;
             const linked=linkedIds.has(node.limId) && node.opacity>.55;
             button.style.setProperty('--lim-accent',linked?relationship.accent:(node.accent||'#719b62'));
-            button.style.setProperty('--lim-progress',String(progress));
-            button.classList.toggle('is-lim-holding',progress>0 && progress<1);
             button.classList.toggle('is-lim-selected',selectedLimCell===node.key);
             button.classList.toggle('is-lim-related',linked);
             button.classList.toggle('is-lim-pathway-current',pathwayCurrent);
             button.setAttribute('aria-pressed',String(selectedLimCell===node.key));
-            button.setAttribute('aria-valuenow',String(Math.round(progress*100)));
             button.dataset.welcomeHollow=node.hollow?'true':'false';
             button.setAttribute('aria-label',`${node.hollow?'Reopen and explore':'Explore'} ${node.label} cell`);
         }
@@ -1322,7 +1283,7 @@ function showArWelcomeShowcase() {
     const reducedOpening=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const seedBytes=new Uint32Array(1);
     if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seedBytes);else seedBytes[0]=Math.floor(Math.random()*0xffffffff);
-    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
+    arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();arWelcomeVisionActivated=false;arWelcomeVisionActivatedAt=NaN;
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-vision');
     limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
     if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
@@ -1345,7 +1306,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='NourishlandXR';
-    introBoardBody='A place for learning and mapping nature.';
+    introBoardBody='Choose a pathway, or continue into a guided example.';
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
@@ -1407,13 +1368,13 @@ function showArWelcomeShowcase() {
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="Welcome to Nourishland. A Living Information Mesh grows from Vision into four branching paths before introducing NourishlandXR."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Learn what XR and AR mean, then discover four pathways for exploring a living place."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_SURFACE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_SURFACE_CANVAS.height;}
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
         const cell=document.createElement('button');cell.type='button';cell.dataset.welcomeCell=node.key;cell.dataset.label=node.label;cell.textContent=node.label;
-        cell.setAttribute('aria-label',node.accessibilityLabel || `Explore ${node.label} learning cell`);cell.setAttribute('aria-pressed','false');cell.setAttribute('aria-valuemin','0');cell.setAttribute('aria-valuemax','100');cell.setAttribute('aria-valuenow','0');cell.hidden=true;
+        cell.setAttribute('aria-label',node.accessibilityLabel || `Explore ${node.label} learning cell`);cell.setAttribute('aria-pressed','false');cell.hidden=true;
         cell.style.cssText=`left:${node.x/25}%;top:${node.y/21}%;width:${node.baseRadius*2/25}%;height:${node.baseRadius*2/21}%;`;
         cell.addEventListener('beforexrselect',event=>event.preventDefault());
         layer.append(cell);
@@ -1452,10 +1413,20 @@ function showArWelcomeShowcase() {
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
         arWelcomeSharedBoard=false;limMeshVisible=false;
-        armDemoPlacement('plant',{explained:true});
+        introducePigeonPeaExample();
     };
     // Only the explicit Continue action advances beyond the introduction.
     setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
+}
+
+function introducePigeonPeaExample(){
+    demoOrientationStep=-1;syncDemoPanelActions();
+    showIntroBoard('Why begin with Pigeon Pea?',[
+        'NourishlandXR connects knowledge to something living in a real place.',
+        'Pigeon Pea is the first example. Its orb becomes a doorway to the plant’s roles, growing needs and uses. Place it to see how information can belong in the landscape.'
+    ],'Place Pigeon Pea',()=>{
+        finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'GUIDED EXAMPLE',nextGuide:'When ready, press Place Pigeon Pea and choose a nearby position.'});
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -3343,7 +3314,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},activeKey:limActivation?.activeKey||'',activeProgress:limActivation?.progress||0,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

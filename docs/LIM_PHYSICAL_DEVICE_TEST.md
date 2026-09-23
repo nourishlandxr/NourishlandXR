@@ -8,13 +8,13 @@ browser, orientation and exact reproduction steps for every problem.
 
 - [ ] Open the NourishlandXR demo in portrait.
 - [ ] Confirm all eight parent faces are visible and readable.
-- [ ] Hold a LIM cell for less than 0.5 seconds; confirm it does not activate.
-- [ ] Hold a LIM cell for 0.5 seconds; confirm the centre-out fill completes.
+- [ ] Aim at a LIM cell; confirm its bright hover outline appears immediately.
+- [ ] Select it once; confirm its stable accent tint appears and the Control panel opens.
 - [ ] Select cells from several different faces.
 - [ ] Confirm the companion panel shows the selected cell's content and accent.
 - [ ] Confirm previously revealed cells remain visible and do not move.
 - [ ] Type into every available editable field and check responsiveness.
-- [ ] Use the Learning and Plant tabs and confirm their content remains separate.
+- [ ] Use the Selected topic and Plant views and confirm their content remains separate.
 - [ ] Use Back, Continue, Skip and Close.
 - [ ] Reposition and customise the companion panel.
 - [ ] Rotate into landscape, then return to portrait.
