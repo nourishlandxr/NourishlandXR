@@ -203,11 +203,10 @@ function revealFrames(graphs) {
   const branch=LIM_INTRO_BRANCHES.find(item=>item.id===config.limId);
   return {...config,label:branch?.displayLabel||branch?.title||config.id,accent:branch?.accent||'#dcef95',children:(branch?.children||[]).map(child=>[child.title,child.id])};
  });
- const vision={corner:4,phase:0,cycle:0,nodes:[{id:'vision',parent:null,label:'Vision',depth:0,limId:'lim-intro-vision',accent:'#dcef95',accessibilityLabel:'Vision introductory learning cell',...attachedRoot(Math.PI/2),baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:700}]};
  // These are forward/side distances in the root's own direction of growth.
  // Their slight unevenness keeps the branch cellular and connected without
  // arranging every family into the same mechanical honeycomb.
- const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154],[438,18],[292,238]];
+ const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154],[438,18],[292,238],[304,-244]];
  const foundationPoint=(quadrant,slot,root)=>{
   const [forward,side]=foundationOffsets[slot]||foundationOffsets.at(-1);
   const angle=root.growthAngle;
@@ -260,7 +259,7 @@ function revealFrames(graphs) {
   });
   return {corner,phase:0,cycle:0,nodes};
  });
- const layout=[vision,...frames];
+ const layout=frames;
  settleWelcomeLayout(layout);
  settledLayouts.set(graphs,layout);
  return layout.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
@@ -271,11 +270,8 @@ function revealFrames(graphs) {
 export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set(),progression={}) {
  return revealFrames(graphs).map(frame=>{
   const corner=frame.corner,totalTime=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
-  const isVision=frame.nodes[0]?.id==='vision';
-  const visionActivated=progression?.visionActivated!==false;
-  const visionActivatedAt=Number.isFinite(progression?.visionActivatedAt)?progression.visionActivatedAt:0;
   const cellsActivatedAt=Number.isFinite(progression?.cellsActivatedAt)?progression.cellsActivatedAt:0;
-  const time=isVision?Math.max(0,totalTime-cellsActivatedAt):visionActivated?Math.max(0,totalTime-visionActivatedAt):0;
+  const time=Math.max(0,totalTime-cellsActivatedAt);
   const expanded=new Set(Array.isArray(progression?.expandedLimIds)?progression.expandedLimIds:[]);
   const expandedAt=progression?.expandedAt || {};
   frame.nodes.forEach(node=>{
@@ -287,9 +283,9 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
    node.radius=node.baseRadius*node.scale;
    node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
    node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
-   // Every branch is an invitation, not ambient clutter. Vision reveals only
-   // the four archetypes. Selecting an archetype or child then blooms its
-   // immediate children in a short, staggered sequence.
+   // Every branch is an invitation, not ambient clutter. The four archetypes
+   // are the stable roots. Selecting one blooms its immediate children in a
+   // short, staggered sequence; Vision belongs to Shape the Outcome.
    if(!progression?.opening && node.depth>=1){
     const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
     const parentId=parent?.limId || node.parent;

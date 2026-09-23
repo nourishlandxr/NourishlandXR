@@ -95,8 +95,8 @@ test('LIM cells distinguish idle, hover and selected without a progress fill',()
  assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?5:4/);
 });
 
-test('Vision fades in after learning cells are activated late in the demo',()=>{
- const activatedAt=90000,progression={cellsActivatedAt:activatedAt,visionActivated:false};
+test('the four archetypes fade in after learning cells are activated late in the demo',()=>{
+ const activatedAt=90000,progression={cellsActivatedAt:activatedAt};
  const before=welcomeExperienceFrames(activatedAt,false,undefined,new Set(),progression)[0].nodes[0];
  const fading=welcomeExperienceFrames(activatedAt+1400,false,undefined,new Set(),progression)[0].nodes[0];
  const settled=welcomeExperienceFrames(activatedAt+3000,false,undefined,new Set(),progression)[0].nodes[0];
@@ -110,7 +110,7 @@ test('a late cell selection keeps repainting until its children finish fading',(
  assert.equal(welcomeRevealIsAnimating(selectedAt+100,[selectedAt]),true);
  assert.equal(welcomeRevealIsAnimating(selectedAt+4400,[selectedAt]),true);
  assert.equal(welcomeRevealIsAnimating(selectedAt+4500,[selectedAt]),false);
- const progression={visionActivated:true,visionActivatedAt:0,expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':selectedAt}};
+ const progression={expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':selectedAt}};
  const first=welcomeExperienceFrames(selectedAt+1000,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
  const later=welcomeExperienceFrames(selectedAt+2500,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
  assert.ok(first.some(node=>node.opacity>0 && node.opacity<1));
@@ -184,24 +184,25 @@ test('archetypes stay calm until a selected parent opens a deeper branch',async(
  const {welcomeExperienceFrames}=await import('../app/services/arWelcomeShowcase.js');
  const early=welcomeExperienceFrames(14500).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
  const middle=welcomeExperienceFrames(32000).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length;
- assert.equal(early,5);assert.equal(middle,5);
+ assert.equal(early,4);assert.equal(middle,4);
  const expandedIds=['lim-intro-analysis','lim-intro-analysis-climate','lim-intro-food-forest','lim-intro-food-function'];
  const settled=welcomeExperienceFrames(64000,false,undefined,new Set(),{expandedLimIds:expandedIds});
  assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.opacity===1).length>5);
  assert.ok(settled.flatMap(f=>f.nodes).filter(n=>n.depth>=2 && n.opacity>0).every(n=>expandedIds.some(id=>n.parent===id || n.limId===id || n.parent?.includes(id))));
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,new Set(),{expandedLimIds:expandedIds}),settled);
  assert.ok(welcomeExperienceFrames(0,true).flatMap(f=>f.nodes).every(n=>n.opacity===0));
- assert.equal(welcomeExperienceFrames(64000,true).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,5);
+ assert.equal(welcomeExperienceFrames(64000,true).flatMap(f=>f.nodes).filter(n=>n.opacity===1).length,4);
 });
 
-test('Vision opens first, then four archetypes preserve ancestry and spacing',async()=>{
+test('four archetypes are roots and Vision belongs to Shape the Outcome',async()=>{
  const {welcomeExperienceFrames,createArWelcomeClusters}=await import('../app/services/arWelcomeShowcase.js');
  const graphs=createArWelcomeClusters();
  const nodes=welcomeExperienceFrames(0,false,graphs).flatMap(f=>f.nodes);
  assert.ok(nodes.every(n=>n.opacity===0));
  const order=[...nodes].sort((a,b)=>a.revealAt-b.revealAt);
- assert.equal(order[0].label,'Vision');
- assert.deepEqual(order.filter(node=>node.depth===0 && node.label!=='Vision').map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
+ assert.deepEqual(order.filter(node=>node.depth===0).map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
+ const vision=nodes.find(node=>node.label==='Vision');
+ assert.equal(vision.parent,'smart');assert.equal(vision.depth,1);assert.equal(vision.limId,'lim-intro-vision');
  for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
  assert.ok(nodes.every(node=>node.x-node.radius>0 && node.x+node.radius<2500 && node.y-node.radius>0 && node.y+node.radius<2100));
@@ -211,24 +212,22 @@ test('Vision opens first, then four archetypes preserve ancestry and spacing',as
  assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
 });
 
-test('Vision is the only live cell until activation releases the four archetypes',()=>{
- const graphs=createArWelcomeClusters(),activationAt=5000;
- const waiting=welcomeExperienceFrames(30000,false,graphs,new Set(),{visionActivated:false,visionActivatedAt:NaN}).flatMap(frame=>frame.nodes);
- assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Vision']);
- const opening=welcomeExperienceFrames(activationAt+1800,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(opening.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity>.5).map(node=>node.label),['Read Nature']);
- const foundations=welcomeExperienceFrames(activationAt+7200,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt}).flatMap(frame=>frame.nodes);
- assert.deepEqual(foundations.filter(node=>node.depth===0 && node.label!=='Vision' && node.opacity===1).map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
- assert.ok(foundations.every(node=>node.depth===0 || node.opacity===0));
- const branching=welcomeExperienceFrames(activationAt+9000,false,graphs,new Set(),{visionActivated:true,visionActivatedAt:activationAt,expandedLimIds:['lim-intro-analysis'],expandedAt:{'lim-intro-analysis':activationAt+7200}}).flatMap(frame=>frame.nodes);
- assert.ok(branching.some(node=>node.depth===1 && node.opacity>0));
- assert.ok(branching.filter(node=>node.depth===1 && node.opacity>0).every(node=>node.primaryFaceId===undefined || node.key.startsWith('0:')));
+test('the four roots remain live while Shape softly introduces Vision and its siblings',()=>{
+ const graphs=createArWelcomeClusters(),expandedAt=30000;
+ const waiting=welcomeExperienceFrames(expandedAt,false,graphs).flatMap(frame=>frame.nodes);
+ assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
+ const opening=welcomeExperienceFrames(expandedAt+900,false,graphs,new Set(),{expandedLimIds:['lim-intro-smart'],expandedAt:{'lim-intro-smart':expandedAt}}).flatMap(frame=>frame.nodes);
+ const vision=opening.find(node=>node.label==='Vision');
+ assert.ok(vision.opacity>0 && vision.opacity<1);
+ assert.ok(opening.filter(node=>node.depth===1 && node.opacity>0).every(node=>node.key.startsWith('3:')));
+ const settled=welcomeExperienceFrames(expandedAt+5000,false,graphs,new Set(),{expandedLimIds:['lim-intro-smart'],expandedAt:{'lim-intro-smart':expandedAt}}).find(frame=>frame.corner===3).nodes.filter(node=>node.depth===1);
+ assert.equal(settled.length,7);assert.ok(settled.every(node=>node.opacity===1));
 });
 
 test('expanded LIM content forms a logical four-branch learning cycle',()=>{
  assert.equal(LIM_INTRO_CELLS.length,27);
  assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.title),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
- assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.children.length),[4,6,6,6]);
+ assert.deepEqual(LIM_INTRO_BRANCHES.map(branch=>branch.children.length),[4,6,6,7]);
  const ids=new Set(LIM_INTRO_CELLS.map(cell=>cell.id));
  assert.equal(ids.size,LIM_INTRO_CELLS.length);
  for(const cell of LIM_INTRO_CELLS){
@@ -238,8 +237,8 @@ test('expanded LIM content forms a logical four-branch learning cycle',()=>{
  }
  assert.deepEqual(LIM_INTRO_CELLS.filter(cell=>cell.parentId==='lim-intro-literacy').map(cell=>cell.title),['Plants','Guilds','Grow','Fruit','Soil Life','Wildlife']);
  assert.deepEqual(LIM_INTRO_CELLS.filter(cell=>cell.parentId==='lim-intro-food-forest').map(cell=>cell.title),['Function','Energy','Design','Succession','Water','Stewardship']);
- assert.deepEqual(LIM_INTRO_CELLS.filter(cell=>cell.parentId==='lim-intro-smart').map(cell=>cell.title),['Goals','Outcomes','Limitations','Challenges','Decisions','Feedback']);
- const revealAt=10000,progression={visionActivated:true,visionActivatedAt:0,expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':revealAt}};
+ assert.deepEqual(LIM_INTRO_CELLS.filter(cell=>cell.parentId==='lim-intro-smart').map(cell=>cell.title),['Vision','Goals','Outcomes','Limitations','Challenges','Decisions','Feedback']);
+ const revealAt=10000,progression={expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':revealAt}};
  const openingChildren=welcomeExperienceFrames(revealAt+900,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
  assert.ok(openingChildren.some(node=>node.opacity>0 && node.opacity<1),'new siblings fade rather than appearing instantly');
  assert.ok(openingChildren.some(node=>node.opacity===0),'later siblings remain staged');

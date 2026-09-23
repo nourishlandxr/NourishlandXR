@@ -1393,9 +1393,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /for \(let fontSize = 60; fontSize >= 26; fontSize -= 2\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
-    assert.match(source, /arWelcomeVisionActivated=false/);
-    assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*visionActivated:arWelcomeVisionActivated/);
-    assert.match(source, /Activate learning cells in the Control panel whenever you want to explore Vision/);
+    assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);
+    assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*expandedLimIds:\[\.\.\.limExpandedCells\]/);
+    assert.match(source, /Activate learning cells in the Control panel whenever you want to explore the four pathways/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
