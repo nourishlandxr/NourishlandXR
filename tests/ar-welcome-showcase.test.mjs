@@ -74,6 +74,13 @@ test('minimal introduction reveals only four coloured primary pathways without c
  assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
 });
 
+test('LIM cells use a flat face with an obvious hover fill',()=>{
+ assert.doesNotMatch(showcaseSource,/Rear rim gives the transparent face physical depth/);
+ assert.doesNotMatch(showcaseSource,/ctx\.lineTo\(x\+5,y\+thickness\)/);
+ assert.match(showcaseSource,/if\(hoverOnly\)drawHexagon\(ctx,0,0,r-4,accentRgba\(accent,hue,\.34\)/);
+ assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?10:6/);
+});
+
 test('Vision fades in after learning cells are activated late in the demo',()=>{
  const activatedAt=90000,progression={cellsActivatedAt:activatedAt,visionActivated:false};
  const before=welcomeExperienceFrames(activatedAt,false,undefined,new Set(),progression)[0].nodes[0];

@@ -1103,6 +1103,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function demoPointerWorldOrigin\(\)/);
     assert.match(source, /function drawDemoControllerPointer\(view\)/);
     assert.match(source, /const hoveredRecordHit=/);
+    assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
+    assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
     assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);

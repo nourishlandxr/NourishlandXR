@@ -351,27 +351,13 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  ctx.translate(node.drawX,node.drawY);
  ctx.rotate(0);
  ctx.scale(node.scale,node.scale);
- const r=node.baseRadius, thickness=10+(reducedMotion?0:opening*12), hollow=Boolean(node.hollow);
+ const r=node.baseRadius, hollow=Boolean(node.hollow);
  const activation=Math.max(0,Math.min(1,Number(visual.activation)||0));
  const selected=Boolean(visual.selected);
  const accent=node.accent || '';
- // Rear rim gives the transparent face physical depth without separating cells.
- drawHexagon(ctx,5,thickness,r,'rgba(15,43,32,.04)',`hsla(${hue},24%,64%,${hollow?.42:.24})`,2);
- for(let i=0;i<6;i++){
-  const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;
-  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+5,y+thickness);
-  ctx.strokeStyle=`hsla(${hue},36%,83%,.28)`;ctx.lineWidth=1.6;ctx.stroke();
- }
- const glass=ctx.createLinearGradient(-r,-r,r*.6,r);
- glass.addColorStop(0,`hsla(${hue},28%,90%,${hollow?.035:.26})`);
- glass.addColorStop(.45,`hsla(${hue},23%,78%,${hollow?.015:.09})`);
- glass.addColorStop(1,`rgba(15,53,36,${hollow?.025:.17})`);
- const rim=ctx.createLinearGradient(-r,-r,r,r);
- rim.addColorStop(0,'rgba(246,255,231,.92)');rim.addColorStop(.5,`hsla(${hue},31%,78%,.58)`);rim.addColorStop(1,'rgba(232,251,217,.3)');
- ctx.shadowColor='rgba(7,29,18,.22)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;
- drawHexagon(ctx,0,0,r,glass,rim,hollow?2.5:3);
- ctx.shadowBlur=0;ctx.shadowOffsetY=0;
- drawHexagon(ctx,0,0,r-6,'rgba(255,255,255,0)',`hsla(${hue},28%,91%,${hollow?.4:.16})`,hollow?2:1);
+ // Keep cells deliberately flat in XR: one face and one outline, with no
+ // false rear rim, bevel, perspective edge or drop shadow.
+ drawHexagon(ctx,0,0,r,accentRgba(accent,hue,hollow?.035:.16),`hsla(${hue},30%,86%,${hollow?.46:.72})`,hollow?2.5:3);
  if(activation>0){
   // Centre-out paint is clipped to the fixed hexagon; geometry never scales.
   ctx.save();ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*r,y=Math.sin(a)*r;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.clip();
@@ -388,7 +374,8 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  }
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
-  ctx.globalAlpha=node.opacity*(hoverOnly?.76:.9);ctx.shadowColor=accentRgba(accent,hue,.55);ctx.shadowBlur=hoverOnly?12:18;ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?4:5;
+  if(hoverOnly)drawHexagon(ctx,0,0,r-4,accentRgba(accent,hue,.34),'rgba(255,255,255,0)',0);
+  ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?24:18;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?10:6;
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
   ctx.setLineDash([r*.34,r*.18]);ctx.globalAlpha=node.opacity*.65;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.86)';
   ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-8),y=Math.sin(a)*(r-8);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);

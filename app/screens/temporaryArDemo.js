@@ -3949,10 +3949,14 @@ function drawDemoControllerPointer(view) {
     const hoveredRecordHit=Number.isFinite(hoveredRecordDepth) && hoveredRecordDepth>0 ? {distance:hoveredRecordDepth,point:{x:origin.x+direction.x*hoveredRecordDepth,y:origin.y+direction.y*hoveredRecordDepth,z:origin.z+direction.z*hoveredRecordDepth}} : null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
     const surface = [limSurface,controlSurface,placementSurface,pimSurface,hoveredRecordHit,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
-    const surfacePoint=surface?.point ? {
-        x:surface.point.x-direction.x*.012,
-        y:surface.point.y-direction.y*.012,
-        z:surface.point.z-direction.z*.012
+    // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
+    // `point`. Treat both as the same exact visual contact so the laser does
+    // not fall through to its five-metre fallback after a valid cell hit.
+    const contactPoint=surface?.point || surface?.position;
+    const surfacePoint=contactPoint ? {
+        x:contactPoint.x-direction.x*.004,
+        y:contactPoint.y-direction.y*.004,
+        z:contactPoint.z-direction.z*.004
     } : null;
     const end = surfacePoint || controllerRayEnd(latestControllerRay, [], XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
