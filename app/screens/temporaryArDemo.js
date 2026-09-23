@@ -3339,11 +3339,6 @@ function drawIntroNoteContent(ctx) {
     const contentLeft = 300;
     const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
-    if(arWelcomeIntroPending){
-        ctx.save();ctx.globalAlpha=.82;ctx.textAlign='right';ctx.textBaseline='middle';
-        ctx.fillStyle='#e7f5bb';ctx.font='600 23px system-ui, sans-serif';
-        ctx.fillText('↙ Control panel',292,700,190);ctx.restore();
-    }
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
@@ -3365,7 +3360,8 @@ function drawIntroNoteContent(ctx) {
     ctx.moveTo(contentLeft, 478);
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
-    ctx.textAlign = 'left';
+    const isOpeningStatement = arWelcomeIntroPending;
+    ctx.textAlign = isOpeningStatement ? 'center' : 'left';
     ctx.fillStyle = 'rgba(255,255,255,.96)';
     const typedBody = introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
@@ -3377,7 +3373,8 @@ function drawIntroNoteContent(ctx) {
     const bodyTop = 498;
     const bodyBottom = introBoardNextGuide ? 710 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
-    ctx.font = `650 ${bodyLayout.fontSize}px system-ui, sans-serif`;
+    ctx.font = `${isOpeningStatement ? 400 : 650} ${bodyLayout.fontSize}px system-ui, sans-serif`;
+    const bodyX = isOpeningStatement ? contentCenter : contentLeft;
     let paragraphY = bodyTop;
     let clipped = false;
     ctx.save();
@@ -3390,11 +3387,11 @@ function drawIntroNoteContent(ctx) {
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true; break outer; }
-            ctx.fillText(line, contentLeft, lineY);
+            ctx.fillText(line, bodyX, lineY);
         }
         paragraphY += completeLines.length * bodyLayout.lineHeight + bodyLayout.paragraphGap;
     }
-    if (clipped) ctx.fillText('…', contentLeft, bodyBottom);
+    if (clipped) ctx.fillText('…', bodyX, bodyBottom);
     ctx.restore();
     }
     if(introBoardNextGuideVisible && introBoardNextGuide){
