@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createPimDocument, pimAddNode } from '../app/services/pimModel.js';
-import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
+import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, panelCenterFromGrab, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
 
 test('Quest Control panel collapses its side regions while keeping Continue reachable', () => {
     const items=controlPanelControls({height:850,utilityActions:[{id:'continue',label:'Continue',primary:true},{id:'close',label:'Close demo'}]});
@@ -90,6 +91,26 @@ test('Side panel faces elevated and moving eyes; pitched controls use the render
         const hit=hitTotemSurface(ray,[{center,...axes,width:.66,height:.66}]);
         assert.ok(hit);assert.ok(Math.abs(hit.localX-.2)<1e-10);assert.ok(Math.abs(hit.localY+.25)<1e-10);
     }
+});
+
+test('grabbing the off-centre move dot keeps that exact point under the controller ray',()=>{
+    const center={x:-.7,y:1.5,z:-1.2};
+    const axes={right:{x:1,y:0,z:0},up:{x:0,y:1,z:0}};
+    const localX=.21,localY=.29;
+    const ray={origin:{x:0,y:1.5,z:0},direction:{x:(center.x+localX)/1.2,y:localY/1.2,z:-1}};
+    const grab={distance:1.2,localX,localY};
+    const initial=panelCenterFromGrab(ray,grab,axes);
+    for(const key of ['x','y','z'])assert.ok(Math.abs(initial[key]-center[key])<1e-10);
+    const movedRay={origin:{...ray.origin},direction:{x:ray.direction.x+.1,y:ray.direction.y+.05,z:-1}};
+    const moved=panelCenterFromGrab(movedRay,grab,axes);
+    assert.ok(Math.abs(moved.x-center.x-.12)<1e-10);
+    assert.ok(Math.abs(moved.y-center.y-.06)<1e-10);
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    assert.match(panel,/distance:target\.distance,localX:target\.localX,localY:target\.localY/);
+    assert.match(panel,/xrFrame\.getPose\(spatialMove\.source\.targetRaySpace,spatialMove\.referenceSpace\)/);
+    assert.match(panel,/card\.largeText\?'400 38px':'400 33px'/);
+    const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
+    assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\) \.nlxr-info-trail \{ font-size:15px/);
 });
 
 test('hold requires dwell on the same cell, activates once, and clears fill on cancellation',()=>{

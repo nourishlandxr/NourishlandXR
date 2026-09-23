@@ -4148,7 +4148,7 @@ async function startImmersive() {
             pollDemoHandPinch();
             syncImmersiveLimHover();
             tickLimActivation(_time);
-            infoPanel?.update(viewerMatrix, _time, latestControllerRay);
+            infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame);
             if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
                 limDiagnostic('companion-panel-position',infoPanel.getPosition());
                 limPanelDiagnosticRecorded=true;

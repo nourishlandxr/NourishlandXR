@@ -6009,7 +6009,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput(_time);
             updateControllerRay(frame);
-            infoPanel?.update(latestViewerMatrix, _time, latestControllerRay); pimHold?.tick(_time);
+            infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
             const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? spatialPimTargetAtAim() : null;
             const specialPaletteTarget = !dashboardTarget && !pimTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;

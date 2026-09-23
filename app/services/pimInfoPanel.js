@@ -76,6 +76,17 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
     return forwardDistance < .16 || forwardDistance > 2.4 || Math.abs(lateralDistance) > 1.45 || Math.abs(dy) > 1.35;
 }
 
+// Keep the point under the user's ray fixed instead of snapping the panel's
+// centre onto the ray when its off-centre move handle is grabbed.
+export function panelCenterFromGrab(ray, grab, axes) {
+    if (!ray?.origin || !ray.direction || !grab || !axes?.right || !axes?.up) return null;
+    return {
+        x:ray.origin.x+ray.direction.x*grab.distance-axes.right.x*grab.localX-axes.up.x*grab.localY,
+        y:ray.origin.y+ray.direction.y*grab.distance-axes.right.y*grab.localX-axes.up.y*grab.localY,
+        z:ray.origin.z+ray.direction.z*grab.distance-axes.right.z*grab.localX-axes.up.z*grab.localY
+    };
+}
+
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
@@ -136,7 +147,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     let mediaImage=null,mediaLoadToken=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,pathwayContext=null,moduleContext=null,utilityActions=[];
-    let spatialMove=null,manuallyPositioned=false;
+    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
@@ -145,7 +156,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
         :'This is your Control panel. It stays nearby to help you read selected topics, follow the tutorial and adjust the experience.';
-    const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
+    const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
     const title=()=>tab==='Modules'?(moduleContext?.title || 'Guides'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && selection.image
@@ -272,21 +283,21 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             ctx.fillStyle='rgba(11,25,20,.25)';ctx.fillRect(6,115,rail,c.height-122);
             ctx.fillStyle='rgba(14,29,24,.28)';ctx.fillRect(1000-media,115,media-6,c.height-122);
             ctx.fillStyle='#f1f4f4';ctx.font='600 35px system-ui';ctx.fillText(card.plant,left,28,Math.max(100,width-150));
-            ctx.fillStyle='#bdc9cc';ctx.font='400 21px system-ui';ctx.fillText(card.scientific,left,79,width);
+            ctx.fillStyle='#d4e0dc';ctx.font='400 25px system-ui';ctx.fillText(card.scientific,left,77,width);
             let y=156;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 24px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=35;
-                ctx.fillStyle='#b7c5c9';ctx.font='400 19px system-ui';ctx.fillText(card.pathway.progress,left,y,width);y+=30;
+                ctx.fillStyle='#d4e0dc';ctx.font='400 23px system-ui';ctx.fillText(card.pathway.progress,left,y,width);y+=34;
                 infoPages(card.pathway.explanation,Math.max(26,Math.floor(width/13)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=24;});y+=16;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,6,34);}
             ctx.fillStyle='#f1f4f4';ctx.font='600 30px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=46;
-            ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.trail,left,y,width);y+=40;
+            ctx.fillStyle='#d4e0dc';ctx.font='400 23px system-ui';ctx.fillText(card.trail,left,y,width);y+=42;
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-90);
             const contentBottom=actionTop-22;
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
-            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 36px':'400 30px')+' system-ui';
-            const lineHeight=card.largeText?44:38;
+            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 38px':'400 33px')+' system-ui';
+            const lineHeight=card.largeText?46:41;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(!card.mediaCollapsed){
                 const imageX=1000-media+12,imageY=206,imageWidth=media-28,imageHeight=Math.max(180,card.height-300);
@@ -295,7 +306,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
                     ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
                 }else{ctx.fillStyle='#bdc9cc';ctx.font='400 20px system-ui';infoPages('Plant media appears here when a plant is selected.',18,4)[0].forEach((line,index)=>ctx.fillText(line,imageX,imageY+index*27,imageWidth));}
             }
-            ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.metadata,left,card.height-20,width);
+            ctx.fillStyle='#d4e0dc';ctx.font='400 22px system-ui';ctx.fillText(card.metadata,left,card.height-27,width);
             if(card.tab==='Details')ctx.fillText(card.page,right-65,card.height-20,65);
         }else if(!card.hidden){
             ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
@@ -337,7 +348,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle='rgba(232,244,240,.42)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(button.x+radius,button.y+2,button.width-radius*2,1.5);}
             if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}
-            ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':button.kind==='toggle'||button.kind==='handle'?'#d9ffb3':'#f1f4f4';ctx.font=(button.primary?'700 ':button.kind==='toggle'||button.kind==='handle'?'700 ':'500 ')+(button.kind==='toggle'||button.kind==='handle'?'32px':'27px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(button.kind==='toggle'||button.kind==='handle'?36:32))/2,button.width-16);
+            ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':button.kind==='toggle'||button.kind==='handle'?'#d9ffb3':'#f1f4f4';ctx.font=(button.primary?'700 ':button.kind==='toggle'||button.kind==='handle'?'700 ':'500 ')+(button.kind==='toggle'||button.kind==='handle'?'32px':'29px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(button.kind==='toggle'||button.kind==='handle'?36:34))/2,button.width-16);
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66}]);}
@@ -371,18 +382,24 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value)render();},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66,card:cards[0]}]:[]});element.hidden=true;},
-        update(matrix,time=performance.now(),inputRay=null){
+        update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
             if(!manuallyPositioned && panelPoseOutsideSafeBounds(matrix,pose)){heading=null;pose=null;lastTime=0;}
             const next=infoPanelPose(matrix,heading,headset);if(!next)return;heading=next.anchorHeading;
-            if(spatialMove && inputRay?.origin && inputRay?.direction){
+            let heldTransform=null;
+            if(spatialMove && xrFrame?.getPose && spatialMove.source?.targetRaySpace && spatialMove.referenceSpace){
+                try{heldTransform=xrFrame.getPose(spatialMove.source.targetRaySpace,spatialMove.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
+            }
+            const heldRay=heldTransform?{origin:{x:heldTransform[12],y:heldTransform[13],z:heldTransform[14]},direction:{x:-heldTransform[8],y:-heldTransform[9],z:-heldTransform[10]}}:xrFrame?null:inputRay;
+            if(spatialMove && heldRay?.origin && heldRay?.direction){
                 pose ||= next;
-                pose.center={x:inputRay.origin.x+inputRay.direction.x*spatialMove.distance,y:inputRay.origin.y+inputRay.direction.y*spatialMove.distance,z:inputRay.origin.z+inputRay.direction.z*spatialMove.distance};
+                pose.center=panelCenterFromGrab(heldRay,spatialMove,pose);
                 manuallyPositioned=true;
             }else if(!manuallyPositioned){
                 const amount=pose?1-Math.exp(-Math.min(100,Math.max(0,time-lastTime))/160):1;
                 if(!pose)pose=next;else for(const key of ['x','y','z'])pose.center[key]+=(next.center[key]-pose.center[key])*amount;
             }
-            Object.assign(pose,facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]}));lastTime=time;
+            if(!spatialMove)Object.assign(pose,facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]}));
+            lastTime=time;
         },
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;spatialMove=null;},
         getPosition(){return pose?.center ? {...pose.center} : null;},
@@ -394,7 +411,9 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());
             const button=(headset?spatialControls():controls()).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);if(button && button.action!=='MovePanel')act(button.action);return true;},
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
-            if(event.type==='selectend' && spatialMove?.source===event.inputSource){spatialMove=null;return;}
+            if(event.type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
+            if(event.type==='selectend' && spatialMove?.source===event.inputSource){finishingMoveSource=event.inputSource;spatialMove=null;event.stopImmediatePropagation();return;}
+            if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
             const transform=event.frame?.getPose(event.inputSource.targetRaySpace,referenceSpace)?.transform.matrix;if(!transform)return;
             const ray={origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
             const target=hit(ray);if(!target)return;
@@ -402,8 +421,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());
             const button=spatialControls().find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);
             if(event.type==='selectstart' && button?.action==='MovePanel'){
-                const dx=pose.center.x-ray.origin.x,dy=pose.center.y-ray.origin.y,dz=pose.center.z-ray.origin.z;
-                spatialMove={source:event.inputSource,distance:Math.max(.45,Math.min(2.2,dx*ray.direction.x+dy*ray.direction.y+dz*ray.direction.z))};
+                spatialMove={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY};
                 return;
             }
             if(event.type==='select' && !spatialMove)api.activate(ray);
