@@ -1102,7 +1102,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /if \(latestControllerRay\) return latestControllerRay\.direction/);
     assert.match(source, /function demoPointerWorldOrigin\(\)/);
     assert.match(source, /function drawDemoControllerPointer\(view\)/);
-    assert.match(source, /function demoLaserSubjects\(\)/);
+    assert.match(source, /const hoveredRecordHit=/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialOrb/);
@@ -1321,7 +1322,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
     assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
     assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
     assert.match(source, /function revealIntroBoardNextGuide\(\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);
@@ -1340,7 +1341,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
-    assert.match(source, /radius: \.96/);
+    assert.doesNotMatch(source, /radius: \.96/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
     assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);

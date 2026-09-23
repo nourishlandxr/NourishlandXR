@@ -46,17 +46,20 @@ test('waist companion follows translation but remains reachable when looking lef
     assert.deepEqual(next.anchorHeading,first.anchorHeading); assert.equal(next.center.x-first.center.x,2); assert.equal(next.center.z-first.center.z,3);
 });
 
-test('Control panel tabs and tools share non-overlapping hit rectangles with gated editing',()=>{
+test('Control panel keeps navigation separate from experience actions',()=>{
     for(const tab of ['Details','Modules','Help','Settings']){
         const buttons=controlPanelControls({tab});
         assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,1);
         for(const [i,a] of buttons.entries())for(const b of buttons.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
     }
-    assert.equal(controlPanelControls({tab:'Details'}).find(b=>b.action==='Edit').disabled,true);
-    assert.equal(controlPanelControls({tab:'Details',selected:true}).find(b=>b.action==='Edit').disabled,false);
+    assert.equal(controlPanelControls({tab:'Details',selected:true}).some(b=>b.action==='Edit'),false);
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
-    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Learning');
+    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Selected topic');
     assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
+    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Modules').label,'Guides');
+    const menu=controlPanelControls({height:760,utilityActions:[{id:'lim-visibility',label:'Hide learning cells'},{id:'close',label:'Close demo'}]});
+    assert.deepEqual(menu.filter(button=>button.kind==='menu').map(button=>button.action),['Utility:lim-visibility','Utility:close']);
+    assert.equal(menu.some(button=>button.kind==='utility' && ['Utility:lim-visibility','Utility:close'].includes(button.action)),false);
     const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});
     assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:recenter','Utility:continue']);
     for(const [i,a] of utilities.entries())for(const b of utilities.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);

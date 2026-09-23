@@ -8,7 +8,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeCanContinue,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -187,6 +187,16 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
+const WELCOME_NARRATIVE = Object.freeze([
+    Object.freeze({at:0,text:'A place for learning and mapping nature.',accent:'#dcef95'}),
+    Object.freeze({at:4800,text:'Notice what is already here.',accent:'#7fa7e8'}),
+    Object.freeze({at:6600,text:'See how living patterns connect.',accent:'#8fc77a'}),
+    Object.freeze({at:8400,text:'Imagine what could grow.',accent:'#e7b45f'}),
+    Object.freeze({at:10200,text:'Turn learning into care.',accent:'#d68bb8'}),
+    Object.freeze({at:12400,text:'Choose a pathway or Continue.',accent:'#dcef95'})
+]);
+const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
+const DEMO_WELCOME_CONTINUE_MS=8000;
 // Canvas texture uploads are expensive on phones. Coalesce the continuously
 // changing welcome copy/mesh into a modest cadence so typing and input stay
 // responsive while the XR frame loop remains free to render at 60fps.
@@ -1032,7 +1042,7 @@ function welcomeFrames() {
     if(arWelcomeIntroPending && arWelcomeRenderedFrames.length)return arWelcomeRenderedFrames;
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{cellsActivatedAt:limMeshActivatedAt,visionActivated:arWelcomeVisionActivated,visionActivatedAt:arWelcomeVisionActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
-const welcomeSequenceCanContinue=()=>!arWelcomeOpeningActive && welcomeCanContinue(arWelcomeClock.elapsed-arWelcomeOpeningDuration,arWelcomeVisionActivated?arWelcomeVisionActivatedAt:NaN);
+const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=DEMO_WELCOME_CONTINUE_MS;
 
 let selectedLimCell='';
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
@@ -1437,7 +1447,7 @@ function showArWelcomeShowcase() {
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     button.onclick=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
-        arWelcomeIntroPending=false;introBoardTextureDirty=true;
+        arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
@@ -2228,6 +2238,8 @@ function demoPimPointerTarget(record) {
     const size = record.pimTextureSize || demoPimSurfaceSize(record);
     return {
         panelHit: true,
+        point: hit,
+        distance,
         xPercent,
         yPercent,
         node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, {
@@ -3366,18 +3378,24 @@ function drawIntroNoteContent(ctx) {
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
     const isOpeningStatement = arWelcomeIntroPending;
+    const narrative = isOpeningStatement ? welcomeNarrative(arWelcomeClock.elapsed) : null;
     ctx.textAlign = isOpeningStatement ? 'center' : 'left';
-    ctx.fillStyle = 'rgba(255,255,255,.96)';
-    const typedBody = introBoardVisibleBody
+    if(narrative){
+        ctx.save();ctx.globalAlpha=.18;
+        const glow=ctx.createRadialGradient(contentCenter,610,10,contentCenter,610,360);
+        glow.addColorStop(0,narrative.accent);glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(contentLeft,480,contentWidth,290);ctx.restore();
+    }
+    ctx.fillStyle = narrative?.accent || 'rgba(255,255,255,.96)';
+    const typedBody = narrative?.text || (introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
-        : '▌';
+        : '▌');
     const visibleParagraphs = typedBody.split(/\n\n/);
     // Keep the first body line clear of the divider and the clipping edge;
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
     const bodyTop = 498;
     const bodyBottom = introBoardNextGuide ? 710 : 775;
-    const bodyLayout = fitIntroBodyLayout(ctx, introBoardBody, contentWidth, bodyBottom - bodyTop);
+    const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `${isOpeningStatement ? 400 : 650} ${bodyLayout.fontSize}px system-ui, sans-serif`;
     const bodyX = isOpeningStatement ? contentCenter : contentLeft;
     let paragraphY = bodyTop;
@@ -3907,33 +3925,6 @@ function drawMarker(view) {
     drawDemoControllerPointer(view);
 }
 
-function demoLaserSubjects() {
-    const subjects = markers.flatMap(record => [
-        {
-            position: record.position,
-            radius: record.demoType === 'note' ? .62 : record.demoType === 'zone' ? .42 : .3
-        },
-        ...(record.demoExpanded && record.informationPosition
-            ? [{ position: record.informationPosition, radius: .96 }]
-            : [])
-    ]);
-    if (placementReady) {
-        const point = placementPosition();
-        if (point) subjects.push({ position: point, radius: .38 });
-    }
-    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlLabel = session && !domOverlayEnabled && continueButton && sessionMode !== 'immersive-vr' && !continueButton.hidden
-        ? (continueButton.textContent || 'Continue').trim()
-        : '';
-    if (controlLabel && introWorldAnchor) {
-        subjects.push({
-            position: introLocalPosition(introWorldAnchor, INTRO_CONTROL_POSITION),
-            radius: .46
-        });
-    }
-    return subjects;
-}
-
 function drawDemoControllerPointer(view) {
     if (!latestControllerRay || !tetherRenderer) return;
     const { origin, direction } = latestControllerRay;
@@ -3945,13 +3936,25 @@ function drawDemoControllerPointer(view) {
     const limSurface=arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell()
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
-    const surface = [limSurface,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
+    const controlSurface=session && !domOverlayEnabled && continueButton && sessionMode!=='immersive-vr' && !continueButton.hidden && introWorldAnchor
+        ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,220)
+        : null;
+    const placementPoint=placementReady ? placementPosition() : null;
+    const placementDepth=placementPoint ? (placementPoint.x-origin.x)*direction.x+(placementPoint.y-origin.y)*direction.y+(placementPoint.z-origin.z)*direction.z : NaN;
+    const placementSurface=Number.isFinite(placementDepth) && placementDepth>0 ? {distance:placementDepth,point:placementPoint} : null;
+    const pimTarget=demoInfoTarget()?.target;
+    const hoveredRecord=demoRecordAtPointer()?.record;
+    const hoveredRecordDepth=hoveredRecord ? (hoveredRecord.position.x-origin.x)*direction.x+(hoveredRecord.position.y-origin.y)*direction.y+(hoveredRecord.position.z-origin.z)*direction.z : NaN;
+    const hoveredRecordHit=Number.isFinite(hoveredRecordDepth) && hoveredRecordDepth>0 ? {distance:hoveredRecordDepth,point:{x:origin.x+direction.x*hoveredRecordDepth,y:origin.y+direction.y*hoveredRecordDepth,z:origin.z+direction.z*hoveredRecordDepth}} : null;
+    const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
+    const surface = [limSurface,controlSurface,placementSurface,pimSurface,hoveredRecordHit,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     const surfacePoint=surface?.point ? {
         x:surface.point.x-direction.x*.012,
         y:surface.point.y-direction.y*.012,
         z:surface.point.z-direction.z*.012
     } : null;
-    const end = surfacePoint || controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const end = surfacePoint || controllerRayEnd(latestControllerRay, [], XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -3960,6 +3963,7 @@ function drawDemoControllerPointer(view) {
         lift: .001,
         color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
+    if(surface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.016,{color:[.82,1,.56],alpha:1,emissive:.8});
 }
 
 async function startImmersive() {
