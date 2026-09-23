@@ -7031,6 +7031,21 @@ body.creator-ar-quest-headset.creator-ar-spatial-belt-ready .creator-ar-quest-li
 .ar-safety-icon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(85, 141, 83, .48); border-radius: 14px; background: rgba(220, 239, 149, .18); color: #2f7545; font-size: 1.42rem; }
 .ar-safety-actions { width: min(100%, 620px); margin-inline: auto; }
 .ar-safety-actions button { min-height: 48px; flex: 1 1 220px; }
+.ar-introduction-preparation { align-content: start; }
+.ar-introduction-preparation-card { gap: 18px; }
+.ar-introduction-lead { color: #284d33; font-size: 1rem; }
+.ar-preparation-points { display: grid; gap: 10px; }
+.ar-preparation-points > div { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid rgba(85, 141, 83, .22); border-radius: 14px; background: rgba(238, 247, 232, .58); }
+.ar-preparation-points > div > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: rgba(93, 133, 57, .13); color: #397247; font-size: 1.35rem; }
+.ar-preparation-points p { display: grid; gap: 2px; }
+.ar-preparation-points strong { color: #294f34; font-size: .9rem; }
+.ar-preparation-points small { color: var(--muted, #64746a); font-size: .78rem; line-height: 1.4; }
+.ar-introduction-remember { width: min(100%, 620px); margin-inline: auto; box-sizing: border-box; }
+@media (max-width: 520px) {
+    .ar-introduction-preparation .page-header h1 { font-size: clamp(1.85rem, 10vw, 2.7rem); }
+    .ar-preparation-points > div { grid-template-columns: 36px minmax(0, 1fr); padding: 9px 10px; }
+    .ar-preparation-points > div > span { width: 36px; height: 36px; font-size: 1.15rem; }
+}
 @media screen and (orientation: landscape) and (max-height: 720px) {
     .creator-ar-overlay, .tryit-demo, .creator-ar-canvas, .tryit-xr-canvas { width: 100dvw; height: 100dvh; min-width: 100dvw; min-height: 100dvh; }
     .creator-ar-control-dock,

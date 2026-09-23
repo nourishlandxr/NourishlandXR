@@ -1,4 +1,5 @@
 const CAMERA_SAFETY_ACK_KEY = 'nourishlandxr.camera-safety-ack.v1';
+const AR_INTRO_PREPARATION_SKIP_KEY = 'nourishlandxr.ar-introduction-preparation-skip.v1';
 
 function storageOrDefault(storage) {
     return storage || globalThis.localStorage;
@@ -20,6 +21,14 @@ export function hasArCameraSafetyAcknowledgement(storage) {
 
 export function acknowledgeArCameraSafety(storage) {
     writeFlag(CAMERA_SAFETY_ACK_KEY, storage);
+}
+
+export function shouldSkipArIntroductionPreparation(storage) {
+    return readFlag(AR_INTRO_PREPARATION_SKIP_KEY, storage);
+}
+
+export function skipArIntroductionPreparation(storage) {
+    writeFlag(AR_INTRO_PREPARATION_SKIP_KEY, storage);
 }
 
 export const AR_CAMERA_SAFETY_COPY = Object.freeze({
@@ -46,6 +55,33 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
         finally { button.disabled = false; }
     });
     app.querySelector('[data-ar-safety-cancel]')?.addEventListener('click', () => onCancel?.());
+}
+
+export function renderArIntroductionPreparation(app, { onContinue, onCancel } = {}) {
+    if (!app) return;
+    app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
+        <div class="page-header"><p class="welcome-label">Before the camera opens</p><h1>Ready to step into AR?</h1><p class="subtitle">Nothing starts until you choose Enter AR.</p></div>
+        <section class="panel ar-safety-card ar-introduction-preparation-card">
+            <p class="ar-introduction-lead">This introduction places NourishlandXR’s learning cells in the space around you.</p>
+            <div class="ar-preparation-points">
+                <div><span aria-hidden="true">◎</span><p><strong>Make a little room</strong><small>Use a clear, calm space and stay aware of people and obstacles.</small></p></div>
+                <div><span aria-hidden="true">⌾</span><p><strong>Allow camera access</strong><small>Your browser or headset will ask permission after you continue.</small></p></div>
+                <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On Quest, stay inside your boundary. On a phone, hold the device securely.</small></p></div>
+            </div>
+            <p class="meta">You can leave the experience at any time. NourishlandXR does not begin camera access from this page.</p>
+        </section>
+        <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
+        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Enter AR</button></div>
+    </div>`;
+    app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        const remember = Boolean(app.querySelector('[data-ar-introduction-remember]')?.checked);
+        if (remember) skipArIntroductionPreparation();
+        try { await onContinue?.({ remember }); }
+        finally { button.disabled = false; }
+    });
+    app.querySelector('[data-ar-introduction-cancel]')?.addEventListener('click', () => onCancel?.());
 }
 
 export function showArSafetyDialog(root) {

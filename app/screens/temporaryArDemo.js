@@ -26,7 +26,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
-import { showArSafetyDialog } from '../services/arOnboarding.js';
+import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
 import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
@@ -4054,7 +4054,11 @@ async function startImmersive() {
 }
 
 export function openTemporaryArDemoWindow(app) {
-    return startTemporaryArDemo(app);
+    if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
+    renderArIntroductionPreparation(app, {
+        onContinue: () => startTemporaryArDemo(app),
+        onCancel: () => window.renderLaunchScreen?.()
+    });
 }
 
 export async function startTemporaryArDemo(app) {
