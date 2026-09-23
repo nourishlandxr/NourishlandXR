@@ -148,7 +148,10 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     const pages=()=>infoPages(text(),largeText?32:38,pathwayContext?4:7);
     const title=()=>tab==='Modules'?(moduleContext?.title || 'Guides'):tab==='Help'?'Explore at your own pace':tab==='Settings'?'Reading comfort':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const showPlantPreview=()=>Boolean(identity?.media?.image);
+    const previewMedia=()=>selection?.mesh==='lim' && selection.image
+        ? {image:selection.image,alt:selection.imageAlt || selection.title,caption:'Pathway illustration'}
+        : identity?.media?.image ? {...identity.media,caption:`${identity.plant} · reference image`} : null;
+    const showPlantPreview=()=>Boolean(previewMedia()?.image);
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
@@ -237,9 +240,9 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             if(tab==='Modules'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
-                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label','Plant media');
+                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
                 const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);
-                if(!mediaCollapsed && showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=identity.media.image;image.alt=identity.media.alt || identity.plant;image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=identity.plant+' · reference image';figure.append(image,caption);media.append(figure);}
+                if(!mediaCollapsed && showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
                 else if(!mediaCollapsed){const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
                 element.append(media);
             }
@@ -339,7 +342,13 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66}]);}
     const api={element,
-        showLearning(content){record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};mediaImage=null;mediaLoadToken++;tab='Details';hidden=false;page=0;render();},
+        showLearning(content){
+            record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
+            mediaImage=null;const token=++mediaLoadToken;
+            mediaCollapsed=!content?.image;
+            if(content?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token!==mediaLoadToken)return;mediaImage=image;render();};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=content.image;}
+            tab='Details';hidden=false;page=0;render();
+        },
         setLearningModules(value,{open=false}={}){moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setCompact(value=true){const compact=Boolean(value);railCollapsed=compact;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);render();},

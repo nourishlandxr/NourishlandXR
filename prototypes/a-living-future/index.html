@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f6f3e9">
+  <meta name="description" content="A standalone Nourishland prototype exploring a living future through real places, care, community and thoughtful technology.">
+  <title>A Living Future · Nourish Land prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{color-scheme:light;--ink:#17271f;--leaf:#244d38;--leaf-deep:#183b2b;--leaf-soft:#678874;--paper:#f6f3e9;--paper-light:#fffefa;--gold:#bf9144;--soil:#795e42;--line:#d7ddce;--muted:#52645b;--shadow:0 24px 70px rgba(19,45,28,.13)}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper-light);color:var(--ink);font-family:Montserrat,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+    a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #bf9144;outline-offset:4px}
+    .skip-link{position:absolute;z-index:100;left:1rem;top:-5rem;padding:.65rem 1rem;background:#fff;color:var(--ink)}
+    .skip-link:focus{top:1rem}
+    .site-header{background:#fff;border-top:5px solid var(--leaf-deep);border-bottom:1px solid #e7e9e3}
+    .header-inner{max-width:1420px;margin:auto;padding:1.1rem clamp(1.2rem,5vw,4.2rem);display:flex;align-items:center;justify-content:space-between;gap:2rem}
+    .brand{display:flex;align-items:center;gap:.8rem;text-decoration:none;flex-shrink:0}
+    .brand-mark{width:58px;height:58px;flex:none}
+    .brand-name{display:block;font-size:clamp(1.14rem,2vw,1.8rem);font-weight:800;letter-spacing:.095em;line-height:1.1;white-space:nowrap}
+    .brand-line{display:block;margin-top:.22rem;padding-top:.18rem;border-top:1px solid currentColor;font-size:.64rem;font-weight:500;letter-spacing:.015em;text-align:center;line-height:1.3}
+    .primary-nav{display:flex;align-items:center;gap:clamp(1rem,2.4vw,2.6rem);font-size:.77rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+    .primary-nav a{text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;padding:.6rem .05rem}
+    .primary-nav a:hover,.primary-nav a:focus-visible{border-bottom-color:var(--gold)}
+    .mobile-nav{display:none}
+    .page-shell{max-width:1420px;margin:auto;padding-inline:clamp(1.2rem,5vw,4.2rem)}
+    .eyebrow{display:block;color:var(--leaf);font-size:.71rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;line-height:1.5}
+    .hero{background:radial-gradient(circle at 76% 10%,#f5e8c4 0,transparent 37%),linear-gradient(180deg,#fbfaf5 0,var(--paper) 100%);border-bottom:1px solid var(--line)}
+    .hero-grid{display:grid;grid-template-columns:minmax(300px,.79fr) minmax(0,1.21fr);align-items:center;gap:clamp(2rem,5vw,6rem);padding-block:clamp(3.8rem,7vw,7rem) clamp(3rem,6vw,5rem)}
+    .hero-copy{max-width:520px}
+    .hero h1{font-size:clamp(3.6rem,5.7vw,6.5rem);font-weight:700;letter-spacing:-.072em;line-height:.98;margin:1.15rem 0 1.5rem}
+    .hero-intro{font-size:clamp(1.06rem,1.38vw,1.25rem);line-height:1.72;max-width:44ch}
+    .hero-intro p{margin:0 0 1rem}
+    .hero-actions,.invitation-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem}
+    .button{min-height:51px;display:inline-flex;align-items:center;justify-content:center;gap:.6rem;padding:.76rem 1.3rem;border:1px solid var(--leaf);border-radius:100px;background:var(--leaf);color:#fff;text-decoration:none;text-align:center;font-size:.84rem;font-weight:700;line-height:1.35;transition:background .2s ease,transform .2s ease}
+    .button:hover{background:#306247;transform:translateY(-2px)}
+    .button--line{background:transparent;color:var(--leaf)}
+    .button--line:hover{background:#ecf1e8}
+    .hero-prompt{display:flex;align-items:center;gap:.75rem;margin-top:2rem;color:var(--muted);font-size:.77rem;font-weight:600;letter-spacing:.035em}
+    .hero-prompt::before{content:"";width:36px;height:1px;background:var(--gold)}
+    .landscape-shell{min-width:0;background:#fff;border:1px solid #d8e0d4;border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+    .landscape-viewport{position:relative;overflow:hidden;background:#dce9cc;isolation:isolate}
+    .landscape-art{display:block;width:100%;height:auto;aspect-ratio:5/3;object-fit:cover}
+    .landscape-art .layer{opacity:0;transition:opacity .42s ease}
+    .landscape-viewport[data-state="0"] .layer-observe,.landscape-viewport[data-state="1"] .layer-imagine,.landscape-viewport[data-state="2"] .layer-act,.landscape-viewport[data-state="3"] .layer-learn{opacity:1}
+    .landscape-art .callout rect{fill:rgba(255,254,247,.95);stroke:rgba(45,88,58,.38);stroke-width:2}
+    .landscape-art .callout text{font-size:26px;font-weight:700;fill:#1a3828;letter-spacing:.01em}
+    .landscape-art .callout line{stroke:#224d36;stroke-width:3;stroke-dasharray:7 6}
+    .landscape-art .sketch{fill:none;stroke:#f8f5dd;stroke-width:7;stroke-dasharray:14 12;stroke-linecap:round}
+    .landscape-art .ghost{fill:#295a3b;fill-opacity:.22;stroke:#275537;stroke-width:5;stroke-dasharray:12 9}
+    .landscape-flag{position:absolute;top:1rem;left:1rem;max-width:calc(100% - 2rem);padding:.45rem .7rem;border:1px solid rgba(45,77,49,.3);border-radius:100px;background:rgba(255,254,248,.94);color:#244d38;font-size:.63rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;line-height:1.45}
+    .landscape-stamp{position:absolute;bottom:1rem;left:1rem;display:flex;align-items:baseline;gap:.6rem;padding:.45rem .75rem;border-radius:6px;background:rgba(23,47,31,.9);color:#fff;font-size:.74rem;line-height:1.2}
+    .landscape-stamp strong{font-size:.91rem}
+    .landscape-shell figcaption{padding:.68rem 1.3rem;border-bottom:1px solid var(--line);color:#52645b;font-size:.72rem;line-height:1.5}
+    .stage-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,.9fr);gap:1.1rem;padding:1.2rem 1.3rem 1.45rem;align-items:end}
+    .stage-panel .eyebrow{font-size:.64rem;letter-spacing:.15em}
+    .stage-panel h2{font-size:1.28rem;line-height:1.3;letter-spacing:-.03em;margin:.32rem 0 .28rem}
+    .stage-panel p{color:#43594b;margin:0;font-size:.78rem;line-height:1.58}
+    .timeline-controls{align-self:center}
+    .state-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.25rem;margin-bottom:.75rem}
+    .state-buttons button{min-height:38px;border:1px solid transparent;border-radius:8px;background:#f2f3eb;color:#42584a;font-size:.64rem;font-weight:700;padding:.45rem .2rem}
+    .state-buttons button:hover{background:#e1eadb}
+    .state-buttons button[aria-pressed="true"]{background:var(--leaf);color:#fff}
+    .timeline-controls label{display:block;font-size:.67rem;font-weight:700;color:#365541;margin-bottom:.2rem}
+    .timeline-controls input[type="range"]{display:block;width:100%;accent-color:var(--leaf);cursor:pointer}
+    .timeline-ends{display:flex;justify-content:space-between;color:#677567;font-size:.61rem;font-weight:600}
+    .no-js .timeline-controls{display:none}
+    .no-js-summary{padding:0 1.3rem 1.3rem;font-size:.76rem;color:var(--muted)}
+    .no-js-summary ol{margin:.45rem 0 0;padding-left:1.2rem}
+    .section{padding-block:clamp(4.5rem,8vw,8rem)}
+    .section-heading{max-width:830px;margin:0 0 2.1rem}
+    .section-heading h2,.section h2{font-size:clamp(2rem,3.4vw,3.5rem);line-height:1.16;letter-spacing:-.055em;margin:.65rem 0 1.2rem}
+    .section p{max-width:69ch}
+    .section p+p{margin-top:1.15rem}
+    .intro-section{background:#fff}
+    .intro-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.93fr);gap:clamp(2rem,7vw,7rem);align-items:center}
+    .intro-copy{font-size:1.01rem}
+    .network-card{border:1px solid var(--line);border-radius:22px;padding:1.2rem;background:#f7f8f1}
+    .network-card svg{display:block;width:100%;height:auto}
+    .network-card figcaption{padding:.25rem .5rem .1rem;color:var(--muted);font-size:.73rem}
+    .chapters-section{background:var(--paper)}
+    .chapter-stack{display:grid;gap:1.35rem}
+    .chapter{display:grid;grid-template-columns:minmax(0,.93fr) minmax(340px,1.07fr);gap:clamp(1.4rem,4.5vw,5rem);align-items:center;padding:clamp(1.4rem,3vw,3rem);border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 10px 38px rgba(31,57,39,.05)}
+    .chapter:nth-child(even) .chapter-copy{order:2}
+    .chapter:nth-child(even) .chapter-demo{order:1}
+    .chapter-number{font-size:.7rem;font-weight:800;letter-spacing:.16em;color:var(--gold)}
+    .chapter h3{font-size:clamp(1.65rem,2.7vw,2.6rem);line-height:1.2;letter-spacing:-.05em;margin:.45rem 0 1.1rem}
+    .chapter p{font-size:.94rem;line-height:1.75}
+    .chapter-demo{min-width:0}
+    .chapter-demo details{padding:0 0 .75rem}
+    .chapter-demo summary{width:max-content;max-width:100%;display:flex;align-items:center;gap:.7rem;list-style:none;padding:.52rem .9rem;border:1px solid #b8cabc;border-radius:100px;background:#f1f5eb;color:var(--leaf);font-size:.8rem;font-weight:700;cursor:pointer}
+    .chapter-demo summary::-webkit-details-marker{display:none}
+    .chapter-demo summary::after{content:"+";font-size:1rem;line-height:1}
+    .chapter-demo details[open] summary::after{content:"−"}
+    .chapter-demo details>p{max-width:48ch;margin:.65rem .15rem .1rem;color:var(--muted);font-size:.78rem;line-height:1.6}
+    .chapter-visual{position:relative;margin:0;overflow:hidden;border:1px solid #d7dfd3;border-radius:16px;background:#e9eee4}
+    .chapter-visual svg{display:block;width:100%;height:auto;aspect-ratio:1.76}
+    .chapter-visual .reveal{opacity:0;transition:opacity .36s ease}
+    .chapter-demo details[open]+.chapter-visual .reveal{opacity:1}
+    .chapter-visual figcaption{padding:.48rem .68rem;border-top:1px solid #d7dfd3;background:#fff;color:#48604d;font-size:.65rem;font-weight:600;line-height:1.45}
+    .people-section{background:#fff}
+    .people-grid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(350px,1.05fr);align-items:center;gap:clamp(2rem,7vw,7rem)}
+    .field-sequence{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.45rem;list-style:none;margin:0;padding:1.25rem;border:1px solid var(--line);border-radius:22px;background:#f7f6ee}
+    .field-sequence li{min-height:178px;padding:.75rem .55rem;border-radius:12px;background:#fff;border:1px solid #e2e5d8}
+    .field-sequence .step-icon{display:grid;place-items:center;width:43px;height:43px;margin:0 0 1.5rem;border:1px solid #b9cbb8;border-radius:50%;color:var(--leaf);font-size:1.25rem}
+    .field-sequence strong{display:block;font-size:.69rem;line-height:1.35}
+    .field-sequence small{display:block;margin-top:.38rem;color:var(--muted);font-size:.62rem;line-height:1.5}
+    .practice-section{background:#e8eee3}
+    .practice-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(330px,1.1fr);gap:clamp(2rem,7vw,7rem);align-items:center}
+    .field-note{padding:1.4rem clamp(1.2rem,3vw,2.3rem);border:1px solid #cfdbc8;border-radius:17px;background:repeating-linear-gradient(to bottom,#fffcf3 0,#fffcf3 38px,#e8e5d9 39px,#fffcf3 40px);box-shadow:0 16px 44px rgba(26,58,33,.09);transform:rotate(.55deg)}
+    .field-note-head{display:flex;justify-content:space-between;gap:1rem;align-items:start;border-bottom:2px solid #adbda7;padding-bottom:.9rem}
+    .field-note-head strong{font-size:1.15rem;letter-spacing:-.025em}
+    .field-note-head span{font-size:.61rem;font-weight:800;letter-spacing:.1em;color:#746649;text-transform:uppercase;text-align:right}
+    .field-note dl{display:grid;gap:0;margin:0}
+    .field-note dl>div{padding:.8rem 0;border-bottom:1px solid rgba(123,143,116,.35)}
+    .field-note dl>div:last-child{border-bottom:0}
+    .field-note dt{font-size:.73rem;font-weight:800;color:var(--leaf);text-transform:uppercase;letter-spacing:.1em}
+    .field-note dd{margin:.2rem 0 0;font-size:.81rem;line-height:1.62;color:#435044}
+    .invitation{position:relative;overflow:hidden;background:linear-gradient(135deg,#173b2b,#285941 60%,#3b6544);color:#fff}
+    .invitation::after{content:"";position:absolute;right:-120px;top:-210px;width:520px;height:520px;border:1px solid rgba(255,255,255,.2);border-radius:50%;box-shadow:0 0 0 55px rgba(255,255,255,.035),0 0 0 120px rgba(255,255,255,.026);pointer-events:none}
+    .invitation-inner{position:relative;z-index:1;max-width:920px;padding-block:clamp(4.5rem,8vw,7rem)}
+    .invitation .eyebrow{color:#e3cf95}
+    .invitation h2{max-width:16ch;color:#fff}
+    .invitation p{max-width:66ch;color:#edf6e9;font-size:1rem}
+    .invitation .button{border-color:#f3e7be;background:#f3e7be;color:#173b2b}
+    .invitation .button:hover{background:#fff3d1}
+    .invitation .button--line{background:transparent;color:#fff;border-color:rgba(255,255,255,.72)}
+    .invitation .button--line:hover{background:rgba(255,255,255,.12)}
+    .story-link{display:inline-block;margin-top:1.25rem;color:#f8eabd;font-size:.81rem;font-weight:700;text-underline-offset:.25em}
+    .site-footer{background:#fff}
+    .footer-inner{display:grid;grid-template-columns:1fr 1.4fr;gap:2rem;padding-block:2.5rem 3rem;border-top:1px solid var(--line)}
+    .footer-inner strong{font-size:.94rem;letter-spacing:.13em}
+    .footer-inner small{display:block;margin-top:.3rem;color:var(--muted)}
+    .footer-inner p{margin:0;color:#3e5547;font-size:.76rem;line-height:1.7}
+    @media(max-width:1100px){.primary-nav{gap:1rem;font-size:.7rem}.brand-mark{width:47px;height:47px}.brand-name{font-size:1.2rem}.brand-line{font-size:.58rem}.stage-panel{grid-template-columns:1fr}.hero-grid{gap:2rem}.field-sequence{grid-template-columns:repeat(5,1fr)}.field-sequence li{padding:.65rem .4rem}}
+    @media(max-width:800px){.primary-nav{display:none}.mobile-nav{display:block;position:relative;margin-left:auto}.mobile-nav summary{list-style:none;padding:.55rem .8rem;border:1px solid var(--line);border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer}.mobile-nav summary::-webkit-details-marker{display:none}.mobile-nav nav{position:absolute;right:0;top:calc(100% + .5rem);z-index:20;display:grid;min-width:215px;padding:.45rem;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:var(--shadow)}.mobile-nav nav a{padding:.6rem .7rem;text-decoration:none;font-size:.78rem;font-weight:700}.mobile-nav nav a:hover{background:#f0f4ea}.hero-grid,.intro-grid,.chapter,.people-grid,.practice-grid{grid-template-columns:1fr}.hero-grid{padding-block:3.5rem}.hero-copy{max-width:670px}.chapter:nth-child(even) .chapter-copy,.chapter:nth-child(even) .chapter-demo{order:initial}.chapter{gap:1rem}.field-sequence li{min-height:160px}.section{padding-block:4.5rem}.hero h1{font-size:clamp(3.5rem,11vw,5.5rem)}}
+    @media(max-width:620px){.header-inner{padding:1rem 1.1rem}.brand{gap:.55rem}.brand-mark{width:44px;height:44px}.brand-name{font-size:1.06rem}.brand-line{font-size:.49rem}.hero-grid{gap:2rem}.hero h1{font-size:clamp(3.2rem,15vw,4.7rem)}.landscape-shell{border-radius:15px}.landscape-flag{top:.6rem;left:.6rem;font-size:.48rem;max-width:65%;border-radius:7px}.landscape-stamp{left:.6rem;bottom:.6rem;font-size:.57rem}.landscape-stamp strong{font-size:.7rem}.stage-panel{padding:1rem}.stage-panel h2{font-size:1.13rem}.stage-panel p{font-size:.78rem}.state-buttons button{min-height:41px;font-size:.59rem}.field-sequence{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem;padding:.8rem}.field-sequence li{min-height:115px}.field-sequence .step-icon{margin-bottom:.75rem}.field-sequence li:last-child{grid-column:1/-1}.footer-inner{grid-template-columns:1fr}.chapter{padding:1.15rem}.chapter-visual figcaption{font-size:.61rem}.invitation-actions{display:grid;align-items:start}.invitation-actions .button{width:100%}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button,.landscape-art .layer,.chapter-visual .reveal{transition:none}.button:hover{transform:none}}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="https://nourishland.org/" aria-label="Nourish Land home">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#111b14"/><path d="M32 52V30m0 8-12-12m12 8 13-14M32 50l-13 8m13-8 13 8M31 29C17 28 13 16 20 11c7-5 14 1 14 9 2-11 13-15 19-8 8 9-6 18-21 18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 20l10 1m15-8-3 11m12 2-9-1" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        <span><span class="brand-name">NOURISH LAND</span><span class="brand-line">Food forest education · plant literacy</span></span>
+      </a>
+      <nav class="primary-nav" aria-label="Primary navigation"><a href="https://nourishland.org/a-food-forest-story/">Discover</a><a href="https://nourishland.org/hillyards-food-forest/">Explore</a><a href="https://nourishland.org/food-forest-education/">Learn</a><a href="https://nourishland.org/xr/">NourishlandXR</a><a href="https://nourishland.org/contact-us/">Contact</a></nav>
+      <details class="mobile-nav"><summary>Menu</summary><nav aria-label="Mobile navigation"><a href="https://nourishland.org/a-food-forest-story/">Discover</a><a href="https://nourishland.org/hillyards-food-forest/">Explore</a><a href="https://nourishland.org/food-forest-education/">Learn</a><a href="https://nourishland.org/xr/">NourishlandXR</a><a href="https://nourishland.org/contact-us/">Contact</a></nav></details>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="page-title"><div class="page-shell hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Solarpunk at Nourishland</span>
+        <h1 id="page-title">A Living<br>Future</h1>
+        <div class="hero-intro"><p>Imagine a future where food grows close to home, landscapes hold more life, and technology helps us understand the places we care for.</p><p>Solarpunk gives that future a name. Nourishland explores what parts of it we can begin to practise today.</p></div>
+        <div class="hero-actions"><a class="button" href="#landscape-explorer">Explore the vision <span aria-hidden="true">↗</span></a><a class="button button--line" href="https://nourishland.org/xr/">Discover NourishlandXR</a></div>
+        <p class="hero-prompt">Explore what is here—and what could be possible.</p>
+      </div>
+
+      <div class="landscape-shell" id="landscape-explorer" aria-label="Explore an illustrative landscape over four stages">
+        <div class="landscape-viewport" data-state="0">
+          <span class="landscape-flag">Illustrative landscape · photo needed</span>
+          <svg class="landscape-art" viewBox="0 0 1200 720" role="img" aria-labelledby="landscape-art-title landscape-art-desc" xmlns="http://www.w3.org/2000/svg">
+            <title id="landscape-art-title">One landscape, considered over time</title>
+            <desc id="landscape-art-desc">An original illustrative hillside with an existing tree, a path, and a shallow watercourse. Labels and proposed layers change with the selected state; the text beneath describes each state.</desc>
+            <defs>
+              <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#f5e2ac"/><stop offset=".55" stop-color="#dceac8"/><stop offset="1" stop-color="#acc9a4"/></linearGradient>
+              <linearGradient id="ground" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#719363"/><stop offset="1" stop-color="#395f3d"/></linearGradient>
+              <pattern id="grass" width="36" height="30" patternUnits="userSpaceOnUse"><path d="M5 26l3-8m-3 8-3-5m24 6 2-7m-2 7-3-4" fill="none" stroke="#e8e4aa" stroke-opacity=".25" stroke-width="2"/></pattern>
+              <filter id="soft"><feGaussianBlur stdDeviation="13"/></filter>
+            </defs>
+            <path fill="url(#sky)" d="M0 0h1200v720H0z"/>
+            <circle cx="960" cy="130" r="80" fill="#f8dda0" opacity=".32" filter="url(#soft)"/><circle cx="960" cy="130" r="53" fill="#f3d487" opacity=".72"/>
+            <path d="M0 327c135-110 256-89 381-38 111 45 191 24 289-54 114-91 234-86 348-23 71 39 129 36 182 18v280H0Z" fill="#b0c4a5"/>
+            <path d="M0 386c173-71 273-32 379 34 92 58 218 50 327-27 126-90 272-83 494-32v290H0Z" fill="#8eaa83"/>
+            <path d="M0 461c148-15 231 39 357 18 114-18 155-67 268-44 166 34 290 4 575-3v288H0Z" fill="url(#ground)"/>
+            <path d="M0 574c246-49 440-2 614-42 188-44 371 23 586-12v200H0Z" fill="#517744"/>
+            <path d="M0 580c238-46 436-1 614-41 189-41 370 22 586-13v194H0Z" fill="url(#grass)" opacity=".65"/>
+            <path d="M528 720c52-101 94-134 156-158 76-29 111-57 132-95 89 25 137 73 237 102-127 29-224 65-292 151Z" fill="#b99469"/>
+            <path d="M569 720c40-69 99-118 150-139 63-28 99-66 107-99" fill="none" stroke="#e7cf9b" stroke-width="10" opacity=".63"/>
+            <path d="M835 449c62 9 89 34 137 47 49 14 115 5 158 28" fill="none" stroke="#a8c3a5" stroke-width="16" stroke-linecap="round" opacity=".55"/>
+            <path d="M835 449c62 9 89 34 137 47 49 14 115 5 158 28" fill="none" stroke="#d6e9c4" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+            <path d="M205 512c17-65 16-130 13-182l-23-76 21-5 27 83c8 61 8 119 13 180Z" fill="#634a35"/><path d="M228 374c-23-44-71-66-103-72m112 26c42-54 103-70 151-72m-167 4c-33-61-28-94-17-131" fill="none" stroke="#634a35" stroke-width="15" stroke-linecap="round"/>
+            <ellipse cx="183" cy="205" rx="151" ry="95" fill="#3d6542"/><ellipse cx="323" cy="225" rx="112" ry="82" fill="#456f45"/><ellipse cx="232" cy="153" rx="132" ry="92" fill="#4e7548"/><ellipse cx="110" cy="268" rx="84" ry="62" fill="#517a49"/><ellipse cx="331" cy="276" rx="84" ry="57" fill="#365f3d"/>
+            <g fill="#83a26a" opacity=".66"><circle cx="134" cy="152" r="8"/><circle cx="267" cy="145" r="7"/><circle cx="355" cy="212" r="6"/><circle cx="115" cy="302" r="6"/><circle cx="327" cy="279" r="6"/></g>
+            <path d="M832 433v-77l85-37 89 30v84Z" fill="#d5c6a4" stroke="#6c795c" stroke-width="5"/><path d="M815 358l105-63 108 65" fill="none" stroke="#566d53" stroke-width="15" stroke-linejoin="round"/><path d="M920 369v64" stroke="#9c9e79" stroke-width="6"/>
+            <path d="M0 533c40-20 65-18 95-6m294 4c72 6 131-5 189-35m515 10 107 10" fill="none" stroke="#c6d5ab" stroke-opacity=".75" stroke-width="3"/>
+            <g fill="#ddd7b2"><ellipse cx="1038" cy="550" rx="36" ry="15"/><ellipse cx="1088" cy="562" rx="22" ry="10"/></g>
+            <g fill="#6e985c"><circle cx="442" cy="491" r="14"/><circle cx="473" cy="502" r="18"/><circle cx="1168" cy="494" r="23"/><circle cx="1118" cy="479" r="18"/></g>
+            <g class="layer layer-observe">
+              <path d="M754 217 930 185m-626 182-57-75m612 236 115-28M530 589l114-61" fill="none" stroke="#fff9dc" stroke-width="3" stroke-dasharray="8 7"/>
+              <g class="callout"><rect x="623" y="174" width="235" height="55" rx="12"/><text x="645" y="210">Light &amp; exposure</text></g>
+              <g class="callout"><rect x="53" y="348" width="274" height="55" rx="12"/><text x="74" y="384">Existing canopy</text></g>
+              <g class="callout"><rect x="850" y="536" width="278" height="55" rx="12"/><text x="872" y="572">Water movement?</text></g>
+              <g class="callout"><rect x="463" y="593" width="210" height="55" rx="12"/><text x="485" y="629">Access path</text></g>
+            </g>
+            <g class="layer layer-imagine">
+              <path class="sketch" d="M419 482c107-62 224-58 351-17m97 58c83 20 169 11 277 31"/>
+              <path d="M483 498v-104m130 89V352m94 114v-96" stroke="#275537" stroke-opacity=".57" stroke-width="9" stroke-dasharray="10 10"/>
+              <ellipse class="ghost" cx="478" cy="384" rx="75" ry="63"/><ellipse class="ghost" cx="614" cy="345" rx="84" ry="70"/><ellipse class="ghost" cx="709" cy="378" rx="66" ry="58"/>
+              <path d="M836 449c100 12 155 68 299 82" fill="none" stroke="#5b9bac" stroke-width="12" stroke-opacity=".62" stroke-dasharray="22 11"/>
+              <g class="callout"><rect x="476" y="244" width="257" height="55" rx="12"/><text x="498" y="279">Proposed layers</text></g>
+              <g class="callout"><rect x="814" y="557" width="313" height="55" rx="12"/><text x="836" y="593">Possible water care</text></g>
+            </g>
+            <g class="layer layer-act">
+              <path d="M433 507c40-19 79-18 120-2m79-20c44-25 87-29 133-16" fill="none" stroke="#b5915f" stroke-width="26" stroke-opacity=".62"/>
+              <path d="M508 508v-62m-11 29-20-19m31 15 17-18m-18-7-22-6m22 6 24-9" stroke="#315a37" stroke-width="8" stroke-linecap="round"/>
+              <path d="M708 463v-54m-7 30-17-15m24 16 18-15" stroke="#315a37" stroke-width="7" stroke-linecap="round"/>
+              <circle cx="609" cy="404" r="15" fill="#936d4f"/><path d="M609 419v59m0-43-31 21m31-17 30 14m-30 23-19 33m19-33 19 30" fill="none" stroke="#385848" stroke-width="12" stroke-linecap="round"/>
+              <circle cx="754" cy="412" r="14" fill="#b98a67"/><path d="M754 426v56m0-38-28 21m28-19 31 17m-31 19-21 30m21-30 20 27" fill="none" stroke="#d9c48b" stroke-width="11" stroke-linecap="round"/>
+              <path d="M801 432 817 510" stroke="#715b3e" stroke-width="6"/><path d="M804 513q13 14 28 0" fill="none" stroke="#715b3e" stroke-width="5"/>
+              <g class="callout"><rect x="390" y="304" width="202" height="55" rx="12"/><text x="410" y="339">Plant &amp; mulch</text></g>
+              <g class="callout"><rect x="696" y="312" width="240" height="55" rx="12"/><text x="716" y="347">Care together</text></g>
+            </g>
+            <g class="layer layer-learn">
+              <path d="M469 510V356m165 135V305m97 167V336" fill="none" stroke="#53663d" stroke-width="20"/>
+              <ellipse cx="463" cy="349" rx="115" ry="85" fill="#416b45" opacity=".92"/><ellipse cx="634" cy="305" rx="132" ry="98" fill="#366741" opacity=".9"/><ellipse cx="741" cy="346" rx="101" ry="78" fill="#4a7547" opacity=".9"/>
+              <g fill="#799957" opacity=".72"><circle cx="455" cy="304" r="13"/><circle cx="654" cy="263" r="15"/><circle cx="728" cy="318" r="10"/></g>
+              <path d="M864 425c62 11 115 68 268 91" fill="none" stroke="#a0c8c0" stroke-width="8" stroke-opacity=".75"/>
+              <g class="callout"><rect x="508" y="155" width="289" height="55" rx="12"/><text x="529" y="191">Imagined later layers</text></g>
+              <g class="callout"><rect x="826" y="549" width="338" height="55" rx="12"/><text x="847" y="585">Observe &amp; revise again</text></g>
+            </g>
+          </svg>
+          <span class="landscape-stamp"><span id="stamp-number">01 / 04</span><strong id="stamp-label">Current</strong></span>
+        </div>
+        <p class="landscape-caption">Original illustration for this prototype. It is not a photograph or a record of completed Nourishland work.</p>
+        <div class="stage-panel">
+          <div aria-live="polite" aria-atomic="true"><span class="eyebrow" id="state-kind">Observe · Current</span><h2 id="state-heading">What is here now?</h2><p id="state-description">Start with the place itself: existing plants, sunlight, slope, access, water and signs of other life. These are questions to investigate on site.</p></div>
+          <div class="timeline-controls"><div class="state-buttons" role="group" aria-label="Landscape states"><button type="button" data-step="0" aria-pressed="true">Observe</button><button type="button" data-step="1" aria-pressed="false">Imagine</button><button type="button" data-step="2" aria-pressed="false">Act</button><button type="button" data-step="3" aria-pressed="false">Learn</button></div><label for="landscape-range">Move through the landscape</label><input id="landscape-range" type="range" min="0" max="3" step="1" value="0" aria-label="Landscape timeline" aria-valuetext="Observe: Current"><div class="timeline-ends"><span>Current</span><span>Imagined later</span></div></div>
+        </div>
+        <noscript><div class="no-js-summary"><strong>The four views:</strong><ol><li>Observe current conditions.</li><li>Imagine clearly labelled possibilities.</li><li>Consider the people and tasks involved.</li><li>Return to learn and revise over time.</li></ol></div></noscript>
+      </div>
+    </div></section>
+
+    <section class="section intro-section" id="solarpunk" aria-labelledby="solarpunk-title"><div class="page-shell intro-grid">
+      <div class="intro-copy"><span class="eyebrow">01 · The idea</span><h2 id="solarpunk-title">A future worth imagining.<br>A future worth making.</h2><p>Solarpunk is a creative and practical vision of a world where ecological care, useful technology, beauty and community work together. It appears in art and stories while asking a practical question: what can people make, repair, share and restore where they live?</p><p>Its optimism calls for participation. Healthy soil, resilient food systems, cleaner energy, accessible knowledge and stronger communities take time and cooperation. The vision helps us picture that work and find a place to begin.</p></div>
+      <figure class="network-card"><svg viewBox="0 0 620 520" role="img" aria-labelledby="network-title network-desc" xmlns="http://www.w3.org/2000/svg"><title id="network-title">A living place connects sun, water, soil, plants, people and tools</title><desc id="network-desc">Six parts circle a living place, with lines between them to show that each influences the others.</desc><path d="M310 80 492 172 487 351 310 442 132 350 128 171Z" fill="none" stroke="#a8bca7" stroke-width="3"/><path d="M310 80v362M128 171l359 180M492 172 132 350" stroke="#d3ddc9" stroke-width="2"/><circle cx="310" cy="260" r="89" fill="#27523c"/><text x="310" y="251" fill="#fff" text-anchor="middle" font-size="23" font-weight="700">LIVING</text><text x="310" y="282" fill="#fff" text-anchor="middle" font-size="23" font-weight="700">PLACE</text><g font-size="18" font-weight="700" text-anchor="middle" fill="#173b2b"><circle cx="310" cy="80" r="51" fill="#f7dfaa"/><text x="310" y="87">SUN</text><circle cx="492" cy="172" r="51" fill="#d1e5e1"/><text x="492" y="179">WATER</text><circle cx="487" cy="351" r="51" fill="#ddd3b9"/><text x="487" y="358">SOIL</text><circle cx="310" cy="442" r="51" fill="#dce8c7"/><text x="310" y="449">PLANTS</text><circle cx="132" cy="350" r="51" fill="#e8d6c2"/><text x="132" y="357">PEOPLE</text><circle cx="128" cy="171" r="51" fill="#e4e5d6"/><text x="128" y="178">TOOLS</text></g></svg><figcaption>Every decision changes a relationship. The diagram is an original illustration, not a site plan.</figcaption></figure>
+    </div></section>
+
+    <section class="section chapters-section" aria-labelledby="chapters-title"><div class="page-shell">
+      <div class="section-heading"><span class="eyebrow">02 · Look closer</span><h2 id="chapters-title">Three connected ways to begin</h2><p>Open each field layer to see what a living future asks us to notice, make and keep caring for.</p></div>
+      <div class="chapter-stack">
+        <article class="chapter"><div class="chapter-copy"><span class="chapter-number">CHAPTER A / LIVING LANDSCAPES</span><h3>Landscapes that give back</h3><p>A food forest is more than a collection of edible plants. Its layers interact: shade changes the ground below, roots explore the soil, fallen material returns nutrients and flowering plants make space for other life.</p><p>Nourishland begins by observing a place—its light, water, existing vegetation, climate and people—then considering how food production and ecological health might develop together. A living design keeps changing, and so does our understanding of it.</p></div><div class="chapter-demo"><details><summary>Reveal the layers</summary><p>Roots, groundcover, shrubs and canopy can work together, but species and arrangements must fit the actual site.</p></details><figure class="chapter-visual"><svg viewBox="0 0 720 410" role="img" aria-label="Illustrative food forest cross section with roots, water, groundcover, shrubs, canopy and a small wildlife marker revealed when opened" xmlns="http://www.w3.org/2000/svg"><path fill="#dce9e0" d="M0 0h720v410H0z"/><circle cx="570" cy="82" r="43" fill="#ead194"/><path d="M0 240q180-45 355 0t365-7v177H0Z" fill="#648a57"/><path d="M0 270q180-45 355 0t365-7v147H0Z" fill="#765f46"/><path d="M297 239V96" stroke="#654c36" stroke-width="22"/><path d="M293 160c-37-57-79-79-124-79m130 53c37-60 85-73 139-74" fill="none" stroke="#654c36" stroke-width="13" stroke-linecap="round"/><g fill="#416b43"><ellipse cx="227" cy="79" rx="92" ry="60"/><ellipse cx="363" cy="70" rx="114" ry="67"/><ellipse cx="306" cy="40" rx="99" ry="59"/></g><g fill="#5f9150"><ellipse cx="105" cy="218" rx="63" ry="37"/><ellipse cx="532" cy="201" rx="75" ry="46"/><ellipse cx="640" cy="226" rx="48" ry="30"/></g><path d="M30 246c50-24 74-20 120-8m256 2c49-18 91-7 146 7" fill="none" stroke="#b6c485" stroke-width="9"/><g class="reveal"><path d="M296 249c-12 73-52 105-104 136m105-136c28 77 70 114 159 142m-160-143c-85 18-116 42-162 88" fill="none" stroke="#d7be91" stroke-width="8" stroke-linecap="round"/><path d="M566 281c39 28 78 24 136 19" fill="none" stroke="#a4c9c5" stroke-width="13"/><g fill="#fffdf2" stroke="#55785d" stroke-width="2"><rect x="32" y="291" rx="8" width="137" height="39"/><rect x="255" y="306" rx="8" width="112" height="39"/><rect x="506" y="286" rx="8" width="142" height="39"/></g><g fill="#254b35" font-size="19" font-weight="700"><text x="47" y="318">Groundcover</text><text x="273" y="333">Roots</text><text x="523" y="313">Water flow</text></g><text x="436" y="122" fill="#fffdf2" font-size="22" font-weight="700">CANOPY</text><text x="480" y="225" fill="#fffdf2" font-size="22" font-weight="700">SHRUBS</text></g></svg><figcaption>Original field diagram · species and outcomes depend on the place.</figcaption></figure></div></article>
+        <article class="chapter"><div class="chapter-copy"><span class="chapter-number">CHAPTER B / PLACE-BASED LEARNING</span><h3>Technology that brings us closer</h3><p>Information is useful when it helps us notice, understand and act. NourishlandXR explores how digital tools can connect plants, observations, learning and real places.</p><p>Imagine standing beside a tree and discovering why it was planted, what grows around it, how it changes through the seasons and what others have learned there. The aim is to make knowledge easier to share while encouraging more time noticing the landscape itself.</p></div><div class="chapter-demo"><details><summary>See the connections</summary><p>This concept layer links an observation to a plant, its area and a learning note. It describes a direction for NourishlandXR, not a finished feature claim.</p></details><figure class="chapter-visual"><svg viewBox="0 0 720 410" role="img" aria-label="Illustrative plant in place with a subtle concept information layer linking an observation, plant, area and note" xmlns="http://www.w3.org/2000/svg"><path fill="#e1e9de" d="M0 0h720v410H0z"/><path d="M0 228q183-62 381-2t339-3v187H0Z" fill="#8aaa7b"/><path d="M0 306q263-62 487-14t233 18v100H0Z" fill="#6f9464"/><path d="M346 410q54-90 70-170t22-151" fill="none" stroke="#75593e" stroke-width="22"/><path d="M418 173Q320 58 239 48m179 117Q490 42 575 52m-160 162Q319 150 240 151" fill="none" stroke="#75593e" stroke-width="11" stroke-linecap="round"/><g fill="#427448"><ellipse cx="243" cy="70" rx="91" ry="59"/><ellipse cx="537" cy="67" rx="112" ry="64"/><ellipse cx="284" cy="169" rx="89" ry="48"/><ellipse cx="435" cy="89" rx="86" ry="55"/></g><path d="M0 335c151-35 261-28 332-10" fill="none" stroke="#d4c59c" stroke-width="20"/><g class="reveal"><circle cx="414" cy="213" r="42" fill="#f8f9ea" fill-opacity=".86" stroke="#2e6b52" stroke-width="4"/><circle cx="414" cy="213" r="12" fill="#bf9144"/><path d="M450 211h63" stroke="#2e6b52" stroke-width="4"/><rect x="503" y="105" width="191" height="231" rx="15" fill="#fffdf5" fill-opacity=".95" stroke="#95b29c" stroke-width="3"/><text x="524" y="140" fill="#315b40" font-size="17" font-weight="700">CONCEPT LAYER</text><path d="M524 154h149" stroke="#bdd0bc" stroke-width="2"/><g fill="#243e2d" font-size="19" font-weight="700"><text x="524" y="191">Observation</text><text x="524" y="235">Plant</text><text x="524" y="279">Area</text><text x="524" y="323">Learning note</text></g><path d="M611 200v19m0 26v18m0 26v18" stroke="#bf9144" stroke-width="3" stroke-dasharray="5 5"/></g></svg><figcaption>Original concept illustration · replace the plant view with a verified site photograph.</figcaption></figure></div></article>
+        <article class="chapter"><div class="chapter-copy"><span class="chapter-number">CHAPTER C / ENERGY WITH CARE</span><h3>Energy as part of the design</h3><p>A living future depends on how we power our tools and spaces. Renewable energy creates possibilities, and thoughtful design also asks how much energy a system needs and how long its parts will last.</p><p>What needs power? Can we use less? Can a system be repaired and maintained locally? Who can access its benefits? These questions belong alongside food production, land care and emerging technology.</p></div><div class="chapter-demo"><details><summary>Follow the energy</summary><p>A possible system would be designed around need, access, maintenance and repair. No solar installation is represented here as completed Nourishland work.</p></details><figure class="chapter-visual"><svg viewBox="0 0 720 410" role="img" aria-label="Illustrative sun over a landscape and an optional energy planning loop revealed when opened" xmlns="http://www.w3.org/2000/svg"><path fill="#e7ead9" d="M0 0h720v410H0z"/><circle cx="145" cy="105" r="62" fill="#e8c87c"/><g stroke="#d5b26d" stroke-width="4"><path d="M145 9v23m0 146v23M48 105h23m147 0h23M75 35l17 17m106 106 17 17m0-140-17 17M92 158l-17 17"/></g><path d="M0 250q190-63 372 0t348-18v178H0Z" fill="#88a77a"/><path d="M0 313q169-46 344 1t376-8v104H0Z" fill="#4f7b54"/><path d="M333 315v-88l83-32 95 34v86Z" fill="#d5c59e" stroke="#617a5d" stroke-width="5"/><path d="m319 232 101-61 105 62" fill="none" stroke="#506f54" stroke-width="14"/><path d="M85 327q83-51 159-11" fill="none" stroke="#b5c586" stroke-width="14"/><g class="reveal"><path d="M208 104q57-34 118 31m137-6q65 0 88 64m-8 91q-18 52-84 69m-188-7q-54-21-70-75" fill="none" stroke="#fffbdf" stroke-width="5" stroke-dasharray="11 8"/><g fill="#fffdf4" stroke="#a5b9a3" stroke-width="2"><rect x="294" y="96" rx="11" width="145" height="49"/><rect x="526" y="191" rx="11" width="151" height="49"/><rect x="330" y="315" rx="11" width="156" height="49"/><rect x="53" y="194" rx="11" width="173" height="49"/></g><g fill="#2d5139" font-size="20" font-weight="700"><text x="316" y="128">USE LESS</text><text x="548" y="223">POWER?</text><text x="352" y="347">REPAIR</text><text x="75" y="226">ACCESS</text></g><text x="508" y="91" fill="#31563d" font-size="18" font-weight="700">POSSIBLE DESIGN</text></g></svg><figcaption>Original planning illustration · any energy equipment is a possibility, not an existing installation.</figcaption></figure></div></article>
+      </div>
+    </div></section>
+
+    <section class="section people-section" aria-labelledby="people-title"><div class="page-shell people-grid"><div><span class="eyebrow">03 · People make the future</span><h2 id="people-title">Who gets to take part?</h2><p>A productive landscape can offer more than a harvest. It can become a place to exchange knowledge, share plants and food, learn skills and make decisions together.</p><p>The details matter: who has access, whose experience is heard, who carries the work of maintenance and whether a design remains useful over time. A hopeful future becomes more meaningful when people can participate in shaping it.</p></div><ol class="field-sequence" aria-label="A possible sequence of shared work"><li><span class="step-icon" aria-hidden="true">◌</span><strong>Observe</strong><small>Walk, listen and map.</small></li><li><span class="step-icon" aria-hidden="true">✳</span><strong>Propagate</strong><small>Prepare what fits the site.</small></li><li><span class="step-icon" aria-hidden="true">↟</span><strong>Plant</strong><small>Begin at a useful scale.</small></li><li><span class="step-icon" aria-hidden="true">↺</span><strong>Maintain</strong><small>Return, repair and adapt.</small></li><li><span class="step-icon" aria-hidden="true">◎</span><strong>Share</strong><small>Pass on what was learned.</small></li></ol></div></section>
+
+    <section class="section practice-section" aria-labelledby="practice-title"><div class="page-shell practice-grid"><div><span class="eyebrow">04 · From vision to practice</span><h2 id="practice-title">Begin with a real place</h2><p>The future does not arrive as a finished picture. It begins with walking a site, noticing patterns, speaking with people who know it, trying something modest and returning to see what happened.</p><p>At Nourishland, real landscapes are places to learn. Successes matter. So do changes of plan, seasonal surprises, maintenance needs and unanswered questions. Recording those experiences makes the next decision more informed—and the vision more useful.</p></div><aside class="field-note" aria-label="Demonstration field note"><div class="field-note-head"><strong>Field note / 001</strong><span>Demonstration content<br>not a site record</span></div><dl><div><dt>Observed</dt><dd>Where does afternoon shade fall? Which plants are already here? What happens after rain?</dd></div><div><dt>Tried</dt><dd>Record a small action here only after it is done, with the date and people involved.</dd></div><div><dt>Learned</dt><dd>Note what changed, what did not and what is still uncertain.</dd></div><div><dt>Next</dt><dd>Choose when to return and which question to test or watch.</dd></div></dl></aside></div></section>
+
+    <section class="invitation" aria-labelledby="invitation-title"><div class="page-shell invitation-inner"><span class="eyebrow">An invitation</span><h2 id="invitation-title">Where would you begin?</h2><p>You can begin with one plant, one question about water or a new way of seeing a familiar place. Explore food forest learning, discover what Nourishland is developing and carry an idea into the world around you.</p><div class="invitation-actions"><a class="button" href="https://nourishland.org/food-forest-education/">Explore food forest learning <span aria-hidden="true">↗</span></a><a class="button button--line" href="https://nourishland.org/xr/">Discover NourishlandXR</a></div><a class="story-link" href="https://nourishland.org/a-food-forest-story/">Read A New Way to Grow →</a></div></section>
+  </main>
+
+  <footer class="site-footer"><div class="page-shell footer-inner"><div><strong>NOURISH LAND</strong><small>Food forest education · plant literacy · beyond gardens</small><small>Standalone page prototype · not published</small></div><p>We acknowledge the Bundjalung people as the Traditional Custodians of the land of Kyogle and recognise their enduring knowledge of caring for Country. We pay our respects to Elders past, present and emerging.</p></div></footer>
+  <script>
+    (()=>{
+      document.documentElement.classList.replace('no-js','js');
+      const states=[
+        {kind:'Observe · Current',heading:'What is here now?',description:'Start with the place itself: existing plants, sunlight, slope, access, water and signs of other life. These are questions to investigate on site.',stamp:'Current',value:'Observe: Current'},
+        {kind:'Imagine · Proposed',heading:'What might be possible?',description:'Faint layers suggest planting, water care and places to gather. They are possibilities to test with the people and conditions of a real site.',stamp:'Proposed',value:'Imagine: Proposed'},
+        {kind:'Act · Possible work',heading:'What would people do?',description:'A future landscape takes propagation, planting, mulching, water management, repair, learning and ongoing collaboration.',stamp:'Possible actions',value:'Act: Possible work'},
+        {kind:'Learn · Imagined',heading:'What could change over time?',description:'An imagined later view includes mature layers, but also new questions. Field observations and maintenance would shape every next decision.',stamp:'Imagined later',value:'Learn: Imagined later'}
+      ];
+      const view=document.querySelector('.landscape-viewport');
+      const range=document.getElementById('landscape-range');
+      const buttons=[...document.querySelectorAll('.state-buttons button')];
+      const setState=(index)=>{
+        const step=Math.max(0,Math.min(3,Number(index)||0));
+        const state=states[step];
+        view.dataset.state=String(step);
+        range.value=String(step);
+        range.setAttribute('aria-valuetext',state.value);
+        buttons.forEach((button)=>button.setAttribute('aria-pressed',String(Number(button.dataset.step)===step)));
+        document.getElementById('state-kind').textContent=state.kind;
+        document.getElementById('state-heading').textContent=state.heading;
+        document.getElementById('state-description').textContent=state.description;
+        document.getElementById('stamp-label').textContent=state.stamp;
+        document.getElementById('stamp-number').textContent=`0${step+1} / 04`;
+      };
+      range.addEventListener('input',()=>setState(range.value));
+      buttons.forEach((button)=>button.addEventListener('click',()=>setState(button.dataset.step)));
+      setState(0);
+    })();
+  </script>
+</body>
+</html>

@@ -70,15 +70,13 @@ export function sphereModelMatrix(position, radius, scale = {}) {
 
 export function createOrbCrownGeometry() {
     const vertices = [], indices = [];
-    // A continuous witness ring remains readable when motion is disabled.
-    // Three separated light arcs suggest knowledge circulating around the seed.
+    // One fine, incomplete witness arc stays quiet until the Orb is selected.
     const band=(radius,width,from,to,steps)=>{for(let i=0;i<steps;i++){
         const a=from+(to-from)*i/steps,b=from+(to-from)*(i+1)/steps,start=vertices.length/6;
         for(const [angle,r] of [[a,radius-width],[a,radius+width],[b,radius+width],[b,radius-width]])vertices.push(Math.cos(angle)*r,Math.sin(angle)*r,.04,0,0,1);
         indices.push(start,start+1,start+2,start,start+2,start+3);
     }};
-    band(1.19,.018,0,Math.PI*2,96);
-    for(let i=0;i<3;i++)band(1.31,.035,i*Math.PI*2/3,i*Math.PI*2/3+1.15,32);
+    band(1.16,.013,-Math.PI*.16,Math.PI*1.3,72);
     return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }
 
@@ -206,7 +204,6 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.drawElements(gl.TRIANGLES, renderer.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
-const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 export function drawSpatialOrb(gl, renderer, view, position, radius, options = {}) {
     if (!view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     const plant = options.type === 'plant';
@@ -244,13 +241,14 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
 
     if (plant && options.knowledge?.live) {
         gl.depthMask(false);
-        const time=motionPreference?.matches ? 0 : (options.time ?? performance.now()/1000);
+        const still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        const time=still ? 0 : (options.time ?? performance.now()/1000);
         drawSpatialSphere(gl, { ...renderer, vertexBuffer:renderer.crownVertexBuffer,
             indexBuffer:renderer.crownIndexBuffer, indexCount:renderer.crownIndexCount },
             view.projectionMatrix, view.transform.inverse.matrix, position,
-            radius * ((options.knowledge.state === 'expanded' ? 1.08 : 1)+Math.sin(time*.8)*.018), {
-                billboard:true, halo:true, time, rotation:time*.12, color:options.knowledge.draftOnly ? [.88,.78,.55] : [.79,.94,.82],
-                alpha:.95, emissive:.6, opacity:options.opacity
+            radius * (options.knowledge.state === 'expanded' ? 1.12 : 1), {
+                billboard:true, halo:true, time, rotation:0, color:options.knowledge.draftOnly ? [.72,.61,.38] : [.85,.78,.53],
+                alpha:options.highlighted ? .78 : options.knowledge.state === 'expanded' ? .58 : .34+(still?0:Math.sin(time*1.1)*.07), emissive:.3, opacity:options.opacity
             });
         gl.depthMask(true);
     }

@@ -479,6 +479,12 @@ export const LIM_INTRO_CELLS = Object.freeze([
 ]);
 
 export const LIM_INTRO_CELL_BY_ID = Object.freeze(Object.fromEntries(LIM_INTRO_CELLS.map(cell=>[cell.id,cell])));
+export const LIM_ARCHETYPE_MEDIA = Object.freeze({
+    'lim-intro-analysis': Object.freeze({src:new URL('../assets/archetype-read-nature.jpg',import.meta.url).href,alt:'Layered leaves, with one translucent leaf revealing its veins'}),
+    'lim-intro-literacy': Object.freeze({src:new URL('../assets/archetype-understand-land.jpg',import.meta.url).href,alt:'Landscape cross-section revealing water, soil layers and plant roots'}),
+    'lim-intro-food-forest': Object.freeze({src:new URL('../assets/archetype-design-forest.jpg',import.meta.url).href,alt:'A layered food forest with trees, shrubs, groundcover and roots'}),
+    'lim-intro-smart': Object.freeze({src:new URL('../assets/archetype-shape-outcome.jpg',import.meta.url).href,alt:'A young tree growing within a larger seasonal landscape'})
+});
 const LIM_INTRO_ROOT_IDS = Object.freeze(['lim-intro-analysis','lim-intro-literacy','lim-intro-food-forest','lim-intro-smart']);
 export const LIM_INTRO_BRANCHES = Object.freeze(LIM_INTRO_ROOT_IDS.map(id=>{
     const root=LIM_INTRO_CELL_BY_ID[id];
@@ -494,6 +500,7 @@ const cellByLabel = new Map(LIM_ALL_CELLS.map(cell => [cell.title, cell]));
 const LEGACY_LABEL_IDS = Object.freeze({Climate:'lim-climate','Food forest':'lim-food-forest',Plant:'lim-plant',Pin:'lim-pin'});
 export function limLearningContent(labelOrId) {
     const cell = LIM_INTRO_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[LEGACY_LABEL_IDS[labelOrId]] || cellByLabel.get(labelOrId);
+    const illustration = LIM_ARCHETYPE_MEDIA[cell?.id];
     const label = cell?.title || String(labelOrId ?? 'Learning');
     const face = LIM_FACES.find(item => item.id === cell?.primaryFaceId);
     const introParent = cell?.layoutRole === 'intro' ? LIM_INTRO_CELL_BY_ID[cell.parentId] : null;
@@ -507,7 +514,8 @@ export function limLearningContent(labelOrId) {
         body, primaryFaceId: cell?.primaryFaceId || null,
         primaryFace: face?.title || '', relatedFaceIds: cell?.relatedFaceIds || Object.freeze([]),
         accent: cell?.accent || '', accessibilityLabel: cell?.accessibilityLabel || `${label} learning cell`,
-        pathwayRefs: cell?.pathwayRefs || Object.freeze([])
+        pathwayRefs: cell?.pathwayRefs || Object.freeze([]),
+        image: illustration?.src || '', imageAlt: illustration?.alt || ''
     };
 }
 export function limCellById(id) { return LIM_CELL_BY_ID[id] || null; }

@@ -52,7 +52,7 @@ test('welcome exploration steps share one fading stage without layout movement',
 test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{
  const source=fs.readFileSync(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
  const styles=fs.readFileSync(path.join(root,'app/style.css'),'utf8');
- assert.match(source,/They offer ways to explore/);
+ assert.match(source,/All four pathways remain available as you explore/);
  assert.match(source,/More paths are being developed/);
  assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
@@ -529,7 +529,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.'/);
+    assert.match(source, /nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.'/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);

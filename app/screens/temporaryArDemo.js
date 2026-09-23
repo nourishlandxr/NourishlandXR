@@ -193,11 +193,11 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:demoLocalizedText('Plant Orbs connect information to the real plants they describe.'),accent:'#dcef95'}),
-    Object.freeze({at:5200,text:demoLocalizedText('Each orb opens that plant’s information in the landscape.'),accent:'#7fa7e8'}),
-    Object.freeze({at:10400,text:demoLocalizedText('NourishlandXR maps places by organizing plants and stories into Areas.'),accent:'#8fc77a'}),
-    Object.freeze({at:14800,text:demoLocalizedText('Each Area can welcome visitors with a Totem.'),accent:'#e7b45f'}),
-    Object.freeze({at:28200,text:'Choose a pathway, or continue into a guided example.',accent:'#dcef95'})
+    Object.freeze({at:0,text:demoLocalizedText('XR connects digital information to the real world around you.'),accent:'#dcef95'}),
+    Object.freeze({at:5200,text:demoLocalizedText('The living landscape stays at the centre of the experience.'),accent:'#7fa7e8'}),
+    Object.freeze({at:10400,text:demoLocalizedText('Four pathways invite you to explore plants, places, design and change.'),accent:'#8fc77a'}),
+    Object.freeze({at:14800,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#e7b45f'}),
+    Object.freeze({at:28200,text:demoLocalizedText('When ready, explore the four pathways.'),accent:'#dcef95'})
 ]);
 const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
 const DEMO_WELCOME_OPENING_MS=30000;
@@ -238,10 +238,10 @@ const DEMO_ORB_MATERIALS = Object.freeze({
         style: '--demo-orb-size:56px;--demo-orb-light:#ead7ba;--demo-orb-mid:#8a6946;--demo-orb-dark:#3e2a1c;--demo-orb-core-light:#f1dfbd;--demo-orb-core-mid:#a77b48;--demo-orb-core-dark:#4d321e'
     },
     pigeonPea: {
-        shell: [0.08, 0.24, 0.14],
-        core: [0.22, 0.48, 0.27],
-        radius: 0.09,
-        style: '--demo-orb-size:78px;--demo-orb-light:#c3e0b1;--demo-orb-mid:#427d4f;--demo-orb-dark:#112f1e;--demo-orb-core-light:#dcefc5;--demo-orb-core-mid:#5a9a5b;--demo-orb-core-dark:#1d5331'
+        shell: [0.08, 0.21, 0.14],
+        core: [0.72, 0.63, 0.36],
+        radius: 0.06,
+        style: '--demo-orb-size:50px;--demo-orb-light:#9ebda1;--demo-orb-mid:#315e43;--demo-orb-dark:#102b20;--demo-orb-core-light:#f1e4b2;--demo-orb-core-mid:#b9a268;--demo-orb-core-dark:#665b38'
     },
     green: {
         shell: [0.58, 0.38, 0.12],
@@ -1335,7 +1335,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='A LIVING INTRODUCTION';
     introBoardTitle='NourishlandXR';
-    introBoardBody='Choose a pathway, or continue into a guided example.';
+    introBoardBody='XR connects digital information to the real world around you. In NourishlandXR, you can discover the stories of plants and places while the living landscape stays at the centre.';
     introBoardVisibleBody=introBoardBody;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Start exploring',body:'Guidance and selected details appear here as the journey unfolds. The learning cells remain available whenever you want to explore further.',accent:'#dcef95',mesh:'lim',editable:false});
@@ -1425,14 +1425,14 @@ function showArWelcomeShowcase() {
         if(simulatedMode && arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
-    button.textContent=demoLocalizedText('Continue');button.hidden=true;button.disabled=true;syncDemoPanelActions();
+    button.textContent=demoLocalizedText('Explore the pathways');button.hidden=true;button.disabled=true;syncDemoPanelActions();
     if(skip)skip.hidden=true;
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
         if(arWelcomeOpeningActive || !welcomeSequenceCanContinue()){arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);return;}
         button.disabled=false;button.hidden=false;
         syncDemoPanelActions();
-        setGuide('Press Continue when ready. Activate learning cells in the Control panel whenever you want to explore the four pathways.');
+        setGuide('Press Explore the pathways when ready. The four learning cells can then be opened in any order.');
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     button.onclick=()=>{
@@ -1441,21 +1441,16 @@ function showArWelcomeShowcase() {
         infoPanel?.setLearningModules(learningModuleBoard());
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
-        arWelcomeSharedBoard=false;limMeshVisible=false;
-        introducePigeonPeaExample();
+        limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SHOWCASE_DURATION;
+        limMeshVisible=true;
+        runArWelcomeTutorial(0);
     };
     // Only the explicit Continue action advances beyond the introduction.
     setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
 }
 
 function introducePigeonPeaExample(){
-    demoOrientationStep=-1;syncDemoPanelActions();
-    showIntroBoard('Why begin with Pigeon Pea?',[
-        'NourishlandXR connects knowledge to something living in a real place.',
-        'Pigeon Pea is the first example. Its orb becomes a doorway to the plant’s roles, growing needs and uses. Place it to see how information can belong in the landscape.'
-    ],'Place Pigeon Pea',()=>{
-        finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'GUIDED EXAMPLE',nextGuide:'When ready, press Place Pigeon Pea and choose a nearby position.'});
+    runArWelcomeTutorial(DEMO_ORIENTATION_STEPS.length-1);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1479,34 +1474,37 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'A place full of stories',button:'Continue',nextGuide:'Press Continue to see how the stories in this place connect.',paragraphs:[
-        'Imagine standing in a food forest. A Plant Orb belongs at a real plant and opens that plant’s information there.',
-        'NourishlandXR maps a landscape as Areas. Each Area receives a welcoming Totem for its local stories and visitor guidance.'
+    {title:'Four ways to explore',button:'Meet the Plant Orb',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Plant Orb when you are ready.',paragraphs:[
+        'Choose the question that interests you. All four pathways remain available as you explore.',
+        'Read Nature observes a place. Understand the Land explores living relationships. Design the Forest imagines how plants work together. Shape the Outcome considers care and change over time.'
     ]},
-    {title:'Connections begin to appear',button:'Continue',nextGuide:'Explore a learning cell if you wish, or press Continue to follow the story.',paragraphs:[
-        'The floating learning cells connect questions about place, plants, life and design.',
-        'They offer ways to explore. You can follow a connection now or return to these cells later.'
+    {title:'Meet the Plant Orb',button:'Explore Areas',nextGuide:'Press Explore Areas after learning how a Plant Orb connects to a real plant.',paragraphs:[
+        'A Plant Orb belongs at a real plant and opens that plant’s information there.',
+        'Open it to explore the plant’s profile and connected knowledge, then look back at the living plant.'
     ]},
-    {title:'Knowledge belongs to a place',button:'Continue',nextGuide:'Press Continue to meet the first plant in this place.',paragraphs:[
-        'An idea becomes more useful when it connects to a particular plant and the place where it grows.',
-        'Tap the orb to open its profile in place; return to the plant whenever you want to discover more.'
+    {title:'Areas and Totems',button:'See a guided example',nextGuide:'Press See a guided example when you are ready to meet Pigeon Pea.',paragraphs:[
+        'NourishlandXR maps a landscape as Areas. Each Area receives a welcoming Totem for its local stories and visitor guidance.',
+        'Plant Orbs connect individual plants to those mapped places, making information available where it matters.'
     ]},
-    {title:'Begin with Pigeon Pea',button:'Place Pigeon Pea',nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.',paragraphs:[
-        'Pigeon Pea is our first example. Its profile brings together the plant’s roles, growing needs and uses.',
-        'Giving its orb a place in the scene lets us explore that knowledge where the plant belongs.'
+    {title:'Begin with Pigeon Pea',button:'Place the Plant Orb',nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.',paragraphs:[
+        'Pigeon Pea is our first example. Its Plant Orb connects this plant to its roles, growing needs and relationships.',
+        'Choose a place for the Orb to see how knowledge can belong in the landscape.'
     ]}
 ];
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
+    limMeshVisible=index===0;
+    introBoardTextureDirty=true;
     syncDemoPanelActions();
-    infoPanel?.setGuided(index===1 || index===2);
+    infoPanel?.setGuided(index===0);
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         suppressSessionSelectUntil=performance.now()+700;
+        if(index===2){introducePigeonPeaExample();return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of 4 · '+['Place','Connections','Knowledge','Pigeon Pea'][index],nextGuide:step.nextGuide});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of 4 · '+['Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
 }
 
 function guidePlantConversion(record) {

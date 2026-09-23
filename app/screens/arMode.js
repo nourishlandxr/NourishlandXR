@@ -4011,7 +4011,7 @@ function drawSpatialMarkers(view) {
             drawPlantTagStem(view, record.position, record.marker, arrivalEase * markerAppearanceOpacity(record.marker));
             return;
         }
-        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28), {
+        drawSpatialOrb(gl, sphereRenderer, view, record.position, Math.max(scaleX, scaleY) * (.72 + arrivalEase * .28) * (shape === 4 ? .72 : 1), {
             type: shape === 4 ? 'plant' : 'marker',
             knowledge: shape === 4 ? creatorOrbKnowledge(record) : null,
             color: markerRgb(record.marker, baseColor),

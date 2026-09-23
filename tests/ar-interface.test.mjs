@@ -1164,7 +1164,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /A place full of stories[\s\S]*Connections begin to appear[\s\S]*Knowledge belongs to a place[\s\S]*Begin with Pigeon Pea/);
+    assert.match(source, /Four ways to explore[\s\S]*Meet the Plant Orb[\s\S]*Areas and Totems[\s\S]*Begin with Pigeon Pea/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1174,7 +1174,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /NourishLandXR is a portal for plant-related information, a plant mapping tool and a experience editor/);
     assert.match(source, /few examples of how information can be mapped real places/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
-    assert.match(source, /nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.'/);
+    assert.match(source, /nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.'/);
     assert.doesNotMatch(source, /Press it to create a Plant orb\. Press Continue to load your pointer/);
     assert.doesNotMatch(source, /gentle introduction/);
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
@@ -1199,7 +1199,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
     assert.match(source, /The orb can be moved later if its position needs adjusting/);
-    assert.match(source, /button:'Place Pigeon Pea'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
+    assert.match(source, /button:'Place the Plant Orb'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
     assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
@@ -1237,7 +1237,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea' : type === 'plant2' \? 'green'/);
     assert.match(source, /demoOrbShape: type === 'plant' \? 'orb' : type === 'plant2' \? 'orb'/);
     assert.match(source, /class="tryit-sim-orb is-plant" style="\$\{orbAppearance\}"/);
-    assert.match(source, /pigeonPea:[\s\S]*radius: 0\.09/);
+    assert.match(source, /pigeonPea:[\s\S]*radius: 0\.06/);
     assert.match(source, /green:[\s\S]*radius: 0\.074/);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
     assert.match(source, /coreColor: material\?\.core/);
@@ -1345,10 +1345,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=30000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=16000/);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
-    assert.match(source, /Plant Orbs connect information to the real plants they describe/);
-    assert.match(source, /NourishlandXR maps places by organizing plants and stories into Areas/);
+    assert.match(source, /XR connects digital information to the real world around you/);
+    assert.match(source, /Four pathways invite you to explore plants, places, design and change/);
     assert.match(source, /function introducePigeonPeaExample\(\)/);
-    assert.match(source, /Why begin with Pigeon Pea\?/);
+    assert.match(source, /Begin with Pigeon Pea/);
     assert.match(source, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
     assert.doesNotMatch(source, /Hold to open selected learning cell/);
     assert.doesNotMatch(livingStyles, /--lim-progress|is-lim-holding/);
@@ -1395,7 +1395,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);
     assert.match(source, /welcomeExperienceFrames\(arWelcomeClock\.elapsed,[\s\S]*expandedLimIds:\[\.\.\.limExpandedCells\]/);
-    assert.match(source, /Activate learning cells in the Control panel whenever you want to explore the four pathways/);
+    assert.match(source, /The four learning cells can then be opened in any order/);
     assert.doesNotMatch(source, /infoPanel\.setLearningModules\(learningModuleBoard\(\)\);\s*if\(!simulated/);
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
