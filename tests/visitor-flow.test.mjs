@@ -551,7 +551,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /A Totem is an Area’s home marker/);
+    assert.match(source, /NourishlandXR is a mapping tool\. Plants, observations and visitor stories are organized into Areas/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.match(source, /const DEMO_TOTEM_STYLES/);
     assert.match(source, /function cycleDemoTotemStyle\(record\)/);

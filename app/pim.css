@@ -189,7 +189,7 @@
 .pim-web-identity {
     grid-area: identity;
     justify-self: center;
-    width: min(100%, 560px);
+    width: min(100%, 920px);
     align-self: start;
     min-width: 0;
 }
@@ -203,8 +203,8 @@
 
 .pim-web-centre {
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: minmax(210px, .42fr) minmax(0, 1fr);
+    gap: 20px;
     width: 100%;
     min-width: 0;
     padding: 14px;
@@ -223,8 +223,8 @@
 .pim-web-plant-visual {
     display: grid;
     place-items: center;
-    width: 84px;
-    height: 84px;
+    width: min(100%, 320px);
+    height: clamp(220px, 26vw, 320px);
     overflow: hidden;
     border-radius: 15px;
     background: #dcebd3;
@@ -234,7 +234,8 @@
 .pim-web-plant-visual img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #dcebd3;
 }
 
 .pim-web-identity-copy {
@@ -1569,13 +1570,16 @@
 
 @media (max-width: 480px) {
     .pim-web-centre {
-        grid-template-columns: 68px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         padding: 11px;
     }
 
     .pim-web-plant-visual {
-        width: 68px;
-        height: 68px;
+        width: 100%;
+        max-width: 360px;
+        height: min(44svh, 360px);
+        min-height: min(240px, 40svh);
+        justify-self: center;
     }
 
     .pim-web-direction-key,

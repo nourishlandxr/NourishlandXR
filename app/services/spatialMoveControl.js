@@ -13,3 +13,16 @@ export function spatialMoveControlMarkup(prefix = 'ar') {
         <output class="spatial-move-readout" data-${prefix}-depth-readout hidden>1.0 m</output>
     </aside>`;
 }
+
+export const SPATIAL_DEPTH_DEADZONE = .28;
+
+// Positive is farther from the viewer.  The curved response keeps the centre
+// of the stick quiet, then adds precision before reaching full speed.
+export function spatialDepthDelta(axis, elapsedMs = 16, { speed = .9, deadzone = SPATIAL_DEPTH_DEADZONE } = {}) {
+    const value = Number(axis) || 0;
+    const magnitude = Math.abs(value);
+    if (magnitude <= deadzone) return 0;
+    const normalized = Math.min(1, (magnitude - deadzone) / Math.max(.01, 1 - deadzone));
+    const accelerated = normalized * normalized;
+    return -Math.sign(value) * accelerated * speed * Math.min(50, Math.max(0, Number(elapsedMs) || 0)) / 1000;
+}

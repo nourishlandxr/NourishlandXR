@@ -4,7 +4,7 @@ import { createPlantKnowledgeResolver, plantKnowledgeState, totemKnowledgeCards,
 import { createPimDocument, pimAddNode, pimUpdateNode } from '../app/services/pimModel.js';
 import { createOrbCrownGeometry } from '../app/services/spatialSphereRenderer.js';
 import { createBeveledPrismGeometry } from '../app/services/spatialPrismRenderer.js';
-import { totemCardSurfaces, hitTotemSurface } from '../app/services/spatialTotemCards.js';
+import { totemCardSurfaces, hitTotemSurface, stableTotemCardRight } from '../app/services/spatialTotemCards.js';
 
 test('Live availability ignores empty category shells and separates draft/visitor states',()=>{
     const resolve=createPlantKnowledgeResolver();
@@ -62,4 +62,12 @@ test('Spatial card hit regions stay separate and detail closes independently',()
         assert.equal(hit.detail,surface.detail);
     }
     assert.equal(hitTotemSurface({origin:{x:0,y:0,z:0},direction:{x:0,y:0,z:1}},surfaces),null);
+});
+
+test('Totem signs keep their first world orientation when the viewer turns',()=>{
+    const record={id:'totem'};
+    const first=stableTotemCardRight(record,{x:1,y:0,z:0});
+    const afterTurn=stableTotemCardRight(record,{x:0,y:0,z:1});
+    assert.deepEqual(afterTurn,first);
+    assert.deepEqual(afterTurn,{x:1,y:0,z:0});
 });

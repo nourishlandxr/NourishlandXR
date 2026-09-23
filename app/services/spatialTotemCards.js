@@ -1,14 +1,20 @@
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
 export function totemCardSurfaces(position, right, cards, selectedId = '') {
-    const layout = [[-.61,1.58],[.61,1.12],[-.61,.64]];
+    const layout = [[-.48,1.34],[.48,1.02],[-.48,.70]];
     const place = (x,y,width,height,card,detail=false) => ({
         center:{x:position.x+right.x*x,y:position.y+y,z:position.z+right.z*x},
         right, width,height,card,detail
     });
-    const surfaces=cards.slice(0,3).map((card,i)=>place(...layout[i],.86,.4,card));
+    const surfaces=cards.slice(0,3).map((card,i)=>place(...layout[i],.70,.30,card));
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected) surfaces.push(place(-1.57,1.16,.82,1.08,selected,true));
+    if(selected) surfaces.push(place(-1.18,1.03,.72,.82,selected,true));
     return surfaces;
+}
+
+export function stableTotemCardRight(record, viewerRight) {
+    if (!record) return viewerRight;
+    if (!record.spatialCardRight) record.spatialCardRight={x:viewerRight.x,y:0,z:viewerRight.z};
+    return record.spatialCardRight;
 }
 
 export function hitTotemSurface(ray, surfaces) {
@@ -78,7 +84,7 @@ export function createSpatialTotemCards(gl, options = {}) {
         begin(){surfaces=[];used.clear();},
         draw(view, record, position, cards, selectedId) {
             const m=view.transform.inverse.matrix,rightLength=Math.hypot(m[0],m[8])||1;
-            const right={x:m[0]/rightLength,y:0,z:m[8]/rightLength};
+            const right=stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
             const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId);
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);

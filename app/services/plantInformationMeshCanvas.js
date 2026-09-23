@@ -469,16 +469,15 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.x,
             point.y,
             radius,
-            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, .96)` : `hsla(${hue}, 31%, 19%, ${active ? .58 : node.depth ? .42 : .22})`,
+            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, ${active ? .14 : .045})` : `hsla(${hue}, 31%, 19%, ${active ? .12 : .035})`,
             options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
         if (options.pressPath === node.path && options.pressProgress > 0) {
-            // drawHexagon leaves its path available: clip fill to the exact cell.
-            context.clip();
             const progress = Math.max(0, Math.min(1, options.pressProgress));
-            context.fillStyle = 'rgba(214,246,173,.40)';
-            context.fillRect(point.x-radius*1.2, point.y+radius*(1-2*progress), radius*2.4, radius*2*progress);
+            context.setLineDash([Math.max(4,radius*.12),Math.max(3,radius*.07)]);
+            drawHexagon(context,point.x,point.y,radius-3,'rgba(0,0,0,0)',`rgba(214,246,173,${.28+progress*.68})`,2+progress*2);
+            context.setLineDash([]);
         }
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
@@ -522,7 +521,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.save();
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
-    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? '#d3dfc9' : 'rgba(39, 58, 92, .78)', options.softSurface ? '#6b8261' : 'rgba(137, 165, 213, .82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? 'rgba(211,223,201,.10)' : 'rgba(39,58,92,.10)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
     context.restore();
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';

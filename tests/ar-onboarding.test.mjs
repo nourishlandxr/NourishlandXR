@@ -28,7 +28,8 @@ test('AR introduction preparation explains camera access before entry', () => {
     assert.match(app.innerHTML, /Before the camera opens/);
     assert.match(app.innerHTML, /Nothing starts until you choose Enter AR/);
     assert.match(app.innerHTML, /Allow camera access/);
-    assert.match(app.innerHTML, /Quest/);
+    assert.match(app.innerHTML, /Spatial device/);
+    assert.doesNotMatch(app.innerHTML, /Quest/);
     assert.match(app.innerHTML, /Don’t show this preparation next time/);
     assert.match(app.innerHTML, /data-ar-introduction-continue/);
 });

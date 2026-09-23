@@ -587,6 +587,7 @@ export function pimToArKnowledge(document, options = {}) {
         title: source.identity.commonName || source.identity.scientificName || source.plantId,
         scientificName: source.identity.scientificName,
         identityStatement: source.identity.identityStatement,
+        image: source.identity.image,
         sources: clone(source.sources || []),
         customCategories: source.nodes.filter(node => !node.parentId && !PIM_COMPASS.some(compass => compass.id === node.id)).map(node => projectNode(node, 'core')),
         categories: PIM_COMPASS.map(compass => projectNode(pimNodeById(source, compass.id), 'core'))

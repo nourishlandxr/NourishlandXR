@@ -66,7 +66,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel } = 
             <div class="ar-preparation-points">
                 <div><span aria-hidden="true">◎</span><p><strong>Make a little room</strong><small>Use a clear, calm space and stay aware of people and obstacles.</small></p></div>
                 <div><span aria-hidden="true">⌾</span><p><strong>Allow camera access</strong><small>Your browser or headset will ask permission after you continue.</small></p></div>
-                <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On Quest, stay inside your boundary. On a phone, hold the device securely.</small></p></div>
+                <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On a Spatial device, stay within your safety boundary. On a phone, hold the device securely.</small></p></div>
             </div>
             <p class="meta">You can leave the experience at any time. NourishlandXR does not begin camera access from this page.</p>
         </section>

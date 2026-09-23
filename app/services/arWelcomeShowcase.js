@@ -329,9 +329,9 @@ export function welcomeCellAtPoint(frames,x,y) {
 // Labels share the face transform, so their centre cannot drift off the cell.
 export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  const lines=label.split(' '), maxWidth=radius*1.48;
- let font=depth?34:39;
- do {ctx.font=`${depth?'550':'650'} ${font}px system-ui`;if(lines.every(line=>ctx.measureText(line).width<=maxWidth))break;font--;}
- while(font>12);
+ let font=32;
+ do {ctx.font=`620 ${font}px system-ui`;if(lines.every(line=>ctx.measureText(line).width<=maxWidth))break;font--;}
+ while(font>16);
  return {lines,font,lineHeight:font*1.12,maxWidth};
 }
 
@@ -485,8 +485,6 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.globalAlpha=reducedMotion?1:smooth(elapsed,500,3000);ctx.fillStyle='#dcef95';ctx.font='750 30px system-ui';ctx.fillText('A LIVING WORLD OF KNOWLEDGE',700,412);
  ctx.fillStyle='#fff';ctx.font='760 72px system-ui';ctx.fillText('NourishlandXR',700,500);
- ctx.font='500 32px system-ui';ctx.fillText('Explore the wonders of plants and ecosystems',700,577);
- ctx.fillText('in an immersive, interactive way.',700,622);
   ctx.font='24px system-ui';ctx.fillText(welcomeCanContinue(elapsed)?'Continue when ready · hold a cell to explore':'Let the knowledge unfold',700,690);
  }
  }
@@ -505,8 +503,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
    return expanded.has(node.parent) || expanded.has(parentId);
   }).map(node=>{
    if(order.has(node.key)){
-    const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,interval=Number(options.minimalInterval)||1800,revealDuration=Number(options.minimalRevealDuration)||1100;
-    const progress=reducedMotion?1:opening?smooth(elapsed,start+index*interval,revealDuration):1;
+    const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,revealDuration=Number(options.minimalRevealDuration)||1100;
+    const progress=reducedMotion?1:opening?smooth(elapsed,start,revealDuration):1;
     return {...node,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,
      emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
    }

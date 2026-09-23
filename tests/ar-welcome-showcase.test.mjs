@@ -70,9 +70,9 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const pacing={opening:true,minimalIntro:true,openingSeed:73421,openingDuration:30000,minimalStartAt:16000,minimalInterval:4000,minimalRevealDuration:1400,drawPanel:false};
  const visibleAt=time=>drawArWelcomeShowcase(ctx,time,false,createArWelcomeClusters(),pacing).flatMap(frame=>frame.nodes).filter(node=>node.opacity>.5);
  assert.equal(visibleAt(15999).length,0);
- assert.equal(visibleAt(17800).length,1);
- assert.equal(visibleAt(21800).length,2);
- assert.equal(visibleAt(25800).length,3);
+ assert.equal(visibleAt(17800).length,4);
+ assert.equal(visibleAt(21800).length,4);
+ assert.equal(visibleAt(25800).length,4);
  const frames=drawArWelcomeShowcase(ctx,29800,false,createArWelcomeClusters(),pacing);
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
@@ -222,6 +222,12 @@ test('the four roots remain live while Shape softly introduces Vision and its si
  assert.ok(opening.filter(node=>node.depth===1 && node.opacity>0).every(node=>node.key.startsWith('3:')));
  const settled=welcomeExperienceFrames(expandedAt+5000,false,graphs,new Set(),{expandedLimIds:['lim-intro-smart'],expandedAt:{'lim-intro-smart':expandedAt}}).find(frame=>frame.corner===3).nodes.filter(node=>node.depth===1);
  assert.equal(settled.length,7);assert.ok(settled.every(node=>node.opacity===1));
+});
+
+test('all four pathway archetypes are simultaneously visible when pathway choice appears',()=>{
+ const roots=welcomeExperienceFrames(30000,false).flatMap(frame=>frame.nodes).filter(node=>node.depth===0 && node.id!=='vision');
+ assert.equal(roots.length,4);
+ assert.ok(roots.every(node=>node.opacity===1), 'all four pathways are ready before the welcome text offers a choice');
 });
 
 test('expanded LIM content forms a logical four-branch learning cycle',()=>{

@@ -4,6 +4,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
+import { applySpatialNoteTemplate, spatialNoteTemplate, spatialNoteTemplateOptions } from '../services/spatialNoteTemplates.js';
 /*
  * Creator AR placement mode
  *
@@ -17,7 +18,7 @@ import { createPlaceMarker, createProjectSite, createSitePlace, deletePlaceMarke
 import { AR_EXPERIENCE_CONFIG, DEFAULT_HOME_AREA_NAME, isDefaultHomeArea } from '../services/arExperienceConfig.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { matrixFromPose, spatialPosition } from '../services/spatialPlacement.js';
-import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
+import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createMinimalMarkerDraft, scopedMarkerStorageId } from '../services/markerWorkflow.js';
 import { alignAreaToCheckpoint } from '../services/areaSpatialAlignment.js';
 import { normalizeAreaLink, normalizeAreaLinks } from '../services/areaLinks.js';
@@ -52,6 +53,7 @@ let creatorInputMode = 'touch';
 let controllerActionIndex = 0;
 let controllerMenuActive = true;
 let controllerAxisCooldownUntil = 0;
+let controllerDepthAt = 0;
 let latestControllerRay = null;
 let latestHandState = null;
 let hoveredMarkerId = '';
@@ -1801,7 +1803,7 @@ function setCreatorInputMode(mode) {
     overlayRoot?.classList.toggle('is-controller-mode', creatorInputMode === 'controller');
     updateControllerHud();
     if (creatorInputMode === 'controller') {
-        setPlacementStatus('Right Quest controller active. Aim with the controller, move the thumbstick to choose an AR action, then press the trigger.');
+        setPlacementStatus('Right Spatial device controller active. Aim with the controller, move the thumbstick to choose an AR action, then press the trigger.');
     } else if (!readyPlacementType) {
         setPlacementStatus('Touch controls active. Aim dot ready.');
     }
@@ -2222,12 +2224,19 @@ function activateControllerSelection() {
     return true;
 }
 
-function pollControllerInput() {
+function pollControllerInput(time = performance.now()) {
     const source = controllerInputSource();
     setCreatorInputMode(source ? 'controller' : 'touch');
     if (!source?.gamepad || creatorInputMode !== 'controller') return;
     const verticalCandidates = [Number(source.gamepad.axes?.[3]) || 0, Number(source.gamepad.axes?.[1]) || 0];
     const vertical = verticalCandidates.sort((left, right) => Math.abs(right) - Math.abs(left))[0];
+    const elapsed = controllerDepthAt ? time - controllerDepthAt : 16;
+    controllerDepthAt = time;
+    if (dragState) {
+        const delta = spatialDepthDelta(vertical, elapsed);
+        if (delta) setHeldMarkerDepthOffset(dragState.depthOffset + delta);
+        return;
+    }
     if (questSpatialWebVisible && questSpatialDashboardMirror && Math.abs(vertical) >= .28) {
         if (performance.now() >= questSpatialDashboardScrollCooldownUntil) {
             questSpatialDashboardScrollCooldownUntil = performance.now() + 72;
@@ -2331,6 +2340,7 @@ function pollHandPinch() {
 }
 
 function drawControllerPointer(view) {
+    if (latestHandState) return;
     const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
     if (creatorInputMode !== 'controller' || (interactionMode === 'view' && !viewingPim) || !latestControllerRay || !controllerPointerRenderer) return;
     const { origin, direction } = latestControllerRay;
@@ -2354,6 +2364,7 @@ function drawControllerPointer(view) {
 }
 
 function drawControllerPointerContact(view) {
+    if (latestHandState) return;
     const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
     if (creatorInputMode !== 'controller'
         || (interactionMode === 'view' && !viewingPim)
@@ -4388,9 +4399,10 @@ function renderSessionMarkers() {
             || record.marker.notes
             || (record.marker.type === 'area_checkpoint' ? areaBoard(record.marker).introduction : '')
             || `${readyPlacementLabel(record.marker.type)} information`;
+        const noteTemplate = record.marker.type === 'note' ? spatialNoteTemplate(record.marker) : null;
         const markerCaption = record.marker.type === 'area_checkpoint'
             ? ''
-            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.marker.type === 'note' ? ' creator-ar-demo-note' : ''}">${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
+            : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface creator-ar-demo-note' : ''}"${noteTemplate ? ` data-note-template="${escapeHtml(noteTemplate.id)}" style="--spatial-note-color:${escapeHtml(noteTemplate.color)}"` : ''}>${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<aside class="creator-ar-plant-profile is-anchored-profile${usesSpatialPimRenderer() ? ' is-spatial-pim-hit-layer' : ''}" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
              : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
@@ -4558,6 +4570,16 @@ function openInlineEditor(record, force = false) {
         appearanceFieldset.append(opacityField);
     }
     if (record.marker.type === 'note' && editorForm) {
+        const currentTemplate = spatialNoteTemplate(record.marker);
+        const templateField = document.createElement('label');
+        templateField.textContent = 'Note template';
+        const templateSelect = document.createElement('select');
+        templateSelect.name = 'noteTemplate';
+        templateSelect.innerHTML = spatialNoteTemplateOptions(currentTemplate.id)
+            .map(option => `<option value="${escapeHtml(option.id)}" ${option.selected ? 'selected' : ''}>${escapeHtml(option.label)}</option>`)
+            .join('');
+        templateField.append(templateSelect);
+        editorForm.insertBefore(templateField, appearanceFieldset);
         const informationField = document.createElement('label');
         informationField.textContent = 'Information';
         const information = document.createElement('textarea');
@@ -4572,6 +4594,17 @@ function openInlineEditor(record, force = false) {
         liveField.innerHTML=`<legend>Live Note</legend><label><input type="checkbox" name="liveNoteEnabled" ${live.enabled?'checked':''}> Open this note as connected cells</label><label>Topic cells<textarea name="liveNoteTopics" rows="5" placeholder="Area | What makes this place special&#10;Plant guild | How these plants work together&#10;Technique | What is being tried here"></textarea></label><p>One topic per line: title | information. Up to 12 topics. Your original note stays intact.</p>`;
         liveField.querySelector('textarea').value=(live.topics || []).map(topic=>`${topic.title} | ${topic.body}`).join('\n');
         editorForm.insertBefore(liveField,appearanceFieldset);
+
+        templateSelect.addEventListener('change', () => {
+            const selected = spatialNoteTemplate(templateSelect.value);
+            editorForm.elements.name.value = selected.title;
+            information.value = selected.description;
+            editorForm.elements.markerColor.value = selected.color;
+            editorForm.elements.markerOpacity.value = '.64';
+            editorForm.elements.noteSurface.value = 'outline';
+            editorForm.elements.liveNoteEnabled.checked = selected.topics.length > 0;
+            editorForm.elements.liveNoteTopics.value = selected.topics.map(topic => `${topic.title} | ${topic.body}`).join('\n');
+        });
 
     }
     if (plant) {
@@ -4645,7 +4678,7 @@ function openInlineEditor(record, force = false) {
                     color: form.elements.markerColor.value,
                     size: form.elements.markerSize.value,
                     opacity: Number(form.elements.markerOpacity?.value ?? markerAppearanceOpacity(record.marker)),
-                    ...(type === 'note' ? { surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled', live_note:{...appearance.live_note,enabled:Boolean(form.elements.liveNoteEnabled?.checked),topics:liveNoteTopics(form.elements.liveNoteTopics?.value,appearance.live_note?.topics)} } : {})
+                    ...(type === 'note' ? { note_template:spatialNoteTemplate(form.elements.noteTemplate?.value).id, surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled', live_note:{...appearance.live_note,enabled:Boolean(form.elements.liveNoteEnabled?.checked),topics:liveNoteTopics(form.elements.liveNoteTopics?.value,appearance.live_note?.topics)} } : {})
                 },
                 plant_profile: type === 'plant' ? {
                     ...(record.marker.plant_profile || {}),
@@ -4849,6 +4882,9 @@ function updateGrabbedMarkerFromCamera() {
     dragState.record.position.x = origin.x + ray.x * distance;
     dragState.record.position.y = origin.y + ray.y * distance;
     dragState.record.position.z = origin.z + ray.z * distance;
+    if (dragState.record.marker.type === 'area_checkpoint') {
+        dragState.record.position = groundedTotemPosition(dragState.record.position);
+    }
 }
 
 async function finishMarkerDrag(event) {
@@ -5396,10 +5432,13 @@ async function quickPlace(type) {
         const specialMarker = type === 'sub_checkpoint' ? readySpecialMarker : null;
         readySpecialMarker = null;
         const requestedName = specialMarker?.name || placementDetails?.name || baseName;
-        const draft = createMinimalMarkerDraft(type, {
+        let draft = createMinimalMarkerDraft(type, {
             name: uniqueMarkerName(requestedName, existingMarkers),
             description: placementDetails?.description || (type === 'area_checkpoint' ? `Information centre for ${operation.areaName || 'this Area'}.` : '')
         });
+        if (type === 'note' && !placementDetails?.name && !placementDetails?.description) {
+            draft = applySpatialNoteTemplate(draft, 'welcome');
+        }
         if (placementAppearance) draft.appearance = { ...(draft.appearance || {}), ...placementAppearance };
         if (specialMarker) Object.assign(draft, specialMarker);
         if (type === 'area_checkpoint') {
@@ -5467,7 +5506,7 @@ function createOverlay() {
           <button type="button" data-ar-safety-help aria-label="Show AR safety">Safety</button>
         </div>
         <section class="creator-ar-controller-hud" data-ar-controller-hud hidden aria-live="polite">
-          <strong>QUEST CONTROLS</strong>
+          <strong>SPATIAL DEVICE CONTROLS</strong>
           <span data-ar-controller-action>ADD PLANT</span>
           <small data-ar-controller-instruction>Thumbstick choose / Trigger confirm</small>
         </section>
@@ -5566,6 +5605,7 @@ function createOverlay() {
     infoPanel?.destroy();
     creatorPanelActionSignature='';
     infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+    infoPanel.element.classList.add('is-creator-panel');
     bindCreatorPanelActions();
     bindCreatorViewportReflow();
     updateLocationNote();
@@ -5902,9 +5942,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         document.body.classList.toggle('creator-ar-quest-headset', questHeadsetSession);
         if (questHeadsetSession) document.body.dataset.arDevice = 'quest';
         if (questHeadsetSession && !arSession.domOverlay) {
-            setPlacementStatus('Quest 3 AR is active. The spatial belt uses the controller pointer, thumbstick and trigger.');
+            setPlacementStatus('Spatial device AR is active. The spatial belt uses the controller pointer, thumbstick and trigger.');
         } else if (sessionMode === 'immersive-vr') {
-            setPlacementStatus('Quest 3 immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
+            setPlacementStatus('Spatial device immersive mode is active. Passthrough AR is unavailable in this browser; placement uses the headset\'s 6DoF space.');
         } else if (!arSession.passthrough) {
             setPlacementStatus(`WebXR opened AR mode but reports an opaque blend (${arSession.blendMode || 'unknown'}). Camera passthrough is unavailable in this runtime.`);
         }
@@ -5967,9 +6007,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             // The DOM taskbar is the safe fallback until the world-locked
             // WebGL belt has completed its first draw.
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
-            pollControllerInput();
+            pollControllerInput(_time);
             updateControllerRay(frame);
-            infoPanel?.update(latestViewerMatrix, _time); pimHold?.tick(_time);
+            infoPanel?.update(latestViewerMatrix, _time, latestControllerRay); pimHold?.tick(_time);
             const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? spatialPimTargetAtAim() : null;
             const specialPaletteTarget = !dashboardTarget && !pimTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;

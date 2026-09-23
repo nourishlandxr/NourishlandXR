@@ -6,11 +6,12 @@ import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, controlP
 test('Quest Control panel collapses its side regions while keeping Continue reachable', () => {
     const items=controlPanelControls({height:850,utilityActions:[{id:'continue',label:'Continue',primary:true},{id:'close',label:'Close demo'}]});
     const open=spatialPanelControls({height:1050,items});
-    const folded=spatialPanelControls({height:1050,items,railCollapsed:true,mediaCollapsed:true,toolsCollapsed:true});
+    const folded=spatialPanelControls({height:1050,items,railCollapsed:true,mediaCollapsed:true});
     assert.ok(open.some(item=>item.kind==='tab'));
     assert.ok(!folded.some(item=>item.kind==='tab'));
-    for(const action of ['ToggleMenu','ToggleMedia','ToggleTools','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
-    assert.ok(folded.find(item=>item.action==='Utility:continue').y>folded.find(item=>item.action==='ToggleTools').y);
+    for(const action of ['MovePanel','ToggleMenu','ToggleMedia','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
+    assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
+    assert.equal(folded.find(item=>item.action==='MovePanel').label,'●');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
 import { createPimHold, bindSpatialPimHold } from '../app/services/pimActivationHold.js';
@@ -50,7 +51,7 @@ test('Quest Control panel begins beside the welcome board instead of below it',(
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
     const pose=infoPanelPose(matrix,null,true);
     assert.ok(pose.center.x<=-1,'panel has a clear left-side offset');
-    assert.ok(Math.abs(pose.center.y-1.54)<1e-10,'panel stays near reading height');
+    assert.ok(Math.abs(pose.center.y-1.58)<1e-10,'panel stays near reading height');
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
 });
 

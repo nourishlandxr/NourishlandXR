@@ -16,7 +16,7 @@ import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_O
 import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
-import { spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
+import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -28,7 +28,8 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
-import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { SPATIAL_NOTE_TEMPLATES, spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
@@ -36,6 +37,7 @@ import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
+const MORINGA_PROFILE_IMAGE = new URL('../assets/moringa-oleifera.jpg', import.meta.url).href;
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
@@ -57,6 +59,9 @@ let viewerMatrix = null;
 let latestDemoView = null;
 let hitMatrix = null;
 let latestControllerRay = null;
+let latestHandState = null;
+let handPinchActive = false;
+let demoControllerDepthAt = 0;
 let marker = null;
 let markerType = 'marker';
 let markers = [];
@@ -120,7 +125,7 @@ let introTaglineVisible = true;
 let introKnowledgeVisible = false;
 let introBoardStep = '';
 let introBoardTitle = 'NourishlandXR';
-let introBoardBody = 'A short guided demo of Plant Live Tags and Notes.';
+let introBoardBody = 'A short guided demo of Plant Orbs, Areas and Notes.';
 let introBoardNextGuide = '';
 let introBoardNextGuideVisible = false;
 let placementReady = false;
@@ -149,7 +154,8 @@ function limDeviceContext(pointerType = 'unknown') {
 const AR_PHONE_COMFORT = Object.freeze({
     pointerOffsetCss: '3.5cm',
     pointerOffsetPixels: 132.3,
-    boardPosition: [0, 0.82, -2.8],
+    // Give the left-side reading panel room in the spatial view.
+    boardPosition: [0.42, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
 const INTRO_CONTROL_POSITION = Object.freeze([0, -0.58, -2.72]);
@@ -164,8 +170,8 @@ const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
 // Creator Mode's medium Note is 1.88 m x .69 m on the shared quad. The demo
 // keeps the same real-world proportions at 88% so it reads as a nearby Note,
 // without turning into a flyaway presentation board.
-const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 4.14, y: 3.8 });
-const DEMO_TOTEM_HALF_HEIGHT_METRES = .9;
+const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
+const DEMO_TOTEM_HALF_HEIGHT_METRES = .76;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo interface.',
@@ -187,10 +193,10 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:'NourishlandXR connects knowledge about nature to the places where it lives.',accent:'#dcef95'}),
-    Object.freeze({at:5200,text:'XR means extended reality: digital learning placed into the space around you.',accent:'#7fa7e8'}),
-    Object.freeze({at:10400,text:'AR keeps the real landscape visible while adding useful guidance.',accent:'#8fc77a'}),
-    Object.freeze({at:14800,text:'Four pathways offer different ways to explore a living place.',accent:'#e7b45f'}),
+    Object.freeze({at:0,text:demoLocalizedText('Plant Orbs connect information to the real plants they describe.'),accent:'#dcef95'}),
+    Object.freeze({at:5200,text:demoLocalizedText('Each orb opens that plant’s information in the landscape.'),accent:'#7fa7e8'}),
+    Object.freeze({at:10400,text:demoLocalizedText('NourishlandXR maps places by organizing plants and stories into Areas.'),accent:'#8fc77a'}),
+    Object.freeze({at:14800,text:demoLocalizedText('Each Area can welcome visitors with a Totem.'),accent:'#e7b45f'}),
     Object.freeze({at:28200,text:'Choose a pathway, or continue into a guided example.',accent:'#dcef95'})
 ]);
 const welcomeNarrative=elapsed=>WELCOME_NARRATIVE.reduce((current,item)=>elapsed>=item.at?item:current,WELCOME_NARRATIVE[0]);
@@ -219,6 +225,11 @@ const DEMO_TOTEM_STYLES = Object.freeze([
     { id: 'organic', label: 'Light Bulb' },
     { id: 'flat-disc', label: 'Disk Totem' }
 ]);
+function demoHexColour(value,fallback=[.32,.52,.36]){
+    const match=String(value||'').match(/^#?([\da-f]{6})$/i);
+    if(!match)return fallback;
+    return match[1].match(/[\da-f]{2}/gi).map(part=>parseInt(part,16)/255);
+}
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
         shell: [0.34, 0.23, 0.14],
@@ -258,25 +269,25 @@ const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: {
-        title: 'Food Forest Totem',
-        accent: '#8fa56a',
+        title: 'My Food Forest',
+        accent: '#50865c',
         bubbles: [
             'FOOD FOREST AREA',
+            'WELCOME · My Food Forest',
             'Pigeon Pea + Moringa guild',
-            'Warm sheltered microclimate',
-            'Pollinator activity',
-            'Seasonal garden observations'
+            'Warm growing conditions',
+            'Pollinators + seasonal care'
         ]
     },
     zoneTwo: {
-        title: 'Kitchen Garden Totem',
-        accent: '#b58a5e',
+        title: 'Rainforest Walk',
+        accent: '#438f99',
         bubbles: [
-            'KITCHEN GARDEN AREA',
-            'Seed-to-table plants',
-            'Warm growing space',
-            'Kitchen observations',
-            'LINKED TO FOOD FOREST'
+            'RAINFOREST WALK AREA',
+            'ORIENTATION · follow the path',
+            'Native species interpretation',
+            'Stay on trail · respect habitat',
+            'LINKED TO MY FOOD FOREST'
         ]
     }
 });
@@ -289,7 +300,8 @@ const MORINGA_PROFILE = Object.freeze({
         identity: Object.freeze({
             commonName: 'Moringa Tree',
             scientificName: 'Moringa oleifera',
-            identityStatement: 'A fast-growing food and support tree for tropical and subtropical gardens.'
+            identityStatement: 'A fast-growing food and support tree for tropical and subtropical gardens.',
+            image: MORINGA_PROFILE_IMAGE
         }),
         nodes: Object.freeze([
             { id: 'moringa-forest-layer', parentId: 'food-forest', title: 'Canopy / low tree layer', preview: 'Light canopy role', body: 'A fast-growing low tree within a layered food forest.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
@@ -309,14 +321,15 @@ const MORINGA_PROFILE = Object.freeze({
         ])
     })
 });
-const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(resolvePlantPim(MORINGA_PROFILE, {
+const MORINGA_PIM = Object.freeze(resolvePlantPim(MORINGA_PROFILE, {
     id: 'moringa-oleifera',
     plantId: 'moringa-oleifera',
     name: 'Moringa Tree',
     commonName: 'Moringa Tree',
     title: 'Moringa Tree',
     scientificName: 'Moringa oleifera'
-})));
+}));
+const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(MORINGA_PIM));
 const knowledgeFor = record => record.demoKnowledgeProjection || (record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE);
 const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
 function demoPimSurfaceSize(record) {
@@ -338,11 +351,13 @@ function demoPimPanel(record, pose = record?.informationPose) {
         height: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
     });
 }
-const NOTE_TEMPLATES = Object.freeze({
-    poi: { title: 'Point of Interest · Seasonal observation', accent: '#f0cf70', lines: ['PURPOSE  Draw attention to this place', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
-    plaque: { title: 'Garden plaque · Grow gently', accent: '#f2d997', lines: ['“A garden teaches us to care for what comes next.”', 'Pause · notice · return', 'A small thought anchored to this living place'] },
-    warning: { title: 'Warning Note · DON’T GO HERE', accent: '#ef9b78', lines: ['WARNING  Do not enter this place', 'GUIDANCE  Explain the risk or boundary', 'FUTURE  Sound · alerts · animation'] }
-});
+const NOTE_TEMPLATES = Object.freeze(Object.fromEntries(SPATIAL_NOTE_TEMPLATES.map(item => [item.id, Object.freeze({
+    title: item.title,
+    accent: item.color,
+    lines: item.topics.length
+        ? item.topics.map(topic => `${topic.title.toUpperCase()}  ${topic.body}`)
+        : [item.description]
+})])));
 const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
 
 function clearSessionState() {
@@ -485,10 +500,10 @@ function demoControlIsVisible(selector) {
 
 function demoPanelActions() {
     const actions=[];
-    if(demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
+    if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
     if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Activate learning cells'});
-    if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Quest 3…':'Enter Quest 3',disabled:questLaunchPending});
+    if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
     return actions.slice(-8);
@@ -531,13 +546,13 @@ function handleDemoPanelAction(action) {
 
 async function retryQuestImmersive() {
     if(questLaunchPending || !simulatedMode)return;
-    questLaunchPending=true;syncDemoPanelActions();setGuide('Opening Quest 3 immersive mode…');
+    questLaunchPending=true;syncDemoPanelActions();setGuide('Opening Spatial device immersive mode…');
     const immersive=await startImmersive();
     questLaunchPending=false;
     renderInterface(!immersive);
     if(!immersive){
         viewerMatrix=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
-        setGuide('Quest 3 immersive mode was not available. Preview mode remains open.');
+        setGuide('Spatial device immersive mode is not available here. Preview mode remains open.');
     }
 }
 
@@ -558,8 +573,8 @@ function setDemoTutorialStep(step) {
     if (root) root.dataset.demoTutorialStep = controls.step;
     const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]');
     if (liveTagButton) {
-        liveTagButton.hidden = !controls.showOpenPlantLiveTag;
-        if (!controls.showOpenPlantLiveTag) liveTagButton.onclick = null;
+        liveTagButton.hidden = !simulatedMode || !controls.showOpenPlantLiveTag;
+        if (liveTagButton.hidden) liveTagButton.onclick = null;
     }
     const footer = appRoot?.querySelector('.tryit-demo-footer');
     if (footer) footer.hidden = !controls.showPersistentControls;
@@ -640,6 +655,13 @@ function closeDemoVirtualTag(record) {
 }
 
 function openDemoVirtualTag(record) {
+    // Web Mode is a useful flat-screen preview, but opening a DOM workspace in
+    // immersive WebXR can become a browser-owned white surface. Keep headset
+    // visitors in the spatial scene and advance the same tutorial state.
+    if (!simulatedMode || session) {
+        advancePastVirtualTag(record);
+        return;
+    }
     openDemoKnowledge(record);
 }
 
@@ -653,6 +675,20 @@ function advancePastVirtualTag(record) {
 }
 
 function inviteVirtualTag(record) {
+    if (!simulatedMode || session) {
+        showGuidedChoice('<h2>Plant Orbs keep knowledge in place</h2><p>This orb can sit beside a real plant so its profile remains available inside the spatial garden.</p>', () => {}, {
+            persistent: true,
+            tutorialStep: DEMO_TUTORIAL_STEPS.PLACEMENT
+        });
+        setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PLACEMENT);
+        const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
+        if (continueButton) {
+            continueButton.textContent = demoLocalizedText('Continue');
+            continueButton.hidden = false;
+            continueButton.onclick = () => advancePastVirtualTag(record);
+        }
+        return;
+    }
     showGuidedChoice('<h2>One plant, two ways to read it</h2><p>Pigeon Pea’s full profile is also available in Web Mode. Open it for a closer read, or continue to meet a second plant in this place.</p>', () => {}, {
         persistent: true,
         tutorialStep: DEMO_TUTORIAL_STEPS.LIVE_TAG
@@ -740,7 +776,7 @@ function activateImmersiveDemoControl() {
         choiceButton.click();
         return true;
     }
-    const liveTagButton = appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])');
+    const liveTagButton = simulatedMode ? appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])') : null;
     if (liveTagButton) {
         liveTagButton.click();
         return true;
@@ -1361,7 +1397,7 @@ function showArWelcomeShowcase() {
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Learn what XR and AR mean, then discover four pathways for exploring a living place."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover Plant Orbs, mapped Areas with welcoming Totems, and four learning pathways."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_SURFACE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_SURFACE_CANVAS.height;}
     // Native buttons provide touch, keyboard and screen-reader access to cells.
@@ -1444,8 +1480,8 @@ function selectWelcomeCell() {
 
 const DEMO_ORIENTATION_STEPS = [
     {title:'A place full of stories',button:'Continue',nextGuide:'Press Continue to see how the stories in this place connect.',paragraphs:[
-        'Imagine standing in a food forest. Some relationships are easy to see; others become clear when we look closer.',
-        'Here, what you learn stays connected to the place it describes.'
+        'Imagine standing in a food forest. A Plant Orb belongs at a real plant and opens that plant’s information there.',
+        'NourishlandXR maps a landscape as Areas. Each Area receives a welcoming Totem for its local stories and visitor guidance.'
     ]},
     {title:'Connections begin to appear',button:'Continue',nextGuide:'Explore a learning cell if you wish, or press Continue to follow the story.',paragraphs:[
         'The floating learning cells connect questions about place, plants, life and design.',
@@ -1453,7 +1489,7 @@ const DEMO_ORIENTATION_STEPS = [
     ]},
     {title:'Knowledge belongs to a place',button:'Continue',nextGuide:'Press Continue to meet the first plant in this place.',paragraphs:[
         'An idea becomes more useful when it connects to a particular plant and the place where it grows.',
-        'A Plant orb gives one plant a location in the scene and opens its profile there.'
+        'Tap the orb to open its profile in place; return to the plant whenever you want to discover more.'
     ]},
     {title:'Begin with Pigeon Pea',button:'Place Pigeon Pea',nextGuide:'Press Place Pigeon Pea, then use the visible aiming circle to choose its spot.',paragraphs:[
         'Pigeon Pea is our first example. Its profile brings together the plant’s roles, growing needs and uses.',
@@ -1500,11 +1536,10 @@ function guidePlantConversion(record) {
         pointer?.setAttribute('hidden', '');
         pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
-        if(!moringa)infoPanel?.focusPlant(record,PIGEON_PEA_PIM,{
-            image:PIGEON_PEA_CONTROL_IMAGE,
-            alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas'
-        });
-        if(!moringa)infoPanel?.suspend(false);
+        infoPanel?.focusPlant(record,moringa ? MORINGA_PIM : PIGEON_PEA_PIM,moringa
+            ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
+            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas'});
+        infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     showIntroBoard(
@@ -1546,8 +1581,17 @@ function cycleDemoNoteTemplate(record) {
     const current = Math.max(0, Number(record.demoNoteTemplateIndex) || 0);
     record.demoNoteTemplateIndex = (current + 1) % DEMO_NOTE_TEMPLATE_KEYS.length;
     const templateKey = DEMO_NOTE_TEMPLATE_KEYS[record.demoNoteTemplateIndex];
+    const template = spatialNoteTemplate(templateKey);
     record.demoContent = NOTE_TEMPLATES[templateKey];
     record.name = record.demoContent.title;
+    record.description = template.description;
+    record.appearance = {
+        ...(record.appearance || {}),
+        note_template: template.id,
+        color: template.color,
+        opacity: .64,
+        surface: 'outline'
+    };
     refreshDemoRecord(record);
     setGuide(`${record.demoContent.title} is using the same Note template and remains anchored in the same place.`);
     return true;
@@ -1558,7 +1602,8 @@ function showDemoClosingMessage() {
         'NourishlandXR',
         [
             'From one Pigeon Pea, we followed knowledge through two plants, an observation and connected Areas.',
-            'NourishlandXR helps people explore living places, share what they learn and care for them together. Back at the welcome screen, you can explore a place or begin creating your own.'
+        'NourishlandXR helps people explore living places, share what they learn and care for them together. Back at the welcome screen, you can explore a place or begin creating your own.',
+        'NourishlandXR aims to bring information to botanical gardens, public parks, community gardens, native forests and food forests, helping people discover the wonders of plants.'
         ],
         'Finish demo',
         returnToWelcome
@@ -1573,7 +1618,7 @@ function createDemoTotemExample() {
     groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
-            name: 'Food Forest Totem',
+            name: 'My Food Forest Totem',
             description: 'An example of Area information attached to a Totem Marker.'
         }),
         // Spatial prisms are positioned from their centre. Raising the centre
@@ -1589,6 +1634,8 @@ function createDemoTotemExample() {
         demoType: 'zone',
         tutorialStage: 'totem',
         demoTotemStyle: 'basic',
+        demoTotemExampleId:'my-food-forest',
+        demoTotemColor:'#50865c',
         demoLinkVisible: false,
         demoExpanded: true,
         demoInteractive: true,
@@ -1605,8 +1652,8 @@ function createDemoTotemExample() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('The Food Forest Totem marks one Area. Show the Kitchen Garden Totem to see a route between Areas.');
-    showSceneContinue('Show Kitchen Garden Totem', createDemoSecondTotem);
+    setGuide('The My Food Forest Totem welcomes visitors to its Area. Show the Rainforest Walk Totem to see a differently coloured Area and a route between them.');
+    showSceneContinue('Show Rainforest Walk Totem', createDemoSecondTotem);
 }
 
 function createDemoSecondTotem() {
@@ -1618,8 +1665,8 @@ function createDemoSecondTotem() {
     groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
-            name: 'Kitchen Garden Totem',
-            description: 'A second Area Totem linked to the Food Forest Area.'
+            name: 'Rainforest Walk Totem',
+            description: 'A Rainforest Walk Area Totem linked to My Food Forest.'
         }),
         position: {
             x: sourcePosition.x - 1.15,
@@ -1631,9 +1678,11 @@ function createDemoSecondTotem() {
         demoType: 'zone',
         tutorialStage: 'totem2',
         demoTotemStyle: 'basic',
+        demoTotemExampleId:'rainforest-walk',
+        demoTotemColor:'#438f99',
         demoLinkVisible: true,
         demoLinkDirection: 'left',
-        demoLinkDestination: 'Food Forest Area',
+        demoLinkDestination: 'My Food Forest Area',
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
@@ -1649,11 +1698,11 @@ function createDemoSecondTotem() {
     if (first) {
         first.demoLinkVisible = true;
         first.demoLinkDirection = 'right';
-        first.demoLinkDestination = 'Kitchen Garden Area';
+        first.demoLinkDestination = 'Rainforest Walk Area';
         first.demoLinkPartner = totem.id;
         first.demoContent = {
             ...first.demoContent,
-            bubbles: [...(first.demoContent?.bubbles || []), 'LINKED TO KITCHEN GARDEN'].slice(0, 5)
+            bubbles: [...(first.demoContent?.bubbles || []), 'LINKED TO RAINFOREST WALK'].slice(0, 5)
         };
         totem.demoLinkPartner = first.id;
         if (first.texture) gl?.deleteTexture(first.texture);
@@ -1681,8 +1730,9 @@ function showLinkedTotemsIntroduction() {
     showIntroBoard(
         'Why link Areas?',
         [
-            'Each Totem is the home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
-            'A link creates a visitor route between Areas. Here it connects the Food Forest with the Kitchen Garden without mixing their information.',
+            'Each Totem is the welcoming home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
+            'My Food Forest can welcome visitors; Rainforest Walk can orient them; Botanical Collection can interpret plants; Community Garden can share safety information and care guidance.',
+            'A link creates a visitor route between Areas. Here it connects My Food Forest with Rainforest Walk without mixing their information.',
             'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
         'Continue',
@@ -1694,10 +1744,11 @@ function showTotemIntroduction() {
     showIntroBoard(
         'Area Totems',
         [
-            'A Totem is an Area’s home marker. It gathers the plants, Notes and local knowledge that belong to that part of a project.',
-            'This example reveals a Food Forest Area and a Kitchen Garden Area, then shows the route between them.'
+            'NourishlandXR is a mapping tool. Plants, observations and visitor stories are organized into Areas, with a welcoming Totem for each one.',
+            'My Food Forest can welcome visitors; Rainforest Walk can orient them; Botanical Collection can interpret plants; Community Garden can share safety information and care guidance.',
+            'Each Totem keeps its own Area content. In this example, My Food Forest and Rainforest Walk use different Totem colours and link into a visitor route.'
         ],
-        'Show Food Forest Totem',
+        'Show My Food Forest Totem',
         () => {
             finishIntroBoard();
             createDemoTotemExample();
@@ -1708,7 +1759,7 @@ function showTotemIntroduction() {
 function showSpatialGardenSummary() {
     showIntroBoard(
         'Your place is becoming connected',
-        'This place now holds two plant profiles and one observation. Area Totems show how those pieces belong to larger parts of the landscape.',
+        'This place now holds two plant profiles and one observation. NourishlandXR maps them into Areas; each Area can have a welcoming Totem that connects plants, stories and visitor guidance.',
         'See Area Totems',
         showTotemIntroduction
     );
@@ -2015,7 +2066,8 @@ function renderSimulatedTotem(record, index, anchor) {
     const linkLabel = record.demoLinkVisible
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
+    const colour=record.demoTotemColor || record.demoContent?.accent || '#50865c';
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -2783,6 +2835,17 @@ function beginControllerDemoHold() {
     return true;
 }
 
+function beginHandDemoGrab() {
+    if (placementReady || demoHeldIndex >= 0) return false;
+    const target = demoRecordAtPointer();
+    const origin = demoPointerWorldOrigin();
+    if (!target || !origin || target.record.demoInteractive === false) return false;
+    if (!captureDemoGrabPose(target.record, origin, demoPointerWorldRay())) return false;
+    demoHeldIndex = target.index;
+    setGuide(`Holding ${target.record.name || 'the orb'}. Move your hand, then release.`);
+    return true;
+}
+
 function selectDemoNoteTemplateAtPointer() {
     const target = demoRecordAtPointer();
     if (!target || target.record?.demoType !== 'note') return false;
@@ -2873,10 +2936,11 @@ function placeMarker() {
         revealLines: 3,
         texture: null,
         ...(type === 'note' ? {
-            name: NOTE_TEMPLATES.poi.title,
-            demoContent: NOTE_TEMPLATES.poi,
+            name: NOTE_TEMPLATES.welcome.title,
+            description: spatialNoteTemplate('welcome').description,
+            demoContent: NOTE_TEMPLATES.welcome,
             demoNoteTemplateIndex: 0,
-            appearance: { color: '#9a6b50', size: 'medium', opacity: 1, surface: 'filled' }
+            appearance: { note_template:'welcome', color: spatialNoteTemplate('welcome').color, size: 'small', opacity: .64, surface: 'outline' }
         } : {})
     };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
@@ -3151,9 +3215,49 @@ function updateDemoControllerRay(frame) {
     latestControllerRay = null;
     const source = demoControllerInputSource();
     if (!source || !referenceSpace) return;
+    if (source.hand) {
+        latestHandState = handTrackingState(frame, source, referenceSpace);
+        latestControllerRay = latestHandState?.pointer || null;
+        return;
+    }
+    latestHandState = null;
     const controllerSpace = source.targetRaySpace || source.gripSpace;
     const pose = controllerSpace ? frame.getPose(controllerSpace, referenceSpace) : null;
     latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
+}
+
+function pollDemoControllerDepth(time = performance.now()) {
+    const source = demoControllerInputSource();
+    const elapsed = demoControllerDepthAt ? time - demoControllerDepthAt : 16;
+    demoControllerDepthAt = time;
+    if (demoHeldIndex < 0 || source?.hand || !source?.gamepad) return;
+    const axes = [Number(source.gamepad.axes?.[3]) || 0, Number(source.gamepad.axes?.[1]) || 0];
+    const vertical = axes.sort((a,b)=>Math.abs(b)-Math.abs(a))[0];
+    const delta = spatialDepthDelta(vertical, elapsed);
+    const record = markers[demoHeldIndex];
+    if (!delta || !record) return;
+    record.demoGrabDepth = Math.max(.4, Math.min(4, (Number(record.demoGrabDepth) || Number(record.demoDistance) || 1) + delta));
+    record.demoDistance = record.demoGrabDepth;
+}
+
+function pollDemoHandPinch() {
+    if (!latestHandState?.pointer) {
+        if (handPinchActive && demoHeldIndex >= 0) releaseHeldDemoRecord();
+        handPinchActive = false;
+        return;
+    }
+    const pinching = Boolean(latestHandState.pinch);
+    if (pinching && !handPinchActive) {
+        let handled=Boolean(infoPanel?.activate(latestControllerRay));
+        if(!handled && placementReady){pressPlacementPointer();handled=true;}
+        if(!handled)handled=Boolean(selectDemoProfileCell());
+        if(!handled)handled=Boolean(selectDemoNoteTemplateAtPointer());
+        if(!handled)handled=Boolean(activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay)));
+        if(!handled)handled=Boolean(beginHandDemoGrab());
+        if (handled) { handPinchActive = true; return; }
+    }
+    if (!pinching && handPinchActive && demoHeldIndex >= 0) releaseHeldDemoRecord();
+    handPinchActive = pinching;
 }
 
 function unusedLegacyMarkerTexture() {
@@ -3320,6 +3424,11 @@ function drawIntroNoteContent(ctx) {
     const contentLeft = 300;
     const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
+    ctx.save();
+    if(arWelcomeIntroPending){
+        const elapsed=arWelcomeClock?.elapsed || 0;
+        ctx.globalAlpha*=.34+.66*(.5+.5*Math.sin(elapsed/1750));
+    }
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
@@ -3328,12 +3437,16 @@ function drawIntroNoteContent(ctx) {
     ctx.font = '750 46px system-ui, sans-serif';
     ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     ctx.fillStyle = '#fff';
+    // Keep headings on one line so a wrapped second line cannot collide with
+    // the divider/body copy on the compact spatial note (notably Pigeon Pea).
+    const titleWidth = 900;
     let titleSize = 92;
-    do {
+    ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
+    while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
+        titleSize -= 2;
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
-        titleSize -= 4;
-    } while (titleSize > 62 && ctx.measureText(introBoardTitle).width > contentWidth);
-    drawWrappedTextureText(ctx, introBoardTitle, contentCenter, 420, contentWidth, titleSize + 10, 2);
+    }
+    ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
@@ -3391,6 +3504,7 @@ function drawIntroNoteContent(ctx) {
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
+    ctx.restore();
 }
 
 function createIntroControlTexture(labelText, texture = null) {
@@ -3619,21 +3733,23 @@ function createBoundaryTexture() {
 }
 
 function createDemoNoteTexture(record) {
-    const content = demoContentFor(record) || NOTE_TEMPLATES.poi;
+    const content = demoContentFor(record) || NOTE_TEMPLATES.observation;
     const label = document.createElement('canvas');
     label.width = 1024;
     label.height = 384;
     const ctx = label.getContext('2d');
-    const noteColor = record?.appearance?.color || '#9a6b50';
+    const noteColor = record?.appearance?.color || '#506d68';
     ctx.clearRect(0, 0, label.width, label.height);
-    ctx.fillStyle = noteColor;
-    ctx.globalAlpha = Number(record?.appearance?.opacity ?? 1);
+    const gradient=ctx.createLinearGradient(12,12,1012,372);
+    gradient.addColorStop(0,`${noteColor}c2`);gradient.addColorStop(1,'rgba(7,28,17,.38)');
+    ctx.fillStyle = gradient;
+    ctx.globalAlpha = Math.min(.78,Number(record?.appearance?.opacity ?? .64));
     ctx.beginPath();
     ctx.roundRect(12, 12, 1000, 360, 58);
     ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(239,255,235,.88)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(239,255,235,.68)';
+    ctx.lineWidth = 2;
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -3642,7 +3758,9 @@ function createDemoNoteTexture(record) {
     drawWrappedTextureText(ctx, content.title || record.name || 'Note', 62, 56, 900, 58, 2);
     ctx.fillStyle = 'rgba(255,255,255,.9)';
     ctx.font = '650 27px system-ui, sans-serif';
-    (content.lines || []).slice(0, 3).forEach((line, index) => {
+    const lines=[...(content.lines || [])];
+    if(record?.appearance?.note_template==='pollinators' && lines.length){const offset=Number(record.noteScrollIndex)||0;lines.push(...lines.splice(0,offset%lines.length));}
+    lines.slice(0, 3).forEach((line, index) => {
         drawWrappedTextureText(ctx, line, 62, 184 + index * 54, 900, 34, 1);
     });
     return canvasTexture(label);
@@ -3759,15 +3877,17 @@ function drawMarker(view) {
     markers.forEach(record => {
         if (record.demoType !== 'zone') return;
         const style = record.demoTotemStyle || 'basic';
+        const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent);
+        const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.48+.48));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
         if (style === 'organic') {
             drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
                 ...record.position,
-                y: groundBaseY + .44
-            }, .44, {
-                color: [.06, .24, .12],
+                y: groundBaseY + .38
+            }, .38, {
+                color: totemColour,
                 alpha: .98,
                 emissive: .2
             });
@@ -3777,8 +3897,8 @@ function drawMarker(view) {
             drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
                 ...record.position,
                 y: groundBaseY + .06
-            }, .48, {
-                color: [.16, .43, .22],
+            }, .42, {
+                color: totemColour,
                 alpha: .98,
                 emissive: .2,
                 scale: { x: 1, y: .16, z: 1 }
@@ -3786,11 +3906,11 @@ function drawMarker(view) {
             return;
         }
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
-            halfWidth: .16,
-            halfHeight: .9,
-            halfDepth: .16,
-            color: [.45, .55, .4],
-            topColor: [.68, .76, .58],
+            halfWidth: .14,
+            halfHeight: DEMO_TOTEM_HALF_HEIGHT_METRES,
+            halfDepth: .14,
+            color: totemColour,
+            topColor: totemHighlight,
             rotationY: Math.PI / 7
         });
     });
@@ -3816,6 +3936,10 @@ function drawMarker(view) {
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
     drawIntroSpatial(view);
     markers.forEach(record => {
+        if(record.demoType==='note' && record.appearance?.note_template==='pollinators' && performance.now()-(record.noteScrolledAt||0)>2600){
+            record.noteScrolledAt=performance.now();record.noteScrollIndex=(Number(record.noteScrollIndex)||0)+1;
+            if(record.texture)gl.deleteTexture(record.texture);record.texture=createMarkerTexture(record);
+        }
         if (record.demoType === 'plant' && record.demoExpanded && record.pimBloomStarted) {
             const elapsed = performance.now() - record.pimBloomStarted;
             if (elapsed <= PIM_BLOOM_DURATION_MS) {
@@ -3891,6 +4015,13 @@ function drawMarker(view) {
 
 function drawDemoControllerPointer(view) {
     if (!latestControllerRay || !tetherRenderer) return;
+    if (latestHandState?.joints) {
+        for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
+            const from=latestHandState.joints.get(fromName),to=latestHandState.joints.get(toName);
+            if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:3,width:.009,curve:0,lift:0,color:[.72,1,.34,.76]});
+        }
+        return;
+    }
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
@@ -3957,10 +4088,11 @@ async function startImmersive() {
             hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
         } catch (error) {
             hitTestSource = null;
-            setGuide(`${sessionMode === 'immersive-vr' ? 'Quest immersive mode' : 'Passthrough AR'} is active. Surface detection unavailable; placement uses your view direction. (${error.message})`);
+            setGuide(`${sessionMode === 'immersive-vr' ? 'Spatial device immersive mode' : 'Passthrough AR'} is active. Surface detection unavailable; placement uses your view direction. (${error.message})`);
         }
         setupRenderer();
-        session.addEventListener('select', () => {
+        session.addEventListener('select', event => {
+            if(event.inputSource?.hand)return;
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
@@ -3981,7 +4113,8 @@ async function startImmersive() {
             getTarget:demoInfoTarget,activate:()=>selectDemoProfileCell(),
             progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;if(gl){if(record.texture)gl.deleteTexture(record.texture);record.texture=createMarkerTexture(record);}}
         });
-        session.addEventListener('selectstart', () => {
+        session.addEventListener('selectstart', event => {
+            if(event.inputSource?.hand)return;
             if(demoKnowledgeWorkspace) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
@@ -3990,7 +4123,8 @@ async function startImmersive() {
             if (actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();
         });
-        session.addEventListener('selectend', () => {
+        session.addEventListener('selectend', event => {
+            if(event.inputSource?.hand)return;
             if (demoHeldIndex < 0) {
                 clearTimeout(demoHoldTimer);
                 demoHoldTimer = null;
@@ -4012,9 +4146,11 @@ async function startImmersive() {
             hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
+            pollDemoControllerDepth(_time);
+            pollDemoHandPinch();
             syncImmersiveLimHover();
             tickLimActivation(_time);
-            infoPanel?.update(viewerMatrix, _time);
+            infoPanel?.update(viewerMatrix, _time, latestControllerRay);
             if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
                 limDiagnostic('companion-panel-position',infoPanel.getPosition());
                 limPanelDiagnosticRecorded=true;

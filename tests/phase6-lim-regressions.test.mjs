@@ -10,6 +10,9 @@ const styles = fs.readFileSync(new URL('../app/style.css', import.meta.url), 'ut
 
 test('Phase 6 welcome copy is bounded to the compact note and scrolls only in the DOM copy', () => {
     assert.match(demoSource, /const contentWidth = 800/);
+    assert.match(demoSource, /const titleWidth = 900/);
+    assert.match(demoSource, /ctx\.fillText\(introBoardTitle, contentCenter, 420, titleWidth\)/);
+    assert.doesNotMatch(demoSource, /drawWrappedTextureText\(ctx, introBoardTitle/);
     assert.doesNotMatch(demoSource, /↙ Control panel/);
     assert.match(demoSource, /ctx\.textAlign = isOpeningStatement \? 'center' : 'left'/);
     assert.match(demoSource, /isOpeningStatement \? 400 : 650/);

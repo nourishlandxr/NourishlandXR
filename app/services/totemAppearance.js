@@ -20,9 +20,9 @@ export const TOTEM_TONES = Object.freeze([
 ]);
 
 export const TOTEM_HEIGHT_PRESETS = Object.freeze([
-    Object.freeze({ id: 'low', label: 'Low', metres: 1.05, halfHeightMetres: .525, previewPixels: 82 }),
-    Object.freeze({ id: 'standard', label: 'Standard', metres: 1.36, halfHeightMetres: .68, previewPixels: 104 }),
-    Object.freeze({ id: 'tall', label: 'Tall', metres: 1.72, halfHeightMetres: .86, previewPixels: 132 })
+    Object.freeze({ id: 'low', label: 'Low', metres: .92, halfHeightMetres: .46, previewPixels: 72 }),
+    Object.freeze({ id: 'standard', label: 'Standard', metres: 1.2, halfHeightMetres: .6, previewPixels: 92 }),
+    Object.freeze({ id: 'tall', label: 'Tall', metres: 1.5, halfHeightMetres: .75, previewPixels: 116 })
 ]);
 
 export function normalizeTotemHeightPreset(value) {

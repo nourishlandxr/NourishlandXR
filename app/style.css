@@ -576,7 +576,7 @@ h1 {
 .tryit-spatial-intro { position: fixed; inset: 0; z-index: 12000; overflow: hidden; perspective: 900px; pointer-events: none; }
 .tryit-spatial-intro[hidden] { display: none; }
 .tryit-demo.is-immersive .tryit-spatial-intro { display: none !important; }
-.nourishland-spatial-note-surface { --spatial-note-color:#4b7f59; box-sizing:border-box; overflow:hidden; border:1px solid rgba(240,255,232,.76); border-radius:38px 29px 44px 32px !important; background:radial-gradient(circle at 20% 12%,rgba(255,255,255,.18),transparent 38%),linear-gradient(145deg,color-mix(in srgb,var(--spatial-note-color) 64%,transparent),color-mix(in srgb,var(--spatial-note-color) 22%,rgba(7,28,17,.5))); color:#fff; box-shadow:0 28px 74px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(14px); }
+.nourishland-spatial-note-surface { --spatial-note-color:#4b7f59; box-sizing:border-box; overflow:hidden; border:1px solid rgba(240,255,232,.58); border-radius:24px 20px 27px 22px !important; background:radial-gradient(circle at 20% 12%,rgba(255,255,255,.09),transparent 38%),linear-gradient(145deg,color-mix(in srgb,var(--spatial-note-color) 38%,transparent),color-mix(in srgb,var(--spatial-note-color) 14%,rgba(7,28,17,.34))); color:#fff; box-shadow:0 14px 36px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.12); backdrop-filter:blur(6px); }
 .creator-ar-demo-note { font-family:Inter,"Aptos","Segoe UI",system-ui,sans-serif; font-weight:800; letter-spacing:.015em; text-shadow:0 2px 5px rgba(0,0,0,.68); }
 @keyframes tryit-spatial-note-arrive { 0% { opacity:0; filter:blur(10px); transform:translate3d(-50%,-34%,-360px) scale(.68) rotateX(-7deg); } 58% { opacity:.82; filter:blur(1px); } 100% { opacity:1; filter:blur(0); transform:translate3d(-50%,-50%,0) scale(1) rotateX(0); } }
 @keyframes tryit-persistent-note-arrive { from { opacity:0; } to { opacity:1; } }
@@ -893,7 +893,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 /* Legacy fixed-position PIM layout removed; the shared honeycomb rules below own every Demo and Creator PIM surface. */
 
 .tryit-sim-marker-note.is-expanded,
-.tryit-sim-marker-note:not(.is-expanded) { width:min(78vw,248px); height:102px; min-height:102px; padding:15px 19px; }
+.tryit-sim-marker-note:not(.is-expanded) { width:min(72vw,210px); height:82px; min-height:82px; padding:11px 15px; }
 .tryit-sim-marker-note { --note-board-color:#9a6b50; --spatial-note-color:var(--note-board-color); display:grid; place-content:center; gap:4px; overflow:hidden; font-family:Inter,"Aptos","Segoe UI",system-ui,sans-serif; text-align:center; cursor:pointer; }
 .tryit-sim-marker-note::before,.tryit-sim-marker-note::after { display:none; }
 .tryit-sim-marker-zone:not(.is-expanded) { width: 64px; height: 150px; border:0; border-radius:0; overflow:visible; background:#70875b; box-shadow:0 12px 22px rgba(0,0,0,.2); backdrop-filter:none; }
@@ -5526,7 +5526,7 @@ body.ar-dashboard-open .ar-tutorial-panel {
 
 .plant-card-hero {
     display: grid;
-    grid-template-columns: minmax(128px, 0.42fr) minmax(0, 1fr);
+    grid-template-columns: minmax(min(36vw, 280px), 0.68fr) minmax(0, 1fr);
     gap: 0.8rem;
     padding: 0.85rem;
     border: 1px solid rgba(77, 116, 78, 0.18);
@@ -5540,7 +5540,8 @@ body.ar-dashboard-open .ar-tutorial-panel {
     place-items: center;
     align-content: center;
     gap: 0.35rem;
-    min-height: 156px;
+    height: clamp(320px, 38vw, 480px);
+    min-height: 320px;
     overflow: hidden;
     border: 2px dashed rgba(86, 127, 88, 0.28);
     border-radius: 18px 38px 18px 32px;
@@ -5551,8 +5552,8 @@ body.ar-dashboard-open .ar-tutorial-panel {
 .plant-photo-space img {
     width: 100%;
     height: 100%;
-    min-height: 156px;
-    object-fit: cover;
+    min-height: 0;
+    object-fit: contain;
 }
 
 .plant-photo-space > span {
@@ -6327,13 +6328,17 @@ body.ar-dashboard-open .ar-tutorial-panel {
     }
 
     .plant-card-hero {
-        grid-template-columns: 92px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         padding: 0.65rem;
     }
 
-    .plant-photo-space,
+    .plant-photo-space {
+        height: min(50svh, 420px);
+        min-height: min(300px, 42svh);
+    }
+
     .plant-photo-space img {
-        min-height: 124px;
+        min-height: 0;
     }
 
     .plant-vital-grid {
@@ -8546,19 +8551,19 @@ button.ar-square-action::before { display: none !important; }
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::before {
     inset: 0;
-    background: hsl(var(--pim-hue,112) 58% 82% / .86);
+    background: hsl(var(--pim-hue,112) 40% 79% / .68);
+    clip-path: polygon(evenodd,25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%,25% 0,26% 2%,2% 50%,26% 98%,74% 98%,98% 50%,74% 2%,26% 2%);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after {
     inset: 2px;
     z-index: -1;
-    background: hsl(var(--pim-hue,112) 31% 19% / .14);
-    backdrop-filter: blur(3px);
+    background: hsl(var(--pim-hue,112) 31% 19% / .035);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-press-fill {
     position: absolute;
     z-index: 0 !important;
     inset: 2px;
-    display: block;
+    display: none;
     clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
     background: hsl(var(--pim-hue,112) 62% 65% / .72);
     opacity: 0;
@@ -8577,6 +8582,9 @@ button.ar-square-action::before { display: none !important; }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-press-complete .plant-knowledge-press-fill {
     opacity: .82;
     transform: scale(1);
+}
+.plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(.is-open,.is-selected,.is-pressing)::before {
+    filter:drop-shadow(0 0 8px hsl(var(--pim-hue,112) 65% 70% / .7));
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell > * {
     position: relative;
