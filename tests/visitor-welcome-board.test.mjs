@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
 
 globalThis.window = { location: { pathname: '/app/' } };
 const { visitorPlaceWelcomeMarkup, visitorPlaceWelcomeModel } = await import('../app/screens/visitorExperience.js');
 
-const root = 'C:/FILES/Projects/website/github/NourishlandXR';
+const visitorExperienceUrl = new URL('../app/screens/visitorExperience.js', import.meta.url);
+const productStylesUrl = new URL('../app/product-v2.css', import.meta.url);
 const anchoredTotem = {
     id: 'creek-totem',
     name: 'Creek Totem',
@@ -64,8 +64,8 @@ test('place welcome never invents an ArUco assignment', () => {
 });
 
 test('production visitor route uses the completed welcome board and responsive styles', () => {
-    const source = fs.readFileSync(path.join(root, 'app/screens/visitorExperience.js'), 'utf8');
-    const styles = fs.readFileSync(path.join(root, 'app/product-v2.css'), 'utf8');
+    const source = fs.readFileSync(visitorExperienceUrl, 'utf8');
+    const styles = fs.readFileSync(productStylesUrl, 'utf8');
     assert.match(source, /visitorPlaceWelcomeMarkup\(guide\)/);
     assert.match(source, /physicalMarkerSvg/);
     assert.match(styles, /\.v2-place-welcome-board/);
