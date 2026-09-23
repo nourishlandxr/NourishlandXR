@@ -1333,9 +1333,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 220/);
+    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0, -0\.58, -2\.72\]\)/);
+    assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
+    assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.match(source, /radius: \.96/);
-    assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 96/);
+    assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /plant: \{ x: 34,[\s\S]*plant2: \{ x: 66,[\s\S]*note: \{ x: 50,/);

@@ -438,19 +438,15 @@ function openingHash(value){
  return hash>>>0;
 }
 
-function drawOrganicTendril(ctx,node,frame,reducedMotion){
+function drawOrganicTendril(ctx,node,frame){
  if(!node.openingCurve || node.openingPathProgress<=0)return;
- const curve=partialCubic(node.openingCurve,node.openingPathProgress),depthFade=node.openingDepth===1?1:.78;
- ctx.save();ctx.globalAlpha=frame.organismOpacity*depthFade*(.35+node.openingPathProgress*.55);ctx.lineCap='round';
- ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.bezierCurveTo(curve.c1.x,curve.c1.y,curve.c2.x,curve.c2.y,curve.to.x,curve.to.y);
- ctx.strokeStyle='rgba(7,31,20,.38)';ctx.lineWidth=node.openingDepth===1?19:11;ctx.shadowColor=accentRgba(node.accent,108,.52);ctx.shadowBlur=reducedMotion?0:18;ctx.stroke();
- ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.bezierCurveTo(curve.c1.x,curve.c1.y,curve.c2.x,curve.c2.y,curve.to.x,curve.to.y);
- ctx.strokeStyle=accentRgba(node.accent,108,node.openingDepth===1?.72:.6);ctx.lineWidth=node.openingDepth===1?7:4;ctx.shadowBlur=0;ctx.stroke();
- if(node.openingPathProgress<.995){
-  const tip=cubicPoint(node.openingCurve,node.openingPathProgress),pulse=reducedMotion?1:.88+Math.sin(frame.time/170+(node.rotation||0)*9)*.12;
-  ctx.globalAlpha=frame.organismOpacity*(.7+node.openingPathProgress*.3);ctx.fillStyle='#efffcf';ctx.shadowColor=node.accent;ctx.shadowBlur=reducedMotion?0:24;
-  ctx.beginPath();ctx.arc(tip.x,tip.y,(node.openingDepth===1?13:8)*pulse,0,Math.PI*2);ctx.fill();
- }
+ const curve=partialCubic(node.openingCurve,node.openingPathProgress);
+ // One quiet connection is enough to explain the relationship. Keeping it
+ // below the cell pass avoids the doubled glow, animated tip and shadow work
+ // that made the Quest opening visually busy and expensive to repaint.
+ ctx.save();ctx.globalAlpha=frame.organismOpacity*(.22+node.openingPathProgress*.34);ctx.lineCap='round';
+ ctx.beginPath();ctx.moveTo(curve.from.x,curve.from.y);ctx.lineTo(curve.to.x,curve.to.y);
+ ctx.strokeStyle=accentRgba(node.accent,108,.58);ctx.lineWidth=node.openingDepth===1?4:3;ctx.stroke();
  ctx.restore();
 }
 
@@ -543,7 +539,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // each daughter travel along a seeded curved hypha before blooming. Once the
  // opening settles, the familiar straight LIM relationships return.
  if(opening){
-  for(const node of frame.nodes)drawOrganicTendril(ctx,node,openingState.frame,reducedMotion);
+  for(const node of frame.nodes)drawOrganicTendril(ctx,node,openingState.frame);
  } else {
   for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
   for(const node of frame.nodes){

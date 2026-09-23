@@ -152,7 +152,7 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardPosition: [0, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
-const INTRO_CONTROL_POSITION = Object.freeze([0.92, -0.42, -2.72]);
+const INTRO_CONTROL_POSITION = Object.freeze([0, -0.58, -2.72]);
 const INTRO_CONTROL_SCALE = Object.freeze([1.35, 0.58]);
 const DEMO_QUEST_ORB_SCALE = 0.62;
 // The shared demo quad is .4 m by .16 m before model scaling. These values
@@ -190,7 +190,7 @@ const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTROD
 // changing welcome copy/mesh into a modest cadence so typing and input stay
 // responsive while the XR frame loop remains free to render at 60fps.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
-const DEMO_LIM_TEXTURE_INTERVAL_MS = 96;
+const DEMO_LIM_TEXTURE_INTERVAL_MS = 64;
 const DEMO_LIM_SURFACE_CANVAS = Object.freeze({width:1600,height:1344});
 const AR_WELCOME_SETTLED_MS = 64000;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
@@ -717,7 +717,7 @@ function activateImmersiveDemoControl() {
             if(arWelcomeIntroPending && !welcomeSequenceCanContinue())return false;
             // DOM-overlay buttons handle their own clicks. Controller-only AR
             // must hit the drawn Continue control instead of accepting any tap.
-            if(sessionMode==='immersive-vr' || domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,[0,-.16,-2.8]),1.85,.78,900,220))return false;
+            if(sessionMode==='immersive-vr' || domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,220))return false;
         }
         continueButton.click();
         return true;
@@ -3346,16 +3346,17 @@ function drawIntroNoteContent(ctx) {
     ctx.shadowColor = 'rgba(0,0,0,.35)';
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#dcef95';
     ctx.font = '750 46px system-ui, sans-serif';
-    ctx.fillText(demoIntroLabel(), contentCenter, 350, contentWidth);
+    ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     ctx.fillStyle = '#fff';
     let titleSize = 92;
     do {
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
         titleSize -= 4;
     } while (titleSize > 62 && ctx.measureText(introBoardTitle).width > contentWidth);
-    drawWrappedTextureText(ctx, introBoardTitle, contentCenter, 410, contentWidth, titleSize + 10, 2);
+    drawWrappedTextureText(ctx, introBoardTitle, contentCenter, 420, contentWidth, titleSize + 10, 2);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
@@ -3938,11 +3939,16 @@ function drawDemoControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const limSurface=arWelcomeShowcaseActive && introWorldAnchor
+    const limSurface=arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell()
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
     const surface = [limSurface,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
-    const end = surface?.point || controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    const surfacePoint=surface?.point ? {
+        x:surface.point.x-direction.x*.012,
+        y:surface.point.y-direction.y*.012,
+        z:surface.point.z-direction.z*.012
+    } : null;
+    const end = surfacePoint || controllerRayEnd(latestControllerRay, demoLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,

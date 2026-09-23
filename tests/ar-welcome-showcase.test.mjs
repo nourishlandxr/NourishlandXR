@@ -40,19 +40,21 @@ test('reduced motion composes the complete LIM surface immediately',()=>{
  assert.ok(nodes.every(node=>node.opacity===1 && node.drawX===node.x && node.drawY===node.y));
 });
 
-test('main LIM renderer draws curved tendrils while retaining existing cell labels',()=>{
+test('main LIM renderer draws one lightweight connection beneath existing cell labels',()=>{
  let beziers=0;
+ let lines=0;
  const stack=[];
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
   save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
   restore(){Object.assign(this,stack.pop());},
   measureText(text){return {width:text.length*10};},
   createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},
-  bezierCurveTo(){beziers+=1;}};
- for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+  bezierCurveTo(){beziers+=1;},lineTo(){lines+=1;}};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
  const frame=drawArWelcomeShowcase(ctx,3000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421});
  assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),59);
- assert.ok(beziers>0,'parent-child tendrils use cubic curves');
+ assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
+ assert.ok(lines>0,'parent-child relationships retain a simple line');
 });
 
 test('Vision fades in after learning cells are activated late in the demo',()=>{

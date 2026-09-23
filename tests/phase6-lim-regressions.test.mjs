@@ -34,7 +34,7 @@ test('Phase 6 panel recovery keeps the southwest pose until it leaves the safe f
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.match(demoSource, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
-    assert.match(demoSource, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 96/);
+    assert.match(demoSource, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
     assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
     assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);
