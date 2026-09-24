@@ -17,7 +17,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
+import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife, drawDemoLycheeClusters } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -97,6 +97,17 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let ambientCanvas=null,ambientGrowth={progress:0,lastElapsed:0},ambientGrowthTarget=0,ambientSeedStartedAt=NaN,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let ambientTreeImages=null,ambientTreeTextures=null,ambientTreeLocations=null,ambientWorldFacing=null;
+const AMBIENT_TREE_ASSETS=Object.freeze({bare:'assets/lychee-tree-bare.png',leafy:'assets/lychee-tree-leafy.png'});
+function ensureAmbientTreeImages(){
+    if(ambientTreeImages)return;
+    ambientTreeImages={bare:null,leafy:null};
+    for(const [stage,url] of Object.entries(AMBIENT_TREE_ASSETS)){
+        const image=new Image();image.decoding='async';
+        image.onload=()=>{ambientTreeImages[stage]=image;ambientLastPaint=0;};
+        image.src=url;
+    }
+}
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -405,7 +416,9 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
+    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFacing=null;ambientLastPaint=0;
+    if(ambientTreeTextures){Object.values(ambientTreeTextures).forEach(value=>gl?.deleteTexture(value));ambientTreeTextures=null;}
+    ambientTreeLocations=null;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -945,6 +958,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
+    const deferContinueUntilCopyReady = Boolean(options.deferContinueUntilCopyReady);
     let typingStartDelay = 220;
     let typedLength = 0;
     let typing = true;
@@ -971,7 +985,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board?.classList.remove('is-typing');
         revealIntroBoardNextGuide();
         typing = false;
-        if (continueButton && buttonLabel) {continueButton.hidden = false;syncDemoPanelActions();}
+        if (continueButton && buttonLabel) {continueButton.hidden = false;continueButton.disabled = false;syncDemoPanelActions();}
         if (!completionNotified) {
             completionNotified = true;
             options.onTextComplete?.();
@@ -1006,11 +1020,12 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     finalActions?.setAttribute('hidden', '');
     if (continueButton && buttonLabel) {
         continueButton.textContent = demoLocalizedText(buttonLabel);
-        // The next step is a choice, not a typing-speed gate. The narration
-        // continues while the round trigger remains available at the bottom centre.
-        continueButton.hidden = false;
-        continueButton.disabled = false;
+        // Keep the Plant Orb introduction on screen until its explanation has
+        // appeared; a second press must not jump straight from pathways to Areas.
+        continueButton.hidden = deferContinueUntilCopyReady;
+        continueButton.disabled = deferContinueUntilCopyReady;
         continueButton.onclick = () => {
+            if (deferContinueUntilCopyReady && typing) return;
             suppressSessionSelectUntil = performance.now() + 700;
             onContinue();
         };
@@ -1341,16 +1356,15 @@ function paintDemoAmbientLife(now){
     if(ambientCanvas.height!==Math.round(height*ratio))ambientCanvas.height=Math.round(height*ratio);
     const context=ambientCanvas.getContext('2d');
     context.setTransform(ratio,0,0,ratio,0,0);
-    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
+    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,darkBackdrop:window.matchMedia('(hover: hover) and (pointer: fine)').matches,treeImages:ambientTreeImages});
 }
 
 function showArWelcomeShowcase() {
     selectedLimCell='';
     introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
-    const button=appRoot?.querySelector('[data-tryit-intro-continue]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
-    if(!panel || !button)return;
+    if(!panel)return;
     const reducedOpening=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const seedBytes=new Uint32Array(1);
     if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seedBytes);else seedBytes[0]=Math.floor(Math.random()*0xffffffff);
@@ -1470,7 +1484,8 @@ function showArWelcomeShowcase() {
         if(simulatedMode && arWelcomeLayer)arWelcomeShowcaseFrame=limRequestFrame(frame);
     };
     frame(performance.now());
-    button.textContent=demoLocalizedText('Meet the Control Panel');button.hidden=true;button.disabled=true;syncDemoPanelActions();
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');
+    syncDemoPanelActions();
     if(skip)skip.hidden=true;
     const advanceWelcome=()=>{
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
@@ -1484,17 +1499,13 @@ function showArWelcomeShowcase() {
     };
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
-        if(!arWelcomeOpeningActive && welcomeSequenceCanContinue()){
-            if(button.disabled){button.disabled=false;button.hidden=false;syncDemoPanelActions();}
-            if(welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
-                advanceWelcome();return;
-            }
+        if(!arWelcomeOpeningActive && welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+            advanceWelcome();return;
         }
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    button.onclick=advanceWelcome;
-    // The control is an optional shortcut; the guided flow continues by itself.
+    // The control panel appears as part of the narrative, without a separate gate.
     setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
 }
 
@@ -1559,6 +1570,7 @@ function runArWelcomeTutorial(index=0) {
     if(index===0)infoPanel?.setIntroduction(true);
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
+        if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
         if(index===0){
             infoPanel?.setIntroduction(false);
@@ -1572,7 +1584,7 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
 }
 
 function guidePlantConversion(record) {
@@ -3106,6 +3118,7 @@ function drawDemoKnowledge(view) {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
+    ensureAmbientTreeImages();
     limDiagnostic('layout-recalculation',{reason:'interface-render',simulated,step:demoTutorialStep,...limDeviceContext(simulated && navigator.maxTouchPoints ? 'touch-capable' : simulated ? 'mouse' : 'xr-pointer')});
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
     const questImmersiveMode = Boolean(!simulated && session && sessionMode === 'immersive-vr');
@@ -3940,6 +3953,54 @@ function drawDemoAmbientLines(view,vertices,color){
     gl.depthMask(false);gl.drawArrays(gl.LINES,0,vertices.length/3);gl.depthMask(true);
 }
 
+function createAmbientTreeTexture(source){
+    const result=gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D,result);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return result;
+}
+
+function drawAmbientTreeSprites(view,base,growth){
+    if(!ambientTreeImages?.bare?.naturalWidth || !ambientTreeImages?.leafy?.naturalWidth || !program || !buffer)return false;
+    if(!ambientTreeTextures){
+        const fruitCanvas=document.createElement('canvas');fruitCanvas.width=ambientTreeImages.leafy.naturalWidth;fruitCanvas.height=ambientTreeImages.leafy.naturalHeight;
+        drawDemoLycheeClusters(fruitCanvas.getContext('2d'),0,0,fruitCanvas.width,fruitCanvas.height,1);
+        ambientTreeTextures={bare:createAmbientTreeTexture(ambientTreeImages.bare),leafy:createAmbientTreeTexture(ambientTreeImages.leafy),fruit:createAmbientTreeTexture(fruitCanvas)};
+    }
+    ambientTreeLocations ||= {
+        point:gl.getAttribLocation(program,'p'),uv:gl.getAttribLocation(program,'uv'),
+        mvp:gl.getUniformLocation(program,'mvp'),sampler:gl.getUniformLocation(program,'t'),opacity:gl.getUniformLocation(program,'opacity')
+    };
+    const height=.12+growth*1.12,width=height*.96;
+    const position={x:base.x,y:base.y+height/2,z:base.z};
+    const model=billboardMatrix(position,width,height,ambientWorldFacing);
+    const mvp=multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model));
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    gl.enableVertexAttribArray(ambientTreeLocations.point);gl.vertexAttribPointer(ambientTreeLocations.point,3,gl.FLOAT,false,20,0);
+    gl.enableVertexAttribArray(ambientTreeLocations.uv);gl.vertexAttribPointer(ambientTreeLocations.uv,2,gl.FLOAT,false,20,12);
+    gl.uniformMatrix4fv(ambientTreeLocations.mvp,false,mvp);
+    gl.uniform1i(ambientTreeLocations.sampler,0);
+    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    const draw=(texture,opacity)=>{
+        if(opacity<=.001)return;
+        gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.uniform1f(ambientTreeLocations.opacity,opacity);
+        gl.drawArrays(gl.TRIANGLES,0,6);
+    };
+    const foliage=Math.max(0,Math.min(1,(growth-.24)/.54));
+    draw(ambientTreeTextures.bare,.75*(1-foliage*.65));
+    draw(ambientTreeTextures.leafy,.88*foliage);
+    draw(ambientTreeTextures.fruit,.9*Math.max(0,Math.min(1,(growth-.78)/.2)));
+    gl.depthMask(true);
+    return true;
+}
+
 function drawSpatialAmbientLife(view){
     if(!sphereRenderer || !prismRenderer || !viewerMatrix || !Number.isFinite(ambientSeedStartedAt) || ambientGrowth.progress<.01)return;
     if(!ambientWorldAnchor){
@@ -3947,12 +4008,15 @@ function drawSpatialAmbientLife(view){
         const rightX=viewerMatrix[0]/rightLength,rightZ=viewerMatrix[2]/rightLength;
         const forwardX=-viewerMatrix[8],forwardZ=-viewerMatrix[10];
         ambientWorldAnchor={x:viewerMatrix[12]+rightX*.95+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.95+forwardZ*2.4};
+        ambientWorldFacing=introWorldAnchorFromViewer(viewerMatrix);
     }
     const base=ambientWorldAnchor,growth=ambientGrowth.progress,height=.12+growth*1.12;
-    drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.007+growth*.015,halfHeight:height/2,halfDepth:.008+growth*.014,color:[.27,.36,.21],topColor:[.42,.53,.31],alpha:.55});
-    const canopy=Math.max(0,Math.min(1,(growth-.25)/.5));
-    if(canopy>0){
-        for(const side of [-1,1])drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.17*canopy,y:base.y+height*(side<0?.77:.86),z:base.z},(.08+.22*canopy),{scale:{x:1.1,y:.7,z:.8},color:[.35,.57,.33],alpha:.19+.08*canopy,emissive:.07});
+    if(!drawAmbientTreeSprites(view,base,growth)){
+        drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.007+growth*.015,halfHeight:height/2,halfDepth:.008+growth*.014,color:[.27,.36,.21],topColor:[.42,.53,.31],alpha:.55});
+        const canopy=Math.max(0,Math.min(1,(growth-.25)/.5));
+        if(canopy>0){
+            for(const side of [-1,1])drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.17*canopy,y:base.y+height*(side<0?.77:.86),z:base.z},(.08+.22*canopy),{scale:{x:1.1,y:.7,z:.8},color:[.35,.57,.33],alpha:.19+.08*canopy,emissive:.07});
+        }
     }
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const wings=[];

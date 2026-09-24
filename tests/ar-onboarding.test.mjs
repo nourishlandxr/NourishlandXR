@@ -22,13 +22,14 @@ test('AR introduction preparation can be dismissed on a device', () => {
     assert.equal(shouldSkipArIntroductionPreparation(storage), true);
 });
 
-test('AR introduction preparation explains camera access before entry', () => {
+test('AR introduction preparation explains supported devices and the limited desktop preview', () => {
     const app = { innerHTML: '', querySelector: () => null };
     renderArIntroductionPreparation(app);
-    assert.match(app.innerHTML, /Before the camera opens/);
-    assert.match(app.innerHTML, /Nothing starts until you choose Enter AR/);
-    assert.match(app.innerHTML, /Allow camera access/);
-    assert.match(app.innerHTML, /Spatial device/);
+    assert.match(app.innerHTML, /designed for spatial devices and mobile phones/);
+    assert.match(app.innerHTML, /limited desktop preview/);
+    assert.match(app.innerHTML, /Desktop preview does not need a camera/);
+    assert.match(app.innerHTML, /Camera and tracking/);
+    assert.match(app.innerHTML, /Begin introduction/);
     assert.doesNotMatch(app.innerHTML, /Quest/);
     assert.match(app.innerHTML, /Don’t show this preparation next time/);
     assert.match(app.innerHTML, /data-ar-introduction-continue/);

@@ -20,13 +20,15 @@ test('XR introduction holds four explorable archetypes before Orb and placement 
     const demo = read('app/screens/temporaryArDemo.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
     assert.match(demo, /XR connects digital information to the real world around you/);
-    assert.match(demo, /button\.textContent=demoLocalizedText\('Meet the Control Panel'\)/);
+    assert.doesNotMatch(demo, /Meet the Control Panel/);
+    assert.match(demo, /welcomeAutoAdvanceReady\(arWelcomeClock\.elapsed/);
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
     assert.ok(guide.indexOf('Four ways to explore') < guide.indexOf('Meet the Plant Orb'));
     assert.ok(guide.indexOf('Meet the Plant Orb') < guide.indexOf('Areas and Totems'));
     assert.ok(guide.indexOf('Areas and Totems') < guide.indexOf('Begin with Pigeon Pea'));
     assert.match(demo, /limMeshVisible=index>0/);
+    assert.match(demo, /deferContinueUntilCopyReady:index===2/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });

@@ -60,18 +60,18 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
 export function renderArIntroductionPreparation(app, { onContinue, onCancel } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
-        <div class="page-header"><p class="welcome-label">Before the camera opens</p><h1>Ready to step into AR?</h1><p class="subtitle">Nothing starts until you choose Enter AR.</p></div>
+        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">NourishlandXR is designed for spatial devices and mobile phones. A limited desktop preview is available, but the full experience is best tried on a compatible device.</p></div>
         <section class="panel ar-safety-card ar-introduction-preparation-card">
-            <p class="ar-introduction-lead">This introduction places NourishlandXR’s learning cells in the space around you.</p>
+            <p class="ar-introduction-lead">On a supported device, this introduction places NourishlandXR’s learning cells in the space around you. Desktop preview presents a limited on-screen version.</p>
             <div class="ar-preparation-points">
                 <div><span aria-hidden="true">◎</span><p><strong>Make a little room</strong><small>Use a clear, calm space and stay aware of people and obstacles.</small></p></div>
-                <div><span aria-hidden="true">⌾</span><p><strong>Allow camera access</strong><small>Your browser or headset will ask permission after you continue.</small></p></div>
+                <div><span aria-hidden="true">⌾</span><p><strong>Camera and tracking</strong><small>A spatial device or phone may request access after you continue. Desktop preview does not need a camera.</small></p></div>
                 <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On a Spatial device, stay within your safety boundary. On a phone, hold the device securely.</small></p></div>
             </div>
-            <p class="meta">You can leave the experience at any time. NourishlandXR does not begin camera access from this page.</p>
+            <p class="meta">You can leave at any time. Camera access, when available, begins only after you continue and grant permission.</p>
         </section>
         <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
-        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Enter AR</button></div>
+        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Begin introduction</button></div>
     </div>`;
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
