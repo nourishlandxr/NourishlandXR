@@ -4,9 +4,9 @@ export function advanceAmbientGrowth(state,elapsed,target,startedAt){
     if(!Number.isFinite(startedAt))return {progress:0,lastElapsed:elapsed};
     const previous=clamp01(Number(state?.progress)||0);
     const delta=Math.max(0,Math.min(250,elapsed-(Number.isFinite(state?.lastElapsed)?state.lastElapsed:elapsed)));
-    const natural=clamp01((elapsed-startedAt)/100000);
+    const natural=clamp01((elapsed-startedAt)/22000);
     const destination=Math.max(clamp01(target),natural);
-    return {progress:previous+(destination-previous)*(1-Math.exp(-delta/6500)),lastElapsed:elapsed};
+    return {progress:previous+(destination-previous)*(1-Math.exp(-delta/1800)),lastElapsed:elapsed};
 }
 
 export function demoBeePose(elapsed,startedAt,index=0){

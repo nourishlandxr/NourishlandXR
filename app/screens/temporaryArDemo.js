@@ -516,6 +516,7 @@ function demoPanelActions() {
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
     if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Activate learning cells'});
+    actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
@@ -528,7 +529,11 @@ function syncDemoPanelActions() {
     const primary=actions.find(item=>item.primary || item.id==='continue');
     const externalTrigger=simulatedMode || domOverlayEnabled;
     const trigger=appRoot?.querySelector('[data-tryit-context-trigger]');
-    if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');}
+    if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
+        const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+        if(simulatedMode && window.matchMedia('(max-width:600px)').matches && primary?.id==='continue' && board)board.append(trigger);
+        else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
+    }
     const panelActions=externalTrigger && primary?actions.filter(item=>item!==primary):actions;
     if(signature===demoPanelActionSignature && JSON.stringify(panelActions)===elementPanelActionSignature)return;
     demoPanelActionSignature=signature;
@@ -549,6 +554,7 @@ function setLimMeshVisible(visible) {
 function handleDemoPanelAction(action) {
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
+    if(action==='safety'){showArSafetyDialog(appRoot?.querySelector('.tryit-demo'));return;}
     if(action==='back' && demoOrientationStep>0){runArWelcomeTutorial(demoOrientationStep-1);return;}
     if(action==='skip'){skipDemoNarration?.();return;}
     if(action==='lim-visibility'){setLimMeshVisible(!limMeshVisible);return;}
@@ -1323,9 +1329,9 @@ function paintWelcomeLayer(now) {
 }
 
 function tickDemoAmbientLife(){
-    if(!Number.isFinite(ambientSeedStartedAt) && arWelcomeClock.elapsed>=12000){
+    if(!Number.isFinite(ambientSeedStartedAt)){
         ambientSeedStartedAt=arWelcomeClock.elapsed;
-        ambientGrowthTarget=Math.max(ambientGrowthTarget,.22);
+        ambientGrowthTarget=Math.max(ambientGrowthTarget,.16);
     }
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     ambientGrowth=reducedMotion
@@ -3111,6 +3117,7 @@ function renderInterface(simulated) {
     introBoardHasEntered = false;
     const biomapMarkup=INTRO_KNOWLEDGE_KEYWORDS.map((keyword,index)=>`<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length?`<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child=>`<span>${child}</span>`).join('')}</span>`:''}</span>`).join('');
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><canvas class="tryit-ambient-life" data-demo-ambient aria-hidden="true"></canvas><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${biomapMarkup}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
+    appRoot.querySelector('[data-tryit-safety-help]')?.remove();
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -3148,7 +3155,6 @@ function renderInterface(simulated) {
     contextTrigger.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(contextTrigger.dataset.contextMode!=='hold')handleDemoPanelAction(contextTrigger.dataset.contextMode);});
     bindDemoPanelActions();
     infoPanel?.suspend(true);
-    appRoot.querySelector('[data-tryit-safety-help]')?.addEventListener('click', () => showArSafetyDialog(appRoot.querySelector('.tryit-demo')));
     appRoot.querySelectorAll('[data-biomap-category]').forEach(button => {
         const expand = () => {
             button.closest('.biomap-branch')?.classList.add('is-expanded');

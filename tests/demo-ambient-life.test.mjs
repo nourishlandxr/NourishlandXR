@@ -8,7 +8,7 @@ test('the seedling grows steadily without jumping at a demo step', () => {
     for(let elapsed=12050;elapsed<=22000;elapsed+=50){
         const next=advanceAmbientGrowth(state,elapsed,.7,12000);
         assert.ok(next.progress>=state.progress);
-        assert.ok(next.progress-state.progress<.01);
+        assert.ok(next.progress-state.progress<.025);
         state=next;
     }
     assert.ok(state.progress>.4 && state.progress<.7);

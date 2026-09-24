@@ -54,7 +54,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     // reach. Phone/Web mode keeps its lower compact position.
     // A phone's camera has a much narrower usable view than a headset. Keep
     // its spatial console close and just left of centre, without UA sniffing.
-    const side=phoneAR ? .34 : headset ? 1.28 : .64;
+    const side=phoneAR ? .48 : headset ? 1.58 : .78;
     const forward=phoneAR ? .74 : headset ? 1.14 : .58;
     const drop=phoneAR ? .06 : headset ? .02 : .70;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
