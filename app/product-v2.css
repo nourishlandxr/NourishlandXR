@@ -33,8 +33,6 @@ body { background:var(--v2-paper); }
 .v2-intro-sequence small{color:var(--v2-muted)}
 .v2-intro-sequence h2{margin:7px 0 8px}
 .v2-intro-sequence p{max-width:620px;margin:0;color:var(--v2-muted);font-size:14px}
-.v2-intro-toggle{margin:0 0 18px;padding:5px 0;border:0;border-bottom:1px solid transparent;background:transparent;color:var(--v2-muted);font:inherit;font-size:12px;cursor:pointer}
-.v2-intro-toggle:hover,.v2-intro-toggle:focus-visible{border-bottom-color:currentColor;color:var(--v2-text)}
 #app .v2-card { display:flex; flex-direction:column; align-items:start; text-align:left; padding:25px; background:var(--v2-surface); border:1px solid var(--v2-line); border-radius:var(--v2-radius); color:var(--v2-ink); gap:10px; box-shadow:none; overflow:hidden; transition:border-color .22s ease,background .22s ease; }
 #app .v2-card:hover { border-color:#8da785; background:#edf1e5; }
 .v2-card strong { font-size:21px; line-height:1.3; font-weight:550; }
@@ -391,13 +389,18 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 .nl-botanical-texture__cells::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle var(--glow-radius,40px) at var(--glow-x,50%) var(--glow-y,50%),rgba(255,248,187,.92),rgba(194,235,142,.6) 42%,transparent 92%);mix-blend-mode:screen}
 .nl-botanical-texture__cells.is-lit::after{animation:nl-cell-light 2.4s ease-out both}
 @keyframes nl-cell-light{0%{opacity:0;transform:scale(.84)}15%{opacity:1;transform:scale(1)}48%{opacity:.75}100%{opacity:.22}}
-.nl-botanical-texture__hint{position:absolute;right:10px;bottom:9px;z-index:1;padding:5px 8px;border-radius:99px;background:rgba(23,43,30,.74);color:#f9f5db;font:600 10px/1.1 Montserrat,sans-serif;letter-spacing:.04em;pointer-events:none}
 .nl-botanical-texture--prep{width:min(100%,740px);height:clamp(92px,15vw,138px);margin:0 auto 14px}
 .nl-botanical-texture--places{width:100%;height:clamp(86px,12vw,136px);margin:20px 0 4px;border-radius:18px}
-.nl-botanical-texture--settings{width:min(100%,620px);height:82px;margin:18px auto 0;border-radius:16px}
+.settings-screen>.nl-botanical-texture--settings{width:100%;height:82px;align-self:stretch;margin:18px 0 0;border-radius:16px}
 .about-experience-content{grid-template-columns:minmax(0,1fr) minmax(138px,190px)}
 .about-experience-content>.nl-botanical-texture--about{grid-column:2;grid-row:1;height:190px;border-radius:22px}
 .about-experience-content>section:first-of-type{grid-column:1;grid-row:1}
 .about-experience-content>section:not(:first-of-type),.about-experience-content>.about-experience-conclusion{grid-column:1/-1}
-@media(max-width:620px){.about-experience-content{grid-template-columns:1fr}.about-experience-content>.nl-botanical-texture--about{grid-column:1;grid-row:2;width:min(100%,260px);height:118px}.about-experience-content>section:first-of-type{grid-column:1;grid-row:1}.nl-botanical-texture__hint{font-size:9px}}
+@media(max-width:620px){.about-experience-content{grid-template-columns:1fr}.about-experience-content>.nl-botanical-texture--about{grid-column:1;grid-row:2;width:min(100%,260px);height:118px}.about-experience-content>section:first-of-type{grid-column:1;grid-row:1}}
 @media(prefers-reduced-motion:reduce){.nl-botanical-texture__cells.is-lit::after{animation:none;opacity:.35}}
+
+/* The welcome is a page, not a card inside the narrow application shell. */
+#app:has(> .v2-welcome){width:100%;max-width:none;margin:0;padding:0;box-sizing:border-box}
+#app .screen.v2-welcome{width:100%;max-width:none;min-height:100svh;box-sizing:border-box;padding:clamp(18px,3vw,34px) clamp(20px,5vw,84px) 48px}
+.v2-welcome>:is(.v2-masthead,.v2-hero,.v2-intro-sequence,.v2-context){width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
+@media(max-width:700px){#app .screen.v2-welcome{padding:16px 18px 40px}}

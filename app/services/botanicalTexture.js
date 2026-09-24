@@ -4,7 +4,7 @@ const VARIANTS=new Set(['prep','about','settings','places']);
 
 export function botanicalTextureMarkup(variant='places'){
     const style=VARIANTS.has(variant)?variant:'places';
-    return `<div class="nl-botanical-texture nl-botanical-texture--${style}"><button class="nl-botanical-texture__cells" type="button" data-botanical-texture aria-label="Illuminate a botanical cell"><span class="nl-botanical-texture__hint" aria-hidden="true">Touch a cell ✦</span></button></div>`;
+    return `<div class="nl-botanical-texture nl-botanical-texture--${style}"><button class="nl-botanical-texture__cells" type="button" data-botanical-texture aria-label="Illuminate a botanical cell"></button></div>`;
 }
 
 export function bindBotanicalTexture(root){

@@ -45,7 +45,7 @@ test('welcome exploration steps share one fading stage without layout movement',
  assert.match(launch,/step\.classList\.toggle\('is-active',active\)/);
  assert.match(launch,/step\.setAttribute\('aria-hidden',String\(!active\)\)/);
  assert.match(launch,/if\(disposed\|\|paused\)return/);
- assert.match(launch,/data-intro-toggle/);
+ assert.doesNotMatch(launch,/data-intro-toggle|Pause rotating guidance/);
  assert.match(launch,/paused=Boolean\(reduced\.matches\)/);
 });
 
