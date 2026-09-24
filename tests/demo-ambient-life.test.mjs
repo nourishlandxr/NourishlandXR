@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, statSync } from 'node:fs';
-import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
+import { readFileSync } from 'node:fs';
+import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife, seedlingGrowthStage } from '../app/services/demoAmbientLife.js';
 
-test('the seedling grows steadily toward a tree without jumping at a demo step', () => {
+test('the seedling grows steadily without jumping at a demo step', () => {
     let state={progress:0,lastElapsed:12000};
     for(let elapsed=12050;elapsed<=22000;elapsed+=50){
         const next=advanceAmbientGrowth(state,elapsed,.7,12000);
@@ -28,7 +28,7 @@ test('bees arrive only after their introduction and stay near the edge', () => {
     }
 });
 
-test('reduced motion keeps the tree but omits animated bees', () => {
+test('reduced motion keeps the seedling but omits animated bees', () => {
     const calls=[];
     const context={
         clearRect(){},save(){},restore(){},translate(){},fill(){},stroke(){},
@@ -42,23 +42,23 @@ test('reduced motion keeps the tree but omits animated bees', () => {
     assert.ok(calls.length>5);
 });
 
-test('lightweight lychee cutouts replace primitive tree shapes and fruit appears only at maturity', () => {
-    const calls={images:0,fruit:0,ellipses:0};
+test('a low, ground-rooted stalk forms leaves first and small fruit only at maturity', () => {
+    const calls={images:0,fruit:0,ellipses:[],stem:[]};
     const context={
         globalAlpha:1,clearRect(){},save(){},restore(){},translate(){},fill(){},stroke(){},
-        beginPath(){},moveTo(){},lineTo(){},drawImage(){calls.images++;},
-        arc(){calls.fruit++;},ellipse(){calls.ellipses++;}
+        beginPath(){},moveTo(...point){calls.stem.push(point);},lineTo(){},bezierCurveTo(){},drawImage(){calls.images++;},
+        arc(){calls.fruit++;},ellipse(...point){calls.ellipses.push(point);}
     };
-    const treeImages={bare:{naturalWidth:512},leafy:{naturalWidth:512}};
-    drawDemoAmbientLife(context,1200,800,{growth:.7,treeImages,reducedMotion:true});
-    assert.equal(calls.images,2);
+    assert.equal(seedlingGrowthStage(.5).fruit,0);
+    assert.equal(seedlingGrowthStage(1).leaves.filter(Boolean).length,4);
+    drawDemoAmbientLife(context,1200,800,{growth:.7,reducedMotion:true});
+    assert.equal(calls.images,0);
     assert.equal(calls.fruit,0);
-    assert.equal(calls.ellipses,0);
-    drawDemoAmbientLife(context,1200,800,{growth:1,treeImages,reducedMotion:true});
+    assert.ok(calls.ellipses.length>=3);
+    assert.ok(calls.stem.some(([x,y])=>x===840 && y===656),'stalk meets the ground below the intro board');
+    drawDemoAmbientLife(context,1200,800,{growth:1,reducedMotion:true});
     assert.ok(calls.fruit>0);
-    for(const name of ['lychee-tree-bare.png','lychee-tree-leafy.png']){
-        assert.ok(statSync(new URL(`../app/assets/${name}`,import.meta.url)).size<600_000);
-    }
+    assert.equal(calls.images,0);
 });
 
 test('ambient life is wired into simulated and immersive demo rendering', () => {
@@ -67,7 +67,8 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(source,/data-demo-ambient/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
-    assert.match(source,/drawAmbientTreeSprites\(view,base,growth\)/);
+    assert.match(source,/seedlingGrowthStage\(growth\)/);
+    assert.doesNotMatch(source,/drawAmbientTreeSprites|AMBIENT_TREE_ASSETS|lychee-tree-/);
     assert.match(style,/\.tryit-ambient-life[^}]*pointer-events:none/);
     assert.match(style,/@media \(hover:hover\) and \(pointer:fine\) \{ \.tryit-demo\.is-simulated \.tryit-stage \{ background:#050606; \} \}/);
     assert.match(source,/darkBackdrop:window\.matchMedia\('\(hover: hover\) and \(pointer: fine\)'\)\.matches/);

@@ -45,14 +45,18 @@ export function facePanelTowardEyes(center, eyes) {
     return {right,up,normal};
 }
 
-export function infoPanelPose(matrix, heading = null, headset = false) {
+export function infoPanelPose(matrix, heading = null, headset = false, phoneAR = false) {
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
     // In a headset this is a true left-side companion: near the board's
     // reading height, laterally separated, and still inside easy controller
     // reach. Phone/Web mode keeps its lower compact position.
-    const side=headset ? 1.28 : .64,forward=headset ? 1.14 : .58,drop=headset ? .02 : .70;
+    // A phone's camera has a much narrower usable view than a headset. Keep
+    // its spatial console close and just left of centre, without UA sniffing.
+    const side=phoneAR ? .34 : headset ? 1.28 : .64;
+    const forward=phoneAR ? .74 : headset ? 1.14 : .58;
+    const drop=phoneAR ? .06 : headset ? .02 : .70;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
@@ -142,7 +146,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false;
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
@@ -167,7 +171,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
-    const spatialHeight=()=>headset?1250:height();
+    const spatialHeight=()=>phoneAR?960:headset?1250:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
     function act(action){
         const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
@@ -365,15 +369,17 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
     element.addEventListener('pointerdown',event=>event.stopPropagation());
     function canvas(card){
         const c=document.createElement('canvas');c.width=1000;c.height=card.hidden?160:card.height;const ctx=c.getContext('2d');
-            const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(53,75,62,.74)');gradient.addColorStop(1,'rgba(19,34,28,.66)');
-        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,22);ctx.fill();ctx.strokeStyle=card.guided?'#b7dcc8':'rgba(205,229,202,.42)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
+            const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(39,57,73,.96)');gradient.addColorStop(1,'rgba(9,20,31,.94)');
+        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
+        ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.headset && !card.hidden){
             const rail=card.railCollapsed?62:200,media=card.mediaCollapsed?62:350;
             const left=rail+22,right=1000-media-22,width=right-left;
-            ctx.fillStyle='rgba(11,25,20,.25)';ctx.fillRect(6,115,rail,c.height-122);
-            ctx.fillStyle='rgba(14,29,24,.28)';ctx.fillRect(1000-media,115,media-6,c.height-122);
-            ctx.fillStyle='#f1f4f4';ctx.font='600 35px system-ui';ctx.fillText(card.plant,left,28,Math.max(100,width-150));
-            ctx.fillStyle='#d4e0dc';ctx.font='400 25px system-ui';ctx.fillText(card.scientific,left,77,width);
+            ctx.fillStyle='rgba(5,15,27,.68)';ctx.fillRect(6,115,rail,c.height-122);
+            ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,115,media-6,c.height-122);
+            ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,116,width,2);
+            ctx.fillStyle='#f3f8fc';ctx.font='650 39px system-ui';ctx.fillText(card.plant,left,25,Math.max(100,width-150));
+            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText(card.scientific,left,78,width);
             let y=156;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 24px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=35;
@@ -381,13 +387,13 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
                 infoPages(card.pathway.explanation,Math.max(26,Math.floor(width/13)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=24;});y+=16;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,6,34);}
-            ctx.fillStyle='#f1f4f4';ctx.font='600 30px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=46;
-            ctx.fillStyle='#d4e0dc';ctx.font='400 23px system-ui';ctx.fillText(card.trail,left,y,width);y+=42;
+            ctx.fillStyle='#f3f8fc';ctx.font='650 34px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=49;
+            ctx.fillStyle='#c9e0ed';ctx.font='500 25px system-ui';ctx.fillText(card.trail,left,y,width);y+=44;
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-90);
             const contentBottom=actionTop-22;
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
-            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 38px':'400 33px')+' system-ui';
-            const lineHeight=card.largeText?46:41;
+            ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 43px':'500 38px')+' system-ui';
+            const lineHeight=card.largeText?52:47;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(!card.mediaCollapsed){
                 // The media wing owns the right-hand column; it never covers
@@ -431,16 +437,16 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
             const radius=button.kind==='tab'?13:15;
             if(button.kind!=='tab' && button.kind!=='handle' && !button.disabled){ctx.fillStyle='rgba(4,9,12,.34)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
             const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
-            if(button.primary){face.addColorStop(0,'rgba(232,246,189,.98)');face.addColorStop(.55,'rgba(183,215,151,.96)');face.addColorStop(1,'rgba(135,178,114,.98)');}
-            else if(button.selected){face.addColorStop(0,'rgba(185,216,177,.44)');face.addColorStop(1,'rgba(88,124,94,.36)');}
+            if(button.primary){face.addColorStop(0,'rgba(213,244,251,.98)');face.addColorStop(.55,'rgba(152,215,235,.96)');face.addColorStop(1,'rgba(96,173,209,.98)');}
+            else if(button.selected){face.addColorStop(0,'rgba(140,205,235,.5)');face.addColorStop(1,'rgba(56,112,150,.4)');}
             else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
             else if(button.action==='Utility:close'){face.addColorStop(0,'rgba(159,101,82,.44)');face.addColorStop(1,'rgba(94,51,45,.38)');}
-            else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(212,246,177,.38)');face.addColorStop(1,'rgba(95,153,87,.18)');}
-            else {face.addColorStop(0,'rgba(151,180,145,.24)');face.addColorStop(.5,'rgba(70,94,75,.5)');face.addColorStop(1,'rgba(35,56,43,.68)');}
+            else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(174,232,252,.4)');face.addColorStop(1,'rgba(61,137,177,.2)');}
+            else {face.addColorStop(0,'rgba(119,169,198,.34)');face.addColorStop(.5,'rgba(56,93,122,.56)');face.addColorStop(1,'rgba(26,52,78,.74)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle='rgba(232,244,240,.42)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(button.x+radius,button.y+2,button.width-radius*2,1.5);}
-            if(button.selected){ctx.fillStyle='#aaccc1';ctx.fillRect(button.x,button.y+9,3,button.height-18);}
-            ctx.fillStyle=button.disabled?'#899297':button.primary?'#15261c':button.kind==='toggle'||button.kind==='handle'?'#d9ffb3':'#f1f4f4';ctx.font=(button.primary?'700 ':button.kind==='toggle'||button.kind==='handle'?'700 ':'500 ')+(button.kind==='toggle'||button.kind==='handle'?'32px':'29px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(button.kind==='toggle'||button.kind==='handle'?36:34))/2,button.width-16);
+            if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
+            ctx.fillStyle=button.disabled?'#899297':button.primary?'#102b3a':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(button.primary?'750 ':button.kind==='toggle'||button.kind==='handle'?'700 ':'600 ')+(button.kind==='toggle'||button.kind==='handle'?'35px':'32px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(button.kind==='toggle'||button.kind==='handle'?38:37))/2,button.width-16);
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return hitTotemSurface(ray,[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66}]);}
@@ -478,7 +484,7 @@ export function createPimInfoPanel({ root, headset = false, onEdit = () => {}, o
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_right,cards)=>pose?[{...pose,width:hidden?.26:.66,height:hidden?.06:spatialHeight()/1000*.66,card:cards[0]}]:[]});element.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
-            const next=infoPanelPose(matrix,heading,headset);if(!next)return;heading=next.anchorHeading;
+            const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             let heldTransform=null;
             if(spatialMove && xrFrame?.getPose && spatialMove.source?.targetRaySpace && spatialMove.referenceSpace){
                 try{heldTransform=xrFrame.getPose(spatialMove.source.targetRaySpace,spatialMove.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}

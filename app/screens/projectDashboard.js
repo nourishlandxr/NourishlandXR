@@ -9,6 +9,7 @@ import { loadProject } from '../services/persistence.js';
 import { deletePlaceMarker, savePlantProfile } from '../services/persistence.js';
 import { createAreaRecord } from '../services/areaWorkflow.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
+import { botanicalTextureMarkup, bindBotanicalTexture } from '../services/botanicalTexture.js';
 import { loadPlantInstances, loadPlantLibrary } from '../services/plantDataService.js';
 import { dismissTutorialFeature, getArTutorialProgress, getTutorialStage, isProjectTutorialEnabled, recallTutorialFeatures, recordTutorialEvent, replayArTutorial, resetArLearningTips, resetLearningTips, restartProjectTutorial, setArHintsEnabled, setProjectTutorialMode } from '../services/tutorialProgress.js';
 import { scopedMarkerStorageId } from '../services/markerWorkflow.js';
@@ -1250,7 +1251,8 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <div class="setting-row"><label for="settingsLanguage"><strong>Language</strong></label><select id="settingsLanguage" onchange="window.savePlatformSetting('language', this.value)">${languageOptionsMarkup(settings.language)}</select></div>
                 <div class="setting-row"><div><strong>Hints and instructions</strong><p>Show guidance while creating and exploring.</p></div><label class="toggle-label"><input type="checkbox" ${settings.hints ? 'checked' : ''} onchange="window.savePlatformSetting('hints', this.checked)"><span>On</span></label></div>
             </div>
-            <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div></div>`;
+            <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div>${botanicalTextureMarkup('settings')}</div>`;
+        bindBotanicalTexture(app);
         return;
     }
     if (feature === 'About This Tool') {
@@ -1261,6 +1263,7 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <h1>About This Tool</h1>
             </div>
             <article class="panel about-experience-content">
+                ${botanicalTextureMarkup('about')}
                 <section>
                     <h2>What is NourishlandXR?</h2>
                     <p>NourishlandXR is a place-based tool that connects information directly to real environments — gardens, food forests, farms, parks and nurseries.</p>
@@ -1282,6 +1285,7 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <p class="about-experience-conclusion"><strong>NourishlandXR turns knowledge about a place into something you can see, edit and share — on screen and in the landscape.</strong></p>
             </article>
         </div>`;
+        bindBotanicalTexture(app);
         return;
     }
     if (feature === 'Help Guide' || feature === 'Project Guide') {

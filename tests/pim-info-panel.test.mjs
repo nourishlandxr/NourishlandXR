@@ -56,6 +56,16 @@ test('Quest Control panel begins beside the welcome board instead of below it',(
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
 });
 
+test('Android AR Control panel begins within a comfortable left-hand view',()=>{
+    const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
+    const phone=infoPanelPose(matrix,null,true,true);
+    const headset=infoPanelPose(matrix,null,true,false);
+    assert.ok(phone.center.x<0 && phone.center.x>-.5,'phone panel is visibly left, but not a metre away');
+    assert.ok(phone.center.z<-.5 && phone.center.z>-.9,'phone panel is within a comfortable reading distance');
+    assert.ok(Math.abs(phone.center.y-1.54)<1e-10,'phone panel remains near eye height');
+    assert.ok(Math.hypot(phone.center.x,phone.center.z)<Math.hypot(headset.center.x,headset.center.z));
+});
+
 test('Control panel keeps navigation separate from experience actions',()=>{
     for(const tab of ['Details','Modules','Help','Settings']){
         const buttons=controlPanelControls({tab});
@@ -108,7 +118,7 @@ test('grabbing the off-centre move dot keeps that exact point under the controll
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/distance:target\.distance,localX:target\.localX,localY:target\.localY/);
     assert.match(panel,/xrFrame\.getPose\(spatialMove\.source\.targetRaySpace,spatialMove\.referenceSpace\)/);
-    assert.match(panel,/card\.largeText\?'400 38px':'400 33px'/);
+    assert.match(panel,/card\.largeText\?'500 43px':'500 38px'/);
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\) \.nlxr-info-trail \{ font-size:15px/);
 });

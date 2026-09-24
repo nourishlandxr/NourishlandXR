@@ -1200,7 +1200,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Four ways to explore[\s\S]*Meet the Plant Orb[\s\S]*Areas and Totems[\s\S]*Begin with Pigeon Pea/);
+    assert.match(source, /Four ways to explore[\s\S]*Meet the Plant Orb[\s\S]*Begin with Pigeon Pea[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1262,9 +1262,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
-    assert.match(source, /showIntroBoard\(\s*moringa \? 'Moringa joins the place' : 'A story anchored here'/);
-    assert.match(source, /The Control panel holds the detail as you explore connected topics/);
-    assert.match(source, /Pigeon Pea now has a place in the scene/);
+    assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /The Control Panel is on your left/);
+    assert.match(source, /Your first Plant Orb now has a place/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /Moringa now has its own Plant Profile/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
@@ -1383,7 +1383,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
     assert.match(source, /XR connects digital information to the real world around you/);
     assert.match(source, /Four pathways invite you to explore plants, places, design and change/);
-    assert.match(source, /function introducePigeonPeaExample\(\)/);
+    assert.match(source, /button:'Meet Pigeon Pea'/);
+    assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
+    assert.match(source, /phoneArPanel=Boolean\(!simulated && sessionMode==='immersive-ar'/);
     assert.match(source, /Begin with Pigeon Pea/);
     assert.match(source, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
     assert.doesNotMatch(source, /Hold to open selected learning cell/);

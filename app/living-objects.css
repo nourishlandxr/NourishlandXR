@@ -767,3 +767,107 @@
     .tryit-sim-marker-plant:is(:hover,:focus-visible,.is-pointer-hover,.is-held) .tryit-sim-orb.is-plant::before,
     .tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-welcome-board .tryit-board-text-window { animation:none!important;opacity:1; }
 }
+
+/* The companion is a working instrument: distinct header, navigation rail,
+   reading bay and action dock. Keep the Android preview touch-sized. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) {
+    border:1px solid rgba(152,207,235,.72);
+    border-radius:20px;
+    background:linear-gradient(152deg,rgba(28,47,66,.97),rgba(8,20,34,.98) 72%);
+    box-shadow:0 20px 54px rgba(2,9,19,.6),inset 0 1px rgba(236,250,255,.24),inset 0 0 0 4px rgba(8,27,42,.45);
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)::before {
+    content:"";
+    position:absolute;
+    z-index:1;
+    left:19px;
+    top:0;
+    width:88px;
+    height:3px;
+    border-radius:0 0 4px 4px;
+    background:#a6e7fa;
+    box-shadow:0 0 16px rgba(119,212,247,.65);
+    pointer-events:none;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header {
+    min-height:82px;
+    padding-top:28px;
+    border-bottom:1px solid rgba(157,202,227,.38);
+    background:linear-gradient(95deg,rgba(61,105,132,.34),rgba(13,34,53,.14));
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header::before {
+    content:"NLXR  /  FIELD CONSOLE";
+    position:absolute;
+    top:8px;
+    left:5px;
+    color:#9ed9ef;
+    font:700 11px/1.2 "Cascadia Code","Segoe UI",monospace;
+    letter-spacing:.11em;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header h2 { font-size:clamp(20px,2.4vw,26px); line-height:1.16; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs {
+    border-right:1px solid rgba(151,202,229,.32);
+    background:linear-gradient(180deg,rgba(7,21,35,.94),rgba(16,38,58,.86));
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { min-height:46px; }
+.nlxr-info-panel.is-demo-panel.is-media-collapsed {
+    left:8px;
+    width:min(480px,calc(100vw - 24px));
+    height:min(56dvh,480px);
+    max-height:56dvh;
+    grid-template-columns:100px minmax(0,1fr) 42px;
+}
+.nlxr-info-panel.is-demo-panel.is-media-collapsed.is-rail-collapsed { grid-template-columns:62px minmax(0,1fr) 42px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) > [role="tabpanel"] { padding:14px 12px 8px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) h3 { margin-top:0; font-size:clamp(20px,2.2vw,25px); }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body { font-size:clamp(17px,1.65vw,20px); line-height:1.5; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock {
+    margin-top:0;
+    padding:10px 9px 6px;
+    border-top:1px solid rgba(155,204,228,.38);
+    background:linear-gradient(180deg,rgba(17,43,65,.8),rgba(8,25,43,.94));
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock button { min-height:48px; font-size:15px; font-weight:700; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is(.nlxr-rail-toggle,.nlxr-media-toggle) { min-width:42px; min-height:44px; }
+@media(max-width:700px) {
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) {
+        left:8px;
+        top:max(8px,env(safe-area-inset-top));
+        width:min(95vw,450px);
+        height:min(48dvh,450px);
+        max-height:48dvh;
+        grid-template-columns:minmax(0,1fr) 42px;
+        grid-template-rows:auto auto minmax(0,1fr) auto auto;
+        grid-template-areas:"header media" "rail media" "content media" "tools media" "page media";
+        gap:0;
+    }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header { min-height:75px; padding:26px 94px 8px 14px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header::before { left:14px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header h2 { font-size:20px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs {
+        flex-direction:row;
+        align-items:center;
+        min-height:52px;
+        padding:4px 8px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        border-right:0;
+        border-bottom:1px solid rgba(151,202,229,.32);
+    }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-rail-collapsed .nlxr-control-tabs { min-height:50px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { flex:0 0 auto; min-height:42px; padding:8px 11px; font-size:14px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) > [role="tabpanel"] { padding:12px 14px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) h3 { font-size:20px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body { font-size:17px; line-height:1.48; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities button { min-height:48px; font-size:14px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):not(.is-media-collapsed) { grid-template-columns:minmax(0,1fr) minmax(118px,32vw); }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-media-collapsed .nlxr-media-wing { position:static; width:auto; }
+    .nlxr-info-panel.is-demo-panel.is-media-collapsed {
+        left:8px;
+        width:min(95vw,450px);
+        height:min(50dvh,440px);
+        max-height:50dvh;
+        grid-template-columns:minmax(0,1fr) 42px;
+    }
+    .nlxr-info-panel.is-demo-panel.is-media-collapsed.is-rail-collapsed { grid-template-columns:minmax(0,1fr) 42px; }
+}

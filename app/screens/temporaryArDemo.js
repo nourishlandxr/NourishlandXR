@@ -17,7 +17,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife, drawDemoLycheeClusters } from '../services/demoAmbientLife.js';
+import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife, seedlingGrowthStage } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -97,17 +97,6 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let ambientCanvas=null,ambientGrowth={progress:0,lastElapsed:0},ambientGrowthTarget=0,ambientSeedStartedAt=NaN,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
-let ambientTreeImages=null,ambientTreeTextures=null,ambientTreeLocations=null,ambientWorldFacing=null;
-const AMBIENT_TREE_ASSETS=Object.freeze({bare:'assets/lychee-tree-bare.png',leafy:'assets/lychee-tree-leafy.png'});
-function ensureAmbientTreeImages(){
-    if(ambientTreeImages)return;
-    ambientTreeImages={bare:null,leafy:null};
-    for(const [stage,url] of Object.entries(AMBIENT_TREE_ASSETS)){
-        const image=new Image();image.decoding='async';
-        image.onload=()=>{ambientTreeImages[stage]=image;ambientLastPaint=0;};
-        image.src=url;
-    }
-}
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -416,9 +405,7 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFacing=null;ambientLastPaint=0;
-    if(ambientTreeTextures){Object.values(ambientTreeTextures).forEach(value=>gl?.deleteTexture(value));ambientTreeTextures=null;}
-    ambientTreeLocations=null;
+    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -1356,7 +1343,7 @@ function paintDemoAmbientLife(now){
     if(ambientCanvas.height!==Math.round(height*ratio))ambientCanvas.height=Math.round(height*ratio);
     const context=ambientCanvas.getContext('2d');
     context.setTransform(ratio,0,0,ratio,0,0);
-    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,darkBackdrop:window.matchMedia('(hover: hover) and (pointer: fine)').matches,treeImages:ambientTreeImages});
+    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,darkBackdrop:window.matchMedia('(hover: hover) and (pointer: fine)').matches});
 }
 
 function showArWelcomeShowcase() {
@@ -1394,7 +1381,7 @@ function showArWelcomeShowcase() {
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'Your companion for the journey. Selected topics and plant information appear here, while the garden stays in view. Use the side controls to explore sections, open imagery and adjust the panel to your comfort.',accent:'#83c5e8',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'On your left: your interactive companion. Select a living cell to read its story here. Use the sections to explore and the glowing dot to move the panel.',accent:'#83c5e8',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
     infoPanel?.suspend(false);
     infoPanel?.setIntroduction(true);
@@ -1509,10 +1496,6 @@ function showArWelcomeShowcase() {
     setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
 }
 
-function introducePigeonPeaExample(){
-    runArWelcomeTutorial(DEMO_ORIENTATION_STEPS.length-1);
-}
-
 // Use the same billboard geometry for ray hits and texture drawing.
 function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
     if(!introWorldAnchor)return null;
@@ -1535,20 +1518,16 @@ function selectWelcomeCell() {
 
 const DEMO_ORIENTATION_STEPS = [
     {title:'Your Control Panel',button:'Explore the pathways',nextGuide:'The Control Panel is your companion. Continue to bring the four pathways into view.',paragraphs:[
-        'The Control Panel is your companion for this journey. Choose a living cell and its story appears here, while the garden stays in view.',
-        'Use its sections to explore, open the side dot for imagery, and move the panel to a comfortable position. Next, the four pathways will appear on the green introduction screen.'
+        'The Control Panel is on your left. Choose a living cell and its story appears there, while the garden stays in view.',
+        'It is your place to interact: explore sections, open the side dot for imagery, and move the panel to a comfortable position. Next, four pathways will appear on the green introduction screen.'
     ]},
     {title:'Four ways to explore',button:'Meet the Plant Orb',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Plant Orb when you are ready.',paragraphs:[
         'Choose the question that interests you. All four pathways remain available as you explore.',
         'Read Nature observes a place. Understand the Land explores living relationships. Design the Forest imagines how plants work together. Shape the Outcome considers care and change over time.'
     ]},
-    {title:'Meet the Plant Orb',button:'Explore Areas',nextGuide:'Press Explore Areas after learning how a Plant Orb connects to a real plant.',paragraphs:[
+    {title:'Meet the Plant Orb',button:'Meet Pigeon Pea',nextGuide:'Meet Pigeon Pea, then place its Plant Orb beside a real plant.',paragraphs:[
         'A Plant Orb belongs at a real plant and opens that plant’s information there.',
-        'Open it to explore the plant’s profile and connected knowledge, then look back at the living plant.'
-    ]},
-    {title:'Areas and Totems',button:'See a guided example',nextGuide:'Press See a guided example when you are ready to meet Pigeon Pea.',paragraphs:[
-        'NourishlandXR maps a landscape as Areas. Each Area receives a welcoming Totem for its local stories and visitor guidance.',
-        'Plant Orbs connect individual plants to those mapped places, making information available where it matters.'
+        'First, you will place one. Then press it to explore the plant’s profile and connected knowledge.'
     ]},
     {title:'Begin with Pigeon Pea',button:'Place the Plant Orb',nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.',paragraphs:[
         'Pigeon Pea is our first example. Its Plant Orb connects this plant to its roles, growing needs and relationships.',
@@ -1556,18 +1535,27 @@ const DEMO_ORIENTATION_STEPS = [
     ]}
 ];
 
+const POST_PLACEMENT_AREA_STEP = {
+    title:'Areas and Totems',button:'Explore Pigeon Pea',
+    nextGuide:'Press Explore Pigeon Pea, then open the orb you just placed.',
+    paragraphs:[
+        'Your first Plant Orb now has a place. NourishlandXR maps a larger landscape as Areas, with plants organised within each one.',
+        'Each Area receives a welcoming Totem for local stories and visitor guidance. The orb you placed connects Pigeon Pea to that mapped place. The orb can be moved later if its position needs adjusting.'
+    ]
+};
+
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
     if(index>=1){
         if(!Number.isFinite(ambientSeedStartedAt))ambientSeedStartedAt=arWelcomeClock.elapsed;
-        ambientGrowthTarget=Math.max(ambientGrowthTarget,[0,.37,.53,.68,.78][index] || 0);
+        ambientGrowthTarget=Math.max(ambientGrowthTarget,[0,.37,.53,.78][index] || 0);
     }
     if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=index>0;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
     infoPanel?.setGuided(index===0);
-    if(index===0)infoPanel?.setIntroduction(true);
+    if(index===0){infoPanel?.setCompact(false);infoPanel?.setIntroduction(true);}
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
@@ -1580,11 +1568,10 @@ function runArWelcomeTutorial(index=0) {
             runArWelcomeTutorial(index+1);
             return;
         }
-        if(index===3){introducePigeonPeaExample();return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Areas','Pigeon Pea'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Pigeon Pea'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
 }
 
 function guidePlantConversion(record) {
@@ -1620,21 +1607,19 @@ function guidePlantConversion(record) {
         infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
+    const afterPlacement=moringa
+        ? {title:'Moringa joins the place',paragraphs:['Moringa now has its own Plant Profile. Together, the two orbs show distinct plant stories within one food forest.'],button:'Continue',nextGuide:'Press the Moringa orb to read its profile.'}
+        : POST_PLACEMENT_AREA_STEP;
     showIntroBoard(
-        moringa ? 'Moringa joins the place' : 'A story anchored here',
-        moringa
-            ? 'Moringa now has its own Plant Profile. Together, the two orbs show distinct plant stories within one food forest.'
-            : [
-                'Pigeon Pea now has a place in the scene. Its orb opens a profile of the plant’s roles, care and uses.',
-                'The Control panel holds the detail as you explore connected topics.',
-                'The orb can be moved later if its position needs adjusting.'
-            ],
-        'Continue',
+        afterPlacement.title,
+        afterPlacement.paragraphs,
+        afterPlacement.button,
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
             finishIntroBoard();
             setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its Plant Information Mesh.`);
-        }
+        },
+        {stepLabel:moringa?'A second plant':'After placing your first Plant Orb',nextGuide:afterPlacement.nextGuide,deferContinueUntilCopyReady:!moringa}
     );
     // The sample plant is interactive while the large instruction board is
     // still visible, so the suggested grab can be tried immediately.
@@ -3118,7 +3103,6 @@ function drawDemoKnowledge(view) {
 
 function renderInterface(simulated) {
     simulatedMode = simulated;
-    ensureAmbientTreeImages();
     limDiagnostic('layout-recalculation',{reason:'interface-render',simulated,step:demoTutorialStep,...limDeviceContext(simulated && navigator.maxTouchPoints ? 'touch-capable' : simulated ? 'mouse' : 'xr-pointer')});
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
     const questImmersiveMode = Boolean(!simulated && session && sessionMode === 'immersive-vr');
@@ -3128,7 +3112,9 @@ function renderInterface(simulated) {
     const biomapMarkup=INTRO_KNOWLEDGE_KEYWORDS.map((keyword,index)=>`<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length?`<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child=>`<span>${child}</span>`).join('')}</span>`:''}</span>`).join('');
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><canvas class="tryit-ambient-life" data-demo-ambient aria-hidden="true"></canvas><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${biomapMarkup}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
+    const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -3953,69 +3939,24 @@ function drawDemoAmbientLines(view,vertices,color){
     gl.depthMask(false);gl.drawArrays(gl.LINES,0,vertices.length/3);gl.depthMask(true);
 }
 
-function createAmbientTreeTexture(source){
-    const result=gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D,result);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    return result;
-}
-
-function drawAmbientTreeSprites(view,base,growth){
-    if(!ambientTreeImages?.bare?.naturalWidth || !ambientTreeImages?.leafy?.naturalWidth || !program || !buffer)return false;
-    if(!ambientTreeTextures){
-        const fruitCanvas=document.createElement('canvas');fruitCanvas.width=ambientTreeImages.leafy.naturalWidth;fruitCanvas.height=ambientTreeImages.leafy.naturalHeight;
-        drawDemoLycheeClusters(fruitCanvas.getContext('2d'),0,0,fruitCanvas.width,fruitCanvas.height,1);
-        ambientTreeTextures={bare:createAmbientTreeTexture(ambientTreeImages.bare),leafy:createAmbientTreeTexture(ambientTreeImages.leafy),fruit:createAmbientTreeTexture(fruitCanvas)};
-    }
-    ambientTreeLocations ||= {
-        point:gl.getAttribLocation(program,'p'),uv:gl.getAttribLocation(program,'uv'),
-        mvp:gl.getUniformLocation(program,'mvp'),sampler:gl.getUniformLocation(program,'t'),opacity:gl.getUniformLocation(program,'opacity')
-    };
-    const height=.12+growth*1.12,width=height*.96;
-    const position={x:base.x,y:base.y+height/2,z:base.z};
-    const model=billboardMatrix(position,width,height,ambientWorldFacing);
-    const mvp=multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model));
-    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-    gl.enableVertexAttribArray(ambientTreeLocations.point);gl.vertexAttribPointer(ambientTreeLocations.point,3,gl.FLOAT,false,20,0);
-    gl.enableVertexAttribArray(ambientTreeLocations.uv);gl.vertexAttribPointer(ambientTreeLocations.uv,2,gl.FLOAT,false,20,12);
-    gl.uniformMatrix4fv(ambientTreeLocations.mvp,false,mvp);
-    gl.uniform1i(ambientTreeLocations.sampler,0);
-    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
-    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-    const draw=(texture,opacity)=>{
-        if(opacity<=.001)return;
-        gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
-        gl.uniform1f(ambientTreeLocations.opacity,opacity);
-        gl.drawArrays(gl.TRIANGLES,0,6);
-    };
-    const foliage=Math.max(0,Math.min(1,(growth-.24)/.54));
-    draw(ambientTreeTextures.bare,.75*(1-foliage*.65));
-    draw(ambientTreeTextures.leafy,.88*foliage);
-    draw(ambientTreeTextures.fruit,.9*Math.max(0,Math.min(1,(growth-.78)/.2)));
-    gl.depthMask(true);
-    return true;
-}
-
 function drawSpatialAmbientLife(view){
     if(!sphereRenderer || !prismRenderer || !viewerMatrix || !Number.isFinite(ambientSeedStartedAt) || ambientGrowth.progress<.01)return;
     if(!ambientWorldAnchor){
         const rightLength=Math.hypot(viewerMatrix[0],viewerMatrix[2])||1;
         const rightX=viewerMatrix[0]/rightLength,rightZ=viewerMatrix[2]/rightLength;
         const forwardX=-viewerMatrix[8],forwardZ=-viewerMatrix[10];
-        ambientWorldAnchor={x:viewerMatrix[12]+rightX*.95+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.95+forwardZ*2.4};
-        ambientWorldFacing=introWorldAnchorFromViewer(viewerMatrix);
+        ambientWorldAnchor={x:viewerMatrix[12]+rightX*.67+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.67+forwardZ*2.4};
     }
-    const base=ambientWorldAnchor,growth=ambientGrowth.progress,height=.12+growth*1.12;
-    if(!drawAmbientTreeSprites(view,base,growth)){
-        drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.007+growth*.015,halfHeight:height/2,halfDepth:.008+growth*.014,color:[.27,.36,.21],topColor:[.42,.53,.31],alpha:.55});
-        const canopy=Math.max(0,Math.min(1,(growth-.25)/.5));
-        if(canopy>0){
-            for(const side of [-1,1])drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.17*canopy,y:base.y+height*(side<0?.77:.86),z:base.z},(.08+.22*canopy),{scale:{x:1.1,y:.7,z:.8},color:[.35,.57,.33],alpha:.19+.08*canopy,emissive:.07});
+    const base=ambientWorldAnchor,growth=ambientGrowth.progress,stage=seedlingGrowthStage(growth),height=(.07+.48*growth)*stage.height;
+    drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.003+growth*.002,halfHeight:height/2,halfDepth:.003+growth*.002,color:[.29,.44,.27],topColor:[.55,.7,.4],alpha:.83});
+    for(let index=0;index<stage.leaves.length;index++){
+        const open=stage.leaves[index];if(open<=0)continue;
+        const side=index%2?-1:1,level=.34+index*.16,reach=(.035+index*.008)*open;
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*reach,y:base.y+height*level+.008,z:base.z},Math.max(.006,reach*.72),{scale:{x:1.2,y:.26,z:.52},color:[.32,.55,.29],alpha:.82,emissive:.04});
+    }
+    if(stage.fruit>0){
+        for(const [side,level] of [[-1,.83],[1,.9],[-1,.96]]){
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.025*stage.fruit,y:base.y+height*level,z:base.z},.011*stage.fruit,{color:[.73,.26,.19],alpha:.9*stage.fruit,emissive:.06});
         }
     }
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;

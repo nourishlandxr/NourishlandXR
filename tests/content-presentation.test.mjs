@@ -6,13 +6,20 @@ import { LIM_INTRO_BRANCHES, limLearningContent } from '../app/services/limLearn
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('guided narrative introduces Orbs, Areas and Totems before placement, then closes with the requested mission', () => {
+test('guided narrative places the first Orb before introducing mapped Areas and Totems', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
+    const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('const POST_PLACEMENT_AREA_STEP'));
+    const area = demo.slice(demo.indexOf('const POST_PLACEMENT_AREA_STEP'), demo.indexOf('function runArWelcomeTutorial'));
+    const conversion = demo.slice(demo.indexOf('function guidePlantConversion'), demo.indexOf('function showSceneContinue'));
+    const placement = demo.slice(demo.indexOf('function placeMarker'), demo.indexOf('function pressPlacementPointer'));
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function createDemoTotemExample'));
     assert.match(guide, /A Plant Orb belongs at a real plant and opens that plant’s information there\./);
-    assert.match(guide, /maps a landscape as Areas\. Each Area receives a welcoming Totem/);
+    assert.doesNotMatch(guide, /Areas and Totems/);
+    assert.match(area, /maps a larger landscape as Areas/);
+    assert.match(area, /Each Area receives a welcoming Totem/);
     assert.ok(guide.indexOf('A Plant Orb belongs') < guide.indexOf('Begin with Pigeon Pea'));
+    assert.match(placement, /markers\.push\(marker\);[\s\S]*if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
+    assert.match(conversion, /POST_PLACEMENT_AREA_STEP/);
     assert.match(closing, /NourishlandXR aims to bring information to botanical gardens, public parks, community gardens, native forests and food forests, helping people discover the wonders of plants\./);
 });
 
@@ -25,8 +32,9 @@ test('XR introduction holds four explorable archetypes before Orb and placement 
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
     assert.ok(guide.indexOf('Four ways to explore') < guide.indexOf('Meet the Plant Orb'));
-    assert.ok(guide.indexOf('Meet the Plant Orb') < guide.indexOf('Areas and Totems'));
-    assert.ok(guide.indexOf('Areas and Totems') < guide.indexOf('Begin with Pigeon Pea'));
+    assert.ok(guide.indexOf('Meet the Plant Orb') < guide.indexOf('Begin with Pigeon Pea'));
+    assert.doesNotMatch(guide, /button:'Explore Areas'/);
+    assert.match(guide, /button:'Meet Pigeon Pea'/);
     assert.match(demo, /limMeshVisible=index>0/);
     assert.match(demo, /deferContinueUntilCopyReady:index===2/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
@@ -48,8 +56,8 @@ test('pathways follow their spoken invitation, copy fades, and the companion pan
     assert.match(demo,/at:18000,text:demoLocalizedText\('Four pathways invite/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/Your Control Panel[\s\S]*The Control Panel is your companion/);
-    assert.match(panel,/const spatialHeight=\(\)=>headset\?1250:height\(\)/);
+    assert.match(demo,/Your Control Panel[\s\S]*The Control Panel is on your left/);
+    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?960:headset\?1250:height\(\)/);
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
 });

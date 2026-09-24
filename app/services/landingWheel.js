@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import {scrollTurn,gestureIntent,wheelGestureVelocity,decayWheelVelocity,WHEEL_DRAG_RADIANS_PER_PIXEL,WHEEL_TOUCH_RADIANS_PER_PIXEL,discoveryOrientation,discoveryMomentumFactor} from './wheel-model.js';
+import {scrollTurn,gestureIntent,wheelGestureVelocity,decayWheelVelocity,WHEEL_DRAG_RADIANS_PER_PIXEL,WHEEL_TOUCH_RADIANS_PER_PIXEL,WHEEL_TOUCH_MAX_VELOCITY,discoveryOrientation,discoveryMomentumFactor} from './wheel-model.js';
 
 export async function mountLandingWheel(hero){
 if(!hero?.isConnected)return;
@@ -14,7 +14,7 @@ const media=matchMedia('(prefers-reduced-motion: reduce)');
 const forcedReduce=new URLSearchParams(location.search).get('motion')==='reduce';
 const start=discoveryOrientation(Math.random());
 let reduced=media.matches||forcedReduce,visible=true,frame=0,previous=0,time=0;
-let velocity=0,pitchVelocity=0;
+let velocity=0,pitchVelocity=0,momentumDamping=1.05;
 let roll=0,yaw=start.yaw,pitch=start.pitch,pointerX=0,pointerY=0,scroll=0,scrollOrigin=0,gesture=null;
 let renderer,resizeObserver,intersectionObserver,renderedFrames=0;
 const scene=new THREE.Scene();
@@ -66,14 +66,14 @@ function draw(now){
  frame=0;if(!visible||document.hidden||hero.dataset.ready!=='true')return;
  const dt=previous?Math.min((now-previous)/1000,.05):.016;previous=now;
  const live=!reduced;
- if(live){time+=dt;if(!gesture){roll+=dt*.14;yaw+=velocity*dt;velocity=decayWheelVelocity(velocity,dt,false);pitch+=pitchVelocity*dt;pitchVelocity=decayWheelVelocity(pitchVelocity,dt,false);}}
+ if(live){time+=dt;if(!gesture){roll+=dt*.07;yaw+=velocity*dt;velocity=decayWheelVelocity(velocity,dt,false,momentumDamping);pitch+=pitchVelocity*dt;pitchVelocity=decayWheelVelocity(pitchVelocity,dt,false,momentumDamping);}}
  const scrollDelta=live?scroll-scrollOrigin:0;
  const targetZ=roll+scrollDelta;
- const targetY=yaw+(live?pointerX*.12+Math.sin(time*.35)*.08+Math.sin(scrollDelta)*.36:0);
+ const targetY=yaw+(live?pointerX*.12+Math.sin(time*.35)*.06+Math.sin(scrollDelta)*.18:0);
  const targetX=pitch+(live?pointerY*.08:0);
  // During a drag, stay close to the finger. The gentler idle response remains
  // after release so the sculpture still settles like a soft physical object.
- const blend=reduced?1:1-Math.exp(-dt*(gesture?18:4.2));
+ const blend=reduced?1:1-Math.exp(-dt*(gesture?12:4.2));
  wheel.rotation.x+=(targetX-wheel.rotation.x)*blend;wheel.rotation.y+=(targetY-wheel.rotation.y)*blend;wheel.rotation.z+=(targetZ-wheel.rotation.z)*blend;
  wheel.position.y=live?Math.sin(time*.65)*.045:0;
  renderer.render(scene,camera);
@@ -87,7 +87,7 @@ listen(window,'scroll',readScroll,{passive:true});
 listen(document,'visibilitychange',()=>{previous=0;if(document.hidden){cancelAnimationFrame(frame);frame=0;}else requestDraw();});
 listen(media,'change',setMotion);
 listen(host,'pointermove',event=>{
- if(gesture&&event.pointerId===gesture.id){const point=event.getCoalescedEvents?.()?.at(-1)||event,now=performance.now(),dx=point.clientX-gesture.x,dy=point.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true,threshold:gesture.threshold});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=point.clientX-gesture.lastX,stepY=point.clientY-gesture.lastY;yaw+=stepX*gesture.sensitivity;roll+=stepX*gesture.sensitivity/3;pitch+=stepY*gesture.sensitivity*.7;gesture.lastX=point.clientX;gesture.lastY=point.clientY;gesture.lastAt=now;gesture.samples.push({x:point.clientX,y:point.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x',gesture.sensitivity);pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y',gesture.sensitivity);requestDraw();}return;}
+ if(gesture&&event.pointerId===gesture.id){const point=event.getCoalescedEvents?.()?.at(-1)||event,now=performance.now(),dx=point.clientX-gesture.x,dy=point.clientY-gesture.y;if(gesture.intent==='pending')gesture.intent=gestureIntent(dx,dy,{allowVertical:true,threshold:gesture.threshold});if(gesture.intent==='rotate'){event.preventDefault();if(!host.hasPointerCapture(event.pointerId))host.setPointerCapture(event.pointerId);const stepX=point.clientX-gesture.lastX,stepY=point.clientY-gesture.lastY;yaw+=stepX*gesture.sensitivity;roll+=stepX*gesture.sensitivity/3;pitch+=stepY*gesture.sensitivity*.7;gesture.lastX=point.clientX;gesture.lastY=point.clientY;gesture.lastAt=now;gesture.samples.push({x:point.clientX,y:point.clientY,at:now});gesture.samples=gesture.samples.filter(sample=>now-sample.at<=140).slice(-8);velocity=wheelGestureVelocity(gesture.samples,gesture.inheritedVelocity,reduced,'x',gesture.sensitivity,gesture.maxVelocity);pitchVelocity=wheelGestureVelocity(gesture.samples,gesture.inheritedPitchVelocity,reduced,'y',gesture.sensitivity,gesture.maxVelocity);requestDraw();}return;}
  if(event.pointerType==='mouse'){const bounds=host.getBoundingClientRect();pointerX=(event.clientX-bounds.left)/bounds.width*2-1;pointerY=(event.clientY-bounds.top)/bounds.height*2-1;requestDraw();}
 });
 listen(host,'pointerleave',event=>{pointerX=0;pointerY=0;if(gesture&&event.pointerId===gesture.id&&!host.hasPointerCapture(event.pointerId))endGesture({type:'pointercancel',timeStamp:event.timeStamp});requestDraw();});
@@ -95,13 +95,13 @@ listen(host,'pointerdown',event=>{
  if(event.pointerType==='mouse' && event.button!==0)return;
  if(gesture)return;
  event.preventDefault?.();host.setPointerCapture?.(event.pointerId);
- const now=performance.now(),touch=event.pointerType==='touch';gesture={lastX:event.clientX,lastY:event.clientY,lastAt:now,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',threshold:touch?5:10,sensitivity:touch?WHEEL_TOUCH_RADIANS_PER_PIXEL:WHEEL_DRAG_RADIANS_PER_PIXEL,inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:now}]};requestDraw();
+ const now=performance.now(),touch=event.pointerType==='touch';momentumDamping=touch?2.2:1.05;gesture={lastX:event.clientX,lastY:event.clientY,lastAt:now,id:event.pointerId,x:event.clientX,y:event.clientY,intent:'pending',threshold:touch?5:10,sensitivity:touch?WHEEL_TOUCH_RADIANS_PER_PIXEL:WHEEL_DRAG_RADIANS_PER_PIXEL,maxVelocity:touch?WHEEL_TOUCH_MAX_VELOCITY:6,inheritedVelocity:velocity,inheritedPitchVelocity:pitchVelocity,samples:[{x:event.clientX,y:event.clientY,at:now}]};requestDraw();
 });
 function endGesture(event){
  if(!gesture)return;
  const active=gesture,now=performance.now();
  if(event?.type==='pointercancel'){velocity=0;pitchVelocity=0;}
- else if(active.intent==='rotate'&&(now-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x',active.sensitivity);pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y',active.sensitivity);const variation=discoveryMomentumFactor(Math.random());velocity*=variation;pitchVelocity*=2-variation;}
+ else if(active.intent==='rotate'&&(now-active.lastAt)<=160){velocity=wheelGestureVelocity(active.samples,active.inheritedVelocity,reduced,'x',active.sensitivity,active.maxVelocity);pitchVelocity=wheelGestureVelocity(active.samples,active.inheritedPitchVelocity,reduced,'y',active.sensitivity,active.maxVelocity);const variation=discoveryMomentumFactor(Math.random());velocity*=variation;pitchVelocity*=2-variation;}
  else{velocity=active.inheritedVelocity;pitchVelocity=active.inheritedPitchVelocity;}
  gesture=null;requestDraw();
 }

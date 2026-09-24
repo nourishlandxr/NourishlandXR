@@ -34,59 +34,44 @@ function drawBee(ctx,x,y,size,wing,opacity){
     ctx.restore();
 }
 
-export function drawDemoLycheeClusters(ctx,x,y,width,height,opacity=1){
-    if(opacity<=0)return;
-    const clusters=[[.27,.45,3],[.7,.35,4],[.78,.57,3],[.37,.64,4],[.57,.27,3]];
-    const radius=Math.max(1.5,height*.012);
-    ctx.save();ctx.globalAlpha*=clamp01(opacity);
-    for(const [cx,cy,count] of clusters){
-        const stemX=x+width*cx,stemY=y+height*cy;
-        ctx.strokeStyle='rgba(110,94,54,.78)';ctx.lineWidth=Math.max(.7,radius*.23);
-        ctx.beginPath();ctx.moveTo(stemX,stemY-radius*1.4);ctx.lineTo(stemX,stemY+radius*.5);ctx.stroke();
-        for(let index=0;index<count;index++){
-            const px=stemX+(index-(count-1)/2)*radius*1.15;
-            const py=stemY+radius*(.55+(index%2)*.66);
-            ctx.fillStyle=index%2?'#b84742':'#ce6251';
-            ctx.beginPath();ctx.arc(px,py,radius*.72,0,Math.PI*2);ctx.fill();
-            ctx.fillStyle='rgba(255,213,171,.48)';ctx.beginPath();ctx.arc(px-radius*.2,py-radius*.23,radius*.13,0,Math.PI*2);ctx.fill();
-        }
-    }
-    ctx.restore();
+export function seedlingGrowthStage(progress){
+    const growth=clamp01(progress);
+    return {height:.14+.86*growth,leaves:[.18,.36,.55,.72].map(start=>clamp01((growth-start)/.19)),fruit:clamp01((growth-.79)/.19)};
 }
 
-export function drawDemoAmbientLife(ctx,width,height,{growth=0,elapsed=0,beesStartedAt=NaN,reducedMotion=false,darkBackdrop=false,treeImages=null}={}){
+export function drawDemoAmbientLife(ctx,width,height,{growth=0,elapsed=0,beesStartedAt=NaN,reducedMotion=false,darkBackdrop=false}={}){
     ctx.clearRect(0,0,width,height);
     if(growth<=.002)return;
     const compact=width<700;
-    const baseX=width*(compact?.85:.79),baseY=height*(compact?.67:.84);
-    const size=Math.min(height*(compact?.18:.29),compact?130:260)*growth;
-    const canopy=clamp01((growth-.24)/.54);
-    const treeReady=treeImages?.bare?.naturalWidth && treeImages?.leafy?.naturalWidth;
+    const baseX=width*(compact?.77:.70),baseY=height*(compact?.77:.82);
+    const stage=seedlingGrowthStage(growth),size=Math.min(height*.17,compact?78:122)*stage.height;
+    const sway=reducedMotion?0:Math.sin(elapsed*.0012)*Math.min(2,growth*2);
+    const stem=darkBackdrop?'#96b783':'#4f7651';
     ctx.save();
-    if(treeReady){
-        const treeWidth=size*.96,treeX=baseX-treeWidth/2,treeY=baseY-size;
-        ctx.globalAlpha=darkBackdrop?.78:.68;
-        ctx.drawImage(treeImages.bare,treeX,treeY,treeWidth,size);
-        if(canopy>0){ctx.globalAlpha=(darkBackdrop?.9:.78)*canopy;ctx.drawImage(treeImages.leafy,treeX,treeY,treeWidth,size);}
-        if(growth>.78){ctx.globalAlpha=1;drawDemoLycheeClusters(ctx,treeX,treeY,treeWidth,size,(growth-.78)/.2);}
-    }else{
-        ctx.lineCap='round';
-        ctx.strokeStyle=darkBackdrop?'rgba(162,190,139,.68)':'rgba(49,67,39,.56)';ctx.lineWidth=1.6+growth*6;
-        ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.bezierCurveTo(baseX-4,baseY-size*.38,baseX+4,baseY-size*.76,baseX,baseY-size);ctx.stroke();
-        const branchWidth=size*(.22+.08*canopy);
-        for(const side of [-1,1]){
-            ctx.lineWidth=1+growth*2.1;ctx.beginPath();ctx.moveTo(baseX,baseY-size*.47);
-            ctx.quadraticCurveTo(baseX+side*branchWidth*.75,baseY-size*.67,baseX+side*branchWidth,baseY-size*.84);ctx.stroke();
+    ctx.fillStyle=darkBackdrop?'rgba(158,181,133,.14)':'rgba(55,84,52,.12)';
+    ctx.beginPath();ctx.ellipse(baseX,baseY+2,size*.23,Math.max(2,size*.025),0,0,Math.PI*2);ctx.fill();
+    ctx.lineCap='round';ctx.strokeStyle=stem;ctx.lineWidth=Math.max(1.5,size*.026);
+    ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.bezierCurveTo(baseX-sway,baseY-size*.35,baseX+sway,baseY-size*.75,baseX+sway,baseY-size);ctx.stroke();
+    for(let index=0;index<stage.leaves.length;index++){
+        const open=stage.leaves[index];if(open<=0)continue;
+        const level=.34+index*.16,side=index%2?-1:1;
+        const x=baseX+sway*level,y=baseY-size*level;
+        const length=size*(.19+index*.015)*open;
+        ctx.strokeStyle=stem;ctx.lineWidth=Math.max(.8,size*.009);
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+side*length*.72,y-length*.18);ctx.stroke();
+        ctx.fillStyle=darkBackdrop?'rgba(153,200,126,.85)':'rgba(78,139,77,.85)';
+        ctx.beginPath();ctx.ellipse(x+side*length*.64,y-length*.22,length*.45,length*.17,-side*.27,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=darkBackdrop?'rgba(216,231,171,.52)':'rgba(207,226,162,.55)';
+        ctx.beginPath();ctx.moveTo(x+side*length*.32,y-length*.13);ctx.lineTo(x+side*length*.95,y-length*.29);ctx.stroke();
+    }
+    if(stage.fruit>0){
+        ctx.strokeStyle=stem;ctx.lineWidth=1;
+        for(const [side,level] of [[-1,.83],[1,.9],[-1,.96]]){
+            const x=baseX+sway*level+side*size*.09*stage.fruit,y=baseY-size*level;
+            ctx.beginPath();ctx.moveTo(baseX+sway*level,baseY-size*(level+.025));ctx.lineTo(x,y);ctx.stroke();
+            ctx.fillStyle='#b94f42';ctx.globalAlpha=.85*stage.fruit;
+            ctx.beginPath();ctx.arc(x,y,Math.max(1.5,size*.028)*stage.fruit,0,Math.PI*2);ctx.fill();
         }
-        if(canopy>0){
-            ctx.fillStyle=darkBackdrop?`rgba(141,194,123,${.16+.17*canopy})`:`rgba(92,141,88,${.10+.12*canopy})`;
-            const clusters=[[-.4,-.76,.36],[-.13,-.95,.42],[.22,-.88,.4],[.48,-.7,.31],[0,-.66,.43]];
-            for(const [dx,dy,radius] of clusters){ctx.beginPath();ctx.ellipse(baseX+dx*size,baseY+dy*size,size*radius*canopy,size*radius*.72*canopy,0,0,Math.PI*2);ctx.fill();}
-        }else{
-            ctx.fillStyle=darkBackdrop?'rgba(156,201,128,.6)':'rgba(115,169,97,.54)';
-            for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(baseX+side*size*.23,baseY-size*.72,size*.24,size*.095,side*.4,0,Math.PI*2);ctx.fill();}
-        }
-        if(growth>.78)drawDemoLycheeClusters(ctx,baseX-size*.48,baseY-size,size*.96,size,(growth-.78)/.2);
     }
     ctx.restore();
     if(reducedMotion)return;

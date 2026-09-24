@@ -1,3 +1,5 @@
+import { botanicalTextureMarkup, bindBotanicalTexture } from './botanicalTexture.js';
+
 const CAMERA_SAFETY_ACK_KEY = 'nourishlandxr.camera-safety-ack.v1';
 const AR_INTRO_PREPARATION_SKIP_KEY = 'nourishlandxr.ar-introduction-preparation-skip.v1';
 
@@ -61,6 +63,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel } = 
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
         <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">NourishlandXR is designed for spatial devices and mobile phones. A limited desktop preview is available, but the full experience is best tried on a compatible device.</p></div>
+        ${botanicalTextureMarkup('prep')}
         <section class="panel ar-safety-card ar-introduction-preparation-card">
             <p class="ar-introduction-lead">On a supported device, this introduction places NourishlandXR’s learning cells in the space around you. Desktop preview presents a limited on-screen version.</p>
             <div class="ar-preparation-points">
@@ -73,6 +76,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel } = 
         <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
         <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Begin introduction</button></div>
     </div>`;
+    bindBotanicalTexture(app);
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
         button.disabled = true;
