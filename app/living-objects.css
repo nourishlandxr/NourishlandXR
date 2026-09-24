@@ -273,6 +273,21 @@
     background:transparent !important;
     color:transparent !important;
     text-shadow:none !important;
+    -webkit-tap-highlight-color:transparent;
+}
+
+/* Android can retain :hover/tap feedback after a touch. The canvas already
+   draws selection, so the transparent hit target must never flash a green
+   browser-generated circle or halo. */
+.tryit-demo,
+.tryit-demo button { -webkit-tap-highlight-color:transparent; }
+@media(hover:none) and (pointer:coarse) {
+    .tryit-demo[data-lim-surface="true"] .tryit-live-welcome button[data-welcome-cell]:hover {
+        border-color:transparent !important;
+        background:transparent !important;
+        box-shadow:none !important;
+        outline:0 !important;
+    }
 }
 /* Reserve a clear lane beneath the green surface for the main Continue orb. */
 .tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome,
@@ -699,14 +714,36 @@
     animation:nlxr-control-panel-reveal 1.6s cubic-bezier(.2,.72,.24,1) both;
 }
 @keyframes nlxr-control-panel-reveal {
-    from { opacity:0; transform:translateY(10px) scale(.985); filter:blur(2px); }
-    to { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+    from { opacity:0; transform:perspective(1200px) translateY(10px) rotateY(2.5deg) rotateX(1.5deg) scale(.985); filter:blur(2px); }
+    to { opacity:1; transform:perspective(1200px) rotateY(2.5deg) rotateX(1.5deg) scale(1); filter:blur(0); }
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) {
-    color:#f2f7fb;
-    border-color:rgba(169,202,225,.72);
-    background:linear-gradient(148deg,rgba(40,55,72,.98),rgba(13,24,37,.98) 72%);
-    box-shadow:0 20px 48px rgba(3,10,20,.55),inset 0 1px rgba(255,255,255,.2),inset 3px 0 rgba(116,196,232,.38);
+    color:#f7fbff;
+    border:2px solid rgba(173,216,241,.82);
+    background:linear-gradient(148deg,#34475b 0%,#18283a 46%,#091521 100%);
+    box-shadow:0 24px 58px rgba(1,7,15,.68),inset 0 2px rgba(255,255,255,.22),inset 4px 0 #55bfe0,inset 0 -3px rgba(0,6,13,.58);
+    backdrop-filter:blur(12px) saturate(1.18);
+    transform:perspective(1200px) rotateY(2.5deg) rotateX(1.5deg);
+    transform-origin:left center;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-hidden {
+    display:block;
+    width:fit-content !important;
+    height:fit-content !important;
+    min-width:0;
+    max-width:max-content;
+    max-height:none !important;
+    padding:4px;
+    overflow:visible;
+    border-radius:12px;
+    container-type:normal;
+    grid-template:none;
+    animation:none;
+    transform:none !important;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-hidden > button {
+    min-width:104px;
+    min-height:44px;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header {
     border-bottom-color:rgba(173,207,231,.34);
@@ -714,14 +751,17 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is(.nlxr-control-header h2,h3,.nlxr-info-body,.nlxr-pathway-heading strong) { color:#f3f8fc; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is(.nlxr-control-identity,.nlxr-info-trail,.nlxr-control-page,.nlxr-control-page ~ small) { color:#c5d7e4; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs {
-    background:rgba(6,15,27,.82);
-    border-right-color:rgba(161,197,220,.38);
+    background:linear-gradient(180deg,#122638,#08131f);
+    border-right-color:rgba(159,211,240,.55);
+    box-shadow:inset -2px 0 rgba(0,5,11,.46);
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button {
-    color:#edf6fc;
-    border-color:rgba(162,198,222,.38);
-    background:linear-gradient(145deg,rgba(91,122,148,.42),rgba(38,57,77,.78));
+    color:#f6fbff;
+    border-color:rgba(170,213,238,.55);
+    background:linear-gradient(180deg,#48657e,#263d53 54%,#172a3e);
+    box-shadow:inset 0 1px rgba(255,255,255,.22),0 3px 0 #07111c,0 7px 12px rgba(0,0,0,.28);
     font-size:14px;
+    font-weight:750;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs [role="tab"][aria-selected="true"] {
     border-left-color:#81d7f5;
@@ -731,13 +771,18 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is(.nlxr-control-utilities button,.nlxr-control-actions button,.nlxr-guide-actions button,.nlxr-pathway-context button) {
     min-height:44px;
     color:#f1f7fb;
-    border-color:rgba(166,204,229,.48);
-    background:linear-gradient(145deg,rgba(80,116,145,.5),rgba(34,54,75,.88));
+    border-color:rgba(177,220,243,.66);
+    background:linear-gradient(180deg,#4b6c87,#29465f 54%,#173047);
+    box-shadow:inset 0 1px rgba(255,255,255,.25),0 3px 0 #07131f,0 8px 15px rgba(0,0,0,.3);
     font-size:14px;
     line-height:1.3;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities .is-primary-action { color:#102432; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-wing { background:rgba(7,17,29,.98); border-left-color:rgba(153,193,220,.38); }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock {
+    border-top:2px solid rgba(154,205,234,.42);
+    background:linear-gradient(180deg,rgba(17,36,53,.92),rgba(6,16,27,.98));
+}
 @media(max-width:700px) {
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { font-size:13px; }
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header h2 { font-size:17px; }
@@ -750,6 +795,29 @@
     border-color:rgba(247,232,181,.92);
     box-shadow:inset -5px -6px 9px rgba(8,28,17,.32),0 0 0 2px rgba(247,232,181,.38),0 0 24px rgba(238,219,162,.72);
     animation:nlxr-orb-hover-pulse 1.15s ease-in-out infinite alternate!important;
+}
+
+/* Restore the richer, clearly visible Plant Orb: luminous shell, defined
+   inner core and a broad halo that remains readable before interaction. */
+.tryit-sim-orb.is-plant {
+    border:2px solid rgba(242,255,220,.96);
+    background:radial-gradient(circle at 29% 22%,#ffffff 0 6%,var(--demo-orb-light,#efffd8) 7% 15%,var(--demo-orb-mid,#84c96d) 39%,var(--demo-orb-dark,#1d6635) 75%,#092719 100%);
+    box-shadow:inset -10px -12px 17px rgba(3,31,15,.62),inset 6px 6px 11px rgba(255,255,255,.28),0 0 0 4px rgba(215,242,177,.16),0 0 30px color-mix(in srgb,var(--demo-orb-mid,#9ee578) 72%,transparent);
+    filter:saturate(1.28) brightness(1.08);
+}
+.tryit-sim-orb.is-plant::before {
+    inset:-10px;
+    background:conic-gradient(from -28deg,rgba(255,239,174,.94) 0 252deg,rgba(142,221,119,.2) 255deg 318deg,transparent 321deg 360deg);
+    opacity:.88;
+    -webkit-mask:radial-gradient(transparent 66%,#000 68% 73%,transparent 75%);
+    mask:radial-gradient(transparent 66%,#000 68% 73%,transparent 75%);
+}
+.tryit-sim-orb.is-plant::after {
+    width:34%;
+    height:34%;
+    border:2px solid rgba(255,249,211,.94);
+    background:radial-gradient(circle at 30% 24%,#fffde2 0 14%,var(--demo-orb-core-light,#f2ffd9) 19%,var(--demo-orb-core-mid,#c8ed72) 54%,var(--demo-orb-core-dark,#3c843f) 100%);
+    box-shadow:0 0 13px rgba(250,235,157,.78),inset -4px -5px 7px rgba(16,48,24,.42);
 }
 .tryit-sim-marker-plant:is(:hover,:focus-visible,.is-pointer-hover,.is-held) .tryit-sim-orb.is-plant::before {
     opacity:.95;

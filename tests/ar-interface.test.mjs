@@ -1264,6 +1264,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /The Control Panel is on your left/);
+    assert.match(source, /Thousands of plants can be researched, connected and mapped into real-world places/);
     assert.match(source, /Your first Plant Orb now has a place/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /Moringa now has its own Plant Profile/);

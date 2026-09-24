@@ -17,7 +17,7 @@ import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { advanceAmbientGrowth, demoBeePose, drawDemoAmbientLife, seedlingGrowthStage } from '../services/demoAmbientLife.js';
+import { demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -96,7 +96,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
-let ambientCanvas=null,ambientGrowth={progress:0,lastElapsed:0},ambientGrowthTarget=0,ambientSeedStartedAt=NaN,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let ambientCanvas=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -405,7 +405,7 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientCanvas=null;ambientGrowth={progress:0,lastElapsed:0};ambientGrowthTarget=0;ambientSeedStartedAt=NaN;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
+    ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -1328,28 +1328,16 @@ function paintWelcomeLayer(now) {
     }
 }
 
-function tickDemoAmbientLife(){
-    if(!Number.isFinite(ambientSeedStartedAt)){
-        ambientSeedStartedAt=arWelcomeClock.elapsed;
-        ambientGrowthTarget=Math.max(ambientGrowthTarget,.16);
-    }
-    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    ambientGrowth=reducedMotion
-        ? {progress:ambientGrowthTarget,lastElapsed:arWelcomeClock.elapsed}
-        : advanceAmbientGrowth(ambientGrowth,arWelcomeClock.elapsed,ambientGrowthTarget,ambientSeedStartedAt);
-}
-
 function paintDemoAmbientLife(now){
     if(!ambientCanvas || now-ambientLastPaint<33)return;
     ambientLastPaint=now;
-    tickDemoAmbientLife();
-    if(!Number.isFinite(ambientSeedStartedAt))return;
+    if(!Number.isFinite(ambientBeesStartedAt))return;
     const width=window.innerWidth,height=window.innerHeight,ratio=Math.min(window.devicePixelRatio||1,1.5);
     if(ambientCanvas.width!==Math.round(width*ratio))ambientCanvas.width=Math.round(width*ratio);
     if(ambientCanvas.height!==Math.round(height*ratio))ambientCanvas.height=Math.round(height*ratio);
     const context=ambientCanvas.getContext('2d');
     context.setTransform(ratio,0,0,ratio,0,0);
-    drawDemoAmbientLife(context,width,height,{growth:ambientGrowth.progress,elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,darkBackdrop:window.matchMedia('(hover: hover) and (pointer: fine)').matches});
+    drawDemoAmbientLife(context,width,height,{elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
 }
 
 function showArWelcomeShowcase() {
@@ -1387,7 +1375,7 @@ function showArWelcomeShowcase() {
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'On your left: your interactive companion. Select a living cell to read its story here. Use the sections to explore and the glowing dot to move the panel.',accent:'#83c5e8',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'Your interactive companion. Select a living cell to read its story here. Use the sections to explore and the glowing dot to move the panel.',accent:'#83c5e8',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
     infoPanel?.suspend(false);
     infoPanel?.setIntroduction(true);
@@ -1533,7 +1521,7 @@ const DEMO_ORIENTATION_STEPS = [
     ]},
     {title:'Meet the Plant Orb',button:'Meet Pigeon Pea',nextGuide:'Meet Pigeon Pea, then place its Plant Orb beside a real plant.',paragraphs:[
         'A Plant Orb belongs at a real plant and opens that plant’s information there.',
-        'First, you will place one. Then press it to explore the plant’s profile and connected knowledge.'
+        'Thousands of plants can be researched, connected and mapped into real-world places. First, you will place one, then press it to explore the plant’s profile and connected knowledge.'
     ]},
     {title:'Begin with Pigeon Pea',button:'Place the Plant Orb',nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.',paragraphs:[
         'Pigeon Pea is our first example. Its Plant Orb connects this plant to its roles, growing needs and relationships.',
@@ -1552,10 +1540,6 @@ const POST_PLACEMENT_AREA_STEP = {
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
-    if(index>=1){
-        if(!Number.isFinite(ambientSeedStartedAt))ambientSeedStartedAt=arWelcomeClock.elapsed;
-        ambientGrowthTarget=Math.max(ambientGrowthTarget,[0,.37,.53,.78][index] || 0);
-    }
     if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=index>0;
     introBoardTextureDirty=true;
@@ -1667,7 +1651,6 @@ function cycleDemoNoteTemplate(record) {
 }
 
 function showDemoClosingMessage() {
-    ambientGrowthTarget=1;
     showIntroBoard(
         'NourishlandXR',
         [
@@ -1811,7 +1794,6 @@ function showLinkedTotemsIntroduction() {
 }
 
 function showTotemIntroduction() {
-    ambientGrowthTarget=1;
     showIntroBoard(
         'Area Totems',
         [
@@ -1828,7 +1810,6 @@ function showTotemIntroduction() {
 }
 
 function showSpatialGardenSummary() {
-    ambientGrowthTarget=Math.max(ambientGrowthTarget,.95);
     showIntroBoard(
         'Your place is becoming connected',
         'This place now holds two plant profiles and one observation. NourishlandXR maps them into Areas; each Area can have a welcoming Totem that connects plants, stories and visitor guidance.',
@@ -1905,7 +1886,6 @@ function refreshSimulatedPlacementAim() {
 }
 
 function armDemoPlacement(type, {explained=false}={}) {
-    ambientGrowthTarget=Math.max(ambientGrowthTarget,type==='plant'? .82:type==='plant2'? .88:.92);
     if (markers.some(record => record.tutorialStage === type)) return;
     demoStage = type;
     placementReady = false;
@@ -3550,7 +3530,11 @@ function drawIntroNoteContent(ctx) {
     }
     ctx.save();
     if(narrative)ctx.globalAlpha*=narrative.alpha;
-    ctx.fillStyle = narrative?.accent || 'rgba(255,255,255,.96)';
+    // Accent colours illuminate the surface, while the copy stays bright and
+    // neutral so blue and orange narrative stages remain equally readable.
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,12,7,.94)';
+    ctx.shadowBlur = 10;
     const typedBody = narrative?.text || (introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌');
@@ -3946,31 +3930,19 @@ function drawDemoAmbientLines(view,vertices,color){
 }
 
 function drawSpatialAmbientLife(view){
-    if(!sphereRenderer || !prismRenderer || !viewerMatrix || !Number.isFinite(ambientSeedStartedAt) || ambientGrowth.progress<.01)return;
+    if(!sphereRenderer || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
     if(!ambientWorldAnchor){
         const rightLength=Math.hypot(viewerMatrix[0],viewerMatrix[2])||1;
         const rightX=viewerMatrix[0]/rightLength,rightZ=viewerMatrix[2]/rightLength;
         const forwardX=-viewerMatrix[8],forwardZ=-viewerMatrix[10];
         ambientWorldAnchor={x:viewerMatrix[12]+rightX*.67+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.67+forwardZ*2.4};
     }
-    const base=ambientWorldAnchor,growth=ambientGrowth.progress,stage=seedlingGrowthStage(growth),height=(.07+.48*growth)*stage.height;
-    drawSpatialPrism(gl,prismRenderer,view,{x:base.x,y:base.y+height/2,z:base.z},{halfWidth:.003+growth*.002,halfHeight:height/2,halfDepth:.003+growth*.002,color:[.29,.44,.27],topColor:[.55,.7,.4],alpha:.83});
-    for(let index=0;index<stage.leaves.length;index++){
-        const open=stage.leaves[index];if(open<=0)continue;
-        const side=index%2?-1:1,level=.34+index*.16,reach=(.035+index*.008)*open;
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*reach,y:base.y+height*level+.008,z:base.z},Math.max(.006,reach*.72),{scale:{x:1.2,y:.26,z:.52},color:[.32,.55,.29],alpha:.82,emissive:.04});
-    }
-    if(stage.fruit>0){
-        for(const [side,level] of [[-1,.83],[1,.9],[-1,.96]]){
-            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{x:base.x+side*.025*stage.fruit,y:base.y+height*level,z:base.z},.011*stage.fruit,{color:[.73,.26,.19],alpha:.9*stage.fruit,emissive:.06});
-        }
-    }
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const wings=[];
     for(let index=0;index<2;index++){
         const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index);
         if(!bee)continue;
-        const position={x:base.x+(bee.x-.79)*3,y:base.y+Math.max(.5,height*.66)+(bee.y-.62)*2,z:base.z+bee.depth};
+        const position={x:base.x+(bee.x-.79)*3,y:base.y+.5+(bee.y-.62)*2,z:base.z+bee.depth};
         drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
         const flap=.025+Math.abs(bee.wing)*.013;
         wings.push(position.x-.008,position.y,position.z,position.x-.025,position.y+flap,position.z,
@@ -4340,7 +4312,6 @@ async function startImmersive() {
             }
             pimHold?.tick(_time);
             if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
-            tickDemoAmbientLife();
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);

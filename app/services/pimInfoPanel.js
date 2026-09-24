@@ -49,14 +49,12 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    // In a headset this is a true left-side companion: near the board's
-    // reading height, laterally separated, and still inside easy controller
-    // reach. Phone/Web mode keeps its lower compact position.
-    // A phone's camera has a much narrower usable view than a headset. Keep
-    // its spatial console close and just left of centre, without UA sniffing.
-    const side=phoneAR ? .48 : headset ? 1.58 : .78;
-    const forward=phoneAR ? .74 : headset ? 1.14 : .58;
-    const drop=phoneAR ? .06 : headset ? .02 : .70;
+    // The console begins below and to the left of the main view, like a
+    // waist-height spatial workstation. Looking down to it produces a gentle
+    // upward-facing pitch instead of a vertical panel in the main FOV.
+    const side=phoneAR ? .58 : headset ? 1.42 : .82;
+    const forward=phoneAR ? .78 : headset ? 1.08 : .62;
+    const drop=phoneAR ? .24 : headset ? .30 : .72;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};

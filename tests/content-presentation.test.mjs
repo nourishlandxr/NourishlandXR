@@ -57,6 +57,9 @@ test('pathways follow their spoken invitation, copy fades, and the companion pan
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
     assert.match(demo,/Your Control Panel[\s\S]*The Control Panel is on your left/);
+    assert.match(demo,/Thousands of plants can be researched, connected and mapped into real-world places/);
+    assert.match(demo,/ctx\.fillStyle = '#ffffff'/);
+    assert.doesNotMatch(demo,/body:'On your left: your interactive companion/);
     assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?960:headset\?1250:height\(\)/);
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
@@ -69,6 +72,7 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     assert.match(demo, /highlighted:orbType==='plant' && hoveredPlant===record/);
     assert.match(styles, /nlxr-orb-hover-pulse/);
     assert.match(styles, /nlxr-orb-hover-orbit/);
+    assert.match(styles, /Restore the richer, clearly visible Plant Orb/);
 });
 
 test('each archetype opens its ordered illustration in the shared control panel', () => {

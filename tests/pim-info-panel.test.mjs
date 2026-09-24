@@ -39,20 +39,20 @@ test('long detail is paginated without dropping words, including unbroken text',
     assert.ok(pages.every(p=>p.length<=10 && p.every(line=>line.length<=48)));
 });
 
-test('waist companion follows translation but remains reachable when looking left',()=>{
+test('waist companion follows translation and starts below the main view',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
-    const first=infoPanelPose(matrix); assert.ok(Math.abs(first.center.y-.9)<1e-10); assert.ok(first.center.x<0);
-    assert.ok(Math.hypot(first.center.x,first.center.y-1.6,first.center.z)<1.2);
+    const first=infoPanelPose(matrix); assert.ok(Math.abs(first.center.y-.88)<1e-10); assert.ok(first.center.x<0);
+    assert.ok(Math.hypot(first.center.x,first.center.y-1.6,first.center.z)<1.35);
     const turned=[0,0,1,0,0,1,0,0,-1,0,0,0,2,1.6,3,1];
     const next=infoPanelPose(turned,first.anchorHeading);
     assert.deepEqual(next.anchorHeading,first.anchorHeading); assert.equal(next.center.x-first.center.x,2); assert.equal(next.center.z-first.center.z,3);
 });
 
-test('Quest Control panel begins beside the welcome board instead of below it',()=>{
+test('Quest Control panel begins below and beside the welcome board',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
     const pose=infoPanelPose(matrix,null,true);
     assert.ok(pose.center.x<=-1,'panel has a clear left-side offset');
-    assert.ok(Math.abs(pose.center.y-1.58)<1e-10,'panel stays near reading height');
+    assert.ok(Math.abs(pose.center.y-1.3)<1e-10,'panel sits below eye height for a natural upward pitch');
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
 });
 
@@ -60,9 +60,9 @@ test('Android AR Control panel begins within a comfortable left-hand view',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
     const phone=infoPanelPose(matrix,null,true,true);
     const headset=infoPanelPose(matrix,null,true,false);
-    assert.ok(phone.center.x<0 && phone.center.x>-.5,'phone panel is visibly left, but not a metre away');
+    assert.ok(phone.center.x<-.5 && phone.center.x>-.7,'phone panel is clearly left of the main view');
     assert.ok(phone.center.z<-.5 && phone.center.z>-.9,'phone panel is within a comfortable reading distance');
-    assert.ok(Math.abs(phone.center.y-1.54)<1e-10,'phone panel remains near eye height');
+    assert.ok(Math.abs(phone.center.y-1.36)<1e-10,'phone panel sits below eye height');
     assert.ok(Math.hypot(phone.center.x,phone.center.z)<Math.hypot(headset.center.x,headset.center.z));
 });
 
@@ -177,4 +177,9 @@ test('ordinary control actions retain the panel shell and device treatment',()=>
     assert.match(panel,/tabs\.scrollTop=railScroll/);
     assert.match(styles,/A persistent instrument beside the experience/);
     assert.match(styles,/"Cascadia Code","Segoe UI Variable",ui-monospace,monospace/);
+});
+
+test('hidden demo Control panel collapses to a compact restore button',()=>{
+    const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
+    assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-hidden \{[\s\S]*?width:fit-content !important;[\s\S]*?height:fit-content !important;[\s\S]*?container-type:normal;[\s\S]*?transform:none !important;/);
 });
