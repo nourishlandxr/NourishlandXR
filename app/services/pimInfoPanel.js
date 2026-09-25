@@ -273,6 +273,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         const media=element.querySelector('.nlxr-media-wing');
         if(media){
             const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
+            const desktopDemo=Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
+            if(desktopDemo && !preview && !mediaCollapsed){mediaCollapsed=true;syncPanelWings();}
+            const mediaToggle=media.querySelector('.nlxr-media-toggle');
+            if(mediaToggle && desktopDemo){mediaToggle.disabled=!preview;mediaToggle.setAttribute('aria-label',preview?(mediaCollapsed?'Open plant media':'Collapse plant media'):'Plant media becomes available with a plant selection');}
             if(preview){
                 if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
                 else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
@@ -328,7 +332,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             return;
         }
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
-        const showMediaWing=showPlantPreview() || element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel');
+        const plantPreviewAvailable=showPlantPreview();
+        const desktopDemo=Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
+        if(desktopDemo && !plantPreviewAvailable)mediaCollapsed=true;
+        const showMediaWing=plantPreviewAvailable || element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel');
         element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
@@ -369,7 +376,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             element.append(content);
             if(showMediaWing){
                 const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
-                const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);
+                const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{if(desktopDemo && !showPlantPreview())return;mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.disabled=desktopDemo && !plantPreviewAvailable;mediaToggle.setAttribute('aria-label',mediaToggle.disabled?'Plant media becomes available with a plant selection':(mediaCollapsed?'Open plant media':'Collapse plant media'));media.append(mediaToggle);
                 if(showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
                 else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
                 element.append(media);

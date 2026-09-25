@@ -56,3 +56,26 @@ test('desktop presentation is isolated from phone and Quest renderers', () => {
     assert.doesNotMatch(service, /requestImmersiveArSession|immersive-ar|immersive-vr/);
     assert.doesNotMatch(immersive, /desktopSpatialPreview/);
 });
+
+test('desktop PIM movement has a dedicated bounded handle', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/living-objects.css');
+    assert.match(demo, /data-desktop-pim-move-handle/);
+    assert.match(demo, /desktopConsole\.getBoundingClientRect\(\)\.right \+ 16/);
+    assert.match(demo, /handles\.forEach\(handle =>/);
+    assert.match(demo, /event\.stopPropagation\(\)/);
+    assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview \.nlxr-desktop-pim-move/);
+    assert.match(styles, /\.nlxr-desktop-pim-move \{ display:none; \}/);
+});
+
+test('desktop control panel keeps a stable footprint and internal media drawer', () => {
+    const panel = read('app/services/pimInfoPanel.js');
+    const styles = read('app/living-objects.css');
+    assert.match(panel, /desktopDemo && !plantPreviewAvailable/);
+    assert.match(panel, /desktopDemo && !preview && !mediaCollapsed/);
+    assert.match(panel, /Plant media becomes available with a plant selection/);
+    assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.nlxr-info-panel\.is-demo-panel/);
+    assert.match(styles, /width:414px !important/);
+    assert.match(styles, /height:calc\(100dvh - 36px\) !important/);
+    assert.match(styles, /width:250px/);
+});

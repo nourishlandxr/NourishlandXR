@@ -2174,7 +2174,13 @@ function clampPlantPanelOffset(anchor, offset) {
     const anchorX = viewportWidth * anchor.x / 100;
     const anchorY = viewportHeight * anchor.y / 100;
     const surface = demoPimSurfaceLayout(anchor);
-    const minimumX = 12 + surface.panelWidth / 2 - anchorX;
+    const desktopConsole = appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview')
+        ? appRoot.querySelector('.nlxr-info-panel.is-demo-panel:not(.is-hidden)')
+        : null;
+    const desktopSafeLeft = desktopConsole
+        ? Math.min(viewportWidth - 12, desktopConsole.getBoundingClientRect().right + 16)
+        : 12;
+    const minimumX = desktopSafeLeft + surface.panelWidth / 2 - anchorX;
     const maximumX = viewportWidth - 12 - surface.panelWidth / 2 - anchorX;
     const minimumY = surface.topInset + surface.panelHeight / 2 - anchorY;
     const maximumY = viewportHeight - surface.bottomInset - surface.panelHeight / 2 - anchorY;
@@ -2280,7 +2286,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     if (!record.demoExpanded) return anchoredOrb;
     const surface = demoPimSurfaceLayout(anchor);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px;width:${surface.panelWidth}px;height:${surface.panelHeight}px`;
-    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information">${demoPlantKnowledgeMarkup(record, anchor)}</span>`;
+    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information"><button type="button" class="nlxr-desktop-pim-move" data-desktop-pim-move-handle aria-label="Move plant information"><span aria-hidden="true">Move PIM</span></button>${demoPlantKnowledgeMarkup(record, anchor)}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -2745,8 +2751,8 @@ function bindSimulatedInformationPanels(layer) {
     layer.querySelectorAll('[data-demo-plant-profile]').forEach(profile => {
         const index = Number(profile.dataset.demoPlantProfile);
         const record = markers[index];
-        const handle = profile.querySelector('[data-plant-profile-handle]');
-        if (!record || !handle) return;
+        const handles = profile.querySelectorAll('[data-desktop-pim-move-handle],[data-plant-profile-handle]');
+        if (!record || !handles.length) return;
         const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]');
         profile.addEventListener('pointerdown', event => {
             if (!pimTarget(event)) return;
@@ -2811,42 +2817,50 @@ function bindSimulatedInformationPanels(layer) {
                 : `${cellLabel} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring this plant.` : ''}`);
         });
         bindPlantInformationMeshPress(profile);
-        let start = null;
-        handle.addEventListener('pointerdown', event => {
-            event.preventDefault();
-            start = { x: event.clientX, y: event.clientY, offset: record.demoPanelOffset || { x: 0, y: 0 } };
-            handle.setPointerCapture?.(event.pointerId);
-            profile.classList.add('is-dragging');
-        });
-        handle.addEventListener('pointermove', event => {
-            if (!start) return;
-            record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
-                x: start.offset.x + event.clientX - start.x,
-                y: start.offset.y + event.clientY - start.y
+        handles.forEach(handle => {
+            let start = null;
+            handle.addEventListener('pointerdown', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                start = { x: event.clientX, y: event.clientY, offset: record.demoPanelOffset || { x: 0, y: 0 } };
+                handle.setPointerCapture?.(event.pointerId);
+                profile.classList.add('is-dragging');
             });
-            applyPlantPanelOffset(profile, record.demoPanelOffset);
-        });
-        const finish = () => {
-            start = null;
-            profile.classList.remove('is-dragging');
-        };
-        handle.addEventListener('pointerup', finish);
-        handle.addEventListener('pointercancel', finish);
-        handle.addEventListener('keydown', event => {
-            const movement = {
-                ArrowLeft: { x: -12, y: 0 },
-                ArrowRight: { x: 12, y: 0 },
-                ArrowUp: { x: 0, y: -12 },
-                ArrowDown: { x: 0, y: 12 }
-            }[event.key];
-            if (!movement) return;
-            event.preventDefault();
-            const offset = record.demoPanelOffset || { x: 0, y: 0 };
-            record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
-                x: offset.x + movement.x,
-                y: offset.y + movement.y
+            handle.addEventListener('pointermove', event => {
+                if (!start) return;
+                event.preventDefault();
+                event.stopPropagation();
+                record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
+                    x: start.offset.x + event.clientX - start.x,
+                    y: start.offset.y + event.clientY - start.y
+                });
+                applyPlantPanelOffset(profile, record.demoPanelOffset);
             });
-            applyPlantPanelOffset(profile, record.demoPanelOffset);
+            const finish = event => {
+                if (start) event?.stopPropagation();
+                start = null;
+                profile.classList.remove('is-dragging');
+            };
+            handle.addEventListener('pointerup', finish);
+            handle.addEventListener('pointercancel', finish);
+            if(handle.matches('[data-desktop-pim-move-handle]'))handle.addEventListener('click', event => event.stopPropagation());
+            handle.addEventListener('keydown', event => {
+                const movement = {
+                    ArrowLeft: { x: -12, y: 0 },
+                    ArrowRight: { x: 12, y: 0 },
+                    ArrowUp: { x: 0, y: -12 },
+                    ArrowDown: { x: 0, y: 12 }
+                }[event.key];
+                if (!movement) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const offset = record.demoPanelOffset || { x: 0, y: 0 };
+                record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
+                    x: offset.x + movement.x,
+                    y: offset.y + movement.y
+                });
+                applyPlantPanelOffset(profile, record.demoPanelOffset);
+            });
         });
     });
 }

@@ -946,6 +946,124 @@
    final overrides after the shared LIM rules so phone centring and Quest
    texture geometry remain exactly as defined above. */
 @media (min-width:960px) and (min-height:600px) and (hover:hover) and (pointer:fine) {
+    /* Desktop console: one stable footprint. The media bay becomes an internal
+       drawer instead of widening the console over the spatial workspace. */
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel {
+        left:18px !important;
+        top:18px !important;
+        right:auto !important;
+        bottom:18px !important;
+        width:414px !important;
+        height:calc(100dvh - 36px) !important;
+        max-height:none !important;
+        grid-template-columns:104px minmax(0,1fr) 40px !important;
+        grid-template-rows:auto minmax(0,1fr) auto auto !important;
+        gap:0 10px !important;
+        transform:none;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel.is-rail-collapsed {
+        grid-template-columns:58px minmax(0,1fr) 40px !important;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-header {
+        min-width:0;
+        min-height:0;
+        padding:26px 86px 10px 4px;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-header h2 {
+        margin:6px 0 2px;
+        font-size:23px;
+        line-height:1.08;
+        overflow-wrap:normal;
+        word-break:normal;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-identity { font-size:12px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-panel-progress { margin-top:8px; padding-top:7px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-panel-progress-heading { gap:6px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-panel-progress-heading span { font-size:8px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-tabs {
+        min-height:0;
+        padding:10px 7px;
+        gap:7px;
+        overflow-y:auto;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-tabs button {
+        min-height:44px;
+        padding:7px 8px;
+        font-size:12px;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel > [role="tabpanel"] { padding:10px 6px 4px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel h3 { font-size:21px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-info-trail { font-size:13px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-info-body { font-size:16px; line-height:1.48; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-utilities button,
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-tools-dock button { min-height:42px; font-size:12px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel:not(.is-media-collapsed) .nlxr-media-wing {
+        position:absolute;
+        z-index:8;
+        inset:0 0 0 auto;
+        width:250px;
+        min-width:0;
+        height:100%;
+        box-sizing:border-box;
+        box-shadow:-18px 0 34px rgba(0,0,0,.52);
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel.is-media-collapsed .nlxr-media-wing {
+        position:static;
+        width:auto;
+        height:auto;
+        box-shadow:none;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-media-toggle:disabled {
+        opacity:.24;
+        cursor:default;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel.is-hidden {
+        right:auto !important;
+        bottom:auto !important;
+        width:fit-content !important;
+        height:fit-content !important;
+    }
+    /* The center cell keeps its semantic reset action. A separate, visible
+       grip owns movement so dragging never resets or opens a PIM cell. */
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-pim-move {
+        position:absolute;
+        z-index:30;
+        left:50%;
+        top:8px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        min-width:96px;
+        min-height:34px;
+        padding:7px 14px 7px 31px;
+        transform:translateX(-50%);
+        border:1px solid rgba(220,239,149,.58);
+        border-radius:999px;
+        background:linear-gradient(180deg,rgba(29,56,42,.94),rgba(10,29,20,.94));
+        color:#eef8df;
+        box-shadow:0 8px 20px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.16);
+        font:700 10px/1 "Montserrat",system-ui,sans-serif;
+        letter-spacing:.055em;
+        text-transform:uppercase;
+        cursor:grab;
+        touch-action:none;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-pim-move::before {
+        content:"";
+        position:absolute;
+        left:12px;
+        width:10px;
+        height:10px;
+        background:radial-gradient(circle,#dcef95 1.35px,transparent 1.6px) 0 0/5px 5px;
+        opacity:.9;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-pim-move:is(:hover,:focus-visible) {
+        border-color:#efffb7;
+        outline:2px solid rgba(220,239,149,.2);
+        outline-offset:3px;
+        box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 18px rgba(220,239,149,.18);
+    }
+    .tryit-demo.is-desktop-spatial-preview .tryit-sim-plant-profile.is-dragging .nlxr-desktop-pim-move { cursor:grabbing; }
     .tryit-demo.is-simulated.is-desktop-spatial-preview .tryit-live-welcome {
         inset:auto !important;
         left:66% !important;
@@ -963,3 +1081,5 @@
     }
     .tryit-demo.is-simulated.is-desktop-spatial-preview[data-lim-surface="true"] ~ .tryit-context-trigger { left:66%; }
 }
+
+.nlxr-desktop-pim-move { display:none; }
