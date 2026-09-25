@@ -1037,6 +1037,28 @@
         width:fit-content !important;
         height:fit-content !important;
     }
+    /* Desktop primary actions belong to the frame controls, not on top of the
+       central spatial screen. Phone and Quest keep their in-screen trigger. */
+    .tryit-demo.is-desktop-spatial-preview ~ .tryit-context-trigger:not([hidden]) {
+        position:fixed;
+        left:calc((100vw + clamp(440px,31vw,540px) + 6px) / 2);
+        top:auto;
+        right:auto;
+        bottom:38px;
+        width:auto;
+        min-width:220px;
+        height:auto;
+        min-height:50px;
+        padding:11px 22px;
+        transform:translateX(-50%);
+        border-color:rgba(223,255,155,.5);
+        border-radius:14px;
+        background:linear-gradient(155deg,rgba(29,65,43,.96),rgba(8,28,18,.96));
+        color:#faffef;
+        box-shadow:0 12px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.12);
+        font:700 13px/1.2 "Segoe UI Variable","Aptos",Inter,system-ui,sans-serif;
+    }
+    .tryit-demo.is-desktop-spatial-preview ~ .tryit-context-trigger:not([hidden]):active { transform:translate(-50%,1px); }
     /* The center cell keeps its semantic reset action. A separate, visible
        grip owns movement so dragging never resets or opens a PIM cell. */
     .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-pim-move {
@@ -1093,7 +1115,7 @@
         transform:translate(calc(-50% + var(--desktop-look-x)),calc(-50% + var(--desktop-look-y))) perspective(1200px) rotateX(var(--desktop-pitch)) rotateY(var(--desktop-yaw)) scale(var(--desktop-scene-zoom)) !important;
         transform-origin:50% 54%;
     }
-    .tryit-demo.is-simulated.is-desktop-spatial-preview[data-lim-surface="true"] ~ .tryit-context-trigger { left:66%; }
+    .tryit-demo.is-simulated.is-desktop-spatial-preview[data-lim-surface="true"] ~ .tryit-context-trigger { left:calc((100vw + clamp(440px,31vw,540px) + 6px) / 2); }
 }
 
 .nlxr-desktop-pim-move { display:none; }

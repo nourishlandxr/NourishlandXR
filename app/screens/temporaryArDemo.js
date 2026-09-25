@@ -571,7 +571,8 @@ function syncDemoPanelActions() {
         // Preview mode uses the visible central screen. Keep its primary
         // trigger inside that surface at every viewport size; immersive AR
         // draws the same trigger directly over the spatial screen.
-        if(simulatedMode && primary?.id==='continue' && mainScreen)mainScreen.append(trigger);
+        const desktopPreview=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
+        if(simulatedMode && primary?.id==='continue' && mainScreen && !desktopPreview)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
     }
     const panelActions=externalTrigger && primary?actions.filter(item=>item!==primary):actions;
@@ -1514,7 +1515,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='Welcome';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody=demoLocalizedText('This is a short guided journey through a living place and the knowledge it holds.\n\nTake a moment to settle in. When you are ready, we will begin with why NourishlandXR exists.');
+    introBoardBody=demoLocalizedText('This is a short guided journey through a living place and the knowledge it holds.\n\nTake a moment to settle in. Continue when you are ready.');
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1621,10 +1622,10 @@ function showArWelcomeShowcase() {
         limMeshVisible=false;
         infoPanel?.setHeaderProgress(null);
         infoPanel?.setGuided(true);
-        setIntroBoardNextGuide('When you are ready, begin with why NourishlandXR exists.');
+        setIntroBoardNextGuide('Discover how knowledge can stay connected to the place it describes.');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
-            continueButton.textContent=demoLocalizedText('Begin with why');
+            continueButton.textContent=demoLocalizedText('Start the journey');
             continueButton.hidden=false;
             continueButton.disabled=false;
             continueButton.onclick=()=>{
@@ -1645,7 +1646,7 @@ function showArWelcomeShowcase() {
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     // The control panel appears as part of the narrative, without a separate gate.
-    setGuide('Welcome to NourishlandXR. Begin with why place-based knowledge matters.');
+    setGuide('Welcome to NourishlandXR. Continue when you are ready.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.

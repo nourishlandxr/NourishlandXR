@@ -1382,7 +1382,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /label\.height = 220/);
     assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.08, -2\.76\]\)/);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
-    assert.match(source, /primary\?\.id==='continue' && mainScreen\)mainScreen\.append\(trigger\)/);
+    assert.match(source, /primary\?\.id==='continue' && mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
     assert.doesNotMatch(source, /MAIN SCREEN/);
     assert.doesNotMatch(styles, /content:"Main Screen"/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:clamp\(18px,3\.5vh,34px\);[^}]*transform:translateX\(-50%\);[^}]*border-radius:15px;/);

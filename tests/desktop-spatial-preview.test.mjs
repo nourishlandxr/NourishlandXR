@@ -82,3 +82,13 @@ test('desktop control panel keeps a stable footprint and internal media drawer',
     assert.match(styles, /height:calc\(100dvh - 36px\) !important/);
     assert.match(styles, /nlxr-panel-move,.nlxr-rail-toggle,.nlxr-media-toggle/);
 });
+
+test('desktop primary action sits outside the central spatial screen', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/living-objects.css');
+    assert.match(demo, /mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
+    assert.match(demo, /demoLocalizedText\('Start the journey'\)/);
+    assert.doesNotMatch(demo, /Begin with why/i);
+    assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
+    assert.match(styles, /bottom:38px/);
+});

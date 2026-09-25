@@ -56,7 +56,7 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
     assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
     assert.match(greeting, /Take a moment to settle in/);
-    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Begin with why'\)/);
+    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
     assert.match(demo, /if\(index===0\)setDemoJourneyStage\('why'\)/);
