@@ -153,8 +153,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
+    const isDesktopDemo=()=>Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     const text=()=>tab==='Modules'?(moduleContext?.body || 'Choose a short guide. It will lead through a few cells, then return to the demo.') : tab==='Help'?INFO_HELP:tab==='Settings'
-        ? 'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
+        ? isDesktopDemo()?'Adjust the reading size to make longer explanations comfortable on this screen.':'Make this panel comfortable to read. Choose a larger text size, or recenter it to the left of your current view. Your plant selection stays in place.'
         : selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
         : identity?'Explore the honeycomb around '+identity.plant+'. Hold a cell to read its details here.'
         :'This is your Control panel. It stays nearby to help you read selected topics, follow the tutorial and adjust the experience.';
@@ -167,7 +168,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
-    const controls=()=>controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});
+    const controls=()=>{const items=controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions});return isDesktopDemo()?items.filter(item=>item.action!=='Recenter'):items;};
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
     const spatialHeight=()=>phoneAR?960:headset?1250:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
@@ -226,6 +227,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         region.append(heading,list);target.append(region);
     }
     function syncPanelWings(){
+        if(isDesktopDemo()){railCollapsed=false;mediaCollapsed=false;}
         element.classList.toggle('is-rail-collapsed',railCollapsed);
         element.classList.toggle('is-media-collapsed',mediaCollapsed);
         const railToggle=element.querySelector('.nlxr-rail-toggle');
@@ -273,10 +275,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         const media=element.querySelector('.nlxr-media-wing');
         if(media){
             const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
-            const desktopDemo=Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
-            if(desktopDemo && !preview && !mediaCollapsed){mediaCollapsed=true;syncPanelWings();}
+            const desktopDemo=isDesktopDemo();
+            if(desktopDemo && (railCollapsed || mediaCollapsed)){railCollapsed=false;mediaCollapsed=false;syncPanelWings();}
             const mediaToggle=media.querySelector('.nlxr-media-toggle');
-            if(mediaToggle && desktopDemo){mediaToggle.disabled=!preview;mediaToggle.setAttribute('aria-label',preview?(mediaCollapsed?'Open plant media':'Collapse plant media'):'Plant media becomes available with a plant selection');}
+            if(mediaToggle && desktopDemo)mediaToggle.remove();
             if(preview){
                 if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
                 else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
@@ -333,8 +335,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         }
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
         const plantPreviewAvailable=showPlantPreview();
-        const desktopDemo=Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
-        if(desktopDemo && !plantPreviewAvailable)mediaCollapsed=true;
+        const desktopDemo=isDesktopDemo();
+        if(desktopDemo){railCollapsed=false;mediaCollapsed=false;}
         const showMediaWing=plantPreviewAvailable || element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel');
         element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
@@ -348,11 +350,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
             const hideButton=makeButton(controls()[0]);hideButton.classList.add('is-panel-hide');
-            const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='●';moveButton.setAttribute('aria-label','Hold and move Control panel');bindPanelMove(moveButton);
-            header.append(hideButton,moveButton,plant,scientific);element.append(header);syncHeaderProgress(header);
+            header.append(hideButton);
+            if(!desktopDemo){const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='●';moveButton.setAttribute('aria-label','Hold and move Control panel');bindPanelMove(moveButton);header.append(moveButton);}
+            header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
-            tabs.append(makePanelToggle('●','nlxr-rail-toggle',()=>{railCollapsed=!railCollapsed;},!railCollapsed));
-            tabs.lastElementChild?.setAttribute('aria-label',railCollapsed?'Open settings and sections':'Collapse settings and sections');
+            if(!desktopDemo){tabs.append(makePanelToggle('●','nlxr-rail-toggle',()=>{railCollapsed=!railCollapsed;},!railCollapsed));tabs.lastElementChild?.setAttribute('aria-label',railCollapsed?'Open settings and sections':'Collapse settings and sections');}
             controls().filter(item=>['tab','menu'].includes(item.kind)).forEach(item=>tabs.append(makeButton(item)));
             element.append(tabs);
             if(pathwayContext){
@@ -376,7 +378,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             element.append(content);
             if(showMediaWing){
                 const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
-                const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{if(desktopDemo && !showPlantPreview())return;mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.disabled=desktopDemo && !plantPreviewAvailable;mediaToggle.setAttribute('aria-label',mediaToggle.disabled?'Plant media becomes available with a plant selection':(mediaCollapsed?'Open plant media':'Collapse plant media'));media.append(mediaToggle);
+                if(!desktopDemo){const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);}
                 if(showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
                 else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
                 element.append(media);
@@ -499,7 +501,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
-        setCompact(value=true){const compact=Boolean(value);railCollapsed=compact;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && (element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')))render(true);else syncPanelWings();},
+        setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=compact;if(compact)mediaCollapsed=true;else if(isDesktopDemo())mediaCollapsed=false;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && (element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')))render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},

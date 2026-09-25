@@ -11448,8 +11448,8 @@ body:has(.app-surface) {
         --desktop-yaw:0deg;
         --desktop-pitch:0deg;
         --desktop-scene-zoom:1;
-        --desktop-console-width:clamp(350px,29vw,414px);
-        --desktop-window-left:calc(var(--desktop-console-width) + 72px);
+        --desktop-console-width:clamp(440px,31vw,540px);
+        --desktop-window-left:calc(var(--desktop-console-width) + 28px);
         --desktop-window-center:66%;
         background:#020806;
     }

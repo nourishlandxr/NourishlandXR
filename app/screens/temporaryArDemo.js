@@ -546,11 +546,12 @@ function demoControlIsVisible(selector) {
 
 function demoPanelActions() {
     const actions=[];
+    const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
     if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
-    actions.push({id:'safety',label:'Safety guidance'});
+    if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');

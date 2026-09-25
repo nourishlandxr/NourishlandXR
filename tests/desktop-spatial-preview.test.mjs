@@ -70,12 +70,15 @@ test('desktop PIM movement has a dedicated bounded handle', () => {
 
 test('desktop control panel keeps a stable footprint and internal media drawer', () => {
     const panel = read('app/services/pimInfoPanel.js');
+    const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(panel, /desktopDemo && !plantPreviewAvailable/);
-    assert.match(panel, /desktopDemo && !preview && !mediaCollapsed/);
-    assert.match(panel, /Plant media becomes available with a plant selection/);
+    assert.match(panel, /if\(desktopDemo\)\{railCollapsed=false;mediaCollapsed=false;\}/);
+    assert.match(panel, /if\(!desktopDemo\)\{const moveButton=/);
+    assert.match(panel, /if\(!desktopDemo\)\{tabs\.append\(makePanelToggle/);
+    assert.match(panel, /isDesktopDemo\(\)\?items\.filter\(item=>item\.action!=='Recenter'\):items/);
+    assert.match(demo, /if\(!desktopDemo\)actions\.push\(\{id:'safety',label:'Safety guidance'\}\)/);
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.nlxr-info-panel\.is-demo-panel/);
-    assert.match(styles, /width:414px !important/);
+    assert.match(styles, /width:clamp\(440px,31vw,540px\) !important/);
     assert.match(styles, /height:calc\(100dvh - 36px\) !important/);
-    assert.match(styles, /width:250px/);
+    assert.match(styles, /nlxr-panel-move,.nlxr-rail-toggle,.nlxr-media-toggle/);
 });
