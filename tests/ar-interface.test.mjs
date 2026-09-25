@@ -1373,7 +1373,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 220/);
-    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0, -0\.58, -2\.72\]\)/);
+    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.08, -2\.76\]\)/);
+    assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
+    assert.match(source, /primary\?\.id==='continue' && mainScreen\)mainScreen\.append\(trigger\)/);
+    assert.match(source, /MAIN SCREEN/);
+    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*right:clamp\(18px,4vw,42px\);[^}]*border-radius:15px;/);
+    assert.match(styles, /\.tryit-live-welcome > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*bottom:25%;[^}]*pointer-events:auto;/);
+    assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(false\)/);

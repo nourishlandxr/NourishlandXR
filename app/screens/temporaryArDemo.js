@@ -170,7 +170,10 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardPosition: [0.42, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
-const INTRO_CONTROL_POSITION = Object.freeze([0, -0.58, -2.72]);
+// Keep the primary trigger on the Main Screen rather than floating beneath it.
+// It sits slightly in front of the screen so the texture remains crisp and the
+// shared ray hit target can still resolve it independently from LIM cells.
+const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.08, -2.76]);
 const INTRO_CONTROL_SCALE = Object.freeze([1.35, 0.58]);
 const DEMO_QUEST_ORB_SCALE = 0.62;
 // The shared demo quad is .4 m by .16 m before model scaling. These values
@@ -203,7 +206,8 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
+const demoMainScreenLabel = () => demoIsPortuguese() ? 'ECRÃ PRINCIPAL' : demoIsDutch() ? 'HOOFDSCHERM' : 'MAIN SCREEN';
+const demoIntroLabel = () => introBoardStep ? `${demoMainScreenLabel()} · ${introBoardStep}` : demoMainScreenLabel();
 const WELCOME_NARRATIVE = Object.freeze([
     Object.freeze({at:0,text:demoLocalizedText('Every living place holds knowledge.'),accent:'#dfff9b'}),
     Object.freeze({at:4500,text:demoLocalizedText('But that knowledge is often scattered, hidden or difficult to use.'),accent:'#b9ddff'}),
@@ -556,7 +560,11 @@ function syncDemoPanelActions() {
     const trigger=appRoot?.querySelector('[data-tryit-context-trigger]');
     if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
-        if(simulatedMode && window.matchMedia('(max-width:600px)').matches && primary?.id==='continue' && board)board.append(trigger);
+        const mainScreen=arWelcomeLayer || board;
+        // Preview mode uses the visible DOM Main Screen. Keep its primary
+        // trigger inside that surface at every viewport size; immersive AR
+        // draws the same trigger directly over the spatial Main Screen.
+        if(simulatedMode && primary?.id==='continue' && mainScreen)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
     }
     const panelActions=externalTrigger && primary?actions.filter(item=>item!==primary):actions;
@@ -977,7 +985,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
-    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Press the round ${choiceLabels[0]} trigger at the bottom centre.`:'Choose an option on the green panel.'),{reveal:false});
+    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Use ${choiceLabels[0]} on the Main Screen.`:'Choose an option on the Main Screen.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
@@ -1128,7 +1136,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
-        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Press the round ${demoLocalizedText(buttonLabel)} trigger at the bottom centre.`:'Explore the visible cells for more detail.'),{reveal:false});
+        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Use ${demoLocalizedText(buttonLabel)} on the Main Screen.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');

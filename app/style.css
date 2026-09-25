@@ -8904,6 +8904,48 @@ button.ar-square-action::before { display: none !important; }
     box-shadow:inset 0 1px rgba(255,255,255,.12),0 4px 14px rgba(0,0,0,.16);
     font:750 13px/1.16 system-ui,sans-serif; text-align:center; cursor:pointer; touch-action:none;
 }
+.tryit-guided-choice.is-welcome-board > .tryit-context-trigger {
+    position:absolute;
+    left:auto;
+    right:clamp(18px,4vw,42px);
+    bottom:clamp(18px,3.5vh,34px);
+    width:auto;
+    min-width:min(240px,calc(100% - 36px));
+    height:auto;
+    min-height:54px;
+    padding:12px 22px;
+    transform:none;
+    border-color:rgba(223,255,155,.46);
+    border-radius:15px;
+    background:rgba(117,164,91,.20);
+    color:#faffef;
+    box-shadow:inset 0 1px rgba(255,255,255,.10),0 10px 28px rgba(0,0,0,.26);
+    font-size:.82rem;
+    letter-spacing:.01em;
+}
+.tryit-guided-choice.is-welcome-board > .tryit-context-trigger:active { transform:translateY(1px); }
+.tryit-live-welcome > .tryit-context-trigger {
+    position:absolute;
+    left:50%;
+    right:auto;
+    top:auto;
+    bottom:25%;
+    width:auto;
+    min-width:min(230px,42%);
+    height:auto;
+    min-height:50px;
+    padding:11px 20px;
+    transform:translateX(-50%);
+    border-color:rgba(223,255,155,.46);
+    border-radius:15px;
+    background:rgba(117,164,91,.22);
+    color:#faffef;
+    box-shadow:inset 0 1px rgba(255,255,255,.10),0 10px 28px rgba(0,0,0,.30);
+    font-size:clamp(.68rem,1.25vw,.82rem);
+    letter-spacing:.01em;
+    pointer-events:auto;
+}
+.tryit-live-welcome > .tryit-context-trigger:active { transform:translate(-50%,1px); }
 .tryit-context-trigger:hover,.tryit-context-trigger:focus-visible { outline:3px solid rgba(220,239,149,.42); outline-offset:5px; filter:brightness(1.08); }
 .tryit-context-trigger:active { transform:translate(-50%,2px); background:rgba(50,82,57,.34); }
 .tryit-context-trigger[hidden] { display:none!important; }
@@ -8922,6 +8964,16 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.4rem,3.9vw,1.8rem); line-height:1.4; }
 @media(max-width:600px) { .tryit-context-trigger { width:88px; height:88px; padding:10px; font-size:11px; } }
+@media(max-width:600px) {
+    .tryit-live-welcome > .tryit-context-trigger {
+        width:auto;
+        min-width:min(220px,46%);
+        height:auto;
+        min-height:48px;
+        padding:10px 16px;
+        font-size:.7rem;
+    }
+}
 
 /* Demo pitch journey ----------------------------------------------------
    A quiet, modern forest surface replaces the old bright green gradient.
@@ -8944,27 +8996,24 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board,
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
-    border-color:rgba(223,255,155,.25);
-    background:
-        radial-gradient(circle at 14% 4%,rgba(202,255,172,.10),transparent 32%),
-        radial-gradient(circle at 92% 86%,rgba(102,177,157,.09),transparent 38%),
-        linear-gradient(145deg,rgba(14,42,29,.84),rgba(5,19,13,.76));
+    border-color:rgba(223,255,155,.20);
+    background:linear-gradient(155deg,rgba(9,28,19,.94),rgba(3,13,9,.93));
     color:var(--demo-white);
-    box-shadow:0 28px 84px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.11);
-    backdrop-filter:blur(22px) saturate(112%);
+    box-shadow:0 28px 84px rgba(0,0,0,.56),inset 0 1px rgba(255,255,255,.07);
+    backdrop-filter:blur(24px) saturate(92%);
 }
-.tryit-demo .tryit-guided-choice.is-welcome-board > small { color:var(--demo-mint); }
+.tryit-demo .tryit-guided-choice.is-welcome-board > small { color:#e5ffad; }
 .tryit-demo .tryit-guided-choice.is-welcome-board h2,
 .tryit-demo .tryit-guided-choice.is-welcome-board p {
-    color:var(--demo-white) !important;
-    text-shadow:0 2px 16px rgba(0,0,0,.55);
+    color:#fbfdf9 !important;
+    text-shadow:0 2px 18px rgba(0,0,0,.72);
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
-    border-top-color:rgba(223,255,155,.22);
+    border-top-color:rgba(223,255,155,.16);
 }
 .tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
-    content:"Your guide ↙";
-    color:rgba(223,255,155,.76);
+    content:"Main Screen";
+    color:rgba(223,255,155,.54);
 }
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,
