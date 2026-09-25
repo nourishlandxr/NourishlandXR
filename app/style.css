@@ -11436,6 +11436,228 @@ body:has(.app-surface) {
     color: var(--app-green-deep);
 }
 
+/* Desktop Spatial Window -------------------------------------------------
+   Desktop is a framed view into the same spatial place, never a flattened
+   dashboard. This layer is capability-gated in JavaScript and media-gated
+   again here, so phone AR and immersive Quest rendering remain untouched. */
+.nlxr-desktop-spatial-chrome { display:none; }
+@media (min-width:960px) and (min-height:600px) and (hover:hover) and (pointer:fine) {
+    .tryit-demo.is-desktop-spatial-preview {
+        --desktop-look-x:0px;
+        --desktop-look-y:0px;
+        --desktop-yaw:0deg;
+        --desktop-pitch:0deg;
+        --desktop-scene-zoom:1;
+        --desktop-console-width:clamp(350px,29vw,414px);
+        --desktop-window-left:calc(var(--desktop-console-width) + 72px);
+        --desktop-window-center:66%;
+        background:#020806;
+    }
+    .tryit-demo.is-desktop-spatial-preview .tryit-stage {
+        perspective:1400px;
+        cursor:grab;
+        background:
+            radial-gradient(ellipse at 72% 42%,rgba(80,137,92,.17),transparent 30%),
+            radial-gradient(ellipse at 66% 76%,rgba(38,96,69,.12),transparent 40%),
+            linear-gradient(145deg,#07140f 0%,#020806 72%,#010403 100%);
+    }
+    .tryit-demo.is-desktop-spatial-preview.is-desktop-looking .tryit-stage { cursor:grabbing; }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-chrome {
+        position:fixed;
+        inset:0;
+        z-index:12000;
+        display:block;
+        pointer-events:none;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-frame {
+        position:absolute;
+        left:var(--desktop-window-left);
+        top:18px;
+        right:22px;
+        bottom:18px;
+        overflow:hidden;
+        border:1px solid rgba(190,221,198,.24);
+        border-radius:28px 18px 34px 20px;
+        background:
+            radial-gradient(ellipse at 52% 46%,rgba(44,91,62,.09),transparent 48%),
+            linear-gradient(180deg,rgba(10,24,18,.38),rgba(2,10,7,.14));
+        box-shadow:inset 0 1px rgba(255,255,255,.07),inset 0 0 80px rgba(0,0,0,.28),0 22px 72px rgba(0,0,0,.38);
+        clip-path:polygon(0 18px,18px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 24px),calc(100% - 24px) 100%,12px 100%,0 calc(100% - 12px));
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-frame::before {
+        content:"";
+        position:absolute;
+        inset:0;
+        background:
+            linear-gradient(90deg,transparent 49.86%,rgba(207,232,207,.055) 50%,transparent 50.14%),
+            linear-gradient(transparent 49.86%,rgba(207,232,207,.045) 50%,transparent 50.14%);
+        background-size:84px 84px;
+        opacity:.58;
+        mask-image:linear-gradient(to bottom,transparent 2%,#000 28%,#000 78%,transparent 100%);
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-frame::after {
+        content:"";
+        position:absolute;
+        inset:0;
+        border:1px solid rgba(218,238,212,.08);
+        border-radius:inherit;
+        background:radial-gradient(ellipse at center,transparent 48%,rgba(0,5,3,.44) 100%);
+        box-shadow:inset 0 0 0 9px rgba(2,8,5,.22);
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-heading {
+        position:absolute;
+        left:22px;
+        top:17px;
+        right:22px;
+        z-index:3;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:18px;
+        color:rgba(233,243,230,.76);
+        font:700 10px/1.2 "Montserrat",system-ui,sans-serif;
+        letter-spacing:.13em;
+        text-transform:uppercase;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-heading span { display:flex; align-items:center; gap:8px; }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-heading i {
+        width:7px;
+        height:7px;
+        border-radius:50%;
+        background:#cce795;
+        box-shadow:0 0 10px rgba(204,231,149,.64);
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-heading small {
+        color:rgba(197,216,199,.5);
+        font:600 9px/1.2 "Montserrat",system-ui,sans-serif;
+        letter-spacing:.08em;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth {
+        position:absolute;
+        left:4%;
+        right:4%;
+        bottom:-19%;
+        height:52%;
+        transform:perspective(720px) rotateX(68deg) translateY(var(--desktop-look-y));
+        transform-origin:50% 100%;
+        opacity:.44;
+        background:
+            repeating-linear-gradient(90deg,transparent 0 77px,rgba(180,221,185,.13) 78px 79px),
+            repeating-linear-gradient(0deg,transparent 0 43px,rgba(180,221,185,.12) 44px 45px);
+        mask-image:linear-gradient(to top,#000,transparent 92%);
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i {
+        position:absolute;
+        left:50%;
+        top:50%;
+        width:clamp(140px,18vw,280px);
+        aspect-ratio:1;
+        transform:translate(-50%,-50%) scale(calc(.55 + var(--depth-index,0) * .32));
+        border:1px solid rgba(204,231,149,.13);
+        border-radius:50%;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i:nth-child(1){--depth-index:0}
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i:nth-child(2){--depth-index:1}
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i:nth-child(3){--depth-index:2}
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i:nth-child(4){--depth-index:3}
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-depth i:nth-child(5){--depth-index:4}
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-horizon {
+        position:absolute;
+        left:9%;
+        right:9%;
+        top:56%;
+        height:1px;
+        background:linear-gradient(90deg,transparent,rgba(196,224,199,.24) 22%,rgba(220,239,149,.34) 50%,rgba(196,224,199,.24) 78%,transparent);
+        box-shadow:0 0 18px rgba(141,193,149,.16);
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-help {
+        position:absolute;
+        left:22px;
+        bottom:17px;
+        z-index:3;
+        margin:0;
+        color:rgba(210,225,211,.52);
+        font:600 9px/1.2 "Montserrat",system-ui,sans-serif;
+        letter-spacing:.045em;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-help span { margin:0 5px; color:rgba(220,239,149,.52); }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-reset {
+        position:absolute;
+        right:18px;
+        bottom:12px;
+        z-index:4;
+        min-height:30px;
+        padding:6px 11px;
+        border:1px solid rgba(208,231,205,.18);
+        border-radius:999px;
+        background:rgba(10,28,19,.52);
+        color:rgba(233,243,230,.68);
+        font:650 9px/1 "Montserrat",system-ui,sans-serif;
+        letter-spacing:.04em;
+        pointer-events:auto;
+        cursor:pointer;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-desktop-spatial-reset:is(:hover,:focus-visible) {
+        border-color:rgba(220,239,149,.52);
+        color:#f5faee;
+        outline:2px solid rgba(220,239,149,.16);
+        outline-offset:2px;
+    }
+    .tryit-demo.is-desktop-spatial-preview .tryit-live-welcome {
+        inset:auto;
+        left:var(--desktop-window-center);
+        top:50%;
+        width:min(68vw,820px,calc(94dvh * 1.19));
+        min-width:0;
+        height:auto;
+        aspect-ratio:2500 / 2100;
+        overflow:visible;
+        transform:translate(calc(-50% + var(--desktop-look-x)),calc(-50% + var(--desktop-look-y))) perspective(1200px) rotateX(var(--desktop-pitch)) rotateY(var(--desktop-yaw)) scale(var(--desktop-scene-zoom));
+        transform-origin:50% 54%;
+        filter:drop-shadow(0 28px 42px rgba(0,0,0,.32));
+        transition:transform .16s ease-out;
+    }
+    .tryit-demo.is-desktop-spatial-preview.is-desktop-looking .tryit-live-welcome { transition:none; }
+    .tryit-demo.is-desktop-spatial-preview [data-tryit-sim-markers] {
+        position:fixed;
+        inset:0;
+        z-index:12001;
+        transform:perspective(1400px) rotateX(var(--desktop-pitch)) rotateY(var(--desktop-yaw)) scale(var(--desktop-scene-zoom));
+        transform-origin:70% 54%;
+        transform-style:preserve-3d;
+        pointer-events:none;
+        transition:transform .16s ease-out;
+    }
+    .tryit-demo.is-desktop-spatial-preview.is-desktop-looking [data-tryit-sim-markers] { transition:none; }
+    .tryit-demo.is-desktop-spatial-preview [data-tryit-sim-markers] > * { pointer-events:auto; }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-info-panel.is-demo-panel {
+        left:18px;
+        top:18px;
+        bottom:18px;
+        width:var(--desktop-console-width);
+        height:calc(100dvh - 36px);
+        max-height:none;
+        border-radius:22px 14px 26px 18px;
+    }
+    .tryit-demo.is-desktop-spatial-preview .nlxr-info-panel.is-demo-panel.is-hidden {
+        top:18px;
+        bottom:auto;
+        height:fit-content;
+    }
+    .tryit-demo.is-desktop-spatial-preview .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+        left:var(--desktop-window-center);
+        width:min(58vw,720px);
+        max-height:calc(100dvh - 128px);
+    }
+    .tryit-demo.is-desktop-spatial-preview .tryit-place.creator-ar-placement-guide {
+        filter:drop-shadow(0 16px 22px rgba(0,0,0,.38));
+    }
+}
+@media (prefers-reduced-motion:reduce) {
+    .tryit-demo.is-desktop-spatial-preview .tryit-live-welcome,
+    .tryit-demo.is-desktop-spatial-preview [data-tryit-sim-markers] { transition:none; }
+}
+
 .app-surface-selection { gap: 16px; }
 .app-surface-selection .page-header { padding: 18px; }
 .app-surface-selection .project-section { display: grid; gap: 12px; padding: 16px; }

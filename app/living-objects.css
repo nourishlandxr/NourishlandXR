@@ -941,3 +941,25 @@
     }
     .nlxr-info-panel.is-demo-panel.is-media-collapsed.is-rail-collapsed { grid-template-columns:minmax(0,1fr) 42px; }
 }
+
+/* Desktop owns a framed spatial window beside the Control panel. Keep these
+   final overrides after the shared LIM rules so phone centring and Quest
+   texture geometry remain exactly as defined above. */
+@media (min-width:960px) and (min-height:600px) and (hover:hover) and (pointer:fine) {
+    .tryit-demo.is-simulated.is-desktop-spatial-preview .tryit-live-welcome {
+        inset:auto !important;
+        left:66% !important;
+        top:50% !important;
+        right:auto !important;
+        bottom:auto !important;
+        width:min(68vw,820px,calc((100dvh - 36px) * 2500 / 2100)) !important;
+        min-width:0 !important;
+        max-width:none !important;
+        height:auto !important;
+        aspect-ratio:2500 / 2100 !important;
+        overflow:visible;
+        transform:translate(calc(-50% + var(--desktop-look-x)),calc(-50% + var(--desktop-look-y))) perspective(1200px) rotateX(var(--desktop-pitch)) rotateY(var(--desktop-yaw)) scale(var(--desktop-scene-zoom)) !important;
+        transform-origin:50% 54%;
+    }
+    .tryit-demo.is-simulated.is-desktop-spatial-preview[data-lim-surface="true"] ~ .tryit-context-trigger { left:66%; }
+}
