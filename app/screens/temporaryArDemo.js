@@ -170,7 +170,7 @@ const AR_PHONE_COMFORT = Object.freeze({
     boardPosition: [0.42, 0.82, -2.8],
     boardScale: [5.6, 10.8]
 });
-// Keep the primary trigger on the Main Screen rather than floating beneath it.
+// Keep the primary trigger on the central screen rather than floating beneath it.
 // It sits slightly in front of the screen so the texture remains crisp and the
 // shared ray hit target can still resolve it independently from LIM cells.
 const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.08, -2.76]);
@@ -206,8 +206,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoMainScreenLabel = () => demoIsPortuguese() ? 'ECRÃ PRINCIPAL' : demoIsDutch() ? 'HOOFDSCHERM' : 'MAIN SCREEN';
-const demoIntroLabel = () => introBoardStep ? `${demoMainScreenLabel()} · ${introBoardStep}` : demoMainScreenLabel();
+const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
     Object.freeze({at:0,text:demoLocalizedText('Every living place holds knowledge.'),accent:'#dfff9b'}),
     Object.freeze({at:4500,text:demoLocalizedText('But that knowledge is often scattered, hidden or difficult to use.'),accent:'#b9ddff'}),
@@ -385,7 +384,7 @@ function demoPimSurfaceSize(record) {
 
 function demoPimPanel(record, pose = record?.informationPose) {
     const size = record?.pimTextureSize || demoPimSurfaceSize(record);
-    return pimSpatialPanel(orientDemoPimPoseToViewer(pose), {
+    return pimSpatialPanel(pose, {
         width: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres * size.width / PIM_TEXTURE_SIZE.width,
         height: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
     });
@@ -548,7 +547,8 @@ function demoPanelActions() {
     actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
-    if(demoControlIsVisible('[data-tryit-intro-continue]'))actions.push({id:'continue',label:appRoot.querySelector('[data-tryit-intro-continue]').textContent.trim() || 'Continue',primary:true});
+    const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
+    if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled});
     return actions.slice(-8);
 }
 
@@ -561,9 +561,9 @@ function syncDemoPanelActions() {
     if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         const mainScreen=arWelcomeLayer || board;
-        // Preview mode uses the visible DOM Main Screen. Keep its primary
+        // Preview mode uses the visible central screen. Keep its primary
         // trigger inside that surface at every viewport size; immersive AR
-        // draws the same trigger directly over the spatial Main Screen.
+        // draws the same trigger directly over the spatial screen.
         if(simulatedMode && primary?.id==='continue' && mainScreen)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
     }
@@ -578,7 +578,7 @@ function syncDemoPanelActions() {
 function setLimMeshVisible(visible) {
     if(visible && !limMeshVisible)limMeshActivatedAt=arWelcomeClock.elapsed;
     limMeshVisible=Boolean(visible);
-    if(limMeshVisible)infoPanel?.showLearning({id:'lim-archetype-invitation',title:'Learning Information Mesh · LIM',body:'The LIM helps turn information into useful questions. Read what is here, understand relationships, connect knowledge to purpose, then choose an action and learn from the result.',accent:'#dfff9b',mesh:'lim',editable:false});
+    if(limMeshVisible)infoPanel?.showLearning({id:'lim-archetype-invitation',title:'Connected learning',body:'This view turns information into useful questions. Read what is here, understand relationships, connect knowledge to purpose, then choose an action and learn from the result.',accent:'#dfff9b',mesh:'lim',editable:false});
     introBoardTextureDirty=true;
     paintWelcomeLayer(performance.now());
     syncDemoPanelActions();
@@ -677,7 +677,7 @@ function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
             <p>${profile.shortProfile}</p>
             <p>A Plant Live Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
           </section>
-          <section class="tryit-virtual-tag-pim" aria-label="Pigeon Pea Plant Information Mesh"><div data-demo-pim-web-mount></div></section>
+          <section class="tryit-virtual-tag-pim" aria-label="Pigeon Pea plant information"><div data-demo-pim-web-mount></div></section>
         </main>
         <button type="button" class="tryit-virtual-tag-close" data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR</button>
       </div>`;
@@ -827,7 +827,7 @@ function runLimApplicationStory(bridge,index=0) {
     const final=index===LIM_APPLICATION_LENSES.length-1;
     showIntroBoard(
         lens.title,
-        [lens.explanation,`In this example, the connected LIM cell is “${cellTitle}”. Select other visible cells whenever you want to explore further.`],
+        [lens.explanation,`In this example, the connected learning topic is “${cellTitle}”. Select other visible topics whenever you want to explore further.`],
         final?'Apply this to the map':'Continue',
         ()=>{
             suppressSessionSelectUntil=performance.now()+700;
@@ -841,7 +841,7 @@ function runLimApplicationStory(bridge,index=0) {
             }
             runLimApplicationStory(bridge,index+1);
         },
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:`PIM to LIM · ${index+1} of ${LIM_APPLICATION_LENSES.length}`,nextGuide:final?'Add a second plant to apply the reasoning in the mapped place.':'Continue through the next way of thinking.'}
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:`Putting information to work · ${index+1} of ${LIM_APPLICATION_LENSES.length}`,nextGuide:final?'Add a second plant to apply the reasoning in the mapped place.':'Continue through the next way of thinking.'}
     );
 }
 
@@ -859,16 +859,16 @@ function openPimLimBridge(context) {
     showIntroBoard(
         bridge.title,
         [
-            `PIM information · ${bridge.sourceTitle}`,
+            `Plant information · ${bridge.sourceTitle}`,
             bridge.question,
             bridge.application,
-            'This is the role of the Learning Information Mesh, or LIM: it helps a beginner move from “what is this?” to “what could I do with this here?”'
+            'Connected learning moves from “what is this?” to “what could I do with this here?”'
         ],
         'Follow the connection',
         ()=>runLimApplicationStory(bridge,0),
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'The bridge from PIM to LIM',nextGuide:'Follow the connection through observation, understanding, purpose and action.'}
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'From information to practical use',nextGuide:'Follow the connection through observation, understanding, purpose and action.'}
     );
-    setGuide(`${bridge.sourceTitle} is connected to related LIM questions about purpose and application.`);
+    setGuide(`${bridge.sourceTitle} is connected to questions about purpose and practical use.`);
     return true;
 }
 
@@ -985,7 +985,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
-    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Use ${choiceLabels[0]} on the Main Screen.`:'Choose an option on the Main Screen.'),{reveal:false});
+    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
@@ -1136,7 +1136,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
-        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Use ${demoLocalizedText(buttonLabel)} on the Main Screen.`:'Explore the visible cells for more detail.'),{reveal:false});
+        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');
@@ -1150,7 +1150,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.textContent = demoLocalizedText(buttonLabel);
         // Keep the Plant Orb introduction on screen until its explanation has
         // appeared; a second press must not jump straight from pathways to Areas.
-        continueButton.hidden = deferContinueUntilCopyReady;
+        continueButton.hidden = false;
         continueButton.disabled = deferContinueUntilCopyReady;
         continueButton.onclick = () => {
             if (deferContinueUntilCopyReady && typing) return;
@@ -1191,14 +1191,14 @@ function showPersistentPimPrompt(record) {
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
     if (record?.demoProfileInteracted) {
-        setGuide(`${record.name || 'Plant'} Plant Information Mesh is ready. Use the round Continue trigger at the bottom centre for the next demo step.`);
+        setGuide(`${record.name || 'Plant'} information is ready. Use Continue below for the next demo step.`);
         return;
     }
     const plantName = record?.name || 'Plant';
-    const title = demoLocalizedText('Plant Information Mesh · PIM');
-    const body = demoLocalizedText(`The PIM explains what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles. Some facts also connect to the LIM, where you can ask what the information means for this place.`);
+    const title = demoLocalizedText('Explore this plant');
+    const body = demoLocalizedText(`This connected view brings together what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles. Some facts also lead to questions about what the information means for this place.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide('Explore a plant cell. If “Why does this matter?” appears, follow it into the LIM, or continue when ready.');
+    setIntroBoardNextGuide('Explore a plant topic. If “Why does this matter?” appears, follow the connection, or continue when ready.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1219,7 +1219,7 @@ function showPersistentPimPrompt(record) {
     skipDemoNarration = () => {
         continueButton.click();
     };
-    setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh, then connect useful facts to purpose in the LIM.`);
+    setGuide(`${plantName} information opened. Select topics to explore, then connect useful facts to purpose and practical use.`);
 }
 
 function useSharedWelcomeBoard(visible) {
@@ -1248,7 +1248,7 @@ function updateLimPathway(next){limPathwayState=next;persistLimPathway();introBo
 function pathwayContext(selectedId=''){
     const pathway=understandPlacePathway();if(!pathway)return null;
     const stepId=currentPathwayCellId(),step=LIM_CELL_BY_ID[stepId],number=limPathwayState.currentStepIndex+1;
-    if(limPathwayState.status==='completed')return {mode:'completed',title:pathway.title,progress:'Path completed',explanation:`You’ve completed this learning path. ${limPathwayState.observationNoteStatus==='placed'?'Your observation Note was placed.':'Continue exploring, revisit a topic or record something you noticed about this place.'}`,actions:[{action:'PathContinue',label:'Explore freely',primary:true},{action:'PathRestart',label:'Restart path'},{action:'PathClose',label:'Close LIM'}]};
+    if(limPathwayState.status==='completed')return {mode:'completed',title:pathway.title,progress:'Path completed',explanation:`You’ve completed this learning path. ${limPathwayState.observationNoteStatus==='placed'?'Your observation Note was placed.':'Continue exploring, revisit a topic or record something you noticed about this place.'}`,actions:[{action:'PathContinue',label:'Explore freely',primary:true},{action:'PathRestart',label:'Restart path'},{action:'PathClose',label:'Close learning view'}]};
     if(limPathwayState.status==='paused')return {mode:'paused',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length}`,explanation:'Your place is saved. Resume when you choose, restart this path, or continue exploring freely.',actions:[{action:'PathResume',label:'Resume',primary:true},{action:'PathRestart',label:'Restart'},{action:'PathExplore',label:'Explore freely'}]};
     if(limPathwayState.status!=='active')return {mode:'landing',title:'Learning Paths',preview:true,progress:'Optional guided exploration',explanation:'Follow a gentle sequence of connected topics, or continue exploring freely. More paths are being developed.',actions:[{action:'PathExplore',label:'Explore freely',primary:true},{action:'PathPreview',label:'Try Understand This Place'}]};
     if(selectedId && selectedId!==stepId)return {mode:'off-path',title:pathway.title,progress:`Step ${number} of ${pathway.orderedCellIds.length}`,explanation:'You’re exploring beyond the path.',actions:[{action:'PathReturn',label:'Return to path',primary:true},{action:'PathLeave',label:'Leave path'}]};
@@ -1262,7 +1262,7 @@ function completeLearningPath(noteStatus){updateLimPathway(completeLimPathway(li
 function handlePathwayAction(action){
     const pathway=understandPlacePathway();if(!pathway)return;
     if(action==='PathExplore'){if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));infoPanel?.setPathwayContext(null);return;}
-    if(action==='PathPreview'){infoPanel?.setPathwayContext({mode:'introduction',title:pathway.title,progress:'Optional guided exploration',explanation:'Understand This Place offers an optional route through seven connected LIM topics. You can leave the path, explore any other cell and return whenever you choose.',actions:[{action:'PathBegin',label:'Begin path',primary:true},{action:'PathExplore',label:'Explore freely'}]});return;}
+    if(action==='PathPreview'){infoPanel?.setPathwayContext({mode:'introduction',title:pathway.title,progress:'Optional guided exploration',explanation:'Understand This Place offers an optional route through seven connected topics. You can leave the path, explore any other topic and return whenever you choose.',actions:[{action:'PathBegin',label:'Begin path',primary:true},{action:'PathExplore',label:'Explore freely'}]});return;}
     if(action==='PathBegin' || action==='PathRestart'){updateLimPathway(startLimPathway(pathway));selectCurrentPathwayCell();return;}
     if(action==='PathResume'){updateLimPathway(resumeLimPathway(limPathwayState));selectCurrentPathwayCell();return;}
     if(action==='PathLeave'){updateLimPathway(pauseLimPathway(limPathwayState));infoPanel?.setPathwayContext(pathwayContext());return;}
@@ -1511,7 +1511,7 @@ function showArWelcomeShowcase() {
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel explains whatever you select. You do not need prior plant, farming or technology knowledge to begin.',accent:'#9fdcff',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel stays with you as you explore, explaining each plant, place and connection when you select it.',accent:'#9fdcff',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
     infoPanel?.suspend(false);
     infoPanel?.setIntroduction(true);
@@ -1612,7 +1612,7 @@ function showArWelcomeShowcase() {
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
         limMeshVisible=false;
-        runArWelcomeTutorial(0);
+        runArWelcomeGreeting();
     };
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
@@ -1656,8 +1656,8 @@ const DEMO_ORIENTATION_STEPS = [
         'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
     ]},
     {title:'Begin with one plant',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
-        'A Plant Orb is an information access point attached to a real plant. It can open a Plant Information Mesh, or PIM.',
-        'Pigeon Pea is our example. You do not need to know the plant already. Place its Orb and the map will explain it step by step.'
+        'A Plant Orb is an information access point attached to a real plant. It opens a connected view of that plant’s information.',
+        'Pigeon Pea is our example. Place its Orb and the map will reveal its information step by step.'
     ]}
 ];
 
@@ -1666,13 +1666,29 @@ const POST_PLACEMENT_AREA_STEP = {
     nextGuide:'Press Explore Pigeon Pea, then open the orb you just placed.',
     paragraphs:[
         'Pigeon Pea now has a location in this scene. Its information stays attached to the plant instead of becoming another disconnected page.',
-        'Open the Orb to see the Plant Information Mesh. The PIM begins with simple facts and lets interested visitors follow deeper branches.'
+        'Open the Orb to explore the plant’s information. It begins with simple facts and lets interested visitors follow deeper branches.'
     ]
 };
 
+function runArWelcomeGreeting() {
+    demoOrientationStep=-1;
+    infoPanel?.setHeaderProgress(null);
+    infoPanel?.setGuided(true);
+    showIntroBoard('Welcome to NourishlandXR',[
+        'This is a short guided journey through a living place and the knowledge it holds.',
+        'Take a moment to settle in. When you are ready, we will begin with why NourishlandXR exists.'
+    ],'Begin with why',()=>runArWelcomeTutorial(0),{
+        tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,
+        stepLabel:'Welcome',
+        nextGuide:'When you are ready, begin with why NourishlandXR exists.',
+        deferContinueUntilCopyReady:true
+    });
+}
+
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
-    if(index>=1)setDemoJourneyStage('map');
+    if(index===0)setDemoJourneyStage('why');
+    else if(index>=1)setDemoJourneyStage('map');
     if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=false;
     introBoardTextureDirty=true;
@@ -1738,7 +1754,7 @@ function guidePlantConversion(record) {
         () => {
             suppressSessionSelectUntil = performance.now() + 700;
             finishIntroBoard();
-            setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its Plant Information Mesh.`);
+            setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its plant information.`);
         },
         {stepLabel:moringa?'A second plant':'After placing your first Plant Orb',nextGuide:afterPlacement.nextGuide,deferContinueUntilCopyReady:!moringa}
     );
@@ -1786,8 +1802,8 @@ function showDemoClosingMessage() {
     showIntroBoard(
         'A place people can understand and return to',
         [
-            'You mapped two plants, opened their information, used the LIM to connect a fact with purpose, recorded an observation and linked two Areas.',
-            'The result is more than a digital plant label. It is a living information map that beginners can enter simply and experienced users can explore in depth.',
+            'You mapped two plants, opened their information, connected a fact with purpose, recorded an observation and linked two Areas.',
+            'The result is more than a digital plant label. It is a living information map that can be entered simply and explored in depth.',
             'NourishlandXR can support school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects through the same connected system.'
         ],
         'Finish demo',
@@ -1930,7 +1946,7 @@ function showAudienceValue() {
     showIntroBoard(
         'One place, different reasons to care',
         [
-            'For a beginner, the map answers simple questions: What is this? Why is it here? What can I notice or do next?',
+            'On a first visit, the map answers immediate questions: What is this? Why is it here? What can I notice or do next?',
             'For a school, the same place becomes a learning environment where students can observe, compare, record and return over time.',
             'For a garden, park or land steward, published knowledge, visitor guidance and local observations remain organised around the real landscape.'
         ],
@@ -2297,7 +2313,7 @@ function toggleDemoPlantProfile(record) {
             record.demoProfileInteracted = false;
             record.demoProfileInteractionCount = 0;
         }
-        record.informationPose ||= plantInformationPose(record);
+        ensureDemoPimPose(record);
         record.informationPosition = record.informationPose?.position || record.informationPosition || null;
         // Establish the compact tutorial board before sizing the canonical
         // mesh so its first frame already respects the true top safe inset.
@@ -2358,7 +2374,7 @@ function selectDemoProfileCell() {
     // space must fall through so the orb can still close the PIM or open the
     // Live Tag action at any stage of the demo.
     if (!node) {
-        setGuide('Aim at a visible Plant Information Mesh cell to explore it.');
+        setGuide('Aim at a visible plant information cell to explore it.');
         return false;
     }
     if (node.pimRead) {openDemoKnowledge(record);return true;}
@@ -2394,7 +2410,7 @@ function selectDemoProfileCell() {
     const opened = demoPimState(record).expandedNodeIds.has(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
     setGuide(opened
-        ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'}${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`
+        ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'}${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring this plant.` : ''}`
         : `${node.label} remains closed.`);
     return true;
 }
@@ -2427,12 +2443,21 @@ function orientDemoPimPoseToViewer(pose) {
     return { ...pose, normal, right };
 }
 
+function ensureDemoPimPose(record) {
+    if (!record) return null;
+    // Capture the viewer-facing pose once when the panel opens. Re-evaluating
+    // its facing every frame can flip the surface as phone tracking jitters or
+    // the viewer crosses its plane, which looks like the whole panel jumped.
+    record.informationPose ||= orientDemoPimPoseToViewer(plantInformationPose(record));
+    return record.informationPose;
+}
+
 function demoPimPointerTarget(record) {
     const origin = demoPointerWorldOrigin();
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
-    record.informationPose ||= plantInformationPose(record);
-    const defaultPimPanel = pimSpatialPanel(orientDemoPimPoseToViewer(record.informationPose));
+    ensureDemoPimPose(record);
+    const defaultPimPanel = pimSpatialPanel(record.informationPose);
     const panel = demoPimPanel(record) || defaultPimPanel;
     if (!panel) return null;
     record.informationPosition = panel.center;
@@ -2750,7 +2775,7 @@ function bindSimulatedInformationPanels(layer) {
                 const separator = focusPath.includes('/') ? '/' : '.';
                 record.demoActiveBranch = focusPath.split(separator).slice(0, -1).join(separator);
                 refreshDemoPimProfile(record, profile);
-                setGuide('Returned to the previous PIM bloom.');
+                setGuide('Returned to the previous group of plant information.');
                 return;
             }
             const cell = event.target.closest?.('[data-pim-node]');
@@ -2777,7 +2802,7 @@ function bindSimulatedInformationPanels(layer) {
             refreshDemoPimProfile(record, profile);
             setGuide(wasOpen
                 ? `${cellLabel} remains open.`
-                : `${cellLabel} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring the PIM.` : ''}`);
+                : `${cellLabel} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring this plant.` : ''}`);
         });
         bindPlantInformationMeshPress(profile);
         let start = null;
@@ -3034,6 +3059,9 @@ function beginControllerDemoHold() {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
     const target = demoRecordAtPointer();
     if (!target || target.record.demoInteractive === false) return false;
+    // Match the phone preview: an open plant-information surface is locked.
+    // A cell press must never start moving the orb behind that surface.
+    if (target.record.demoType === 'plant' && target.record.demoExpanded) return false;
     const origin = demoPointerWorldOrigin();
     if (!origin) return false;
     captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
@@ -3051,6 +3079,7 @@ function beginHandDemoGrab() {
     const target = demoRecordAtPointer();
     const origin = demoPointerWorldOrigin();
     if (!target || !origin || target.record.demoInteractive === false) return false;
+    if (target.record.demoType === 'plant' && target.record.demoExpanded) return false;
     if (!captureDemoGrabPose(target.record, origin, demoPointerWorldRay())) return false;
     demoHeldIndex = target.index;
     setGuide(`Holding ${target.record.name || 'the orb'}. Move your hand, then release.`);
@@ -3082,7 +3111,7 @@ function releaseHeldDemoRecord() {
 function plantInformationPosition(record) {
     if (record?.informationPose?.position) return record.informationPose.position;
     if (viewerMatrix) {
-        record.informationPose ||= plantInformationPose(record);
+        ensureDemoPimPose(record);
         if (record.informationPose?.position) return record.informationPose.position;
     }
     const position = record?.position || { x: 0, y: 0, z: -1.2 };
@@ -4271,13 +4300,13 @@ function drawMarker(view) {
             ? { ...record.position, y: record.position.y + 1 }
             : record.position;
         const noteScale = noteSign ? DEMO_NOTE_IMMERSIVE_SCALE : null;
-        const defaultPimModel = fixedPimPanelMatrix(orientDemoPimPoseToViewer(record.informationPose));
+        const defaultPimModel = fixedPimPanelMatrix(record.informationPose);
         const model = plantProfile
             ? (() => {
                 const size = record.pimTextureSize || demoPimSurfaceSize(record);
                 if (size.width === PIM_TEXTURE_SIZE.width && size.height === PIM_TEXTURE_SIZE.height) return defaultPimModel;
                 return fixedPimPanelMatrix(
-                    orientDemoPimPoseToViewer(record.informationPose),
+                    record.informationPose,
                     DEMO_PIM_IMMERSIVE_SCALE.x * size.width / PIM_TEXTURE_SIZE.width,
                     DEMO_PIM_IMMERSIVE_SCALE.y * size.height / PIM_TEXTURE_SIZE.height
                 );
@@ -4320,7 +4349,11 @@ function drawMarker(view) {
 }
 
 function drawDemoControllerPointer(view) {
-    if (!latestControllerRay || !tetherRenderer) return;
+    const pointerSource = demoControllerInputSource();
+    // Android exposes taps as a WebXR `screen` ray. It remains available for
+    // hit testing, but the Quest laser/contact sphere must only be rendered
+    // for tracked spatial input.
+    if (!latestControllerRay || !tetherRenderer || pointerSource?.targetRayMode === 'screen') return;
     if (latestHandState?.joints) {
         for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
             const from=latestHandState.joints.get(fromName),to=latestHandState.joints.get(toName);
@@ -4425,6 +4458,7 @@ async function startImmersive() {
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
+            if (demoInfoTarget()?.target) return;
             const actionTarget = demoRecordAtPointer()?.record;
             if (actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();

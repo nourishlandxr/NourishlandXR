@@ -1143,6 +1143,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
     assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
+    assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialOrb/);
@@ -1262,7 +1263,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
-    assert.match(source, /title:'Your guide'[\s\S]*You do not need prior plant, farming or technology knowledge to begin/);
+    assert.match(source, /title:'Your guide'[\s\S]*stays with you as you explore/);
+    assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
     assert.match(source, /A Project represents the whole place\. Areas organise meaningful parts of it/);
     assert.match(source, /Pigeon Pea now has a location in this scene/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
@@ -1376,7 +1378,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.08, -2\.76\]\)/);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
     assert.match(source, /primary\?\.id==='continue' && mainScreen\)mainScreen\.append\(trigger\)/);
-    assert.match(source, /MAIN SCREEN/);
+    assert.doesNotMatch(source, /MAIN SCREEN/);
+    assert.doesNotMatch(styles, /content:"Main Screen"/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*right:clamp\(18px,4vw,42px\);[^}]*border-radius:15px;/);
     assert.match(styles, /\.tryit-live-welcome > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*bottom:25%;[^}]*pointer-events:auto;/);
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
@@ -1484,8 +1487,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.ok(source.includes('record.demoProfileInteracted = true;'));
     assert.match(source, /inviteVirtualTag\(record\)/);
     assert.match(source, /function orientDemoPimPoseToViewer\(pose\)/);
-    assert.match(source, /fixedPimPanelMatrix\(orientDemoPimPoseToViewer\(record\.informationPose\)\)/);
-    assert.match(source, /pimSpatialPanel\(orientDemoPimPoseToViewer\(record\.informationPose\)\)/);
+    assert.match(source, /record\.informationPose \|\|= orientDemoPimPoseToViewer\(plantInformationPose\(record\)\)/);
+    assert.match(source, /fixedPimPanelMatrix\(record\.informationPose\)/);
+    assert.match(source, /pimSpatialPanel\(record\.informationPose\)/);
+    assert.doesNotMatch(source, /fixedPimPanelMatrix\(orientDemoPimPoseToViewer\(record\.informationPose\)\)/);
     assert.match(source, /targetRayMode === 'screen' && source\.targetRaySpace/);
     assert.doesNotMatch(source, /board\?\.classList\.contains\('is-typing'\)/);
     assert.doesNotMatch(source, /board\.click\(\);/);
@@ -1522,7 +1527,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(pimViewSource, /pimConnectionPairs/);
     assert.doesNotMatch(source, /pimFocusedView\(/);
     assert.doesNotMatch(source, /visibleNodes\.find\(/);
-    assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible Plant Information Mesh cell[\s\S]*return false;/);
+    assert.match(source, /if \(!node\) \{[\s\S]*Aim at a visible plant information cell[\s\S]*return false;/);
     assert.match(source, /function canvasTexture\(label, texture = null, flipY = false\)[\s\S]*UNPACK_FLIP_Y_WEBGL, Boolean\(flipY\)/);
     assert.match(source, /return canvasTexture\(label\);/);
     assert.match(source, /const separator = focusPath\.includes\('\/'\) \? '\/' : '\.'/);
@@ -1549,6 +1554,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoProfileCell\(\)[\s\S]*selectDemoPlantAtPointer\(\)/);
+    assert.match(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
+    assert.match(source, /if \(demoInfoTarget\(\)\?\.target\) return/);
     assert.match(source, /if \(actionTarget\?\.demoType === 'note'\) return;[\s\S]*beginControllerDemoHold\(\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");

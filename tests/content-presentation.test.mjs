@@ -24,11 +24,11 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
 });
 
-test('LIM appears after PIM as the bridge from information to purpose and application', () => {
+test('connected learning appears after plant information as the bridge to purpose and application', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
     assert.match(demo, /openPimLimBridge/);
-    assert.match(demo, /The bridge from PIM to LIM/);
+    assert.match(demo, /From information to practical use/);
     assert.match(demo, /what is this\?” to “what could I do with this here/);
     assert.match(demo, /welcomeAutoAdvanceReady\(arWelcomeClock\.elapsed/);
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed-AR_WELCOME_SETTLED_MS/);
@@ -50,14 +50,26 @@ test('demo opens with the knowledge problem before defining the product', () => 
     assert.match(demo, /introBoardBody=demoLocalizedText\('Every garden, school ground, park and forest holds useful knowledge/);
 });
 
-test('the beginner journey introduces the guide first and the four LIM lenses after PIM', () => {
+test('demo welcomes visitors gently before beginning the Why stage', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const greeting = demo.slice(demo.indexOf('function runArWelcomeGreeting'), demo.indexOf('function runArWelcomeTutorial'));
+    assert.match(demo, /runArWelcomeGreeting\(\)/);
+    assert.match(greeting, /Welcome to NourishlandXR/);
+    assert.match(greeting, /Take a moment to settle in/);
+    assert.match(greeting, /Begin with why/);
+    assert.match(greeting, /setHeaderProgress\(null\)/);
+    assert.match(demo, /if\(index===0\)setDemoJourneyStage\('why'\)/);
+});
+
+test('the first-time journey introduces the guide before four practical learning lenses', () => {
     const demo=read('app/screens/temporaryArDemo.js');
     const panel=read('app/services/pimInfoPanel.js');
     const styles=read('app/living-objects.css');
     assert.match(demo,/at:18000,text:demoLocalizedText\('Explore one plant/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/title:'Your guide'[\s\S]*do not need prior plant, farming or technology knowledge/);
+    assert.match(demo,/title:'Your guide'[\s\S]*stays with you as you explore/);
+    assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
     assert.match(demo,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
     assert.match(demo,/Why does this matter\?/);
     assert.match(demo,/ctx\.fillStyle = '#ffffff'/);

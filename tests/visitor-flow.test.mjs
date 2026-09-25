@@ -563,7 +563,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(styles, /\.tryit-sim-area-link-line/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
-    assert.match(source, /Select other visible cells whenever you want to explore further/);
+    assert.match(source, /Select other visible topics whenever you want to explore further/);
     assert.match(source, /navigator\.vibrate/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.doesNotMatch(styles, /\.tryit-sim-plant-tether/);

@@ -9012,8 +9012,7 @@ button.ar-square-action::before { display: none !important; }
     border-top-color:rgba(223,255,155,.16);
 }
 .tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
-    content:"Main Screen";
-    color:rgba(223,255,155,.54);
+    content:none;
 }
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,
