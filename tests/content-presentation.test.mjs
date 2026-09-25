@@ -47,17 +47,18 @@ test('demo opens with the knowledge problem before defining the product', () => 
     const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
     assert.ok(opening.indexOf('Every living place holds knowledge') < opening.indexOf('living, explorable map'));
     assert.ok(opening.indexOf('knowledge is often scattered') < opening.indexOf('Plants, observations, stories and guidance'));
-    assert.match(demo, /introBoardBody=demoLocalizedText\('Every garden, school ground, park and forest holds useful knowledge/);
+    assert.match(demo, /title:'Knowledge belongs with the place'/);
 });
 
-test('demo welcomes visitors gently before beginning the Why stage', () => {
+test('demo uses one continuous welcome before beginning the Why stage', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    const greeting = demo.slice(demo.indexOf('function runArWelcomeGreeting'), demo.indexOf('function runArWelcomeTutorial'));
-    assert.match(demo, /runArWelcomeGreeting\(\)/);
-    assert.match(greeting, /Welcome to NourishlandXR/);
+    const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
+    assert.doesNotMatch(demo, /runArWelcomeGreeting/);
+    assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
     assert.match(greeting, /Take a moment to settle in/);
-    assert.match(greeting, /Begin with why/);
+    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Begin with why'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
+    assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
     assert.match(demo, /if\(index===0\)setDemoJourneyStage\('why'\)/);
 });
 

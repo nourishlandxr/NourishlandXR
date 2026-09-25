@@ -1476,7 +1476,7 @@ function paintDemoAmbientLife(now){
 }
 
 function showArWelcomeShowcase() {
-    setDemoJourneyStage('why');
+    infoPanel?.setHeaderProgress(null);
     selectedLimCell='';
     introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
@@ -1505,9 +1505,9 @@ function showArWelcomeShowcase() {
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
-    introBoardStep='WHY NOURISHLANDXR EXISTS';
-    introBoardTitle='NourishlandXR';
-    introBoardBody=demoLocalizedText('Every garden, school ground, park and forest holds useful knowledge. Too often it is scattered, hidden or separated from the place it describes.\n\nNourishlandXR turns a living place into an explorable map, so people can discover what is here, understand why it matters and add what they observe.');
+    introBoardStep='Welcome';
+    introBoardTitle='Welcome to NourishlandXR';
+    introBoardBody=demoLocalizedText('This is a short guided journey through a living place and the knowledge it holds.\n\nTake a moment to settle in. When you are ready, we will begin with why NourishlandXR exists.');
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1556,7 +1556,7 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomeOpeningActive=false;limMeshVisible=false;introBoardTitle='NourishlandXR';panel.querySelector('h2')?.replaceChildren(introBoardTitle);panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        arWelcomeOpeningActive=false;limMeshVisible=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
         paintOpeningCopy(introBoardBody);panel.classList.remove('is-typing');
@@ -1612,7 +1612,22 @@ function showArWelcomeShowcase() {
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
         limMeshVisible=false;
-        runArWelcomeGreeting();
+        infoPanel?.setHeaderProgress(null);
+        infoPanel?.setGuided(true);
+        setIntroBoardNextGuide('When you are ready, begin with why NourishlandXR exists.');
+        const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
+        if(continueButton){
+            continueButton.textContent=demoLocalizedText('Begin with why');
+            continueButton.hidden=false;
+            continueButton.disabled=false;
+            continueButton.onclick=()=>{
+                suppressSessionSelectUntil=performance.now()+700;
+                continueButton.hidden=true;
+                runArWelcomeTutorial(0);
+            };
+        }
+        skipDemoNarration=()=>continueButton?.click();
+        syncDemoPanelActions();
     };
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
@@ -1669,21 +1684,6 @@ const POST_PLACEMENT_AREA_STEP = {
         'Open the Orb to explore the plant’s information. It begins with simple facts and lets interested visitors follow deeper branches.'
     ]
 };
-
-function runArWelcomeGreeting() {
-    demoOrientationStep=-1;
-    infoPanel?.setHeaderProgress(null);
-    infoPanel?.setGuided(true);
-    showIntroBoard('Welcome to NourishlandXR',[
-        'This is a short guided journey through a living place and the knowledge it holds.',
-        'Take a moment to settle in. When you are ready, we will begin with why NourishlandXR exists.'
-    ],'Begin with why',()=>runArWelcomeTutorial(0),{
-        tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,
-        stepLabel:'Welcome',
-        nextGuide:'When you are ready, begin with why NourishlandXR exists.',
-        deferContinueUntilCopyReady:true
-    });
-}
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;

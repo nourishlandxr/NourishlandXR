@@ -1216,7 +1216,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
-    assert.match(source, /WHY NOURISHLANDXR EXISTS/);
+    assert.match(source, /introBoardStep='Welcome'/);
+    assert.doesNotMatch(source, /WHY NOURISHLANDXR EXISTS/);
     assert.doesNotMatch(source, /130-inch|130 inch/);
     assert.doesNotMatch(source, /LOOK UP/);
     assert.doesNotMatch(source, /INTRODUCING AIM/);
