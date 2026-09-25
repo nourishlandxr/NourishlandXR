@@ -1,9 +1,9 @@
 /* Shared spatial knowledge cues; motion is feedback, never the only signal. */
-.nlxr-orb-crown { position:absolute; left:50%; top:50%; width:72px; height:72px; transform:translate(-50%,-50%); pointer-events:none; color:#d6edcc; filter:drop-shadow(0 2px 3px rgba(15,35,24,.24)); }
-.nlxr-orb-crown i { position:absolute; left:50%; top:50%; width:15px; height:17px; background:currentColor; clip-path:polygon(50% 0,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%,50% 0,50% 12%,15% 31%,15% 69%,50% 88%,85% 69%,85% 31%,50% 12%); transform:translate(-50%,-50%) rotate(calc(var(--bud)*60deg + 30deg)) translateY(-31px); transition:transform .7s ease; }
-[data-knowledge-state="expanded"] .nlxr-orb-crown i { transform:translate(-50%,-50%) rotate(calc(var(--bud)*60deg + 30deg)) translateY(-35px); }
+.nlxr-orb-crown { position:absolute; left:50%; top:50%; width:72px; height:72px; transform:translate(-50%,-50%); pointer-events:none; color:var(--demo-orb-ring,#e2cca0); opacity:.52; filter:drop-shadow(0 2px 3px rgba(15,35,24,.28)); }
+.nlxr-orb-crown i { position:absolute; left:50%; top:50%; width:4px; height:8px; border-radius:3px; background:currentColor; transform:translate(-50%,-50%) rotate(calc(var(--bud)*60deg)) translateY(-34px); transition:opacity .25s ease; }
+[data-knowledge-state="expanded"] .nlxr-orb-crown { opacity:.68; }
 .nlxr-orb-label { position:absolute; top:calc(50% + 42px); left:50%; transform:translateX(-50%); white-space:nowrap; font:500 11px/1.3 system-ui; color:#f2f7e9; padding:3px 8px; border:1px solid #d6edcc66; border-radius:20px; background:#203e2bb3; pointer-events:none; }
-[data-knowledge-state="live"] .tryit-sim-orb.is-plant,[data-knowledge-state="expanded"] .tryit-sim-orb.is-plant { background:radial-gradient(circle at 30% 20%,#e9f2dc80,#829f7140 44%,#34593c66); border-color:#e8f2dca6; animation:none; }
+[data-knowledge-state="live"] .tryit-sim-orb.is-plant,[data-knowledge-state="expanded"] .tryit-sim-orb.is-plant { animation:none; }
 .tryit-sim-marker-plant.has-plant-profile:is(:hover,:focus-visible) .tryit-sim-orb { animation:none; }
 .nlxr-totem-system { --totem-card-width:154px; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(84vw,390px); height:min(54vh,460px); border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
@@ -187,14 +187,14 @@
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after { background:hsla(var(--pim-hue),31%,19%,.035); }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:is(.is-open,.is-selected)::after { background:hsla(var(--pim-hue),31%,19%,.10); }
 
-/* Living knowledge: a readable rim plus slow circulating light. */
-.nlxr-orb-crown{width:52px;height:52px;border:1px solid rgba(225,211,157,.48);border-right-color:transparent;border-radius:50%;box-shadow:none;animation:nlxr-orb-witness 6s ease-in-out infinite}
-.nlxr-orb-crown i{display:none}
+/* Living knowledge adds six quiet registration marks outside the permanent
+   contrast ring; no rotating halo competes with surrounding foliage. */
+.nlxr-orb-crown{animation:none}
+.nlxr-orb-crown i{display:block}
 .nlxr-orb-crown::before{display:none}
-[data-knowledge-state="expanded"] .nlxr-orb-crown,.tryit-sim-marker-plant:is(:hover,:focus-visible) .nlxr-orb-crown{border-color:rgba(238,224,168,.82);border-right-color:transparent;box-shadow:0 0 12px rgba(227,211,153,.22)}
+[data-knowledge-state="expanded"] .nlxr-orb-crown,.tryit-sim-marker-plant:is(:hover,:focus-visible) .nlxr-orb-crown{opacity:.72;filter:drop-shadow(0 0 5px rgba(227,211,153,.28))}
 @keyframes nlxr-orbit-flow{to{rotate:360deg}}
 @keyframes nlxr-orbit-breathe{50%{scale:1.035}}
-@keyframes nlxr-orb-witness{50%{opacity:.68;filter:drop-shadow(0 0 4px rgba(238,224,168,.22))}}
 .nlxr-totem-system .tryit-sim-totem-pillar{border-radius:12px 12px 9px 9px;background:linear-gradient(90deg,#354b40,#82927b 20%,#9aa68a 36%,#667b64 77%,#354b40);box-shadow:inset 1px 0 #e6efce80,inset -2px 0 #163b3555,0 16px 24px #172e2440}
 .nlxr-totem-system .tryit-sim-totem-pillar::before{background:linear-gradient(180deg,#edf4d5,#bbd9b4 40%,#688166);box-shadow:0 2px 0 #243f35,0 3px 7px #d1e9c033}
 @media(prefers-reduced-motion:reduce){.nlxr-orb-crown,.nlxr-orb-crown::before{animation:none}}
@@ -546,24 +546,21 @@
     position:absolute;
     inset:-5px;
     z-index:0;
+    border:2px solid var(--demo-orb-ring,#e2cca0);
     border-radius:50%;
-    background:conic-gradient(from -28deg,rgba(237,219,161,.65) 0 245deg,transparent 248deg 360deg);
-    -webkit-mask:radial-gradient(transparent 71%,#000 73% 76%,transparent 78%);
-    mask:radial-gradient(transparent 71%,#000 73% 76%,transparent 78%);
-    opacity:.52;
-    animation:nlxr-orb-witness 6s ease-in-out infinite;
+    background:transparent;
+    box-shadow:0 0 0 2px rgba(6,20,14,.74),0 5px 15px rgba(7,21,14,.34),0 0 12px color-mix(in srgb,var(--demo-orb-ring,#e2cca0) 24%,transparent);
+    opacity:.9;
+    animation:none;
 }
 .tryit-sim-orb.is-plant {
-    border:1px solid rgba(219,231,203,.54);
-    background:radial-gradient(circle at 30% 22%,var(--demo-orb-light,#9ebda1),var(--demo-orb-mid,#315e43) 40%,var(--demo-orb-dark,#102b20) 88%);
-    box-shadow:inset -5px -6px 9px rgba(8,28,17,.36),inset 2px 2px 5px rgba(255,255,255,.12),0 0 8px rgba(160,198,146,.12);
+    border:1px solid rgba(242,237,207,.74);
+    background:radial-gradient(circle at 29% 22%,rgba(255,255,239,.72) 0 4%,var(--demo-orb-light,#c5d5b7) 8%,var(--demo-orb-mid,#496b52) 43%,var(--demo-orb-dark,#10271c) 82%,#071710 100%);
+    box-shadow:inset -8px -10px 14px rgba(3,20,12,.58),inset 4px 4px 8px rgba(255,255,255,.16),0 6px 14px rgba(4,15,10,.42);
 }
 .tryit-sim-orb.is-plant::after {
-    width:23%;
-    height:23%;
-    border:1px solid rgba(246,232,177,.76);
-    background:radial-gradient(circle at 30% 25%,var(--demo-orb-core-light,#f1e4b2),var(--demo-orb-core-mid,#b9a268) 68%,var(--demo-orb-core-dark,#665b38));
-    box-shadow:0 0 5px rgba(240,220,154,.22);
+    content:none;
+    display:none;
 }
 .tryit-sim-marker-plant:is(:hover,:focus-visible,.is-held) .tryit-sim-orb.is-plant{box-shadow:inset -5px -6px 9px rgba(8,28,17,.36),0 0 16px rgba(225,211,157,.48)}
 @media(prefers-reduced-motion:reduce){.nlxr-orb-crown,.tryit-sim-orb.is-plant::before{animation:none}}
@@ -811,34 +808,25 @@
     animation:nlxr-orb-hover-pulse 1.15s ease-in-out infinite alternate!important;
 }
 
-/* Restore the richer, clearly visible Plant Orb: luminous shell, defined
-   inner core and a broad halo that remains readable before interaction. */
+/* A restrained botanical marker: opaque enough for foliage, with a warm
+   perimeter that reads clearly without a bright dot in its centre. */
 .tryit-sim-orb.is-plant {
-    border:2px solid rgba(242,255,220,.96);
-    background:radial-gradient(circle at 29% 22%,#ffffff 0 6%,var(--demo-orb-light,#efffd8) 7% 15%,var(--demo-orb-mid,#84c96d) 39%,var(--demo-orb-dark,#1d6635) 75%,#092719 100%);
-    box-shadow:inset -10px -12px 17px rgba(3,31,15,.62),inset 6px 6px 11px rgba(255,255,255,.28),0 0 0 4px rgba(215,242,177,.16),0 0 30px color-mix(in srgb,var(--demo-orb-mid,#9ee578) 72%,transparent);
-    filter:saturate(1.28) brightness(1.08);
+    border:1px solid rgba(242,237,207,.78);
+    filter:saturate(.92) contrast(1.08);
 }
 .tryit-sim-orb.is-plant::before {
-    inset:-10px;
-    background:conic-gradient(from -28deg,rgba(255,239,174,.94) 0 252deg,rgba(142,221,119,.2) 255deg 318deg,transparent 321deg 360deg);
-    opacity:.88;
-    -webkit-mask:radial-gradient(transparent 66%,#000 68% 73%,transparent 75%);
-    mask:radial-gradient(transparent 66%,#000 68% 73%,transparent 75%);
+    inset:-8px;
+    opacity:.92;
 }
 .tryit-sim-orb.is-plant::after {
-    width:34%;
-    height:34%;
-    border:2px solid rgba(255,249,211,.94);
-    background:radial-gradient(circle at 30% 24%,#fffde2 0 14%,var(--demo-orb-core-light,#f2ffd9) 19%,var(--demo-orb-core-mid,#c8ed72) 54%,var(--demo-orb-core-dark,#3c843f) 100%);
-    box-shadow:0 0 13px rgba(250,235,157,.78),inset -4px -5px 7px rgba(16,48,24,.42);
+    content:none;
+    display:none;
 }
 .tryit-sim-marker-plant:is(:hover,:focus-visible,.is-pointer-hover,.is-held) .tryit-sim-orb.is-plant::before {
     opacity:.95;
-    animation:nlxr-orb-hover-orbit 2.4s linear infinite!important;
+    animation:none!important;
 }
 @keyframes nlxr-orb-hover-pulse { to { filter:brightness(1.25); box-shadow:inset -5px -6px 9px rgba(8,28,17,.3),0 0 0 4px rgba(247,232,181,.27),0 0 34px rgba(238,219,162,.85); } }
-@keyframes nlxr-orb-hover-orbit { to { transform:rotate(360deg); } }
 /* The introductory copy breathes while the visitor decides when to continue. */
 .tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
     animation:nlxr-intro-copy-fade 6s ease-in-out infinite;

@@ -99,8 +99,9 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     assert.match(demo, /compactMarker\.addEventListener\('pointerenter'.*is-pointer-hover/);
     assert.match(demo, /highlighted:orbType==='plant' && hoveredPlant===record/);
     assert.match(styles, /nlxr-orb-hover-pulse/);
-    assert.match(styles, /nlxr-orb-hover-orbit/);
-    assert.match(styles, /Restore the richer, clearly visible Plant Orb/);
+    assert.doesNotMatch(styles, /nlxr-orb-hover-orbit/);
+    assert.match(styles, /--demo-orb-ring,#e2cca0/);
+    assert.match(styles, /\.tryit-sim-orb\.is-plant::after\s*\{\s*content:none;/);
 });
 
 test('each archetype opens its ordered illustration in the shared control panel', () => {
@@ -204,8 +205,9 @@ test('simulated and immersive plant orbs use the shared crowned renderer', () =>
     assert.match(renderer, /export function drawSpatialOrb\(/);
     assert.match(renderer, /export function createOrbCrownGeometry\(/);
     assert.match(styles, /\.tryit-sim-orb\.is-plant::before/);
-    assert.match(demo, /--demo-orb-size:50px/);
+    assert.match(demo, /--demo-orb-size:56px/);
     assert.match(creator, /shape === 4 \? \.72 : 1/);
-    assert.match(renderer, /band\(1\.16,\.013,-Math\.PI\*\.16,Math\.PI\*1\.3,72\)/);
-    assert.match(styles, /@keyframes nlxr-orb-witness/);
+    assert.match(renderer, /band\(1\.18,\.022,0,Math\.PI\*2,96\)/);
+    assert.match(styles, /border:2px solid var\(--demo-orb-ring/);
+    assert.match(styles, /content:none;\s*display:none;/);
 });

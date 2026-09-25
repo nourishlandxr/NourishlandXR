@@ -276,16 +276,18 @@ const DEMO_ORB_MATERIALS = Object.freeze({
         style: '--demo-orb-size:56px;--demo-orb-light:#ead7ba;--demo-orb-mid:#8a6946;--demo-orb-dark:#3e2a1c;--demo-orb-core-light:#f1dfbd;--demo-orb-core-mid:#a77b48;--demo-orb-core-dark:#4d321e'
     },
     pigeonPea: {
-        shell: [0.08, 0.21, 0.14],
+        shell: [0.1, 0.25, 0.18],
         core: [0.72, 0.63, 0.36],
-        radius: 0.06,
-        style: '--demo-orb-size:50px;--demo-orb-light:#9ebda1;--demo-orb-mid:#315e43;--demo-orb-dark:#102b20;--demo-orb-core-light:#f1e4b2;--demo-orb-core-mid:#b9a268;--demo-orb-core-dark:#665b38'
+        ring: [0.88, 0.8, 0.56],
+        radius: 0.065,
+        style: '--demo-orb-size:56px;--demo-orb-light:#c5d5b7;--demo-orb-mid:#496b52;--demo-orb-dark:#10271c;--demo-orb-ring:#e2cca0'
     },
     green: {
-        shell: [0.58, 0.38, 0.12],
+        shell: [0.17, 0.31, 0.2],
         core: [0.87, 0.68, 0.25],
+        ring: [0.92, 0.72, 0.3],
         radius: 0.074,
-        style: '--demo-orb-size:62px;--demo-orb-light:#fff0b5;--demo-orb-mid:#b47a27;--demo-orb-dark:#5b3612;--demo-orb-core-light:#fff5c9;--demo-orb-core-mid:#d6a83c;--demo-orb-core-dark:#76501b'
+        style: '--demo-orb-size:62px;--demo-orb-light:#d1dab3;--demo-orb-mid:#536f43;--demo-orb-dark:#172a18;--demo-orb-ring:#e8ba4d'
     }
 });
 const BIOMAP_CATEGORIES = Object.freeze({
@@ -4220,7 +4222,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1),
-            { type: orbType, color: material?.shell, coreColor: material?.core, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {

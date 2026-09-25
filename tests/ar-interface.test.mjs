@@ -397,7 +397,8 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     const panelSource = read('app/services/arPanel.js');
     const styles = read('app/style.css');
     assert.match(sphereSource, /gl\.drawElements\(gl\.TRIANGLES/);
-    assert.match(sphereSource, /radius \* 0\.38/);
+    assert.doesNotMatch(sphereSource, /radius \* 0\.38/);
+    assert.match(sphereSource, /alpha: plant \? 0\.96 : 0\.92/);
     assert.match(sphereSource, /gl\.enable\(gl\.DEPTH_TEST\)/);
     assert.match(creatorSource, /shape !== 0 && shape !== 4/);
     assert.doesNotMatch(creatorSource, /hoverVibration|livingRadius|profileHovered/);
@@ -406,10 +407,10 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(demoSource, /record\.demoType === 'plant' \? 'plant' : record\.demoType === 'marker' \? 'marker'/);
     assert.match(demoSource, /const orbOnly = \['marker', 'plant'\]\.includes\(record\.demoType\) && !record\.demoExpanded/);
     assert.match(demoSource, /class="tryit-sim-orb/);
-    assert.match(styles, /\.tryit-sim-orb\.is-plant::after/);
+    assert.match(read('app/living-objects.css'), /\.tryit-sim-orb\.is-plant::after \{[\s\S]*content:none;[\s\S]*display:none;/);
     assert.match(sphereSource, /createUvSphereGeometry\(latitudeBands = 12, longitudeBands = 16\)/);
     assert.doesNotMatch(sphereSource, /uniform float time|uniform float motion|ribbonA|ribbonB/);
-    assert.match(sphereSource, /options\.knowledge\?\.live/);
+    assert.match(sphereSource, /const ringColor = options\.ringColor \|\| PLANT_RING_COLOR/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-arrow-marker \.creator-ar-special-symbol \{[\s\S]*background:transparent;[\s\S]*box-shadow:none;/);
     assert.match(styles, /\.creator-ar-arrow-grid \.creator-ar-symbol-marker \{[\s\S]*background:transparent !important;/);
     assert.match(explorerSource, /drawSpatialContent:[\s\S]*drawSpatialOrb/);
@@ -1281,7 +1282,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pigeonPea:[\s\S]*radius: 0\.06/);
     assert.match(source, /green:[\s\S]*radius: 0\.074/);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
-    assert.match(source, /coreColor: material\?\.core/);
+    assert.match(source, /ringColor: material\?\.ring/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
     assert.doesNotMatch(styles, /\.tryit-guided-choice\.is-movement-tip/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);

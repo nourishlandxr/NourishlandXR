@@ -1,6 +1,6 @@
 const DEFAULT_MARKER_COLOR = Object.freeze([0.39, 0.48, 0.23]);
 const DEFAULT_PLANT_COLOR = Object.freeze([0.42, 0.72, 0.34]);
-const PLANT_CORE_COLOR = Object.freeze([0.82, 0.96, 0.58]);
+const PLANT_RING_COLOR = Object.freeze([0.88, 0.8, 0.56]);
 
 function compileShader(gl, type, source) {
     const shader = gl.createShader(type);
@@ -70,13 +70,14 @@ export function sphereModelMatrix(position, radius, scale = {}) {
 
 export function createOrbCrownGeometry() {
     const vertices = [], indices = [];
-    // One fine, incomplete witness arc stays quiet until the Orb is selected.
+    // A complete, fine perimeter gives the Plant Orb enough contrast to remain
+    // legible against foliage without adding another bright object inside it.
     const band=(radius,width,from,to,steps)=>{for(let i=0;i<steps;i++){
         const a=from+(to-from)*i/steps,b=from+(to-from)*(i+1)/steps,start=vertices.length/6;
         for(const [angle,r] of [[a,radius-width],[a,radius+width],[b,radius+width],[b,radius-width]])vertices.push(Math.cos(angle)*r,Math.sin(angle)*r,.04,0,0,1);
         indices.push(start,start+1,start+2,start,start+2,start+3);
     }};
-    band(1.16,.013,-Math.PI*.16,Math.PI*1.3,72);
+    band(1.18,.022,0,Math.PI*2,96);
     return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }
 
@@ -109,11 +110,9 @@ export function createSpatialSphereRenderer(gl) {
         uniform float livingTime;
         void main() {
             if(haloPass > .5){
-                float radius=length(localPosition.xy);
-                float arc=step(1.24,radius);
-                float edge=abs(radius-mix(1.19,1.31,arc))/mix(.018,.035,arc);
-                float light=(1.-smoothstep(.45,1.,edge))*(.78+.12*sin(atan(localPosition.y,localPosition.x)*3.-livingTime*.7));
-                vec3 ink=mix(color*.22,mix(color,vec3(.96,.98,.89),.35),light);
+                float angle=atan(localPosition.y,localPosition.x);
+                float light=.9+.06*sin(angle*2.-livingTime*.25);
+                vec3 ink=mix(color,vec3(.97,.94,.78),.3)*light;
                 gl_FragColor=vec4(ink,alpha);return;
             }
             vec3 normal = normalize(surfaceNormal);
@@ -129,7 +128,7 @@ export function createSpatialSphereRenderer(gl) {
             shaded += vec3(0.22) * highlight;
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
             shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
-            gl_FragColor = vec4(shaded, alpha * (1.0 - rim * .16));
+            gl_FragColor = vec4(shaded, alpha);
         }
     `;
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
@@ -208,7 +207,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     if (!view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     const plant = options.type === 'plant';
     const shellColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
-    const coreColor = options.coreColor || PLANT_CORE_COLOR;
+    const ringColor = options.ringColor || PLANT_RING_COLOR;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -218,17 +217,6 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
 
-    if (plant) {
-        drawSpatialSphere(
-            gl,
-            renderer,
-            view.projectionMatrix,
-            view.transform.inverse.matrix,
-            position,
-            radius * 0.38,
-            { color: coreColor, alpha: 0.98, emissive: options.highlighted ? 1 : 0.82, opacity: options.opacity }
-        );
-    }
     drawSpatialSphere(
         gl,
         renderer,
@@ -236,19 +224,19 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? (options.knowledge?.live ? 0.42 : 0.74) : 0.92, emissive: options.highlighted ? 0.9 : plant ? 0.34 : 0.24, opacity: options.opacity }
+        { color: shellColor, alpha: plant ? 0.96 : 0.92, emissive: options.highlighted ? 0.72 : plant ? 0.22 : 0.24, opacity: options.opacity }
     );
 
-    if (plant && options.knowledge?.live) {
+    if (plant) {
         gl.depthMask(false);
         const still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         const time=still ? 0 : (options.time ?? performance.now()/1000);
         drawSpatialSphere(gl, { ...renderer, vertexBuffer:renderer.crownVertexBuffer,
             indexBuffer:renderer.crownIndexBuffer, indexCount:renderer.crownIndexCount },
             view.projectionMatrix, view.transform.inverse.matrix, position,
-            radius * (options.knowledge.state === 'expanded' ? 1.12 : 1), {
-                billboard:true, halo:true, time, rotation:0, color:options.knowledge.draftOnly ? [.72,.61,.38] : [.85,.78,.53],
-                alpha:options.highlighted ? .78 : options.knowledge.state === 'expanded' ? .58 : .34+(still?0:Math.sin(time*1.1)*.07), emissive:.3, opacity:options.opacity
+            radius * (options.knowledge?.state === 'expanded' ? 1.04 : 1), {
+                billboard:true, halo:true, time, rotation:0, color:options.knowledge?.draftOnly ? [.72,.61,.38] : ringColor,
+                alpha:options.highlighted ? .96 : options.knowledge?.state === 'expanded' ? .86 : .78, emissive:.2, opacity:options.opacity
             });
         gl.depthMask(true);
     }
