@@ -52,7 +52,8 @@ test('welcome exploration steps share one fading stage without layout movement',
 test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{
  const source=fs.readFileSync(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
  const styles=fs.readFileSync(path.join(root,'app/style.css'),'utf8');
- assert.match(source,/All four pathways remain available as you explore/);
+ assert.match(source,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
+ assert.match(source,/Why does this matter\?/);
  assert.match(source,/More paths are being developed/);
  assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
@@ -529,7 +530,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.'/);
+    assert.match(source, /nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.'/);
     assert.match(source, /Press the aiming circle to place the example Plant orb/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);
@@ -562,7 +563,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(styles, /\.tryit-sim-area-link-line/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
-    assert.match(source, /Select a cell to expand its connected knowledge/);
+    assert.match(source, /Select other visible cells whenever you want to explore further/);
     assert.match(source, /navigator\.vibrate/);
     assert.doesNotMatch(source, /tryit-panel/);
     assert.doesNotMatch(styles, /\.tryit-sim-plant-tether/);

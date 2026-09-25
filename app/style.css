@@ -8922,6 +8922,50 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board p { font-size:clamp(1.4rem,3.9vw,1.8rem); line-height:1.4; }
 @media(max-width:600px) { .tryit-context-trigger { width:88px; height:88px; padding:10px; font-size:11px; } }
+
+/* Demo pitch journey ----------------------------------------------------
+   A quiet, modern forest surface replaces the old bright green gradient.
+   Journey progress now lives in the dynamic Control panel header so the
+   spatial scene remains clear. */
+.tryit-demo {
+    --demo-forest-950:#06110c;
+    --demo-forest-900:#091a12;
+    --demo-forest-800:#102a1d;
+    --demo-mint:#dfff9b;
+    --demo-white:#f8fbf7;
+    background:var(--demo-forest-950);
+}
+.tryit-demo .tryit-stage,
+.tryit-demo.is-simulated .tryit-stage {
+    background:
+        radial-gradient(circle at 18% 12%,rgba(104,181,129,.15),transparent 34%),
+        radial-gradient(circle at 82% 78%,rgba(72,130,112,.12),transparent 38%),
+        linear-gradient(155deg,#10271c 0%,#081711 54%,#06100c 100%);
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board,
+.tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {
+    border-color:rgba(223,255,155,.25);
+    background:
+        radial-gradient(circle at 14% 4%,rgba(202,255,172,.10),transparent 32%),
+        radial-gradient(circle at 92% 86%,rgba(102,177,157,.09),transparent 38%),
+        linear-gradient(145deg,rgba(14,42,29,.84),rgba(5,19,13,.76));
+    color:var(--demo-white);
+    box-shadow:0 28px 84px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.11);
+    backdrop-filter:blur(22px) saturate(112%);
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board > small { color:var(--demo-mint); }
+.tryit-demo .tryit-guided-choice.is-welcome-board h2,
+.tryit-demo .tryit-guided-choice.is-welcome-board p {
+    color:var(--demo-white) !important;
+    text-shadow:0 2px 16px rgba(0,0,0,.55);
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
+    border-top-color:rgba(223,255,155,.22);
+}
+.tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
+    content:"Your guide ↙";
+    color:rgba(223,255,155,.76);
+}
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,
    project dashboard and AR surfaces keep their existing visual contracts. */

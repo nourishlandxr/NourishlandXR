@@ -12,13 +12,13 @@ function outline(ctx) {
 }
 export function drawArWelcomePanel(ctx) {
  const glass=ctx.createLinearGradient(250,300,1150,800);
- glass.addColorStop(0,'rgba(74,122,91,.64)');
- glass.addColorStop(.48,'rgba(24,70,48,.54)');
- glass.addColorStop(1,'rgba(8,32,21,.42)');
+ glass.addColorStop(0,'rgba(22,62,43,.78)');
+ glass.addColorStop(.48,'rgba(8,34,23,.74)');
+ glass.addColorStop(1,'rgba(3,17,11,.68)');
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
- ctx.strokeStyle='rgba(239,255,229,.82)';ctx.lineWidth=5;ctx.stroke();
+ ctx.strokeStyle='rgba(223,255,155,.72)';ctx.lineWidth=4;ctx.stroke();
  ctx.save();outline(ctx);ctx.clip();
  const light=ctx.createRadialGradient(360,290,20,470,350,420);
- light.addColorStop(0,'rgba(255,255,255,.2)');light.addColorStop(1,'rgba(255,255,255,0)');
+ light.addColorStop(0,'rgba(223,255,195,.14)');light.addColorStop(1,'rgba(255,255,255,0)');
  ctx.fillStyle=light;ctx.fillRect(80,110,1240,880);ctx.restore();
 }

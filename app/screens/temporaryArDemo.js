@@ -1,4 +1,4 @@
-import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
+import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
 import { createLimActivationController } from '../services/limActivation.js';
@@ -45,6 +45,7 @@ import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePla
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
 import { plantInformationMeshSurfaceLayout } from '../services/plantInformationMeshSurfaceLayout.js';
+import { defaultPimLimBridge, pimLimBridgeFor } from '../services/pimLimBridge.js';
 
 let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=null, demoKnowledgePanel=null;
 let demoKnowledgeScrollAt=0;
@@ -76,7 +77,15 @@ let sphereRenderer = null;
 let totemCardsRenderer = null;
 let infoPanel = null;
 let pimHold = null;
-function showDemoInfo(record,path) { clearLimSelection(); infoPanel?.select(record,demoOrbKnowledge(record).document,path); }
+let activePimLimBridge = null;
+function showDemoInfo(record,path) {
+    clearLimSelection();
+    const document=demoOrbKnowledge(record).document;
+    infoPanel?.select(record,document,path);
+    const bridge=pimLimBridgeFor(document,path);
+    activePimLimBridge=bridge?{bridge,record}:null;
+    syncDemoPanelActions();
+}
 function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 let tetherRenderer = null;
 let prismRenderer = null;
@@ -177,9 +186,9 @@ const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
 const DEMO_TOTEM_HALF_HEIGHT_METRES = .76;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to the NourishlandXR demo interface.',
-    'Augmented reality(AR) & Mixed reality(XR) are technologies that can help us better understand and interact with the world around us by connecting virtual information to real places.',
-    'NourishLandXR is a portal for plant-related information, a plant mapping tool and a experience editor for visitors and students. This demo shows a few examples of how information can be mapped real places.'
+    'Welcome to NourishlandXR.',
+    'Living places hold useful knowledge, but it is often scattered across signs, documents, websites and people.',
+    'NourishlandXR creates an explorable map of a place and connects plants, observations, stories and guidance to where they belong.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
@@ -196,11 +205,11 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:demoLocalizedText('Welcome to NourishlandXR. Imagine walking through a garden where every plant has a story to share.'),accent:'#dcef95'}),
-    Object.freeze({at:6000,text:demoLocalizedText('What if those stories could meet you right where the plants grow?'),accent:'#7fa7e8'}),
-    Object.freeze({at:12000,text:demoLocalizedText('XR connects digital information to the real world around you.'),accent:'#8fc77a'}),
-    Object.freeze({at:18000,text:demoLocalizedText('Four pathways invite you to explore plants, places, design and change.'),accent:'#e7b45f'}),
-    Object.freeze({at:24000,text:demoLocalizedText('Choose the question that interests you. Explore at your own pace.'),accent:'#dcef95'})
+    Object.freeze({at:0,text:demoLocalizedText('Every living place holds knowledge.'),accent:'#dfff9b'}),
+    Object.freeze({at:4500,text:demoLocalizedText('But that knowledge is often scattered, hidden or difficult to use.'),accent:'#b9ddff'}),
+    Object.freeze({at:9000,text:demoLocalizedText('NourishlandXR turns a real place into a living, explorable map.'),accent:'#9ff3bd'}),
+    Object.freeze({at:13500,text:demoLocalizedText('Plants, observations, stories and guidance become available where they belong.'),accent:'#ffd38a'}),
+    Object.freeze({at:18000,text:demoLocalizedText('Explore one plant. Follow what it means. See how the place connects.'),accent:'#dfff9b'})
 ]);
 export const welcomeNarrative=elapsed=>{
     const index=WELCOME_NARRATIVE.findLastIndex(item=>elapsed>=item.at);
@@ -209,8 +218,8 @@ export const welcomeNarrative=elapsed=>{
     const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
     return {...item,alpha};
 };
-const DEMO_WELCOME_OPENING_MS=30000;
-const DEMO_WELCOME_CONTINUE_MS=30000;
+const DEMO_WELCOME_OPENING_MS=21000;
+const DEMO_WELCOME_CONTINUE_MS=21000;
 export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
 const DEMO_ARCHETYPE_START_MS=20500;
@@ -231,6 +240,21 @@ const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // narration must finish character-by-character without snapping its tail in.
 const DEMO_BOARD_TYPING_SAFETY_MS = 30000;
 const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
+const DEMO_JOURNEY_STAGES = Object.freeze([
+    Object.freeze({id:'why',label:'Why'}),
+    Object.freeze({id:'map',label:'Map'}),
+    Object.freeze({id:'know',label:'Know'}),
+    Object.freeze({id:'apply',label:'Apply'}),
+    Object.freeze({id:'connect',label:'Connect'}),
+    Object.freeze({id:'impact',label:'Impact'})
+]);
+let demoJourneyStage='why';
+
+function setDemoJourneyStage(stageId) {
+    if(!DEMO_JOURNEY_STAGES.some(stage=>stage.id===stageId))return;
+    demoJourneyStage=stageId;
+    infoPanel?.setHeaderProgress({label:'Demo journey',steps:DEMO_JOURNEY_STAGES,activeId:stageId});
+}
 const DEMO_TOTEM_STYLES = Object.freeze([
     { id: 'basic', label: 'Simple Totem' },
     { id: 'organic', label: 'Light Bulb' },
@@ -375,7 +399,7 @@ function clearSessionState() {
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-surface');
     closeDemoKnowledge(true);
-    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoOrientationStep=-1;limMeshVisible=true;learningModule=null;learningModuleStep=0;
+    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoOrientationStep=-1;limMeshVisible=true;learningModule=null;learningModuleStep=0;activePimLimBridge=null;demoJourneyStage='why';
     limInteractionCleanup();limSessionCleanup();limInteractionCleanup=()=>{};limSessionCleanup=()=>{};limActivation=null;limActivationSessionSuppressUntil=0;
     releaseArScreenRotation();
     hitTestSource?.cancel?.();
@@ -515,7 +539,8 @@ function demoPanelActions() {
     const actions=[];
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
-    if(arWelcomeShowcaseActive)actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Activate learning cells'});
+    if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
+    if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
     actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
@@ -545,7 +570,7 @@ function syncDemoPanelActions() {
 function setLimMeshVisible(visible) {
     if(visible && !limMeshVisible)limMeshActivatedAt=arWelcomeClock.elapsed;
     limMeshVisible=Boolean(visible);
-    if(limMeshVisible)infoPanel?.showLearning({id:'lim-archetype-invitation',title:'Learning cells are active',body:'Choose any of the four learning paths. Vision now sits inside Shape the Outcome, alongside goals, decisions and feedback.',accent:'#dcef95',mesh:'lim',editable:false});
+    if(limMeshVisible)infoPanel?.showLearning({id:'lim-archetype-invitation',title:'Learning Information Mesh · LIM',body:'The LIM helps turn information into useful questions. Read what is here, understand relationships, connect knowledge to purpose, then choose an action and learn from the result.',accent:'#dfff9b',mesh:'lim',editable:false});
     introBoardTextureDirty=true;
     paintWelcomeLayer(performance.now());
     syncDemoPanelActions();
@@ -554,6 +579,7 @@ function setLimMeshVisible(visible) {
 function handleDemoPanelAction(action) {
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
+    if(action==='pim-lim'){openPimLimBridge(activePimLimBridge);return;}
     if(action==='safety'){showArSafetyDialog(appRoot?.querySelector('.tryit-demo'));return;}
     if(action==='back' && demoOrientationStep>0){runArWelcomeTutorial(demoOrientationStep-1);return;}
     if(action==='skip'){skipDemoNarration?.();return;}
@@ -617,8 +643,8 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
     const messages = {
-        plant2: ['A second plant story', 'Pigeon Pea now has a place and a profile. Moringa will bring a different plant story into the same space.'],
-        note: ['Add one observation', 'The two plants share this place but hold different knowledge. A Note can keep a local observation alongside them.']
+        plant2: ['Apply the thinking in the place', 'Pigeon Pea can provide food, seed and support. Add Moringa to compare a different plant role and see how more than one plant becomes part of the same living map.'],
+        note: ['Turn attention into a record', 'The plants provide reference knowledge. A Note adds what someone actually sees, remembers or needs to do in this place.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
@@ -695,7 +721,7 @@ function advancePastVirtualTag(record) {
 
 function inviteVirtualTag(record) {
     if (!simulatedMode || session) {
-        showGuidedChoice('<h2>Plant Orbs keep knowledge in place</h2><p>This orb can sit beside a real plant so its profile remains available inside the spatial garden.</p>', () => {}, {
+        showGuidedChoice('<h2>Knowledge stays available</h2><p>The Orb keeps this plant’s profile in the spatial map. The same published information can also be reached through an ordinary web view, so a headset is never required.</p>', () => {}, {
             persistent: true,
             tutorialStep: DEMO_TUTORIAL_STEPS.PLACEMENT
         });
@@ -708,7 +734,7 @@ function inviteVirtualTag(record) {
         }
         return;
     }
-    showGuidedChoice('<h2>One plant, two ways to read it</h2><p>Pigeon Pea’s full profile is also available in Web Mode. Open it for a closer read, or continue to meet a second plant in this place.</p>', () => {}, {
+    showGuidedChoice(`<h2>One map, more than one way to enter</h2><p>${record?.name || 'This plant'} can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.</p>`, () => {}, {
         persistent: true,
         tutorialStep: DEMO_TUTORIAL_STEPS.LIVE_TAG
     });
@@ -732,8 +758,109 @@ function inviteVirtualTag(record) {
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
     record.demoProfileInteracted = true;
-    if (record.tutorialStage === 'plant2') showDemoAction('note');
-    else if (record.tutorialStage === 'plant') inviteVirtualTag(record);
+    if (record.tutorialStage === 'plant2') inviteVirtualTag(record);
+    else if (record.tutorialStage === 'plant') {
+        const bridge=activePimLimBridge?.record===record
+            ? activePimLimBridge.bridge
+            : defaultPimLimBridge(demoOrbKnowledge(record).document);
+        openPimLimBridge(bridge?{bridge,record}:null);
+    }
+    return true;
+}
+
+const LIM_APPLICATION_LENSES = Object.freeze([
+    Object.freeze({
+        title:'Read what is here',
+        explanation:'Begin with what can be observed in this place. General plant information becomes more useful when it is checked against season, light, water, soil and the plant in front of you.'
+    }),
+    Object.freeze({
+        title:'Understand how it works',
+        explanation:'Follow the living logic. Ask how the plant grows, what it depends on, what it supports and which parts of the information remain uncertain.'
+    }),
+    Object.freeze({
+        title:'Connect information to purpose',
+        explanation:'A fact becomes practical when it serves a purpose. Seed might become food, another plant, a shared resource or part of a wider planting design.'
+    }),
+    Object.freeze({
+        title:'Choose, observe and learn',
+        explanation:'Turn the purpose into a small decision. Record what happens, compare it with the intention and adjust when the place gives new feedback.'
+    })
+]);
+
+function prepareLimPitchCell(cellId) {
+    limMeshVisible=true;
+    limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
+    const cell=LIM_INTRO_CELL_BY_ID[cellId];
+    if(cell?.parentId){
+        limExpandedCells.add(cell.parentId);
+        limExpandedAt.set(cell.parentId,arWelcomeClock.elapsed-5000);
+    }
+    introBoardTextureDirty=true;
+    paintWelcomeLayer(performance.now());
+    const node=welcomeFrames().flatMap(frame=>frame.nodes).find(candidate=>(candidate.limId || candidate.label)===cellId);
+    if(node)activateLimCell(node.key);
+    syncDemoPanelActions();
+}
+
+function runLimApplicationStory(bridge,index=0) {
+    const lens=LIM_APPLICATION_LENSES[index];
+    const cellId=bridge?.limIds?.[index];
+    if(!lens || !cellId){
+        finishIntroBoard();
+        clearLimSelection();
+        limMeshVisible=false;
+        activePimLimBridge=null;
+        showDemoAction('plant2');
+        return;
+    }
+    setDemoJourneyStage('apply');
+    prepareLimPitchCell(cellId);
+    const cellTitle=LIM_INTRO_CELL_BY_ID[cellId]?.title || limLearningContent(cellId).title;
+    const final=index===LIM_APPLICATION_LENSES.length-1;
+    showIntroBoard(
+        lens.title,
+        [lens.explanation,`In this example, the connected LIM cell is “${cellTitle}”. Select other visible cells whenever you want to explore further.`],
+        final?'Apply this to the map':'Continue',
+        ()=>{
+            suppressSessionSelectUntil=performance.now()+700;
+            if(final){
+                finishIntroBoard();
+                clearLimSelection();
+                limMeshVisible=false;
+                activePimLimBridge=null;
+                showDemoAction('plant2');
+                return;
+            }
+            runLimApplicationStory(bridge,index+1);
+        },
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:`PIM to LIM · ${index+1} of ${LIM_APPLICATION_LENSES.length}`,nextGuide:final?'Add a second plant to apply the reasoning in the mapped place.':'Continue through the next way of thinking.'}
+    );
+}
+
+function openPimLimBridge(context) {
+    const bridge=context?.bridge;
+    const record=context?.record;
+    if(!bridge || !record)return false;
+    record.demoProfileInteracted=true;
+    record.demoExpanded=false;
+    refreshDemoRecord(record);
+    setDemoJourneyStage('apply');
+    activePimLimBridge={bridge,record};
+    infoPanel?.setLearningModules(learningModuleBoard());
+    prepareLimPitchCell(bridge.limIds[0]);
+    showIntroBoard(
+        bridge.title,
+        [
+            `PIM information · ${bridge.sourceTitle}`,
+            bridge.question,
+            bridge.application,
+            'This is the role of the Learning Information Mesh, or LIM: it helps a beginner move from “what is this?” to “what could I do with this here?”'
+        ],
+        'Follow the connection',
+        ()=>runLimApplicationStory(bridge,0),
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'The bridge from PIM to LIM',nextGuide:'Follow the connection through observation, understanding, purpose and action.'}
+    );
+    setGuide(`${bridge.sourceTitle} is connected to related LIM questions about purpose and application.`);
     return true;
 }
 
@@ -1060,10 +1187,10 @@ function showPersistentPimPrompt(record) {
         return;
     }
     const plantName = record?.name || 'Plant';
-    const title = demoLocalizedText('Plant Information Mesh');
-    const body = demoLocalizedText(`The ${plantName} orb is now open. Select a cell to expand its connected knowledge. Use the round Continue trigger at the bottom centre after you have explored the Plant Information Mesh.`);
+    const title = demoLocalizedText('Plant Information Mesh · PIM');
+    const body = demoLocalizedText(`The PIM explains what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles. Some facts also connect to the LIM, where you can ask what the information means for this place.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide('Explore a plant cell, then press the round Continue trigger at the bottom centre.');
+    setIntroBoardNextGuide('Explore a plant cell. If “Why does this matter?” appears, follow it into the LIM, or continue when ready.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1084,7 +1211,7 @@ function showPersistentPimPrompt(record) {
     skipDemoNarration = () => {
         continueButton.click();
     };
-    setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh.`);
+    setGuide(`${plantName} profile opened. Select cells to explore the Plant Information Mesh, then connect useful facts to purpose in the LIM.`);
 }
 
 function useSharedWelcomeBoard(visible) {
@@ -1341,6 +1468,7 @@ function paintDemoAmbientLife(now){
 }
 
 function showArWelcomeShowcase() {
+    setDemoJourneyStage('why');
     selectedLimCell='';
     introBoardStep='';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
@@ -1369,13 +1497,13 @@ function showArWelcomeShowcase() {
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
-    introBoardStep='A LIVING INTRODUCTION';
+    introBoardStep='WHY NOURISHLANDXR EXISTS';
     introBoardTitle='NourishlandXR';
-    introBoardBody=demoLocalizedText('Welcome to NourishlandXR. Imagine walking through a garden where every plant has a story to share.\n\nHere, digital information can meet you where plants grow. XR makes those connections possible while the living landscape stays at the centre.');
+    introBoardBody=demoLocalizedText('Every garden, school ground, park and forest holds useful knowledge. Too often it is scattered, hidden or separated from the place it describes.\n\nNourishlandXR turns a living place into an explorable map, so people can discover what is here, understand why it matters and add what they observe.');
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your Control Panel',body:'Your interactive companion. Select a living cell to read its story here. Use the sections to explore and the glowing dot to move the panel.',accent:'#83c5e8',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel explains whatever you select. You do not need prior plant, farming or technology knowledge to begin.',accent:'#9fdcff',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
     infoPanel?.suspend(false);
     infoPanel?.setIntroduction(true);
@@ -1436,7 +1564,7 @@ function showArWelcomeShowcase() {
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover Plant Orbs, mapped Areas with welcoming Totems, and four learning pathways."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover how plant knowledge becomes a mapped, understandable and connected place."></canvas>';
     arWelcomeCanvas=layer.querySelector('canvas');
     if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_SURFACE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_SURFACE_CANVAS.height;}
     // Native buttons provide touch, keyboard and screen-reader access to cells.
@@ -1472,7 +1600,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
         clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
-        infoPanel?.setLearningModules(learningModuleBoard());
+        infoPanel?.setLearningModules(null);
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
         limMeshVisible=false;
@@ -1487,7 +1615,7 @@ function showArWelcomeShowcase() {
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     // The control panel appears as part of the narrative, without a separate gate.
-    setGuide('Welcome to Nourishland. The Living Information Mesh is growing into NourishlandXR.');
+    setGuide('Welcome to NourishlandXR. Begin with why place-based knowledge matters.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1511,37 +1639,34 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Your Control Panel',button:'Explore the pathways',nextGuide:'The Control Panel is your companion. Continue to bring the four pathways into view.',paragraphs:[
-        'The Control Panel is on your left. Choose a living cell and its story appears there, while the garden stays in view.',
-        'It is your place to interact: explore sections, open the side dot for imagery, and move the panel to a comfortable position. Next, four pathways will appear on the green introduction screen.'
+    {title:'Knowledge belongs with the place',button:'See how the map works',nextGuide:'Continue to see the simple structure behind every NourishlandXR place.',paragraphs:[
+        'A visitor should not need to search several signs, files and websites to understand what is in front of them.',
+        'NourishlandXR brings that information together and keeps the real place at the centre. The panel beside you explains each item when you select it.'
     ]},
-    {title:'Four ways to explore',button:'Meet the Plant Orb',nextGuide:'Select any of the four archetypes to see its illustration and learn more. Meet the Plant Orb when you are ready.',paragraphs:[
-        'Choose the question that interests you. All four pathways remain available as you explore.',
-        'Read Nature observes a place. Understand the Land explores living relationships. Design the Forest imagines how plants work together. Shape the Outcome considers care and change over time.'
+    {title:'One place, one clear structure',button:'Meet a Plant Orb',nextGuide:'Continue to meet the first information access point in the map.',paragraphs:[
+        'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
+        'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
     ]},
-    {title:'Meet the Plant Orb',button:'Meet Pigeon Pea',nextGuide:'Meet Pigeon Pea, then place its Plant Orb beside a real plant.',paragraphs:[
-        'A Plant Orb belongs at a real plant and opens that plant’s information there.',
-        'Thousands of plants can be researched, connected and mapped into real-world places. First, you will place one, then press it to explore the plant’s profile and connected knowledge.'
-    ]},
-    {title:'Begin with Pigeon Pea',button:'Place the Plant Orb',nextGuide:'Press Place the Plant Orb, then use the visible aiming circle to choose its spot.',paragraphs:[
-        'Pigeon Pea is our first example. Its Plant Orb connects this plant to its roles, growing needs and relationships.',
-        'Choose a place for the Orb to see how knowledge can belong in the landscape.'
+    {title:'Begin with one plant',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
+        'A Plant Orb is an information access point attached to a real plant. It can open a Plant Information Mesh, or PIM.',
+        'Pigeon Pea is our example. You do not need to know the plant already. Place its Orb and the map will explain it step by step.'
     ]}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
-    title:'Areas and Totems',button:'Explore Pigeon Pea',
+    title:'The first point on the map',button:'Open Pigeon Pea',
     nextGuide:'Press Explore Pigeon Pea, then open the orb you just placed.',
     paragraphs:[
-        'Your first Plant Orb now has a place. NourishlandXR maps a larger landscape as Areas, with plants organised within each one.',
-        'Each Area receives a welcoming Totem for local stories and visitor guidance. The orb you placed connects Pigeon Pea to that mapped place. The orb can be moved later if its position needs adjusting.'
+        'Pigeon Pea now has a location in this scene. Its information stays attached to the plant instead of becoming another disconnected page.',
+        'Open the Orb to see the Plant Information Mesh. The PIM begins with simple facts and lets interested visitors follow deeper branches.'
     ]
 };
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
+    if(index>=1)setDemoJourneyStage('map');
     if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
-    limMeshVisible=index>0;
+    limMeshVisible=false;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
     infoPanel?.setGuided(index===0);
@@ -1552,8 +1677,6 @@ function runArWelcomeTutorial(index=0) {
         suppressSessionSelectUntil=performance.now()+700;
         if(index===0){
             infoPanel?.setIntroduction(false);
-            limMeshVisible=true;
-            limMeshActivatedAt=arWelcomeClock.elapsed;
             introBoardTextureDirty=true;
             runArWelcomeTutorial(index+1);
             return;
@@ -1561,7 +1684,7 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'Introduction '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Control panel','Pathways','Plant Orb','Pigeon Pea'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'The idea · '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Why','Living map','First plant'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===1});
 }
 
 function guidePlantConversion(record) {
@@ -1598,7 +1721,7 @@ function guidePlantConversion(record) {
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     const afterPlacement=moringa
-        ? {title:'Moringa joins the place',paragraphs:['Moringa now has its own Plant Profile. Together, the two orbs show distinct plant stories within one food forest.'],button:'Continue',nextGuide:'Press the Moringa orb to read its profile.'}
+        ? {title:'The living map can compare',paragraphs:['Moringa now has its own Plant Profile. Open it to compare a small tree with the Pigeon Pea support shrub and consider how their roles differ in the same place.'],button:'Open Moringa',nextGuide:'Press the Moringa Orb to read its profile.'}
         : POST_PLACEMENT_AREA_STEP;
     showIntroBoard(
         afterPlacement.title,
@@ -1651,12 +1774,13 @@ function cycleDemoNoteTemplate(record) {
 }
 
 function showDemoClosingMessage() {
+    setDemoJourneyStage('impact');
     showIntroBoard(
-        'NourishlandXR',
+        'A place people can understand and return to',
         [
-            'From one Pigeon Pea, we followed knowledge through two plants, an observation and connected Areas.',
-        'NourishlandXR helps people explore living places, share what they learn and care for them together. Back at the welcome screen, you can explore a place or begin creating your own.',
-        'NourishlandXR aims to bring information to botanical gardens, public parks, community gardens, native forests and food forests, helping people discover the wonders of plants.'
+            'You mapped two plants, opened their information, used the LIM to connect a fact with purpose, recorded an observation and linked two Areas.',
+            'The result is more than a digital plant label. It is a living information map that beginners can enter simply and experienced users can explore in depth.',
+            'NourishlandXR can support school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects through the same connected system.'
         ],
         'Finish demo',
         returnToWelcome
@@ -1788,12 +1912,27 @@ function showLinkedTotemsIntroduction() {
             'A link creates a visitor route between Areas. Here it connects My Food Forest with Rainforest Walk without mixing their information.',
             'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
-        'Continue',
+        'Who benefits?',
+        showAudienceValue
+    );
+}
+
+function showAudienceValue() {
+    setDemoJourneyStage('impact');
+    showIntroBoard(
+        'One place, different reasons to care',
+        [
+            'For a beginner, the map answers simple questions: What is this? Why is it here? What can I notice or do next?',
+            'For a school, the same place becomes a learning environment where students can observe, compare, record and return over time.',
+            'For a garden, park or land steward, published knowledge, visitor guidance and local observations remain organised around the real landscape.'
+        ],
+        'See the connected result',
         showDemoClosingMessage
     );
 }
 
 function showTotemIntroduction() {
+    setDemoJourneyStage('connect');
     showIntroBoard(
         'Area Totems',
         [
@@ -1810,9 +1949,10 @@ function showTotemIntroduction() {
 }
 
 function showSpatialGardenSummary() {
+    setDemoJourneyStage('connect');
     showIntroBoard(
-        'Your place is becoming connected',
-        'This place now holds two plant profiles and one observation. NourishlandXR maps them into Areas; each Area can have a welcoming Totem that connects plants, stories and visitor guidance.',
+        'The information now belongs to a place',
+        'This scene now holds two plant profiles and one local observation. NourishlandXR organises them into Areas, so visitors can understand where they are and how each part connects to the wider project.',
         'See Area Totems',
         showTotemIntroduction
     );
@@ -1887,6 +2027,7 @@ function refreshSimulatedPlacementAim() {
 
 function armDemoPlacement(type, {explained=false}={}) {
     if (markers.some(record => record.tutorialStage === type)) return;
+    setDemoJourneyStage(type==='plant'?'map':'apply');
     demoStage = type;
     placementReady = false;
     shiftSimulatedSceneForStage(type);
@@ -1923,11 +2064,11 @@ function armDemoPlacement(type, {explained=false}={}) {
         : 'Take in the space before choosing the next position.');
     const introductions = {
         plant: ['A plant story in this place', [
-            'A Plant orb gives a plant’s profile a location in the scene.',
-            'Pigeon Pea will be our first example.'
+            'A Plant Orb gives a plant’s information a location in the scene.',
+            'Pigeon Pea will be our first example. No previous plant knowledge is needed.'
         ]],
-        plant2: ['A second plant story', 'Moringa will have its own orb and profile beside Pigeon Pea. Together, they show how different plants share a place.'],
-        note: ['Add one observation', 'A Note can keep something observed in this part of the landscape beside the plants it relates to.']
+        plant2: ['Compare a second plant', 'Moringa will have its own Orb and profile beside Pigeon Pea. Together they show how different plant roles can be compared in one place.'],
+        note: ['Add one observation', 'A Note keeps something noticed in this part of the landscape beside the plants it relates to. It can be as simple as flowering, damage, a task or a question.']
     };
     const [title, introduction] = introductions[type];
     const startPlacement = () => {
@@ -2133,6 +2274,8 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     record.demoExpanded = !record.demoExpanded;
     if (record.demoExpanded) {
+        activePimLimBridge=null;
+        if(record.tutorialStage==='plant')setDemoJourneyStage('know');
         clearLimSelection();
         infoPanel?.focusPlant(record,demoOrbKnowledge(record).document);
         setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
@@ -2996,11 +3139,11 @@ function placeMarker() {
         revealLines: 3,
         texture: null,
         ...(type === 'note' ? {
-            name: NOTE_TEMPLATES.welcome.title,
-            description: spatialNoteTemplate('welcome').description,
-            demoContent: NOTE_TEMPLATES.welcome,
-            demoNoteTemplateIndex: 0,
-            appearance: { note_template:'welcome', color: spatialNoteTemplate('welcome').color, size: 'small', opacity: .64, surface: 'outline' }
+            name: NOTE_TEMPLATES.observation.title,
+            description: spatialNoteTemplate('observation').description,
+            demoContent: NOTE_TEMPLATES.observation,
+            demoNoteTemplateIndex: Math.max(0,DEMO_NOTE_TEMPLATE_KEYS.indexOf('observation')),
+            appearance: { note_template:'observation', color: spatialNoteTemplate('observation').color, size: 'small', opacity: .64, surface: 'outline' }
         } : {})
     };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
@@ -3110,6 +3253,7 @@ function renderInterface(simulated) {
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
     const introContinue = appRoot.querySelector('[data-tryit-intro-continue]');
     setDemoTutorialStep(DEMO_TUTORIAL_STEPS.WELCOME);
+    setDemoJourneyStage('why');
     appRoot.querySelector('[data-tryit-intro]')?.removeAttribute('hidden');
     appRoot.querySelector('.tryit-drag-hint')?.remove();
     const exitButton = appRoot.querySelector('[data-tryit-exit]');

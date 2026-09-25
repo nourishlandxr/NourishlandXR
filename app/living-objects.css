@@ -448,6 +448,17 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header { padding:14px 100px 11px 4px; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header h2 { font-size:clamp(19px,2.2vw,25px); }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header .is-panel-hide { right:4px; }
+.nlxr-panel-progress { margin-top:10px; padding-top:8px; border-top:1px solid rgba(223,255,155,.16); color:#f8fbf7; }
+.nlxr-panel-progress-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:7px; font:760 10px/1.2 system-ui,sans-serif; letter-spacing:.07em; text-transform:uppercase; }
+.nlxr-panel-progress-heading strong { color:#dfff9b; font:inherit; }
+.nlxr-panel-progress-heading span { color:rgba(248,251,247,.68); font:inherit; white-space:nowrap; }
+.nlxr-panel-progress ol { position:relative; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:3px; margin:0; padding:0; list-style:none; }
+.nlxr-panel-progress ol::before { content:""; position:absolute; left:5px; right:5px; top:5px; height:2px; border-radius:999px; background:rgba(255,255,255,.14); }
+.nlxr-panel-progress li { position:relative; display:grid; justify-items:center; gap:4px; min-width:0; color:rgba(248,251,247,.46); font:760 8px/1.1 system-ui,sans-serif; letter-spacing:.035em; text-transform:uppercase; }
+.nlxr-panel-progress li i { z-index:1; width:8px; height:8px; border:2px solid rgba(255,255,255,.32); border-radius:50%; background:#0a1820; box-shadow:0 0 0 3px rgba(9,21,33,.86); }
+.nlxr-panel-progress li.is-complete,.nlxr-panel-progress li.is-current { color:#f8fbf7; }
+.nlxr-panel-progress li.is-complete i { border-color:#dfff9b; background:#dfff9b; }
+.nlxr-panel-progress li.is-current i { border-color:#dfff9b; background:#234934; box-shadow:0 0 0 3px rgba(223,255,155,.1),0 0 12px rgba(223,255,155,.4); }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-move { position:absolute; top:10px; right:56px; min-width:38px; min-height:38px; padding:0; border-radius:50%; color:#d9ffb3; font-size:20px; line-height:1; cursor:grab; touch-action:none; box-shadow:0 0 0 1px rgba(217,255,179,.2),0 0 15px rgba(167,230,123,.2); }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-move:hover,.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-move:focus-visible { color:#f1ffd9; box-shadow:0 0 0 3px rgba(217,255,179,.24),0 0 21px rgba(167,230,123,.56); }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-move:active { cursor:grabbing; }
@@ -512,6 +523,9 @@
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body { font-size:18px; line-height:1.5; }
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { font-size:12px; }
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities button { font-size:12px; }
+    .nlxr-panel-progress { margin-top:7px; padding-top:6px; }
+    .nlxr-panel-progress-heading { margin-bottom:5px; font-size:9px; }
+    .nlxr-panel-progress li span { display:none; }
 }
 
 /* Editorial polish for the guided introduction, plant photographs and Area examples. */
