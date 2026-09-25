@@ -79,7 +79,10 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.match(viewSource, /data-pim-density="\$\{density\}"/);
     assert.match(viewSource, /export function reconcilePlantInformationMesh/);
     assert.match(viewSource, /currentByKey = new Map/);
-    assert.match(viewSource, /currentMap\.append\(resolved\)/);
+    assert.match(viewSource, /desiredKeys = new Set/);
+    assert.match(viewSource, /if \(resolved === cursor\)/);
+    assert.match(viewSource, /currentMap\.insertBefore\(resolved, cursor\)/);
+    assert.doesNotMatch(viewSource, /currentMap\.append\(resolved\)/);
     assert.match(viewSource, /data-pim-role="center"/);
     assert.match(viewSource, /data-pim-role="\$\{role\}"/);
     assert.match(canvasSource, /pimVisibleNodes/);

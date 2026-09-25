@@ -325,16 +325,35 @@ export function reconcilePlantInformationMesh(container, markup) {
             .map(element => [pimElementKey(element), element])
             .filter(([key]) => key)
     );
+    const nextElements = [...nextMap.children]
+        .map(element => ({ element, key: pimElementKey(element) }))
+        .filter(({ key }) => key);
+    const desiredKeys = new Set(nextElements.map(({ key }) => key));
+    const nextDesiredSibling = element => {
+        let sibling = element?.nextElementSibling || null;
+        while (sibling && !desiredKeys.has(pimElementKey(sibling))) {
+            sibling = sibling.nextElementSibling;
+        }
+        return sibling;
+    };
+    let cursor = [...currentMap.children]
+        .find(element => desiredKeys.has(pimElementKey(element))) || null;
     const retained = new Set();
-    [...nextMap.children].forEach(nextElement => {
-        const key = pimElementKey(nextElement);
-        if (!key) return;
+    nextElements.forEach(({ element: nextElement, key }) => {
         const currentElement = currentByKey.get(key);
         const resolved = currentElement
             ? syncPimElement(currentElement, nextElement)
             : nextElement;
         retained.add(key);
-        currentMap.append(resolved);
+        if (resolved === cursor) {
+            cursor = nextDesiredSibling(cursor);
+        } else {
+            // Do not re-append retained cells: moving an already rendered cell
+            // can replay its entrance animation and make unrelated branches
+            // blink. Only insert a new cell, or correct a genuinely changed
+            // order, immediately before the next retained desired cell.
+            currentMap.insertBefore(resolved, cursor);
+        }
     });
     currentByKey.forEach((element, key) => {
         if (!retained.has(key)) element.remove();
