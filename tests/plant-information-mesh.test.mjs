@@ -487,6 +487,18 @@ test('PIM shared hit testing exposes large cells without a floating recenter con
         point.x,
         point.y
     ).path, 'food-forest');
+    const visible = pimVisibleNodes(PIGEON_PEA_AR_KNOWLEDGE, []);
+    const core = visible[0].layoutCenterPosition;
+    const foodCell = visible.find(node => node.path === 'food-forest');
+    const overlapPoint = {
+        x: core.x + (foodCell.position.x - core.x) * .68,
+        y: core.y + (foodCell.position.y - core.y) * .68
+    };
+    assert.equal(
+        pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], overlapPoint.x, overlapPoint.y).path,
+        'food-forest',
+        'overlapping touch padding resolves to the nearest visible cell instead of the core'
+    );
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 50, 94), null);
     assert.equal(pimHoneycombTargetAtPercent(PIGEON_PEA_AR_KNOWLEDGE, [], 2, 2), null);
 });

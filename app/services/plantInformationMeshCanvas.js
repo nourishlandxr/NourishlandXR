@@ -607,16 +607,15 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
         const box=pimReaderControl(nodes,options);
         if(xPercent>=box.left && xPercent<=box.left+box.width && yPercent>=box.top && yPercent<=box.top+box.height) return {pimRead:true,path:'',label:'All topics'};
     }
-    if (coreDistance <= 1) {
-    return {
+    const candidates = [{
+        target: {
             pimCore: true,
             path: '',
             label: knowledge?.title || knowledge?.name || 'Plant',
             position: center
-        };
-    }
-    return nodes
-        .map(node => {
+        },
+        distance: coreDistance
+    }, ...nodes.map(node => {
             const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
             const halfWidth = Math.max(.1, Number(node.layoutCellWidthPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
             const halfHeight = Math.max(.1, Number(node.layoutCellHeightPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
@@ -624,8 +623,12 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
                 (xPercent - point.x) / halfWidth,
                 (yPercent - point.y) / halfHeight
             );
-            return { node, distance: normalizedDistance };
-        })
+            return { target: node, distance: normalizedDistance };
+        })];
+    // Touch colliders deliberately extend beyond the visible hexagons. Where
+    // neighbouring colliders overlap, resolve the geometrically nearest cell
+    // rather than allowing the centre cell (or source order) to steal a tap.
+    return candidates
         .sort((left, right) => left.distance - right.distance)
-        .find(candidate => candidate.distance <= 1)?.node || null;
+        .find(candidate => candidate.distance <= 1)?.target || null;
 }

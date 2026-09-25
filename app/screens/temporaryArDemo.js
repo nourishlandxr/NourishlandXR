@@ -3472,6 +3472,20 @@ function updateDemoControllerRay(frame) {
     latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
 }
 
+function demoControllerRayForInputEvent(event) {
+    const source = event?.inputSource;
+    if (!source || source.hand || !referenceSpace) return null;
+    const sourceSpace = source.targetRaySpace || source.gripSpace;
+    const pose = sourceSpace ? event.frame?.getPose?.(sourceSpace, referenceSpace) : null;
+    return controllerRayFromPose(pose, source.handedness || 'right');
+}
+
+function captureDemoInputEventRay(event) {
+    const eventRay = demoControllerRayForInputEvent(event);
+    if (eventRay) latestControllerRay = eventRay;
+    return eventRay;
+}
+
 function pollDemoControllerDepth(time = performance.now()) {
     const source = demoControllerInputSource();
     const elapsed = demoControllerDepthAt ? time - demoControllerDepthAt : 16;
@@ -4432,6 +4446,7 @@ async function startImmersive() {
         setupRenderer();
         session.addEventListener('select', event => {
             if(event.inputSource?.hand)return;
+            captureDemoInputEventRay(event);
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
@@ -4454,6 +4469,7 @@ async function startImmersive() {
         });
         session.addEventListener('selectstart', event => {
             if(event.inputSource?.hand)return;
+            captureDemoInputEventRay(event);
             if(demoKnowledgeWorkspace) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;

@@ -1145,6 +1145,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
+    assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
+    assert.match(source, /event\.frame\?\.getPose\?\.\(sourceSpace, referenceSpace\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialOrb/);
     assert.match(source, /import \{ AR_EXPERIENCE_CONFIG \} from '\.\.\/services\/arExperienceConfig\.js'/);
@@ -1310,6 +1312,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
     assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Previous'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
+    assert.match(immersiveSelectHandler, /captureDemoInputEventRay\(event\)[\s\S]*selectDemoProfileCell\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
     const immersiveSelectStartHandler = source.slice(
         source.indexOf("session.addEventListener('selectstart'"),
