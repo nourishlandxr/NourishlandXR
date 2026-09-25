@@ -4086,7 +4086,15 @@ function drawSpatialAmbientLife(view){
     for(let index=0;index<2;index++){
         const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index);
         if(!bee)continue;
-        const position={x:base.x+(bee.x-.79)*3,y:base.y+.5+(bee.y-.62)*2,z:base.z+bee.depth};
+        // The ambient anchor is established from the current viewer pose above.
+        // Referencing the old `base` name here threw on every immersive frame as
+        // soon as the Meet a Plant Orb step enabled the bees. Because the frame
+        // had already been cleared, that made the whole AR scene disappear.
+        const position={
+            x:ambientWorldAnchor.x+(bee.x-.79)*3,
+            y:ambientWorldAnchor.y+.5+(bee.y-.62)*2,
+            z:ambientWorldAnchor.z+bee.depth
+        };
         drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
         const flap=.025+Math.abs(bee.wing)*.013;
         wings.push(position.x-.008,position.y,position.z,position.x-.025,position.y+flap,position.z,

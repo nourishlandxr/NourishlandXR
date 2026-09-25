@@ -31,9 +31,12 @@ test('reduced motion omits animated bees', () => {
 test('ambient life is wired into simulated and immersive demo rendering', () => {
     const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     const style=readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
+    const spatialDraw=source.slice(source.indexOf('function drawSpatialAmbientLife'),source.indexOf('function drawSpatialRain'));
     assert.match(source,/data-demo-ambient/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
+    assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
+    assert.doesNotMatch(spatialDraw,/\bbase\.(?:x|y|z)\b/);
     assert.doesNotMatch(source,/seedlingGrowthStage|ambientGrowth|tickDemoAmbientLife/);
     assert.doesNotMatch(source,/drawAmbientTreeSprites|AMBIENT_TREE_ASSETS|lychee-tree-/);
     assert.match(style,/\.tryit-ambient-life[^}]*z-index:12000[^}]*pointer-events:none/);
