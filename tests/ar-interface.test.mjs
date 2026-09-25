@@ -1385,8 +1385,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /primary\?\.id==='continue' && mainScreen\)mainScreen\.append\(trigger\)/);
     assert.doesNotMatch(source, /MAIN SCREEN/);
     assert.doesNotMatch(styles, /content:"Main Screen"/);
-    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*right:clamp\(18px,4vw,42px\);[^}]*border-radius:15px;/);
-    assert.match(styles, /\.tryit-live-welcome > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*bottom:25%;[^}]*pointer-events:auto;/);
+    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:clamp\(18px,3\.5vh,34px\);[^}]*transform:translateX\(-50%\);[^}]*border-radius:15px;/);
+    assert.match(styles, /\.tryit-live-welcome > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:28%;[^}]*pointer-events:auto;/);
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);

@@ -8906,15 +8906,15 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-guided-choice.is-welcome-board > .tryit-context-trigger {
     position:absolute;
-    left:auto;
-    right:clamp(18px,4vw,42px);
+    left:50%;
+    right:auto;
     bottom:clamp(18px,3.5vh,34px);
     width:auto;
     min-width:min(240px,calc(100% - 36px));
     height:auto;
     min-height:54px;
     padding:12px 22px;
-    transform:none;
+    transform:translateX(-50%);
     border-color:rgba(223,255,155,.46);
     border-radius:15px;
     background:rgba(117,164,91,.20);
@@ -8923,13 +8923,13 @@ button.ar-square-action::before { display: none !important; }
     font-size:.82rem;
     letter-spacing:.01em;
 }
-.tryit-guided-choice.is-welcome-board > .tryit-context-trigger:active { transform:translateY(1px); }
+.tryit-guided-choice.is-welcome-board > .tryit-context-trigger:active { transform:translate(-50%,1px); }
 .tryit-live-welcome > .tryit-context-trigger {
     position:absolute;
     left:50%;
     right:auto;
     top:auto;
-    bottom:25%;
+    bottom:28%;
     width:auto;
     min-width:min(230px,42%);
     height:auto;
