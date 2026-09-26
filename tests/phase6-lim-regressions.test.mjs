@@ -37,7 +37,7 @@ test('spatial panel keeps its pose through head turns and only moves on grab or 
     assert.equal(panelPoseOutsideSafeBounds(turned, pose), true);
     assert.doesNotMatch(panelSource, /if\(!manuallyPositioned && panelPoseOutsideSafeBounds\(matrix,pose\)\)/);
     assert.doesNotMatch(panelSource, /Object\.assign\(pose,facePanelTowardEyes\(pose\.center/);
-    assert.match(panelSource, /else if\(!pose\)pose=next/);
+    assert.match(panelSource, /else if\(!pose\)\{[\s\S]*pose=next;[\s\S]*if\(headset && firstPlacement\)[\s\S]*firstPlacement=false;[\s\S]*\}/);
     assert.match(panelSource, /const spatialHeight=\(\)=>phoneAR\?960:headset\?720:height\(\)/);
 });
 
