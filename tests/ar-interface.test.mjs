@@ -67,7 +67,7 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     const panelSource=read('app/services/pimInfoPanel.js');
     assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
     assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
-    assert.match(panelSource, /angleDegrees = 18, arcDepth = 0/);
+    assert.match(panelSource, /angleDegrees = 18, arcDepth = \.24/);
     assert.match(panelSource, /gap=\.012/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
@@ -1392,7 +1392,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 360/);
-    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0, -0\.34, -2\.755\]\)/);
+    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.16, -2\.755\]\)/);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
     assert.match(source, /primary\?\.id==='continue' && mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
     assert.doesNotMatch(source, /MAIN SCREEN/);
@@ -1405,7 +1405,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
     assert.match(source, /demoOrientationStep===2[\s\S]*infoPanel\?\.setIntroduction\(true\);infoPanel\?\.suspend\(false\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
-    assert.match(source, /const DEMO_WELCOME_OPENING_MS=12500/);
+    assert.match(source, /const DEMO_WELCOME_OPENING_MS=31500/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
     assert.match(source, /NourishlandXR turns a real place into a living, explorable map/);

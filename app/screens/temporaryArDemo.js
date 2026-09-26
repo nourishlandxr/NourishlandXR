@@ -325,8 +325,8 @@ const AR_PHONE_COMFORT = Object.freeze({
 // Keep the primary trigger on the central screen rather than floating beneath it.
 // It sits slightly in front of the screen so the texture remains crisp and the
 // shared ray hit target can still resolve it independently from LIM cells.
-const INTRO_CONTROL_POSITION = Object.freeze([0, -0.34, -2.755]);
-const INTRO_CONTROL_SCALE = Object.freeze([1.32, 1.02]);
+const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.16, -2.755]);
+const INTRO_CONTROL_SCALE = Object.freeze([1.05, .72]);
 const DEMO_QUEST_ORB_SCALE = 0.62;
 // The shared demo quad is .4 m by .16 m before model scaling. These values
 // produce the configured 1.44 m by 1.08 m transparent PIM interaction wall.
@@ -373,9 +373,10 @@ export const welcomeNarrative=elapsed=>{
     const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
     return {...item,alpha};
 };
-const DEMO_WELCOME_OPENING_MS=12500;
-const DEMO_WELCOME_TITLE_HOLD_MS=4300;
-const DEMO_WELCOME_PLACE_HOLD_MS=9600;
+const DEMO_WELCOME_OPENING_MS=31500;
+const DEMO_WELCOME_TITLE_HOLD_MS=3500;
+const DEMO_WELCOME_DESCRIPTION_HOLD_MS=7600;
+const DEMO_WELCOME_NARRATIVE_START_MS=9000;
 const DEMO_WELCOME_CONTINUE_MS=21000;
 export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
@@ -3279,7 +3280,8 @@ function demoRecordRayHit(record) {
         const matrix=billboardMatrix(record.position,DEMO_NOTE_IMMERSIVE_SCALE.x,DEMO_NOTE_IMMERSIVE_SCALE.y);
         const right={x:matrix[0]/DEMO_NOTE_IMMERSIVE_SCALE.x,y:matrix[1]/DEMO_NOTE_IMMERSIVE_SCALE.x,z:matrix[2]/DEMO_NOTE_IMMERSIVE_SCALE.x};
         const up={x:matrix[4]/DEMO_NOTE_IMMERSIVE_SCALE.y,y:matrix[5]/DEMO_NOTE_IMMERSIVE_SCALE.y,z:matrix[6]/DEMO_NOTE_IMMERSIVE_SCALE.y};
-        return spatialDashboardRayHit({origin,direction:ray},{center:record.position,right,up,width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y},{width:1024,height:384});
+        const normal={x:matrix[8],y:matrix[9],z:matrix[10]};
+        return spatialDashboardRayHit({origin,direction:ray},{center:record.position,right,up,normal,width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y},{width:1024,height:384});
     }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
     const along=offset.x*ray.x+offset.y*ray.y+offset.z*ray.z;
@@ -4036,19 +4038,28 @@ function drawIntroNoteContent(ctx) {
         ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     }
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
-    const openingTitle=openingElapsed===null ? introBoardTitle : openingElapsed<DEMO_WELCOME_TITLE_HOLD_MS ? demoLocalizedText('Welcome to Nourishland XR') : openingElapsed<DEMO_WELCOME_PLACE_HOLD_MS ? demoLocalizedText('Every living place holds knowledge.') : '';
+    if(openingElapsed!==null){
+        if(openingElapsed<DEMO_WELCOME_NARRATIVE_START_MS){
+            const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_NARRATIVE_START_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
+            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='760 92px Georgia, serif';ctx.fillText(demoLocalizedText('Welcome to Nourishland XR'),contentCenter,450,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NourishlandXR is a learning tool for exploring how plants, knowledge and real places connect.'),contentCenter,570,760,54,3);}
+        }else{
+            const narrative=welcomeNarrative(openingElapsed-DEMO_WELCOME_NARRATIVE_START_MS);ctx.globalAlpha*=narrative.alpha;ctx.fillStyle='#ffffff';ctx.font='580 50px system-ui, sans-serif';drawWrappedTextureText(ctx,narrative.text,contentCenter,520,780,62,4);
+        }
+        ctx.restore();return;
+    }
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
     const titleWidth = 900;
     let titleSize = 92;
     ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
-    while (titleSize > 48 && ctx.measureText(openingTitle).width > titleWidth) {
+    while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
     }
-    if(openingTitle)ctx.fillText(openingTitle, contentCenter, 540, titleWidth);
-    if (introBoardVisibleBody && openingElapsed===null) {
+    ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
+    if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();

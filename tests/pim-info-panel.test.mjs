@@ -58,12 +58,12 @@ test('Quest Control panel begins below and centrally in the current forward view
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
 });
 
-test('companion faces form one restrained inward-facing plane',()=>{
+test('companion faces compensate for lateral distance while turning inward',()=>{
     const pose={center:{x:0,y:1.3,z:-1},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:.2,z:.98}};
     const left=companionPanelPose(pose,'left',.82),right=companionPanelPose(pose,'right',.82);
     assert.ok(left.center.x<0 && right.center.x>0);
     assert.ok(left.normal.x>0 && right.normal.x<0,'both side faces turn toward the viewer');
-    assert.ok(Math.abs(left.center.z-pose.center.z)<1e-10 && Math.abs(right.center.z-pose.center.z)<1e-10,'side faces share the main panel depth plane');
+    assert.ok(left.center.z>pose.center.z+.2 && right.center.z>pose.center.z+.2,'side faces move toward the viewer to preserve perceived distance');
 });
 
 test('Quest panel source keeps progress separate and all three surfaces aligned',()=>{

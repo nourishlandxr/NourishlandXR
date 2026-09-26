@@ -62,7 +62,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = 0) {
+export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = .24) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     return {...pose,
