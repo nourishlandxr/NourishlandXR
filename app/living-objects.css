@@ -1056,7 +1056,7 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview figcaption { font-size:15px; line-height:1.45; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-wing {
     position:absolute!important;
-    inset:0 auto 0 calc(100% + 18px)!important;
+    inset:0 auto 0 calc(100% + 6px)!important;
     width:clamp(300px,38vw,470px)!important;
     padding:14px!important;
     border:1px solid rgba(152,207,235,.72);
@@ -1066,7 +1066,7 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview { height:100%; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview img { min-height:240px; }
 .nlxr-settings-companion {
-    position:fixed; z-index:12901; left:min(790px,calc(100vw - 420px)); top:16px;
+    position:fixed; z-index:12901; left:8px; top:16px;
     width:min(390px,calc(100vw - 32px)); max-height:min(70vh,620px); overflow:auto;
     box-sizing:border-box; padding:20px 22px; color:#f3f8fc;
     border:1px solid rgba(152,207,235,.72); border-radius:20px;
@@ -1079,6 +1079,14 @@
 .nlxr-settings-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:14px 0; }
 .nlxr-settings-actions button { min-height:50px; padding:8px; color:#f3f8fc; border:1px solid rgba(177,220,243,.66); border-radius:12px; background:#29465f; font:700 14px/1.25 system-ui; }
 .nlxr-settings-actions button:last-child { grid-column:1/-1; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle { font-size:12px; letter-spacing:.04em; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle::before { display:none; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager { display:flex; justify-content:flex-end; gap:8px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button { min-width:48px; min-height:48px; padding:8px 14px; overflow:hidden; white-space:nowrap; transition:min-width .16s ease,background .16s ease; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Previous"]:is(:hover,:focus-visible),
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Next"]:is(:hover,:focus-visible) { min-width:118px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Previous"]:is(:hover,:focus-visible)::after { content:" Previous"; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Next"]:is(:hover,:focus-visible)::before { content:"Next "; }
 @media(max-width:700px) {
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel),
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-rail-collapsed,

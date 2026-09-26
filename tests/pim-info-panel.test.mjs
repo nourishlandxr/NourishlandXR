@@ -68,24 +68,23 @@ test('Android AR Control panel begins within a comfortable left-hand view',()=>{
 });
 
 test('Control panel keeps navigation separate from experience actions',()=>{
-    for(const tab of ['Details','Modules','Help']){
+    for(const tab of ['Details','Help']){
         const buttons=controlPanelControls({tab});
-        assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,1);
+        assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,tab==='Help'?1:0);
         for(const [i,a] of buttons.entries())for(const b of buttons.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
     }
-    assert.equal(controlPanelControls().filter(b=>b.action==='Settings' && b.kind!=='tab').length,1);
+    assert.equal(controlPanelControls().filter(b=>b.action==='Settings' && b.kind==='menu').length,1);
     assert.equal(controlPanelControls({tab:'Details',selected:true}).some(b=>b.action==='Edit'),false);
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
-    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Information');
-    assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
-    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Modules').label,'Guides');
+    assert.equal(controlPanelControls().some(b=>['Details','Modules'].includes(b.action)),false);
+    assert.equal(controlPanelControls().find(b=>b.action==='Help').label,'Help');
     const menu=controlPanelControls({height:760,utilityActions:[{id:'lim-visibility',label:'Hide learning cells'},{id:'close',label:'Close demo'}]});
-    assert.deepEqual(menu.filter(button=>button.kind==='menu').map(button=>button.action),['Utility:lim-visibility','Utility:close']);
+    assert.deepEqual(menu.filter(button=>button.kind==='menu').map(button=>button.action),['Settings','Utility:lim-visibility','Utility:close']);
     assert.equal(menu.some(button=>button.kind==='utility' && ['Utility:lim-visibility','Utility:close'].includes(button.action)),false);
     const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});
     assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:recenter','Utility:continue']);
     for(const [i,a] of utilities.entries())for(const b of utilities.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
-    const modules=controlPanelControls({tab:'Modules',height:760,moduleActions:[{id:'food-forest',label:'Create a food forest'},{id:'native-forest',label:'Identify a native forest'}]});
+    const modules=controlPanelControls({tab:'Help',height:760,moduleActions:[{id:'food-forest',label:'Create a food forest'},{id:'native-forest',label:'Identify a native forest'}]});
     assert.deepEqual(modules.filter(button=>button.kind==='module').map(button=>button.action),['Module:food-forest','Module:native-forest']);
     for(const [i,a] of modules.entries())for(const b of modules.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
 });

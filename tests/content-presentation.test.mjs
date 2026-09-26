@@ -49,14 +49,14 @@ test('demo opens with the knowledge problem before defining the product', () => 
     const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
     assert.ok(opening.indexOf('Every living place holds knowledge') < opening.indexOf('living, explorable map'));
     assert.ok(opening.indexOf('knowledge is often scattered') < opening.indexOf('Plants, observations, stories and guidance'));
-    assert.match(demo, /title:'Knowledge belongs with the place'/);
+    assert.match(demo, /title:'Knowledge begins with the place'/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
-    assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
+    assert.match(greeting, /introBoardTitle='Welcome to Nourishland'/);
     assert.match(greeting, /Take a moment to settle in/);
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
@@ -71,7 +71,9 @@ test('the first-time journey introduces the guide before four practical learning
     assert.match(demo,/at:18000,text:demoLocalizedText\('Explore one plant/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/title:'Your guide'[\s\S]*stays with you as you explore/);
+    assert.match(demo,/title:'Your guide'[\s\S]*This panel explains each plant/);
+    assert.match(demo,/infoPanel\?\.suspend\(true\)/);
+    assert.match(demo,/if\(index===2\)[\s\S]*infoPanel\?\.setIntroduction\(true\)[\s\S]*infoPanel\?\.suspend\(false\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
     assert.match(demo,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
     assert.match(demo,/Why does this matter\?/);

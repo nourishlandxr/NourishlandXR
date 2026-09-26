@@ -11700,8 +11700,8 @@ body:has(.app-surface) {
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"],
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
     min-width:min(360px,76vw);
-    min-height:64px;
-    padding:16px 30px;
+    min-height:72px;
+    padding:20px 34px;
     border:2px solid transparent;
     border-radius:18px;
     background:linear-gradient(145deg,#e6ffc2,#a9dc79 68%,#7fbe63);

@@ -58,14 +58,18 @@ test('welcome narrative moves from the place problem to the explorable map witho
 test('spatial Control Panel keeps reading actions in the main card and companions separate', () => {
     const actions = spatialPanelControls({
         mediaCollapsed: false,
-        items: [{ action: 'Settings', label: 'Settings' },{ action: 'Utility:continue', kind: 'utility', primary: true, label: 'Continue' }]
+        items: [{ action: 'Settings', kind: 'menu', label: 'Settings' }]
     });
-    const continueAction = actions.find(action => action.action === 'Utility:continue');
     const settings = actions.find(action => action.action === 'Settings');
-    assert.ok(continueAction.x >= 200 && continueAction.x + continueAction.width <= 1000);
     assert.ok(settings);
+    assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
-    assert.match(read('app/services/pimInfoPanel.js'), /createSpatialTotemCards/);
+    const panelSource=read('app/services/pimInfoPanel.js');
+    assert.match(panelSource, /const assemblyRight=pose\.right/);
+    assert.match(panelSource, /pose\.center\.x-assemblyRight\.x\*offset/);
+    assert.match(panelSource, /pose\.center\.x\+assemblyRight\.x\*offset/);
+    assert.match(panelSource, /gap=\.015/);
+    assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
 
@@ -1206,12 +1210,12 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Knowledge belongs with the place[\s\S]*One place, one clear structure[\s\S]*Begin with one plant[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /Knowledge begins with the place[\s\S]*One place, one clear structure[\s\S]*Begin with one plant[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
-    assert.match(source, /Welcome to NourishlandXR/);
+    assert.match(source, /Welcome to Nourishland/);
     assert.match(source, /Living places hold useful knowledge, but it is often scattered/);
     assert.match(source, /creates an explorable map of a place and connects plants, observations, stories and guidance/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
@@ -1269,7 +1273,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
-    assert.match(source, /title:'Your guide'[\s\S]*stays with you as you explore/);
+    assert.match(source, /title:'Your guide'[\s\S]*This panel explains each plant/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
     assert.match(source, /A Project represents the whole place\. Areas organise meaningful parts of it/);
     assert.match(source, /Pigeon Pea now has a location in this scene/);
@@ -1392,7 +1396,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(false\)/);
+    assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
+    assert.match(source, /demoOrientationStep===2[\s\S]*infoPanel\?\.setIntroduction\(true\);infoPanel\?\.suspend\(false\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=21000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
@@ -1545,6 +1550,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(styles, /--pim-parent-grid-x/);
     assert.doesNotMatch(source, /globalCompositeOperation = 'destination-over'/);
     assert.match(source, /explorationGoal = record\.tutorialStage === 'plant' \? 3 : 2/);
+    const interactionAdvance=source.slice(source.indexOf('function advanceAfterDemoProfileInteraction'),source.indexOf('function orientDemoPimPoseToViewer'));
+    assert.doesNotMatch(interactionAdvance,/continueAfterDemoPim\(record\)/);
+    assert.match(interactionAdvance,/record\.demoProfileReady = true/);
     assert.match(source, /PIM_SPATIAL_CONFIG\.expandedSurfaceWidthMetres \/ \.4/);
     assert.match(styles, /left: var\(--pim-node-x, 50%\)/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);

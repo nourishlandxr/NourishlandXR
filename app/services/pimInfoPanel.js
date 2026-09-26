@@ -95,16 +95,16 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue');
     const menuUtilities=utilities.filter(item=>['close','lim-visibility'].includes(item.id));
     const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item));
-    const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Modules'?moduleActions.length:0;
+    const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Help'?moduleActions.length:0;
     const primaryY=height-22-primaryHeight,secondaryStart=primaryY-secondaryRows*62;
     const actionY=secondaryStart-moduleRows*58-62;
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
-    ['Details','Modules','Help'].forEach((action,i)=>buttons.push({action,label:action==='Details'?(contentKind==='pim'?'Plant':'Information'):action==='Modules'?'Guides':action,kind:'tab',selected:tab===action,x:18,y:148+i*68,width:174,height:56}));
-    menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,kind:'menu',disabled:Boolean(item.disabled),x:18,y:428+index*62,width:174,height:54}));
+    buttons.push({action:'Help',label:'Help',kind:'tab',selected:tab==='Help',x:18,y:148,width:174,height:56});
+    buttons.push({action:'Settings',label:'Settings',kind:'menu',x:18,y:216,width:174,height:56});
+    menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
     if(tab==='Details' && pageCount>1)buttons.push({action:'Previous',label:'‹',ariaLabel:'Previous page',kind:'pager',x:852,y:130,width:52,height:42,disabled:page===0},{action:'Next',label:'›',ariaLabel:'Next page',kind:'pager',x:918,y:130,width:52,height:42,disabled:page>=pageCount-1});
-    buttons.push({action:'Settings',label:'Settings',x:238,y:actionY,width:350,height:48});
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
-    if(tab==='Modules')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
+    if(tab==='Help')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
     secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
     if(primary)buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238,y:primaryY,width:732,height:68});
     return buttons;
@@ -128,15 +128,14 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     items.filter(item=>['tab','menu'].includes(item.kind)).forEach((item,index)=>result.push(button(item,18,196+index*64,rail-36,52)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
     const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
-    const reading=items.filter(item=>['Settings'].includes(item.action));
     const pager=items.filter(item=>item.kind==='pager');
     const module=items.filter(item=>item.kind==='module'),pathway=items.filter(item=>item.kind==='pathway');
     const primaryY=primary?height-82:height-26;
     if(primary)result.push(button(primary,left,primaryY,width,56));
     pager.forEach((item,index)=>result.push(button(item,left+width-108+index*56,124,48,42)));
     const rows=Math.ceil(secondary.length/2);
-    let y=primaryY-(rows*54+reading.length*54+module.length*54+pathway.length*54+10);
-    for(const group of [pathway,module,reading])for(const item of group){result.push(button(item,left,y,width,48));y+=54;}
+    let y=primaryY-(rows*54+module.length*54+pathway.length*54+10);
+    for(const group of [pathway,module])for(const item of group){result.push(button(item,left,y,width,48));y+=54;}
     secondary.forEach((item,index)=>result.push(button(item,left+(index%2)*(width/2+4),y+Math.floor(index/2)*54,width/2-4,48)));
     return result;
 }
@@ -162,21 +161,20 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         return lines.join('\n');
     };
     const text=()=>{
-        if(tab==='Modules')return moduleContext?.body || 'Choose a short guide. It will lead through a few cells, then return to the demo.';
-        if(tab==='Help')return INFO_HELP;
+        if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Information about what you select will appear here. Select a Plant Orb or hold one of its cells to explore.'
                 :'Information about what you select will appear here.';
         return [reading,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
     };
-    const pages=()=>infoPages(text(),headset?(mediaCollapsed?(largeText?27:31):(largeText?18:22)):(largeText?32:38),pathwayContext?4:7);
-    const title=()=>tab==='Modules'?(moduleContext?.title || 'Guides'):tab==='Help'?'Help':selection?.title || (identity?'Choose a topic':'Ready to explore');
+    const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
+    const title=()=>tab==='Help'?'Help':selection?.title || (identity?'Choose a topic':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && selection.image
         ? {image:selection.image,alt:selection.imageAlt || selection.title,caption:'Pathway illustration'}
         : identity?.media?.image ? {...identity.media,caption:`${identity.plant} · reference image`} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Modules'?(moduleContext?.actions?.length||0):0);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
     const controls=()=>{const items=controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions:mainUtilities()});return isDesktopDemo()?items.filter(item=>item.action!=='Recenter'):items;};
@@ -189,7 +187,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(action==='MovePanel')return;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
-        if(['Details','Modules','Help'].includes(action)){tab=action;page=0;}
+        if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
         if(action==='Settings'){settingsOpen=!settingsOpen;renderSettings();}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -288,7 +286,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(header){header.querySelector('h2').textContent=identity?.plant || selection?.plant || 'Control panel';header.querySelector('.nlxr-control-identity').textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');syncHeaderProgress(header);}
         const detailsTab=element.querySelector('[data-info-action="Details"]');
         if(detailsTab)detailsTab.textContent=contentKind()==='pim'?'Plant':'Selected topic';
-        content.setAttribute('aria-labelledby',contentId+'-'+tab);
+        if(tab==='Help'){content.setAttribute('aria-labelledby',contentId+'-Help');content.removeAttribute('aria-label');}
+        else{content.removeAttribute('aria-labelledby');content.setAttribute('aria-label','Information');}
         content.querySelector('h3').textContent=title();
         content.querySelector('.nlxr-info-trail').textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
         content.querySelector('.nlxr-info-body').textContent=currentPages[page].join('\n');
@@ -297,8 +296,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(!pager && currentPages.length>1){pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');content.append(pager);}
         if(pager)pager.replaceChildren(...controls().filter(item=>item.kind==='pager').map(makeButton));
         let guides=content.querySelector('.nlxr-guide-actions');
-        if(tab==='Modules' && !guides){guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');content.append(guides);}
-        if(guides){if(tab==='Modules')guides.replaceChildren(...controls().filter(item=>item.kind==='module' && !item.disabled).map(makeButton));else guides.remove();}
+        if(tab==='Help' && !guides){guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');content.append(guides);}
+        if(guides){if(tab==='Help')guides.replaceChildren(...controls().filter(item=>item.kind==='module' && !item.disabled).map(makeButton));else guides.remove();}
         const count=element.querySelector('.nlxr-control-page');
         if(count)count.textContent=(page+1)+' / '+currentPages.length;
         const media=element.querySelector('.nlxr-media-wing');
@@ -397,17 +396,17 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
                 controls().filter(item=>item.kind==='pathway').forEach(item=>actions.append(makeButton(item)));
                 pathway.append(heading,progress,explanation,actions);element.append(pathway);
             }
-            const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');content.setAttribute('aria-labelledby',contentId+'-'+tab);content.tabIndex=0;
+            const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');if(tab==='Help')content.setAttribute('aria-labelledby',contentId+'-Help');else content.setAttribute('aria-label','Information');content.tabIndex=0;
             const heading=document.createElement('h3');heading.textContent=title();
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);
             const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));if(pager.childElementCount)content.append(pager);
-            if(tab==='Modules'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
+            if(tab==='Help'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
                 const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
-                if(!desktopDemo){const mediaToggle=makePanelToggle('●','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);}
+                if(!desktopDemo){const mediaToggle=makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);}
                 if(showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
                 else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
                 element.append(media);
@@ -422,8 +421,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
     }
     element.addEventListener('keydown',event=>{
         if(event.target.getAttribute('role')!=='tab' || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
-        event.preventDefault();const tabs=['Details','Modules','Help'],index=tabs.indexOf(tab);
-        act(event.key==='Home'?'Details':event.key==='End'?'Help':tabs[(index+(['ArrowRight','ArrowDown'].includes(event.key)?1:tabs.length-1))%tabs.length]);
+        event.preventDefault();
+        act('Help');
         element.querySelector('[data-info-action="'+tab+'"]')?.focus();
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
@@ -452,7 +451,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             return c;
         }
         if(card.headset && !card.hidden){
-            const rail=card.railCollapsed?62:200,media=card.mediaCollapsed?62:350;
+            const rail=card.railCollapsed?62:200,media=0;
             const left=rail+22,right=1000-media-22,width=right-left;
             ctx.fillStyle='rgba(5,15,27,.68)';ctx.fillRect(6,115,rail,c.height-122);
             ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,115,media-6,c.height-122);
@@ -481,15 +480,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 43px':'500 38px')+' system-ui';
             const lineHeight=card.largeText?52:47;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
-            if(!card.mediaCollapsed){
-                // The media wing owns the right-hand column; it never covers
-                // the central reading bay or its controls.
-                const imageX=1000-media+12,imageY=194,imageWidth=media-30,imageHeight=card.height-300;
-                ctx.fillStyle='rgba(12,22,31,.9)';ctx.fillRect(imageX-8,imageY-8,imageWidth+16,imageHeight+16);
-                if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight);
-                    ctx.drawImage(card.image,imageX+(imageWidth-card.image.naturalWidth*scale)/2,imageY+(imageHeight-card.image.naturalHeight*scale)/2,card.image.naturalWidth*scale,card.image.naturalHeight*scale);
-                }else{ctx.fillStyle='#bdc9cc';ctx.font='400 20px system-ui';infoPages('Plant media appears here when a plant is selected.',18,4)[0].forEach((line,index)=>ctx.fillText(line,imageX,imageY+index*27,imageWidth));}
-            }
             ctx.fillStyle='#d4e0dc';ctx.font='400 22px system-ui';ctx.fillText(card.metadata,left,card.height-27,width);
             if(card.tab==='Details')ctx.fillText(card.page,right-65,card.height-20,65);
         }else if(!card.hidden){
@@ -546,7 +536,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             if(content?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=content.image;}
             tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();
         },
-        setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Modules';else if(!moduleContext && tab==='Modules')tab='Details';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
+        setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setMeshComposition(value){meshContext=value?{...value,items:[...(value.items || [])]}:null;page=0;updateReading();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
@@ -571,13 +561,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const wasDetails=tab==='Details';const previous=record===nextRecord?identity?.media:null;const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media};if(media?.image && !mediaTouched)mediaCollapsed=false;tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
-        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,right,cards)=>{
+        attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
             if(!pose)return [];
             const mainWidth=(hidden?.26:headset?1:.66)*spatialScale,mainHeight=(hidden?.06:headset?.52:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            if(settingsOpen && !hidden && settingsCard)surfaces.push({...pose,center:{x:pose.center.x+right.x*(mainWidth*.78+.34),y:pose.center.y,z:pose.center.z+right.z*(mainWidth*.78+.34)},right,width:.62*spatialScale,height:.52*spatialScale,card:settingsCard});
-            if(!hidden && mediaCard)surfaces.push({...pose,center:{x:pose.center.x+right.x*(mainWidth*.78+(settingsOpen?1.02:.38)),y:pose.center.y,z:pose.center.z+right.z*(mainWidth*.78+(settingsOpen?1.02:.38))},right,width:.66*spatialScale,height:.58*spatialScale,card:mediaCard});
+            const assemblyRight=pose.right,settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.015;
+            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...pose,center:{x:pose.center.x-assemblyRight.x*offset,y:pose.center.y,z:pose.center.z-assemblyRight.z*offset},right:assemblyRight,width:settingsWidth,height:.52*spatialScale,card:settingsCard});}
+            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...pose,center:{x:pose.center.x+assemblyRight.x*offset,y:pose.center.y,z:pose.center.z+assemblyRight.z*offset},right:assemblyRight,width:mediaWidth,height:.58*spatialScale,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -598,7 +589,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),image:showPlantPreview()?mediaImage:null,accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,title:identity?.plant || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || 'Plant reference image'};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);

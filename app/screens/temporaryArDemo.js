@@ -745,7 +745,9 @@ function syncDemoPanelActions() {
         if(simulatedMode && primary?.id==='continue' && mainScreen && !desktopPreview)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
     }
-    const panelActions=externalTrigger && primary?actions.filter(item=>item!==primary):actions;
+    // Journey progression always belongs to the main experience surface.
+    // The Control panel keeps only persistent tools and navigation.
+    const panelActions=primary?actions.filter(item=>item!==primary):actions;
     if(signature===demoPanelActionSignature && JSON.stringify(panelActions)===elementPanelActionSignature)return;
     demoPanelActionSignature=signature;
     elementPanelActionSignature=JSON.stringify(panelActions);
@@ -948,6 +950,7 @@ function inviteVirtualTag(record) {
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
     record.demoProfileInteracted = true;
+    record.demoProfileReady = false;
     if (record.tutorialStage === 'plant2') inviteVirtualTag(record);
     else if (record.tutorialStage === 'plant') {
         const bridge=activePimLimBridge?.record===record
@@ -1705,15 +1708,15 @@ function showArWelcomeShowcase() {
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='Welcome';
-    introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody=demoLocalizedText('This is a short guided journey through a living place and the knowledge it holds.\n\nTake a moment to settle in. Continue when you are ready.');
+    introBoardTitle='Welcome to Nourishland';
+    introBoardBody=demoLocalizedText("Take a moment to settle in.\n\nThis experience is designed to be explored at your own pace. Read carefully, look around, and continue when you're ready.");
     introBoardVisibleBody=introBoardBody;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel stays with you as you explore, explaining each plant, place and connection when you select it.',accent:'#9fdcff',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel explains each plant, place and connection when you select it.',accent:'#9fdcff',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
-    infoPanel?.suspend(false);
-    infoPanel?.setIntroduction(true);
+    infoPanel?.suspend(true);
+    infoPanel?.setIntroduction(false);
     const openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
@@ -1836,8 +1839,7 @@ function showArWelcomeShowcase() {
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    // The control panel appears as part of the narrative, without a separate gate.
-    setGuide('Welcome to NourishlandXR. Continue when you are ready.');
+    setGuide('Welcome to Nourishland. Start the journey when you are ready.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1861,7 +1863,7 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Knowledge belongs with the place',button:'Continue',nextGuide:'Continue to see how NourishlandXR gives a real place one connected structure.',paragraphs:[
+    {title:'Knowledge begins with the place',button:'Continue',nextGuide:'Continue to see how NourishlandXR gives a real place one connected structure.',paragraphs:[
         'A visitor should not need to search several signs, files and websites to understand what is in front of them.',
         'NourishlandXR brings that information together and keeps the real place at the centre. The panel beside you explains each item when you select it.'
     ]},
@@ -1896,18 +1898,17 @@ function runArWelcomeTutorial(index=0) {
     limMeshVisible=false;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
-    infoPanel?.setGuided(index===0);
-    if(index===0){infoPanel?.setCompact(false);infoPanel?.setIntroduction(true);}
+    infoPanel?.setGuided(index>=2);
+    if(index===2){
+        infoPanel?.setCompact(false);
+        setTimeout(()=>{if(demoOrientationStep===2){infoPanel?.setIntroduction(true);infoPanel?.suspend(false);}},500);
+    }
     const step=DEMO_ORIENTATION_STEPS[index];
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
-        if(index===0){
-            infoPanel?.setIntroduction(false);
-            introBoardTextureDirty=true;
-            runArWelcomeTutorial(index+1);
-            return;
-        }
+        if(index===2)infoPanel?.setIntroduction(false);
+        if(index===0){introBoardTextureDirty=true;runArWelcomeTutorial(index+1);return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
@@ -2521,6 +2522,7 @@ function toggleDemoPlantProfile(record) {
         record.demoExpandedBranches ||= [];
         if (firstOpen) {
             record.demoProfileInteracted = false;
+            record.demoProfileReady = false;
             record.demoProfileInteractionCount = 0;
         }
         ensureDemoPimPose(record);
@@ -2627,12 +2629,18 @@ function selectDemoProfileCell() {
 
 function advanceAfterDemoProfileInteraction(record) {
     if (!record || record.demoProfileInteracted) return 0;
+    if (record.demoProfileReady) return 0;
     const opened = demoPimState(record).expandedNodeIds.has(record.demoActiveBranch);
     const explorationGoal = record.tutorialStage === 'plant' ? 3 : 2;
     if (opened) record.demoProfileInteractionCount = (Number(record.demoProfileInteractionCount) || 0) + 1;
     const remaining = Math.max(0, explorationGoal - (Number(record.demoProfileInteractionCount) || 0));
     if (remaining) return remaining;
-    continueAfterDemoPim(record);
+    // Exploring information unlocks progression; it never performs it.
+    record.demoProfileReady = true;
+    const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
+    if(continueButton){continueButton.textContent=demoLocalizedText('Continue');continueButton.hidden=false;continueButton.disabled=false;}
+    setGuide('You have explored this plant information. Continue when you are ready.');
+    syncDemoPanelActions();
     return 0;
 }
 
