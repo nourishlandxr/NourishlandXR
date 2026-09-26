@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createPimDocument, pimAddNode } from '../app/services/pimModel.js';
-import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, panelCenterFromGrab, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
+import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, companionPanelPose, panelCenterFromGrab, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
 
 test('Quest Control panel keeps its navigation rail and Continue reachable', () => {
     const items=controlPanelControls({height:850,utilityActions:[{id:'continue',label:'Continue',primary:true},{id:'close',label:'Close demo'}]});
@@ -13,7 +13,8 @@ test('Quest Control panel keeps its navigation rail and Continue reachable', () 
     for(const action of ['MovePanel','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
     assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
-    assert.equal(folded.find(item=>item.action==='MovePanel').label,'●');
+    assert.equal(folded.find(item=>item.action==='MovePanel').label,'✋');
+    assert.equal(spatialPanelControls({hidden:true})[0].label,'Restore panel');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
 import { createPimHold, bindSpatialPimHold } from '../app/services/pimActivationHold.js';
@@ -49,12 +50,20 @@ test('waist companion follows translation and starts below the main view',()=>{
     assert.deepEqual(next.anchorHeading,first.anchorHeading); assert.equal(next.center.x-first.center.x,2); assert.equal(next.center.z-first.center.z,3);
 });
 
-test('Quest Control panel begins below and beside the welcome board',()=>{
+test('Quest Control panel begins below and centrally in the current forward view',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
     const pose=infoPanelPose(matrix,null,true);
-    assert.ok(pose.center.x<=-1,'panel has a clear left-side offset');
+    assert.ok(Math.abs(pose.center.x)<1e-10,'main panel is centered rather than shifted left');
     assert.ok(Math.abs(pose.center.y-1.3)<1e-10,'panel sits below eye height for a natural upward pitch');
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
+});
+
+test('companion faces form one restrained inward-facing arc',()=>{
+    const pose={center:{x:0,y:1.3,z:-1},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:.2,z:.98}};
+    const left=companionPanelPose(pose,'left',.82),right=companionPanelPose(pose,'right',.82);
+    assert.ok(left.center.x<0 && right.center.x>0);
+    assert.ok(left.normal.x>0 && right.normal.x<0,'both side faces turn toward the viewer');
+    assert.ok(left.center.z>pose.center.z && right.center.z>pose.center.z,'side faces sit on a shallow arc');
 });
 
 test('Android AR Control panel begins within a comfortable left-hand view',()=>{
@@ -119,7 +128,7 @@ test('grabbing the off-centre move dot keeps that exact point under the controll
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/distance:target\.distance,localX:target\.localX,localY:target\.localY/);
     assert.match(panel,/xrFrame\.getPose\(spatialMove\.source\.targetRaySpace,spatialMove\.referenceSpace\)/);
-    assert.match(panel,/card\.largeText\?'500 43px':'500 38px'/);
+    assert.match(panel,/card\.largeText\?'500 47px':'500 42px'/);
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\) \.nlxr-info-trail \{ font-size:15px/);
 });

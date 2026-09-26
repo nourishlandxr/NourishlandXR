@@ -100,23 +100,6 @@ function meshPanelContext(){
     return {items,result:result?{id:result.id,title:result.title,summary:result.summary}:null,mode:state.mode,error:state.error};
 }
 function syncMeshPanel(){infoPanel?.setMeshComposition(meshPanelContext());}
-function meshPanelActions(){
-    const state=meshComposition.get(),actions=[],activeKey=state.activeRef?meshRefKey(state.activeRef):'';
-    if(state.activeRef && !state.compositionRefs.some(ref=>meshRefKey(ref)===activeKey))actions.push({id:'mesh-add',label:'Add current knowledge'});
-    state.compositionRefs.slice(0,4).forEach((ref,index)=>{let title='knowledge';try{title=meshSourceResolver.resolve(ref).title;}catch{}actions.push({id:`mesh-remove-${index}`,label:`Remove ${title}`});});
-    if(state.compositionRefs.length)actions.push({id:'mesh-clear',label:'Clear selected knowledge'});
-    if(state.compositionRefs.length>=2)actions.push({id:'mesh-create',label:state.mode==='resolving'?'Connecting ideas…':'Connect selected ideas',primary:true,disabled:state.mode==='resolving'});
-    return actions;
-}
-async function createDemoMeshRelationship(){
-    const refs=meshComposition.get().compositionRefs;
-    meshComposition.resolving();
-    try{
-        const result=await meshRelationships.resolve(refs,{context:{mode:'general'}});
-        meshComposition.display(result);
-        infoPanel?.showLearning({id:result.derivedNode.id,title:result.derivedNode.title,body:result.derivedNode.summary,mesh:'derived',editable:false});
-    }catch(error){meshComposition.fail(error);}
-}
 meshComposition.subscribe(()=>{syncMeshPanel();syncDemoPanelActions();});
 function showDemoInfo(record,path) {
     clearLimSelection();
@@ -726,7 +709,7 @@ function demoPanelActions() {
     if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled});
     const priorities=actions.filter(item=>item.id==='close' || item.id==='continue');
     const ordinary=actions.filter(item=>!priorities.includes(item));
-    return [...ordinary,...meshPanelActions().map(item=>({...item,primary:false})),...priorities].slice(-8);
+    return [...ordinary,...priorities].slice(-8);
 }
 
 function syncDemoPanelActions() {
@@ -765,10 +748,6 @@ function setLimMeshVisible(visible) {
 }
 
 function handleDemoPanelAction(action) {
-    if(action==='mesh-add'){meshComposition.add();return;}
-    if(action==='mesh-clear'){meshComposition.clear();return;}
-    if(action==='mesh-create'){void createDemoMeshRelationship();return;}
-    if(action.startsWith('mesh-remove-')){const ref=meshComposition.get().compositionRefs[Number(action.slice(12))];if(ref)meshComposition.remove(ref);return;}
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
     if(action==='pim-lim'){openPimLimBridge(activePimLimBridge);return;}
@@ -1396,10 +1375,10 @@ function showPersistentPimPrompt(record) {
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Explore this plant');
     const body = record?.tutorialStage==='plant'
-        ? demoLocalizedText(`Open Cultivation, then Maintenance, and select Pruning. You will use that knowledge in the landscape.`)
+        ? demoLocalizedText(`Open a few plant information cells to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape.`)
         : demoLocalizedText(`This connected view brings together what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide(record?.tutorialStage==='plant'?'Open Cultivation → Maintenance → Pruning.':'Explore a plant topic, or continue when ready.');
+    setIntroBoardNextGuide(record?.tutorialStage==='plant'?'Explore a few plant information cells. Continue when you are ready.':'Explore a plant topic, or continue when ready.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1420,7 +1399,7 @@ function showPersistentPimPrompt(record) {
     skipDemoNarration = () => {
         continueButton.click();
     };
-    setGuide(record?.tutorialStage==='plant'?`${plantName} information opened. Open Cultivation, then Maintenance, and select Pruning.`:`${plantName} information opened. Select topics to explore.`);
+    setGuide(record?.tutorialStage==='plant'?`${plantName} information opened. Select any visible cell to explore it.`:`${plantName} information opened. Select topics to explore.`);
 }
 
 function useSharedWelcomeBoard(visible) {
@@ -1707,7 +1686,7 @@ function showArWelcomeShowcase() {
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
-    introBoardStep='Welcome';
+    introBoardStep='';
     introBoardTitle='Welcome to Nourishland';
     introBoardBody=demoLocalizedText("Take a moment to settle in.\n\nThis experience is designed to be explored at your own pace. Read carefully, look around, and continue when you're ready.");
     introBoardVisibleBody=introBoardBody;
@@ -1718,10 +1697,10 @@ function showArWelcomeShowcase() {
     infoPanel?.suspend(true);
     infoPanel?.setIntroduction(false);
     const openingParagraphs=introBoardBody.split('\n\n');
-    panel.innerHTML=`<small>${introBoardStep}</small><h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
+    panel.innerHTML=`<h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
     setIntroBoardNextGuide('');
-    panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface','is-typing');
+    panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface','is-opening-welcome','is-typing');
     panel.classList.remove('is-live-welcome-copy');
     panel.hidden=true;
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-opening','true');
@@ -1867,8 +1846,8 @@ const DEMO_ORIENTATION_STEPS = [
         'A visitor should not need to search several signs, files and websites to understand what is in front of them.',
         'NourishlandXR brings that information together and keeps the real place at the centre. The panel beside you explains each item when you select it.'
     ]},
-    {title:'A real place becomes a project',button:'Continue',nextGuide:'Continue to see the clear structure inside a Nourishland project.',paragraphs:[
-        'Nourishland organises a real place as a Project. A Project brings its plants, Areas, observations and knowledge into one connected structure.',
+    {title:'A project represents a whole place',button:'Continue',nextGuide:'Continue to see the clear structure inside a Nourishland project.',paragraphs:[
+        'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
         'That shared context keeps every piece of information connected to the place it describes.'
     ]},
     {title:'One place, one clear structure',button:'Continue',nextGuide:'Continue to begin with one example plant.',paragraphs:[
@@ -1944,7 +1923,7 @@ function guidePlantConversion(record) {
         refreshDemoRecord(record);
         infoPanel?.focusPlant(record,moringa ? MORINGA_PIM : PIGEON_PEA_PIM,moringa
             ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
-            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas'});
+            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'});
         infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };

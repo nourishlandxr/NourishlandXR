@@ -49,15 +49,29 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     if (!matrix) return null;
     const length = Math.hypot(matrix[0], matrix[2]) || 1;
     const right = heading || { x: matrix[0] / length, y: 0, z: matrix[2] / length };
-    // The console begins below and to the left of the main view, like a
+    // The headset console begins below the current forward view, like a
     // waist-height spatial workstation. Looking down to it produces a gentle
     // upward-facing pitch instead of a vertical panel in the main FOV.
-    const side=phoneAR ? .58 : headset ? 1.42 : .82;
+    const side=phoneAR ? .58 : headset ? 0 : .82;
     const forward=phoneAR ? .78 : headset ? 1.08 : .62;
     const drop=phoneAR ? .24 : headset ? .30 : .72;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
+}
+
+// Build companion faces from the main panel's local axes. The restrained
+// inward turn reads as one curved workstation without billboarding each face.
+export function companionPanelPose(pose, side, offset, angleDegrees = 12, arcDepth = .045) {
+    const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
+    const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
+    return {...pose,
+        center:{x:pose.center.x+pose.right.x*offset*direction+pose.normal.x*arcDepth,
+            y:pose.center.y+pose.normal.y*arcDepth,
+            z:pose.center.z+pose.right.z*offset*direction+pose.normal.z*arcDepth},
+        right:{x:pose.right.x*cos-pose.normal.x*sin*turn,y:pose.right.y*cos-pose.normal.y*sin*turn,z:pose.right.z*cos-pose.normal.z*sin*turn},
+        normal:{x:pose.normal.x*cos+pose.right.x*sin*turn,y:pose.normal.y*cos+pose.right.y*sin*turn,z:pose.normal.z*cos+pose.right.z*sin*turn}
+    };
 }
 
 // Recover an accidentally lost reading position only when it has left the
@@ -91,7 +105,7 @@ export function panelCenterFromGrab(ray, grab, axes) {
 
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
-    if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
+    if(hidden)return [{action:'Restore',label:'Restore panel',x:150,y:28,width:700,height:104}];
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue');
     const menuUtilities=utilities.filter(item=>['close','lim-visibility'].includes(item.id));
     const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item));
@@ -119,11 +133,11 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 // The headset uses the same actions as the screen panel, but lays them out in
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
-    if(hidden)return [{action:'Restore',label:'Control panel',x:30,y:36,width:940,height:70}];
+    if(hidden)return [{action:'Restore',label:'Restore panel',x:150,y:28,width:700,height:104}];
     const rail=200,media=0;
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,x,y,width:w,height:h});
-    const result=[button({action:'MovePanel',label:'●',ariaLabel:'Grab and move Control panel',kind:'handle'},744,24,62,48),
+    const result=[button({action:'MovePanel',label:'✋',ariaLabel:'Grab and move Control panel',kind:'handle'},744,24,62,48),
         button({action:'Hide',label:'Hide'},824,24,140,48)];
     items.filter(item=>['tab','menu'].includes(item.kind)).forEach((item,index)=>result.push(button(item,18,196+index*64,rail-36,52)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
@@ -165,7 +179,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Information about what you select will appear here. Select a Plant Orb or hold one of its cells to explore.'
                 :'Information about what you select will appear here.';
-        return [reading,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
+        const interactionHint=identity?.hint ? `PLANT ORB\n${identity.hint}` : '';
+        return [reading,interactionHint,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
     };
     const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
     const title=()=>tab==='Help'?'Help':selection?.title || (identity?'Choose a topic':'Ready to explore');
@@ -380,7 +395,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
             const hideButton=makeButton(controls()[0]);hideButton.classList.add('is-panel-hide');
             header.append(hideButton);
-            if(!desktopDemo){const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='●';moveButton.setAttribute('aria-label','Hold and move Control panel');bindPanelMove(moveButton);header.append(moveButton);}
+            if(!desktopDemo){const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='✋';moveButton.setAttribute('aria-label','Grab and move Control panel');bindPanelMove(moveButton);header.append(moveButton);}
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>['tab','menu'].includes(item.kind)).forEach(item=>tabs.append(makeButton(item)));
@@ -456,8 +471,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             ctx.fillStyle='rgba(5,15,27,.68)';ctx.fillRect(6,115,rail,c.height-122);
             ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,115,media-6,c.height-122);
             ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,116,width,2);
-            ctx.fillStyle='#f3f8fc';ctx.font='650 39px system-ui';ctx.fillText(card.plant,left,25,Math.max(100,width-150));
-            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText(card.scientific,left,78,width);
+            ctx.fillStyle='#f3f8fc';ctx.font='650 42px system-ui';ctx.fillText(card.plant,left,23,Math.max(100,width-150));
+            ctx.fillStyle='#c9e0ed';ctx.font='500 29px system-ui';ctx.fillText(card.scientific,left,76,width);
             if(card.progress){
                 const stepWidth=width/Math.max(1,card.progress.steps.length-1),barY=116;
                 ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='right';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,right,83,Math.min(250,width*.42));ctx.textAlign='left';
@@ -472,13 +487,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
                 infoPages(card.pathway.explanation,Math.max(26,Math.floor(width/13)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=24;});y+=16;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,6,34);}
-            ctx.fillStyle='#f3f8fc';ctx.font='650 34px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=49;
-            ctx.fillStyle='#c9e0ed';ctx.font='500 25px system-ui';ctx.fillText(card.trail,left,y,width);y+=44;
+            ctx.fillStyle='#f3f8fc';ctx.font='650 38px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=51;
+            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText(card.trail,left,y,width);y+=45;
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-90);
             const contentBottom=actionTop-22;
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
-            ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 43px':'500 38px')+' system-ui';
-            const lineHeight=card.largeText?52:47;
+            ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 47px':'500 42px')+' system-ui';
+            const lineHeight=card.largeText?56:50;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             ctx.fillStyle='#d4e0dc';ctx.font='400 22px system-ui';ctx.fillText(card.metadata,left,card.height-27,width);
             if(card.tab==='Details')ctx.fillText(card.page,right-65,card.height-20,65);
@@ -548,27 +563,28 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         focusPlant(nextRecord,document,media=null){
             const wasDetails=tab==='Details';
             const previousMedia=record===nextRecord ? identity?.media : null;
+            const previousHint=record===nextRecord ? identity?.hint : '';
             const identityImage=document?.identity?.image;
             const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || '')}
                 : identityImage ? {image:String(identityImage),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}
                     : previousMedia;
-            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia};mediaImage=null;
+            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};mediaImage=null;
             if(nextMedia?.image && !mediaTouched)mediaCollapsed=false;
             const token=++mediaLoadToken;
             if(nextMedia?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=nextMedia.image;}
             tab='Details';page=0;if(wasDetails)updateReading();else render();
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const wasDetails=tab==='Details';const previous=record===nextRecord?identity?.media:null;const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media};if(media?.image && !mediaTouched)mediaCollapsed=false;tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const wasDetails=tab==='Details';const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};if(media?.image && !mediaTouched)mediaCollapsed=false;tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
             if(!pose)return [];
-            const mainWidth=(hidden?.26:headset?1:.66)*spatialScale,mainHeight=(hidden?.06:headset?.52:spatialHeight()/1000*.66)*spatialScale;
+            const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.52:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const assemblyRight=pose.right,settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.015;
-            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...pose,center:{x:pose.center.x-assemblyRight.x*offset,y:pose.center.y,z:pose.center.z-assemblyRight.z*offset},right:assemblyRight,width:settingsWidth,height:.52*spatialScale,card:settingsCard});}
-            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...pose,center:{x:pose.center.x+assemblyRight.x*offset,y:pose.center.y,z:pose.center.z+assemblyRight.z*offset},right:assemblyRight,width:mediaWidth,height:.58*spatialScale,card:mediaCard});}
+            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.015;
+            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:.52*spatialScale,card:settingsCard});}
+            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:.58*spatialScale,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -581,6 +597,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             if(spatialMove && heldRay?.origin && heldRay?.direction){
                 pose ||= next;
                 pose.center=panelCenterFromGrab(heldRay,spatialMove,pose);
+                const facing=facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]});
+                pose={...pose,...facing,anchorHeading:facing.right};heading=facing.right;
                 manuallyPositioned=true;
             }else if(!pose)pose=next;
             lastTime=time;

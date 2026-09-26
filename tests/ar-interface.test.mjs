@@ -65,9 +65,9 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
-    assert.match(panelSource, /const assemblyRight=pose\.right/);
-    assert.match(panelSource, /pose\.center\.x-assemblyRight\.x\*offset/);
-    assert.match(panelSource, /pose\.center\.x\+assemblyRight\.x\*offset/);
+    assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
+    assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
+    assert.match(panelSource, /angleDegrees = 12/);
     assert.match(panelSource, /gap=\.015/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
@@ -1225,7 +1225,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
     assert.doesNotMatch(source, /nothing to memorise/i);
     assert.match(source, /paragraphs\.join\('\\n\\n'\)/);
-    assert.match(source, /introBoardStep='Welcome'/);
+    assert.match(source, /introBoardStep=''/);
+    assert.doesNotMatch(source, /Add current knowledge|Clear selected knowledge|Connect selected ideas/);
+    assert.doesNotMatch(source, /Open Cultivation, then Maintenance/);
+    assert.match(source, /Select the plant to explore it, or grab it to reposition it/);
     assert.doesNotMatch(source, /WHY NOURISHLANDXR EXISTS/);
     assert.doesNotMatch(source, /130-inch|130 inch/);
     assert.doesNotMatch(source, /LOOK UP/);

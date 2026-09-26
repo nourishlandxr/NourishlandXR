@@ -11722,6 +11722,42 @@ body:has(.app-surface) {
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"]:active { transform:translateX(-50%) translateY(1px) scale(.985); }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):active { transform:translateY(1px) scale(.985); }
 
+/* The first welcome settles in two quiet beats: identity, then explanation. */
+.tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-opening-welcome {
+    place-content:center;
+    text-align:center;
+    row-gap:clamp(24px,4vh,44px);
+}
+.tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-opening-welcome h2 {
+    margin-inline:auto;
+    animation:nlxr-welcome-title-settle .75s ease-out both;
+}
+.tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-opening-welcome .tryit-board-text-window {
+    max-width:680px;
+    margin-inline:auto;
+    animation:nlxr-welcome-support-settle .65s .35s ease-out both;
+}
+@keyframes nlxr-welcome-title-settle { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:none; } }
+@keyframes nlxr-welcome-support-settle { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+
+/* Start is a compact AR target, visually separate from the reading surface. */
+.tryit-demo[data-intro-pending="true"] ~ .tryit-context-trigger[data-context-mode="continue"],
+.tryit-demo[data-intro-pending="true"] .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"],
+.tryit-demo[data-intro-pending="true"] .tryit-guided-choice > .tryit-context-trigger[data-context-mode="continue"] {
+    width:clamp(154px,25vw,190px);
+    min-width:0;
+    min-height:92px;
+    padding:17px 22px;
+    border-radius:30px;
+    white-space:normal;
+    text-align:center;
+    line-height:1.18;
+}
+@media(prefers-reduced-motion:reduce) {
+    .tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-opening-welcome h2,
+    .tryit-demo[data-intro-pending="true"] .tryit-guided-choice.is-opening-welcome .tryit-board-text-window { animation:none!important; opacity:1; transform:none; }
+}
+
 .nlxr-db-v2-close-project { display: flex; justify-content: center; padding-top: 4px; }
 .nlxr-db-v2-close-project button {
     width: min(100%, 320px);
