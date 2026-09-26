@@ -1,14 +1,18 @@
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
-export function totemCardSurfaces(position, right, cards, selectedId = '', simplified = false) {
+export function totemCardSurfaces(position, right, cards, selectedId = '', state = {}) {
     const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
     const place = (x,y,width,height,card,detail=false) => ({
         center:{x:position.x+right.x*x,y:position.y+y,z:position.z+right.z*x},
         right, width,height,card,detail
     });
-    const toggle={id:'__simplify',eyebrow:'TOTEM VIEW',title:simplified?'Expand':'Simplify',summary:simplified?'Show Area categories':'Hide secondary categories',control:true,collapsed:simplified};
-    const surfaces=[place(0,.50,.18,.18,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)))];
+    const legacySimplified=typeof state==='boolean' ? state : false;
+    const signsVisible=typeof state==='object' ? Boolean(state.signsVisible) : !legacySimplified;
+    const faded=typeof state==='object' ? Boolean(state.faded) : false;
+    const signs={id:'__signs',title:'SIGNS',control:true,pressed:signsVisible && !faded};
+    const fade={id:'__fade',title:faded?'WAKE':'FADE',control:true,pressed:faded};
+    const surfaces=[place(0,.78,.16,.16,signs),place(0,.51,.16,.16,fade),...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && !simplified) surfaces.push(place(0,2.02,1.08,.58,selected,true));
+    if(selected && signsVisible && !faded) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;
 }
 
@@ -56,8 +60,16 @@ function wrapped(ctx,text,x,y,width,lineHeight,maxLines) {
 }
 
 function cardCanvas(card, detail, selected) {
-    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=detail ? 560 : 400;
+    const canvas=document.createElement('canvas');canvas.width=card.control ? 400 : 768;canvas.height=detail ? 560 : 400;
     const ctx=canvas.getContext('2d');
+    if(card.control){
+        const face=ctx.createRadialGradient(142,116,18,200,200,176);face.addColorStop(0,'rgba(191,184,168,.98)');face.addColorStop(.58,'rgba(103,91,78,.98)');face.addColorStop(1,'rgba(48,42,38,.99)');
+        ctx.fillStyle='rgba(22,19,18,.58)';ctx.beginPath();ctx.arc(200,216,164,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=face;ctx.beginPath();ctx.arc(200,196,158,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=card.pressed?'#f0d49a':'rgba(231,220,202,.72)';ctx.lineWidth=card.pressed?10:6;ctx.stroke();
+        ctx.fillStyle='#f8f1e4';ctx.font='700 54px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.title,200,196,300);
+        return canvas;
+    }
     const gradient=ctx.createLinearGradient(0,0,768,canvas.height);
     if(detail){gradient.addColorStop(0,'rgba(63,88,99,.96)');gradient.addColorStop(1,'rgba(18,38,49,.95)');}
     else if(card.control){gradient.addColorStop(0,'rgba(190,210,180,.9)');gradient.addColorStop(1,'rgba(74,105,88,.96)');}
@@ -88,7 +100,7 @@ export function createSpatialTotemCards(gl, options = {}) {
         draw(view, record, position, cards, selectedId) {
             const m=view.transform.inverse.matrix,rightLength=Math.hypot(m[0],m[8])||1;
             const right=stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
-            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,Boolean(record.demoSimplified));
+            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,{signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)});
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthMask(false);

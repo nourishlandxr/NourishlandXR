@@ -1,4 +1,4 @@
-export const DEFAULT_TOTEM_COLOR = '#68765d';
+export const DEFAULT_TOTEM_COLOR = '#715a46';
 
 export const TOTEM_STYLES = Object.freeze([
     Object.freeze({ id: 'basic', label: 'Simple Totem', description: 'Simple upright post' }),

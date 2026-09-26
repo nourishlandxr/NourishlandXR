@@ -581,6 +581,8 @@ h1 {
 .tryit-demo.is-simulated[data-rain-stage="mist"] .tryit-stage::after { opacity:.65; }
 .tryit-demo.is-simulated[data-rain-intensity="light"] .tryit-stage::before { opacity:.3; }
 .tryit-demo.is-simulated[data-rain-intensity="light"] .tryit-stage::after { opacity:.22; }
+.tryit-demo.is-simulated[data-rain-intensity="heavy"] .tryit-stage::before { opacity:1; background-size:176px 230px,214px 230px; animation-duration:4.6s; }
+.tryit-demo.is-simulated[data-rain-intensity="heavy"] .tryit-stage::after { opacity:.94; background-size:151px 250px,183px 250px,207px 250px; animation-duration:5.2s; }
 .tryit-demo.is-simulated[data-rain-intensity="off"] .tryit-stage::before,.tryit-demo.is-simulated[data-rain-intensity="off"] .tryit-stage::after { opacity:0; }
 .tryit-ambient-life { display:none; }
 .tryit-demo.is-simulated .tryit-ambient-life { display:block; position:fixed; inset:0; z-index:12000; width:100%; height:100%; pointer-events:none; }
@@ -8958,6 +8960,23 @@ button.ar-square-action::before { display: none !important; }
 .tryit-context-trigger:hover,.tryit-context-trigger:focus-visible { outline:3px solid rgba(220,239,149,.42); outline-offset:5px; filter:brightness(1.08); }
 .tryit-context-trigger:active { transform:translate(-50%,2px); background:rgba(50,82,57,.34); }
 .tryit-context-trigger[hidden] { display:none!important; }
+.tryit-context-trigger.is-phone-footer-action {
+    position:fixed;
+    left:max(12px,env(safe-area-inset-left,0px));
+    right:max(12px,env(safe-area-inset-right,0px));
+    bottom:max(12px,env(safe-area-inset-bottom,0px));
+    width:auto;
+    max-width:none;
+    min-width:0;
+    height:auto;
+    min-height:52px;
+    padding:10px 18px;
+    transform:none;
+    border-radius:14px;
+    font-size:.82rem;
+}
+.tryit-context-trigger.is-phone-footer-action:is(:hover,:focus-visible) { transform:translateY(-1px); }
+.tryit-context-trigger.is-phone-footer-action:active { transform:translateY(1px) scale(.99); }
 .tryit-demo.has-companion-actions:not(.uses-webgl-controls) .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { opacity:0; pointer-events:none; }
 .tryit-demo[data-lim-opening="true"] [data-tryit-guided-choice] { display:none!important; }
 .tryit-demo[data-lim-opening="true"] .tryit-live-welcome canvas { opacity:1; }
@@ -11750,7 +11769,7 @@ body:has(.app-surface) {
 @keyframes nlxr-welcome-support-settle { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
 
 /* Start is a compact AR target, visually separate from the reading surface. */
-.tryit-demo[data-intro-pending="true"] ~ .tryit-context-trigger[data-context-mode="continue"],
+.tryit-demo[data-intro-pending="true"] ~ .tryit-context-trigger[data-context-mode="continue"]:not(.is-phone-footer-action),
 .tryit-demo[data-intro-pending="true"] .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"],
 .tryit-demo[data-intro-pending="true"] .tryit-guided-choice > .tryit-context-trigger[data-context-mode="continue"] {
     width:clamp(154px,25vw,190px);

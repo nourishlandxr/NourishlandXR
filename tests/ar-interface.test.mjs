@@ -52,6 +52,8 @@ test('welcome narrative moves from the place problem to the explorable map witho
     const styles = read('app/style.css');
     assert.match(styles, /data-rain-stage="first-drops"/);
     assert.match(styles, /data-rain-stage="mist"/);
+    assert.match(styles, /data-rain-intensity="heavy"/);
+    assert.match(read('app/services/pimInfoPanel.js'), /Rain · \$\{ambientRain<=0\?'Off':ambientRain<1\?'Light':ambientRain>1\?'Heavy':'Normal'\}/);
     assert.match(styles, /z-index:12002; pointer-events:none/);
 });
 
@@ -65,10 +67,10 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
-    assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
-    assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
-    assert.match(panelSource, /angleDegrees = 18, arcDepth = 0/);
-    assert.match(panelSource, /gap=\.003/);
+    assert.match(panelSource, /companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
+    assert.match(panelSource, /companionPanelPose\(pose,'right',mainWidth,mediaWidth,18,gap\)/);
+    assert.match(panelSource, /angleDegrees = 18, gap = 0/);
+    assert.match(panelSource, /gap=0/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
@@ -1394,7 +1396,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /label\.height = 360/);
     assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.16, -2\.755\]\)/);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
-    assert.match(source, /primary\?\.id==='continue' && mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
+    assert.match(source, /const phoneFooterAction=simulatedMode && !desktopPreview/);
+    assert.match(source, /trigger\.classList\.toggle\('is-phone-footer-action',phoneFooterAction\)/);
+    assert.match(styles, /\.tryit-context-trigger\.is-phone-footer-action \{[\s\S]*bottom:max\(12px,env\(safe-area-inset-bottom,0px\)\);[\s\S]*min-height:52px/);
     assert.doesNotMatch(source, /MAIN SCREEN/);
     assert.doesNotMatch(styles, /content:"Main Screen"/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:clamp\(18px,3\.5vh,34px\);[^}]*transform:translateX\(-50%\);[^}]*border-radius:15px;/);

@@ -156,6 +156,7 @@ export function createSpatialPrismRenderer(gl) {
 
 export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     if (!renderer || !view?.projectionMatrix || !view?.transform?.inverse?.matrix || !position) return;
+    const alpha = Number.isFinite(options.alpha) ? options.alpha : .96;
     const model = prismModelMatrix(position, options, Number.isFinite(options.rotationY) ? options.rotationY : Math.PI / 7);
     const modelView = multiplyMatrices(view.transform.inverse.matrix, model);
     gl.enable(gl.DEPTH_TEST);
@@ -165,7 +166,7 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.cullFace(gl.BACK);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(true);
+    gl.depthMask(alpha >= .95);
     gl.useProgram(renderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
@@ -177,8 +178,9 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.uniform3fv(renderer.inverseScaleLocation, [1/(Number(options.halfWidth)||.14),1/(Number(options.halfHeight)||.72),1/(Number(options.halfDepth)||Number(options.halfWidth)||.14)]);
     gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
     gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
-    gl.uniform1f(renderer.alphaLocation, Number.isFinite(options.alpha) ? options.alpha : .96);
+    gl.uniform1f(renderer.alphaLocation, alpha);
     gl.drawArrays(gl.TRIANGLES, 0, renderer.vertexCount);
+    gl.depthMask(true);
     gl.disable(gl.CULL_FACE);
 }
 

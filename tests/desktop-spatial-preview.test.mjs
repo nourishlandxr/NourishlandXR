@@ -84,10 +84,12 @@ test('desktop control panel keeps a stable footprint with an always-visible rail
     assert.match(styles, /nlxr-panel-move,.nlxr-rail-toggle,.nlxr-media-toggle/);
 });
 
-test('desktop primary action sits outside the central spatial screen', () => {
+test('desktop primary action stays on its rendered surface while phone preview uses the safe footer', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(demo, /mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
+    assert.match(demo, /const phoneFooterAction=simulatedMode && !desktopPreview/);
+    assert.match(demo, /mainScreen && desktopPreview\)mainScreen\.append\(trigger\)/);
+    assert.match(read('app/style.css'), /\.tryit-context-trigger\.is-phone-footer-action/);
     assert.match(demo, /demoLocalizedText\('Start the journey'\)/);
     assert.doesNotMatch(demo, /Begin with why/i);
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.tryit-context-trigger:not\(\[hidden\]\)/);

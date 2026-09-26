@@ -62,16 +62,14 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = 0) {
+export function companionPanelPose(pose, side, mainWidth, companionWidth, angleDegrees = 18, gap = 0) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
-    return {...pose,
-        center:{x:pose.center.x+pose.right.x*offset*direction+pose.normal.x*arcDepth,
-            y:pose.center.y+pose.normal.y*arcDepth,
-            z:pose.center.z+pose.right.z*offset*direction+pose.normal.z*arcDepth},
-        right:{x:pose.right.x*cos-pose.normal.x*sin*turn,y:pose.right.y*cos-pose.normal.y*sin*turn,z:pose.right.z*cos-pose.normal.z*sin*turn},
-        normal:{x:pose.normal.x*cos+pose.right.x*sin*turn,y:pose.normal.y*cos+pose.right.y*sin*turn,z:pose.normal.z*cos+pose.right.z*sin*turn}
-    };
+    const right={x:pose.right.x*cos-pose.normal.x*sin*turn,y:pose.right.y*cos-pose.normal.y*sin*turn,z:pose.right.z*cos-pose.normal.z*sin*turn};
+    const normal={x:pose.normal.x*cos+pose.right.x*sin*turn,y:pose.normal.y*cos+pose.right.y*sin*turn,z:pose.normal.z*cos+pose.right.z*sin*turn};
+    const hingeDistance=mainWidth/2+gap/2,companionDistance=companionWidth/2+gap/2;
+    const hinge={x:pose.center.x+pose.right.x*hingeDistance*direction,y:pose.center.y+pose.right.y*hingeDistance*direction,z:pose.center.z+pose.right.z*hingeDistance*direction};
+    return {...pose,right,normal,center:{x:hinge.x+right.x*companionDistance*direction,y:hinge.y+right.y*companionDistance*direction,z:hinge.z+right.z*companionDistance*direction}};
 }
 
 // Recover an accidentally lost reading position only when it has left the
@@ -156,7 +154,8 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 
 let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(1,Number(rainIntensity)||0)),contextHint='';
+    const HEAVY_RAIN_INTENSITY=1.65;
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='';
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
@@ -212,7 +211,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
         if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
-        if(action==='RainIntensity'){ambientRain=ambientRain>=1?0:ambientRain<=0?.45:1;onRainIntensity(ambientRain);}
+        if(action==='RainIntensity'){ambientRain=ambientRain>=HEAVY_RAIN_INTENSITY?0:ambientRain>=1?HEAVY_RAIN_INTENSITY:ambientRain<=0?.45:1;onRainIntensity(ambientRain);}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
         if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
@@ -224,7 +223,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:56,y:316,width:188,height:62},
         {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:756,y:316,width:188,height:62},
         {action:'Recenter',label:'◎  Recenter panel',x:56,y:396,width:424,height:58},
-        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':'Full'}`,ariaLabel:'Change rain intensity',x:520,y:396,width:424,height:58}
+        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal'}`,ariaLabel:'Change rain intensity',x:520,y:396,width:424,height:58}
     ];
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
@@ -588,9 +587,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.003,companionHeight=.54*spatialScale;
-            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:companionHeight,card:settingsCard});}
-            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:companionHeight,card:mediaCard});}
+            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=0,companionHeight=mainHeight;
+            if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:companionHeight,card:settingsCard});
+            if(!hidden && mediaCard)surfaces.push({...companionPanelPose(pose,'right',mainWidth,mediaWidth,18,gap),width:mediaWidth,height:companionHeight,card:mediaCard});
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){

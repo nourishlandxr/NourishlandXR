@@ -55,13 +55,16 @@ test('Beveled geometry has outward unit normals and no degenerate faces',()=>{
 
 test('Spatial card hit regions stay separate and detail closes independently',()=>{
     const cards=totemKnowledgeCards(),right={x:1,z:0};
-    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},right,cards,'plants');
+    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},right,cards,'plants',{signsVisible:true,faded:false});
+    assert.deepEqual(surfaces.slice(0,2).map(surface=>surface.card.id),['__signs','__fade']);
     for(const surface of surfaces) {
         const hit=hitTotemSurface({origin:{x:surface.center.x,y:surface.center.y,z:0},direction:{x:0,y:0,z:-1}},surfaces);
         assert.equal(hit.card.id,surface.card.id);
         assert.equal(hit.detail,surface.detail);
     }
     assert.equal(hitTotemSurface({origin:{x:0,y:0,z:0},direction:{x:0,y:0,z:1}},surfaces),null);
+    assert.equal(totemCardSurfaces({x:0,y:0,z:-2},right,cards,'',{signsVisible:false,faded:false}).length,2);
+    assert.equal(totemCardSurfaces({x:0,y:0,z:-2},right,cards,'',{signsVisible:true,faded:true}).length,2);
 });
 
 test('Totem signs keep their first world orientation when the viewer turns',()=>{

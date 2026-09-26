@@ -594,10 +594,10 @@
     padding-bottom:8px;
 }
 .nlxr-totem-system .tryit-sim-totem-pillar {
-    background:linear-gradient(90deg,color-mix(in srgb,var(--demo-totem-color,#50865c),#193c31 48%),color-mix(in srgb,var(--demo-totem-color,#50865c),#fff 28%) 18%,var(--demo-totem-color,#50865c) 55%,color-mix(in srgb,var(--demo-totem-color,#50865c),#1b3840 38%));
+    background:linear-gradient(90deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#2b2420 48%),color-mix(in srgb,var(--demo-totem-color,#715a46),#fff 28%) 18%,var(--demo-totem-color,#715a46) 55%,color-mix(in srgb,var(--demo-totem-color,#715a46),#29211e 38%));
 }
 .nlxr-totem-system .tryit-sim-totem-pillar::before {
-    background:linear-gradient(180deg,color-mix(in srgb,var(--demo-totem-color,#50865c),#fff 66%),color-mix(in srgb,var(--demo-totem-color,#50865c),#fff 24%) 55%,var(--demo-totem-color,#50865c));
+    background:linear-gradient(180deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#fff 66%),color-mix(in srgb,var(--demo-totem-color,#715a46),#fff 24%) 55%,var(--demo-totem-color,#715a46));
 }
 .nlxr-totem-cards { gap:8px; }
 .nlxr-totem-cards > button {
@@ -1213,5 +1213,86 @@
 .demo-knowledge-result.is-second{left:55%;top:80%;transform:translate(-50%,-50%)}
 .demo-connection-resolving{position:absolute;left:64%;top:39%;transform:translate(-50%,-50%);padding:7px 11px;border-radius:999px;background:rgba(16,55,44,.94);color:#efffc9;font:700 11px/1.1 system-ui,sans-serif}
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
+
+/* The revised Totem keeps its mass narrow and makes the post itself the
+   interface. Two stamped physical controls reveal signs or lower presence. */
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
+    left:46%;
+    top:22%;
+    width:8%;
+    height:76%;
+    border-radius:9px 9px 6px 6px;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#211b19 42%),color-mix(in srgb,var(--demo-totem-color,#715a46),#e5d7c5 24%) 34%,var(--demo-totem-color,#715a46) 62%,color-mix(in srgb,var(--demo-totem-color,#715a46),#241d1a 38%));
+    box-shadow:inset 1px 0 rgba(250,237,218,.24),inset -2px 0 rgba(25,18,15,.36),0 16px 23px rgba(23,17,14,.3);
+    transition:opacity .35s ease,filter .35s ease;
+}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::before {
+    left:7%;
+    top:-7px;
+    width:92%;
+    height:8px;
+    border-radius:50%;
+    clip-path:none;
+    background:color-mix(in srgb,var(--demo-totem-color,#715a46),#eadfce 26%);
+}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::after { display:none; }
+.nlxr-totem-controls { position:absolute; z-index:8; inset:0; pointer-events:none; }
+.nlxr-totem-controls button {
+    position:absolute;
+    left:50%;
+    display:grid;
+    place-items:center;
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    padding:0;
+    transform:translateX(-50%);
+    border:2px solid rgba(231,220,202,.68);
+    border-radius:50%;
+    background:radial-gradient(circle at 34% 28%,#a99a86,#675a4b 58%,#312925);
+    color:#fff8ec;
+    box-shadow:inset 0 2px 3px rgba(255,247,231,.28),inset 0 -5px 8px rgba(27,20,17,.42),0 3px 0 #2f2824,0 6px 10px rgba(24,18,16,.32);
+    pointer-events:auto;
+    cursor:pointer;
+}
+.nlxr-totem-controls button:first-child { top:40%; }
+.nlxr-totem-controls button:last-child { top:56%; }
+.nlxr-totem-controls button[aria-pressed="true"] { transform:translate(-50%,3px); border-color:#efd6a0; box-shadow:inset 0 4px 8px rgba(25,18,15,.5),0 1px 0 #2f2824; }
+.nlxr-totem-controls button > span { font:700 18px/1 system-ui; }
+.nlxr-totem-controls button > small { position:absolute; top:49px; width:max-content; color:rgba(244,230,210,.78); font:700 8px/1 system-ui; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 1px rgba(26,18,15,.8); }
+.nlxr-totem-system:not(.is-signs-open) .nlxr-totem-cards,
+.nlxr-totem-system.is-totem-faded .nlxr-totem-cards { display:none; }
+.nlxr-totem-system.is-totem-faded .tryit-sim-totem-pillar { opacity:.18; filter:saturate(.45); }
+.nlxr-totem-system.is-totem-faded .nlxr-totem-controls button { opacity:1; box-shadow:inset 0 2px 3px rgba(255,247,231,.28),0 0 0 4px rgba(239,214,160,.1),0 0 16px rgba(239,214,160,.24); }
+.nlxr-totem-cards > button { border-color:rgba(204,215,224,.52); background:linear-gradient(145deg,rgba(77,88,99,.88),rgba(28,34,40,.94)); color:#f4f6f7; }
+.nlxr-totem-cards > button:nth-child(2) { background:linear-gradient(145deg,rgba(114,90,70,.9),rgba(48,35,29,.94)); }
+.nlxr-totem-cards > button:nth-child(3) { background:linear-gradient(145deg,rgba(76,93,105,.9),rgba(27,39,47,.94)); }
+.nlxr-totem-cards > button small,.nlxr-totem-cards > button strong,.nlxr-totem-cards > button > span { color:#f4f6f7; }
+
+/* Main and companion panels share one framed instrument language. The
+   settings and media surfaces align to the main shell instead of floating as
+   unframed inner cards. */
+.nlxr-settings-companion,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):not(.is-media-collapsed) .nlxr-media-wing {
+    border:1px solid rgba(152,207,235,.72)!important;
+    border-radius:20px!important;
+    background:linear-gradient(152deg,rgba(28,47,66,.98),rgba(8,20,34,.99) 72%)!important;
+    box-shadow:0 22px 60px rgba(0,0,0,.52),inset 0 1px rgba(236,250,255,.24),inset 0 0 0 4px rgba(8,27,42,.45)!important;
+}
+.nlxr-settings-companion::before,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):not(.is-media-collapsed) .nlxr-media-wing::before {
+    content:"";
+    position:absolute;
+    z-index:2;
+    left:19px;
+    top:0;
+    width:88px;
+    height:3px;
+    border-radius:0 0 4px 4px;
+    background:#a6e7fa;
+    box-shadow:0 0 16px rgba(119,212,247,.65);
+    pointer-events:none;
+}
 @keyframes demo-knowledge-appear{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
 @media (prefers-reduced-motion:reduce){.demo-connection-target{transition:none}.demo-knowledge-connections path.is-preview{stroke-dasharray:none}.demo-knowledge-result{animation:none}}

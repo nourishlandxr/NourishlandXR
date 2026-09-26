@@ -58,19 +58,23 @@ test('Quest Control panel begins below and centrally in the current forward view
     assert.ok(pose.center.z<-.3,'panel remains forward and reachable');
 });
 
-test('companion faces share the main depth plane while turning inward',()=>{
+test('companion faces hinge cleanly from the main frame while turning inward',()=>{
     const pose={center:{x:0,y:1.3,z:-1},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:.2,z:.98}};
-    const left=companionPanelPose(pose,'left',.82),right=companionPanelPose(pose,'right',.82);
+    const mainWidth=.66,companionWidth=.62,gap=0;
+    const left=companionPanelPose(pose,'left',mainWidth,companionWidth,18,gap),right=companionPanelPose(pose,'right',mainWidth,companionWidth,18,gap);
     assert.ok(left.center.x<0 && right.center.x>0);
     assert.ok(left.normal.x>0 && right.normal.x<0,'both side faces turn toward the viewer');
-    assert.ok(Math.abs(left.center.z-pose.center.z)<1e-10 && Math.abs(right.center.z-pose.center.z)<1e-10,'side faces share the main panel depth plane');
+    const edge=(surface,direction)=>({x:surface.center.x-surface.right.x*direction*companionWidth/2,y:surface.center.y-surface.right.y*direction*companionWidth/2,z:surface.center.z-surface.right.z*direction*companionWidth/2});
+    const hinge=direction=>({x:pose.center.x+pose.right.x*direction*mainWidth/2,y:pose.center.y+pose.right.y*direction*mainWidth/2,z:pose.center.z+pose.right.z*direction*mainWidth/2});
+    for(const [surface,direction] of [[left,-1],[right,1]])for(const key of ['x','y','z'])assert.ok(Math.abs(edge(surface,direction)[key]-hinge(direction)[key])<1e-10,'companion inner edge meets the main frame');
 });
 
 test('Quest panel source keeps progress separate and all three surfaces aligned',()=>{
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/target\.prepend\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
-    assert.match(panel,/companionHeight=\.54\*spatialScale/);
+    assert.match(panel,/companionHeight=mainHeight/);
+    assert.match(panel,/companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
     assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.6/);
 });
 

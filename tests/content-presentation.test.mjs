@@ -143,8 +143,8 @@ test('Area Totem examples show distinct colours and welcoming, orientation, inte
         assert.ok(demo.includes(label), `missing Area example ${label}`);
     }
     assert.match(demo, /A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area\./);
-    assert.match(demo, /demoTotemColor:'#50865c'/);
-    assert.match(demo, /demoTotemColor:'#438f99'/);
+    assert.match(demo, /demoTotemColor:'#785a43'/);
+    assert.match(demo, /demoTotemColor:'#526d7a'/);
 });
 
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {

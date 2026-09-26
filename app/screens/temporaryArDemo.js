@@ -466,7 +466,7 @@ const DEMO_CONTENT = Object.freeze({
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: {
         title: 'Botanical Garden',
-        accent: '#50865c',
+        accent: '#785a43',
         bubbles: [
             'FOOD FOREST AREA',
             'WELCOME · Botanical Garden',
@@ -726,11 +726,12 @@ function syncDemoPanelActions() {
     if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         const mainScreen=arWelcomeLayer || board;
-        // Preview mode uses the visible central screen. Keep its primary
-        // trigger inside that surface at every viewport size; immersive AR
-        // draws the same trigger directly over the spatial screen.
+        // Desktop preview keeps the action on its rendered surface. Phone AR
+        // uses the safe-area footer so the action never obscures the scene.
         const desktopPreview=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
-        if(simulatedMode && primary?.id==='continue' && mainScreen && !desktopPreview)mainScreen.append(trigger);
+        const phoneFooterAction=simulatedMode && !desktopPreview;
+        trigger.classList.toggle('is-phone-footer-action',phoneFooterAction);
+        if(simulatedMode && primary?.id==='continue' && mainScreen && desktopPreview)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
     }
     // Journey progression always belongs to the main experience surface.
@@ -1058,10 +1059,16 @@ function demoTotemCards(record) {
 }
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
-    if(hit.card?.id==='__simplify'){
-        hit.record.demoSimplified=!hit.record.demoSimplified;
+    if(hit.card?.id==='__signs'){
+        hit.record.demoTotemSignsVisible=!hit.record.demoTotemSignsVisible;
+        hit.record.demoTotemFaded=false;
         hit.record.totemSelectedCard='';
         hit.record.totemCardsRefreshed=0;
+        updateSimulatedMarkers();return true;
+    }
+    if(hit.card?.id==='__fade'){
+        hit.record.demoTotemFaded=!hit.record.demoTotemFaded;
+        hit.record.totemSelectedCard='';
         updateSimulatedMarkers();return true;
     }
     hit.record.totemSelectedCard=hit.detail || hit.record.totemSelectedCard===hit.card.id ? '' : hit.card.id;
@@ -2041,7 +2048,9 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
         tutorialStage: 'totem',
         demoTotemStyle: 'basic',
         demoTotemExampleId:'botanical-garden',
-        demoTotemColor:'#50865c',
+        demoTotemColor:'#785a43',
+        demoTotemSignsVisible:false,
+        demoTotemFaded:false,
         demoLinkVisible: false,
         demoExpanded: true,
         demoInteractive: true,
@@ -2085,7 +2094,9 @@ function createDemoSecondTotem() {
         tutorialStage: 'totem2',
         demoTotemStyle: 'basic',
         demoTotemExampleId:'rainforest-walk',
-        demoTotemColor:'#438f99',
+        demoTotemColor:'#526d7a',
+        demoTotemSignsVisible:false,
+        demoTotemFaded:false,
         demoLinkVisible: true,
         demoLinkDirection: 'left',
         demoLinkDestination: 'Botanical Garden Area',
@@ -2507,8 +2518,8 @@ function renderSimulatedTotem(record, index, anchor) {
     const linkLabel = record.demoLinkVisible
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
-    const colour=record.demoTotemColor || record.demoContent?.accent || '#50865c';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoSimplified?' is-simplified':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><button type="button" class="nlxr-totem-simplify" data-totem-simplify aria-pressed="${Boolean(record.demoSimplified)}" aria-label="${record.demoSimplified?'Expand':'Simplify'} Totem information"><span aria-hidden="true">${record.demoSimplified?'＋':'−'}</span><small>${record.demoSimplified?'Expand':'Simplify'}</small></button>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
+    const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -2931,8 +2942,10 @@ function bindSimulatedInformationPanels(layer) {
             return;
         }
         if (record.demoType === 'zone') {
-            compactMarker.querySelector('[data-totem-simplify]')?.addEventListener('pointerdown',event=>event.stopPropagation());
-            compactMarker.querySelector('[data-totem-simplify]')?.addEventListener('click',event=>{event.stopPropagation();record.demoSimplified=!record.demoSimplified;record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
+            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('pointerdown',event=>event.stopPropagation());
+            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('click',event=>{event.stopPropagation();record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoTotemFaded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
+            compactMarker.querySelector('[data-totem-fade]')?.addEventListener('pointerdown',event=>event.stopPropagation());
+            compactMarker.querySelector('[data-totem-fade]')?.addEventListener('click',event=>{event.stopPropagation();record.demoTotemFaded=!record.demoTotemFaded;record.totemSelectedCard='';updateSimulatedMarkers();});
             compactMarker.querySelectorAll('[data-totem-card]').forEach(button=>{
                 button.addEventListener('pointerdown',event=>event.stopPropagation());
                 button.addEventListener('click',event=>{
@@ -3612,7 +3625,7 @@ function renderInterface(simulated) {
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':'full';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -4642,7 +4655,7 @@ function drawMarker(view) {
                 y: groundBaseY + .38
             }, .38, {
                 color: totemColour,
-                alpha: .98,
+                alpha: record.demoTotemFaded ? .18 : .98,
                 emissive: .2
             });
             return;
@@ -4653,18 +4666,19 @@ function drawMarker(view) {
                 y: groundBaseY + .06
             }, .42, {
                 color: totemColour,
-                alpha: .98,
+                alpha: record.demoTotemFaded ? .18 : .98,
                 emissive: .2,
                 scale: { x: 1, y: .16, z: 1 }
             });
             return;
         }
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
-            halfWidth: .14,
+            halfWidth: .085,
             halfHeight: DEMO_TOTEM_HALF_HEIGHT_METRES,
-            halfDepth: .14,
+            halfDepth: .075,
             color: totemColour,
             topColor: totemHighlight,
+            alpha: record.demoTotemFaded ? .18 : .98,
             rotationY: Math.PI / 7
         });
     });
