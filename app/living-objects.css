@@ -5,7 +5,7 @@
 .nlxr-orb-label { position:absolute; top:calc(50% + 42px); left:50%; transform:translateX(-50%); white-space:nowrap; font:500 11px/1.3 system-ui; color:#f2f7e9; padding:3px 8px; border:1px solid #d6edcc66; border-radius:20px; background:#203e2bb3; pointer-events:none; }
 [data-knowledge-state="live"] .tryit-sim-orb.is-plant,[data-knowledge-state="expanded"] .tryit-sim-orb.is-plant { animation:none; }
 .tryit-sim-marker-plant.has-plant-profile:is(:hover,:focus-visible) .tryit-sim-orb { animation:none; }
-.nlxr-totem-system { --totem-card-width:154px; }
+.nlxr-totem-system { --totem-card-width:138px; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(84vw,390px); height:min(54vh,460px); border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system::before,.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system::after { display:none; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { outline:none; }
@@ -13,7 +13,9 @@
 .nlxr-totem-system .tryit-sim-totem-pillar::before { border-radius:4px; background:linear-gradient(140deg,#d6dfba,#718367); }
 .nlxr-totem-system .tryit-sim-totem-pillar::after { background:linear-gradient(90deg,#405747,#637963); }
 .nlxr-totem-cards { display:grid; gap:12px; pointer-events:auto; }
-.nlxr-totem-cards > button { appearance:none; display:grid; gap:4px; min-width:0; min-height:68px; padding:10px 12px; color:#f2f6e8; text-align:left; border:1px solid #d2e8c65f; border-radius:12px; background:linear-gradient(145deg,#677e5f5c,#173b2d9e); backdrop-filter:blur(5px); box-shadow:inset 0 1px #ffffff24,0 7px 17px #14261d20; font:400 12px/1.3 system-ui; cursor:pointer; }
+.nlxr-totem-cards > button { appearance:none; display:grid; gap:3px; min-width:0; min-height:56px; padding:7px 10px; color:#f2f6e8; text-align:left; border:1px solid #d2e8c65f; border-radius:11px; background:linear-gradient(145deg,#677e5f70,#173b2db5); backdrop-filter:blur(5px); box-shadow:inset 0 1px #ffffff24,0 7px 17px #14261d20; font:400 11px/1.25 system-ui; cursor:pointer; }
+.nlxr-totem-cards > button:nth-child(2){background:linear-gradient(145deg,#777a5275,#32351fb8)}
+.nlxr-totem-cards > button:nth-child(3){background:linear-gradient(145deg,#496f6578,#14322db8)}
 .nlxr-totem-cards > button small,.nlxr-totem-detail > small { font:600 9px/1.4 system-ui; letter-spacing:.12em; color:#d2e8c6; }
 .nlxr-totem-cards > button strong { font:600 15px/1.3 system-ui; color:#f2f6e8; overflow-wrap:anywhere; }
 .nlxr-totem-cards > button > span { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
@@ -31,7 +33,7 @@
 .nlxr-totem-detail p { white-space:pre-line; font:400 15px/1.6 system-ui; color:inherit; }
 .nlxr-totem-detail > button { float:right; min-width:44px; min-height:44px; margin:-12px -12px 0 8px; border:1px solid #d4e7c855; border-radius:50%; background:#203e2b80; color:inherit; font-size:24px; cursor:pointer; }
 .nlxr-totem-detail{left:50%;top:8vh;width:min(520px,calc(100vw - 32px));transform:translateX(-50%);border-color:rgba(186,225,237,.7);border-radius:24px;background:linear-gradient(145deg,rgba(66,91,102,.97),rgba(18,40,51,.96));box-shadow:0 22px 54px rgba(4,17,24,.58),inset 0 1px rgba(255,255,255,.18)}
-.nlxr-totem-simplify{position:absolute;z-index:5;left:50%;top:44%;display:grid;place-items:center;gap:1px;width:70px;min-width:70px;height:62px;min-height:62px;padding:5px;transform:translate(-50%,-50%);border:1px solid rgba(230,248,215,.72);border-radius:18px;background:linear-gradient(145deg,rgba(176,204,160,.92),rgba(57,94,73,.96));color:#f7fff1;box-shadow:0 8px 18px rgba(8,31,21,.34);cursor:pointer}
+.nlxr-totem-simplify{position:absolute;z-index:5;left:50%;top:4%;display:grid;place-items:center;gap:1px;width:64px;min-width:64px;height:54px;min-height:54px;padding:4px;transform:translate(-50%,-100%);border:1px solid rgba(230,248,215,.72);border-radius:17px;background:linear-gradient(145deg,rgba(136,166,126,.94),rgba(49,82,62,.97));color:#f7fff1;box-shadow:0 8px 18px rgba(8,31,21,.34);cursor:pointer}
 .nlxr-totem-simplify span{font:800 24px/1 system-ui}.nlxr-totem-simplify small{font:700 9px/1.1 system-ui;letter-spacing:.03em}.nlxr-totem-system.is-simplified .nlxr-totem-cards{display:none}
 @keyframes nlxr-note-arrive { from { opacity:0; translate:-8px 0; } to { opacity:1; translate:0 0; } }
 @media(max-width:600px) { .nlxr-totem-system { --totem-card-width:130px; } .nlxr-totem-cards > button { padding:10px; min-height:88px; font-size:11px; } .nlxr-totem-cards > button strong { font-size:13px; } .nlxr-totem-detail { top:18vh; max-height:64vh; } }
@@ -1079,10 +1081,12 @@
 .nlxr-settings-companion h2 { margin:5px 0 18px; font:700 26px/1.15 system-ui; }
 .nlxr-settings-companion h3 { margin:16px 0 5px; font:700 18px/1.25 system-ui; }
 .nlxr-settings-companion p { margin:0; color:#d2e0e8; font:500 16px/1.5 system-ui; }
-.nlxr-settings-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:14px 0; }
+.nlxr-settings-actions { display:grid; grid-template-columns:64px minmax(0,1fr) 64px; align-items:center; gap:8px; margin:14px 0; }
 .nlxr-settings-actions button { min-height:50px; padding:8px; color:#f3f8fc; border:1px solid rgba(177,220,243,.66); border-radius:12px; background:#29465f; font:700 14px/1.25 system-ui; }
-.nlxr-settings-actions button:first-child { grid-column:1/-1; }
-.nlxr-settings-actions button:nth-child(2),.nlxr-settings-actions button:nth-child(3){min-height:58px;font-size:24px}
+.nlxr-settings-actions::before{content:'Text size';grid-column:2;grid-row:1;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
+.nlxr-settings-actions::after{content:'Spatial scale';grid-column:2;grid-row:2;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
+.nlxr-settings-actions button:nth-child(1){grid-column:1;grid-row:1}.nlxr-settings-actions button:nth-child(2){grid-column:3;grid-row:1}.nlxr-settings-actions button:nth-child(3){grid-column:1;grid-row:2}.nlxr-settings-actions button:nth-child(4){grid-column:3;grid-row:2}
+.nlxr-settings-actions button:nth-child(-n+4){min-height:54px;font-size:22px}.nlxr-settings-actions button:nth-child(5){grid-column:1/-1;grid-row:3}
 .nlxr-scale-readout{text-align:center;color:#dfff9b!important;font-size:13px!important;font-weight:700!important}
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle { font-size:12px; letter-spacing:.04em; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle::before { display:none; }
@@ -1211,22 +1215,3 @@
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
 @keyframes demo-knowledge-appear{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
 @media (prefers-reduced-motion:reduce){.demo-connection-target{transition:none}.demo-knowledge-connections path.is-preview{stroke-dasharray:none}.demo-knowledge-result{animation:none}}
-
-/* Final welcome action geometry. This stylesheet loads after style.css, so
-   the complete selector intentionally owns the computed Quest/preview shape. */
-.tryit-demo[data-intro-pending="true"][data-lim-surface="true"] .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"],
-.tryit-demo[data-intro-pending="true"][data-lim-surface="true"] ~ .tryit-context-trigger[data-context-mode="continue"] {
-    top:64% !important;
-    bottom:auto !important;
-    width:156px !important;
-    min-width:156px !important;
-    max-width:156px !important;
-    height:120px !important;
-    min-height:120px !important;
-    padding:20px 22px !important;
-    border-radius:42px !important;
-    white-space:normal;
-    font-size:18px !important;
-    font-weight:820 !important;
-    line-height:1.12;
-}

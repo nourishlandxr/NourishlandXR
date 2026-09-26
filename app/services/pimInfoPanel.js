@@ -62,7 +62,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 22, arcDepth = .075) {
+export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = 0) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     return {...pose,
@@ -156,7 +156,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 
 let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,safetyOpen=false,spatialScale=1,contextHint='';
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,contextHint='';
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
@@ -203,12 +203,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
-        if(action==='Settings'){settingsOpen=!settingsOpen;safetyOpen=false;renderSettings();}
+        if(action==='Settings'){settingsOpen=!settingsOpen;renderSettings();}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
-        if(action==='TextSize'){largeText=!largeText;page=0;}
-        if(action==='SafetyGuidance'){safetyOpen=!safetyOpen;}
+        if(action==='TextDown'){largeText=false;page=0;}
+        if(action==='TextUp'){largeText=true;page=0;}
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
         if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
@@ -218,17 +218,17 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         render();
     }
     const settingsControls=()=>[
-        {action:'TextSize',label:largeText?'A−  Standard text':'A+  Larger text',x:56,y:260,width:888,height:62},
-        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:56,y:344,width:188,height:66},
-        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:756,y:344,width:188,height:66},
-        {action:'Recenter',label:'◎  Recenter panel',x:56,y:438,width:424,height:66},
-        {action:'SafetyGuidance',label:'Safety guidance ›',x:520,y:438,width:424,height:66}
+        {action:'TextDown',label:'A−',ariaLabel:'Decrease text size',x:56,y:224,width:188,height:62},
+        {action:'TextUp',label:'A+',ariaLabel:'Increase text size',x:756,y:224,width:188,height:62},
+        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:56,y:316,width:188,height:62},
+        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:756,y:316,width:188,height:62},
+        {action:'Recenter',label:'◎  Recenter panel',x:56,y:408,width:888,height:62}
     ];
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.classList.toggle('has-settings-companion',settingsOpen);
         if(settingsElement.hidden)return;
-        settingsElement.innerHTML='<header><small>COMPANION PANEL</small><h2>Settings</h2></header><section><h3>Reading comfort</h3><p>Adjust text and spatial scale without compressing the main panel.</p><div class="nlxr-settings-actions"></div><p class="nlxr-scale-readout">Spatial scale · '+Math.round(spatialScale*100)+'%</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
+        settingsElement.innerHTML='<header><h2>Settings</h2></header><section><div class="nlxr-settings-actions"></div><p class="nlxr-scale-readout">Spatial scale · '+Math.round(spatialScale*100)+'%</p><h3>Safety</h3><p>Keep a clear walking area and remain aware of people, plants, furniture and uneven ground around you.</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
         settingsControls().forEach(item=>actions.append(makeButton(item)));
     }
@@ -456,21 +456,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.fillText(card.caption || 'Plant reference image',48,c.height-48,904);
             return c;
         }
-            if(card.safety){
-                ctx.fillStyle='#9adcf4';ctx.font='700 22px system-ui';ctx.fillText('SAFETY GUIDANCE',56,34,888);
-                ctx.fillStyle='#f3f8fc';ctx.font='700 46px system-ui';ctx.fillText('Stay aware of your space',56,78,888);
-                ctx.fillStyle='#d5e5eb';ctx.font='500 30px system-ui';
-                infoPages('Keep a clear boundary. Look for people, plants, furniture and uneven ground before moving. Pause whenever the real environment needs your attention.',54,7)[0].forEach((line,index)=>ctx.fillText(line,56,174+index*42,888));
-                ctx.fillStyle='#dfff9b';ctx.font='650 25px system-ui';ctx.fillText('Select Safety guidance again to close this panel.',56,c.height-66,888);
-                return c;
-            }
             if(card.settings){
-            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText('COMPANION PANEL',56,34,888);
-            ctx.fillStyle='#f3f8fc';ctx.font='700 48px system-ui';ctx.fillText('Settings',56,72,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText('Reading comfort · Spatial position',56,138,888);
-            ctx.fillStyle='#dfff9b';ctx.font='650 26px system-ui';ctx.textAlign='center';ctx.fillText(`Spatial scale · ${Math.round(spatialScale*100)}%`,500,362,450);ctx.textAlign='left';
-            ctx.fillStyle='#f3f8fc';ctx.font='650 30px system-ui';ctx.fillText('Help',56,548,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 23px system-ui';infoPages(INFO_HELP,70,2)[0].forEach((line,index)=>ctx.fillText(line,56,588+index*28,888));
+            ctx.fillStyle='#f3f8fc';ctx.font='700 48px system-ui';ctx.fillText('Settings',56,46,888);
+            ctx.fillStyle='#dfff9b';ctx.font='650 26px system-ui';ctx.textAlign='center';ctx.fillText('Text size',500,238,450);ctx.fillText(`Spatial scale · ${Math.round(spatialScale*100)}%`,500,330,450);ctx.textAlign='left';
+            ctx.fillStyle='#f3f8fc';ctx.font='650 29px system-ui';ctx.fillText('Safety',56,500,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 22px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',72,2)[0].forEach((line,index)=>ctx.fillText(line,56,538+index*28,888));
+            ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.fillText('Help',56,610,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';infoPages(INFO_HELP,76,2)[0].forEach((line,index)=>ctx.fillText(line,56,644+index*26,888));
             card.controls.forEach(button=>{const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);face.addColorStop(0,button.primary?'#d5f4fb':'rgba(119,169,198,.56)');face.addColorStop(1,button.primary?'#60add1':'rgba(26,52,78,.84)');ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,16);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.stroke();ctx.fillStyle=button.primary?'#102b3a':'#f1f7fb';ctx.font='700 27px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+18,button.width-18);});
             return c;
         }
@@ -596,8 +588,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.012,companionHeight=.54*spatialScale;
             if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:companionHeight,card:settingsCard});}
             if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:companionHeight,card:mediaCard});}
-            const safetyCard=cards.find(card=>card.safety);
-            if(safetyOpen && !hidden && safetyCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset+settingsWidth*.9,28,.11),width:settingsWidth,height:companionHeight,card:safetyCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -629,9 +619,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
-            const safetyCard={id:'safety',safety:true,height:spatialHeight(),controls:[]};
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,title:identity?.plant || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || 'Plant reference image'};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(safetyOpen)cards.push(safetyCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());

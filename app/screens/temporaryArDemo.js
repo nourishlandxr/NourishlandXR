@@ -325,8 +325,8 @@ const AR_PHONE_COMFORT = Object.freeze({
 // Keep the primary trigger on the central screen rather than floating beneath it.
 // It sits slightly in front of the screen so the texture remains crisp and the
 // shared ray hit target can still resolve it independently from LIM cells.
-const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.08, -2.76]);
-const INTRO_CONTROL_SCALE = Object.freeze([1.55, 1.35]);
+const INTRO_CONTROL_POSITION = Object.freeze([0, -0.34, -2.755]);
+const INTRO_CONTROL_SCALE = Object.freeze([1.32, 1.02]);
 const DEMO_QUEST_ORB_SCALE = 0.62;
 // The shared demo quad is .4 m by .16 m before model scaling. These values
 // produce the configured 1.44 m by 1.08 m transparent PIM interaction wall.
@@ -373,7 +373,9 @@ export const welcomeNarrative=elapsed=>{
     const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
     return {...item,alpha};
 };
-const DEMO_WELCOME_OPENING_MS=21000;
+const DEMO_WELCOME_OPENING_MS=12500;
+const DEMO_WELCOME_TITLE_HOLD_MS=4300;
+const DEMO_WELCOME_PLACE_HOLD_MS=9600;
 const DEMO_WELCOME_CONTINUE_MS=21000;
 export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
@@ -461,11 +463,11 @@ const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: {
-        title: 'My Food Forest',
+        title: 'Botanical Garden',
         accent: '#50865c',
         bubbles: [
             'FOOD FOREST AREA',
-            'WELCOME · My Food Forest',
+            'WELCOME · Botanical Garden',
             'Pigeon Pea + Moringa guild',
             'Warm growing conditions',
             'Pollinators + seasonal care'
@@ -479,7 +481,7 @@ const DEMO_CONTENT = Object.freeze({
             'ORIENTATION · follow the path',
             'Native species interpretation',
             'Stay on trail · respect habitat',
-            'LINKED TO MY FOOD FOREST'
+            'LINKED TO BOTANICAL GARDEN'
         ]
     }
 });
@@ -1698,7 +1700,7 @@ function showArWelcomeShowcase() {
     introBoardStep='';
     introBoardTitle='Welcome to Nourishland XR';
     introBoardBody=demoLocalizedText("Take a moment to settle in.\n\nThis experience is designed to be explored at your own pace. Read carefully, look around, and continue when you're ready.");
-    introBoardVisibleBody=introBoardBody;
+    introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
     infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel explains each plant, place and connection when you select it.',accent:'#9fdcff',mesh:'lim',editable:false});
@@ -1716,7 +1718,7 @@ function showArWelcomeShowcase() {
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-surface','true');
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-intro-pending','true');
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
-    let openingTypedLength=introBoardBody.length,openingTyping=false;
+    let openingTypedLength=0,openingTyping=false;
     const openingTextWindow=panel.querySelector('.tryit-board-text-window');
     const paintOpeningCopy=visibleText=>{
         const paragraphs=[...panel.querySelectorAll('.tryit-board-text-window p:not(.tryit-board-next)')];
@@ -1945,7 +1947,7 @@ function guidePlantConversion(record) {
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     const afterPlacement=moringa
-        ? {title:'The living map can compare',paragraphs:['Moringa now has its own Plant Profile. Open it to compare a small tree with the Pigeon Pea support shrub and consider how their roles differ in the same place.'],button:'Open Moringa',nextGuide:'Press the Moringa Orb to read its profile.'}
+        ? {title:'The living map can compare',paragraphs:['Moringa now has its own Plant Profile. Continue, then aim at and select the physical Moringa Plant Orb to compare it with the Pigeon Pea support shrub.'],button:'Continue',nextGuide:'Aim at and select the Moringa Plant Orb to read its profile.'}
         : POST_PLACEMENT_AREA_STEP;
     showIntroBoard(
         afterPlacement.title,
@@ -2020,7 +2022,7 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
-            name: 'My Food Forest Totem',
+            name: 'Botanical Garden Totem',
             description: 'An example of Area information attached to a Totem Marker.'
         }),
         // Spatial prisms are positioned from their centre. Raising the centre
@@ -2036,7 +2038,7 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
         demoType: 'zone',
         tutorialStage: 'totem',
         demoTotemStyle: 'basic',
-        demoTotemExampleId:'my-food-forest',
+        demoTotemExampleId:'botanical-garden',
         demoTotemColor:'#50865c',
         demoLinkVisible: false,
         demoExpanded: true,
@@ -2054,7 +2056,7 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('The My Food Forest Totem welcomes visitors to its Area. Show the Rainforest Walk Totem to see a differently coloured Area and a route between them.');
+    setGuide('The Botanical Garden Totem welcomes visitors to its Area. Show the Rainforest Walk Totem to see a differently coloured Area and a route between them.');
     showSceneContinue('Show Rainforest Walk Totem', createDemoSecondTotem);
 }
 
@@ -2068,7 +2070,7 @@ function createDemoSecondTotem() {
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Rainforest Walk Totem',
-            description: 'A Rainforest Walk Area Totem linked to My Food Forest.'
+            description: 'A Rainforest Walk Area Totem linked to the Botanical Garden.'
         }),
         position: {
             x: sourcePosition.x - 1.15,
@@ -2084,7 +2086,7 @@ function createDemoSecondTotem() {
         demoTotemColor:'#438f99',
         demoLinkVisible: true,
         demoLinkDirection: 'left',
-        demoLinkDestination: 'My Food Forest Area',
+        demoLinkDestination: 'Botanical Garden Area',
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
@@ -2133,8 +2135,8 @@ function showLinkedTotemsIntroduction() {
         'Why link Areas?',
         [
             'Each Totem is the welcoming home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
-            'My Food Forest can welcome visitors; Rainforest Walk can orient them; Botanical Collection can interpret plants; Community Garden can share safety information and care guidance.',
-            'A link creates a visitor route between Areas. Here it connects My Food Forest with Rainforest Walk without mixing their information.',
+            'A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area.',
+            'A link creates a visitor route between Areas. Here it connects the Botanical Garden with Rainforest Walk without mixing their information.',
             'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
         'Who benefits?',
@@ -2162,10 +2164,10 @@ function showTotemIntroduction() {
         'Area Totems',
         [
             'NourishlandXR is a mapping tool. Plants, observations and visitor stories are organized into Areas, with a welcoming Totem for each one.',
-            'My Food Forest can welcome visitors; Rainforest Walk can orient them; Botanical Collection can interpret plants; Community Garden can share safety information and care guidance.',
-            'Each Totem keeps its own Area content. In this example, My Food Forest and Rainforest Walk use different Totem colours and link into a visitor route.'
+            'A Totem can represent a Botanical Garden, Community Garden, Food Forest, Orchard, Growing Area or Demonstration Site.',
+            'Each Totem keeps its own Area content. In this example, Botanical Garden and Rainforest Walk use different Totem colours and link into a visitor route.'
         ],
-        'Show My Food Forest Totem',
+        'Show Botanical Garden Totem',
         () => {
             finishIntroBoard();
             armDemoPlacement('totem',{explained:true});
@@ -2288,7 +2290,7 @@ function armDemoPlacement(type, {explained=false}={}) {
     if (label) label.textContent = type === 'plant' ? 'Place Orb' : type === 'plant2' ? 'Place Orb' : type === 'totem' ? 'Place Totem' : 'Place Note';
     place?.setAttribute('aria-label', type === 'plant'
         ? 'Place the Pigeon Pea Plant Orb'
-        : type === 'plant2' ? 'Place the Moringa Plant Orb' : type === 'totem' ? 'Place the My Food Forest Totem' : 'Place a Note');
+        : type === 'plant2' ? 'Place the Moringa Plant Orb' : type === 'totem' ? 'Place the Botanical Garden Totem' : 'Place a Note');
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type==='totem'?'Aim the upright preview where the Totem should stand. Use the thumbstick to adjust depth.':'Take in the space before choosing the next position.');
@@ -2299,7 +2301,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         ]],
         plant2: ['Compare a second plant', 'Moringa will have its own Orb and profile beside Pigeon Pea. Together they show how different plant roles can be compared in one place.'],
         note: ['Add one observation', 'A Note keeps something noticed in this part of the landscape beside the plants it relates to. It can be as simple as flowering, damage, a task or a question.'],
-        totem: ['Place My Food Forest Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
+        totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
     const startPlacement = () => {
@@ -2311,7 +2313,7 @@ function armDemoPlacement(type, {explained=false}={}) {
             : type === 'plant2'
                 ? {title:'Place Moringa',body:'This second orb will show how two distinct plant profiles can share a place.',next:'Press the visible aiming circle to place Moringa.'}
                 : type==='totem'
-                    ? {title:'Place My Food Forest Totem',body:'The vertical preview shows where the Totem will stand. Adjust its depth, then confirm placement.',next:'Aim the upright preview and pull the trigger to place the Totem.'}
+                    ? {title:'Place Botanical Garden Totem',body:'The vertical preview shows where the Totem will stand. Adjust its depth, then confirm placement.',next:'Aim the upright preview and pull the trigger to place the Totem.'}
                     : {title:'Place an observation',body:'A Note gives an observation a location beside the plants.',next:'Press the visible aiming circle to place the Note.'};
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
@@ -3244,6 +3246,13 @@ function placementPosition() {
     return demoPlacementPosition(viewerMatrix, demoPointerWorldRay(), demoPointerWorldOrigin(),placementDistance);
 }
 
+function totemPlacementPosition() {
+    const position=placementPosition();
+    if(!position)return null;
+    const floorY=demoGroundBaseY(hitMatrix,viewerMatrix,groundYEstimate);
+    return {x:Number(hitMatrix?.[12])||position.x,y:floorY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:Number(hitMatrix?.[14])||position.z};
+}
+
 function pointerDistanceToRecord(record) {
     const ray = demoPointerWorldRay();
     const origin = demoPointerWorldOrigin();
@@ -3266,6 +3275,12 @@ function pointerDistanceToRecord(record) {
 function demoRecordRayHit(record) {
     const ray=demoPointerWorldRay(),origin=demoPointerWorldOrigin();
     if(!origin || !ray || !record?.position)return null;
+    if(record.demoType==='note'){
+        const matrix=billboardMatrix(record.position,DEMO_NOTE_IMMERSIVE_SCALE.x,DEMO_NOTE_IMMERSIVE_SCALE.y);
+        const right={x:matrix[0]/DEMO_NOTE_IMMERSIVE_SCALE.x,y:matrix[1]/DEMO_NOTE_IMMERSIVE_SCALE.x,z:matrix[2]/DEMO_NOTE_IMMERSIVE_SCALE.x};
+        const up={x:matrix[4]/DEMO_NOTE_IMMERSIVE_SCALE.y,y:matrix[5]/DEMO_NOTE_IMMERSIVE_SCALE.y,z:matrix[6]/DEMO_NOTE_IMMERSIVE_SCALE.y};
+        return spatialDashboardRayHit({origin,direction:ray},{center:record.position,right,up,width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y},{width:1024,height:384});
+    }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
     const along=offset.x*ray.x+offset.y*ray.y+offset.z*ray.z;
     if(along<=0)return null;
@@ -3445,13 +3460,13 @@ function plantInformationPose(record) {
 
 function placeMarker() {
     if (!placementReady || marker || markers.length >= DEMO_SEQUENCE.length || markers.some(record => record.tutorialStage === demoStage)) return;
-    const position = placementPosition();
+    const type = demoStage;
+    const position = type==='totem' ? totemPlacementPosition() : placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');
         return;
     }
     placementReady = false;
-    const type = demoStage;
     if(type==='totem'){
         const pointer=appRoot?.querySelector('[data-tryit-place]');
         pointer?.setAttribute('hidden','');pointer?.classList.remove('is-revealing','is-ready','is-pressed');
@@ -3746,7 +3761,7 @@ function setupRenderer() {
     gl.shaderSource(vertex, 'attribute vec3 p;attribute vec2 uv;uniform mat4 mvp;varying vec2 v;void main(){gl_Position=mvp*vec4(p,1.);v=uv;}');
     gl.compileShader(vertex);
     const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
+    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);if(sampleColor.a<.02)discard;gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
     gl.compileShader(fragment);
     program = gl.createProgram();
     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
@@ -4020,27 +4035,29 @@ function drawIntroNoteContent(ctx) {
         ctx.font = '750 46px system-ui, sans-serif';
         ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     }
+    const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
+    const openingTitle=openingElapsed===null ? introBoardTitle : openingElapsed<DEMO_WELCOME_TITLE_HOLD_MS ? demoLocalizedText('Welcome to Nourishland XR') : openingElapsed<DEMO_WELCOME_PLACE_HOLD_MS ? demoLocalizedText('Every living place holds knowledge.') : '';
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
     const titleWidth = 900;
     let titleSize = 92;
     ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
-    while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
+    while (titleSize > 48 && ctx.measureText(openingTitle).width > titleWidth) {
         titleSize -= 2;
         ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
     }
-    ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
-    if (introBoardVisibleBody) {
+    if(openingTitle)ctx.fillText(openingTitle, contentCenter, 540, titleWidth);
+    if (introBoardVisibleBody && openingElapsed===null) {
     ctx.strokeStyle = 'rgba(220,239,149,.56)';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(contentLeft, 478);
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
-    const isOpeningStatement = arWelcomeIntroPending && !arWelcomeSettleStage;
-    const narrative = isOpeningStatement ? welcomeNarrative(arWelcomeClock.elapsed) : null;
-    ctx.textAlign = isOpeningStatement ? 'center' : 'left';
+    const isOpeningStatement = false;
+    const narrative = null;
+    ctx.textAlign = 'left';
     if(narrative){
         ctx.save();ctx.globalAlpha*=.18*narrative.alpha;
         const glow=ctx.createRadialGradient(contentCenter,610,10,contentCenter,610,360);
@@ -4132,11 +4149,11 @@ function createIntroControlTexture(labelText, texture = null) {
     label.height = 360;
     const ctx = label.getContext('2d');
     const panel = ctx.createLinearGradient(50, 24, 850, 336);
-    panel.addColorStop(0, 'rgba(182,224,135,.98)');
-    panel.addColorStop(1, 'rgba(65,130,76,.98)');
+    panel.addColorStop(0, 'rgba(100,137,101,.98)');
+    panel.addColorStop(1, 'rgba(54,91,69,.98)');
     ctx.fillStyle = panel;
-    ctx.strokeStyle = 'rgba(240,255,224,.88)';
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(218,235,207,.68)';
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.roundRect(12, 12, 876, 336, 64);
     ctx.fill();
@@ -4144,9 +4161,9 @@ function createIntroControlTexture(labelText, texture = null) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,.7)';
-    ctx.shadowBlur = 7;
-    ctx.font = '850 72px system-ui, sans-serif';
+    ctx.shadowColor = 'rgba(0,0,0,.38)';
+    ctx.shadowBlur = 4;
+    ctx.font = '780 62px system-ui, sans-serif';
     ctx.fillText(String(labelText || 'Continue'), 450, 180,820);
     ctx.shadowBlur = 0;
     return canvasTexture(label, texture);
@@ -4178,6 +4195,14 @@ function createIntroPointerTexture(texture = null) {
     ctx.arc(128, 128, 8, 0, Math.PI * 2);
     ctx.fill();
     return canvasTexture(label, texture);
+}
+
+function createNotePlacementTexture(texture = null) {
+    const label=document.createElement('canvas');label.width=480;label.height=320;const ctx=label.getContext('2d');
+    const face=ctx.createLinearGradient(50,35,430,285);face.addColorStop(0,'rgba(117,151,139,.3)');face.addColorStop(1,'rgba(48,86,73,.18)');
+    ctx.fillStyle=face;ctx.strokeStyle='rgba(235,250,224,.92)';ctx.lineWidth=7;ctx.setLineDash([18,12]);ctx.beginPath();ctx.roundRect(42,42,396,236,34);ctx.fill();ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(235,250,224,.9)';ctx.font='750 28px system-ui';ctx.textAlign='center';ctx.fillText('NOTE',240,176);
+    return canvasTexture(label,texture);
 }
 
 function createTotemPlacementTexture(texture = null) {
@@ -4316,10 +4341,10 @@ function drawIntroSpatial(view) {
         introControlTextureLabel = '';
     }
     if (placementReady) {
-        const pointerKind=demoStage==='totem'?'totem':'aim';
-        if(introPointerTextureKind!==pointerKind){if(introPointerTexture)gl.deleteTexture(introPointerTexture);introPointerTexture=pointerKind==='totem'?createTotemPlacementTexture():createIntroPointerTexture();introPointerTextureKind=pointerKind;}
-        const pointerPosition = placementPosition();
-        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:.32, demoStage==='totem'?3.2:.8, 1);
+        const pointerKind=demoStage==='totem'?'totem':demoStage==='note'?'note':'aim';
+        if(introPointerTextureKind!==pointerKind){if(introPointerTexture)gl.deleteTexture(introPointerTexture);introPointerTexture=pointerKind==='totem'?createTotemPlacementTexture():pointerKind==='note'?createNotePlacementTexture():createIntroPointerTexture();introPointerTextureKind=pointerKind;}
+        const pointerPosition = demoStage==='totem'?totemPlacementPosition():placementPosition();
+        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.32, demoStage==='totem'?3.2:demoStage==='note'?1.4:.8, 1);
     }
 }
 

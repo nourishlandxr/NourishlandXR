@@ -1,12 +1,12 @@
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
 export function totemCardSurfaces(position, right, cards, selectedId = '', simplified = false) {
-    const layout = [[-.48,1.34],[.48,1.02],[-.48,.70]];
+    const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
     const place = (x,y,width,height,card,detail=false) => ({
         center:{x:position.x+right.x*x,y:position.y+y,z:position.z+right.z*x},
         right, width,height,card,detail
     });
     const toggle={id:'__simplify',eyebrow:'TOTEM VIEW',title:simplified?'Expand':'Simplify',summary:simplified?'Show Area categories':'Hide secondary categories',control:true,collapsed:simplified};
-    const surfaces=[place(0,1.04,.34,.22,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.70,.30,card)))];
+    const surfaces=[place(0,1.78,.30,.16,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)))];
     const selected=cards.find(card=>card.id===selectedId);
     if(selected && !simplified) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;
@@ -61,14 +61,14 @@ function cardCanvas(card, detail, selected) {
     const gradient=ctx.createLinearGradient(0,0,768,canvas.height);
     if(detail){gradient.addColorStop(0,'rgba(63,88,99,.96)');gradient.addColorStop(1,'rgba(18,38,49,.95)');}
     else if(card.control){gradient.addColorStop(0,'rgba(190,210,180,.9)');gradient.addColorStop(1,'rgba(74,105,88,.96)');}
-    else {gradient.addColorStop(0,'rgba(83,113,92,.82)');gradient.addColorStop(1,'rgba(15,44,35,.78)');}
+    else {const tones=[['rgba(91,120,91,.86)','rgba(26,55,39,.82)'],['rgba(112,116,82,.84)','rgba(50,52,31,.82)'],['rgba(73,111,101,.84)','rgba(20,50,45,.82)']][Math.abs(String(card.id||'').split('').reduce((sum,value)=>sum+value.charCodeAt(0),0))%3];gradient.addColorStop(0,tones[0]);gradient.addColorStop(1,tones[1]);}
     ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(8,8,752,canvas.height-16,32);ctx.fill();
     ctx.strokeStyle=selected ? '#e5eac0' : 'rgba(218,242,224,.8)';ctx.lineWidth=selected ? 4 : 2;ctx.stroke();
     ctx.textBaseline='top';ctx.fillStyle='#d2e8c6';ctx.font='600 25px system-ui';
-    ctx.fillText(card.eyebrow,38,34,692);
-    ctx.fillStyle='#f4faef';ctx.font=card.control?'700 54px system-ui':'600 48px system-ui';wrapped(ctx,card.control?(card.collapsed?'＋  Expand':'−  Simplify'):card.title,38,78,692,54,2);
-    ctx.font=detail ? '400 34px system-ui' : '400 42px system-ui';ctx.fillStyle='#e0eadd';
-    wrapped(ctx,detail ? card.body : card.summary,38,204,692,detail ? 43 : 50,detail ? 6 : 2);
+    ctx.fillText(card.eyebrow,38,28,692);
+    ctx.fillStyle='#f4faef';ctx.font=card.control?'700 48px system-ui':'600 44px system-ui';wrapped(ctx,card.control?(card.collapsed?'＋  Expand':'−  Collapse'):card.title,38,68,692,50,2);
+    ctx.font=detail ? '400 34px system-ui' : '400 34px system-ui';ctx.fillStyle='#e0eadd';
+    wrapped(ctx,detail ? card.body : card.summary,38,180,692,detail ? 43 : 42,detail ? 6 : 2);
     ctx.fillStyle='#d2e8c6';ctx.font='500 22px system-ui';
     ctx.fillText(detail ? 'Select this note to close' : 'Select to explore',38,canvas.height-46);
     return canvas;

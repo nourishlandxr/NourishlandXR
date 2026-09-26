@@ -61,7 +61,7 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
 // complete hierarchy remains in the shared document model and Web Hub; this
 // limit only controls what blooms into the spatial surface.
 export const AR_PIM_MAX_VISIBLE_CHILDREN = 3;
-export const PIM_CHILD_SCALE = .7;
+export const PIM_CHILD_SCALE = 1;
 export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
     safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
     layoutWidth: 1440,

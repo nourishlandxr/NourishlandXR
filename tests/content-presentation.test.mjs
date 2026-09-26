@@ -139,10 +139,10 @@ test('each archetype opens its ordered illustration in the shared control panel'
 
 test('Area Totem examples show distinct colours and welcoming, orientation, interpretation and safety roles', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    for (const label of ['My Food Forest', 'Rainforest Walk', 'Botanical Collection', 'Community Garden']) {
+    for (const label of ['Botanical Garden', 'Rainforest Walk', 'Food Forest', 'Community Garden']) {
         assert.ok(demo.includes(label), `missing Area example ${label}`);
     }
-    assert.match(demo, /My Food Forest can welcome visitors; Rainforest Walk can orient them; Botanical Collection can interpret plants; Community Garden can share safety information and care guidance\./);
+    assert.match(demo, /A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area\./);
     assert.match(demo, /demoTotemColor:'#50865c'/);
     assert.match(demo, /demoTotemColor:'#438f99'/);
 });
