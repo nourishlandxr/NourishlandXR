@@ -62,7 +62,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = .055) {
+export function companionPanelPose(pose, side, offset, angleDegrees = 22, arcDepth = .075) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     return {...pose,
@@ -156,7 +156,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 
 let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1;
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,safetyOpen=false,spatialScale=1,contextHint='';
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
@@ -179,7 +179,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Information about what you select will appear here. Select a Plant Orb or hold one of its cells to explore.'
                 :'Information about what you select will appear here.';
-        const interactionHint=identity?.hint ? `PLANT ORB\n${identity.hint}` : '';
+        const interactionHint=contextHint ? `HINT\n${contextHint}` : identity?.hint ? `HINT\n${identity.hint}` : '';
         return [reading,interactionHint,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
     };
     const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
@@ -203,11 +203,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
-        if(action==='Settings'){settingsOpen=!settingsOpen;renderSettings();}
+        if(action==='Settings'){settingsOpen=!settingsOpen;safetyOpen=false;renderSettings();}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
         if(action==='TextSize'){largeText=!largeText;page=0;}
+        if(action==='SafetyGuidance'){safetyOpen=!safetyOpen;}
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
         if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
@@ -217,18 +218,17 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         render();
     }
     const settingsControls=()=>[
-        {action:'TextSize',label:largeText?'Standard text':'Larger text',x:56,y:286,width:888,height:70},
-        {action:'ScaleDown',label:'Smaller spatial scale',x:56,y:376,width:424,height:66},
-        {action:'ScaleUp',label:'Larger spatial scale',x:520,y:376,width:424,height:66},
-        {action:'Recenter',label:'Recenter panel',x:56,y:462,width:424,height:66},
-        {action:'Utility:safety',label:'Safety guidance',x:520,y:462,width:424,height:66},
-        {action:'Settings',label:'Close settings',x:56,y:620,width:888,height:66,primary:true}
+        {action:'TextSize',label:largeText?'A−  Standard text':'A+  Larger text',x:56,y:260,width:888,height:62},
+        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:56,y:344,width:188,height:66},
+        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:756,y:344,width:188,height:66},
+        {action:'Recenter',label:'◎  Recenter panel',x:56,y:438,width:424,height:66},
+        {action:'SafetyGuidance',label:'Safety guidance ›',x:520,y:438,width:424,height:66}
     ];
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.classList.toggle('has-settings-companion',settingsOpen);
         if(settingsElement.hidden)return;
-        settingsElement.innerHTML='<header><small>COMPANION PANEL</small><h2>Settings</h2></header><section><h3>Safety guidance</h3><p>Keep a clear boundary and remain aware of people, plants and uneven ground around you.</p><h3>Size / scale</h3><p>Adjust reading size or spatial scale without compressing the main panel.</p><div class="nlxr-settings-actions"></div><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
+        settingsElement.innerHTML='<header><small>COMPANION PANEL</small><h2>Settings</h2></header><section><h3>Reading comfort</h3><p>Adjust text and spatial scale without compressing the main panel.</p><div class="nlxr-settings-actions"></div><p class="nlxr-scale-readout">Spatial scale · '+Math.round(spatialScale*100)+'%</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
         settingsControls().forEach(item=>actions.append(makeButton(item)));
     }
@@ -430,7 +430,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
             if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
             element.append(tools);
-            if(tab==='Details'){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
+            if(tab==='Details' && pages().length>1){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
         }
         if(focused)(element.querySelector('[data-info-action="'+focused+'"]') || element.querySelector('button'))?.focus({preventScroll:true});
     }
@@ -456,12 +456,21 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.fillText(card.caption || 'Plant reference image',48,c.height-48,904);
             return c;
         }
-        if(card.settings){
+            if(card.safety){
+                ctx.fillStyle='#9adcf4';ctx.font='700 22px system-ui';ctx.fillText('SAFETY GUIDANCE',56,34,888);
+                ctx.fillStyle='#f3f8fc';ctx.font='700 46px system-ui';ctx.fillText('Stay aware of your space',56,78,888);
+                ctx.fillStyle='#d5e5eb';ctx.font='500 30px system-ui';
+                infoPages('Keep a clear boundary. Look for people, plants, furniture and uneven ground before moving. Pause whenever the real environment needs your attention.',54,7)[0].forEach((line,index)=>ctx.fillText(line,56,174+index*42,888));
+                ctx.fillStyle='#dfff9b';ctx.font='650 25px system-ui';ctx.fillText('Select Safety guidance again to close this panel.',56,c.height-66,888);
+                return c;
+            }
+            if(card.settings){
             ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText('COMPANION PANEL',56,34,888);
             ctx.fillStyle='#f3f8fc';ctx.font='700 48px system-ui';ctx.fillText('Settings',56,72,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText('Safety guidance · Size / scale · General settings',56,138,888);
-            ctx.fillStyle='#f3f8fc';ctx.font='650 30px system-ui';ctx.fillText('Help',56,554,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 23px system-ui';infoPages(INFO_HELP,70,2)[0].forEach((line,index)=>ctx.fillText(line,56,590+index*28,888));
+            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText('Reading comfort · Spatial position',56,138,888);
+            ctx.fillStyle='#dfff9b';ctx.font='650 26px system-ui';ctx.textAlign='center';ctx.fillText(`Spatial scale · ${Math.round(spatialScale*100)}%`,500,362,450);ctx.textAlign='left';
+            ctx.fillStyle='#f3f8fc';ctx.font='650 30px system-ui';ctx.fillText('Help',56,548,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 23px system-ui';infoPages(INFO_HELP,70,2)[0].forEach((line,index)=>ctx.fillText(line,56,588+index*28,888));
             card.controls.forEach(button=>{const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);face.addColorStop(0,button.primary?'#d5f4fb':'rgba(119,169,198,.56)');face.addColorStop(1,button.primary?'#60add1':'rgba(26,52,78,.84)');ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,16);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.stroke();ctx.fillStyle=button.primary?'#102b3a':'#f1f7fb';ctx.font='700 27px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+18,button.width-18);});
             return c;
         }
@@ -473,9 +482,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,headerBottom,media-6,c.height-headerBottom-7);
             ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,headerBottom+1,width,2);
             if(card.progress){
-                const stepWidth=width/Math.max(1,card.progress.steps.length-1),barY=48;
-                ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='right';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,right,20,Math.min(250,width*.42));ctx.textAlign='left';
-                ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(left,barY,width,3);
+                const progressRight=718,progressWidth=Math.max(180,progressRight-left),stepWidth=progressWidth/Math.max(1,card.progress.steps.length-1),barY=48;
+                ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='left';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,left,20,progressWidth);ctx.textAlign='left';
+                ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(left,barY,progressWidth,3);
                 ctx.fillStyle='#dfff9b';ctx.fillRect(left,barY,Math.max(3,stepWidth*card.progress.activeIndex),3);
                 card.progress.steps.forEach((step,index)=>{const x=left+stepWidth*index;ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=index<=card.progress.activeIndex?'#dfff9b':'#536469';ctx.fill();});
             }
@@ -497,7 +506,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const lineHeight=card.largeText?56:50;
             card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             ctx.fillStyle='#d4e0dc';ctx.font='400 22px system-ui';ctx.fillText(card.metadata,left,card.height-27,width);
-            if(card.tab==='Details')ctx.fillText(card.page,right-65,card.height-20,65);
+            if(card.tab==='Details' && card.page)ctx.fillText(card.page,right-65,card.height-20,65);
         }else if(!card.hidden){
             ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
             ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
@@ -556,6 +565,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         setMeshComposition(value){meshContext=value?{...value,items:[...(value.items || [])]}:null;page=0;updateReading();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
+        setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;else if(isDesktopDemo())mediaCollapsed=false;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && (element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')))render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},
@@ -583,9 +593,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.025,companionHeight=.54*spatialScale;
+            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.012,companionHeight=.54*spatialScale;
             if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:companionHeight,card:settingsCard});}
             if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:companionHeight,card:mediaCard});}
+            const safetyCard=cards.find(card=>card.safety);
+            if(safetyOpen && !hidden && safetyCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset+settingsWidth*.9,28,.11),width:settingsWidth,height:companionHeight,card:safetyCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -615,10 +627,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
+            const safetyCard={id:'safety',safety:true,height:spatialHeight(),controls:[]};
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,title:identity?.plant || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || 'Plant reference image'};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(safetyOpen)cards.push(safetyCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());

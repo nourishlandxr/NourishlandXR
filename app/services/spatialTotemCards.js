@@ -1,13 +1,14 @@
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
-export function totemCardSurfaces(position, right, cards, selectedId = '') {
+export function totemCardSurfaces(position, right, cards, selectedId = '', simplified = false) {
     const layout = [[-.48,1.34],[.48,1.02],[-.48,.70]];
     const place = (x,y,width,height,card,detail=false) => ({
         center:{x:position.x+right.x*x,y:position.y+y,z:position.z+right.z*x},
         right, width,height,card,detail
     });
-    const surfaces=cards.slice(0,3).map((card,i)=>place(...layout[i],.70,.30,card));
+    const toggle={id:'__simplify',eyebrow:'TOTEM VIEW',title:simplified?'Expand':'Simplify',summary:simplified?'Show Area categories':'Hide secondary categories',control:true,collapsed:simplified};
+    const surfaces=[place(0,1.04,.34,.22,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.70,.30,card)))];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected) surfaces.push(place(-1.18,1.03,.72,.82,selected,true));
+    if(selected && !simplified) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;
 }
 
@@ -55,17 +56,19 @@ function wrapped(ctx,text,x,y,width,lineHeight,maxLines) {
 }
 
 function cardCanvas(card, detail, selected) {
-    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=detail ? 960 : 400;
+    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=detail ? 560 : 400;
     const ctx=canvas.getContext('2d');
     const gradient=ctx.createLinearGradient(0,0,768,canvas.height);
-    gradient.addColorStop(0,'rgba(83,113,92,.82)');gradient.addColorStop(1,'rgba(15,44,35,.78)');
+    if(detail){gradient.addColorStop(0,'rgba(63,88,99,.96)');gradient.addColorStop(1,'rgba(18,38,49,.95)');}
+    else if(card.control){gradient.addColorStop(0,'rgba(190,210,180,.9)');gradient.addColorStop(1,'rgba(74,105,88,.96)');}
+    else {gradient.addColorStop(0,'rgba(83,113,92,.82)');gradient.addColorStop(1,'rgba(15,44,35,.78)');}
     ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(8,8,752,canvas.height-16,32);ctx.fill();
     ctx.strokeStyle=selected ? '#e5eac0' : 'rgba(218,242,224,.8)';ctx.lineWidth=selected ? 4 : 2;ctx.stroke();
     ctx.textBaseline='top';ctx.fillStyle='#d2e8c6';ctx.font='600 25px system-ui';
     ctx.fillText(card.eyebrow,38,34,692);
-    ctx.fillStyle='#f4faef';ctx.font='600 48px system-ui';wrapped(ctx,card.title,38,78,692,54,2);
+    ctx.fillStyle='#f4faef';ctx.font=card.control?'700 54px system-ui':'600 48px system-ui';wrapped(ctx,card.control?(card.collapsed?'＋  Expand':'−  Simplify'):card.title,38,78,692,54,2);
     ctx.font=detail ? '400 34px system-ui' : '400 42px system-ui';ctx.fillStyle='#e0eadd';
-    wrapped(ctx,detail ? card.body : card.summary,38,204,692,detail ? 43 : 50,detail ? 15 : 2);
+    wrapped(ctx,detail ? card.body : card.summary,38,204,692,detail ? 43 : 50,detail ? 6 : 2);
     ctx.fillStyle='#d2e8c6';ctx.font='500 22px system-ui';
     ctx.fillText(detail ? 'Select this note to close' : 'Select to explore',38,canvas.height-46);
     return canvas;
@@ -85,7 +88,7 @@ export function createSpatialTotemCards(gl, options = {}) {
         draw(view, record, position, cards, selectedId) {
             const m=view.transform.inverse.matrix,rightLength=Math.hypot(m[0],m[8])||1;
             const right=stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
-            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId);
+            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,Boolean(record.demoSimplified));
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthMask(false);

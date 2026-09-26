@@ -612,27 +612,15 @@ function siblingTarget(childIndex, childCount) {
 }
 
 function placePimRecord(record, parent, metrics) {
-    const direction = DIRECTION_LAYOUT[record.rootDirection] || DIRECTION_LAYOUT.top;
     const slotOffset = childSlotOffset(record.childIndex, record.childCount);
     const slotIndex = Number(parent?.slotIndex || 0) + slotOffset;
     let grid;
-    if (record.depth === 1) {
-        // The six first-generation slots are the three outward-facing axial
-        // neighbours of the real parent. They are reserved whether open or
-        // not, so a later branch cannot take one and move an earlier cell.
-        const preferred = pimChildPosition(parent, record.childIndex, record.childCount, metrics);
-        grid = { x: preferred.axial.q, y: preferred.axial.r };
-    } else {
-        // Deeper generations continue along the root branch sector. The
-        // inherited slot index makes a compact local fan around the actual
-        // parent while the depth keeps every generation in a new outward
-        // ring. These are preferences; the full-tree allocator below reserves unique slots.
-        const root = DIRECTION_AXIAL[record.rootDirection] || { q: 0, r: 0 };
-        grid = {
-            x: root.q + root.q * record.depth + direction.tangentX * slotIndex,
-            y: root.r + root.r * record.depth + direction.tangentY * slotIndex
-        };
-    }
+    // Every generation begins in an immediately adjacent slot around its
+    // actual parent. The full-tree allocator below reserves all authored
+    // descendants up front, so this local cluster remains collision-free
+    // without moving cells that are already visible.
+    const preferred = pimChildPosition(parent, record.childIndex, record.childCount, metrics);
+    grid = { x: preferred.axial.q, y: preferred.axial.r };
     record.slotIndex = slotIndex;
     record.fixedPosition = layoutPosition(grid, metrics);
     record.layoutGrid = grid;
