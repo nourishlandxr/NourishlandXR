@@ -155,8 +155,8 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,contextHint='';
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(1,Number(rainIntensity)||0)),contextHint='';
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
@@ -212,6 +212,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
         if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
+        if(action==='RainIntensity'){ambientRain=ambientRain>=1?0:ambientRain<=0?.45:1;onRainIntensity(ambientRain);}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
         if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
@@ -222,7 +223,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         {action:'TextUp',label:'A+',ariaLabel:'Increase text size',x:756,y:224,width:188,height:62},
         {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:56,y:316,width:188,height:62},
         {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:756,y:316,width:188,height:62},
-        {action:'Recenter',label:'◎  Recenter panel',x:56,y:408,width:888,height:62}
+        {action:'Recenter',label:'◎  Recenter panel',x:56,y:396,width:424,height:58},
+        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':'Full'}`,ariaLabel:'Change rain intensity',x:520,y:396,width:424,height:58}
     ];
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
@@ -459,10 +461,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             if(card.settings){
             ctx.fillStyle='#f3f8fc';ctx.font='700 48px system-ui';ctx.fillText('Settings',56,46,888);
             ctx.fillStyle='#dfff9b';ctx.font='650 26px system-ui';ctx.textAlign='center';ctx.fillText('Text size',500,238,450);ctx.fillText(`Spatial scale · ${Math.round(spatialScale*100)}%`,500,330,450);ctx.textAlign='left';
-            ctx.fillStyle='#f3f8fc';ctx.font='650 29px system-ui';ctx.fillText('Safety',56,500,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 22px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',72,2)[0].forEach((line,index)=>ctx.fillText(line,56,538+index*28,888));
-            ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.fillText('Help',56,610,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';infoPages(INFO_HELP,76,2)[0].forEach((line,index)=>ctx.fillText(line,56,644+index*26,888));
+            ctx.fillStyle='#f3f8fc';ctx.font='650 29px system-ui';ctx.fillText('Safety',56,486,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 22px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',72,2)[0].forEach((line,index)=>ctx.fillText(line,56,524+index*28,888));
+            ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.fillText('Help',56,596,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';infoPages(INFO_HELP,76,2)[0].forEach((line,index)=>ctx.fillText(line,56,630+index*26,888));
             card.controls.forEach(button=>{const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);face.addColorStop(0,button.primary?'#d5f4fb':'rgba(119,169,198,.56)');face.addColorStop(1,button.primary?'#60add1':'rgba(26,52,78,.84)');ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,16);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.stroke();ctx.fillStyle=button.primary?'#102b3a':'#f1f7fb';ctx.font='700 27px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+18,button.width-18);});
             return c;
         }

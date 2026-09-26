@@ -579,6 +579,9 @@ h1 {
 .tryit-demo.is-simulated .tryit-stage::after { background-image:radial-gradient(ellipse 1px 16px at 31px 71px,rgba(232,247,245,.62) 15%,transparent 100%),radial-gradient(ellipse 1px 12px at 119px 38px,rgba(245,252,250,.66) 15%,transparent 100%),radial-gradient(ellipse 1px 18px at 202px 126px,rgba(223,242,242,.58) 15%,transparent 100%); background-size:223px 360px,269px 360px,311px 360px; transition:opacity 4s ease; animation:tryit-soft-rain-mist 9s linear infinite; }
 .tryit-demo.is-simulated[data-rain-stage="first-drops"] .tryit-stage::before,.tryit-demo.is-simulated[data-rain-stage="mist"] .tryit-stage::before { opacity:.7; }
 .tryit-demo.is-simulated[data-rain-stage="mist"] .tryit-stage::after { opacity:.65; }
+.tryit-demo.is-simulated[data-rain-intensity="light"] .tryit-stage::before { opacity:.3; }
+.tryit-demo.is-simulated[data-rain-intensity="light"] .tryit-stage::after { opacity:.22; }
+.tryit-demo.is-simulated[data-rain-intensity="off"] .tryit-stage::before,.tryit-demo.is-simulated[data-rain-intensity="off"] .tryit-stage::after { opacity:0; }
 .tryit-ambient-life { display:none; }
 .tryit-demo.is-simulated .tryit-ambient-life { display:block; position:fixed; inset:0; z-index:12000; width:100%; height:100%; pointer-events:none; }
 @keyframes tryit-soft-rain-first { from { background-position:0 0,0 0; } to { background-position:0 320px,0 320px; } }

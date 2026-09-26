@@ -257,6 +257,7 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let ambientCanvas=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let demoRainIntensity=1;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -1620,7 +1621,7 @@ function bindLimSessionInteractions(arSession) {
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     arWelcomeClock.tick(Date.now(),!document.hidden);
-    const rainStage=demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
+    const rainStage=demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
     const demoRoot=appRoot?.querySelector('.tryit-demo');
     if(demoRoot && demoRoot.dataset.rainStage!==rainStage)demoRoot.dataset.rainStage=rainStage;
     const context=arWelcomeCanvas.getContext('2d');
@@ -3611,7 +3612,7 @@ function renderInterface(simulated) {
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':'full';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -4021,6 +4022,7 @@ function drawIntroNoteContent(ctx) {
     const contentLeft = 300;
     const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
+    const titleWidth = 900;
     ctx.save();
     const gentleIntroFade=(arWelcomeIntroPending && !arWelcomeSettleStage) || (arWelcomeShowcaseActive && demoOrientationStep>=0 && demoOrientationStep<=1 && !selectedLimCell);
     if(gentleIntroFade){
@@ -4051,7 +4053,6 @@ function drawIntroNoteContent(ctx) {
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    const titleWidth = 900;
     let titleSize = 92;
     ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
     while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
@@ -4560,11 +4561,11 @@ function drawSpatialAmbientLife(view){
 function drawSpatialRain(view, time) {
     if (!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix
         || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const rainProgress=demoRainProgress(arWelcomeClock.elapsed);
+    const rainProgress=demoRainProgress(arWelcomeClock.elapsed)*demoRainIntensity;
     if(rainProgress<=0)return;
     // A world-up field surrounds the viewer in every direction, rather than
     // occupying a small forward-facing patch that disappears at the FOV edge.
-    const dropCount=Math.round(12+220*rainProgress);
+    const dropCount=rainProgress<=0?0:Math.round(8+220*rainProgress);
     const vertices = new Float32Array(dropCount * 6);
     for (let index = 0; index < dropCount; index += 1) {
         const angle=index*2.399963229728653;

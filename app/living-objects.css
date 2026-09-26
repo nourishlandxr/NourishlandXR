@@ -1086,7 +1086,7 @@
 .nlxr-settings-actions::before{content:'Text size';grid-column:2;grid-row:1;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
 .nlxr-settings-actions::after{content:'Spatial scale';grid-column:2;grid-row:2;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
 .nlxr-settings-actions button:nth-child(1){grid-column:1;grid-row:1}.nlxr-settings-actions button:nth-child(2){grid-column:3;grid-row:1}.nlxr-settings-actions button:nth-child(3){grid-column:1;grid-row:2}.nlxr-settings-actions button:nth-child(4){grid-column:3;grid-row:2}
-.nlxr-settings-actions button:nth-child(-n+4){min-height:54px;font-size:22px}.nlxr-settings-actions button:nth-child(5){grid-column:1/-1;grid-row:3}
+.nlxr-settings-actions button:nth-child(-n+4){min-height:54px;font-size:22px}.nlxr-settings-actions button:nth-child(5){grid-column:1/2;grid-row:3}.nlxr-settings-actions button:nth-child(6){grid-column:2/4;grid-row:3}
 .nlxr-scale-readout{text-align:center;color:#dfff9b!important;font-size:13px!important;font-weight:700!important}
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle { font-size:12px; letter-spacing:.04em; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle::before { display:none; }
