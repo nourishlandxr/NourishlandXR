@@ -58,10 +58,20 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
     assert.match(greeting, /introBoardTitle='Welcome to Nourishland'/);
     assert.match(greeting, /Take a moment to settle in/);
+    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Take a moment to settle in\.'\)/);
+    assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
     assert.match(demo, /if\(index===0\)setDemoJourneyStage\('why'\)/);
+});
+
+test('plant exploration no longer auto-opens LIM or forces the old cell script',()=>{
+    const demo=read('app/screens/temporaryArDemo.js');
+    const continuation=demo.slice(demo.indexOf('function continueAfterDemoPim'),demo.indexOf('const LIM_APPLICATION_LENSES'));
+    assert.doesNotMatch(continuation,/openPimLimBridge|prepareLimPitchCell|runLimApplicationStory/);
+    assert.match(continuation,/clearLimSelection\(\);[\s\S]*limMeshVisible=false;[\s\S]*showDemoAction\('plant2'\)/);
+    assert.doesNotMatch(demo,/Add current knowledge|Clear selected knowledge|Connect selected ideas/);
 });
 
 test('the first-time journey introduces the guide before four practical learning lenses', () => {

@@ -66,6 +66,14 @@ test('companion faces form one restrained inward-facing arc',()=>{
     assert.ok(left.center.z>pose.center.z && right.center.z>pose.center.z,'side faces sit on a shallow arc');
 });
 
+test('Quest panel source keeps progress separate and all three surfaces aligned',()=>{
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    assert.match(panel,/target\.prepend\(region\)/);
+    assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
+    assert.match(panel,/companionHeight=\.54\*spatialScale/);
+    assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.28/);
+});
+
 test('Android AR Control panel begins within a comfortable left-hand view',()=>{
     const matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1];
     const phone=infoPanelPose(matrix,null,true,true);

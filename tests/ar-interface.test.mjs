@@ -67,8 +67,8 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     const panelSource=read('app/services/pimInfoPanel.js');
     assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
     assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
-    assert.match(panelSource, /angleDegrees = 12/);
-    assert.match(panelSource, /gap=\.015/);
+    assert.match(panelSource, /angleDegrees = 18/);
+    assert.match(panelSource, /gap=\.025/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
@@ -1229,6 +1229,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Add current knowledge|Clear selected knowledge|Connect selected ideas/);
     assert.doesNotMatch(source, /Open Cultivation, then Maintenance/);
     assert.match(source, /Select the plant to explore it, or grab it to reposition it/);
+    assert.match(livingStyles,/data-intro-pending="true"\]\[data-lim-surface="true"\][\s\S]*bottom:auto !important;[\s\S]*width:176px !important;[\s\S]*height:104px !important;/);
+    assert.match(source,/arWelcomeClusters=createArWelcomeClusters\(\);limHiddenCells=new Set\(\);limExpandedCells=new Set\(\);limExpandedAt=new Map\(\)/);
     assert.doesNotMatch(source, /WHY NOURISHLANDXR EXISTS/);
     assert.doesNotMatch(source, /130-inch|130 inch/);
     assert.doesNotMatch(source, /LOOK UP/);
@@ -1341,7 +1343,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /A Plant Live Tag can open this full, view-only plant file/);
     assert.match(source, /function advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
-    assert.match(source, /record\.tutorialStage === 'plant'[\s\S]*defaultPimLimBridge\(demoOrbKnowledge\(record\)\.document\)[\s\S]*openPimLimBridge/);
+    assert.match(source, /record\.tutorialStage === 'plant'[\s\S]*clearLimSelection\(\);[\s\S]*limMeshVisible=false;[\s\S]*showDemoAction\('plant2'\)/);
     assert.match(source, /if\(demoKnowledgeWorkspace\) \{const hit=spatialDashboardRayHit/);
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);

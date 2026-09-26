@@ -524,10 +524,13 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  const linkedKeys=new Set(linkedNodes.map(node=>node.key));
  if(linkedNodes.length===2){
   const [from,to]=linkedNodes,dx=to.x-from.x,dy=to.y-from.y,distance=Math.hypot(dx,dy)||1;
-  const nx=-dy/distance,ny=dx/distance,bend=Math.min(150,distance*.16),pulse=reducedMotion?.72:.58+Math.sin(elapsed/520)*.14;
-  ctx.save();ctx.globalAlpha=pulse;ctx.strokeStyle=relationship.accent;ctx.lineWidth=5;ctx.setLineDash([18,13]);
-  ctx.shadowColor=relationship.accent;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(from.x,from.y);
-  ctx.quadraticCurveTo((from.x+to.x)/2+nx*bend,(from.y+to.y)/2+ny*bend,to.x,to.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  const nx=-dy/distance,ny=dx/distance,bend=Math.min(230,distance*.29),pulse=reducedMotion?.34:.27+Math.sin(elapsed/720)*.05;
+  const startInset=(from.radius || from.baseRadius || 0)*.9,endInset=(to.radius || to.baseRadius || 0)*.9;
+  const start={x:from.x+dx/distance*startInset,y:from.y+dy/distance*startInset};
+  const end={x:to.x-dx/distance*endInset,y:to.y-dy/distance*endInset};
+  ctx.save();ctx.globalAlpha=pulse;ctx.strokeStyle=relationship.accent;ctx.lineWidth=2.5;ctx.setLineDash([10,12]);
+  ctx.beginPath();ctx.moveTo(start.x,start.y);
+  ctx.quadraticCurveTo((start.x+end.x)/2+nx*bend,(start.y+end.y)/2+ny*bend,end.x,end.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();
  }
  for(const frame of frames){
   const hue=[226,34,105,56,17,273,157,198][frame.corner];

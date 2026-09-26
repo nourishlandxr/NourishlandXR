@@ -319,7 +319,7 @@ function quadraticPoint(start, control, end, progress) {
     };
 }
 
-function drawPimConnections(context, width, height, nodes, expanded, hoverPath, selectedNodeId, bloom, { currentNodeIds = new Set(), closingPaths = [] } = {}) {
+function drawPimConnections(context, width, height, nodes, expanded, hoverPath, selectedNodeId, bloom, { currentNodeIds = new Set(), closingPaths = [], bloomPath = '' } = {}) {
     const source = Array.isArray(nodes) ? nodes : [];
     const closing = Array.isArray(closingPaths) ? closingPaths.map(String) : [];
     const byId = new Map(source.map(node => [String(node.nodeId || node.id || node.path || ''), node]));
@@ -327,8 +327,9 @@ function drawPimConnections(context, width, height, nodes, expanded, hoverPath, 
     const center = { x: centerPercent.x / 100 * width, y: centerPercent.y / 100 * height };
     const coreWidth = Math.max(1, Number(source[0]?.layoutCellWidthPercent || 0) / 100 * width);
     const coreHeight = Math.max(1, Number(source[0]?.layoutCellHeightPercent || 0) / 100 * height);
+    const nodeBloom = node => bloomPath && (node?.parentPath===bloomPath || String(node?.path || '').startsWith(`${bloomPath}/`)) ? bloom : 1;
     const position = node => {
-        const point = pimNodeVisualPosition(node, node?.depth > 0 ? bloom : 1);
+        const point = pimNodeVisualPosition(node, node?.depth > 0 ? nodeBloom(node) : 1);
         return {
             center: { x: point.x / 100 * width, y: point.y / 100 * height },
             bounds: {
@@ -373,7 +374,7 @@ function drawPimConnections(context, width, height, nodes, expanded, hoverPath, 
                 || Boolean(parent && expanded.has(parent.path))
                 || hoverPath === child.path
                 || hoverPath === parent?.path;
-        const progress = closingLine ? 1 - bloom : child.depth > 0 ? bloom : 1;
+        const progress = closingLine ? 1 - bloom : child.depth > 0 ? nodeBloom(child) : 1;
         const end = quadraticPoint(curve.start, curve.control, curve.end, progress);
         context.save();
         context.globalAlpha = closingLine ? Math.max(0, .65 * (1 - bloom)) : active ? .65 : .36;
@@ -419,9 +420,11 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const reducedMotion = options.reducedMotion ?? (typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     const bloom = reducedMotion ? 1 : Math.max(0, Math.min(1, Number(options.bloomProgress ?? 1)));
+    const bloomPath=String(options.bloomPath || '');
+    const bloomForNode=node=>bloomPath && (node?.parentPath===bloomPath || String(node?.path || '').startsWith(`${bloomPath}/`)) ? bloom : 1;
     const hoverPath = String(options.hoverPath || '');
     const position = node => {
-        const point = pimNodeVisualPosition(node, node.depth > 0 ? bloom : 1);
+        const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomForNode(node) : 1);
         return { x: point.x / 100 * width, y: point.y / 100 * height };
     };
 
@@ -440,12 +443,13 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     // nearest hex edge and remain behind every label and cell surface.
     drawPimConnections(context, width, height, nodes, expanded, hoverPath, options.selectedNodeId, bloom, {
         currentNodeIds,
-        closingPaths
+        closingPaths,
+        bloomPath
     });
 
     nodes.forEach(node => {
         if (!currentNodeIds.has(String(node.nodeId || node.path))) return;
-        const nodeBloom = node.depth > 0 ? bloom : 1;
+        const nodeBloom = node.depth > 0 ? bloomForNode(node) : 1;
         // position() already applies the single shared parent-to-child bloom
         // interpolation used by hit-testing; do not interpolate it again.
         const point = position(node);
@@ -583,6 +587,7 @@ export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPa
 export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, yPercent, options = {}) {
     if (![xPercent, yPercent].every(Number.isFinite)) return null;
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
+    const bloomPath=String(options.bloomPath || '');
     const nodes = pimVisibleNodes(knowledge, expandedPaths, {
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
@@ -616,7 +621,8 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
         },
         distance: coreDistance
     }, ...nodes.map(node => {
-            const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomProgress : 1);
+            const activeBloom=bloomPath && (node.parentPath===bloomPath || String(node.path || '').startsWith(`${bloomPath}/`)) ? bloomProgress : 1;
+            const point = pimNodeVisualPosition(node, node.depth > 0 ? activeBloom : 1);
             const halfWidth = Math.max(.1, Number(node.layoutCellWidthPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
             const halfHeight = Math.max(.1, Number(node.layoutCellHeightPercent) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
             const normalizedDistance = Math.hypot(

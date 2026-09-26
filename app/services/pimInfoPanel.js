@@ -62,7 +62,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 12, arcDepth = .045) {
+export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = .055) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     return {...pose,
@@ -160,7 +160,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
-    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false;
+    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
@@ -183,7 +183,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         return [reading,interactionHint,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
     };
     const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
-    const title=()=>tab==='Help'?'Help':selection?.title || (identity?'Choose a topic':'Ready to explore');
+    const title=()=>tab==='Help'?'Help':selection?.title || (identity?'':'Ready to explore');
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && selection.image
         ? {image:selection.image,alt:selection.imageAlt || selection.title,caption:'Pathway illustration'}
@@ -266,7 +266,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             const text=document.createElement('span');text.textContent=step.label;
             item.append(marker,text);list.append(item);
         });
-        region.append(heading,list);target.append(region);
+        region.append(heading,list);target.prepend(region);
     }
     function syncPanelWings(){
         if(isDesktopDemo()){railCollapsed=false;mediaCollapsed=false;}
@@ -304,7 +304,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(tab==='Help'){content.setAttribute('aria-labelledby',contentId+'-Help');content.removeAttribute('aria-label');}
         else{content.removeAttribute('aria-labelledby');content.setAttribute('aria-label','Information');}
         content.querySelector('h3').textContent=title();
-        content.querySelector('.nlxr-info-trail').textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
+        content.querySelector('.nlxr-info-trail').textContent=tab==='Details'?selection?.breadcrumb || '':'';
         content.querySelector('.nlxr-info-body').textContent=currentPages[page].join('\n');
         content.querySelector('small').textContent=metadata();
         let pager=content.querySelector('.nlxr-content-pager');
@@ -413,7 +413,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');if(tab==='Help')content.setAttribute('aria-labelledby',contentId+'-Help');else content.setAttribute('aria-label','Information');content.tabIndex=0;
             const heading=document.createElement('h3');heading.textContent=title();
-            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || 'Explore → Details':'';
+            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || '':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);
             const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));if(pager.childElementCount)content.append(pager);
@@ -468,19 +468,20 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         if(card.headset && !card.hidden){
             const rail=card.railCollapsed?62:200,media=0;
             const left=rail+22,right=1000-media-22,width=right-left;
-            ctx.fillStyle='rgba(5,15,27,.68)';ctx.fillRect(6,115,rail,c.height-122);
-            ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,115,media-6,c.height-122);
-            ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,116,width,2);
-            ctx.fillStyle='#f3f8fc';ctx.font='650 42px system-ui';ctx.fillText(card.plant,left,23,Math.max(100,width-150));
-            ctx.fillStyle='#c9e0ed';ctx.font='500 29px system-ui';ctx.fillText(card.scientific,left,76,width);
+            const headerBottom=card.progress?155:116;
+            ctx.fillStyle='rgba(5,15,27,.68)';ctx.fillRect(6,headerBottom,rail,c.height-headerBottom-7);
+            ctx.fillStyle='rgba(8,22,34,.7)';ctx.fillRect(1000-media,headerBottom,media-6,c.height-headerBottom-7);
+            ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,headerBottom+1,width,2);
             if(card.progress){
-                const stepWidth=width/Math.max(1,card.progress.steps.length-1),barY=116;
-                ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='right';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,right,83,Math.min(250,width*.42));ctx.textAlign='left';
+                const stepWidth=width/Math.max(1,card.progress.steps.length-1),barY=48;
+                ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='right';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,right,20,Math.min(250,width*.42));ctx.textAlign='left';
                 ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(left,barY,width,3);
                 ctx.fillStyle='#dfff9b';ctx.fillRect(left,barY,Math.max(3,stepWidth*card.progress.activeIndex),3);
                 card.progress.steps.forEach((step,index)=>{const x=left+stepWidth*index;ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=index<=card.progress.activeIndex?'#dfff9b':'#536469';ctx.fill();});
             }
-            let y=156;
+            ctx.fillStyle='#f3f8fc';ctx.font='650 42px system-ui';ctx.fillText(card.plant,left,card.progress?72:23,Math.max(100,width-150));
+            ctx.fillStyle='#c9e0ed';ctx.font='500 29px system-ui';ctx.fillText(card.scientific,left,card.progress?121:76,width);
+            let y=headerBottom+40;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 24px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=35;
                 ctx.fillStyle='#d4e0dc';ctx.font='400 23px system-ui';ctx.fillText(card.pathway.progress,left,y,width);y+=34;
@@ -556,7 +557,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;else if(isDesktopDemo())mediaCollapsed=false;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && (element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')))render(true);else syncPanelWings();},
-        recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;spatialMove=null;render();},
+        recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         setIntroduction(value){introduction=Boolean(value);element.classList.toggle('is-intro-reveal',introduction);},
@@ -579,12 +580,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
             if(!pose)return [];
-            const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.52:spatialHeight()/1000*.66)*spatialScale;
+            const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.015;
-            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:.52*spatialScale,card:settingsCard});}
-            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:.58*spatialScale,card:mediaCard});}
+            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.025,companionHeight=.54*spatialScale;
+            if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:companionHeight,card:settingsCard});}
+            if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:companionHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -600,14 +601,21 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
                 const facing=facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]});
                 pose={...pose,...facing,anchorHeading:facing.right};heading=facing.right;
                 manuallyPositioned=true;
-            }else if(!pose)pose=next;
+            }else if(!pose){
+                pose=next;
+                if(headset && firstPlacement){
+                    pose.center={x:pose.center.x-pose.right.x*.28,y:pose.center.y,z:pose.center.z-pose.right.z*.28};
+                    pose={...pose,...facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
+                }
+                firstPlacement=false;
+            }
             lastTime=time;
         },
-        recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;spatialMove=null;},
+        recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;},
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || 'Explore → Details':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:(page+1)+' / '+p.length,metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,title:identity?.plant || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || 'Plant reference image'};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);

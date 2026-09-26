@@ -932,10 +932,12 @@ function continueAfterDemoPim(record) {
     record.demoProfileReady = false;
     if (record.tutorialStage === 'plant2') inviteVirtualTag(record);
     else if (record.tutorialStage === 'plant') {
-        const bridge=activePimLimBridge?.record===record
-            ? activePimLimBridge.bridge
-            : defaultPimLimBridge(demoOrbKnowledge(record).document);
-        openPimLimBridge(bridge?{bridge,record}:null);
+        record.demoExpanded=false;
+        refreshDemoRecord(record);
+        clearLimSelection();
+        limMeshVisible=false;
+        activePimLimBridge=null;
+        showDemoAction('plant2');
     }
     return true;
 }
@@ -1418,7 +1420,7 @@ function welcomeFrames() {
 }
 const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=(window.matchMedia('(prefers-reduced-motion: reduce)').matches?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS);
 
-let selectedLimCell='';
+let selectedLimCell='',arWelcomeSettleStage=false;
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
 const understandPlacePathway=()=>LIM_PATHWAYS.find(pathway=>pathway.id==='lim-path-understand-place');
 const currentPathwayCellId=()=>understandPlacePathway()?.orderedCellIds[limPathwayState.currentStepIndex] || '';
@@ -1682,7 +1684,7 @@ function showArWelcomeShowcase() {
     // session interactions here, once the controller exists, so tracked
     // pointer holds can reach the companion panel.
     bindLimSessionInteractions(session);
-    arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSharedBoard=true;
+    arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSettleStage=false;arWelcomeSharedBoard=true;
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
@@ -1737,10 +1739,16 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomeOpeningActive=false;limMeshVisible=false;panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
+        arWelcomeOpeningActive=false;arWelcomeSettleStage=true;limMeshVisible=false;
+        introBoardTitle=demoLocalizedText('Take a moment to settle in.');
+        introBoardBody=demoLocalizedText('This experience is designed to be explored at your own pace.');
+        introBoardVisibleBody=introBoardBody;
+        panel.querySelector('h2').textContent=introBoardTitle;
+        panel.querySelector('.tryit-board-text-window').innerHTML=`<p>${introBoardBody}</p>`;
+        panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
-        paintOpeningCopy(introBoardBody);panel.classList.remove('is-typing');
+        panel.classList.remove('is-typing');
     };
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
@@ -2596,7 +2604,8 @@ function selectDemoProfileCell() {
     record.demoActiveBranch = wasOpen
         ? (node.parentPath === 'core' ? '' : node.parentPath)
         : node.path;
-    record.pimBloomStarted = performance.now();
+    record.pimBloomPath = wasOpen ? '' : node.path;
+    record.pimBloomStarted = wasOpen ? 0 : performance.now();
     refreshDemoPimProfile(record);
     const opened = demoPimState(record).expandedNodeIds.has(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
@@ -2694,6 +2703,7 @@ function demoPimPointerTarget(record) {
             layoutWidth: size.layoutWidth,
             layoutHeight: size.layoutHeight,
             bloomProgress,
+            bloomPath:record.pimBloomPath || '',
             selectedNodeId: record.demoSelectedNodeId
         })
     };
@@ -3046,7 +3056,8 @@ function bindSimulatedInformationPanels(layer) {
             record.demoActiveBranch = wasOpen
                 ? (node.parentPath === 'core' ? '' : node.parentPath)
                 : nodePath;
-            record.pimBloomStarted = performance.now();
+            record.pimBloomPath = wasOpen ? '' : nodePath;
+            record.pimBloomStarted = wasOpen ? 0 : performance.now();
             const remaining = advanceAfterDemoProfileInteraction(record);
             refreshDemoPimProfile(record, profile);
             setGuide(wasOpen
@@ -3884,6 +3895,7 @@ function createSpatialKnowledgeTexture(record) {
             layoutWidth: size.layoutWidth,
             layoutHeight: size.layoutHeight,
             bloomProgress,
+            bloomPath:record.pimBloomPath || '',
             pressPath:record.pimPressPath, pressProgress:record.pimPressProgress,
             selectedNodeId: record.demoSelectedNodeId,
             hoverPath:demoPimHover.record===record?demoPimHover.path:'',
@@ -3961,7 +3973,7 @@ function drawIntroNoteContent(ctx) {
     const contentWidth = 800;
     const contentCenter = contentLeft + contentWidth / 2;
     ctx.save();
-    const gentleIntroFade=arWelcomeIntroPending || (arWelcomeShowcaseActive && demoOrientationStep>=0 && demoOrientationStep<=1 && !selectedLimCell);
+    const gentleIntroFade=(arWelcomeIntroPending && !arWelcomeSettleStage) || (arWelcomeShowcaseActive && demoOrientationStep>=0 && demoOrientationStep<=1 && !selectedLimCell);
     if(gentleIntroFade){
         const elapsed=arWelcomeClock?.elapsed || 0;
         ctx.globalAlpha*=.72+.28*(.5+.5*Math.sin(elapsed/2400));
@@ -3991,7 +4003,7 @@ function drawIntroNoteContent(ctx) {
     ctx.moveTo(contentLeft, 478);
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
-    const isOpeningStatement = arWelcomeIntroPending;
+    const isOpeningStatement = arWelcomeIntroPending && !arWelcomeSettleStage;
     const narrative = isOpeningStatement ? welcomeNarrative(arWelcomeClock.elapsed) : null;
     ctx.textAlign = isOpeningStatement ? 'center' : 'left';
     if(narrative){

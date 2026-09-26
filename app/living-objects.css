@@ -1206,3 +1206,20 @@
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
 @keyframes demo-knowledge-appear{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
 @media (prefers-reduced-motion:reduce){.demo-connection-target{transition:none}.demo-knowledge-connections path.is-preview{stroke-dasharray:none}.demo-knowledge-result{animation:none}}
+
+/* Final welcome action geometry. This stylesheet loads after style.css, so
+   the complete selector intentionally owns the computed Quest/preview shape. */
+.tryit-demo[data-intro-pending="true"][data-lim-surface="true"] .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"],
+.tryit-demo[data-intro-pending="true"][data-lim-surface="true"] ~ .tryit-context-trigger[data-context-mode="continue"] {
+    top:62% !important;
+    bottom:auto !important;
+    width:176px !important;
+    min-width:176px !important;
+    max-width:176px !important;
+    height:104px !important;
+    min-height:104px !important;
+    padding:18px 24px !important;
+    border-radius:34px !important;
+    white-space:pre-line;
+    line-height:1.18;
+}
