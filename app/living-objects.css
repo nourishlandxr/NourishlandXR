@@ -1217,9 +1217,9 @@
 /* The revised Totem keeps its mass narrow and makes the post itself the
    interface. Two stamped physical controls reveal signs or lower presence. */
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
-    left:46%;
+    left:41%;
     top:22%;
-    width:8%;
+    width:18%;
     height:76%;
     border-radius:9px 9px 6px 6px;
     background:linear-gradient(90deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#211b19 42%),color-mix(in srgb,var(--demo-totem-color,#715a46),#e5d7c5 24%) 34%,var(--demo-totem-color,#715a46) 62%,color-mix(in srgb,var(--demo-totem-color,#715a46),#241d1a 38%));
@@ -1236,16 +1236,16 @@
     background:color-mix(in srgb,var(--demo-totem-color,#715a46),#eadfce 26%);
 }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::after { display:none; }
-.nlxr-totem-controls { position:absolute; z-index:8; inset:0; pointer-events:none; }
+.nlxr-totem-controls { position:absolute; z-index:8; left:41%; top:22%; width:18%; height:76%; pointer-events:none; }
 .nlxr-totem-controls button {
     position:absolute;
     left:50%;
     display:grid;
     place-items:center;
-    width:44px;
-    min-width:44px;
-    height:44px;
-    min-height:44px;
+    width:34px;
+    min-width:34px;
+    height:34px;
+    min-height:34px;
     padding:0;
     transform:translateX(-50%);
     border:2px solid rgba(231,220,202,.68);
@@ -1256,15 +1256,18 @@
     pointer-events:auto;
     cursor:pointer;
 }
-.nlxr-totem-controls button:first-child { top:40%; }
-.nlxr-totem-controls button:last-child { top:56%; }
+.nlxr-totem-controls button:first-child { top:38%; }
+.nlxr-totem-controls button:last-child { top:55%; }
 .nlxr-totem-controls button[aria-pressed="true"] { transform:translate(-50%,3px); border-color:#efd6a0; box-shadow:inset 0 4px 8px rgba(25,18,15,.5),0 1px 0 #2f2824; }
-.nlxr-totem-controls button > span { font:700 18px/1 system-ui; }
-.nlxr-totem-controls button > small { position:absolute; top:49px; width:max-content; color:rgba(244,230,210,.78); font:700 8px/1 system-ui; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 1px rgba(26,18,15,.8); }
+.nlxr-totem-controls button > span { font:700 15px/1 system-ui; }
+.nlxr-totem-controls button > small { position:absolute; top:37px; width:max-content; color:rgba(244,230,210,.78); font:700 7px/1 system-ui; letter-spacing:.1em; text-transform:uppercase; text-shadow:0 1px rgba(26,18,15,.8); }
 .nlxr-totem-system:not(.is-signs-open) .nlxr-totem-cards,
 .nlxr-totem-system.is-totem-faded .nlxr-totem-cards { display:none; }
 .nlxr-totem-system.is-totem-faded .tryit-sim-totem-pillar { opacity:.18; filter:saturate(.45); }
 .nlxr-totem-system.is-totem-faded .nlxr-totem-controls button { opacity:1; box-shadow:inset 0 2px 3px rgba(255,247,231,.28),0 0 0 4px rgba(239,214,160,.1),0 0 16px rgba(239,214,160,.24); }
+.nlxr-totem-system.is-narrative-faded .nlxr-totem-controls { opacity:.12; pointer-events:none; transition:opacity .55s ease; }
+.tryit-sim-marker-note.is-narrative-faded { opacity:.16; filter:saturate(.35); pointer-events:none; transition:opacity .55s ease,filter .55s ease; }
+.tryit-sim-area-link-line.is-narrative-faded,.tryit-sim-area-link-label.is-narrative-faded { opacity:.1; transition:opacity .55s ease; }
 .nlxr-totem-cards > button { border-color:rgba(204,215,224,.52); background:linear-gradient(145deg,rgba(77,88,99,.88),rgba(28,34,40,.94)); color:#f4f6f7; }
 .nlxr-totem-cards > button:nth-child(2) { background:linear-gradient(145deg,rgba(114,90,70,.9),rgba(48,35,29,.94)); }
 .nlxr-totem-cards > button:nth-child(3) { background:linear-gradient(145deg,rgba(76,93,105,.9),rgba(27,39,47,.94)); }

@@ -118,7 +118,7 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     assert.match(styles, /\.tryit-sim-orb\.is-plant::after\s*\{\s*content:none;/);
 });
 
-test('each archetype opens its ordered illustration in the shared control panel', () => {
+test('each archetype keeps its ordered illustration while plant media remains PIMO-specific', () => {
     const ordered = [
         ['lim-intro-analysis', 'archetype-read-nature.jpg'],
         ['lim-intro-literacy', 'archetype-understand-land.jpg'],
@@ -133,7 +133,8 @@ test('each archetype opens its ordered illustration in the shared control panel'
     }
     const panel = read('app/services/pimInfoPanel.js');
     assert.match(panel, /selection\?\.mesh==='lim' && selection\.image/);
-    assert.match(panel, /if\(content\?\.image && !mediaTouched\)mediaCollapsed=false/);
+    assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
+    assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
     assert.match(panel, /Pathway illustration/);
 });
 
@@ -145,6 +146,18 @@ test('Area Totem examples show distinct colours and welcoming, orientation, inte
     assert.match(demo, /A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area\./);
     assert.match(demo, /demoTotemColor:'#785a43'/);
     assert.match(demo, /demoTotemColor:'#526d7a'/);
+});
+
+test('Areas hand the journey to PIMO-connected LIMO pathways and quiet mapped objects', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    const styles = read('app/living-objects.css');
+    assert.match(demo, /'Connect PIMO to LIMO',\s*showLimoLearningModes/);
+    assert.match(demo, /'Learn here or as a standalone experience'/);
+    assert.match(demo, /'Show pathway archetypes',\s*showLimoArchetypes/);
+    assert.match(demo, /record\.demoTotemFaded=true;[\s\S]*record\.demoNarrativeFaded=true/);
+    assert.match(demo, /record\.demoType==='note'[\s\S]*record\.demoNarrativeFaded=true/);
+    assert.match(styles, /\.tryit-sim-marker-note\.is-narrative-faded/);
+    assert.match(styles, /\.nlxr-totem-system\.is-narrative-faded \.nlxr-totem-controls/);
 });
 
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {

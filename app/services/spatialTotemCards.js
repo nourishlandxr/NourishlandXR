@@ -1,8 +1,9 @@
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
 export function totemCardSurfaces(position, right, cards, selectedId = '', state = {}) {
     const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
+    const front={x:-right.z,y:0,z:right.x};
     const place = (x,y,width,height,card,detail=false) => ({
-        center:{x:position.x+right.x*x,y:position.y+y,z:position.z+right.z*x},
+        center:{x:position.x+right.x*x+front.x*.09,y:position.y+y,z:position.z+right.z*x+front.z*.09},
         right, width,height,card,detail
     });
     const legacySimplified=typeof state==='boolean' ? state : false;

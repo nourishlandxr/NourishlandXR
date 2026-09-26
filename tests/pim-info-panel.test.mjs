@@ -179,14 +179,14 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
 });
 
-test('cell selection patches the existing reading surface without remounting the panel',()=>{
+test('cell selection updates reading content and remounts only when companion media changes',()=>{
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     const update=panel.slice(panel.indexOf('function updateReading()'),panel.indexOf('function updatePathway()'));
     assert.match(update,/content\.querySelector\('\.nlxr-info-body'\)\.textContent=/);
     assert.match(update,/if\(image\.getAttribute\('src'\)!==preview\.image\)image\.src=preview\.image/);
     assert.doesNotMatch(update,/replaceChildren\(\)/);
-    assert.match(panel,/tab='Details';hidden=false;page=0;if\(wasDetails\)updateReading\(\);else render\(\)/);
+    assert.match(panel,/mediaCollapsed=!media\?\.image;mediaTouched=false;tab='Details';hidden=false;page=0;render\(true\)/);
     assert.match(panel,/suspend\(value\).*updateReading\(\);updatePathway\(\)/);
     assert.doesNotMatch(styles,/\.is-opening-compact \{ height:/);
 });

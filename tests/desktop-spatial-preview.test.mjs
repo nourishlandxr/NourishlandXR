@@ -68,11 +68,12 @@ test('desktop PIM movement has a dedicated bounded handle', () => {
     assert.match(styles, /\.nlxr-desktop-pim-move \{ display:none; \}/);
 });
 
-test('desktop control panel keeps a stable footprint with an always-visible rail and media wing', () => {
+test('desktop control panel keeps a stable rail and shows media only for the active PIMO', () => {
     const panel = read('app/services/pimInfoPanel.js');
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(panel, /if\(desktopDemo\)\{railCollapsed=false;mediaCollapsed=false;\}/);
+    assert.match(panel, /if\(desktopDemo\)railCollapsed=false;/);
+    assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed;/);
     assert.match(panel, /if\(!desktopDemo\)\{const moveButton=/);
     assert.match(panel, /if\(!desktopDemo\)\{const mediaToggle=makePanelToggle/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);

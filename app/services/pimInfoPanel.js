@@ -270,7 +270,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         region.append(heading,list);target.prepend(region);
     }
     function syncPanelWings(){
-        if(isDesktopDemo()){railCollapsed=false;mediaCollapsed=false;}
+        if(isDesktopDemo())railCollapsed=false;
         element.classList.toggle('is-rail-collapsed',railCollapsed);
         element.classList.toggle('is-media-collapsed',mediaCollapsed);
         const railToggle=element.querySelector('.nlxr-rail-toggle');
@@ -320,7 +320,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(media){
             const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
             const desktopDemo=isDesktopDemo();
-            if(desktopDemo && (railCollapsed || mediaCollapsed)){railCollapsed=false;mediaCollapsed=false;syncPanelWings();}
+            if(desktopDemo && railCollapsed){railCollapsed=false;syncPanelWings();}
             const mediaToggle=media.querySelector('.nlxr-media-toggle');
             if(mediaToggle && desktopDemo)mediaToggle.remove();
             if(preview){
@@ -351,7 +351,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(detached)return;
         renderSettings();
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-        const needsMediaWing=(element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')) && !element.querySelector('.nlxr-media-wing');
+        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !element.querySelector('.nlxr-media-wing');
         if(!force && !hidden && !needsMediaWing && element.querySelector('.nlxr-control-header')){
             element.classList.toggle('is-large-text',largeText);
             syncPanelWings();
@@ -381,8 +381,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         element.replaceChildren();element.classList.toggle('is-hidden',hidden);element.classList.toggle('is-large-text',largeText);
         const plantPreviewAvailable=showPlantPreview();
         const desktopDemo=isDesktopDemo();
-        if(desktopDemo){railCollapsed=false;mediaCollapsed=false;}
-        const showMediaWing=plantPreviewAvailable || element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel');
+        if(desktopDemo)railCollapsed=false;
+        const showMediaWing=plantPreviewAvailable && !mediaCollapsed;
         element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
@@ -548,25 +548,24 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const controlsForTarget=target=>target?.card?.settings?settingsControls():(headset?spatialControls():controls());
     const api={element,
         showLearning(content){
-            const wasDetails=tab==='Details';
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
             mediaImage=null;const token=++mediaLoadToken;
-            if(content?.image && !mediaTouched)mediaCollapsed=false;
+            mediaCollapsed=true;mediaTouched=false;
             if(content?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=content.image;}
-            tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();
+            tab='Details';hidden=false;page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setMeshComposition(value){meshContext=value?{...value,items:[...(value.items || [])]}:null;page=0;updateReading();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
-        setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;else if(isDesktopDemo())mediaCollapsed=false;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && (element.classList.contains('is-demo-panel') || element.classList.contains('is-creator-panel')))render(true);else syncPanelWings();},
+        setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;render(true);},
+        setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && showPlantPreview() && !mediaCollapsed)render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         setIntroduction(value){introduction=Boolean(value);element.classList.toggle('is-intro-reveal',introduction);},
         focusPlant(nextRecord,document,media=null){
-            const wasDetails=tab==='Details';
             const previousMedia=record===nextRecord ? identity?.media : null;
             const previousHint=record===nextRecord ? identity?.hint : '';
             const identityImage=document?.identity?.image;
@@ -574,12 +573,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 : identityImage ? {image:String(identityImage),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}
                     : previousMedia;
             record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};mediaImage=null;
-            if(nextMedia?.image && !mediaTouched)mediaCollapsed=false;
+            mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             const token=++mediaLoadToken;
             if(nextMedia?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=nextMedia.image;}
-            tab='Details';page=0;if(wasDetails)updateReading();else render();
+            tab='Details';page=0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const wasDetails=tab==='Details';const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};if(media?.image && !mediaTouched)mediaCollapsed=false;tab='Details';hidden=false;page=0;if(wasDetails)updateReading();else render();return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{

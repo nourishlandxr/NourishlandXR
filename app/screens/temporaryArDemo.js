@@ -1059,6 +1059,7 @@ function demoTotemCards(record) {
 }
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
+    infoPanel?.setMediaCollapsed(true);
     if(hit.card?.id==='__signs'){
         hit.record.demoTotemSignsVisible=!hit.record.demoTotemSignsVisible;
         hit.record.demoTotemFaded=false;
@@ -1989,6 +1990,7 @@ function showSceneContinue(label, onContinue) {
 
 function cycleDemoNoteTemplate(record) {
     if (!record || record.demoType !== 'note') return false;
+    infoPanel?.setMediaCollapsed(true);
     infoPanel?.setContextualHint('');
     const current = Math.max(0, Number(record.demoNoteTemplateIndex) || 0);
     record.demoNoteTemplateIndex = (current + 1) % DEMO_NOTE_TEMPLATE_KEYS.length;
@@ -2134,6 +2136,7 @@ function createDemoSecondTotem() {
 
 function cycleDemoTotemStyle(record) {
     if (!record || record.demoType !== 'zone' || record.tutorialStage !== 'totem2') return false;
+    infoPanel?.setMediaCollapsed(true);
     const currentIndex = DEMO_TOTEM_STYLES.findIndex(style => style.id === (record.demoTotemStyle || 'basic'));
     const next = DEMO_TOTEM_STYLES[(currentIndex + 1 + DEMO_TOTEM_STYLES.length) % DEMO_TOTEM_STYLES.length];
     record.demoTotemStyle = next.id;
@@ -2152,9 +2155,74 @@ function showLinkedTotemsIntroduction() {
             'A link creates a visitor route between Areas. Here it connects the Botanical Garden with Rainforest Walk without mixing their information.',
             'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
-        'Who benefits?',
-        showAudienceValue
+        'Connect PIMO to LIMO',
+        showLimoLearningModes
     );
+}
+
+function fadeMappedSceneForLimo() {
+    markers.forEach(record=>{
+        if(record.demoType==='zone'){
+            record.demoTotemFaded=true;
+            record.demoNarrativeFaded=true;
+            record.demoInteractive=false;
+            record.demoTotemSignsVisible=false;
+            record.totemSelectedCard='';
+        }
+        if(record.demoType==='note'){
+            record.demoNarrativeFaded=true;
+            record.demoInteractive=false;
+        }
+    });
+    updateSimulatedMarkers();
+}
+
+function showLimoLearningModes() {
+    setDemoJourneyStage('apply');
+    infoPanel?.setMediaCollapsed(true);
+    showIntroBoard(
+        'Learn here or as a standalone experience',
+        [
+            'A Learning Information Mesh — LIMO — can guide someone on the spot in AR, where questions and actions stay connected to the living place in front of them.',
+            'The same LIMO can also work as a standalone learning experience before a visit, in a classroom or when reflecting afterwards.',
+            'A Plant Information Mesh — PIMO — explains the plant. Connecting PIMO to LIMO turns those facts into pathways: what to notice, how the plant relates to its place, why it matters and what someone could try next.'
+        ],
+        'Show pathway archetypes',
+        showLimoArchetypes,
+        {stepLabel:'From plant information to learning',nextGuide:'Open the pathway archetypes, then select one to explore its questions.'}
+    );
+}
+
+function showLimoArchetypes() {
+    fadeMappedSceneForLimo();
+    clearLimSelection();
+    limExpandedCells=new Set();
+    limExpandedAt=new Map();
+    limMeshVisible=true;
+    limMeshActivatedAt=arWelcomeClock.elapsed;
+    introBoardTextureDirty=true;
+    paintWelcomeLayer(performance.now());
+    infoPanel?.showLearning({
+        id:'limo-pathway-archetypes',
+        title:'Choose a learning pathway',
+        body:'The four archetypes are starting points for different ways of learning. Select an archetype to open its pathway, then follow the connected cells that become relevant.',
+        accent:'#9fdcff',
+        mesh:'lim',
+        editable:false
+    });
+    showIntroBoard(
+        'Choose a pathway archetype',
+        [
+            'The scene is quiet now so the learning pathways can take focus. Totems and Notes remain anchored, but fade into the background.',
+            'Select any archetype to explore. Each pathway opens a different way to read the place, understand living relationships, design with them or shape an outcome.',
+            'A pathway can begin from a plant’s PIMO, from something observed on site or as a standalone learning journey.'
+        ],
+        'Continue after exploring',
+        showAudienceValue,
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'Learning pathways',nextGuide:'Select an archetype to explore its connected learning cells.'}
+    );
+    setGuide('Select a pathway archetype to explore its connected learning cells.');
+    syncDemoPanelActions();
 }
 
 function showAudienceValue() {
@@ -2519,7 +2587,7 @@ function renderSimulatedTotem(record, index, anchor) {
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
     const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -2527,7 +2595,14 @@ function toggleDemoPlantProfile(record) {
     if (!record || record.demoType !== 'plant') return;
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
-    record.demoExpanded = !record.demoExpanded;
+    const opening=!record.demoExpanded;
+    if(opening){
+        markers.filter(candidate=>candidate!==record && candidate.demoType==='plant' && candidate.demoExpanded).forEach(candidate=>{
+            candidate.demoExpanded=false;
+            refreshDemoRecord(candidate);
+        });
+    }
+    record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
         activePimLimBridge=null;
@@ -2558,6 +2633,7 @@ function toggleDemoPlantProfile(record) {
         navigator.vibrate?.([45, 40, 75]);
     }
     if (!record.demoExpanded) {
+        infoPanel?.setMediaCollapsed(true);
         setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
         setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
     }
@@ -2758,7 +2834,8 @@ function renderSimulatedAreaLink() {
     const width = Math.max(2, Math.hypot(dx, dy));
     const angle = Math.atan2(dy, dx) * 180 / Math.PI;
     const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-    return `<span class="tryit-sim-area-link-line" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
+    const faded=linked.every(record=>record.demoTotemFaded) ? ' is-narrative-faded' : '';
+    return `<span class="tryit-sim-area-link-line${faded}" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label${faded}" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
 }
 
 function updateSimulatedMarkers() {
@@ -2781,7 +2858,7 @@ function updateSimulatedMarkers() {
             ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`
             : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('')}`;
     bindSimulatedInformationPanels(layer);
 }
@@ -2943,13 +3020,13 @@ function bindSimulatedInformationPanels(layer) {
         }
         if (record.demoType === 'zone') {
             compactMarker.querySelector('[data-totem-signs]')?.addEventListener('pointerdown',event=>event.stopPropagation());
-            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('click',event=>{event.stopPropagation();record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoTotemFaded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
+            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('click',event=>{event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoTotemFaded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
             compactMarker.querySelector('[data-totem-fade]')?.addEventListener('pointerdown',event=>event.stopPropagation());
-            compactMarker.querySelector('[data-totem-fade]')?.addEventListener('click',event=>{event.stopPropagation();record.demoTotemFaded=!record.demoTotemFaded;record.totemSelectedCard='';updateSimulatedMarkers();});
+            compactMarker.querySelector('[data-totem-fade]')?.addEventListener('click',event=>{event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.demoTotemFaded=!record.demoTotemFaded;record.totemSelectedCard='';updateSimulatedMarkers();});
             compactMarker.querySelectorAll('[data-totem-card]').forEach(button=>{
                 button.addEventListener('pointerdown',event=>event.stopPropagation());
                 button.addEventListener('click',event=>{
-                    event.stopPropagation();record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;updateSimulatedMarkers();
+                    event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;updateSimulatedMarkers();
                 });
             });
             compactMarker.querySelector('[data-totem-close]')?.addEventListener('pointerdown',event=>event.stopPropagation());
@@ -4687,13 +4764,14 @@ function drawMarker(view) {
         const [first, second] = linkedTotems;
         const firstGround = Number(first.groundBaseY ?? (first.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES);
         const secondGround = Number(second.groundBaseY ?? (second.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES);
+        const linkFaded=first.demoTotemFaded && second.demoTotemFaded;
         drawSpatialTether(
             gl,
             tetherRenderer,
             view,
             { ...first.position, y: firstGround + .52 },
             { ...second.position, y: secondGround + .52 },
-            { width: .012, color: [.4, .9, .72, .82], curve: .02, lift: .04 }
+            { width: .012, color: [.4, .9, .72, linkFaded ? .1 : .82], curve: .02, lift: .04 }
         );
     }
 
@@ -4756,7 +4834,8 @@ function drawMarker(view) {
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
         const profileOpacity = plantProfile ? Math.min(1, Math.max(0, (performance.now() - (record.profileRevealStarted || 0)) / 1050)) : 1;
-        gl.uniform1f(gl.getUniformLocation(program, 'opacity'), profileOpacity);
+        const sceneOpacity=noteSign && record.demoNarrativeFaded ? .14 : profileOpacity;
+        gl.uniform1f(gl.getUniformLocation(program, 'opacity'), sceneOpacity);
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         if(plantProfile && record.demoConnectionTexture){
@@ -4775,7 +4854,7 @@ function drawMarker(view) {
     });
     if(totemCardsRenderer) {
         totemCardsRenderer.begin();
-        markers.filter(record=>record.demoType==='zone' && record.demoExpanded).forEach(record=>{
+        markers.filter(record=>record.demoType==='zone' && record.demoExpanded && !record.demoNarrativeFaded).forEach(record=>{
             if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                 record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
             }

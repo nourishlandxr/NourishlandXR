@@ -57,6 +57,7 @@ test('Spatial card hit regions stay separate and detail closes independently',()
     const cards=totemKnowledgeCards(),right={x:1,z:0};
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},right,cards,'plants',{signsVisible:true,faded:false});
     assert.deepEqual(surfaces.slice(0,2).map(surface=>surface.card.id),['__signs','__fade']);
+    assert.ok(surfaces.slice(0,2).every(surface=>surface.center.z>-2),'physical controls should sit on the front face, not inside the Totem');
     for(const surface of surfaces) {
         const hit=hitTotemSurface({origin:{x:surface.center.x,y:surface.center.y,z:0},direction:{x:0,y:0,z:-1}},surfaces);
         assert.equal(hit.card.id,surface.card.id);
