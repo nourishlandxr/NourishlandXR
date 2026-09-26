@@ -13,31 +13,33 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     const conversion = demo.slice(demo.indexOf('function guidePlantConversion'), demo.indexOf('function showSceneContinue'));
     const placement = demo.slice(demo.indexOf('function placeMarker'), demo.indexOf('function pressPlacementPointer'));
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function createDemoTotemExample'));
-    assert.match(guide, /A Plant Orb is an information access point attached to a real plant\./);
-    assert.doesNotMatch(guide, /Areas and Totems/);
+    assert.match(guide, /Plants inside a Nourishland Project can have information connected to their real-world location/);
     assert.match(guide, /A Project represents the whole place/);
     assert.match(guide, /Areas organise meaningful parts of it/);
-    assert.match(area, /first point on the map/);
+    assert.match(area, /This is the Plant Orb/);
     assert.ok(guide.indexOf('One place, one clear structure') < guide.indexOf('Begin with one plant'));
     assert.match(placement, /markers\.push\(marker\);[\s\S]*if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
     assert.match(conversion, /POST_PLACEMENT_AREA_STEP/);
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
 });
 
-test('connected learning appears after plant information as the bridge to purpose and application', () => {
+test('guided discovery connects plant information to two curated learning ideas', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
-    assert.match(demo, /openPimLimBridge/);
-    assert.match(demo, /From information to practical use/);
-    assert.match(demo, /what is this\?” to “what could I do with this here/);
+    assert.match(demo, /startDemoKnowledgeConnections/);
+    assert.match(demo, /resolveDemoKnowledgeConnection/);
+    assert.match(demo, /Living Landscapes/);
+    assert.match(demo, /Biomass Cycling/);
+    assert.match(demo, /Place & Observation/);
+    assert.match(demo, /Watch What Changes/);
     assert.match(demo, /welcomeAutoAdvanceReady\(arWelcomeClock\.elapsed/);
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed-AR_WELCOME_SETTLED_MS/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
     assert.doesNotMatch(guide, /Four ways to explore/);
-    assert.match(guide, /Meet a Plant Orb/);
+    assert.match(guide, /Begin with one plant/);
     assert.match(guide, /Place Pigeon Pea/);
     assert.match(demo, /limMeshVisible=false/);
-    assert.match(demo, /deferContinueUntilCopyReady:index===1/);
+    assert.match(demo, /deferContinueUntilCopyReady:index===2/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });
@@ -75,7 +77,7 @@ test('the first-time journey introduces the guide before four practical learning
     assert.match(demo,/Why does this matter\?/);
     assert.match(demo,/ctx\.fillStyle = '#ffffff'/);
     assert.doesNotMatch(demo,/body:'On your left: your interactive companion/);
-    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?960:headset\?1250:height\(\)/);
+    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?960:headset\?720:height\(\)/);
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
 });

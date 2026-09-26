@@ -11695,6 +11695,33 @@ body:has(.app-surface) {
 .app-surface-selection .project-selection-list .create-project-action strong { color: #fff; }
 .app-surface-selection .project-selection-list .create-project-action:hover { background: #235c42; }
 
+/* XR introduction primary action: a filled, central target that survives
+   headset distance and avoids the shimmer of a thin outline. */
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"],
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
+    min-width:min(360px,76vw);
+    min-height:64px;
+    padding:16px 30px;
+    border:2px solid transparent;
+    border-radius:18px;
+    background:linear-gradient(145deg,#e6ffc2,#a9dc79 68%,#7fbe63);
+    color:#123626;
+    box-shadow:inset 0 2px rgba(255,255,255,.5),0 12px 30px rgba(7,26,15,.42);
+    font-size:clamp(.9rem,1.8vw,1.12rem);
+    font-weight:800;
+    letter-spacing:.015em;
+}
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"]:is(:hover,:focus-visible),
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible) {
+    border-color:transparent;
+    background:linear-gradient(145deg,#f2ffd8,#bce991 64%,#91cb6d);
+    outline:4px solid rgba(220,239,149,.3);
+    outline-offset:4px;
+    transform:translateX(-50%) translateY(-2px);
+}
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"]:active { transform:translateX(-50%) translateY(1px) scale(.985); }
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):active { transform:translateY(1px) scale(.985); }
+
 .nlxr-db-v2-close-project { display: flex; justify-content: center; padding-top: 4px; }
 .nlxr-db-v2-close-project button {
     width: min(100%, 320px);

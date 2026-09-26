@@ -163,9 +163,9 @@ export function fitPimTextBlock(context, options = {}) {
         ? Math.max(1, Number(options.maxDetailLines))
         : Infinity;
     const detailPreferred = Number(options.maxDetailFontSize)
-        || Math.min(depth ? 17 : 19, titleRange.preferred * .64);
+        || Math.min(depth ? 20 : 22, titleRange.preferred * .72);
     const detailMinimum = Number(options.minDetailFontSize)
-        || Math.max(8, radius * (depth ? .09 : .1));
+        || Math.max(10, radius * (depth ? .115 : .12));
     const gap = hasDetail ? Math.max(3, radius * (depth ? .035 : .028)) : 0;
     const step = .5;
     const titleLineHeightFor = size => Math.max(1, Math.round(size * 1.06));
@@ -252,7 +252,7 @@ export function fitPimTextBlock(context, options = {}) {
             ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
             : 0;
         for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= 1 : detailFontSize === 0; detailFontSize -= step) {
-            const result = build(titleFontSize, detailFontSize, false);
+            const result = build(titleFontSize, detailFontSize, true);
             if (result) return result;
         }
     }
@@ -261,7 +261,7 @@ export function fitPimTextBlock(context, options = {}) {
             ? Math.max(1, Math.min(detailPreferred, titleFontSize * .64))
             : 0;
         for (let detailFontSize = detailStart; hasDetail ? detailFontSize >= 1 : detailFontSize === 0; detailFontSize -= step) {
-            const result = build(titleFontSize, detailFontSize, true);
+            const result = build(titleFontSize, detailFontSize, false);
             if (result) return result;
         }
     }

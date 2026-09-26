@@ -4,13 +4,14 @@ import { readFileSync } from 'node:fs';
 import { createPimDocument, pimAddNode } from '../app/services/pimModel.js';
 import { pimInfoContent, infoPages, infoPanelPose, facePanelTowardEyes, panelCenterFromGrab, controlPanelControls, spatialPanelControls } from '../app/services/pimInfoPanel.js';
 
-test('Quest Control panel collapses its side regions while keeping Continue reachable', () => {
+test('Quest Control panel keeps its navigation rail and Continue reachable', () => {
     const items=controlPanelControls({height:850,utilityActions:[{id:'continue',label:'Continue',primary:true},{id:'close',label:'Close demo'}]});
     const open=spatialPanelControls({height:1050,items});
     const folded=spatialPanelControls({height:1050,items,railCollapsed:true,mediaCollapsed:true});
     assert.ok(open.some(item=>item.kind==='tab'));
-    assert.ok(!folded.some(item=>item.kind==='tab'));
-    for(const action of ['MovePanel','ToggleMenu','ToggleMedia','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
+    assert.ok(folded.some(item=>item.kind==='tab'));
+    for(const action of ['MovePanel','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
+    assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
     assert.equal(folded.find(item=>item.action==='MovePanel').label,'●');
 });
@@ -67,14 +68,15 @@ test('Android AR Control panel begins within a comfortable left-hand view',()=>{
 });
 
 test('Control panel keeps navigation separate from experience actions',()=>{
-    for(const tab of ['Details','Modules','Help','Settings']){
+    for(const tab of ['Details','Modules','Help']){
         const buttons=controlPanelControls({tab});
         assert.equal(buttons.filter(b=>b.kind==='tab' && b.selected).length,1);
         for(const [i,a] of buttons.entries())for(const b of buttons.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
     }
+    assert.equal(controlPanelControls().filter(b=>b.action==='Settings' && b.kind!=='tab').length,1);
     assert.equal(controlPanelControls({tab:'Details',selected:true}).some(b=>b.action==='Edit'),false);
     assert.equal(controlPanelControls({hidden:true})[0].action,'Restore');
-    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Selected topic');
+    assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Details').label,'Information');
     assert.equal(controlPanelControls({contentKind:'pim'}).find(b=>b.action==='Details').label,'Plant');
     assert.equal(controlPanelControls({contentKind:'lim'}).find(b=>b.action==='Modules').label,'Guides');
     const menu=controlPanelControls({height:760,utilityActions:[{id:'lim-visibility',label:'Hide learning cells'},{id:'close',label:'Close demo'}]});

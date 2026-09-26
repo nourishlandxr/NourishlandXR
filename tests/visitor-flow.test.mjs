@@ -531,7 +531,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
     assert.match(source, /nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.'/);
-    assert.match(source, /Press the aiming circle to place the example Plant orb/);
+    assert.match(source, /questTriggerPlacement\?'Aim at the ground and pull the trigger to place Pigeon Pea\.':'Aim at the ground and tap the aiming circle to place Pigeon Pea\.'/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);
     assert.doesNotMatch(source, /Every place holds more than we first see/);

@@ -55,15 +55,17 @@ test('welcome narrative moves from the place problem to the explorable map witho
     assert.match(styles, /z-index:12002; pointer-events:none/);
 });
 
-test('spatial Control Panel keeps its reading actions clear of the open photo wing', () => {
+test('spatial Control Panel keeps reading actions in the main card and companions separate', () => {
     const actions = spatialPanelControls({
         mediaCollapsed: false,
-        items: [{ action: 'Utility:continue', kind: 'utility', primary: true, label: 'Continue' }]
+        items: [{ action: 'Settings', label: 'Settings' },{ action: 'Utility:continue', kind: 'utility', primary: true, label: 'Continue' }]
     });
     const continueAction = actions.find(action => action.action === 'Utility:continue');
-    const mediaToggle = actions.find(action => action.action === 'ToggleMedia');
-    assert.ok(continueAction.x + continueAction.width < mediaToggle.x);
-    assert.match(read('app/services/pimInfoPanel.js'), /const imageX=1000-media\+12/);
+    const settings = actions.find(action => action.action === 'Settings');
+    assert.ok(continueAction.x >= 200 && continueAction.x + continueAction.width <= 1000);
+    assert.ok(settings);
+    assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
+    assert.match(read('app/services/pimInfoPanel.js'), /createSpatialTotemCards/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
 
@@ -1159,7 +1161,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointerMarkup/);
     assert.match(styles, /\.creator-ar-overlay \.creator-ar-placement-guide/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-revealing/);
-    assert.match(source, /Press the aiming circle to place the example Plant orb\./);
+    assert.match(source, /tap the aiming circle to place Pigeon Pea/);
     assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
@@ -1238,7 +1240,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /panel\?\.removeAttribute\('hidden'\)/);
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
-    assert.match(source, /Its information stays attached to the plant instead of becoming another disconnected page/);
+    assert.match(source, /This Plant Orb connects information to this plant in the real place/);
     assert.match(source, /button:'Place Pigeon Pea'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
     assert.doesNotMatch(source, /PLAY mode will open/);
@@ -1343,7 +1345,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-demo-taskbar \.tryit-intro-continue \{[^}]*border-color:rgba\(220,239,149,\.62\)/);
     assert.doesNotMatch(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
-    assert.match(source, /Press the aiming circle to place the example Plant orb/);
+    assert.match(source, /tap the aiming circle to place Pigeon Pea/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
