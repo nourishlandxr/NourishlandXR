@@ -56,7 +56,7 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
-    assert.match(greeting, /introBoardTitle='Welcome to Nourishland'/);
+    assert.match(greeting, /introBoardTitle='Welcome to Nourishland XR'/);
     assert.match(greeting, /Take a moment to settle in/);
     assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Take a moment to settle in\.'\)/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);

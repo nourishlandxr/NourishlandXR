@@ -57,7 +57,7 @@ test('Try It Now offers optional LIM paths and a concise post-plant journey',()=
  assert.match(source,/More paths are being developed/);
  assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
- assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : 360/);
+ assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
  assert.match(source,/Your Note is in place/);
  assert.match(source,/Why link Areas\?/);
  assert.match(source,/without mixing their information/);
@@ -551,7 +551,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.doesNotMatch(source, /showDemoAction\('zone'\)/);
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
-    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
     assert.match(source, /NourishlandXR is a mapping tool\. Plants, observations and visitor stories are organized into Areas/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.match(source, /const DEMO_TOTEM_STYLES/);

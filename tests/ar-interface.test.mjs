@@ -67,8 +67,8 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     const panelSource=read('app/services/pimInfoPanel.js');
     assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
     assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
-    assert.match(panelSource, /angleDegrees = 18/);
-    assert.match(panelSource, /gap=\.025/);
+    assert.match(panelSource, /angleDegrees = 22/);
+    assert.match(panelSource, /gap=\.012/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
@@ -1142,7 +1142,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const styles = read('app/style.css');
     const livingStyles = read('app/living-objects.css');
     assert.match(source, /function demoPointerWorldRay\(\)/);
-    assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\), demoPointerWorldOrigin\(\)\)/);
+    assert.match(source, /demoPlacementPosition\(viewerMatrix, demoPointerWorldRay\(\), demoPointerWorldOrigin\(\),placementDistance\)/);
     assert.match(source, /if \(latestControllerRay\) return latestControllerRay\.direction/);
     assert.match(source, /function demoPointerWorldOrigin\(\)/);
     assert.match(source, /function drawDemoControllerPointer\(view\)/);
@@ -1272,7 +1272,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.demoInteractive = true/);
     assert.match(styles, /\.tryit-sim-marker\.is-arriving \{ pointer-events:none; \}/);
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);
-    assert.match(source, /const placementDelay = demoStage === 'note' \? 120 : 360/);
+    assert.match(source, /const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
     assert.match(source, /\}, placementDelay\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
     assert.match(source, /const position = placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
@@ -1390,7 +1390,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
     assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
     assert.match(source, /label\.width = 900/);
-    assert.match(source, /label\.height = 220/);
+    assert.match(source, /label\.height = 360/);
     assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.08, -2\.76\]\)/);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
     assert.match(source, /primary\?\.id==='continue' && mainScreen && !desktopPreview\)mainScreen\.append\(trigger\)/);
@@ -1399,7 +1399,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:clamp\(18px,3\.5vh,34px\);[^}]*transform:translateX\(-50%\);[^}]*border-radius:15px;/);
     assert.match(styles, /\.tryit-live-welcome > \.tryit-context-trigger \{[^}]*position:absolute;[^}]*left:50%;[^}]*bottom:28%;[^}]*pointer-events:auto;/);
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
-    assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,220\)/);
+    assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
     assert.match(source, /demoOrientationStep===2[\s\S]*infoPanel\?\.setIntroduction\(true\);infoPanel\?\.suspend\(false\)/);
@@ -1606,7 +1606,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /SPATIAL_NOTE_TEMPLATES/);
     assert.match(source, /pollinators/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
-    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
     assert.match(source, /NourishlandXR is a mapping tool\. Plants, observations and visitor stories are organized into Areas/);
     assert.match(source, /A link creates a visitor route between Areas/);
     assert.match(source, /tutorialStage: 'totem'/);
