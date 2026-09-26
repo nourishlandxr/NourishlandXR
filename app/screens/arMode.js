@@ -56,6 +56,10 @@ let controllerAxisCooldownUntil = 0;
 let controllerDepthAt = 0;
 let latestControllerRay = null;
 let latestHandState = null;
+let latestTrackedHandStates = [];
+let lastControllerActivityAt = 0;
+const controllerPoseHistory = new WeakMap();
+const CONTROLLER_HANDOFF_IDLE_MS = 1200;
 let hoveredMarkerId = '';
 let handPinchActive = false;
 const CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS = PIM_SPATIAL_LAYOUT_OPTIONS;
@@ -1600,23 +1604,39 @@ function activateQuestHeadsetFromInput(source) {
 
 function controllerInputSource() {
     const sources = [...(session?.inputSources || [])];
-    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer');
+    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer' && !source.hand);
     const selectedSource = trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
         || trackedControllers.find(source => source.handedness === 'right')
         || trackedControllers.find(source => source.gamepad)
         || trackedControllers[0]
-        || sources.find(source => source.hand)
-        || sources.find(source => source.targetRayMode === 'gaze')
         || null;
     activateQuestHeadsetFromInput(selectedSource);
     return selectedSource;
 }
 
+function handInputSources() {
+    return [...(session?.inputSources || [])].filter(source => source.hand);
+}
+
+function fallbackCreatorInputMode() {
+    return questHeadsetSession ? 'idle' : 'touch';
+}
+
+function availableCreatorInputMode() {
+    if (controllerInputSource()) return 'controller';
+    if (handInputSources().length) return 'hand';
+    return fallbackCreatorInputMode();
+}
+
+function isSpatialRayInputMode() {
+    return creatorInputMode === 'controller' || creatorInputMode === 'hand';
+}
+
 function isPrimaryControllerSource(source) {
-    if (!source) return creatorInputMode === 'controller';
+    if (!source || creatorInputMode !== 'controller') return false;
     const active = controllerInputSource();
     if (!active) return false;
-    return source === active || (active.handedness === 'right' && source.handedness === 'right');
+    return source === active;
 }
 
 function controllerActionElements() {
@@ -1792,8 +1812,11 @@ function updateControllerHud() {
 }
 
 function setCreatorInputMode(mode) {
-    const nextMode = mode === 'controller' ? 'controller' : 'touch';
+    const nextMode = ['controller', 'hand', 'touch', 'idle'].includes(mode) ? mode : fallbackCreatorInputMode();
     if (creatorInputMode === nextMode) {
+        overlayRoot?.classList.toggle('is-controller-mode', creatorInputMode === 'controller');
+        overlayRoot?.classList.toggle('is-hand-mode', creatorInputMode === 'hand');
+        overlayRoot?.classList.toggle('is-input-idle', creatorInputMode === 'idle');
         updateControllerHud();
         return;
     }
@@ -1801,9 +1824,15 @@ function setCreatorInputMode(mode) {
     controllerActionIndex = 0;
     controllerMenuActive = true;
     overlayRoot?.classList.toggle('is-controller-mode', creatorInputMode === 'controller');
+    overlayRoot?.classList.toggle('is-hand-mode', creatorInputMode === 'hand');
+    overlayRoot?.classList.toggle('is-input-idle', creatorInputMode === 'idle');
     updateControllerHud();
     if (creatorInputMode === 'controller') {
         setPlacementStatus('Right Spatial device controller active. Aim with the controller, move the thumbstick to choose an AR action, then press the trigger.');
+    } else if (creatorInputMode === 'hand') {
+        setPlacementStatus('Hand tracking active. Pinch to select; tracked hands are outlined.');
+    } else if (creatorInputMode === 'idle') {
+        setPlacementStatus('No tracked controller or hand detected. Raise a hand or pick up a controller to interact.');
     } else if (!readyPlacementType) {
         setPlacementStatus('Touch controls active. Aim dot ready.');
     }
@@ -1832,11 +1861,11 @@ function dispatchControllerAction(button) {
 }
 
 function pointerWorldOrigin() {
-    return creatorInputMode === 'controller' && latestControllerRay?.origin
-        ? latestControllerRay.origin
-        : latestViewerMatrix
-            ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
-            : null;
+    if (creatorInputMode === 'idle') return null;
+    if (isSpatialRayInputMode()) return latestControllerRay?.origin || null;
+    return latestViewerMatrix
+        ? { x: latestViewerMatrix[12], y: latestViewerMatrix[13], z: latestViewerMatrix[14] }
+        : null;
 }
 
 function controllerMarkerRadius(record) {
@@ -2226,7 +2255,6 @@ function activateControllerSelection() {
 
 function pollControllerInput(time = performance.now()) {
     const source = controllerInputSource();
-    setCreatorInputMode(source ? 'controller' : 'touch');
     if (!source?.gamepad || creatorInputMode !== 'controller') return;
     const verticalCandidates = [Number(source.gamepad.axes?.[3]) || 0, Number(source.gamepad.axes?.[1]) || 0];
     const vertical = verticalCandidates.sort((left, right) => Math.abs(right) - Math.abs(left))[0];
@@ -2250,30 +2278,108 @@ function pollControllerInput(time = performance.now()) {
     cycleControllerAction(horizontal > 0 ? 1 : -1);
 }
 
-function updateControllerRay(frame) {
+function controllerRecentlyUsed(source, pose, time) {
+    const gamepad = source?.gamepad;
+    const hasButtonInput = gamepad?.buttons?.some(button => button?.pressed || Number(button?.value) > .18);
+    const hasAxisInput = gamepad?.axes?.some(axis => Math.abs(Number(axis) || 0) > .24);
+    const matrix = pose?.transform?.matrix;
+    const previous = controllerPoseHistory.get(source);
+    if (matrix && previous) {
+        const moved = Math.hypot(matrix[12] - previous[12], matrix[13] - previous[13], matrix[14] - previous[14]) > .02;
+        const turned = [0, 1, 2, 4, 5, 6, 8, 9, 10].some(index => Math.abs(matrix[index] - previous[index]) > .045);
+        if (moved || turned) lastControllerActivityAt = time;
+    } else if (matrix) {
+        // Give a newly detected controller a brief chance to be deliberately
+        // used before hands become the fallback when both input types coexist.
+        lastControllerActivityAt = time;
+    }
+    if (matrix) controllerPoseHistory.set(source, Float32Array.from(matrix));
+    if (hasButtonInput || hasAxisInput) lastControllerActivityAt = time;
+    return time - lastControllerActivityAt < CONTROLLER_HANDOFF_IDLE_MS;
+}
+
+function updateControllerRay(frame, time = performance.now()) {
     latestControllerRay = null;
-    const source = controllerInputSource();
-    if (!source || !refSpace) return;
-    if (source.hand) {
-        latestHandState = handTrackingState(frame, source, refSpace);
-        latestControllerRay = latestHandState?.pointer || null;
+    latestHandState = null;
+    latestTrackedHandStates = [];
+    lastControllerActivityAt = 0;
+    const sources = [...(session?.inputSources || [])];
+    const controllerSources = sources.filter(source => source.targetRayMode === 'tracked-pointer' && !source.hand);
+    const orderedControllers = [
+        ...controllerSources.filter(source => source.handedness === 'right' && source.gamepad),
+        ...controllerSources.filter(source => source.handedness === 'right' && !source.gamepad),
+        ...controllerSources.filter(source => source.handedness !== 'right' && source.gamepad),
+        ...controllerSources.filter(source => source.handedness !== 'right' && !source.gamepad)
+    ];
+    let availableControllerRay = null;
+    let recentlyUsedControllerRay = null;
+    if (refSpace) {
+        for (const source of orderedControllers) {
+            const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
+            const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
+            if (!pose) continue;
+            const ray = controllerRayFromPose(pose, source.handedness || 'right');
+            if (!ray) continue;
+            if (!availableControllerRay) availableControllerRay = ray;
+            if (controllerRecentlyUsed(source, pose, time)) {
+                recentlyUsedControllerRay = ray;
+                break;
+            }
+        }
+    }
+    if (recentlyUsedControllerRay) {
+        latestControllerRay = recentlyUsedControllerRay;
+        setCreatorInputMode('controller');
         return;
     }
-    latestHandState = null;
-    const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
-    const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
-    latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
+
+    const trackedHands = refSpace
+        ? handInputSources().map(source => ({ source, state: handTrackingState(frame, source, refSpace) }))
+            .filter(entry => entry.state?.joints?.size)
+        : [];
+    latestTrackedHandStates = trackedHands;
+    const activeHand = trackedHands.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
+        || trackedHands.find(entry => entry.state.pointer)
+        || trackedHands.find(entry => entry.source.handedness === 'right')
+        || trackedHands[0]
+        || null;
+    if (activeHand) {
+        if (creatorInputMode !== 'hand') {
+            clearControllerMarkerPress();
+            if (dragState?.pointerId === 'xr-controller') cancelMarkerDrag({ pointerId: 'xr-controller' });
+        }
+        latestHandState = activeHand.state;
+        latestControllerRay = activeHand.state.pointer || null;
+        setCreatorInputMode('hand');
+        return;
+    }
+
+    if (availableControllerRay) {
+        latestControllerRay = availableControllerRay;
+        setCreatorInputMode('controller');
+        return;
+    }
+
+    if (dragState?.pointerId === 'xr-controller') {
+        clearControllerMarkerPress();
+        cancelMarkerDrag({ pointerId: 'xr-controller' });
+    }
+    handPinchActive = false;
+    setCreatorInputMode(fallbackCreatorInputMode());
 }
 
 function drawHandTrackingLines(view) {
-    if (!latestHandState?.joints || !controllerPointerRenderer) return;
-    for (const [fromName, toName] of XR_HAND_JOINT_CONNECTIONS) {
-        const from = latestHandState.joints.get(fromName);
-        const to = latestHandState.joints.get(toName);
-        if (!from || !to) continue;
-        drawSpatialTether(gl, controllerPointerRenderer, view, from, to, {
-            segments: 3, width: .012, curve: 0, lift: 0, color: [0.72, 1, 0.34, .88]
-        });
+    if (creatorInputMode !== 'hand' || !latestTrackedHandStates.length || !controllerPointerRenderer) return;
+    for (const { state } of latestTrackedHandStates) {
+        if (!state?.joints) continue;
+        for (const [fromName, toName] of XR_HAND_JOINT_CONNECTIONS) {
+            const from = state.joints.get(fromName);
+            const to = state.joints.get(toName);
+            if (!from || !to) continue;
+            drawSpatialTether(gl, controllerPointerRenderer, view, from, to, {
+                segments: 3, width: .012, curve: 0, lift: 0, color: [0.5, 0.84, 1, .96]
+            });
+        }
     }
 }
 
@@ -4846,7 +4952,8 @@ function moveMarkerDrag(event) {
 
 function pointerWorldRay() {
     if (!latestViewerMatrix) return null;
-    if (creatorInputMode === 'controller' && latestControllerRay) return latestControllerRay.direction;
+    if (creatorInputMode === 'idle') return null;
+    if (isSpatialRayInputMode()) return latestControllerRay?.direction || null;
     if (!latestView?.projectionMatrix) return null;
     const pointer = overlayRoot?.querySelector(readyPlacementType ? '.creator-ar-placement-guide' : '.creator-ar-mode-pointer');
     const rect = pointer?.getBoundingClientRect();
@@ -5715,6 +5822,7 @@ function cleanup() {
     controllerAxisCooldownUntil = 0;
     latestControllerRay = null;
     latestHandState = null;
+    latestTrackedHandStates = [];
     questHeadsetSession = false;
     hoveredMarkerId = '';
     handPinchActive = false;
@@ -6008,13 +6116,14 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             // WebGL belt has completed its first draw.
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput(_time);
-            updateControllerRay(frame);
+            updateControllerRay(frame, _time);
             infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
-            const dashboardTarget = creatorInputMode === 'controller' && latestControllerRay ? controllerSpatialDashboardAtAim() : null;
-            const pimTarget = !dashboardTarget && creatorInputMode === 'controller' && latestControllerRay ? spatialPimTargetAtAim() : null;
-            const specialPaletteTarget = !dashboardTarget && !pimTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerSpecialPaletteActionAtAim() : null;
-            const beltTarget = !dashboardTarget && !pimTarget && !specialPaletteTarget && creatorInputMode === 'controller' && latestControllerRay ? controllerBeltActionAtAim() : null;
-            if (!dashboardTarget && !pimTarget && !specialPaletteTarget && !beltTarget && creatorInputMode === 'controller' && latestControllerRay) controllerMarkerAtAim();
+            const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
+            const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
+            const pimTarget = !dashboardTarget && hasSpatialRay ? spatialPimTargetAtAim() : null;
+            const specialPaletteTarget = !dashboardTarget && !pimTarget && hasSpatialRay ? controllerSpecialPaletteActionAtAim() : null;
+            const beltTarget = !dashboardTarget && !pimTarget && !specialPaletteTarget && hasSpatialRay ? controllerBeltActionAtAim() : null;
+            if (!dashboardTarget && !pimTarget && !specialPaletteTarget && !beltTarget && hasSpatialRay) controllerMarkerAtAim();
             pollHandPinch();
             updateGrabbedMarkerFromCamera();
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
@@ -6076,7 +6185,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             await finishNaturalArExit(projectId, areaId, returnContext, areaName, siteId);
         });
         launchedSession.addEventListener('inputsourceschange', () => {
-            setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
+            setCreatorInputMode(availableCreatorInputMode());
         });
         infoPanel?.bindSession(launchedSession, refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
@@ -6123,7 +6232,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             }
             if (readyPlacementType && performance.now() - placementArmedAt > 250) void quickPlace(readyPlacementType);
         });
-        setCreatorInputMode(controllerInputSource() ? 'controller' : 'touch');
+        setCreatorInputMode(availableCreatorInputMode());
         armArHistory();
         launchedSession.requestAnimationFrame(draw);
         return true;

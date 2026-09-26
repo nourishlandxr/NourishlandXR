@@ -1023,6 +1023,10 @@ body:has(.temporary-ar-demo.is-immersive) #app { pointer-events: none; }
 .creator-ar-overlay.is-view-mode .creator-ar-mode-pointer { opacity: 0; visibility: hidden; }
 .creator-ar-overlay.is-controller-mode .creator-ar-mode-pointer,
 .creator-ar-overlay.is-controller-mode .creator-ar-placement-guide { opacity: 0; visibility: hidden; }
+.creator-ar-overlay.is-hand-mode .creator-ar-mode-pointer,
+.creator-ar-overlay.is-hand-mode .creator-ar-placement-guide,
+.creator-ar-overlay.is-input-idle .creator-ar-mode-pointer,
+.creator-ar-overlay.is-input-idle .creator-ar-placement-guide { opacity: 0; visibility: hidden; }
 .creator-ar-controller-pointer { position:fixed; left:0; top:0; z-index:12005; display:grid; place-items:center; width:18px; height:18px; transform:translate(-50%,-50%); pointer-events:none; filter:drop-shadow(0 0 8px rgba(69,228,93,.85)); }
 .creator-ar-controller-pointer[hidden] { display:none; }
 .creator-ar-controller-pointer span { position:relative; display:block; width:8px; height:8px; border:1px solid rgba(150,255,150,.95); border-radius:50%; background:#45e45d; box-shadow:0 0 0 3px rgba(69,228,93,.18),0 0 12px rgba(69,228,93,.85); }

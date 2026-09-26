@@ -502,6 +502,10 @@ export function limLearningContent(labelOrId) {
     const cell = LIM_INTRO_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[LEGACY_LABEL_IDS[labelOrId]] || cellByLabel.get(labelOrId);
     const illustration = LIM_ARCHETYPE_MEDIA[cell?.id];
     const label = cell?.title || String(labelOrId ?? 'Learning');
+    const sketch = cell?.id ? {
+        src:new URL(`../assets/limo-cell-art/${cell.id}.png`,import.meta.url).href,
+        alt:`Black-and-white concept sketch for ${label}`
+    } : null;
     const face = LIM_FACES.find(item => item.id === cell?.primaryFaceId);
     const introParent = cell?.layoutRole === 'intro' ? LIM_INTRO_CELL_BY_ID[cell.parentId] : null;
     const relatedIntro = cell?.layoutRole === 'intro' ? (cell.relatedIds || []).map(id=>LIM_INTRO_CELL_BY_ID[id]?.title).filter(Boolean) : [];
@@ -515,7 +519,8 @@ export function limLearningContent(labelOrId) {
         primaryFace: face?.title || '', relatedFaceIds: cell?.relatedFaceIds || Object.freeze([]),
         accent: cell?.accent || '', accessibilityLabel: cell?.accessibilityLabel || `${label} learning cell`,
         pathwayRefs: cell?.pathwayRefs || Object.freeze([]),
-        image: illustration?.src || '', imageAlt: illustration?.alt || ''
+        image: illustration?.src || sketch?.src || '', imageAlt: illustration?.alt || sketch?.alt || '',
+        sketchImage: sketch?.src || '', sketchImageAlt: sketch?.alt || ''
     };
 }
 export function limCellById(id) { return LIM_CELL_BY_ID[id] || null; }

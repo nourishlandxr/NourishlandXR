@@ -183,10 +183,20 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     };
     const pages=()=>infoPages(text(),headset?(largeText?27:31):(largeText?32:38),pathwayContext?4:7);
     const title=()=>tab==='Help'?'Help':selection?.title || (identity?'':'Ready to explore');
+    const hasPimPath=()=>Boolean(selection && identity);
+    const pimPath=()=>{
+        if(!hasPimPath())return '';
+        const plant=String(identity?.plant || selection?.plant || '').trim();
+        const trail=String(selection?.breadcrumb || selection?.title || '').split(/\s*[›>]\s*/).filter(Boolean);
+        const parts=plant && trail[0]?.toLowerCase()!==plant.toLowerCase() ? [plant,...trail] : trail;
+        return parts.join(' > ');
+    };
+    const panelHeading=()=>hasPimPath() && tab==='Details' ? pimPath() : title();
+    const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const previewMedia=()=>selection?.mesh==='lim' && selection.image
-        ? {image:selection.image,alt:selection.imageAlt || selection.title,caption:'Pathway illustration'}
-        : identity?.media?.image ? {...identity.media,caption:`${identity.plant} · reference image`} : null;
+    const previewMedia=()=>selection?.mesh==='lim' && (selection.sketchImage || selection.image)
+        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:`${selection.title} · LIMO sketch`}
+        : identity?.media?.image ? {...identity.media,caption:identity.plant} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
@@ -299,13 +309,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
         element.style.setProperty('--lim-accent',selection?.mesh==='lim' ? (selection.accent || '#719b62') : 'transparent');
         const header=element.querySelector('.nlxr-control-header');
-        if(header){header.querySelector('h2').textContent=identity?.plant || selection?.plant || 'Control panel';header.querySelector('.nlxr-control-identity').textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');syncHeaderProgress(header);}
+        if(header){const plant=header.querySelector('h2'),scientific=header.querySelector('.nlxr-control-identity');plant.textContent=identity?.plant || selection?.plant || 'Control panel';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');plant.hidden=hasPimPath();scientific.hidden=hasPimPath();syncHeaderProgress(header);}
         const detailsTab=element.querySelector('[data-info-action="Details"]');
         if(detailsTab)detailsTab.textContent=contentKind()==='pim'?'Plant':'Selected topic';
         if(tab==='Help'){content.setAttribute('aria-labelledby',contentId+'-Help');content.removeAttribute('aria-label');}
         else{content.removeAttribute('aria-labelledby');content.setAttribute('aria-label','Information');}
-        content.querySelector('h3').textContent=title();
-        content.querySelector('.nlxr-info-trail').textContent=tab==='Details'?selection?.breadcrumb || '':'';
+        const heading=content.querySelector('h3'),pathHeading=hasPimPathHeading();heading.textContent=panelHeading();heading.classList.toggle('nlxr-pim-pathline',pathHeading);if(pathHeading)heading.title=heading.textContent;else heading.removeAttribute('title');
+        const trail=content.querySelector('.nlxr-info-trail');trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
         content.querySelector('.nlxr-info-body').textContent=currentPages[page].join('\n');
         content.querySelector('small').textContent=metadata();
         let pager=content.querySelector('.nlxr-content-pager');
@@ -327,7 +337,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
                 else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
             }else if(figure){const next=document.createElement('p');next.className='nlxr-media-empty';next.textContent='Plant imagery and references appear here when a plant is selected.';figure.replaceWith(next);}
-            media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
+            media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
         }else if(showPlantPreview())render(true);
     }
     function updatePathway(){
@@ -392,8 +402,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(hidden)element.append(makeButton(controls()[0]));
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
-            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';
-            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');
+            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';plant.hidden=hasPimPath();
+            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'Your exploration guide');scientific.hidden=hasPimPath();
             const hideButton=makeButton(controls()[0]);hideButton.classList.add('is-panel-hide');
             header.append(hideButton);
             if(!desktopDemo){const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='✋';moveButton.setAttribute('aria-label','Grab and move Control panel');bindPanelMove(moveButton);header.append(moveButton);}
@@ -413,15 +423,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 pathway.append(heading,progress,explanation,actions);element.append(pathway);
             }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');if(tab==='Help')content.setAttribute('aria-labelledby',contentId+'-Help');else content.setAttribute('aria-label','Information');content.tabIndex=0;
-            const heading=document.createElement('h3');heading.textContent=title();
-            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.textContent=tab==='Details'?selection?.breadcrumb || '':'';
+            const heading=document.createElement('h3'),pathHeading=hasPimPathHeading();heading.textContent=panelHeading();heading.classList.toggle('nlxr-pim-pathline',pathHeading);if(pathHeading)heading.title=heading.textContent;
+            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);
             const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));if(pager.childElementCount)content.append(pager);
             if(tab==='Help'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
-                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'Pathway illustration':'Plant media');
+                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
                 if(!desktopDemo){const mediaToggle=makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);}
                 if(showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
                 else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
@@ -449,12 +459,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
-            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText('PLANT MEDIA',48,34,904);
-            ctx.fillStyle='#f3f8fc';ctx.font='700 42px system-ui';ctx.fillText(card.title || 'Selected plant',48,72,904);
-            const imageX=48,imageY=142,imageWidth=904,imageHeight=c.height-212;
+            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText(card.mediaLabel || 'PLANT MEDIA',48,34,904);
+            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='700 42px system-ui';ctx.fillText(card.title,48,72,904);}
+            const imageX=48,imageY=card.title?142:104,imageWidth=904,imageHeight=c.height-(card.title?212:174);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
             if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight),w=card.image.naturalWidth*scale,h=card.image.naturalHeight*scale;ctx.drawImage(card.image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);}
-            ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.fillText(card.caption || 'Plant reference image',48,c.height-48,904);
+            ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.textAlign=card.centerCaption?'center':'left';ctx.fillText(card.caption || card.title || 'Selected plant',card.centerCaption?500:48,c.height-48,904);ctx.textAlign='left';
             return c;
         }
             if(card.settings){
@@ -481,8 +491,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 ctx.fillStyle='#dfff9b';ctx.fillRect(left,barY,Math.max(3,stepWidth*card.progress.activeIndex),3);
                 card.progress.steps.forEach((step,index)=>{const x=left+stepWidth*index;ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=index<=card.progress.activeIndex?'#dfff9b':'#536469';ctx.fill();});
             }
-            ctx.fillStyle='#f3f8fc';ctx.font='650 42px system-ui';ctx.fillText(card.plant,left,card.progress?72:23,Math.max(100,width-150));
-            ctx.fillStyle='#c9e0ed';ctx.font='500 29px system-ui';ctx.fillText(card.scientific,left,card.progress?121:76,width);
+            if(card.plant){ctx.fillStyle='#f3f8fc';ctx.font='650 42px system-ui';ctx.fillText(card.plant,left,card.progress?72:23,Math.max(100,width-150));}
+            if(card.scientific){ctx.fillStyle='#c9e0ed';ctx.font='500 29px system-ui';ctx.fillText(card.scientific,left,card.progress?121:76,width);}
             let y=headerBottom+40;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 24px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=35;
@@ -491,7 +501,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,6,34);}
             ctx.fillStyle='#f3f8fc';ctx.font='650 38px system-ui';ctx.fillText(card.title,left+12,y,width-12);y+=51;
-            ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText(card.trail,left,y,width);y+=45;
+            if(card.trail){ctx.fillStyle='#c9e0ed';ctx.font='500 27px system-ui';ctx.fillText(card.trail,left,y,width);y+=45;}
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-90);
             const contentBottom=actionTop-22;
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
@@ -502,8 +512,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(card.tab==='Details' && card.page)ctx.fillText(card.page,right-65,card.height-20,65);
         }else if(!card.hidden){
             ctx.fillStyle='rgba(18,41,30,.32)';ctx.fillRect(6,6,204,c.height-12);ctx.fillStyle='rgba(34,54,43,.32)';ctx.fillRect(214,6,780,155);
-            ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);
-            ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);
+            if(card.plant){ctx.fillStyle='#f1f4f4';ctx.font='600 38px system-ui';ctx.fillText(card.plant,238,30,732);}
+            if(card.scientific){ctx.fillStyle='#bdc9cc';ctx.font='400 23px system-ui';ctx.fillText(card.scientific,238,91,732);}
             let contentTop=card.pathway?292:187;const titleX=card.accent?258:238,titleWidth=card.accent?712:732;
             if(card.pathway){
                 ctx.fillStyle='#aaccc1';ctx.font='600 22px system-ui';ctx.fillText(card.pathway.title+(card.pathway.preview?' · PREVIEW':''),238,178,560);
@@ -521,9 +531,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(238,contentTop-7,7,42);ctx.globalAlpha=1;}
             ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,titleX,contentTop,titleWidth);
-            ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,contentTop+45,732);
+            if(card.trail){ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,contentTop+45,732);}
             const hintIndex=card.lines.findIndex(line=>line==='HINT');
-            card.lines.forEach((line,i)=>{const hint=hintIndex>=0 && i>=hintIndex;ctx.fillStyle=hint?'#d8e8b5':'#f1f4f4';ctx.font=hint?'500 25px system-ui':(card.largeText?'400 40px':'400 34px')+' system-ui';ctx.fillText(line,238,contentTop+93+i*(hint?31:(card.largeText?46:38)),732);});
+            const bodyOffset=card.trail?93:55;
+            card.lines.forEach((line,i)=>{const hint=hintIndex>=0 && i>=hintIndex;ctx.fillStyle=hint?'#d8e8b5':'#f1f4f4';ctx.font=hint?'500 25px system-ui':(card.largeText?'400 40px':'400 34px')+' system-ui';ctx.fillText(line,238,contentTop+bodyOffset+i*(hint?31:(card.largeText?46:38)),732);});
             const footerY=card.pathway?card.height-218:card.height-106;
             ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.metadata,238,footerY,600);
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
@@ -550,8 +561,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
             mediaImage=null;const token=++mediaLoadToken;
+            const imageSource=content?.sketchImage || content?.image || '';
             mediaCollapsed=true;mediaTouched=false;
-            if(content?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=content.image;}
+            if(imageSource)mediaCollapsed=false;
+            if(imageSource){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=imageSource;}
             tab='Details';hidden=false;page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
@@ -618,9 +631,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
-            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:title(),trail:tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
+            const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
-            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,title:identity?.plant || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || 'Plant reference image'};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,mediaLabel:selection?.mesh==='lim'?'LIMO CELL SKETCH':'PLANT MEDIA',height:760,title:plantMedia?'':identity?.plant || selection?.title || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || identity?.plant || selection?.title || selection?.plant || 'Selected plant',centerCaption:plantMedia};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
