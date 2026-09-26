@@ -1302,7 +1302,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.remove('is-copy-ready');
         board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
         const firstArrival = prepareTutorialBoard(board);
-        setIntroBoardNextGuide(options.nextGuide || (buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
+        setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');
@@ -1420,7 +1420,7 @@ function welcomeFrames() {
 }
 const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=(window.matchMedia('(prefers-reduced-motion: reduce)').matches?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS);
 
-let selectedLimCell='',arWelcomeSettleStage=false;
+let selectedLimCell='',arWelcomeSettleStage=false,arWelcomeSettleStartedAt=NaN;
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
 const understandPlacePathway=()=>LIM_PATHWAYS.find(pathway=>pathway.id==='lim-path-understand-place');
 const currentPathwayCellId=()=>understandPlacePathway()?.orderedCellIds[limPathwayState.currentStepIndex] || '';
@@ -1684,7 +1684,7 @@ function showArWelcomeShowcase() {
     // session interactions here, once the controller exists, so tracked
     // pointer holds can reach the companion panel.
     bindLimSessionInteractions(session);
-    arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSettleStage=false;arWelcomeSharedBoard=true;
+    arWelcomeShowcaseActive=true;arWelcomeIntroPending=true;arWelcomeSettleStage=false;arWelcomeSettleStartedAt=NaN;arWelcomeSharedBoard=true;
     syncDemoPanelActions();
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
@@ -1698,7 +1698,7 @@ function showArWelcomeShowcase() {
     infoPanel?.setCompact(true);
     infoPanel?.suspend(true);
     infoPanel?.setIntroduction(false);
-    const openingParagraphs=introBoardBody.split('\n\n');
+    let openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
     setIntroBoardNextGuide('');
@@ -1739,16 +1739,17 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
-        arWelcomeOpeningActive=false;arWelcomeSettleStage=true;limMeshVisible=false;
+        arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardTitle=demoLocalizedText('Take a moment to settle in.');
-        introBoardBody=demoLocalizedText('This experience is designed to be explored at your own pace.');
-        introBoardVisibleBody=introBoardBody;
+        introBoardBody=demoLocalizedText("This experience is designed to be explored at your own pace.\n\nRead carefully, look around, and continue when you're ready.");
+        introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
-        panel.querySelector('.tryit-board-text-window').innerHTML=`<p>${introBoardBody}</p>`;
+        panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
         panel.hidden=false;introBoardVisible=true;introBoardTextureDirty=true;
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
-        panel.classList.remove('is-typing');
+        panel.classList.add('is-typing');paintOpeningCopy('');
+        boardTypingTimer=setTimeout(typeOpeningCopy,320);
     };
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
@@ -1803,7 +1804,7 @@ function showArWelcomeShowcase() {
         limMeshVisible=false;
         infoPanel?.setHeaderProgress(null);
         infoPanel?.setGuided(true);
-        setIntroBoardNextGuide('Discover how knowledge can stay connected to the place it describes.');
+        setIntroBoardNextGuide('');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
             continueButton.textContent=demoLocalizedText('Start the journey');
@@ -1850,15 +1851,15 @@ function selectWelcomeCell() {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Knowledge begins with the place',button:'Continue',nextGuide:'Continue to see how NourishlandXR gives a real place one connected structure.',paragraphs:[
+    {title:'Knowledge begins with the place',button:'Continue',nextGuide:'',paragraphs:[
         'A visitor should not need to search several signs, files and websites to understand what is in front of them.',
         'NourishlandXR brings that information together and keeps the real place at the centre. The panel beside you explains each item when you select it.'
     ]},
-    {title:'A project represents a whole place',button:'Continue',nextGuide:'Continue to see the clear structure inside a Nourishland project.',paragraphs:[
+    {title:'A project represents a whole place',button:'Continue',nextGuide:'',paragraphs:[
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
         'That shared context keeps every piece of information connected to the place it describes.'
     ]},
-    {title:'One place, one clear structure',button:'Continue',nextGuide:'Continue to begin with one example plant.',paragraphs:[
+    {title:'One place, one clear structure',button:'Continue',nextGuide:'',paragraphs:[
         'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
         'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
     ]},
@@ -1899,7 +1900,7 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:'The idea · '+(index+1)+' of '+DEMO_ORIENTATION_STEPS.length+' · '+['Why','Project','Living map','First plant'][index],nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:`${index+1} of ${DEMO_ORIENTATION_STEPS.length}`,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
 }
 
 function guidePlantConversion(record) {
@@ -3982,9 +3983,12 @@ function drawIntroNoteContent(ctx) {
     ctx.shadowBlur = 18;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#dcef95';
-    ctx.font = '750 46px system-ui, sans-serif';
-    ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
+    if(arWelcomeSettleStage)ctx.globalAlpha*=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-arWelcomeSettleStartedAt)/850));
+    if(!arWelcomeIntroPending){
+        ctx.fillStyle = '#dcef95';
+        ctx.font = '750 46px system-ui, sans-serif';
+        ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
+    }
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).

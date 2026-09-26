@@ -604,7 +604,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, onE
             }else if(!pose){
                 pose=next;
                 if(headset && firstPlacement){
-                    pose.center={x:pose.center.x-pose.right.x*.28,y:pose.center.y,z:pose.center.z-pose.right.z*.28};
+                    pose.center={x:pose.center.x-pose.right.x*.6,y:pose.center.y,z:pose.center.z-pose.right.z*.6};
                     pose={...pose,...facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
                 }
                 firstPlacement=false;

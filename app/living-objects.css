@@ -1211,15 +1211,17 @@
    the complete selector intentionally owns the computed Quest/preview shape. */
 .tryit-demo[data-intro-pending="true"][data-lim-surface="true"] .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"],
 .tryit-demo[data-intro-pending="true"][data-lim-surface="true"] ~ .tryit-context-trigger[data-context-mode="continue"] {
-    top:62% !important;
+    top:64% !important;
     bottom:auto !important;
-    width:176px !important;
-    min-width:176px !important;
-    max-width:176px !important;
-    height:104px !important;
-    min-height:104px !important;
-    padding:18px 24px !important;
-    border-radius:34px !important;
-    white-space:pre-line;
-    line-height:1.18;
+    width:156px !important;
+    min-width:156px !important;
+    max-width:156px !important;
+    height:120px !important;
+    min-height:120px !important;
+    padding:20px 22px !important;
+    border-radius:42px !important;
+    white-space:normal;
+    font-size:18px !important;
+    font-weight:820 !important;
+    line-height:1.12;
 }

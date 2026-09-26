@@ -71,7 +71,7 @@ test('Quest panel source keeps progress separate and all three surfaces aligned'
     assert.match(panel,/target\.prepend\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
     assert.match(panel,/companionHeight=\.54\*spatialScale/);
-    assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.28/);
+    assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.6/);
 });
 
 test('Android AR Control panel begins within a comfortable left-hand view',()=>{
