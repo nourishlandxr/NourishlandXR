@@ -6,7 +6,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', simpl
         right, width,height,card,detail
     });
     const toggle={id:'__simplify',eyebrow:'TOTEM VIEW',title:simplified?'Expand':'Simplify',summary:simplified?'Show Area categories':'Hide secondary categories',control:true,collapsed:simplified};
-    const surfaces=[place(0,1.78,.30,.16,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)))];
+    const surfaces=[place(0,.50,.18,.18,toggle,false),...(simplified?[]:cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)))];
     const selected=cards.find(card=>card.id===selectedId);
     if(selected && !simplified) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;

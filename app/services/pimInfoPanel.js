@@ -62,7 +62,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
 
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
-export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = .24) {
+export function companionPanelPose(pose, side, offset, angleDegrees = 18, arcDepth = 0) {
     const direction=side==='left'?-1:1,turn=side==='left'?1:-1;
     const radians=angleDegrees*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     return {...pose,
@@ -523,7 +523,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(238,contentTop-7,7,42);ctx.globalAlpha=1;}
             ctx.fillStyle='#f1f4f4';ctx.font='600 32px system-ui';ctx.fillText(card.title,titleX,contentTop,titleWidth);
             ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.trail,238,contentTop+45,732);
-            ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 40px':'400 34px')+' system-ui';card.lines.forEach((line,i)=>ctx.fillText(line,238,contentTop+93+i*(card.largeText?46:38),732));
+            const hintIndex=card.lines.findIndex(line=>line==='HINT');
+            card.lines.forEach((line,i)=>{const hint=hintIndex>=0 && i>=hintIndex;ctx.fillStyle=hint?'#d8e8b5':'#f1f4f4';ctx.font=hint?'500 25px system-ui':(card.largeText?'400 40px':'400 34px')+' system-ui';ctx.fillText(line,238,contentTop+93+i*(hint?31:(card.largeText?46:38)),732);});
             const footerY=card.pathway?card.height-218:card.height-106;
             ctx.fillStyle='#b4c3c7';ctx.font='400 20px system-ui';ctx.fillText(card.metadata,238,footerY,600);
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
@@ -587,7 +588,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale;
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.012,companionHeight=.54*spatialScale;
+            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=.003,companionHeight=.54*spatialScale;
             if(settingsOpen && !hidden && settingsCard){const offset=mainWidth/2+settingsWidth/2+gap;surfaces.push({...companionPanelPose(pose,'left',offset),width:settingsWidth,height:companionHeight,card:settingsCard});}
             if(!hidden && mediaCard){const offset=mainWidth/2+mediaWidth/2+gap;surfaces.push({...companionPanelPose(pose,'right',offset),width:mediaWidth,height:companionHeight,card:mediaCard});}
             return surfaces;

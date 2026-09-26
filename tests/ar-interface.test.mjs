@@ -67,8 +67,8 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     const panelSource=read('app/services/pimInfoPanel.js');
     assert.match(panelSource, /companionPanelPose\(pose,'left',offset\)/);
     assert.match(panelSource, /companionPanelPose\(pose,'right',offset\)/);
-    assert.match(panelSource, /angleDegrees = 18, arcDepth = \.24/);
-    assert.match(panelSource, /gap=\.012/);
+    assert.match(panelSource, /angleDegrees = 18, arcDepth = 0/);
+    assert.match(panelSource, /gap=\.003/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });

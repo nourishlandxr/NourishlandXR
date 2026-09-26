@@ -4175,7 +4175,8 @@ function createIntroControlTexture(labelText, texture = null) {
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.38)';
     ctx.shadowBlur = 4;
-    ctx.font = '780 62px system-ui, sans-serif';
+    let controlFontSize=76;ctx.font=`780 ${controlFontSize}px system-ui, sans-serif`;
+    while(controlFontSize>54 && ctx.measureText(String(labelText || 'Continue')).width>800){controlFontSize-=2;ctx.font=`780 ${controlFontSize}px system-ui, sans-serif`;}
     ctx.fillText(String(labelText || 'Continue'), 450, 180,820);
     ctx.shadowBlur = 0;
     return canvasTexture(label, texture);
@@ -4913,12 +4914,6 @@ async function startImmersive() {
                 viewerMatrix = Float32Array.from(pose.transform.matrix);
                 latestDemoView = pose.views?.[0] || null;
                 lastViewerPoseAt = _time;
-            } else if (_time - lastViewerPoseAt > 1200) {
-                // Brief tracking dropouts are common while a visitor is aiming.
-                // Keep the last valid placement frame briefly so a tap does not
-                // silently lose the Plant Orb placement target.
-                viewerMatrix = null;
-                latestDemoView = null;
             }
             const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
             const hitPose = hit?.getPose(referenceSpace);
@@ -4941,6 +4936,7 @@ async function startImmersive() {
             const layer = frame.session.renderState.baseLayer;
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
+            if(!pose){gl.disable(gl.SCISSOR_TEST);gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);return;}
             gl.enable(gl.SCISSOR_TEST);
             for (const view of pose?.views || []) {
                 const viewport = layer.getViewport(view);
