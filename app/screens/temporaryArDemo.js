@@ -1725,9 +1725,8 @@ function showArWelcomeShowcase() {
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
     infoPanel?.setCompact(true);
-    showDemoTutorialMedia('companion','Your companion panel','This is your Control panel companion. Select a plant, Area or connection and its information appears here; the media panel shows a helpful picture for the step you are exploring.');
-    infoPanel?.setIntroduction(true);
-    infoPanel?.suspend(false);
+    infoPanel?.setIntroduction(false);
+    infoPanel?.suspend(true);
     let openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
@@ -1888,9 +1887,13 @@ function showDemoTutorialMedia(key,title,body) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Start with curiosity',art:'curiosity',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'Imagine arriving in a garden',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
-        'The Control panel is your companion: it gives you one place to read what you select, while the garden stays at the centre of the experience.'
+        'You pause, look closely and wonder what it is, how it belongs here and what it might teach you.'
+    ]},
+    {title:'Meet your Control panel',art:'companion',button:'Continue',nextGuide:'',paragraphs:[
+        'This is your companion panel. It gives you one place to read what you select while the garden stays at the centre of the experience.',
+        'Its media area will illustrate the step you are exploring. The panel appears when it is useful and stays out of the way when it is not.'
     ]},
     {title:'A project represents a whole place',art:'references',button:'Continue',nextGuide:'',paragraphs:[
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
@@ -1917,23 +1920,27 @@ const POST_PLACEMENT_AREA_STEP = {
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
-    if(index===0)setDemoJourneyStage('why');
-    else if(index>=1)setDemoJourneyStage('map');
-    if(index>=2 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
+    if(index<=1)setDemoJourneyStage('why');
+    else setDemoJourneyStage('map');
+    if(index>=3 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=false;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
     infoPanel?.setGuided(index>=2);
     const step=DEMO_ORIENTATION_STEPS[index];
+    if(index===0){
+        infoPanel?.setIntroduction(false);
+        infoPanel?.suspend(true);
+    }
     if(step?.art){
         infoPanel?.setCompact(false);
         showDemoTutorialMedia(step.art,step.title,step.paragraphs.join('\n\n'));
-        if(index===0)infoPanel?.setIntroduction(true);
+        if(index===1)infoPanel?.setIntroduction(true);
     }
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
-        if(index===0)infoPanel?.setIntroduction(false);
+        if(index===1)infoPanel?.setIntroduction(false);
         if(index===0){introBoardTextureDirty=true;runArWelcomeTutorial(index+1);return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');

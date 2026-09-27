@@ -63,7 +63,7 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
-    assert.match(demo, /if\(index===0\)setDemoJourneyStage\('why'\)/);
+    assert.match(demo, /if\(index<=1\)setDemoJourneyStage\('why'\)/);
 });
 
 test('plant exploration no longer auto-opens LIM or forces the old cell script',()=>{
@@ -81,9 +81,9 @@ test('the first-time journey introduces the guide before four practical learning
     assert.match(demo,/at:18000,text:demoLocalizedText\('Explore one plant/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/showDemoTutorialMedia\('companion','Your companion panel','This is your Control panel companion[\s\S]*infoPanel\?\.setIntroduction\(true\)/);
+    assert.match(demo,/title:'Imagine arriving in a garden'[\s\S]*title:'Meet your Control panel',art:'companion'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
-    assert.match(demo,/if\(index===0\)infoPanel\?\.setIntroduction\(true\)/);
+    assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.suspend\(true\);[\s\S]*if\(step\?\.art\)[\s\S]*if\(index===1\)infoPanel\?\.setIntroduction\(true\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
     assert.match(demo,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
     assert.match(demo,/Why does this matter\?/);
