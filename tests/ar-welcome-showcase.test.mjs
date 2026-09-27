@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeOpeningFrames,LIM_LAYOUT,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
+import {welcomeNetworkFrame,welcomeExperienceFrames,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeOpeningFrames,LIM_LAYOUT,LIM_CELL_SHAPE,LIM_RESERVED_POSITIONS,welcomeRevealIsAnimating} from '../app/services/arWelcomeShowcase.js';
 import fs from 'node:fs';
 
 const showcaseSource=fs.readFileSync(new URL('../app/services/arWelcomeShowcase.js',import.meta.url),'utf8');
@@ -76,7 +76,7 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const frames=drawArWelcomeShowcase(ctx,29800,false,createArWelcomeClusters(),pacing);
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
- assert.ok(lines>0,'the four primary cells retain their hexagon outlines');
+ assert.ok(lines>0,'the four primary cells retain their faceted outlines');
  const expansion={...pacing,progression:{expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':22000}}};
  const softChildren=drawArWelcomeShowcase(ctx,22500,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
  assert.ok(softChildren.some(node=>node.opacity>0 && node.opacity<1),'selected pathway introduces its children with opacity');
@@ -133,12 +133,16 @@ test('eight face clusters retain parent identity, share edges and avoid the welc
  for(const other of nodes.slice(i+1))assert.ok(Math.hypot(n.x-other.x,n.y-other.y)>=n.radius*1.49);
  }}
 });
-test('all LIM cells have deterministic reserved positions and visible cells use edge-sharing spacing',()=>{
+test('all LIM cells have deterministic reserved positions and one global shape hierarchy',()=>{
  assert.equal(Object.keys(LIM_RESERVED_POSITIONS).length,LIM_ALL_CELLS.length);
  const reserved=Object.values(LIM_RESERVED_POSITIONS).map(item=>`${item.corner}:${item.axial.join(',')}`);
  assert.equal(new Set(reserved).size,LIM_ALL_CELLS.length);
  const first=welcomeNetworkFrame(12000,true).nodes;
- assert.ok(first.every(node=>node.limId && node.scale===1 && node.radius===LIM_LAYOUT.radius));
+ assert.equal(LIM_CELL_SHAPE.sides,16);
+ assert.ok(first.every(node=>node.limId && node.scale===1));
+ assert.ok(first.filter(node=>node.depth===0).every(node=>node.radius===LIM_CELL_SHAPE.archetypeRadius));
+ assert.ok(first.filter(node=>node.depth>0).every(node=>node.radius===LIM_CELL_SHAPE.childRadius));
+ assert.ok(LIM_CELL_SHAPE.archetypeRadius>LIM_CELL_SHAPE.childRadius);
  assert.deepEqual(first.map(node=>[node.x,node.y]),welcomeNetworkFrame(64000,true).nodes.map(node=>[node.x,node.y]));
 });
 test('reduced motion remains static and later loops explore additional branches',()=>{

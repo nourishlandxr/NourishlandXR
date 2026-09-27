@@ -1,5 +1,4 @@
-import {drawArWelcomePanel,welcomeBoundary} from './arWelcomePanel.js';
-import {drawHexagon} from './plantInformationMeshCanvas.js';
+import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
@@ -36,6 +35,8 @@ export const WELCOME_DRAW_OFFSET = WELCOME_PANEL_DRAW_OFFSET;
 // The eight small pattern variations give the outside of the mesh an organic,
 // deterministic silhouette without changing any cell's position at runtime.
 export const LIM_LAYOUT = Object.freeze({
+ archetypeRadius: 92,
+ childRadius: 70,
  radius: 92,
  origins: Object.freeze([
   Object.freeze([1250,700]), Object.freeze([1690,710]),
@@ -55,6 +56,8 @@ export const LIM_LAYOUT = Object.freeze({
  ]),
  reservedRoleOrder: Object.freeze(['face','branch-0','branch-1','attribute-0'])
 });
+export const LIM_CELL_SHAPE = Object.freeze({sides:WELCOME_SHAPE.sides,archetypeRadius:LIM_LAYOUT.archetypeRadius,childRadius:LIM_LAYOUT.childRadius});
+const limCellRadius=depth=>depth===0?LIM_CELL_SHAPE.archetypeRadius:LIM_CELL_SHAPE.childRadius;
 const axialPoint=(q,r,radius)=>({x:q*radius*1.5,y:(r+q*.5)*radius*Math.sqrt(3)});
 export function limLayoutPoint(corner,slot){
  const origin=LIM_LAYOUT.origins[corner%LIM_LAYOUT.origins.length]||LIM_LAYOUT.origins[0];
@@ -101,7 +104,7 @@ export function welcomeNetworkFrame(elapsed,reducedMotion=false,graphs=AR_WELCOM
   node.progress=reducedMotion?1:smooth(phase,node.at,1500+(node.slot%3)*80);
   node.opacity=node.progress*(reducedMotion?1:fading);
   node.scale=1;
-  node.baseRadius=LIM_LAYOUT.radius;
+  node.baseRadius=limCellRadius(node.depth);
   node.radius=node.baseRadius*node.scale;
   node.hollow=false;
   node.emphasis=(1-smooth(phase,node.at+1800,1800))*node.progress;
@@ -154,7 +157,6 @@ function settleWelcomeLayout(frames) {
  const byId=new Map(frames.flatMap(frame=>frame.nodes.map(node=>[`${frame.corner}:${node.id}`,node])));
  const moving=frames.flatMap(frame=>frame.nodes.filter(node=>node.depth>0).map(node=>({frame,node})))
   .sort((a,b)=>a.node.depth-b.node.depth||a.node.revealAt-b.node.revealAt||a.frame.corner-b.frame.corner);
- const minGap=LIM_LAYOUT.radius*2+12;
  const angleSteps=[0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7,8,-8,9,-9,10,-10,11,-11,12];
  for(const {frame,node} of moving){
   const parent=byId.get(`${frame.corner}:${node.parent}`);
@@ -177,8 +179,8 @@ function settleWelcomeLayout(frames) {
     // welcome note by a full cell radius, including its glass rim.
     if((x-root.x)*rootDirection.x+(y-root.y)*rootDirection.y<0)continue;
     const boardX=Math.max(800,Math.min(1700,x)),boardY=Math.max(810,Math.min(1310,y));
-    if(Math.hypot(x-boardX,y-boardY)<LIM_LAYOUT.radius+20)continue;
-    if(placed.some(other=>Math.hypot(other.x-x,other.y-y)<minGap))continue;
+    if(Math.hypot(x-boardX,y-boardY)<node.baseRadius+20)continue;
+    if(placed.some(other=>Math.hypot(other.x-x,other.y-y)<other.baseRadius+node.baseRadius+12))continue;
     const angleCost=Math.abs(step)*3,seedCost=Math.hypot(node.x-x,node.y-y)*.08;
     const cost=distance+angleCost+seedCost;
     if(!best||cost<best.cost)best={x,y,cost};
@@ -227,16 +229,16 @@ function revealFrames(graphs) {
  const frames=archetypes.map((archetype,corner)=>{
   const nodes=[];
   const rootPoint=attachedRoot([3.92,5.48,.73,2.43][archetype.quadrant]);
-  nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at});
+  nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_CELL_SHAPE.archetypeRadius,radius:LIM_CELL_SHAPE.archetypeRadius,revealAt:archetype.at});
   archetype.children.forEach(([label,limId],index)=>{
    const position=foundationPoint(archetype.quadrant,index+1,rootPoint);
-   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:archetype.accent,accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:archetype.at+1800+index*700});
+   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:archetype.accent,accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:archetype.at+1800+index*700});
   });
   let slot=5;
   const nextReservedPosition=()=>{
    while(slot<reservedSlots.length){
     const candidate=reservedPoint(archetype.quadrant,slot++);
-    if(nodes.every(node=>Math.hypot(node.x-candidate.x,node.y-candidate.y)>=LIM_LAYOUT.radius*1.49))return candidate;
+    if(nodes.every(node=>Math.hypot(node.x-candidate.x,node.y-candidate.y)>=node.baseRadius+LIM_CELL_SHAPE.childRadius+10))return candidate;
    }
    return reservedPoint(archetype.quadrant,slot++);
   };
@@ -254,7 +256,7 @@ function revealFrames(graphs) {
     const position=nextReservedPosition(),id=idMap.get(cell.id);
     const parent=cell.parent===null?foundationParent:(idMap.get(cell.parent)||foundationParent);
     const parentNode=nodes.find(item=>item.id===parent);
-    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:cell.accent||archetype.accent,accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_LAYOUT.radius,radius:LIM_LAYOUT.radius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
+    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:cell.accent||archetype.accent,accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
    });
   });
   return {corner,phase:0,cycle:0,nodes};
@@ -341,6 +343,21 @@ function accentRgba(value,hue,alpha=.7){
  const hex=match[1];return `rgba(${parseInt(hex.slice(0,2),16)},${parseInt(hex.slice(2,4),16)},${parseInt(hex.slice(4),16)},${alpha})`;
 }
 
+function learningCellPath(context,radius){
+ context.beginPath();
+ for(let index=0;index<LIM_CELL_SHAPE.sides;index++){
+  const angle=-Math.PI/2+index*Math.PI*2/LIM_CELL_SHAPE.sides;
+  const x=Math.cos(angle)*radius,y=Math.sin(angle)*radius;
+  if(index===0)context.moveTo(x,y);else context.lineTo(x,y);
+ }
+ context.closePath();
+}
+function drawLearningCell(context,radius,fill,stroke,lineWidth=2){
+ learningCellPath(context,radius);
+ if(fill){context.fillStyle=fill;context.fill();}
+ if(stroke&&lineWidth>0){context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();}
+}
+
 function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual={}) {
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
@@ -351,16 +368,16 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  const accent=node.accent || '';
  // Keep cells deliberately flat in XR: one face and one outline, with no
  // false rear rim, bevel, perspective edge or drop shadow.
- drawHexagon(ctx,0,0,r,accentRgba(accent,hue,hollow?.035:.10),`hsla(${hue},30%,86%,${hollow?.46:.62})`,hollow?2.5:3);
+ drawLearningCell(ctx,r,accentRgba(accent,hue,hollow?.035:.10),`hsla(${hue},30%,86%,${hollow?.46:.62})`,hollow?2.5:3);
  if(visual.pathway && !selected){
   ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
-  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-7),y=Math.sin(a)*(r-7);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+  learningCellPath(ctx,r-7);ctx.stroke();ctx.setLineDash([]);
  }
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
-  drawHexagon(ctx,0,0,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);
+  drawLearningCell(ctx,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);
   ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?18:14;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?5:4;
-  ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*(r-2),y=Math.sin(a)*(r-2);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;
+  learningCellPath(ctx,r-2);ctx.stroke();ctx.shadowBlur=0;
  }
  ctx.globalAlpha=node.opacity*smooth(node.progress,.35,.65);
  ctx.textAlign='center';ctx.textBaseline='middle';
