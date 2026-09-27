@@ -132,10 +132,10 @@ test('each archetype keeps its ordered illustration while plant media remains PI
         assert.ok(statSync(new URL(`../app/assets/${file}`, import.meta.url)).size < 500_000);
     }
     const panel = read('app/services/pimInfoPanel.js');
-    assert.match(panel, /selection\?\.mesh==='lim' && selection\.image/);
+    assert.match(panel, /selection\?\.mesh==='lim' && \(selection\.sketchImage \|\| selection\.image\)/);
     assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
-    assert.match(panel, /Pathway illustration/);
+    assert.match(panel, /LIMO cell sketch/);
 });
 
 test('Area Totem examples show distinct colours and welcoming, orientation, interpretation and safety roles', () => {

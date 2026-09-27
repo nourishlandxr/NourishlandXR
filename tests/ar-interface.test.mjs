@@ -68,7 +68,7 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
     assert.match(panelSource, /companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
-    assert.match(panelSource, /companionPanelPose\(pose,'right',mainWidth,mediaWidth,18,gap\)/);
+    assert.match(panelSource, /companionPanelPose\(pose,side,mainWidth,mediaWidth,18,gap\)/);
     assert.match(panelSource, /angleDegrees = 18, gap = 0/);
     assert.match(panelSource, /gap=0/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
@@ -207,7 +207,7 @@ test('the demo keeps the original three simple Totem forms', () => {
     const appearance = read('app/services/totemAppearance.js');
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
-    assert.match(appearance, /id: 'basic', label: 'Simple Totem'/);
+    assert.match(appearance, /id: 'basic', label: 'Elemental Totem'/);
     assert.match(appearance, /id: 'organic', label: 'Light Bulb'/);
     assert.match(appearance, /id: 'flat-disc', label: 'Disk Totem'/);
     assert.match(arSource, /totemStyle === 'organic'/);
@@ -515,7 +515,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /function controllerMarkerRadius\(record\)/);
     assert.match(arSource, /function activateControllerSelection\(\)/);
     assert.match(arSource, /activateControllerTarget\(true\)/);
-    assert.match(arSource, /function updateControllerRay\(frame\)/);
+    assert.match(arSource, /function updateControllerRay\(frame, time = performance\.now\(\)\)/);
     assert.match(arSource, /function positionControllerPointer\(view = latestView\)/);
     assert.match(arSource, /data-ar-controller-pointer/);
     assert.match(arSource, /projectWorldPoint\(view, point\)/);
@@ -1805,7 +1805,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     const arSource = read('app/screens/arMode.js');
     const prismSource = read('app/services/spatialPrismRenderer.js');
     assert.match(arSource, /area_checkpoint: 1, intro_checkpoint: 2, note: 3, plant: 4/);
-    assert.match(arSource, /area_checkpoint: \[\.11 \* factor, totemHeightPreset\(marker\)\.halfHeightMetres \* factor\]/);
+    assert.match(arSource, /area_checkpoint: \[\.07 \* factor, totemHeightPreset\(marker\)\.halfHeightMetres \* factor\]/);
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /createSpatialPrismRenderer/);

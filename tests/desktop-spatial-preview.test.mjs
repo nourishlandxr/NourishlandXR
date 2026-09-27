@@ -73,9 +73,9 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
     assert.match(panel, /if\(desktopDemo\)railCollapsed=false;/);
-    assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed;/);
+    assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached;/);
     assert.match(panel, /if\(!desktopDemo\)\{const moveButton=/);
-    assert.match(panel, /if\(!desktopDemo\)\{const mediaToggle=makePanelToggle/);
+    assert.match(panel, /if\(!floating && !isDesktopDemo\(\)\)toolbar\.append\(makePanelToggle\('Media'/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);
     assert.match(panel, /isDesktopDemo\(\)\?items\.filter\(item=>item\.action!=='Recenter'\):items/);
     assert.match(demo, /if\(!desktopDemo\)actions\.push\(\{id:'safety',label:'Safety guidance'\}\)/);

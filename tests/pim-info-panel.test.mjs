@@ -173,7 +173,7 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     assert.match(panel,/onClick\(\);syncPanelWings\(\)/);
     assert.doesNotMatch(panel,/onClick\(\);render\(\)/);
-    assert.match(panel,/if\(showPlantPreview\(\)\)\{const figure=/);
+    assert.match(panel,/if\(preview\?\.image\)\{const figure=/);
     assert.match(styles,/\.is-media-collapsed :is\(\.nlxr-plant-preview,\.nlxr-media-empty\) \{ display:none; \}/);
     assert.match(styles,/:not\(\.is-media-collapsed\) \.nlxr-media-wing \{ position:absolute/);
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
@@ -184,7 +184,7 @@ test('cell selection updates reading content and remounts only when companion me
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     const update=panel.slice(panel.indexOf('function updateReading()'),panel.indexOf('function updatePathway()'));
     assert.match(update,/content\.querySelector\('\.nlxr-info-body'\)\.textContent=/);
-    assert.match(update,/if\(image\.getAttribute\('src'\)!==preview\.image\)image\.src=preview\.image/);
+    assert.match(panel,/if\(image\.getAttribute\('src'\)!==preview\.image\)image\.src=preview\.image/);
     assert.doesNotMatch(update,/replaceChildren\(\)/);
     assert.match(panel,/mediaCollapsed=!media\?\.image;mediaTouched=false;tab='Details';hidden=false;page=0;render\(true\)/);
     assert.match(panel,/suspend\(value\).*updateReading\(\);updatePathway\(\)/);
