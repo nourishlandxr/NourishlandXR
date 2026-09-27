@@ -1320,3 +1320,116 @@
 .nlxr-info-panel[data-content-kind="pim"] .nlxr-plant-preview figcaption { text-align:center; }
 @keyframes demo-knowledge-appear{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
 @media (prefers-reduced-motion:reduce){.demo-connection-target{transition:none}.demo-knowledge-connections path.is-preview{stroke-dasharray:none}.demo-knowledge-result{animation:none}}
+
+/* The media wing can be torn off into a movable companion, then magnetically
+   rejoined to any edge of the main control surface. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toolbar,
+.nlxr-media-floating .nlxr-media-toolbar {
+    position:relative;
+    z-index:3;
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    gap:8px;
+    min-height:44px;
+    margin:0 0 8px;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toolbar .nlxr-media-toggle {
+    flex:1 1 auto;
+    width:auto;
+    min-width:0;
+    min-height:42px;
+    margin:0;
+    padding:8px 12px;
+    writing-mode:horizontal-tb;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-detach,
+.nlxr-media-floating .nlxr-media-detach {
+    position:relative;
+    z-index:4;
+    flex:0 0 46px;
+    width:46px;
+    min-width:46px;
+    height:42px;
+    min-height:42px;
+    margin:0;
+    padding:0;
+    border:1px solid rgba(166,231,250,.52);
+    border-radius:12px;
+    background:linear-gradient(155deg,rgba(66,111,139,.58),rgba(17,44,67,.82));
+    color:#b8edff;
+    box-shadow:inset 0 1px rgba(255,255,255,.18),0 5px 12px rgba(0,0,0,.18);
+    font:700 22px/1 system-ui,sans-serif;
+    cursor:grab;
+    touch-action:none;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-detach:is(:hover,:focus-visible),
+.nlxr-media-floating .nlxr-media-detach:is(:hover,:focus-visible) {
+    border-color:#d5f5ff;
+    outline:2px solid rgba(166,231,250,.22);
+    outline-offset:2px;
+    color:#f0fcff;
+}
+.nlxr-media-floating {
+    position:fixed!important;
+    z-index:12910!important;
+    right:auto!important;
+    bottom:auto!important;
+    width:min(clamp(280px,38vw,470px),calc(100vw - 16px))!important;
+    height:min(42vh,410px)!important;
+    max-height:calc(100vh - 16px)!important;
+    box-sizing:border-box!important;
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
+    padding:14px!important;
+    border:1px solid rgba(152,207,235,.72)!important;
+    border-radius:20px!important;
+    background:linear-gradient(152deg,rgba(28,47,66,.98),rgba(8,20,34,.99) 72%)!important;
+    box-shadow:0 22px 60px rgba(0,0,0,.52),inset 0 1px rgba(236,250,255,.24),inset 0 0 0 4px rgba(8,27,42,.45)!important;
+    transition:box-shadow .14s ease,outline-color .14s ease;
+}
+.nlxr-media-floating::before {
+    content:"";
+    position:absolute;
+    z-index:2;
+    left:19px;
+    top:0;
+    width:88px;
+    height:3px;
+    border-radius:0 0 4px 4px;
+    background:#a6e7fa;
+    box-shadow:0 0 16px rgba(119,212,247,.65);
+    pointer-events:none;
+}
+.nlxr-media-floating[hidden] { display:none!important; }
+.nlxr-media-floating.is-magnetized { outline:3px solid rgba(166,231,250,.72); outline-offset:4px; box-shadow:0 0 0 9px rgba(166,231,250,.12),0 22px 60px rgba(0,0,0,.52)!important; }
+.nlxr-media-floating .nlxr-plant-preview { position:relative; flex:1 1 auto; display:grid; grid-template-rows:minmax(0,1fr) auto; width:100%; min-height:0; height:auto!important; margin:0; overflow:hidden; border:1px solid rgba(177,215,233,.3); border-radius:12px; background:rgba(3,12,18,.78); }
+.nlxr-media-floating .nlxr-plant-preview::after { display:none; }
+.nlxr-media-floating .nlxr-plant-preview img { display:block; width:100%; height:100%; min-height:0; object-fit:contain; object-position:center; }
+.nlxr-media-floating .nlxr-plant-preview figcaption { padding:8px 9px; color:#e6f2f7; background:rgba(8,20,34,.94); font:600 13px/1.35 system-ui,sans-serif; text-align:center; }
+.nlxr-media-floating .nlxr-media-empty { flex:1 1 auto; display:grid; place-items:center; margin:0; padding:20px; color:#c7d8e0; font:500 15px/1.45 system-ui,sans-serif; text-align:center; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="left"]:not(.is-media-collapsed) > .nlxr-media-wing {
+    left:auto!important; right:calc(100% + 6px)!important; top:0!important; bottom:0!important;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="top"]:not(.is-media-collapsed) > .nlxr-media-wing,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="bottom"]:not(.is-media-collapsed) > .nlxr-media-wing {
+    left:0!important; right:0!important; width:100%!important; height:min(36vh,330px)!important;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="top"]:not(.is-media-collapsed) .nlxr-plant-preview,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="bottom"]:not(.is-media-collapsed) .nlxr-plant-preview {
+    height:calc(100% - 54px)!important;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="top"]:not(.is-media-collapsed) > .nlxr-media-wing {
+    top:auto!important; bottom:calc(100% + 6px)!important;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="bottom"]:not(.is-media-collapsed) > .nlxr-media-wing {
+    top:calc(100% + 6px)!important; bottom:auto!important;
+}
+@media(max-width:700px) {
+    .nlxr-media-floating { width:min(430px,calc(100vw - 16px))!important; height:min(38vh,330px)!important; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="left"]:not(.is-media-collapsed) > .nlxr-media-wing { left:0!important; right:auto!important; top:auto!important; bottom:calc(100% + 10px)!important; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="right"]:not(.is-media-collapsed) > .nlxr-media-wing { left:0!important; right:auto!important; top:calc(100% + 10px)!important; bottom:auto!important; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="left"]:not(.is-media-collapsed) > .nlxr-media-wing,
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="right"]:not(.is-media-collapsed) > .nlxr-media-wing { width:100%!important; height:min(36vh,330px)!important; }
+}

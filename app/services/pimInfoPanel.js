@@ -156,10 +156,10 @@ let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='';
-    let mediaImage=null,mediaLoadToken=0,mediaTouched=false;
+    let mediaImage=null,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='right',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null;
-    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true;
+    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
@@ -208,6 +208,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function act(action){
         const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
         if(action==='ToggleMedia'){mediaCollapsed=!mediaCollapsed;mediaTouched=true;}
+        if(action==='ToggleMediaDetach'){if(mediaDetached)dockMediaPanel();else detachMediaPanel();return;}
         if(action==='MovePanel')return;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
@@ -254,6 +255,96 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const button=document.createElement('button');button.type='button';button.className=className;button.textContent=label;button.setAttribute('aria-expanded',String(expanded));
         button.addEventListener('click',event=>{event.stopPropagation();onClick();syncPanelWings();});return button;
     }
+    function refreshMediaWing(media){
+        if(!media)return;
+        const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
+        media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
+        if(preview?.image){
+            if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
+            else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
+        }else if(figure){const next=document.createElement('p');next.className='nlxr-media-empty';next.textContent='Plant imagery appears here when available for the selected item.';figure.replaceWith(next);}
+    }
+    function createMediaWing({floating=false}={}){
+        const media=document.createElement('aside');media.className='nlxr-media-wing'+(floating?' nlxr-media-floating':'');
+        const toolbar=document.createElement('div');toolbar.className='nlxr-media-toolbar';
+        if(!floating && !isDesktopDemo())toolbar.append(makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed));
+        const handle=document.createElement('button');handle.type='button';handle.className='nlxr-media-detach';handle.textContent='✋';handle.dataset.infoAction='ToggleMediaDetach';
+        handle.setAttribute('aria-label',floating?'Dock media panel to Control panel':'Detach media panel');handle.title=floating?'Drag to move · click to dock to Control panel':'Detach media panel';
+        handle.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<ignoreMediaClickUntil)return;if(mediaDetached)dockMediaPanel();else detachMediaPanel();});
+        toolbar.append(handle);media.append(toolbar);
+        const preview=previewMedia();
+        if(preview?.image){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
+        else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery appears here when available for the selected item.';media.append(empty);}
+        if(floating)bindMediaPanelMove(handle);
+        return media;
+    }
+    function closestDockCandidate(panelRect,mainRect,threshold=88){
+        if(!panelRect || !mainRect)return null;
+        const overlap=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0));
+        const candidates=[
+            {side:'right',gap:Math.abs(panelRect.left-mainRect.right),overlap:overlap(panelRect.top,panelRect.bottom,mainRect.top,mainRect.bottom)},
+            {side:'left',gap:Math.abs(panelRect.right-mainRect.left),overlap:overlap(panelRect.top,panelRect.bottom,mainRect.top,mainRect.bottom)},
+            {side:'bottom',gap:Math.abs(panelRect.top-mainRect.bottom),overlap:overlap(panelRect.left,panelRect.right,mainRect.left,mainRect.right)},
+            {side:'top',gap:Math.abs(panelRect.bottom-mainRect.top),overlap:overlap(panelRect.left,panelRect.right,mainRect.left,mainRect.right)}
+        ].filter(candidate=>candidate.gap<=threshold && candidate.overlap>=48).sort((a,b)=>a.gap-b.gap);
+        return candidates[0] || null;
+    }
+    function placeMediaAgainstMain(side,panelRect,mainRect){
+        const gap=8,centerX=(mainRect.left+mainRect.right)/2,centerY=(mainRect.top+mainRect.bottom)/2;
+        if(side==='right')return {left:mainRect.right+gap,top:centerY-panelRect.height/2};
+        if(side==='left')return {left:mainRect.left-panelRect.width-gap,top:centerY-panelRect.height/2};
+        if(side==='bottom')return {left:centerX-panelRect.width/2,top:mainRect.bottom+gap};
+        return {left:centerX-panelRect.width/2,top:mainRect.top-panelRect.height-gap};
+    }
+    function clampMediaPosition(left,top){
+        const width=mediaFloating?.offsetWidth || 340,height=mediaFloating?.offsetHeight || 300;
+        return {left:Math.max(8,Math.min(window.innerWidth-width-8,left)),top:Math.max(8,Math.min(window.innerHeight-height-8,top))};
+    }
+    function syncDetachedMedia(){
+        if(!mediaDetached){mediaFloating?.remove();mediaFloating=null;return;}
+        if(!mediaFloating){mediaFloating=createMediaWing({floating:true});root?.append(mediaFloating);}
+        refreshMediaWing(mediaFloating);
+        mediaFloating.hidden=Boolean(renderer);
+        const position=mediaPosition || {left:Math.max(8,element.getBoundingClientRect().right+12),top:element.getBoundingClientRect().top};
+        mediaFloating.style.left=position.left+'px';mediaFloating.style.top=position.top+'px';
+    }
+    function detachMediaPanel(){
+        if(!showPlantPreview())return;
+        const wing=element.querySelector('.nlxr-media-wing'),rect=wing?.getBoundingClientRect(),main=element.getBoundingClientRect();
+        mediaPosition=rect?.width?{left:rect.left,top:rect.top}:{left:Math.min(window.innerWidth-360,main.right+12),top:main.top};
+        mediaDetached=true;mediaCollapsed=false;render(true);
+    }
+    function dockMediaPanel(side=null){
+        const main=element.getBoundingClientRect(),panel=mediaFloating?.getBoundingClientRect();
+        if(!side && panel){const distances=[['right',Math.abs(panel.left-main.right)],['left',Math.abs(panel.right-main.left)],['bottom',Math.abs(panel.top-main.bottom)],['top',Math.abs(panel.bottom-main.top)]];side=distances.sort((a,b)=>a[1]-b[1])[0][0];}
+        mediaDockSide=side || 'right';mediaDetached=false;mediaPosition=null;mediaCollapsed=false;render(true);
+    }
+    function bindMediaPanelMove(handle){
+        handle.addEventListener('pointerdown',event=>{
+            if(!mediaDetached || (event.button!==0 && event.pointerType==='mouse'))return;
+            event.preventDefault();event.stopPropagation();const rect=mediaFloating.getBoundingClientRect();
+            mediaPointerDrag={pointerId:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,startX:event.clientX,startY:event.clientY,moved:false};
+            handle.setPointerCapture?.(event.pointerId);
+            const move=next=>{
+                if(!mediaPointerDrag || next.pointerId!==mediaPointerDrag.pointerId)return;
+                const drag=mediaPointerDrag,rawLeft=next.clientX-drag.offsetX,rawTop=next.clientY-drag.offsetY;
+                drag.moved ||= Math.hypot(next.clientX-drag.startX,next.clientY-drag.startY)>4;
+                const raw=clampMediaPosition(rawLeft,rawTop),rawRect={...mediaFloating.getBoundingClientRect(),left:raw.left,top:raw.top,right:raw.left+rect.width,bottom:raw.top+rect.height,width:rect.width,height:rect.height};
+                const candidate=closestDockCandidate(rawRect,element.getBoundingClientRect());
+                const position=candidate?placeMediaAgainstMain(candidate.side,rawRect,element.getBoundingClientRect()):raw;
+                mediaPosition=clampMediaPosition(position.left,position.top);mediaFloating.style.left=mediaPosition.left+'px';mediaFloating.style.top=mediaPosition.top+'px';
+                mediaFloating.classList.toggle('is-magnetized',Boolean(candidate));if(candidate)mediaFloating.dataset.dockSide=candidate.side;else delete mediaFloating.dataset.dockSide;
+            };
+            const end=next=>{
+                if(!mediaPointerDrag || (next?.pointerId!==undefined && next.pointerId!==mediaPointerDrag.pointerId))return;
+                const drag=mediaPointerDrag,candidate=closestDockCandidate(mediaFloating.getBoundingClientRect(),element.getBoundingClientRect());
+                mediaPointerDrag=null;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);
+                if(drag.moved){ignoreMediaClickUntil=performance.now()+450;if(candidate)dockMediaPanel(candidate.side);else{mediaFloating?.classList.remove('is-magnetized');delete mediaFloating?.dataset.dockSide;}}
+            };
+            const cancel=next=>{if(next.pointerId!==mediaPointerDrag?.pointerId)return;mediaPointerDrag=null;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);mediaFloating?.classList.remove('is-magnetized');};
+            window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',cancel);
+        });
+    }
     function progressState(){
         if(!headerProgress?.steps?.length)return null;
         const activeIndex=Math.max(0,headerProgress.steps.findIndex(step=>step.id===headerProgress.activeId));
@@ -282,7 +373,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function syncPanelWings(){
         if(isDesktopDemo())railCollapsed=false;
         element.classList.toggle('is-rail-collapsed',railCollapsed);
-        element.classList.toggle('is-media-collapsed',mediaCollapsed);
+        element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);
+        element.classList.toggle('is-media-detached',mediaDetached);
+        element.dataset.mediaDockSide=mediaDockSide;
         const railToggle=element.querySelector('.nlxr-rail-toggle');
         const mediaToggle=element.querySelector('.nlxr-media-toggle');
         if(railToggle){railToggle.setAttribute('aria-expanded',String(!railCollapsed));railToggle.setAttribute('aria-label',railCollapsed?'Open settings and sections':'Collapse settings and sections');}
@@ -326,19 +419,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(guides){if(tab==='Help')guides.replaceChildren(...controls().filter(item=>item.kind==='module' && !item.disabled).map(makeButton));else guides.remove();}
         const count=element.querySelector('.nlxr-control-page');
         if(count)count.textContent=(page+1)+' / '+currentPages.length;
-        const media=element.querySelector('.nlxr-media-wing');
+        const media=element.querySelector('.nlxr-media-wing') || mediaFloating;
         if(media){
-            const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
             const desktopDemo=isDesktopDemo();
             if(desktopDemo && railCollapsed){railCollapsed=false;syncPanelWings();}
             const mediaToggle=media.querySelector('.nlxr-media-toggle');
             if(mediaToggle && desktopDemo)mediaToggle.remove();
-            if(preview){
-                if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
-                else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
-            }else if(figure){const next=document.createElement('p');next.className='nlxr-media-empty';next.textContent='Plant imagery and references appear here when a plant is selected.';figure.replaceWith(next);}
-            media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
+            refreshMediaWing(media);
         }else if(showPlantPreview())render(true);
+        syncDetachedMedia();
     }
     function updatePathway(){
         if(detached)return;
@@ -361,7 +450,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(detached)return;
         renderSettings();
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !element.querySelector('.nlxr-media-wing');
+        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !mediaDetached && !element.querySelector('.nlxr-media-wing');
         if(!force && !hidden && !needsMediaWing && element.querySelector('.nlxr-control-header')){
             element.classList.toggle('is-large-text',largeText);
             syncPanelWings();
@@ -392,8 +481,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const plantPreviewAvailable=showPlantPreview();
         const desktopDemo=isDesktopDemo();
         if(desktopDemo)railCollapsed=false;
-        const showMediaWing=plantPreviewAvailable && !mediaCollapsed;
-        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed);element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
+        const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached;
+        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);element.classList.toggle('is-media-detached',mediaDetached);element.dataset.mediaDockSide=mediaDockSide;element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
@@ -431,11 +520,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(tab==='Help'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
-                const media=document.createElement('aside');media.className='nlxr-media-wing';media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
-                if(!desktopDemo){const mediaToggle=makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed);mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');media.append(mediaToggle);}
-                if(showPlantPreview()){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');const preview=previewMedia();image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
-                else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery and references appear here when a plant is selected.';media.append(empty);}
-                element.append(media);
+                element.append(createMediaWing());
             }
             const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
@@ -443,6 +528,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             element.append(tools);
             if(tab==='Details' && pages().length>1){const count=document.createElement('small');count.className='nlxr-control-page';count.textContent=(page+1)+' / '+pages().length;element.append(count);}
         }
+        syncDetachedMedia();
         if(focused)(element.querySelector('[data-info-action="'+focused+'"]') || element.querySelector('button'))?.focus({preventScroll:true});
     }
     element.addEventListener('keydown',event=>{
@@ -459,8 +545,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
-            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText(card.mediaLabel || 'PLANT MEDIA',48,34,904);
-            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='700 42px system-ui';ctx.fillText(card.title,48,72,904);}
+            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText(card.mediaLabel || 'PLANT MEDIA',48,34,810);
+            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='700 42px system-ui';ctx.fillText(card.title,48,72,810);}
+            ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(884,20,70,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 34px system-ui';ctx.textAlign='center';ctx.fillText('✋',919,30,56);ctx.textAlign='left';
             const imageX=48,imageY=card.title?142:104,imageWidth=904,imageHeight=c.height-(card.title?212:174);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
             if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight),w=card.image.naturalWidth*scale,h=card.image.naturalHeight*scale;ctx.drawImage(card.image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);}
@@ -556,7 +643,36 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return renderer.hit(ray);}
-    const controlsForTarget=target=>target?.card?.settings?settingsControls():(headset?spatialControls():controls());
+    const mediaSpatialControls=()=>[{action:'MoveMediaPanel',label:'✋',ariaLabel:mediaDetached?'Move or dock media panel':'Detach and move media panel',kind:'handle',x:884,y:20,width:70,height:58}];
+    const controlsForTarget=target=>target?.card?.media?mediaSpatialControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
+    const targetButtonAtRay=target=>{
+        if(!target?.width || !target.height)return null;
+        const x=(target.localX/target.width+.5)*1000,logicalHeight=target.card?.height || (hidden?160:spatialHeight());
+        const y=(.5-target.localY/target.height)*logicalHeight;
+        return controlsForTarget(target).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height) || null;
+    };
+    function spatialDimensions(){return {mainWidth:(hidden?.38:headset?1:.66)*spatialScale,mainHeight:(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale,mediaWidth:.66*spatialScale};}
+    function spatialMediaDockPose(side){
+        if(!pose)return null;
+        const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight,gap=.035;
+        if(side==='left'||side==='right')return companionPanelPose(pose,side,mainWidth,mediaWidth,18,gap);
+        const direction=side==='bottom'?-1:1,distance=mainHeight/2+mediaHeight/2+gap;
+        return {...pose,center:{x:pose.center.x+pose.up.x*distance*direction,y:pose.center.y+pose.up.y*distance*direction,z:pose.center.z+pose.up.z*distance*direction}};
+    }
+    function spatialDockCandidate(panelPose){
+        if(!pose || !panelPose?.center)return null;
+        const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight;
+        const delta={x:panelPose.center.x-pose.center.x,y:panelPose.center.y-pose.center.y,z:panelPose.center.z-pose.center.z};
+        const localX=delta.x*pose.right.x+delta.y*pose.right.y+delta.z*pose.right.z,localY=delta.x*pose.up.x+delta.y*pose.up.y+delta.z*pose.up.z;
+        const candidates=[
+            {side:'right',error:Math.abs(localX-(mainWidth+mediaWidth)/2),overlap:Math.abs(localY)<=(mainHeight+mediaHeight)/2+.06},
+            {side:'left',error:Math.abs(localX+(mainWidth+mediaWidth)/2),overlap:Math.abs(localY)<=(mainHeight+mediaHeight)/2+.06},
+            {side:'top',error:Math.abs(localY-(mainHeight+mediaHeight)/2),overlap:Math.abs(localX)<=(mainWidth+mediaWidth)/2+.06},
+            {side:'bottom',error:Math.abs(localY+(mainHeight+mediaHeight)/2),overlap:Math.abs(localX)<=(mainWidth+mediaWidth)/2+.06}
+        ].filter(candidate=>candidate.error<=.18 && candidate.overlap).sort((a,b)=>a.error-b.error);
+        return candidates[0] || null;
+    }
+    function dockSpatialMedia(side){mediaDockSide=side || 'right';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
@@ -596,14 +712,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
             if(!pose)return [];
-            const mainWidth=(hidden?.38:headset?1:.66)*spatialScale,mainHeight=(hidden?.11:headset?.54:spatialHeight()/1000*.66)*spatialScale;
+            const {mainWidth,mainHeight,mediaWidth}=spatialDimensions();
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,mediaWidth=.66*spatialScale,gap=0,companionHeight=mainHeight;
+            const settingsWidth=.62*spatialScale,gap=0,companionHeight=mainHeight;
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:companionHeight,card:settingsCard});
-            if(!hidden && mediaCard)surfaces.push({...companionPanelPose(pose,'right',mainWidth,mediaWidth,18,gap),width:mediaWidth,height:companionHeight,card:mediaCard});
+            if((!hidden || mediaDetached) && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
-        }});element.hidden=true;settingsElement.hidden=true;},
+        }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             let heldTransform=null;
@@ -613,10 +729,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const heldRay=heldTransform?{origin:{x:heldTransform[12],y:heldTransform[13],z:heldTransform[14]},direction:{x:-heldTransform[8],y:-heldTransform[9],z:-heldTransform[10]}}:xrFrame?null:inputRay;
             if(spatialMove && heldRay?.origin && heldRay?.direction){
                 pose ||= next;
-                pose.center=panelCenterFromGrab(heldRay,spatialMove,pose);
-                const facing=facePanelTowardEyes(pose.center,{x:matrix[12],y:matrix[13],z:matrix[14]});
-                pose={...pose,...facing,anchorHeading:facing.right};heading=facing.right;
-                manuallyPositioned=true;
+                if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
+                const current=spatialMove.panel==='media'?mediaPose:pose;
+                const center=panelCenterFromGrab(heldRay,spatialMove,current);
+                const facing=facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]});
+                const moved={...current,center,...facing,anchorHeading:facing.right};
+                if(spatialMove.panel==='media'){
+                    mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
+                    if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
+                }else{pose=moved;heading=facing.right;manuallyPositioned=true;}
             }else if(!pose){
                 pose=next;
                 if(headset && firstPlacement){
@@ -627,7 +748,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             }
             lastTime=time;
         },
-        recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;},
+        recenter(){heading=null;pose=null;mediaPose=mediaDetached?null:mediaPose;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;},
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
@@ -635,28 +756,33 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
             const preview=previewMedia(),mediaCard={id:'media',media:true,mediaLabel:selection?.mesh==='lim'?'LIMO CELL SKETCH':'PLANT MEDIA',height:760,title:plantMedia?'':identity?.plant || selection?.title || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || identity?.plant || selection?.title || selection?.plant || 'Selected plant',centerCaption:plantMedia};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!mediaCollapsed && preview?.image)cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
-        activate(ray){const target=hit(ray);if(!target)return false;const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());
-            const button=controlsForTarget(target).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);if(button && button.action!=='MovePanel')act(button.action);return true;},
+        activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !['MovePanel','MoveMediaPanel'].includes(button.action))act(button.action);return true;},
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             if(event.type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
-            if(event.type==='selectend' && spatialMove?.source===event.inputSource){finishingMoveSource=event.inputSource;spatialMove=null;event.stopImmediatePropagation();return;}
+            if(event.type==='selectend' && spatialMove?.source===event.inputSource){
+                const moving=spatialMove,candidate=moving.panel==='media'?spatialDockCandidate(mediaPose):null;
+                finishingMoveSource=event.inputSource;spatialMove=null;
+                if(moving.panel==='media' && candidate)dockSpatialMedia(candidate.side);
+                event.stopImmediatePropagation();return;
+            }
             if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
             const transform=event.frame?.getPose(event.inputSource.targetRaySpace,referenceSpace)?.transform.matrix;if(!transform)return;
             const ray={origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
             const target=hit(ray);if(!target)return;
             event.stopImmediatePropagation();
-            const x=(target.localX/target.width+.5)*1000,y=(.5-target.localY/target.height)*(hidden?160:spatialHeight());
-            const button=controlsForTarget(target).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);
-            if(event.type==='selectstart' && button?.action==='MovePanel'){
-                spatialMove={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY};
+            const button=targetButtonAtRay(target);
+            if(event.type==='selectstart' && button && ['MovePanel','MoveMediaPanel'].includes(button.action)){
+                const movingMedia=button.action==='MoveMediaPanel';
+                if(movingMedia && !mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
+                spatialMove={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:movingMedia?'media':'main'};
                 return;
             }
             if(event.type==='select' && !spatialMove)api.activate(ray);
         };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
             removeXrControls=()=>{for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
-        destroy(){mediaLoadToken++;mediaImage=null;removeXrControls();renderer?.destroy();renderer=null;element.remove();settingsElement.remove();}
+        destroy(){mediaLoadToken++;mediaImage=null;removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }
