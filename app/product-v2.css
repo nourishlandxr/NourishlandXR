@@ -28,8 +28,9 @@ body { background:var(--v2-paper); }
 .v2-intro-grid p { color:var(--v2-muted); font-size:14px; }
 .v2-intro-sequence{min-height:132px;border-top:1px solid var(--v2-line)}
 .v2-intro-steps{display:grid;grid-template-areas:"step";min-height:112px;overflow:hidden}
-.v2-intro-sequence article{grid-area:step;align-self:start;padding:24px 0 12px;opacity:0;transform:translateY(9px);pointer-events:none;transition:opacity .8s ease,transform .8s ease}
-.v2-intro-sequence article.is-active{opacity:1;transform:translateY(0);pointer-events:auto}
+.v2-intro-sequence article{grid-area:step;align-self:start;padding:24px 0 12px;opacity:0;visibility:hidden;transform:translateY(9px);pointer-events:none;transition:opacity .42s ease,transform .42s ease}
+.v2-intro-sequence article.is-active{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+.v2-intro-sequence article.is-leaving{opacity:0;visibility:visible;transform:translateY(-5px);pointer-events:none}
 .v2-intro-sequence small{color:var(--v2-muted)}
 .v2-intro-sequence h2{margin:7px 0 8px}
 .v2-intro-sequence p{max-width:620px;margin:0;color:var(--v2-muted);font-size:14px}

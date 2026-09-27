@@ -45,6 +45,7 @@ const DEMO_TUTORIAL_ART = Object.freeze({
     companion:{image:new URL('../assets/demo-tutorial-art/02-companion-control-panel.png',import.meta.url).href,alt:'A visitor explores the NourishlandXR companion Control panel.'},
     references:{image:new URL('../assets/demo-tutorial-art/03-cumbersome-reference-tools.png',import.meta.url).href,alt:'A visitor carries books, a phone, compass and field guides while identifying a plant.'},
     area:{image:new URL('../assets/demo-tutorial-art/04-create-an-area.png',import.meta.url).href,alt:'A garden Area is organised as part of a living place.'},
+    structure:{image:new URL('../assets/demo-tutorial-art/04b-one-place-clear-structure.png',import.meta.url).href,alt:'Signs for a food forest, rainforest walk and school garden reveal Areas within one connected place.'},
     totem:{image:new URL('../assets/demo-tutorial-art/05-totem-unfolds-garden-knowledge.png',import.meta.url).href,alt:'A Totem reveals organised plant and garden information in a dense garden.'},
     orb:{image:new URL('../assets/demo-tutorial-art/06-plant-orb-effects.png',import.meta.url).href,alt:'A Plant Orb connects a plant to its information.'},
     note:{image:new URL('../assets/demo-tutorial-art/07-add-a-plant-note.png',import.meta.url).href,alt:'A visitor adds a note beside a plant.'},
@@ -100,6 +101,7 @@ let infoPanel = null;
 let pimHold = null;
 let demoPimHover={record:null,path:''};
 let activePimLimBridge = null;
+let demoRenderFailureReported = false;
 const meshRepository=createMeshRepository();
 const meshSourceResolver=createMeshSourceResolver({repository:meshRepository});
 const meshGenerator=createPlaceholderKnowledgeGenerator();
@@ -118,12 +120,61 @@ function showDemoInfo(record,path) {
     activePimLimBridge=bridge?{bridge,record}:null;
     syncDemoPanelActions();
 }
+// PIM textures are intentionally large because the canvas keeps authored cell
+// size readable as a branch grows. Re-uploading one on every XR hover/hold
+// frame can exhaust the browser's WebGL texture budget and stop the whole
+// render loop. Coalesce high-frequency feedback and keep the previous texture
+// if a replacement cannot be allocated.
+function replaceDemoTexture(record) {
+    if (!record || !gl) return null;
+    if (record.pimTextureRefreshTimer) {
+        clearTimeout(record.pimTextureRefreshTimer);
+        record.pimTextureRefreshTimer = 0;
+    }
+    const previous = record.texture || null;
+    try {
+        const next = createMarkerTexture(record);
+        if (next && next !== previous) {
+            if (previous) gl.deleteTexture(previous);
+            record.texture = next;
+        } else if (!next && !previous) {
+            record.texture = null;
+        }
+        record.pimTextureFailureReported = false;
+        record.pimTextureLastRefreshAt = performance.now();
+        return record.texture;
+    } catch (error) {
+        record.texture = previous;
+        if (!record.pimTextureFailureReported) {
+            record.pimTextureFailureReported = true;
+            recordArFailure(error, 'PIM texture refresh');
+        }
+        return previous;
+    }
+}
+
+function queueDemoPimTextureRefresh(record) {
+    if (!record || !gl || record.pimTextureRefreshTimer) return;
+    const elapsed = performance.now() - (Number(record.pimTextureLastRefreshAt) || 0);
+    const delay = Math.max(0, 70 - elapsed);
+    record.pimTextureRefreshTimer = setTimeout(() => {
+        record.pimTextureRefreshTimer = 0;
+        replaceDemoTexture(record);
+    }, delay);
+}
+
+function reportDemoRenderFailure(error, phase = 'demo render') {
+    if (demoRenderFailureReported) return;
+    demoRenderFailureReported = true;
+    recordArFailure(error, phase);
+    setGuide('The scene is recovering. Your information is still available.');
+}
 function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 function syncDemoPimHover(){
     const candidate=demoInfoTarget(),nextRecord=candidate?.record || null,nextPath=candidate?.target?.node?.path || candidate?.target?.path || '';
     if(nextRecord===demoPimHover.record && nextPath===demoPimHover.path)return;
     const previous=demoPimHover.record;demoPimHover={record:nextRecord,path:nextPath};
-    for(const record of new Set([previous,nextRecord].filter(Boolean))){if(record.texture)gl?.deleteTexture(record.texture);record.texture=createMarkerTexture(record);}
+    for(const record of new Set([previous,nextRecord].filter(Boolean))) queueDemoPimTextureRefresh(record);
 }
 let tetherRenderer = null;
 let prismRenderer = null;
@@ -349,25 +400,21 @@ const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
     note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
     zone: {
-        title: 'Botanical Garden',
+        title: 'Welcome to this area',
         accent: '#785a43',
         bubbles: [
-            'FOOD FOREST AREA',
-            'WELCOME · Botanical Garden',
-            'Pigeon Pea + Moringa guild',
-            'Warm growing conditions',
-            'Pollinators + seasonal care'
+            'NOTES · nearby',
+            'PLANT ORBS · around this Totem',
+            'NEIGHBOUR TOTEM · right'
         ]
     },
     zoneTwo: {
-        title: 'Rainforest Walk',
+        title: 'Welcome to this area',
         accent: '#438f99',
         bubbles: [
-            'RAINFOREST WALK AREA',
-            'ORIENTATION · follow the path',
-            'Native species interpretation',
-            'Stay on trail · respect habitat',
-            'LINKED TO BOTANICAL GARDEN'
+            'NOTES · nearby',
+            'PLANT ORBS · around this Totem',
+            'NEIGHBOUR TOTEM · left'
         ]
     }
 });
@@ -465,7 +512,7 @@ function clearSessionState() {
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-surface');
     closeDemoKnowledge(true);
-    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoPimHover={record:null,path:''};demoOrientationStep=-1;limMeshVisible=true;learningModule=null;learningModuleStep=0;activePimLimBridge=null;demoJourneyStage='why';
+    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoPimHover={record:null,path:''};demoOrientationStep=-1;limMeshVisible=true;learningModule=null;learningModuleStep=0;activePimLimBridge=null;demoJourneyStage='why';demoRenderFailureReported=false;
     limInteractionCleanup();limSessionCleanup();limInteractionCleanup=()=>{};limSessionCleanup=()=>{};limActivation=null;limActivationSessionSuppressUntil=0;
     releaseArScreenRotation();
     hitTestSource?.cancel?.();
@@ -952,10 +999,14 @@ function demoOrbKnowledge(record) {
 const PIGEON_PEA_PROFILE_FOR_ORB={pim_document:PIGEON_PEA_PIM};
 function demoTotemCards(record) {
     const content=demoContentFor(record);
-    return totemKnowledgeCards({title:record.name || content?.title,introduction:record.description,
+    const neighbour = record.demoLinkVisible && record.demoLinkDestination
+        ? `NEIGHBOUR TOTEM · ${record.demoLinkDestination} · ${record.demoLinkDirection === 'left' ? 'left' : 'right'}`
+        : 'NEIGHBOUR TOTEM · not linked';
+    return totemKnowledgeCards({title:'Welcome to this area',introduction:'Welcome to this area.',context:neighbour,
         bubbles:content?.bubbles || [],
         plants:markers.filter(item=>item.demoType==='plant').map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
-        notes:markers.filter(item=>item.demoType==='note').map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')}))
+        notes:markers.filter(item=>item.demoType==='note').map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),
+        compact:true
     });
 }
 function activateDemoTotemCard(hit) {
@@ -1658,8 +1709,8 @@ function showArWelcomeShowcase() {
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='';
-    introBoardTitle='Welcome to Nourishland XR';
-    introBoardBody=demoLocalizedText("Take a moment to settle in.\n\nThis experience is designed to be explored at your own pace. Read carefully, look around, and continue when you're ready.");
+    introBoardTitle='Welcome to NourishlandXR';
+    introBoardBody=demoLocalizedText('A spatial learning platform connecting plants, places and knowledge.\n\nContinue when you’re ready to explore.');
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1708,8 +1759,8 @@ function showArWelcomeShowcase() {
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
-        introBoardTitle=demoLocalizedText('Take a moment to settle in.');
-        introBoardBody=demoLocalizedText("This experience is designed to be explored at your own pace.\n\nRead carefully, look around, and continue when you're ready.");
+        introBoardTitle=demoLocalizedText('Welcome to NourishlandXR');
+        introBoardBody=demoLocalizedText('A spatial learning platform connecting plants, places and knowledge.\n\nContinue when you’re ready to explore.');
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -1795,7 +1846,7 @@ function showArWelcomeShowcase() {
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    setGuide('Welcome to Nourishland XR. Start the journey when you are ready.');
+    setGuide('Welcome to NourishlandXR. A spatial learning platform connecting plants, places and knowledge. Continue when you’re ready to explore.');
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1841,7 +1892,7 @@ const DEMO_ORIENTATION_STEPS = [
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
         'It keeps useful information connected to the place it describes.'
     ]},
-    {title:'One place, one clear structure',art:'area',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'One place, one clear structure',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
         'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
         'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
     ]},
@@ -1998,8 +2049,8 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
-            name: 'Botanical Garden Totem',
-            description: 'An example of Area information attached to a Totem Marker.'
+            name: 'Totem',
+            description: 'Welcome to this area.'
         }),
         // Spatial prisms are positioned from their centre. Raising the centre
         // by one half-height keeps the Totem's base exactly on the detected or
@@ -2035,8 +2086,8 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     markers.push(totem);
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem','A Totem unfolds garden knowledge','Two simple physical buttons control the Totem: show or store its attached signs, and fade or restore it when it is not in use.');
-    setGuide('The Botanical Garden Totem welcomes visitors to its Area. Show the Rainforest Walk Totem to see a differently coloured Area and a route between them.');
-    showSceneContinue('Show Rainforest Walk Totem', createDemoSecondTotem);
+    setGuide('The Totem welcomes you to this area. Open its short signs to find Notes, Plant Orbs and the neighbouring Totem.');
+    showSceneContinue('Show neighbouring Totem', createDemoSecondTotem);
 }
 
 function createDemoSecondTotem() {
@@ -2048,8 +2099,8 @@ function createDemoSecondTotem() {
     groundYEstimate = groundBaseY;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
-            name: 'Rainforest Walk Totem',
-            description: 'A Rainforest Walk Area Totem linked to the Botanical Garden.'
+            name: 'Totem',
+            description: 'Welcome to this area.'
         }),
         position: {
             x: sourcePosition.x - 1.15,
@@ -2067,7 +2118,7 @@ function createDemoSecondTotem() {
         demoTotemFaded:false,
         demoLinkVisible: true,
         demoLinkDirection: 'left',
-        demoLinkDestination: 'Botanical Garden Area',
+        demoLinkDestination: 'Neighbour Totem',
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
@@ -2083,11 +2134,11 @@ function createDemoSecondTotem() {
     if (first) {
         first.demoLinkVisible = true;
         first.demoLinkDirection = 'right';
-        first.demoLinkDestination = 'Rainforest Walk Area';
+        first.demoLinkDestination = 'Neighbour Totem';
         first.demoLinkPartner = totem.id;
         first.demoContent = {
             ...first.demoContent,
-            bubbles: [...(first.demoContent?.bubbles || []), 'LINKED TO RAINFOREST WALK'].slice(0, 5)
+            bubbles: [...(first.demoContent?.bubbles || [])].slice(0, 5)
         };
         totem.demoLinkPartner = first.id;
         if (first.texture) gl?.deleteTexture(first.texture);
@@ -2096,7 +2147,7 @@ function createDemoSecondTotem() {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
-    setGuide('Each Totem keeps its own Area information. The link is a route between them; it does not merge their content.');
+    setGuide('Each Totem keeps its own local information. The neighbour sign shows its name and direction; the link does not merge their content.');
     showSceneContinue('Why link Areas?', showLinkedTotemsIntroduction);
 }
 
@@ -2118,9 +2169,9 @@ function showLinkedTotemsIntroduction() {
         'Why link Areas?',
         [
             'Each Totem is the welcoming home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
-            'A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area.',
-            'A link creates a visitor route between Areas. Here it connects the Botanical Garden with Rainforest Walk without mixing their information.',
-            'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
+            'Short signs point to Notes, Plant Orbs and neighbouring Totems without filling the scene with instructions.',
+            'A link creates a visitor route between Areas. The neighbour sign gives its name and direction without mixing the information attached to either place.',
+            'The Totem stays simple: welcome here, then choose what nearby information you want to open.'
         ],
         'Connect plant knowledge to learning',
         showLimoLearningModes
@@ -2372,15 +2423,15 @@ function showAudienceValue() {
 
 function showTotemIntroduction() {
     setDemoJourneyStage('connect');
-    showDemoTutorialMedia('totem','Area Totems','A welcoming Totem gives each Area a clear, simple place to gather its visitor information.');
+    showDemoTutorialMedia('totem','A Totem gathers local information','A welcoming Totem gives each Area a clear, simple place to gather its visitor information.');
     showIntroBoard(
-        'Area Totems',
+        'Meet the Totem',
         [
-            'NourishlandXR is a mapping tool. Plants, observations and visitor stories are organized into Areas, with a welcoming Totem for each one.',
-            'A Totem can represent a Botanical Garden, Community Garden, Food Forest, Orchard, Growing Area or Demonstration Site.',
-            'Each Totem keeps its own Area content. In this example, Botanical Garden and Rainforest Walk use different Totem colours and link into a visitor route.'
+            'A Totem welcomes you to an Area and keeps its local information together.',
+            'Its short signs point to Notes, Plant Orbs and neighbouring Totems.',
+            'Open the Totem to see what is nearby, then choose the information you want to explore.'
         ],
-        'Show Botanical Garden Totem',
+        'Show Totem',
         () => {
             finishIntroBoard();
             armDemoPlacement('totem',{explained:true});
@@ -2718,7 +2769,7 @@ function renderSimulatedTotem(record, index, anchor) {
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
     const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards.slice(0,3),record.totemSelectedCard)}${linkLabel}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards.slice(0,3),record.totemSelectedCard)}${linkLabel}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -3328,15 +3379,13 @@ function setDemoPimState(record, state) {
 }
 
 function refreshDemoRecord(record) {
-    if (record.texture) gl?.deleteTexture(record.texture);
-    record.texture = createMarkerTexture(record);
+    replaceDemoTexture(record);
     updateSimulatedMarkers();
 }
 
 function refreshDemoPimProfile(record, profile = null) {
     if (!record) return null;
-    if (record.texture) gl?.deleteTexture(record.texture);
-    record.texture = createMarkerTexture(record);
+    replaceDemoTexture(record);
     const recordIndex = markers.indexOf(record);
     const liveProfile = profile
         || appRoot?.querySelector(`[data-demo-plant-profile="${recordIndex}"]`);
@@ -4891,13 +4940,12 @@ function drawMarker(view) {
     markers.forEach(record => {
         if(record.demoType==='note' && record.appearance?.note_template==='pollinators' && performance.now()-(record.noteScrolledAt||0)>2600){
             record.noteScrolledAt=performance.now();record.noteScrollIndex=(Number(record.noteScrollIndex)||0)+1;
-            if(record.texture)gl.deleteTexture(record.texture);record.texture=createMarkerTexture(record);
+            replaceDemoTexture(record);
         }
         if (record.demoType === 'plant' && record.demoExpanded && record.pimBloomStarted) {
             const elapsed = performance.now() - record.pimBloomStarted;
             if (elapsed <= PIM_BLOOM_DURATION_MS) {
-                if (record.texture) gl.deleteTexture(record.texture);
-                record.texture = createMarkerTexture(record);
+                queueDemoPimTextureRefresh(record);
             } else {
                 record.pimBloomStarted = 0;
             }
@@ -5075,7 +5123,7 @@ async function startImmersive() {
         });
         pimHold=bindSpatialPimHold({session,enabled:()=>!demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady && !infoPanel?.hit(latestControllerRay),
             getTarget:demoInfoTarget,activate:()=>selectDemoProfileCell(),
-            progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;if(gl){if(record.texture)gl.deleteTexture(record.texture);record.texture=createMarkerTexture(record);}}
+            progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;queueDemoPimTextureRefresh(record);}
         });
         session.addEventListener('selectstart', event => {
             if(event.inputSource?.hand)return;
@@ -5145,9 +5193,12 @@ async function startImmersive() {
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 drawSpatialRain(view, _time);
                 drawSpatialAmbientLife(view);
-                drawMarker(view);
-                drawDemoKnowledge(view);
-                infoPanel?.draw(view);
+                try { drawMarker(view); }
+                catch (error) { reportDemoRenderFailure(error, 'marker render'); }
+                try { drawDemoKnowledge(view); }
+                catch (error) { reportDemoRenderFailure(error, 'PIM render'); }
+                try { infoPanel?.draw(view); }
+                catch (error) { reportDemoRenderFailure(error, 'Control panel render'); }
             }
             gl.disable(gl.SCISSOR_TEST);
         };

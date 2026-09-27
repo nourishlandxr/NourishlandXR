@@ -39,11 +39,14 @@ test('welcome exploration steps share one fading stage without layout movement',
  const styles=fs.readFileSync(path.join(root,'app/product-v2.css'),'utf8');
  const launch=fs.readFileSync(path.join(root,'app/screens/launch.js'),'utf8');
  assert.match(styles,/\.v2-intro-steps\{display:grid;grid-template-areas:"step";min-height:112px/);
- assert.match(styles,/\.v2-intro-sequence article\.is-active\{opacity:1;transform:translateY\(0\);pointer-events:auto/);
+ assert.match(styles,/\.v2-intro-sequence article\.is-active\{opacity:1;visibility:visible;transform:translateY\(0\);pointer-events:auto/);
+ assert.match(styles,/\.v2-intro-sequence article\.is-leaving\{opacity:0;visibility:visible;transform:translateY\(-5px\);pointer-events:none/);
  assert.match(styles,/prefers-reduced-motion:reduce\)\{\.v2-intro-sequence article\{transform:none;transition:none!important/);
  assert.match(launch,/function mountLandingSteps\(root\)/);
  assert.match(launch,/step\.classList\.toggle\('is-active',active\)/);
  assert.match(launch,/step\.setAttribute\('aria-hidden',String\(!active\)\)/);
+ assert.match(launch,/current\.classList\.add\('is-leaving'\)/);
+ assert.match(launch,/setTimeout\(\(\)=>\{if\(disposed\)return;show\(next\);\},440\)/);
  assert.match(launch,/if\(disposed\|\|paused\)return/);
  assert.doesNotMatch(launch,/data-intro-toggle|Pause rotating guidance/);
  assert.match(launch,/paused=Boolean\(reduced\.matches\)/);
@@ -60,7 +63,7 @@ test('Try It Now offers optional LIM paths and a concise post-plant journey',()=
  assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
  assert.match(source,/Your Note is in place/);
  assert.match(source,/Why link Areas\?/);
- assert.match(source,/without mixing their information/);
+ assert.match(source,/without mixing the information attached to either place/);
  assert.match(styles,/\.tryit-sim-totem-pillar[^\n]*background: #70875b/);
  assert.match(styles,/\.tryit-sim-marker-zone:not\(\.is-expanded\)[^\n]*background:#70875b/);
 });
@@ -552,7 +555,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
-    assert.match(source, /NourishlandXR is a mapping tool\. Plants, observations and visitor stories are organized into Areas/);
+    assert.match(source, /A Totem welcomes you to an Area and keeps its local information together/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.match(source, /const DEMO_TOTEM_STYLES/);
     assert.match(source, /function cycleDemoTotemStyle\(record\)/);

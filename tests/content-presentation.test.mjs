@@ -62,9 +62,10 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
-    assert.match(greeting, /introBoardTitle='Welcome to Nourishland XR'/);
-    assert.match(greeting, /Take a moment to settle in/);
-    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Take a moment to settle in\.'\)/);
+    assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
+    assert.match(greeting, /A spatial learning platform connecting plants, places and knowledge/);
+    assert.doesNotMatch(greeting, /Take a moment to settle in|designed to be explored at your own pace/);
+    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Welcome to NourishlandXR'\)/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
@@ -146,12 +147,13 @@ test('each archetype keeps its ordered illustration while media labels stay plan
     assert.match(panel, /caption:plantMedia\?\(identity\?\.plant \|\| ''\):''/);
 });
 
-test('Area Totem examples show distinct colours and welcoming, orientation, interpretation and safety roles', () => {
+test('Totem examples stay generic and use short local signs', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    for (const label of ['Botanical Garden', 'Rainforest Walk', 'Food Forest', 'Community Garden']) {
+    for (const label of ['Welcome to this area', 'NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · right']) {
         assert.ok(demo.includes(label), `missing Area example ${label}`);
     }
-    assert.match(demo, /A Botanical Garden can welcome visitors; a Community Garden can share guidance; an Orchard or Food Forest can orient people to a growing area\./);
+    assert.match(demo, /'Meet the Totem'/);
+    assert.doesNotMatch(demo, /Show Botanical Garden Totem|Rainforest Walk Totem|A Botanical Garden can welcome visitors/);
     assert.match(demo, /demoTotemColor:'#785a43'/);
     assert.match(demo, /demoTotemColor:'#526d7a'/);
 });

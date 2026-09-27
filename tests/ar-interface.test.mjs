@@ -1222,7 +1222,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A project represents a whole place',art:'area'[\s\S]*title:'One place, one clear structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A project represents a whole place',art:'area'[\s\S]*title:'One place, one clear structure',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /structure:\{image:new URL\('\.\.\/assets\/demo-tutorial-art\/04b-one-place-clear-structure\.png'/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1382,7 +1383,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : PIGEON_PEA_EXAMPLE\.commonName/);
     assert.doesNotMatch(source, /runKnowledgeTour/);
     assert.match(source, /record\.demoActiveBranch = ''/);
-    assert.match(source, /record\.texture = createMarkerTexture\(record\)/);
+    assert.match(source, /function replaceDemoTexture\(record\)/);
+    assert.match(source, /function queueDemoPimTextureRefresh\(record\)/);
+    assert.match(source, /catch \(error\) \{ reportDemoRenderFailure\(error, 'PIM render'\); \}/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /function createIntroControlTexture\(labelText/);
     assert.match(source, /function createIntroPointerTexture\(/);
@@ -1624,7 +1627,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pollinators/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
     assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
-    assert.match(source, /NourishlandXR is a mapping tool\. Plants, observations and visitor stories are organized into Areas/);
+    assert.match(source, /A Totem welcomes you to an Area/);
     assert.match(source, /A link creates a visitor route between Areas/);
     assert.match(source, /tutorialStage: 'totem'/);
     assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 2\.15, y: 1\.65 \}\)/);

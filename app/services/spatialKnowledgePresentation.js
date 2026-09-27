@@ -34,7 +34,7 @@ export function createPlantKnowledgeResolver() {
     };
 }
 
-export function totemKnowledgeCards({ title = 'This area', introduction = '', context = '', bubbles = [], plants = [], notes = [] } = {}) {
+export function totemKnowledgeCards({ title = 'This area', introduction = '', context = '', bubbles = [], plants = [], notes = [], compact = false } = {}) {
     const live = plants.filter(plant => plant.knowledge?.live);
     const names = plants.map(plant => text(plant.name)).filter(Boolean);
     const observations = plants.flatMap(plant => (plant.knowledge?.document?.nodes || [])
@@ -45,12 +45,12 @@ export function totemKnowledgeCards({ title = 'This area', introduction = '', co
     return [
         { id: 'area', title, eyebrow: 'PLACE', summary: introduction || context || 'Explore this area',
             body: areaBody || 'This area has no introduction yet. Add one in the area settings.' },
-        { id: 'plants', title: live.length + ' Live / ' + plants.length + (plants.length===1 ? ' plant' : ' plants'), eyebrow: 'PLANT KNOWLEDGE',
-            summary: names.slice(0, 2).join(' · ') || 'No plants in this area yet',
+        { id: 'plants', title: compact ? 'Plant Orbs' : live.length + ' Live / ' + plants.length + (plants.length===1 ? ' plant' : ' plants'), eyebrow: compact ? 'NEARBY' : 'PLANT KNOWLEDGE',
+            summary: compact ? (names.slice(0, 2).join(' · ') || 'No Plant Orbs nearby') : (names.slice(0, 2).join(' · ') || 'No plants in this area yet'),
             body: plants.length ? plants.map(plant => plant.name + ' — ' + (plant.knowledge?.label || 'Basic plant')).join('\n') : 'Add plants to this area to connect their knowledge to this Totem.',
             references: plants.map(plant => plant.id) },
-        { id: 'notes', title: recent?.title || 'Notes & observations', eyebrow: recent?.plant ? 'LOCAL OBSERVATION' : 'PLACE NOTES',
-            summary: recent?.body || 'A place for what you notice here',
+        { id: 'notes', title: compact ? 'Notes' : recent?.title || 'Notes & observations', eyebrow: compact ? 'NEARBY' : recent?.plant ? 'LOCAL OBSERVATION' : 'PLACE NOTES',
+            summary: compact ? (recent ? 'Nearby observations' : 'Nearby observations and stories') : (recent?.body || 'A place for what you notice here'),
             body: recent ? [recent.plant, recent.body].filter(Boolean).join('\n\n') : 'No local note has been added here yet. Add a note or a specimen observation; this card updates from the current area.',
             references: recent ? [recent.id] : [] }
     ];

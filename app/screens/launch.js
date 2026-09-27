@@ -5,14 +5,20 @@ function mountLandingSteps(root){
  const sequence=root?.querySelector('.v2-intro-sequence');if(!sequence)return()=>{};
  const steps=[...sequence.querySelectorAll('article')];if(!steps.length)return()=>{};
  const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') || {matches:false,addEventListener(){},removeEventListener(){}};
- let index=0,timer=0,disposed=false,paused=Boolean(reduced.matches);
- const show=next=>{index=next%steps.length;steps.forEach((step,i)=>{const active=i===index;step.classList.toggle('is-active',active);step.setAttribute('aria-hidden',String(!active));});};
- const schedule=()=>{clearTimeout(timer);if(disposed||paused)return;timer=setTimeout(()=>{show(index+1);schedule();},6000);};
- const onPreferenceChange=event=>{paused=event.matches;schedule();};
+ let index=0,timer=0,transitionTimer=0,disposed=false,paused=Boolean(reduced.matches);
+ const show=next=>{index=next%steps.length;steps.forEach((step,i)=>{const active=i===index;step.classList.remove('is-leaving');step.classList.toggle('is-active',active);step.setAttribute('aria-hidden',String(!active));});};
+ const advance=()=>{
+  const next=(index+1)%steps.length;
+  if(reduced.matches){show(next);return;}
+  const current=steps[index];current.classList.add('is-leaving');current.setAttribute('aria-hidden','true');
+  clearTimeout(transitionTimer);transitionTimer=setTimeout(()=>{if(disposed)return;show(next);},440);
+ };
+ const schedule=()=>{clearTimeout(timer);if(disposed||paused)return;timer=setTimeout(()=>{advance();schedule();},6000);};
+ const onPreferenceChange=event=>{paused=event.matches;clearTimeout(transitionTimer);show(index);schedule();};
  reduced.addEventListener?.('change',onPreferenceChange);
  show(0);schedule();
- const observer=new MutationObserver(()=>{if(!root.isConnected){disposed=true;clearTimeout(timer);observer.disconnect();}});observer.observe(document.body,{childList:true,subtree:true});
- return()=>{disposed=true;clearTimeout(timer);reduced.removeEventListener?.('change',onPreferenceChange);observer.disconnect();};
+ const observer=new MutationObserver(()=>{if(!root.isConnected){disposed=true;clearTimeout(timer);clearTimeout(transitionTimer);observer.disconnect();}});observer.observe(document.body,{childList:true,subtree:true});
+ return()=>{disposed=true;clearTimeout(timer);clearTimeout(transitionTimer);reduced.removeEventListener?.('change',onPreferenceChange);observer.disconnect();};
 }
 export function renderLaunchScreen(app) {
  let last=null;try{last=JSON.parse(globalThis.localStorage?.getItem('nxr-v2-last-place') || 'null');}catch{}
