@@ -1605,7 +1605,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
-    assert.match(source, /totemCardsMarkup\(cards,record\.totemSelectedCard\)/);
+    assert.match(source, /totemCardsMarkup\(cards\.slice\(0,3\),record\.totemSelectedCard\)/);
     assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:true\}\)/);
     assert.match(styles, /\.tryit-sim-totem-pillar/);
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);

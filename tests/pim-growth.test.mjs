@@ -11,7 +11,7 @@ test('existing deep reference search presents all matches before opening a topic
  const state=searchPlantInformationWeb(PIGEON_PEA_PIM,{},'soil');
  assert.equal(state.detailNodeId,'');
  const markup=plantInformationWebMarkup(PIGEON_PEA_PIM,state);
- assert.equal((markup.match(/data-pim-search-result=/g)||[]).length,9);
+ assert.equal((markup.match(/data-pim-search-result=/g)||[]).length,11);
  const selected=selectPlantInformationSearchResult(PIGEON_PEA_PIM,state,'root-nodule-symbiosis');
  assert.ok(selected.openNodeIds.includes('ecological-functions'));
  assert.ok(selected.openNodeIds.includes('nitrogen-fixation'));

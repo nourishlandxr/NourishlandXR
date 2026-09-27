@@ -73,7 +73,7 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
     assert.match(panel, /if\(desktopDemo\)railCollapsed=false;/);
-    assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached;/);
+    assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached && !settingsOpen;/);
     assert.match(panel, /if\(!desktopDemo\)\{const moveButton=/);
     assert.match(panel, /if\(!floating && !isDesktopDemo\(\)\)toolbar\.append\(makePanelToggle\('Media'/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);
