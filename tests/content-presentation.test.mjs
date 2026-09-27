@@ -39,7 +39,7 @@ test('guided discovery connects plant information to two curated learning ideas'
     assert.match(guide, /Begin with one plant/);
     assert.match(guide, /Place Pigeon Pea/);
     assert.match(demo, /limMeshVisible=false/);
-    assert.match(demo, /deferContinueUntilCopyReady:index===2/);
+    assert.match(demo, /deferContinueUntilCopyReady:index===0/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });
@@ -49,7 +49,7 @@ test('demo opens with the knowledge problem before defining the product', () => 
     const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
     assert.ok(opening.indexOf('Every living place holds knowledge') < opening.indexOf('living, explorable map'));
     assert.ok(opening.indexOf('knowledge is often scattered') < opening.indexOf('Plants, observations, stories and guidance'));
-    assert.match(demo, /title:'Knowledge begins with the place'/);
+    assert.match(demo, /'Welcome to Nourishland XR\.'[\s\S]*Living places hold useful knowledge, but it is often scattered[\s\S]*NourishlandXR creates an explorable map/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
@@ -81,9 +81,9 @@ test('the first-time journey introduces the guide before four practical learning
     assert.match(demo,/at:18000,text:demoLocalizedText\('Explore one plant/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/title:'Your guide'[\s\S]*This panel explains each plant/);
+    assert.match(demo,/showDemoTutorialMedia\('companion','Your companion panel','This is your Control panel companion[\s\S]*infoPanel\?\.setIntroduction\(true\)/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
-    assert.match(demo,/if\(index===2\)[\s\S]*infoPanel\?\.setIntroduction\(true\)[\s\S]*infoPanel\?\.suspend\(false\)/);
+    assert.match(demo,/if\(index===0\)infoPanel\?\.setIntroduction\(true\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
     assert.match(demo,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
     assert.match(demo,/Why does this matter\?/);

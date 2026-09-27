@@ -203,7 +203,7 @@ test('calibrated Totem routes render as a segmented ground path with arrows', ()
     assert.ok(values.some(value => Math.abs(value - .05) < .01));
 });
 
-test('the demo keeps the original three simple Totem forms', () => {
+test('the demo keeps the three simple Totem forms and adds physical buttons', () => {
     const appearance = read('app/services/totemAppearance.js');
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
@@ -214,8 +214,10 @@ test('the demo keeps the original three simple Totem forms', () => {
     assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer/);
     assert.match(demoSource, /drawSpatialPrism\(gl, prismRenderer/);
-    assert.doesNotMatch(arSource, /drawSpatialTotem/);
-    assert.doesNotMatch(demoSource, /drawSpatialTotem/);
+    assert.doesNotMatch(arSource, /\bdrawSpatialTotem\s*\(/);
+    assert.doesNotMatch(demoSource, /\bdrawSpatialTotem\s*\(/);
+    assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
+    assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
 });
 
 test('Creator PIM preserves Android touch clicks while isolating pointer events', () => {
@@ -1212,7 +1214,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /Knowledge begins with the place[\s\S]*One place, one clear structure[\s\S]*Begin with one plant[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:'Start with curiosity'[\s\S]*title:'A project represents a whole place'[\s\S]*title:'One place, one clear structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /showDemoTutorialMedia\('companion','Your companion panel','This is your Control panel companion/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
@@ -1281,7 +1284,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const type = demoStage;\s*const position = type==='totem' \? totemPlacementPosition\(\) : placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
-    assert.match(source, /title:'Your guide'[\s\S]*This panel explains each plant/);
+    assert.match(source, /showDemoTutorialMedia\('companion','Your companion panel','This is your Control panel companion[\s\S]*infoPanel\?\.setIntroduction\(true\)/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
     assert.match(source, /A Project represents the whole place\. Areas organise meaningful parts of it/);
     assert.match(source, /Pigeon Pea now has a location in this scene/);
@@ -1406,8 +1409,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /infoPanel\?\.setCompact\(true\);\s*infoPanel\?\.suspend\(true\)/);
-    assert.match(source, /demoOrientationStep===2[\s\S]*infoPanel\?\.setIntroduction\(true\);infoPanel\?\.suspend\(false\)/);
+    assert.match(source, /infoPanel\?\.setCompact\(true\);[\s\S]*showDemoTutorialMedia\('companion','Your companion panel'/);
+    assert.match(source, /showDemoTutorialMedia\('companion','Your companion panel'[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=31500/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
