@@ -1157,7 +1157,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const hoveredRecordHit=/);
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.013/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
@@ -1430,7 +1430,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.013/);
     assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
@@ -1600,7 +1600,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /totemCardsMarkup\(cards,record\.totemSelectedCard\)/);
-    assert.match(source, /createSpatialTotemCards\(gl\)/);
+    assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:true\}\)/);
     assert.match(styles, /\.tryit-sim-totem-pillar/);
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);

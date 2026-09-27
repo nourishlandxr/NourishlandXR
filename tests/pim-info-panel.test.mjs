@@ -140,7 +140,7 @@ test('grabbing the off-centre move dot keeps that exact point under the controll
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/distance:target\.distance,localX:target\.localX,localY:target\.localY/);
     assert.match(panel,/xrFrame\.getPose\(spatialMove\.source\.targetRaySpace,spatialMove\.referenceSpace\)/);
-    assert.match(panel,/card\.largeText\?'500 47px':'500 42px'/);
+    assert.match(panel,/card\.largeText\?'500 31px':'500 27px'/);
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\) \.nlxr-info-trail \{ font-size:15px/);
 });
