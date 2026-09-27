@@ -23,6 +23,10 @@ export function createPlaceholderKnowledgeGenerator(){
                 title:'Pruning as Biomass Cycling',
                 summary:'Exploring how pruning Pigeon Pea relates to its role within a living landscape.'
             };
+            if(has(ids,'nitrogen-fixation','lim-wildlife-relationships'))return {
+                title:'Root Partnerships',
+                summary:'Pigeon Pea and compatible soil bacteria can form a partnership below ground. Local conditions decide whether that relationship is active and how it supports nearby life.'
+            };
             if(sources.some(source=>source.title==='Pruning as Biomass Cycling') && ids.has('lim-wildlife-relationships'))return {
                 title:'Biomass Cycling as Wildlife Habitat',
                 summary:'Exploring how pruning-derived biomass may shape shelter, food and movement for wildlife within a living landscape.'
@@ -30,6 +34,10 @@ export function createPlaceholderKnowledgeGenerator(){
             if(sources.some(source=>source.title==='Pruning as Biomass Cycling') && ids.has('lim-pin'))return {
                 title:'Watch What Changes',
                 summary:'After pruning, look at what changes around the plant. Notice regrowth, where cut material settles, ground coverage, decomposition and responses from neighbouring plants.'
+            };
+            if(sources.some(source=>source.title==='Root Partnerships') && ids.has('lim-pin'))return {
+                title:'Evidence Beneath the Soil',
+                summary:'Look for root nodules, compare plant vigour and record soil conditions before deciding that nitrogen fixation is active here.'
             };
             const titles=sources.map(source=>source.title);
             return {title:`Connecting ${titles.join(' + ')}`,summary:`Exploring the relationship between: ${titles.join(', ')}.`};

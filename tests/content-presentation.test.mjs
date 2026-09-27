@@ -24,15 +24,18 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
 });
 
-test('guided discovery connects plant information to two curated learning ideas', () => {
+test('post-LIMO discovery offers two plant-to-learning combinations and an optional deeper connection', () => {
     const demo = read('app/screens/temporaryArDemo.js');
+    const connections = read('app/services/demoKnowledgeConnections.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
-    assert.match(demo, /startDemoKnowledgeConnections/);
-    assert.match(demo, /resolveDemoKnowledgeConnection/);
-    assert.match(demo, /Living Landscapes/);
-    assert.match(demo, /Biomass Cycling/);
-    assert.match(demo, /Place & Observation/);
-    assert.match(demo, /Watch What Changes/);
+    assert.match(demo, /showKnowledgeCombinationIntroduction/);
+    assert.match(demo, /resolveKnowledgeCombination/);
+    assert.match(connections, /Living Landscapes/);
+    assert.match(connections, /Pruning as Biomass Cycling/);
+    assert.match(connections, /Wildlife and Relationships/);
+    assert.match(connections, /Root Partnerships/);
+    assert.match(connections, /Place and Observation/);
+    assert.match(connections, /Watch What Changes/);
     assert.match(demo, /welcomeAutoAdvanceReady\(arWelcomeClock\.elapsed/);
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed-AR_WELCOME_SETTLED_MS/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);

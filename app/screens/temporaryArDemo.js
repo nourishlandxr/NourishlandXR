@@ -59,11 +59,11 @@ import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/de
 import { plantInformationMeshSurfaceLayout } from '../services/plantInformationMeshSurfaceLayout.js';
 import { defaultPimLimBridge, pimLimBridgeFor } from '../services/pimLimBridge.js';
 import { createMeshRepository } from '../services/meshRepository.js';
-import { createMeshSourceResolver, limMeshRef, meshRefKey, pimMeshRef } from '../services/meshReferences.js';
+import { createMeshSourceResolver, limMeshRef, pimMeshRef } from '../services/meshReferences.js';
 import { createPlaceholderKnowledgeGenerator } from '../services/meshGenerator.js';
 import { createMeshRelationshipService } from '../services/meshRelationships.js';
 import { createMeshCompositionState } from '../services/meshCompositionState.js';
-import { DEMO_CONNECTIONS, DEMO_CONNECTION_PHASES, createDemoConnectionState, demoConnectionCurve, demoConnectionStep, demoConnectionTargetAt } from '../services/demoKnowledgeConnections.js';
+import { DEMO_CONNECTION_CHOICES, DEMO_CONNECTION_HOLD_MS, DEMO_CONNECTION_PHASES, DEMO_CONNECTION_POSITIONS, DEMO_DEEPER_CONNECTION, createDemoConnectionState, demoConnectionChoice, demoConnectionCurve, demoConnectionIsDeeper, demoConnectionSource, demoConnectionTarget, demoConnectionTargetAt, selectDemoConnectionChoice } from '../services/demoKnowledgeConnections.js';
 
 let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=null, demoKnowledgePanel=null;
 let demoKnowledgeScrollAt=0;
@@ -106,15 +106,6 @@ const meshGenerator=createPlaceholderKnowledgeGenerator();
 const meshRelationships=createMeshRelationshipService({repository:meshRepository,resolver:meshSourceResolver,generator:meshGenerator});
 const meshComposition=createMeshCompositionState();
 function demoMeshOwnerId(record,document){return String(record?.id || record?.demoPlantPreset || document?.plantId || 'demo-plant');}
-function meshPanelContext(){
-    const state=meshComposition.get();
-    const items=state.compositionRefs.map(ref=>{try{return {key:meshRefKey(ref),title:meshSourceResolver.resolve(ref).title};}catch{return {key:meshRefKey(ref),title:'Unavailable knowledge'};}});
-    const variant=state.resolvedVariantId?meshRepository.getVariant(state.resolvedVariantId):null;
-    const result=variant?.currentDerivedNodeId?meshRepository.getDerivedNode(variant.currentDerivedNodeId):null;
-    return {items,result:result?{id:result.id,title:result.title,summary:result.summary}:null,mode:state.mode,error:state.error};
-}
-function syncMeshPanel(){infoPanel?.setMeshComposition(meshPanelContext());}
-meshComposition.subscribe(()=>{syncMeshPanel();syncDemoPanelActions();});
 function showDemoInfo(record,path) {
     clearLimSelection();
     const document=demoOrbKnowledge(record).document;
@@ -125,125 +116,7 @@ function showDemoInfo(record,path) {
     try{meshComposition.setActiveRef(pimMeshRef(document,selectedNode?.id,{ownerId,specimenId:String(record?.id || ownerId)}));}catch{meshComposition.setActiveRef(null);}
     const bridge=pimLimBridgeFor(document,path);
     activePimLimBridge=bridge?{bridge,record}:null;
-    if(record?.tutorialStage==='plant' && selectedNode?.id==='pruning')startDemoKnowledgeConnections(record);
     syncDemoPanelActions();
-}
-
-function startDemoKnowledgeConnections(record){
-    if(!record || record.demoConnections)return;
-    record.demoConnections=createDemoConnectionState();
-    record.demoProfileInteracted=false;
-    showPersistentPimPrompt(record);
-    refreshDemoRecord(record);
-    setGuide('Pruning selected. Drag the small connection point to Living Landscapes.');
-}
-
-function demoConnectionSource(state){
-    return state?.phase===DEMO_CONNECTION_PHASES.SECOND || state?.phase===DEMO_CONNECTION_PHASES.SECOND_RESOLVING
-        ? {x:61,y:53}:{x:51,y:51};
-}
-
-function demoConnectionTarget(state){
-    return demoConnectionStep(state)===DEMO_CONNECTIONS.second?{x:82,y:76}:{x:82,y:27};
-}
-
-function demoConnectionAtPointer(record,radius=10){
-    const state=record?.demoConnections,target=demoPimPointerTarget(record);
-    if(!state || !target || !demoConnectionStep(state))return null;
-    const source=demoConnectionSource(state);
-    return Math.hypot(target.xPercent-source.x,target.yPercent-source.y)<=radius?{record,state,target}:null;
-}
-
-function activeDemoConnectionRecord(){return [...markers].reverse().find(record=>record?.demoExpanded && record?.demoConnections?.dragging) || null;}
-
-function beginImmersiveDemoConnection(){
-    const candidate=[...markers].reverse().map(record=>demoConnectionAtPointer(record,12)).find(Boolean);
-    if(!candidate)return false;
-    candidate.state.dragging=true;candidate.state.pointer={x:candidate.target.xPercent,y:candidate.target.yPercent};candidate.state.hoverTarget=false;
-    refreshDemoConnectionVisual(candidate.record);setGuide('Keep holding and move the connection to the highlighted learning cell.');return true;
-}
-
-function syncImmersiveDemoConnection(){
-    const record=activeDemoConnectionRecord();if(!record)return;
-    const state=record.demoConnections,target=demoPimPointerTarget(record);if(!target)return;
-    const next={x:target.xPercent,y:target.yPercent},hover=demoConnectionTargetAt(state,next.x,next.y,14);
-    if(Math.hypot(next.x-(state.pointer?.x||0),next.y-(state.pointer?.y||0))<1.2 && hover===state.hoverTarget)return;
-    state.pointer=next;state.hoverTarget=hover;
-    if(!state.paintedAt || performance.now()-state.paintedAt>45){state.paintedAt=performance.now();refreshDemoConnectionVisual(record);}
-}
-
-function endImmersiveDemoConnection(cancel=false){
-    const record=activeDemoConnectionRecord();if(!record)return false;
-    const state=record.demoConnections,valid=!cancel && state.hoverTarget;
-    state.dragging=false;state.pointer=null;state.hoverTarget=false;refreshDemoConnectionVisual(record);
-    if(valid)resolveDemoKnowledgeConnection(record);
-    else setGuide('Connection released. Hold the connection point and release it on the highlighted learning cell.');
-    suppressSessionSelectUntil=performance.now()+300;return true;
-}
-
-function selectImmersiveDemoConnectionResult(){
-    for(const record of [...markers].reverse()){
-        const state=record?.demoConnections,target=record?.demoExpanded?demoPimPointerTarget(record):null;if(!state || !target)continue;
-        const hits=[state.secondResult&&{kind:'second',x:55,y:80,w:18,h:12},state.firstResult&&{kind:'first',x:61,y:53,w:17,h:11}].filter(Boolean);
-        const hit=hits.find(item=>Math.abs(target.xPercent-item.x)<=item.w && Math.abs(target.yPercent-item.y)<=item.h);if(!hit)continue;
-        const content=DEMO_CONNECTIONS[hit.kind];infoPanel?.showLearning({id:`demo-${hit.kind}`,title:content.resultTitle,body:content.resultSummary,editable:false});return true;
-    }
-    return false;
-}
-
-function refreshDemoConnectionVisual(record){
-    if(record)refreshDemoRecord(record);
-}
-
-async function resolveDemoKnowledgeConnection(record){
-    const state=record?.demoConnections,step=demoConnectionStep(state);
-    if(!state || !step || state.resolving)return false;
-    state.resolving=true;state.dragging=false;state.hoverTarget=false;
-    state.phase=step===DEMO_CONNECTIONS.first?DEMO_CONNECTION_PHASES.FIRST_RESOLVING:DEMO_CONNECTION_PHASES.SECOND_RESOLVING;
-    refreshDemoConnectionVisual(record);
-    try{
-        const document=demoOrbKnowledge(record).document,ownerId=demoMeshOwnerId(record,document);
-        meshSourceResolver.registerPimDocument(document,{ownerId});
-        const refs=step===DEMO_CONNECTIONS.first
-            ? [pimMeshRef(document,'pruning',{ownerId,specimenId:String(record.id || ownerId)}),limMeshRef(step.targetId)]
-            : [state.firstResult.derivedRef,limMeshRef(step.targetId)];
-        meshComposition.clear();refs.forEach(ref=>meshComposition.add(ref));meshComposition.resolving();
-        const result=await meshRelationships.resolve(refs,{context:{mode:'general'}});
-        meshComposition.display(result);
-        if(step===DEMO_CONNECTIONS.first){
-            state.firstResult=result;state.phase=DEMO_CONNECTION_PHASES.SECOND;
-            setGuide('Biomass Cycling created. Now connect it to Place & Observation.');
-        }else{
-            state.secondResult=result;state.phase=DEMO_CONNECTION_PHASES.COMPLETE;record.demoProfileInteracted=true;
-            setGuide('Watch What Changes created. Select either result to read it, or continue the demo.');
-            showPersistentPimPrompt(record);
-        }
-        navigator.vibrate?.([35,35,60]);
-    }catch(error){
-        meshComposition.fail(error);state.phase=step===DEMO_CONNECTIONS.first?DEMO_CONNECTION_PHASES.FIRST:DEMO_CONNECTION_PHASES.SECOND;
-        setGuide('That connection could not be completed. Try the same connection again.');
-    }finally{state.resolving=false;refreshDemoConnectionVisual(record);}
-    return true;
-}
-
-function demoConnectionResultMarkup(kind,result){
-    if(!result)return '';
-    const content=DEMO_CONNECTIONS[kind];
-    return `<button type="button" class="demo-knowledge-result is-${kind}" data-demo-connection-result="${kind}"><strong>${content.resultTitle}</strong><small>${content.resultSummary}</small></button>`;
-}
-
-function demoKnowledgeConnectionMarkup(record){
-    const state=record?.demoConnections,step=demoConnectionStep(state);
-    if(!state)return '';
-    const source=demoConnectionSource(state),target=demoConnectionTarget(state);
-    const firstPath=state.firstResult?`${demoConnectionCurve({x:51,y:51},{x:61,y:53})} ${demoConnectionCurve({x:82,y:27},{x:61,y:53})}`:'';
-    const secondPath=state.secondResult?`${demoConnectionCurve({x:61,y:53},{x:55,y:80})} ${demoConnectionCurve({x:82,y:76},{x:55,y:80})}`:'';
-    return `<div class="demo-knowledge-connections is-${state.phase}" data-demo-connections>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="is-set" data-demo-connection-set="first" d="${firstPath}"></path><path class="is-set" data-demo-connection-set="second" d="${secondPath}"></path><path class="is-preview" data-demo-connection-preview d=""></path></svg>
-        ${step?`<button type="button" class="demo-connection-handle" data-demo-connection-handle style="--connection-x:${source.x}%;--connection-y:${source.y}%" aria-label="Connect ${step===DEMO_CONNECTIONS.first?'Pruning':'Biomass Cycling'}"></button><span class="demo-connection-target" data-demo-connection-target style="--connection-x:${target.x}%;--connection-y:${target.y}%"><strong>${step.targetTitle}</strong><small>Drop connection here</small></span>`:''}
-        ${state.phase===DEMO_CONNECTION_PHASES.FIRST_RESOLVING || state.phase===DEMO_CONNECTION_PHASES.SECOND_RESOLVING?'<span class="demo-connection-resolving">Making the connection…</span>':''}
-        ${demoConnectionResultMarkup('first',state.firstResult)}${demoConnectionResultMarkup('second',state.secondResult)}
-    </div>`;
 }
 function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 function syncDemoPimHover(){
@@ -270,6 +143,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
+let knowledgeCombinationState=null,knowledgeCombinationCleanup=()=>{},knowledgeCombinationHold=null;
 let ambientCanvas=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let demoRainIntensity=1;
 let limHiddenCells=new Set();
@@ -624,6 +498,7 @@ function clearSessionState() {
     clearTimeout(introNarrationTimer);
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
+    knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};knowledgeCombinationState=null;knowledgeCombinationHold=null;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
     ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
@@ -668,7 +543,6 @@ function clearSessionState() {
     introKnowledgeVisible = false;
     markers.forEach(record => {
         if (record.texture) gl?.deleteTexture(record.texture);
-        if (record.demoConnectionTexture) gl?.deleteTexture(record.demoConnectionTexture);
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
@@ -1402,23 +1276,6 @@ function showPersistentPimPrompt(record) {
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
-    const connectionState=record?.demoConnections,connectionStep=demoConnectionStep(connectionState);
-    if(connectionState){
-        const complete=connectionState.phase===DEMO_CONNECTION_PHASES.COMPLETE;
-        const title=complete?'Connections made':'Connect what belongs together';
-        const body=complete
-            ? 'You created two useful ideas without moving the original knowledge cells. Select a result to read it, or continue.'
-            : connectionStep===DEMO_CONNECTIONS.first
-                ? 'Use the small connection point on Pruning. Drag it onto Living Landscapes.'
-                : 'Now drag the connection point on Biomass Cycling onto Place & Observation.';
-        panel.innerHTML=`<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-        panel.hidden=false;panel.classList.add('is-welcome-board','is-copy-ready','is-persistent-demo-board');
-        introBoardTitle=title;introBoardBody=body;introBoardVisibleBody=body;introBoardTextureDirty=true;introBoardVisible=true;
-        continueButton.textContent='Continue';continueButton.hidden=!complete;
-        continueButton.onclick=complete?()=>{suppressSessionSelectUntil=performance.now()+700;showDemoAction('plant2');}:null;
-        skipDemoNarration=()=>{record.demoProfileInteracted=true;showDemoAction('plant2');};
-        return;
-    }
     if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information remains open for exploration.`);return;}
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Explore this plant');
@@ -1596,6 +1453,44 @@ function currentLimPointerCell() {
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
     return hit && welcomeCellAtPoint(welcomeFrames(),hit.pixelX,hit.pixelY);
 }
+function knowledgeCombinationSurfacePoint(){
+    if(!knowledgeCombinationState || !introWorldAnchor)return null;
+    const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
+    return hit?{x:hit.pixelX/25,y:hit.pixelY/21}:null;
+}
+function knowledgeCombinationHit(point){
+    const state=knowledgeCombinationState,choice=demoConnectionChoice(state);if(!state || !point)return null;
+    if(!choice){const selected=DEMO_CONNECTION_CHOICES.find(item=>{const p=DEMO_CONNECTION_POSITIONS.sources[item.id];return Math.abs(point.x-p.x)<=12 && Math.abs(point.y-p.y)<=7;});return selected?{type:'choice',choice:selected}:null;}
+    const source=demoConnectionSource(state),node=source?{x:source.x+10,y:source.y}:null;
+    if(node && Math.hypot(point.x-node.x,point.y-node.y)<=5 && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.DEEPER_READY].includes(state.phase))return {type:'node',deeper:demoConnectionIsDeeper(state)};
+    if(state.primaryResult && state.phase===DEMO_CONNECTION_PHASES.RESULT && point.y>=90){if(point.x<50)return {type:'deeper'};return {type:'continue'};}
+    if(state.primaryResult && ![DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase) && point.y>=90)return {type:'continue'};
+    return null;
+}
+function selectImmersiveKnowledgeCombination(){
+    const action=knowledgeCombinationHit(knowledgeCombinationSurfacePoint());if(!action)return false;
+    if(action.type==='choice'){selectDemoConnectionChoice(knowledgeCombinationState,action.choice.id);syncKnowledgeCombinationOverlay();setGuide(`${action.choice.sourceTitle} selected. Hold its glowing node, then drag toward ${action.choice.targetTitle}.`);}
+    if(action.type==='deeper'){knowledgeCombinationState.phase=DEMO_CONNECTION_PHASES.DEEPER_READY;syncKnowledgeCombinationOverlay();setGuide(`Hold the node on the new idea and connect it to ${DEMO_DEEPER_CONNECTION.targetTitle}.`);}
+    if(action.type==='continue')finishKnowledgeCombinationExperience();
+    return true;
+}
+function beginImmersiveKnowledgeCombination(){
+    const action=knowledgeCombinationHit(knowledgeCombinationSurfacePoint()),state=knowledgeCombinationState;if(action?.type!=='node' || !state)return false;
+    knowledgeCombinationHold={deeper:action.deeper,pointerId:'xr',armed:false,startedAt:performance.now(),frame:0};state.holdStartedAt=knowledgeCombinationHold.startedAt;state.holdProgress=0;state.phase=action.deeper?DEMO_CONNECTION_PHASES.DEEPER_HOLDING:DEMO_CONNECTION_PHASES.HOLDING;syncKnowledgeCombinationOverlay();return true;
+}
+function syncImmersiveKnowledgeCombination(now=performance.now()){
+    const hold=knowledgeCombinationHold,state=knowledgeCombinationState;if(!hold || hold.pointerId!=='xr' || !state)return;
+    state.holdProgress=Math.min(1,(now-hold.startedAt)/DEMO_CONNECTION_HOLD_MS);
+    if(state.holdProgress>=1 && !hold.armed){hold.armed=true;state.dragging=true;state.phase=hold.deeper?DEMO_CONNECTION_PHASES.DEEPER_DRAGGING:DEMO_CONNECTION_PHASES.DRAGGING;navigator.vibrate?.(35);}
+    if(hold.armed){state.pointer=knowledgeCombinationSurfacePoint() || state.pointer;state.hoverTarget=Boolean(state.pointer && demoConnectionTargetAt(state,state.pointer.x,state.pointer.y,13));}
+    if(!state.paintedAt || now-state.paintedAt>40){state.paintedAt=now;syncKnowledgeCombinationOverlay();}
+}
+function endImmersiveKnowledgeCombination(cancel=false){
+    const hold=knowledgeCombinationHold,state=knowledgeCombinationState;if(!hold || hold.pointerId!=='xr' || !state)return false;
+    syncImmersiveKnowledgeCombination();const valid=hold.armed && !cancel && state.hoverTarget;knowledgeCombinationHold=null;state.dragging=false;state.pointer=null;state.hoverTarget=false;state.holdProgress=0;
+    if(valid)resolveKnowledgeCombination(hold.deeper);else{state.phase=hold.deeper?DEMO_CONNECTION_PHASES.DEEPER_READY:DEMO_CONNECTION_PHASES.READY;syncKnowledgeCombinationOverlay();setGuide('Hold for a moment, then drag the line all the way to its partner.');}
+    suppressSessionSelectUntil=performance.now()+300;return true;
+}
 function syncImmersiveLimHover() {
     if(!session || !arWelcomeShowcaseActive)return;
     const next=currentLimPointerCell()?.key || '';
@@ -1644,6 +1539,7 @@ function bindLimSessionInteractions(arSession) {
     if(!arSession || !limActivation)return;
     const select=event=>{
         if(!arWelcomeShowcaseActive || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
+        if(knowledgeCombinationState){event.preventDefault?.();event.stopImmediatePropagation?.();selectImmersiveKnowledgeCombination();return;}
         const node=currentLimPointerCell();
         if(node){event.preventDefault?.();event.stopImmediatePropagation?.();limActivation.activateNow(node.key,performance.now(),'xr-select');limActivationSessionSuppressUntil=performance.now()+450;return;}
         if(performance.now()<limActivationSessionSuppressUntil)event.stopImmediatePropagation?.();
@@ -1651,6 +1547,32 @@ function bindLimSessionInteractions(arSession) {
     const visibility=()=>{if(arSession.visibilityState!=='visible')limActivation.cancel('session-hidden');};
     arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
     limSessionCleanup=()=>{arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;};
+}
+
+function drawKnowledgeCombinationExperience(ctx,now){
+    const state=knowledgeCombinationState;if(!state)return;
+    const choice=demoConnectionChoice(state),deeper=demoConnectionIsDeeper(state),toPoint=point=>({x:point.x*25,y:point.y*21});
+    const card=(point,{title,detail,label,color,muted=false,bloom=false,width=500,height=190})=>{
+        const p=toPoint(point),left=p.x-width/2,top=p.y-height/2;ctx.save();ctx.globalAlpha=muted?.26:1;
+        if(bloom){ctx.shadowColor=color;ctx.shadowBlur=36+Math.sin(now/180)*8;}
+        const fill=ctx.createLinearGradient(left,top,left+width,top+height);fill.addColorStop(0,`${color}ee`);fill.addColorStop(1,'rgba(13,39,31,.96)');ctx.fillStyle=fill;ctx.strokeStyle=bloom?'rgba(255,255,235,.95)':'rgba(235,249,226,.55)';ctx.lineWidth=bloom?6:3;
+        ctx.beginPath();ctx.roundRect(left,top,width,height,44);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='rgba(244,255,239,.72)';ctx.font='700 21px system-ui,sans-serif';ctx.fillText(label.toUpperCase(),left+30,top+27);
+        ctx.fillStyle='#fff';ctx.font='800 39px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+60,width-60,44,2);ctx.fillStyle='rgba(247,255,243,.78)';ctx.font='600 22px system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+119,width-60,27,2);ctx.restore();
+    };
+    const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
+    ctx.save();ctx.fillStyle='rgba(6,27,21,.62)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
+    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 58px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,155);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,210,2100);
+    ctx.textAlign='left';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 23px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',215,525);ctx.fillText('LEARNING CELLS',1775,525);
+    if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
+    if(state.deeperResult && choice){line(DEMO_CONNECTION_POSITIONS.result,DEMO_CONNECTION_POSITIONS.deeperResult,choice.targetColor,DEMO_DEEPER_CONNECTION.targetColor,8);line(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult,DEMO_DEEPER_CONNECTION.targetColor,choice.targetColor,8);}
+    if(state.dragging && choice){const target=state.hoverTarget?demoConnectionTarget(state):state.pointer;if(target)line(demoConnectionSource(state),target,deeper?choice.targetColor:choice.sourceColor,deeper?DEMO_DEEPER_CONNECTION.targetColor:choice.targetColor,15);}
+    for(const item of DEMO_CONNECTION_CHOICES){const selected=item.id===choice?.id;card(DEMO_CONNECTION_POSITIONS.sources[item.id],{title:item.sourceTitle,detail:item.sourceDetail,label:'Pigeon Pea',color:item.sourceColor,muted:Boolean(choice&&!selected)});card(DEMO_CONNECTION_POSITIONS.targets[item.id],{title:item.targetTitle,detail:item.targetDetail,label:'Learning cell',color:item.targetColor,muted:Boolean(choice&&!selected),bloom:selected && [DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.RESOLVING].includes(state.phase)});}
+    if(state.primaryResult && choice)card(DEMO_CONNECTION_POSITIONS.result,{title:state.primaryResult.derivedNode?.title || choice.resultTitle,detail:state.primaryResult.derivedNode?.summary || choice.resultSummary,label:'New connection',color:choice.targetColor,width:650,height:250,bloom:state.phase===DEMO_CONNECTION_PHASES.RESULT});
+    if(deeper)card(DEMO_CONNECTION_POSITIONS.deeperTarget,{title:DEMO_DEEPER_CONNECTION.targetTitle,detail:DEMO_DEEPER_CONNECTION.targetDetail,label:'Go deeper',color:DEMO_DEEPER_CONNECTION.targetColor,bloom:[DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase),width:500,height:190});
+    if(state.deeperResult && choice)card(DEMO_CONNECTION_POSITIONS.deeperResult,{title:state.deeperResult.derivedNode?.title || choice.deeperTitle,detail:state.deeperResult.derivedNode?.summary || choice.deeperSummary,label:'Question for this place',color:DEMO_DEEPER_CONNECTION.targetColor,width:680,height:245,bloom:true});
+    const source=demoConnectionSource(state);if(source && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.HOLDING,DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_READY,DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING].includes(state.phase)){const p=toPoint(source),progress=state.holdProgress || 0;ctx.fillStyle='#f4ffd8';ctx.strokeStyle='#173d32';ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x+245,p.y,20,0,Math.PI*2);ctx.fill();ctx.stroke();if(progress){ctx.strokeStyle='#fff';ctx.lineWidth=9;ctx.beginPath();ctx.arc(p.x+245,p.y,34,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);ctx.stroke();}}
+    if(state.primaryResult){const nav=(x,label,filled)=>{ctx.fillStyle=filled?'#dff0b2':'rgba(22,57,45,.94)';ctx.strokeStyle='rgba(238,255,224,.75)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-190,1930,380,78,39);ctx.fill();ctx.stroke();ctx.fillStyle=filled?'#173328':'#eff8e9';ctx.font='800 27px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x,1969);};if(state.phase===DEMO_CONNECTION_PHASES.RESULT)nav(1010,'Go deeper',false);nav(state.phase===DEMO_CONNECTION_PHASES.RESULT?1490:1250,'Continue journey',true);}
+    ctx.restore();
 }
 
 function paintWelcomeLayer(now) {
@@ -1669,6 +1591,7 @@ function paintWelcomeLayer(now) {
             drawCellLabels:true,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
         });
     arWelcomeRenderedFrames=frames;
+    if(knowledgeCombinationState)drawKnowledgeCombinationExperience(context,now);
     context.restore();
     const selectedNode=frames.flatMap(frame=>frame.nodes).find(node=>node.key===selectedLimCell);
     const relationship=welcomeRelationshipFor(selectedNode?.limId);
@@ -2221,6 +2144,168 @@ function fadeMappedSceneForLimo() {
     updateSimulatedMarkers();
 }
 
+function knowledgeCombinationPlantRecord(){
+    return markers.find(record=>record.demoType==='plant' && (record.demoPlantPreset==='pigeon-pea' || /pigeon pea/i.test(record.name || ''))) || markers.find(record=>record.demoType==='plant');
+}
+
+function knowledgeCombinationPoint(event,overlay){
+    const box=overlay.getBoundingClientRect();
+    return {x:100*(event.clientX-box.left)/Math.max(1,box.width),y:100*(event.clientY-box.top)/Math.max(1,box.height)};
+}
+
+function knowledgeCombinationStatus(state){
+    const choice=demoConnectionChoice(state);
+    if(!choice)return 'Choose one plant characteristic to begin.';
+    if(state.error)return state.error;
+    if(state.phase===DEMO_CONNECTION_PHASES.READY)return `Hold the glowing node on ${choice.sourceTitle} for a moment, then drag it to ${choice.targetTitle}.`;
+    if(state.phase===DEMO_CONNECTION_PHASES.HOLDING)return 'Keep holding…';
+    if(state.phase===DEMO_CONNECTION_PHASES.DRAGGING)return state.hoverTarget?'These ideas belong together. Release to connect them.':'Guide the living line to the blooming learning cell.';
+    if(state.phase===DEMO_CONNECTION_PHASES.RESOLVING)return 'A new idea is forming…';
+    if(state.phase===DEMO_CONNECTION_PHASES.RESULT)return 'The original ideas remain visible while a new idea emerges between them.';
+    if(state.phase===DEMO_CONNECTION_PHASES.DEEPER_READY)return `Hold the node on ${choice.resultTitle}, then connect it to ${DEMO_DEEPER_CONNECTION.targetTitle}.`;
+    if(state.phase===DEMO_CONNECTION_PHASES.DEEPER_HOLDING)return 'Keep holding…';
+    if(state.phase===DEMO_CONNECTION_PHASES.DEEPER_DRAGGING)return state.hoverTarget?'Release to ground this idea in observation.':'Guide the line to Place and Observation.';
+    if(state.phase===DEMO_CONNECTION_PHASES.DEEPER_RESOLVING)return 'Looking more closely…';
+    return 'A deeper question is ready to carry back into the living place.';
+}
+
+function ensureKnowledgeCombinationOverlay(){
+    if(!arWelcomeLayer)return null;
+    let overlay=arWelcomeLayer.querySelector('[data-knowledge-combination]');
+    if(overlay)return overlay;
+    overlay=document.createElement('section');
+    overlay.className='knowledge-combination';overlay.dataset.knowledgeCombination='';
+    overlay.setAttribute('aria-label','Combine plant knowledge with learning cells');
+    overlay.innerHTML=`<header><small>EVER-GENERATING INFORMATION MESH</small><h2>What can these ideas reveal together?</h2><p data-combination-status aria-live="polite"></p></header>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs>
+            <linearGradient id="knowledge-primary-gradient"><stop offset="0" data-gradient-source></stop><stop offset="1" data-gradient-target></stop></linearGradient>
+            <linearGradient id="knowledge-deeper-gradient"><stop offset="0" data-gradient-deeper-source></stop><stop offset="1" stop-color="${DEMO_DEEPER_CONNECTION.targetColor}"></stop></linearGradient>
+        </defs><path class="is-established is-primary" data-primary-path></path><path class="is-established is-deeper" data-deeper-path></path><path class="is-live" data-live-path></path></svg>
+        <div class="knowledge-column-label is-plant">PLANT CHARACTERISTICS</div><div class="knowledge-column-label is-learning">LEARNING CELLS</div>
+        ${DEMO_CONNECTION_CHOICES.map(choice=>`<button type="button" class="knowledge-source-cell" data-combination-choice="${choice.id}" style="--cell-x:${DEMO_CONNECTION_POSITIONS.sources[choice.id].x}%;--cell-y:${DEMO_CONNECTION_POSITIONS.sources[choice.id].y}%;--cell-color:${choice.sourceColor}"><small>Pigeon Pea</small><strong>${choice.sourceTitle}</strong><span>${choice.sourceDetail}</span><i class="knowledge-node" data-combination-node="primary" aria-label="Hold and drag ${choice.sourceTitle} to ${choice.targetTitle}" role="button" tabindex="-1"></i></button>`).join('')}
+        ${DEMO_CONNECTION_CHOICES.map(choice=>`<div class="knowledge-target-cell" data-combination-target="${choice.id}" style="--cell-x:${DEMO_CONNECTION_POSITIONS.targets[choice.id].x}%;--cell-y:${DEMO_CONNECTION_POSITIONS.targets[choice.id].y}%;--cell-color:${choice.targetColor}"><small>Learning cell</small><strong>${choice.targetTitle}</strong><span>${choice.targetDetail}</span></div>`).join('')}
+        <article class="knowledge-derived-cell" data-combination-result style="--cell-x:${DEMO_CONNECTION_POSITIONS.result.x}%;--cell-y:${DEMO_CONNECTION_POSITIONS.result.y}%"><small>NEW CONNECTION</small><strong></strong><p></p><i class="knowledge-node" data-combination-node="deeper" aria-label="Hold and drag this new idea to Place and Observation" role="button" tabindex="0"></i></article>
+        <div class="knowledge-target-cell is-deeper" data-combination-deeper-target style="--cell-x:${DEMO_CONNECTION_POSITIONS.deeperTarget.x}%;--cell-y:${DEMO_CONNECTION_POSITIONS.deeperTarget.y}%;--cell-color:${DEMO_DEEPER_CONNECTION.targetColor}"><small>Go deeper</small><strong>${DEMO_DEEPER_CONNECTION.targetTitle}</strong><span>${DEMO_DEEPER_CONNECTION.targetDetail}</span></div>
+        <article class="knowledge-derived-cell is-deeper" data-combination-deeper-result style="--cell-x:${DEMO_CONNECTION_POSITIONS.deeperResult.x}%;--cell-y:${DEMO_CONNECTION_POSITIONS.deeperResult.y}%"><small>QUESTION FOR THIS PLACE</small><strong></strong><p></p></article>
+        <nav><button type="button" data-combination-deeper>Go deeper</button><button type="button" data-combination-continue>Continue journey</button></nav>`;
+    arWelcomeLayer.append(overlay);
+    overlay.querySelectorAll('[data-combination-choice]').forEach(button=>button.addEventListener('click',event=>{
+        if(event.target.closest('[data-combination-node]'))return;
+        selectDemoConnectionChoice(knowledgeCombinationState,button.dataset.combinationChoice);syncKnowledgeCombinationOverlay();
+        setGuide(`${demoConnectionChoice(knowledgeCombinationState).sourceTitle} selected. Hold its glowing connection node, then drag toward the matching learning cell.`);
+    }));
+    overlay.querySelector('[data-combination-deeper]')?.addEventListener('click',()=>{
+        if(knowledgeCombinationState?.phase!==DEMO_CONNECTION_PHASES.RESULT)return;
+        knowledgeCombinationState.phase=DEMO_CONNECTION_PHASES.DEEPER_READY;syncKnowledgeCombinationOverlay();
+        setGuide(`Go deeper: hold the node on the new idea and connect it to ${DEMO_DEEPER_CONNECTION.targetTitle}.`);
+    });
+    overlay.querySelector('[data-combination-continue]')?.addEventListener('click',finishKnowledgeCombinationExperience);
+    overlay.querySelectorAll('[data-combination-node]').forEach(node=>bindKnowledgeCombinationNode(node,overlay));
+    return overlay;
+}
+
+function bindKnowledgeCombinationNode(node,overlay){
+    const deeper=node.dataset.combinationNode==='deeper';
+    const begin=(event,keyboard=false)=>{
+        const state=knowledgeCombinationState,choice=demoConnectionChoice(state);
+        const allowed=deeper?state?.phase===DEMO_CONNECTION_PHASES.DEEPER_READY:state?.phase===DEMO_CONNECTION_PHASES.READY;
+        if(!state || !choice || !allowed)return;
+        event.preventDefault();event.stopPropagation();
+        const pointerId=keyboard?'keyboard':event.pointerId;
+        state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_HOLDING:DEMO_CONNECTION_PHASES.HOLDING;state.holdStartedAt=performance.now();state.holdProgress=0;state.error='';
+        knowledgeCombinationHold={node,overlay,deeper,pointerId,armed:false,timer:0,frame:0};
+        if(!keyboard)node.setPointerCapture?.(event.pointerId);
+        const tick=now=>{
+            if(!knowledgeCombinationHold || knowledgeCombinationHold.node!==node)return;
+            state.holdProgress=Math.min(1,(now-state.holdStartedAt)/DEMO_CONNECTION_HOLD_MS);node.style.setProperty('--hold-progress',String(state.holdProgress));
+            if(state.holdProgress>=1){
+                knowledgeCombinationHold.armed=true;state.dragging=true;state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_DRAGGING:DEMO_CONNECTION_PHASES.DRAGGING;state.pointer=demoConnectionSource(state);navigator.vibrate?.(35);syncKnowledgeCombinationOverlay();return;
+            }
+            knowledgeCombinationHold.frame=limRequestFrame(tick);
+        };
+        knowledgeCombinationHold.frame=limRequestFrame(tick);syncKnowledgeCombinationOverlay();
+    };
+    const move=event=>{
+        const hold=knowledgeCombinationHold,state=knowledgeCombinationState;if(!hold || hold.node!==node || hold.pointerId!==event.pointerId || !hold.armed)return;
+        event.preventDefault();event.stopPropagation();state.pointer=knowledgeCombinationPoint(event,overlay);state.hoverTarget=demoConnectionTargetAt(state,state.pointer.x,state.pointer.y,13);syncKnowledgeCombinationOverlay();
+    };
+    const finish=(event,cancelled=false)=>{
+        const hold=knowledgeCombinationHold,state=knowledgeCombinationState;if(!hold || hold.node!==node || (event?.pointerId!==undefined && hold.pointerId!==event.pointerId))return;
+        event?.preventDefault();event?.stopPropagation();limCancelFrame(hold.frame);knowledgeCombinationHold=null;
+        const valid=hold.armed && !cancelled && state.hoverTarget;
+        state.dragging=false;state.pointer=null;state.hoverTarget=false;state.holdProgress=0;node.style.removeProperty('--hold-progress');
+        if(valid)resolveKnowledgeCombination(deeper);
+        else{state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_READY:DEMO_CONNECTION_PHASES.READY;syncKnowledgeCombinationOverlay();setGuide('Hold the glowing node for a moment, then drag the line all the way to its partner.');}
+    };
+    node.addEventListener('pointerdown',event=>begin(event));node.addEventListener('pointermove',move);node.addEventListener('pointerup',event=>finish(event));node.addEventListener('pointercancel',event=>finish(event,true));node.addEventListener('lostpointercapture',event=>{if(knowledgeCombinationHold?.node===node)finish(event,true);});
+    node.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key) && !event.repeat)begin(event,true);});
+    node.addEventListener('keyup',event=>{if(['Enter',' '].includes(event.key) && knowledgeCombinationHold?.node===node){knowledgeCombinationState.hoverTarget=knowledgeCombinationHold.armed;finish(event,false);}});
+}
+
+function syncKnowledgeCombinationOverlay(){
+    const state=knowledgeCombinationState,overlay=arWelcomeLayer?.querySelector('[data-knowledge-combination]');if(!state || !overlay)return;
+    const choice=demoConnectionChoice(state),deeper=demoConnectionIsDeeper(state),activeDrag=state.dragging;
+    overlay.dataset.phase=state.phase;overlay.style.setProperty('--source-color',choice?.sourceColor || '#7ea45f');overlay.style.setProperty('--target-color',deeper?DEMO_DEEPER_CONNECTION.targetColor:(choice?.targetColor || '#a06a43'));
+    overlay.querySelector('[data-combination-status]').textContent=knowledgeCombinationStatus(state);
+    overlay.querySelectorAll('[data-combination-choice]').forEach(cell=>{const selected=cell.dataset.combinationChoice===choice?.id;cell.classList.toggle('is-selected',selected);cell.classList.toggle('is-muted',Boolean(choice && !selected));cell.setAttribute('aria-pressed',String(selected));const node=cell.querySelector('[data-combination-node]');if(node)node.tabIndex=selected && !state.primaryResult?0:-1;});
+    overlay.querySelectorAll('[data-combination-target]').forEach(cell=>{const selected=cell.dataset.combinationTarget===choice?.id;cell.classList.toggle('is-matching',selected && [DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.RESOLVING].includes(state.phase));cell.classList.toggle('is-magnetic',selected && state.hoverTarget);cell.classList.toggle('is-muted',Boolean(choice && !selected));});
+    const result=overlay.querySelector('[data-combination-result]');result.hidden=!state.primaryResult;if(state.primaryResult){result.querySelector('strong').textContent=state.primaryResult.derivedNode?.title || choice.resultTitle;result.querySelector('p').textContent=state.primaryResult.derivedNode?.summary || choice.resultSummary;}
+    const deeperTarget=overlay.querySelector('[data-combination-deeper-target]');deeperTarget.hidden=!deeper;deeperTarget.classList.toggle('is-matching',[DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase));deeperTarget.classList.toggle('is-magnetic',deeper && state.hoverTarget);
+    const deeperResult=overlay.querySelector('[data-combination-deeper-result]');deeperResult.hidden=!state.deeperResult;if(state.deeperResult){deeperResult.querySelector('strong').textContent=state.deeperResult.derivedNode?.title || choice.deeperTitle;deeperResult.querySelector('p').textContent=state.deeperResult.derivedNode?.summary || choice.deeperSummary;}
+    overlay.querySelector('[data-combination-deeper]').hidden=state.phase!==DEMO_CONNECTION_PHASES.RESULT;
+    overlay.querySelector('[data-combination-continue]').hidden=!state.primaryResult || [DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase);
+    const primaryPath=overlay.querySelector('[data-primary-path]'),deeperPath=overlay.querySelector('[data-deeper-path]'),livePath=overlay.querySelector('[data-live-path]');
+    overlay.querySelector('[data-gradient-source]')?.setAttribute('stop-color',choice?.sourceColor || '#7ea45f');overlay.querySelector('[data-gradient-target]')?.setAttribute('stop-color',choice?.targetColor || '#a06a43');overlay.querySelector('[data-gradient-deeper-source]')?.setAttribute('stop-color',choice?.targetColor || '#a06a43');
+    primaryPath.setAttribute('d',state.primaryResult?`${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result)}`:'');
+    deeperPath.setAttribute('d',state.deeperResult?`${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.result,DEMO_CONNECTION_POSITIONS.deeperResult)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult)}`:'');
+    const endpoint=activeDrag?(state.hoverTarget?demoConnectionTarget(state):state.pointer):null;livePath.setAttribute('d',endpoint?demoConnectionCurve(demoConnectionSource(state),endpoint):'');
+    paintWelcomeLayer(performance.now());introBoardTextureDirty=true;
+}
+
+async function resolveKnowledgeCombination(deeper=false){
+    const state=knowledgeCombinationState,choice=demoConnectionChoice(state);if(!state || !choice)return false;
+    state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_RESOLVING:DEMO_CONNECTION_PHASES.RESOLVING;syncKnowledgeCombinationOverlay();
+    try{
+        const record=knowledgeCombinationPlantRecord() || {id:'pigeon-pea-demo',demoPlantPreset:'pigeon-pea',demoExpanded:false};
+        const document=demoOrbKnowledge(record).document,ownerId=demoMeshOwnerId(record,document);meshSourceResolver.registerPimDocument(document,{ownerId});
+        const refs=deeper?[state.primaryResult.derivedRef,limMeshRef(DEMO_DEEPER_CONNECTION.targetId)]:[pimMeshRef(document,choice.sourceId,{ownerId,specimenId:String(record.id || ownerId)}),limMeshRef(choice.targetId)];
+        meshComposition.clear();refs.forEach(ref=>meshComposition.add(ref));meshComposition.resolving();
+        const result=await meshRelationships.resolve(refs,{context:{mode:'general'}});meshComposition.display(result);
+        if(deeper){state.deeperResult=result;state.phase=DEMO_CONNECTION_PHASES.COMPLETE;setGuide(`${choice.deeperTitle} is ready as a question for this place.`);}
+        else{state.primaryResult=result;state.phase=DEMO_CONNECTION_PHASES.RESULT;setGuide(`${choice.resultTitle} emerged. Go deeper with Place and Observation, or continue the journey.`);}
+        navigator.vibrate?.([35,35,60]);
+    }catch(error){meshComposition.fail(error);state.error='The ideas did not connect this time. Try the same gesture again.';state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_READY:DEMO_CONNECTION_PHASES.READY;}
+    syncKnowledgeCombinationOverlay();return true;
+}
+
+function startKnowledgeCombinationExperience(){
+    useSharedWelcomeBoard(false);clearLimSelection();limMeshVisible=false;knowledgeCombinationState=createDemoConnectionState();knowledgeCombinationCleanup();
+    const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');infoPanel?.suspend(true);
+    const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');syncKnowledgeCombinationOverlay();
+    setGuide('Choose Pruning or Nitrogen Fixation to discover what it can reveal with a learning cell.');
+    knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');};
+}
+
+function finishKnowledgeCombinationExperience(){
+    knowledgeCombinationCleanup();knowledgeCombinationState=null;infoPanel?.suspend(false);showAudienceValue();
+}
+
+function showKnowledgeCombinationIntroduction(){
+    clearLimSelection();
+    showIntroBoard(
+        'Knowledge grows through connection',
+        [
+            'A plant characteristic can meet a learning cell to reveal a useful idea that neither cell holds alone.',
+            'Choose one of two Pigeon Pea characteristics. Hold its connection node, then draw it toward the learning cell that blooms in response.',
+            'The source cells stay visible. A new cell emerges between them, and you can optionally go deeper by connecting it to Place and Observation.'
+        ],
+        'Combine cells',
+        startKnowledgeCombinationExperience,
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'Connect knowledge',nextGuide:'Choose a plant characteristic, then hold and drag its glowing connection node.'}
+    );
+}
+
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
     showDemoTutorialMedia('connection','Connect plant knowledge to learning','A Plant Profile explains a plant. Learning pathways turn that knowledge into questions and practical exploration, on site or as a standalone experience.');
@@ -2264,7 +2349,7 @@ function showLimoArchetypes() {
             'A pathway can begin from a Plant Profile, from something observed on site or as a standalone learning journey.'
         ],
         'Continue after exploring',
-        showAudienceValue,
+        showKnowledgeCombinationIntroduction,
         {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'Learning pathways',nextGuide:'Select an archetype to explore its connected learning cells.'}
     );
     setGuide('Select a pathway archetype to explore its connected learning cells.');
@@ -2471,7 +2556,7 @@ function advanceDemo() {
     appRoot?.querySelector('[data-tryit-action]')?.setAttribute('hidden', '');
     if (nextStage === 'finish') return returnToWelcome();
     if (nextStage === 'reset') {
-        markers.forEach(record => {if(record.texture)gl?.deleteTexture(record.texture);if(record.demoConnectionTexture)gl?.deleteTexture(record.demoConnectionTexture);});
+        markers.forEach(record => {if(record.texture)gl?.deleteTexture(record.texture);});
         markers = [];
         marker = null;
         markerType = 'marker';
@@ -2622,7 +2707,7 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     if (!record.demoExpanded) return anchoredOrb;
     const surface = demoPimSurfaceLayout(anchor);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px;width:${surface.panelWidth}px;height:${surface.panelHeight}px`;
-    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information"><button type="button" class="nlxr-desktop-pim-move" data-desktop-pim-move-handle aria-label="Move plant information"><span aria-hidden="true">Move plant information</span></button>${demoPlantKnowledgeMarkup(record, anchor)}${demoKnowledgeConnectionMarkup(record)}</span>`;
+    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information"><button type="button" class="nlxr-desktop-pim-move" data-desktop-pim-move-handle aria-label="Move plant information"><span aria-hidden="true">Move plant information</span></button>${demoPlantKnowledgeMarkup(record, anchor)}</span>`;
 }
 
 function renderSimulatedTotem(record, index, anchor) {
@@ -2906,57 +2991,6 @@ function updateSimulatedMarkers() {
     bindSimulatedInformationPanels(layer);
 }
 
-function bindDemoKnowledgeConnection(profile,record){
-    const overlay=profile.querySelector('[data-demo-connections]'),state=record?.demoConnections;
-    if(!overlay || !state)return;
-    const handle=overlay.querySelector('[data-demo-connection-handle]');
-    const preview=overlay.querySelector('[data-demo-connection-preview]');
-    const pruning=profile.querySelector('[data-pim-node-id="pruning"]');
-    if(handle && pruning && demoConnectionStep(state)===DEMO_CONNECTIONS.first){
-        const panelRect=profile.getBoundingClientRect(),cellRect=pruning.getBoundingClientRect();
-        const x=100*(cellRect.right-panelRect.left)/Math.max(1,panelRect.width);
-        const y=100*(cellRect.top+cellRect.height*.5-panelRect.top)/Math.max(1,panelRect.height);
-        handle.style.setProperty('--connection-x',`${Math.max(5,Math.min(92,x))}%`);
-        handle.style.setProperty('--connection-y',`${Math.max(7,Math.min(93,y))}%`);
-    }
-    const point=event=>{const box=profile.getBoundingClientRect();return {x:100*(event.clientX-box.left)/Math.max(1,box.width),y:100*(event.clientY-box.top)/Math.max(1,box.height)};};
-    if(handle){
-        let pointerId=null,start=null;
-        const finish=async (event,cancelled=false)=>{
-            if(pointerId===null || (event?.pointerId!==undefined && event.pointerId!==pointerId))return;
-            event?.preventDefault();event?.stopPropagation();
-            const end=event?point(event):state.pointer;
-            const valid=!cancelled && event?.type!=='pointercancel' && demoConnectionTargetAt(state,end?.x,end?.y,15);
-            pointerId=null;state.dragging=false;state.pointer=null;state.hoverTarget=false;
-            overlay.classList.remove('is-dragging','is-targeted');preview?.setAttribute('d','');
-            if(valid)await resolveDemoKnowledgeConnection(record);
-            else setGuide('Connection released. Drag the connection point onto the highlighted learning cell.');
-        };
-        handle.addEventListener('pointerdown',event=>{
-            event.preventDefault();event.stopPropagation();pointerId=event.pointerId;state.dragging=true;
-            const box=profile.getBoundingClientRect(),handleBox=handle.getBoundingClientRect();
-            start={x:100*(handleBox.left+handleBox.width*.5-box.left)/Math.max(1,box.width),y:100*(handleBox.top+handleBox.height*.5-box.top)/Math.max(1,box.height)};
-            handle.setPointerCapture?.(event.pointerId);overlay.classList.add('is-dragging');
-        });
-        handle.addEventListener('pointermove',event=>{
-            if(event.pointerId!==pointerId)return;event.preventDefault();event.stopPropagation();
-            state.pointer=point(event);state.hoverTarget=demoConnectionTargetAt(state,state.pointer.x,state.pointer.y,15);
-            overlay.classList.toggle('is-targeted',state.hoverTarget);preview?.setAttribute('d',demoConnectionCurve(start,state.pointer));
-        });
-        handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
-        handle.addEventListener('lostpointercapture',event=>{if(pointerId!==null)finish(event,true);});
-        handle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();});
-        handle.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' '){event.preventDefault();event.stopPropagation();resolveDemoKnowledgeConnection(record);}});
-    }
-    overlay.querySelectorAll('[data-demo-connection-result]').forEach(button=>{
-        button.addEventListener('pointerdown',event=>event.stopPropagation());
-        button.addEventListener('click',event=>{
-            event.stopPropagation();const content=DEMO_CONNECTIONS[button.dataset.demoConnectionResult];
-            infoPanel?.showLearning({id:`demo-${button.dataset.demoConnectionResult}`,title:content.resultTitle,body:content.resultSummary,editable:false});
-        });
-    });
-}
-
 function applyPlantPanelOffset(profile, offset) {
     profile.style.setProperty('--panel-x', `${offset.x}px`);
     profile.style.setProperty('--panel-y', `${offset.y}px`);
@@ -3157,7 +3191,6 @@ function bindSimulatedInformationPanels(layer) {
         const record = markers[index];
         const handles = profile.querySelectorAll('[data-desktop-pim-move-handle],[data-plant-profile-handle]');
         if (!record || !handles.length) return;
-        bindDemoKnowledgeConnection(profile,record);
         const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]');
         profile.addEventListener('pointerdown', event => {
             if (!pimTarget(event)) return;
@@ -3786,7 +3819,6 @@ function renderInterface(simulated) {
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
-    syncMeshPanel();
     if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
@@ -4309,34 +4341,6 @@ function drawIntroNoteContent(ctx) {
     ctx.restore();
 }
 
-function drawDemoConnectionCard(ctx,{x,y,width,height,title,body='',target=false}){
-    const left=x-width/2,top=y-height/2;
-    ctx.fillStyle=target?'rgba(12,47,37,.92)':'rgba(29,75,55,.96)';ctx.strokeStyle=target?'rgba(190,235,184,.78)':'rgba(219,250,177,.82)';ctx.lineWidth=4;
-    ctx.beginPath();ctx.roundRect(left,top,width,height,26);ctx.fill();ctx.stroke();
-    ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#efffc9';ctx.font='800 25px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+18,top+17,width-36,29,2);
-    if(body){ctx.fillStyle='rgba(255,255,255,.84)';ctx.font='650 17px system-ui,sans-serif';drawWrappedTextureText(ctx,body,left+18,top+70,width-36,21,3);}
-}
-
-function createDemoConnectionTexture(record){
-    if(!gl || !record?.demoConnections)return null;
-    const state=record.demoConnections,step=demoConnectionStep(state),size=record.pimTextureSize || demoPimSurfaceSize(record);
-    const canvas=document.createElement('canvas');canvas.width=size.width;canvas.height=size.height;const ctx=canvas.getContext('2d');
-    const point=value=>({x:value.x*canvas.width/100,y:value.y*canvas.height/100});
-    const curve=(from,to,preview=false)=>{const a=point(from),b=point(to),bend=Math.max(70,Math.abs(b.x-a.x)*.28);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.strokeStyle=preview?'rgba(239,255,201,.96)':'rgba(207,247,145,.72)';ctx.lineWidth=preview?7:5;ctx.setLineDash(preview?[18,14]:[]);ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);};
-    if(state.firstResult){curve({x:51,y:51},{x:61,y:53});curve({x:82,y:27},{x:61,y:53});}
-    if(state.secondResult){curve({x:61,y:53},{x:55,y:80});curve({x:82,y:76},{x:55,y:80});}
-    if(state.dragging && state.pointer)curve(demoConnectionSource(state),state.pointer,true);
-    if(step){
-        const source=point(demoConnectionSource(state)),target=point(demoConnectionTarget(state));
-        ctx.fillStyle='#efffc9';ctx.strokeStyle='#173d32';ctx.lineWidth=4;ctx.beginPath();ctx.arc(source.x,source.y,12,0,Math.PI*2);ctx.fill();ctx.stroke();
-        drawDemoConnectionCard(ctx,{x:target.x,y:target.y,width:290,height:105,title:step.targetTitle,body:'Release connection here',target:true});
-        if(state.hoverTarget){ctx.strokeStyle='rgba(239,255,201,.95)';ctx.lineWidth=8;ctx.beginPath();ctx.roundRect(target.x-153,target.y-65,306,130,32);ctx.stroke();}
-    }
-    if(state.firstResult){const p=point({x:61,y:53});drawDemoConnectionCard(ctx,{x:p.x,y:p.y,width:350,height:155,title:DEMO_CONNECTIONS.first.resultTitle,body:DEMO_CONNECTIONS.first.resultSummary});}
-    if(state.secondResult){const p=point({x:55,y:80});drawDemoConnectionCard(ctx,{x:p.x,y:p.y,width:390,height:165,title:DEMO_CONNECTIONS.second.resultTitle,body:DEMO_CONNECTIONS.second.resultSummary});}
-    return canvasTexture(canvas);
-}
-
 function createIntroControlTexture(labelText, texture = null) {
     const label = document.createElement('canvas');
     label.width = 900;
@@ -4618,12 +4622,8 @@ function createDemoNoteTexture(record) {
 function createMarkerTexture(record) {
     if (!gl) return null;
     if (record.demoExpanded) {
-        const texture=createSpatialKnowledgeTexture(record);
-        if(record.demoConnectionTexture)gl.deleteTexture(record.demoConnectionTexture);
-        record.demoConnectionTexture=createDemoConnectionTexture(record);
-        return texture;
+        return createSpatialKnowledgeTexture(record);
     }
-    if(record.demoConnectionTexture){gl.deleteTexture(record.demoConnectionTexture);record.demoConnectionTexture=null;}
     if (record.demoType === 'note') return createDemoNoteTexture(record);
     const label = document.createElement('canvas');
     label.width = 256;
@@ -4945,11 +4945,6 @@ function drawMarker(view) {
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), sceneOpacity);
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-        if(plantProfile && record.demoConnectionTexture){
-            gl.bindTexture(gl.TEXTURE_2D,record.demoConnectionTexture);
-            gl.uniform1f(gl.getUniformLocation(program,'opacity'),profileOpacity);
-            gl.drawArrays(gl.TRIANGLES,0,6);
-        }
         if (plantProfile) gl.depthMask(true);
         if (record.isBoundary) {
             record.boundaryTexture ||= createBoundaryTexture();
@@ -4996,7 +4991,7 @@ function drawDemoControllerPointer(view) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
-    const limSurface=arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell()
+    const limSurface=(arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell()) || (arWelcomeShowcaseActive && introWorldAnchor && knowledgeCombinationState)
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -5061,14 +5056,13 @@ async function startImmersive() {
         session.addEventListener('select', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
-            if(activeDemoConnectionRecord())return;
+            if(knowledgeCombinationState)return;
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (demoHeldIndex >= 0) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
             if (activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return;
-            if (selectImmersiveDemoConnectionResult()) return;
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
             if (selectDemoPlantAtPointer()) return;
@@ -5090,7 +5084,7 @@ async function startImmersive() {
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
-            if (beginImmersiveDemoConnection()) return;
+            if (beginImmersiveKnowledgeCombination()) return;
             if (demoInfoTarget()?.target) return;
             const actionTarget = demoRecordAtPointer()?.record;
             if (actionTarget?.demoType === 'note') return;
@@ -5098,8 +5092,8 @@ async function startImmersive() {
         });
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
-            captureDemoInputEventRay(event);syncImmersiveDemoConnection();
-            if(endImmersiveDemoConnection())return;
+            captureDemoInputEventRay(event);syncImmersiveKnowledgeCombination();
+            if(endImmersiveKnowledgeCombination())return;
             if (demoHeldIndex < 0) {
                 clearTimeout(demoHoldTimer);
                 demoHoldTimer = null;
@@ -5108,7 +5102,7 @@ async function startImmersive() {
             releaseHeldDemoRecord();
             suppressSessionSelectUntil = performance.now() + 280;
         });
-        session.addEventListener('selectcancel',()=>endImmersiveDemoConnection(true));
+        session.addEventListener('selectcancel',()=>endImmersiveKnowledgeCombination(true));
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
@@ -5126,7 +5120,7 @@ async function startImmersive() {
             groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             updateDemoControllerRay(frame);
             syncDemoPimHover();
-            syncImmersiveDemoConnection();
+            syncImmersiveKnowledgeCombination(_time);
             pollDemoControllerDepth(_time);
             pollDemoHandPinch();
             syncImmersiveLimHover();

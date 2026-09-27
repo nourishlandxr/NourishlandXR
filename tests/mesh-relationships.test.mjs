@@ -13,7 +13,8 @@ function fixture(){
     resolver.registerPimDocument(PIGEON_PEA_PIM,{ownerId:'demo-pigeon-pea'});
     return {repository,resolver,generator,service:createMeshRelationshipService({repository,resolver,generator,now:()=> '2026-09-26T00:00:00.000Z'}),
         living:limMeshRef('lim-food-forest'),place:limMeshRef('lim-pin'),wildlife:limMeshRef('lim-wildlife-relationships'),
-        pruning:pimMeshRef(PIGEON_PEA_PIM,'pruning',{ownerId:'demo-pigeon-pea'})};
+        pruning:pimMeshRef(PIGEON_PEA_PIM,'pruning',{ownerId:'demo-pigeon-pea'}),
+        nitrogen:pimMeshRef(PIGEON_PEA_PIM,'nitrogen-fixation',{ownerId:'demo-pigeon-pea'})};
 }
 
 test('canonicalizes a LIM reference by stable node ID',async()=>{
@@ -98,6 +99,14 @@ test('curated pruning relationship chains into Watch What Changes',async()=>{
     const f=fixture(),first=await f.service.resolve([f.pruning,f.living]),second=await f.service.resolve([first.derivedRef,f.place]);
     assert.equal(second.derivedNode.title,'Watch What Changes');
     assert.match(second.derivedNode.summary,/regrowth/);
+    assert.equal(second.derivedNode.provenance.depth,2);
+});
+
+test('curated nitrogen relationship chains into local soil observation',async()=>{
+    const f=fixture(),first=await f.service.resolve([f.nitrogen,f.wildlife]),second=await f.service.resolve([first.derivedRef,f.place]);
+    assert.equal(first.derivedNode.title,'Root Partnerships');
+    assert.equal(second.derivedNode.title,'Evidence Beneath the Soil');
+    assert.match(second.derivedNode.summary,/root nodules/);
     assert.equal(second.derivedNode.provenance.depth,2);
 });
 

@@ -182,27 +182,19 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
     let mediaImage=null,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='left',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
-    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
+    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
     let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
     settingsElement.className='nlxr-settings-companion';settingsElement.setAttribute('aria-label','Settings companion panel');settingsElement.hidden=true;root?.append(settingsElement);
     const isDesktopDemo=()=>Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
-    const meshText=()=>{
-        if(!meshContext || (!meshContext.items?.length && !meshContext.result && !meshContext.error))return '';
-        const lines=['SELECTED KNOWLEDGE',...(meshContext.items?.length?meshContext.items.map((item,index)=>`${index+1}. ${item.title}`):['None'])];
-        if(meshContext.mode==='resolving')lines.push('','Connecting ideas…');
-        if(meshContext.error)lines.push('','Unable to connect these ideas',meshContext.error);
-        if(meshContext.result && selection?.id!==meshContext.result.id)lines.push('','DISCOVERED IDEA',meshContext.result.title,meshContext.result.summary);
-        return lines.join('\n');
-    };
     const text=()=>{
         if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Information about what you select will appear here. Select a Plant Orb or hold one of its cells to explore.'
                 :'Information about what you select will appear here.';
-        return [reading,meshText()].filter(Boolean).join('\n\n────────────────\n\n');
+        return reading;
     };
     const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || '';
     const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
@@ -726,7 +718,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             tab='Details';hidden=false;page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
-        setMeshComposition(value){meshContext=value?{...value,items:[...(value.items || [])]}:null;page=0;updateReading();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},

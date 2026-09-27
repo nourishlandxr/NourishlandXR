@@ -1,16 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DEMO_CONNECTIONS,DEMO_CONNECTION_PHASES,createDemoConnectionState,demoConnectionCurve,demoConnectionStep,demoConnectionTargetAt} from '../app/services/demoKnowledgeConnections.js';
+import {DEMO_CONNECTION_CHOICES,DEMO_CONNECTION_HOLD_MS,DEMO_CONNECTION_PHASES,DEMO_DEEPER_CONNECTION,createDemoConnectionState,demoConnectionCurve,demoConnectionTargetAt,selectDemoConnectionChoice} from '../app/services/demoKnowledgeConnections.js';
 
-test('guided connection state exposes only the two curated learning targets',()=>{
+test('guided connection state offers two curated plant and learning pairs',()=>{
     const state=createDemoConnectionState();
-    assert.equal(demoConnectionStep(state),DEMO_CONNECTIONS.first);
-    assert.equal(demoConnectionTargetAt(state,82,27),true);
-    assert.equal(demoConnectionTargetAt(state,82,76),false);
-    state.phase=DEMO_CONNECTION_PHASES.SECOND;
-    assert.equal(demoConnectionStep(state),DEMO_CONNECTIONS.second);
-    assert.equal(demoConnectionTargetAt(state,82,76),true);
+    assert.equal(state.phase,DEMO_CONNECTION_PHASES.CHOOSING);
+    assert.equal(DEMO_CONNECTION_CHOICES.length,2);
+    selectDemoConnectionChoice(state,'pruning');
+    assert.equal(state.phase,DEMO_CONNECTION_PHASES.READY);
+    assert.equal(demoConnectionTargetAt(state,81,39),true);
+    assert.equal(demoConnectionTargetAt(state,81,68),false);
+    selectDemoConnectionChoice(state,'nitrogen-fixation');
+    assert.equal(demoConnectionTargetAt(state,81,68),true);
+    assert.equal(DEMO_CONNECTION_HOLD_MS,500);
 });
 
 test('connection curve is a stable curved path with no layout mutation',()=>{
@@ -19,12 +22,16 @@ test('connection curve is a stable curved path with no layout mutation',()=>{
 
 test('visitor-facing guided connection copy keeps implementation acronyms invisible',async()=>{
     const source=await readFile(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
-    const visible=[DEMO_CONNECTIONS.first.targetTitle,DEMO_CONNECTIONS.first.resultTitle,DEMO_CONNECTIONS.second.targetTitle,DEMO_CONNECTIONS.second.resultTitle];
-    visible.forEach(label=>assert.match(source,new RegExp(label.replace(/[&]/g,'&'))));
-    assert.match(source,/Drag the small connection point to Living Landscapes/);
+    const content=await readFile(new URL('../app/services/demoKnowledgeConnections.js',import.meta.url),'utf8');
+    const visible=[...DEMO_CONNECTION_CHOICES.flatMap(choice=>[choice.sourceTitle,choice.targetTitle,choice.resultTitle,choice.deeperTitle]),DEMO_DEEPER_CONNECTION.targetTitle];
+    visible.forEach(label=>assert.match(content,new RegExp(label.replace(/[&]/g,'&'))));
+    assert.match(source,/DEMO_CONNECTION_HOLD_MS/);
+    assert.match(source,/Hold the glowing node/);
     assert.match(source,/selectcancel/);
     assert.match(source,/lostpointercapture/);
     assert.match(source,/setPointerCapture/);
     assert.match(source,/meshRelationships\.resolve\(refs/);
-    assert.match(source,/state\.firstResult\.derivedRef/);
+    assert.match(source,/state\.primaryResult\.derivedRef/);
+    assert.match(source,/showKnowledgeCombinationIntroduction/);
+    assert.doesNotMatch(source,/startDemoKnowledgeConnections/);
 });

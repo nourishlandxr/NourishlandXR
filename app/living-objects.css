@@ -1192,26 +1192,45 @@
 
 .nlxr-desktop-pim-move { display:none; }
 
-/* The guided demo adds connections as a transparent presentation layer. The
-   underlying plant-information cells keep their canonical positions. */
-.demo-knowledge-connections{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
-.demo-knowledge-connections svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.demo-knowledge-connections path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.demo-knowledge-connections path.is-set{stroke:rgba(207,247,145,.72);stroke-width:2.2;filter:drop-shadow(0 0 5px rgba(126,226,153,.34))}
-.demo-knowledge-connections path.is-preview{stroke:#efffc9;stroke-width:3;stroke-dasharray:6 5}
-.demo-knowledge-connections:not(.is-dragging) path.is-preview{opacity:0}
-.demo-connection-handle{position:absolute;left:var(--connection-x);top:var(--connection-y);width:46px;height:46px;transform:translate(-50%,-50%);border:0;background:transparent;pointer-events:auto;touch-action:none;cursor:grab}
-.demo-connection-handle::before{content:"";position:absolute;inset:15px;border-radius:50%;background:#efffc9;border:2px solid #173d32;box-shadow:0 0 0 5px rgba(200,245,152,.18),0 0 14px rgba(200,245,152,.62)}
-.demo-connection-handle:focus-visible{outline:3px solid #fff;outline-offset:1px;border-radius:50%}
-.demo-connection-target{position:absolute;left:var(--connection-x);top:var(--connection-y);width:min(190px,27%);min-height:64px;transform:translate(-50%,-50%);display:grid;align-content:center;gap:3px;padding:10px 13px;border:1px solid rgba(190,235,184,.64);border-radius:18px;background:rgba(12,47,37,.9);color:#f5ffe9;box-shadow:0 14px 34px rgba(4,18,14,.28);transition:border-color .18s,box-shadow .18s,transform .18s}
-.demo-connection-target strong,.demo-connection-target small{display:block;line-height:1.15}
-.demo-connection-target strong{font-size:14px}.demo-connection-target small{font-size:11px;color:rgba(235,255,225,.72)}
-.demo-knowledge-connections.is-targeted .demo-connection-target{border-color:#efffc9;box-shadow:0 0 0 5px rgba(221,255,175,.2),0 14px 34px rgba(4,18,14,.3);transform:translate(-50%,-50%) scale(1.04)}
-.demo-knowledge-result{position:absolute;z-index:2;width:min(230px,31%);min-height:76px;padding:12px 14px;border:1px solid rgba(210,245,170,.7);border-radius:20px;background:linear-gradient(145deg,rgba(40,91,66,.96),rgba(14,50,40,.96));color:#fff;text-align:left;pointer-events:auto;box-shadow:0 13px 32px rgba(3,18,12,.3);animation:demo-knowledge-appear .32s ease-out both}
-.demo-knowledge-result strong,.demo-knowledge-result small{display:block}.demo-knowledge-result strong{font-size:15px;color:#efffc9}.demo-knowledge-result small{margin-top:4px;font-size:11px;line-height:1.28;color:rgba(255,255,255,.82)}
-.demo-knowledge-result.is-first{left:61%;top:53%;transform:translate(-50%,-50%)}
-.demo-knowledge-result.is-second{left:55%;top:80%;transform:translate(-50%,-50%)}
-.demo-connection-resolving{position:absolute;left:64%;top:39%;transform:translate(-50%,-50%);padding:7px 11px;border-radius:999px;background:rgba(16,55,44,.94);color:#efffc9;font:700 11px/1.1 system-ui,sans-serif}
+/* Post-LIMO relationship experience. It lives on the shared spatial surface,
+   not in the Control panel, so the gesture and its meaning stay together. */
+.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.22),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.64),rgba(9,38,29,.42));font-family:system-ui,sans-serif;pointer-events:auto}
+.knowledge-combination[hidden],.knowledge-combination [hidden]{display:none!important}
+.knowledge-combination header{position:absolute;z-index:4;left:50%;top:4%;width:78%;transform:translateX(-50%);text-align:center;pointer-events:none}
+.knowledge-combination header small{display:block;color:rgba(222,241,211,.62);font-size:clamp(8px,1.15vw,13px);font-weight:800;letter-spacing:.18em}
+.knowledge-combination header h2{margin:.35em 0 .2em;font:800 clamp(17px,2.3vw,31px)/1.08 system-ui,sans-serif;color:#f6fff0}
+.knowledge-combination header p{margin:0 auto;max-width:780px;color:rgba(237,248,231,.8);font:600 clamp(10px,1.35vw,16px)/1.35 system-ui,sans-serif}
+.knowledge-combination svg{position:absolute;z-index:1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.knowledge-combination path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.knowledge-combination path.is-established{stroke-width:2;opacity:.82;filter:drop-shadow(0 0 5px rgba(222,249,202,.38))}
+.knowledge-combination path.is-established.is-primary{stroke:url(#knowledge-primary-gradient)}
+.knowledge-combination path.is-established.is-deeper{stroke:url(#knowledge-deeper-gradient)}
+.knowledge-combination path.is-live{stroke:url(#knowledge-primary-gradient);stroke-width:4;filter:drop-shadow(0 0 7px var(--target-color));transition:filter .16s ease}
+.knowledge-combination[data-phase^="deeper"] path.is-live,.knowledge-combination[data-phase="complete"] path.is-live{stroke:url(#knowledge-deeper-gradient)}
+.knowledge-column-label{position:absolute;z-index:3;top:23%;transform:translateX(-50%);color:rgba(224,242,216,.56);font-size:clamp(7px,.95vw,11px);font-weight:850;letter-spacing:.14em;pointer-events:none}.knowledge-column-label.is-plant{left:19%}.knowledge-column-label.is-learning{left:81%}
+.knowledge-source-cell,.knowledge-target-cell,.knowledge-derived-cell{position:absolute;z-index:2;left:var(--cell-x);top:var(--cell-y);width:27%;min-height:14%;box-sizing:border-box;transform:translate(-50%,-50%);display:grid;align-content:center;gap:4px;padding:clamp(10px,1.4vw,18px);border:1px solid color-mix(in srgb,var(--cell-color,#769d73) 52%,#efffe8);border-radius:clamp(16px,2.5vw,30px);background:linear-gradient(145deg,color-mix(in srgb,var(--cell-color,#769d73) 84%,transparent),rgba(10,39,29,.95));color:#fff;text-align:left;box-shadow:inset 0 1px rgba(255,255,255,.16),0 14px 36px rgba(1,18,11,.3);transition:opacity .25s ease,transform .25s ease,filter .25s ease,box-shadow .25s ease}
+button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-action:none}
+.knowledge-source-cell small,.knowledge-target-cell small,.knowledge-derived-cell small{color:rgba(241,253,234,.7);font-size:clamp(7px,.9vw,11px);font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.knowledge-source-cell strong,.knowledge-target-cell strong,.knowledge-derived-cell strong{font-size:clamp(12px,1.65vw,21px);line-height:1.08}
+.knowledge-source-cell span,.knowledge-target-cell span,.knowledge-derived-cell p{margin:0;color:rgba(247,255,243,.78);font-size:clamp(8px,1.03vw,13px);line-height:1.28}
+.knowledge-source-cell:is(:hover,:focus-visible),.knowledge-source-cell.is-selected{outline:0;transform:translate(-50%,-50%) scale(1.035);box-shadow:0 0 0 3px rgba(255,255,255,.2),0 0 28px color-mix(in srgb,var(--cell-color) 52%,transparent),0 16px 40px rgba(1,18,11,.34)}
+.knowledge-combination .is-muted{opacity:.26;filter:saturate(.45)}
+.knowledge-target-cell.is-matching{animation:knowledge-cell-bloom 1.15s ease-in-out infinite;box-shadow:0 0 0 5px color-mix(in srgb,var(--cell-color) 22%,transparent),0 0 34px color-mix(in srgb,var(--cell-color) 66%,transparent),0 16px 40px rgba(1,18,11,.34)}
+.knowledge-target-cell.is-magnetic{transform:translate(-50%,-50%) scale(1.07);border-color:#fff;box-shadow:0 0 0 7px color-mix(in srgb,var(--cell-color) 30%,transparent),0 0 48px color-mix(in srgb,var(--cell-color) 82%,transparent)}
+.knowledge-node{--hold-progress:0;position:absolute;z-index:5;right:-23px;top:50%;width:44px;height:44px;transform:translateY(-50%);border-radius:50%;background:conic-gradient(#f7ffd9 calc(var(--hold-progress)*1turn),rgba(238,255,213,.22) 0);box-shadow:0 0 0 5px rgba(221,248,183,.12),0 0 18px rgba(225,255,186,.6);cursor:grab;touch-action:none}
+.knowledge-node::after{content:"";position:absolute;inset:10px;border:2px solid #173d32;border-radius:50%;background:#f1ffd0}
+.knowledge-node:is(:hover,:focus-visible){outline:3px solid #fff;outline-offset:4px}
+.knowledge-combination[data-phase="holding"] .knowledge-node,.knowledge-combination[data-phase="deeper-holding"] .knowledge-node{animation:knowledge-node-pulse .5s ease-in-out infinite}
+.knowledge-derived-cell{--cell-color:color-mix(in srgb,var(--source-color) 48%,var(--target-color));z-index:3;width:34%;min-height:18%;border-color:rgba(242,255,224,.82);background:linear-gradient(145deg,color-mix(in srgb,var(--source-color) 48%,var(--target-color)),rgba(9,40,30,.97));text-align:center;animation:knowledge-derived-emerge .62s cubic-bezier(.2,.8,.2,1) both}
+.knowledge-derived-cell .knowledge-node{right:-22px}.knowledge-derived-cell.is-deeper{width:38%;--cell-color:#9a9460}.knowledge-target-cell.is-deeper{width:27%}
+.knowledge-combination nav{position:absolute;z-index:6;left:50%;bottom:3.5%;transform:translateX(-50%);display:flex;gap:10px;white-space:nowrap}
+.knowledge-combination nav button{min-height:42px;padding:9px 18px;border:1px solid rgba(236,252,222,.68);border-radius:999px;background:rgba(21,58,45,.94);color:#f3faee;font:800 clamp(10px,1.1vw,14px)/1 system-ui,sans-serif;box-shadow:0 8px 20px rgba(2,20,13,.28);cursor:pointer}
+.knowledge-combination nav button:last-child{background:#dff0b2;color:#173328;border-color:#efffcf}.knowledge-combination nav button:is(:hover,:focus-visible){outline:3px solid rgba(255,255,255,.75);outline-offset:3px;transform:translateY(-1px)}
+@keyframes knowledge-cell-bloom{50%{filter:brightness(1.18);transform:translate(-50%,-50%) scale(1.035)}}
+@keyframes knowledge-node-pulse{50%{scale:1.12}}
+@keyframes knowledge-derived-emerge{from{opacity:0;scale:.55;filter:blur(10px)}to{opacity:1;scale:1;filter:blur(0)}}
+@media(max-width:620px){.knowledge-source-cell,.knowledge-target-cell{width:31%;padding:9px}.knowledge-derived-cell{width:41%}.knowledge-column-label{top:22%}.knowledge-combination nav{bottom:2%}}
+@media(prefers-reduced-motion:reduce){.knowledge-combination *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}}
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
 
 /* Elemental Totem: shape and broad light define the material. The surface is
