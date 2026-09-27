@@ -5,7 +5,7 @@ import { createLimActivationController } from '../services/limActivation.js';
 import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
-import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
+import { createSpatialTotemCards, drawSpatialTotemButtons } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
 import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
@@ -40,6 +40,17 @@ import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
 const MORINGA_PROFILE_IMAGE = new URL('../assets/moringa-oleifera.jpg', import.meta.url).href;
+const DEMO_TUTORIAL_ART = Object.freeze({
+    curiosity:{image:new URL('../assets/demo-tutorial-art/01-plant-curiosity.png',import.meta.url).href,alt:'A visitor pauses beside an unfamiliar plant, wondering what it is.'},
+    companion:{image:new URL('../assets/demo-tutorial-art/02-companion-control-panel.png',import.meta.url).href,alt:'A visitor explores the NourishlandXR companion Control panel.'},
+    references:{image:new URL('../assets/demo-tutorial-art/03-cumbersome-reference-tools.png',import.meta.url).href,alt:'A visitor carries books, a phone, compass and field guides while identifying a plant.'},
+    area:{image:new URL('../assets/demo-tutorial-art/04-create-an-area.png',import.meta.url).href,alt:'A garden Area is organised as part of a living place.'},
+    totem:{image:new URL('../assets/demo-tutorial-art/05-totem-unfolds-garden-knowledge.png',import.meta.url).href,alt:'A Totem reveals organised plant and garden information in a dense garden.'},
+    orb:{image:new URL('../assets/demo-tutorial-art/06-plant-orb-effects.png',import.meta.url).href,alt:'A Plant Orb connects a plant to its information.'},
+    note:{image:new URL('../assets/demo-tutorial-art/07-add-a-plant-note.png',import.meta.url).href,alt:'A visitor adds a note beside a plant.'},
+    connection:{image:new URL('../assets/demo-tutorial-art/08-connect-pimo-to-limo.png',import.meta.url).href,alt:'Plant information is connected to a learning pathway.'},
+    pathways:{image:new URL('../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'}
+});
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
@@ -1713,10 +1724,10 @@ function showArWelcomeShowcase() {
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
-    infoPanel?.showLearning({id:'welcome-control-guide',title:'Your guide',body:'This panel explains each plant, place and connection when you select it.',accent:'#9fdcff',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);
-    infoPanel?.suspend(true);
-    infoPanel?.setIntroduction(false);
+    showDemoTutorialMedia('companion','Your companion panel','This is your Control panel companion. Select a plant, Area or connection and its information appears here; the media panel shows a helpful picture for the step you are exploring.');
+    infoPanel?.setIntroduction(true);
+    infoPanel?.suspend(false);
     let openingParagraphs=introBoardBody.split('\n\n');
     panel.innerHTML=`<h2>${introBoardTitle}</h2><div class="tryit-board-text-window">${openingParagraphs.map(()=>'<p></p>').join('')}</div>`;
     prepareTutorialBoard(panel);
@@ -1869,20 +1880,27 @@ function selectWelcomeCell() {
     toggleLimCell(cell.key);return true;
 }
 
+function showDemoTutorialMedia(key,title,body) {
+    const art=DEMO_TUTORIAL_ART[key];
+    if(!art)return;
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title,body,image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    infoPanel?.suspend(false);
+}
+
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Knowledge begins with the place',button:'Continue',nextGuide:'',paragraphs:[
-        'A visitor should not need to search several signs, files and websites to understand what is in front of them.',
-        'NourishlandXR brings that information together and keeps the real place at the centre. The panel beside you explains each item when you select it.'
+    {title:'Start with curiosity',art:'curiosity',button:'Continue',nextGuide:'',paragraphs:[
+        'Imagine arriving in a garden and noticing a plant you do not recognise.',
+        'The Control panel is your companion: it gives you one place to read what you select, while the garden stays at the centre of the experience.'
     ]},
-    {title:'A project represents a whole place',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'A project represents a whole place',art:'references',button:'Continue',nextGuide:'',paragraphs:[
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
-        'That shared context keeps every piece of information connected to the place it describes.'
+        'Without a shared map, a visitor may need to juggle books, a phone, compass and manuals. NourishlandXR keeps useful information connected to the place it describes.'
     ]},
-    {title:'One place, one clear structure',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'One place, one clear structure',art:'area',button:'Continue',nextGuide:'',paragraphs:[
         'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
         'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
     ]},
-    {title:'Begin with one plant',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
+    {title:'Begin with one plant',art:'orb',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
         'Plants inside a Nourishland Project can have information connected to their real-world location.',
         'Pigeon Pea is our example. First choose where this plant belongs in the scene.'
     ]}
@@ -1906,20 +1924,21 @@ function runArWelcomeTutorial(index=0) {
     introBoardTextureDirty=true;
     syncDemoPanelActions();
     infoPanel?.setGuided(index>=2);
-    if(index===2){
-        infoPanel?.setCompact(false);
-        setTimeout(()=>{if(demoOrientationStep===2){infoPanel?.setIntroduction(true);infoPanel?.suspend(false);}},500);
-    }
     const step=DEMO_ORIENTATION_STEPS[index];
+    if(step?.art){
+        infoPanel?.setCompact(false);
+        showDemoTutorialMedia(step.art,step.title,step.paragraphs.join('\n\n'));
+        if(index===0)infoPanel?.setIntroduction(true);
+    }
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
-        if(index===2)infoPanel?.setIntroduction(false);
+        if(index===0)infoPanel?.setIntroduction(false);
         if(index===0){introBoardTextureDirty=true;runArWelcomeTutorial(index+1);return;}
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:`${index+1} of ${DEMO_ORIENTATION_STEPS.length}`,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===2});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:`${index+1} of ${DEMO_ORIENTATION_STEPS.length}`,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0});
 }
 
 function guidePlantConversion(record) {
@@ -2069,6 +2088,7 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
     updateSimulatedMarkers();
+    showDemoTutorialMedia('totem','A Totem unfolds garden knowledge','Two simple physical buttons control the Totem: show or store its attached signs, and fade or restore it when it is not in use.');
     setGuide('The Botanical Garden Totem welcomes visitors to its Area. Show the Rainforest Walk Totem to see a differently coloured Area and a route between them.');
     showSceneContinue('Show Rainforest Walk Totem', createDemoSecondTotem);
 }
@@ -2147,6 +2167,7 @@ function cycleDemoTotemStyle(record) {
 }
 
 function showLinkedTotemsIntroduction() {
+    showDemoTutorialMedia('totem','Areas stay connected','Each Area keeps its own local knowledge. Totems can create a clear visitor route without merging the information attached to each place.');
     showIntroBoard(
         'Why link Areas?',
         [
@@ -2179,7 +2200,7 @@ function fadeMappedSceneForLimo() {
 
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
-    infoPanel?.setMediaCollapsed(true);
+    showDemoTutorialMedia('connection','Connect PIMO to LIMO','PIMO explains a plant. LIMO turns that knowledge into questions and learning pathways, on site or as a standalone experience.');
     showIntroBoard(
         'Learn here or as a standalone experience',
         [
@@ -2206,6 +2227,8 @@ function showLimoArchetypes() {
         id:'limo-pathway-archetypes',
         title:'Choose a learning pathway',
         body:'The four archetypes are starting points for different ways of learning. Select an archetype to open its pathway, then follow the connected cells that become relevant.',
+        image:DEMO_TUTORIAL_ART.pathways.image,
+        imageAlt:DEMO_TUTORIAL_ART.pathways.alt,
         accent:'#9fdcff',
         mesh:'lim',
         editable:false
@@ -2241,6 +2264,7 @@ function showAudienceValue() {
 
 function showTotemIntroduction() {
     setDemoJourneyStage('connect');
+    showDemoTutorialMedia('totem','Area Totems','A welcoming Totem gives each Area a clear, simple place to gather its visitor information.');
     showIntroBoard(
         'Area Totems',
         [
@@ -2385,6 +2409,8 @@ function armDemoPlacement(type, {explained=false}={}) {
         totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
+    const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
+    showDemoTutorialMedia(mediaKey,title,typeof introduction==='string'?introduction:introduction.join('\n\n'));
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
@@ -4769,6 +4795,10 @@ function drawMarker(view) {
             emissive:.035,
             scale:{x:1,y:.7,z:.5},
             rotationY:Math.PI/7
+        });
+        drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},Math.PI/7,{
+            bodyHalfWidth:crownRadius,bodyHalfDepth:crownRadius*.5,bodyHalfHeight,
+            signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);

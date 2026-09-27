@@ -1,7 +1,7 @@
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { bindSpatialPimHold, createPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
-import { createSpatialTotemCards } from '../services/spatialTotemCards.js';
+import { createSpatialTotemCards, drawSpatialTotemButtons } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
 import { applySpatialNoteTemplate, spatialNoteTemplate, spatialNoteTemplateOptions } from '../services/spatialNoteTemplates.js';
@@ -4014,7 +4014,7 @@ function drawSpatialMarkers(view) {
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.34, .78, .7] };
+    const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.443, .353, .275] };
 
     activeAreaMarkers().forEach(record => {
         if (!hasRenderableSpatialPosition(record)) return;
@@ -4090,6 +4090,9 @@ function drawSpatialMarkers(view) {
                 emissive:.035,
                 scale:{x:1,y:.7,z:.5},
                 rotationY
+            });
+            drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,groundPosition,rotationY,{
+                bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)
             });
             return;
         }
@@ -6151,6 +6154,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawSpatialHomeSign(view);
                 drawQuestSpatialBelt(view);
                 drawQuestSpatialSpecialPalette(view);
+                drawQuestSpatialWebPanel(view);
+                drawHandTrackingLines(view);
+                drawCalibratedTotemPath(view);
+                drawSpatialMarkers(view);
                 if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {
                     totemCardsRenderer.begin();
                     activeAreaMarkers().filter(record=>record.marker.type==='area_checkpoint' && record.infoVisible && hasRenderableSpatialPosition(record)).forEach(record=>{
@@ -6161,10 +6168,6 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                     });
                     totemCardsRenderer.end();
                 }
-                drawQuestSpatialWebPanel(view);
-                drawHandTrackingLines(view);
-                drawCalibratedTotemPath(view);
-                drawSpatialMarkers(view);
                 drawSpatialPlantProfiles(view);
                 infoPanel?.draw(view);
                 // Keep the controller laser and its contact marker in the

@@ -1,9 +1,78 @@
+import { drawSpatialSphere } from './spatialSphereRenderer.js';
+import { totemHeightPreset } from './totemAppearance.js';
+
+const TOTEM_BUTTON_WIDTH = .055;
+const TOTEM_BUTTON_RADIUS = .028;
+const TOTEM_BUTTON_FACE_RADIUS = .025;
+
+function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9) {
+    const localY = Math.max(-1, Math.min(1, (y - bodyHalfHeight) / bodyHalfHeight));
+    const t = Math.max(0, Math.min(1, (localY + .35) / 1.35));
+    const eased = t * t * (3 - 2 * t);
+    return bodyHalfDepth * (1 - (1 - topTaper) * eased);
+}
+
+export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9 } = {}) {
+    const front = { x: -right.z, y: 0, z: right.x };
+    const rotationY = Math.atan2(-right.z, right.x);
+    return [
+        { id: '__signs', y: .78, symbol: '↔', title: 'SIGNS' },
+        { id: '__fade', y: .51, symbol: '◐', title: 'FADE' }
+    ].map(button => {
+        const face = totemFaceDepth(button.y, bodyHalfDepth, bodyHalfHeight, topTaper);
+        const centerOffset = face + .002;
+        const faceOffset = face + .014;
+        const point = offset => ({
+            x: position.x + front.x * offset,
+            y: position.y + button.y,
+            z: position.z + front.z * offset
+        });
+        return {
+            ...button,
+            right,
+            front,
+            rotationY,
+            radius: TOTEM_BUTTON_RADIUS,
+            faceRadius: TOTEM_BUTTON_FACE_RADIUS,
+            center: point(centerOffset),
+            faceCenter: point(faceOffset),
+            width: TOTEM_BUTTON_WIDTH,
+            height: TOTEM_BUTTON_WIDTH
+        };
+    });
+}
+
+export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatrix, position, rotationY = Math.PI / 7, state = {}) {
+    const right = { x: Math.cos(rotationY), y: 0, z: -Math.sin(rotationY) };
+    const bodyHalfWidth = Number(state.bodyHalfWidth) || .07;
+    const bodyHalfDepth = Number(state.bodyHalfDepth) || bodyHalfWidth * .5;
+    const bodyHalfHeight = Number(state.bodyHalfHeight) || .69;
+    const layout = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
+    const opacity = state.faded ? .18 : 1;
+    for (const button of layout) {
+        const pressed = button.id === '__signs' ? Boolean(state.signsVisible && !state.faded) : Boolean(state.faded);
+        drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, button.center, button.radius, {
+            color: [.14, .15, .16], alpha: opacity, emissive: .015,
+            scale: { x: 1, y: 1, z: .25 }, rotationY
+        });
+        const faceCenter = {
+            x: button.center.x + button.front.x * .004,
+            y: button.center.y,
+            z: button.center.z + button.front.z * .004
+        };
+        drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, faceCenter, button.faceRadius, {
+            color: pressed ? [.79, .72, .60] : [.61, .64, .62], alpha: opacity, emissive: .025,
+            scale: { x: 1, y: 1, z: .25 }, rotationY
+        });
+    }
+}
+
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
 export function totemCardSurfaces(position, right, cards, selectedId = '', state = {}) {
     const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
     const front={x:-right.z,y:0,z:right.x};
-    const place = (x,y,width,height,card,detail=false) => ({
-        center:{x:position.x+right.x*x+front.x*.09,y:position.y+y,z:position.z+right.z*x+front.z*.09},
+    const place = (x,y,width,height,card,detail=false,offset=.09) => ({
+        center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
         right, width,height,card,detail
     });
     const legacySimplified=typeof state==='boolean' ? state : false;
@@ -11,7 +80,13 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
     const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
-    const surfaces=[place(0,.78,.075,.075,signs),place(0,.51,.075,.075,fade),...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])];
+    const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
+    const bodyHalfHeight = Number(state?.bodyHalfHeight) || .69;
+    const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
+    const surfaces=[
+        ...buttons.map((button,index)=>({center:button.faceCenter,right,width:button.width,height:button.height,card:index===0?signs:fade,detail:false,opacity:faded ? .18 : 1})),
+        ...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])
+    ];
     const selected=cards.find(card=>card.id===selectedId);
     if(selected && signsVisible && !faded) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;
@@ -100,8 +175,21 @@ export function createSpatialTotemCards(gl, options = {}) {
         begin(){surfaces=[];used.clear();},
         draw(view, record, position, cards, selectedId) {
             const m=view.transform.inverse.matrix,rightLength=Math.hypot(m[0],m[8])||1;
-            const right=stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
-            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,{signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)});
+            const isTotem=record?.demoType==='zone' || record?.marker?.type==='area_checkpoint';
+            const rotationY=(Number(record?.rotationDegrees) || 24)*Math.PI/180;
+            const right=isTotem
+                ? (record.spatialCardRight={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)})
+                : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
+            const size=record?.marker?.appearance?.size || record?.appearance?.size || 'medium';
+            const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
+            const halfWidth=.07*sizeFactor;
+            const bodyHalfHeight=record?.demoType==='zone'
+                ? .69
+                : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-halfWidth*.35);
+            const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,{
+                signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),
+                bodyHalfDepth:halfWidth*.5,bodyHalfHeight
+            });
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthMask(false);
@@ -122,7 +210,8 @@ export function createSpatialTotemCards(gl, options = {}) {
                 const up=surface.up || {x:0,y:1,z:0};gl.uniform3f(locations.up,up.x,up.y,up.z);
                 gl.uniform2f(locations.size,surface.width,surface.height);
                 const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-                gl.uniform1f(locations.opacity,reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration));
+                const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
+                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration))*fadeOpacity);
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);
