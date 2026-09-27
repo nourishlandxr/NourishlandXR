@@ -222,6 +222,10 @@ test('the demo keeps the three simple Totem forms and adds physical buttons', ()
     assert.doesNotMatch(demoSource, /\bdrawSpatialTotem\s*\(/);
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
+    const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone')"),demoSource.indexOf('const linkedTotems'));
+    assert.match(demoTotemDraw,/bodyHalfWidth=\.20,bodyHalfDepth=\.14,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES/);
+    assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
+    assert.match(demoTotemDraw,/drawSpatialTether\(gl,tetherRenderer,view,start,end/);
 });
 
 test('Creator PIM preserves Android touch clicks while isolating pointer events', () => {
@@ -1357,7 +1361,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);
     assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);
-    assert.match(source, /demoWebModeOpen = false;[\s\S]*record\.demoExpanded = false;[\s\S]*armDemoPlacement\('plant2'\)/);
+    const closeWeb=source.slice(source.indexOf('function closeDemoVirtualTag'),source.indexOf('function openDemoVirtualTag'));
+    assert.doesNotMatch(closeWeb,/record\.demoExpanded\s*=\s*false/);
+    assert.match(closeWeb,/armDemoPlacement\('plant2'\)/);
     assert.match(styles, /\.tryit-virtual-tag-mode \{[^}]*position:fixed;[^}]*z-index:12100;[^}]*background:#f2f4ec;/);
     assert.match(styles, /\.tryit-virtual-tag-close,body\[data-project-theme\] \.tryit-virtual-tag-close/);
     assert.match(source, /data-tryit-intro-continue/);

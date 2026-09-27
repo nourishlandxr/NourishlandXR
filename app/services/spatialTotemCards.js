@@ -71,7 +71,8 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
 export function totemCardSurfaces(position, right, cards, selectedId = '', state = {}) {
     const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
     const front={x:-right.z,y:0,z:right.x};
-    const place = (x,y,width,height,card,detail=false,offset=.09) => ({
+    const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
+    const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
         right, width,height,card,detail
     });
@@ -80,7 +81,6 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
     const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
-    const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfHeight = Number(state?.bodyHalfHeight) || .69;
     const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
     const surfaces=[
@@ -186,13 +186,13 @@ export function createSpatialTotemCards(gl, options = {}) {
                 : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
             const size=record?.marker?.appearance?.size || record?.appearance?.size || 'medium';
             const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
-            const halfWidth=.07*sizeFactor;
+            const halfWidth=record?.demoType==='zone' ? .20 : .07*sizeFactor;
             const bodyHalfHeight=record?.demoType==='zone'
-                ? .69
+                ? .82
                 : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-halfWidth*.35);
             const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,{
                 signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),
-                bodyHalfDepth:halfWidth*.5,bodyHalfHeight
+                bodyHalfDepth:record?.demoType==='zone' ? .14 : halfWidth*.5,bodyHalfHeight
             });
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);

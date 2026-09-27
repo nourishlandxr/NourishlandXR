@@ -180,7 +180,7 @@ let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, handMode='pointer', onHandMode=()=>{}, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='right',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='left',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,meshContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
     let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
@@ -266,6 +266,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.classList.toggle('has-settings-companion',settingsOpen);
         if(settingsElement.hidden)return;
+        if(!renderer && !globalThis.matchMedia?.('(max-width:700px)').matches){
+            const main=element.getBoundingClientRect(),panelWidth=Math.min(390,Math.max(300,window.innerWidth-32));
+            settingsElement.style.left=Math.max(8,main.left-panelWidth-6)+'px';
+            settingsElement.style.top=Math.max(8,main.top)+'px';
+            settingsElement.style.bottom='auto';
+        }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
         settingsElement.innerHTML='<header><h2>Settings</h2></header><section><div class="nlxr-settings-actions"></div><p class="nlxr-scale-readout">Spatial scale · '+Math.round(spatialScale*100)+'%</p><h3>Safety</h3><p>Keep a clear walking area and remain aware of people, plants, furniture and uneven ground around you.</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
         settingsControls().forEach(item=>actions.append(makeButton(item)));
@@ -345,7 +351,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function dockMediaPanel(side=null){
         const main=element.getBoundingClientRect(),panel=mediaFloating?.getBoundingClientRect();
         if(!side && panel){const distances=[['right',Math.abs(panel.left-main.right)],['left',Math.abs(panel.right-main.left)],['bottom',Math.abs(panel.top-main.bottom)],['top',Math.abs(panel.bottom-main.top)]];side=distances.sort((a,b)=>a[1]-b[1])[0][0];}
-        mediaDockSide=side || 'right';mediaDetached=false;mediaPosition=null;mediaCollapsed=false;render(true);
+        mediaDockSide=side || 'left';mediaDetached=false;mediaPosition=null;mediaCollapsed=false;render(true);
     }
     function bindMediaPanelMove(handle){
         handle.addEventListener('pointerdown',event=>{
@@ -401,7 +407,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function syncPanelWings(){
         if(isDesktopDemo())railCollapsed=false;
         element.classList.toggle('is-rail-collapsed',railCollapsed);
-        element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);
+        element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached || (settingsOpen && !mediaDetached));
         element.classList.toggle('is-media-detached',mediaDetached);
         element.dataset.mediaDockSide=mediaDockSide;
         const railToggle=element.querySelector('.nlxr-rail-toggle');
@@ -481,7 +487,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(detached)return;
         renderSettings();
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !mediaDetached && !element.querySelector('.nlxr-media-wing');
+        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !mediaDetached && !settingsOpen && !element.querySelector('.nlxr-media-wing');
         if(!force && !hidden && !needsMediaWing && element.querySelector('.nlxr-control-header')){
             element.classList.toggle('is-large-text',largeText);
             syncPanelWings();
@@ -512,8 +518,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const plantPreviewAvailable=showPlantPreview();
         const desktopDemo=isDesktopDemo();
         if(desktopDemo)railCollapsed=false;
-        const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached;
-        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);element.classList.toggle('is-media-detached',mediaDetached);element.dataset.mediaDockSide=mediaDockSide;element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
+        const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached && !settingsOpen;
+        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached || (settingsOpen && !mediaDetached));element.classList.toggle('is-media-detached',mediaDetached);element.dataset.mediaDockSide=mediaDockSide;element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
@@ -708,7 +714,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ].filter(candidate=>candidate.error<=.18 && candidate.overlap).sort((a,b)=>a.error-b.error);
         return candidates[0] || null;
     }
-    function dockSpatialMedia(side){mediaDockSide=side || 'right';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
+    function dockSpatialMedia(side){mediaDockSide=side || 'left';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
@@ -753,7 +759,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
             const settingsWidth=.62*spatialScale,gap=0,companionHeight=mainHeight*.78;
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:companionHeight,card:settingsCard});
-            if((!hidden || mediaDetached) && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            if((!hidden || mediaDetached) && mediaCard && (mediaDetached || !settingsOpen)){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -797,7 +803,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls(),hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,caption:plantMedia?(identity?.plant || ''):'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!mediaCollapsed && preview?.image))cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!settingsOpen && !mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !['MovePanel','MoveMediaPanel'].includes(button.action))act(button.action);return true;},

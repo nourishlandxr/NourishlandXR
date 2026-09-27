@@ -511,19 +511,40 @@ const MORINGA_PROFILE = Object.freeze({
         }),
         nodes: Object.freeze([
             { id: 'moringa-forest-layer', parentId: 'food-forest', title: 'Canopy / low tree layer', preview: 'Light canopy role', body: 'A fast-growing low tree within a layered food forest.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-canopy-management', parentId: 'moringa-forest-layer', title: 'Canopy management', preview: 'Prune for light and access', body: 'Regular pruning can keep the canopy low enough for harvest while allowing useful light to reach plants below. Observe regrowth and adjust the cutting cycle to the season and the needs of neighbouring plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-layer-observation', parentId: 'moringa-forest-layer', title: 'Layer observation', preview: 'Watch shade through the year', body: 'Record where shade falls in different seasons and times of day. This makes the tree layer a local observation rather than a fixed label.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
             { id: 'moringa-relationships', parentId: 'food-forest', title: 'Garden relationships', preview: 'Shade and mulch', body: 'Light shade and pruned biomass can support nearby garden plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-biomass-cycle', parentId: 'moringa-relationships', title: 'Biomass cycle', preview: 'Return suitable prunings', body: 'Clean leaves and soft stems can be cut into manageable pieces and used as surface mulch. Keep material clear of vulnerable stems and exclude diseased material.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-pollinator-observation', parentId: 'moringa-relationships', title: 'Flower visitors', preview: 'Observe insects at flowers', body: 'When the tree flowers, record which insects visit, the time of day and whether nearby plants are flowering too. This creates a place-based relationship record.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
             { id: 'moringa-culinary', parentId: 'uses', title: 'Culinary', preview: 'Leaves and pods', body: 'Nutritious leaves and long seed pods are used as food.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-leaf-harvest', parentId: 'moringa-culinary', title: 'Leaf harvest', preview: 'Pick clean young leaflets', body: 'Harvest clean foliage from correctly identified plants and use preparation methods appropriate to the dish and local food practice. Leave enough healthy canopy for continued growth.', informationType: 'practice', evidenceStatus: 'needs_review', safetyNote: 'Confirm plant identity and use an appropriate food preparation method.', status: 'published' },
+            { id: 'moringa-pod-harvest', parentId: 'moringa-culinary', title: 'Pod harvest', preview: 'Tender and mature stages differ', body: 'Tender pods and mature seed are distinct harvest stages with different textures and preparation needs. Record the stage rather than treating every pod as the same food.', informationType: 'guidance', evidenceStatus: 'needs_review', safetyNote: 'Use a preparation method suitable for the harvested stage.', status: 'published' },
+            { id: 'moringa-food-context', parentId: 'moringa-culinary', title: 'Food context', preview: 'Retain recipe and source', body: 'A useful food record includes the part used, harvest stage, preparation method, recipe tradition and the person or source that supplied the knowledge.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named recipe source, knowledge holder or community should accompany a specific food practice.', safetyNote: 'Traditional food records do not replace allergy or dietary advice.', status: 'published' },
             { id: 'medicinal', parentId: 'uses', title: 'Medicinal', preview: 'Attributed traditions', body: 'Traditional uses must record their source and cultural context.', informationType: 'traditional_knowledge', evidenceStatus: 'needs_review', safetyNote: 'Traditional knowledge only; not medical advice.', status: 'published' },
+            { id: 'moringa-medicinal-boundary', parentId: 'medicinal', title: 'Knowledge boundary', preview: 'Attribute and limit claims', body: 'Record who shared a practice, where it belongs, which plant part was discussed and any limits on sharing. Do not convert a cultural record into a universal health claim.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named knowledge holder or community is required for a specific traditional-use record.', safetyNote: 'This is not medical advice. Seek qualified health guidance where needed.', status: 'published' },
             { id: 'craft', parentId: 'uses', title: 'Craft', preview: 'Dry stems', body: 'Dry stems and other garden material can be used in simple crafts.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-garden-materials', parentId: 'craft', title: 'Garden materials', preview: 'Use dry pruned stems', body: 'Dry straight stems can be trialled as lightweight garden markers, temporary supports or learning materials. Their durability depends on stem age, preparation and exposure.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-seed', parentId: 'propagation', title: 'Seed', preview: 'Direct sowing', body: 'Seed and direct sowing are common starting methods.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-seed-selection', parentId: 'moringa-seed', title: 'Seed selection', preview: 'Choose mature labelled seed', body: 'Select mature seed from healthy pods and retain the source, harvest date and parent-plant notes. Labelling lets later growers compare germination and local performance.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-germination', parentId: 'moringa-seed', title: 'Germination', preview: 'Warmth with careful moisture', body: 'Use warm conditions and a free-draining medium. Keep the medium suitably moist without prolonged saturation, and record emergence time instead of assuming every seed lot behaves alike.', informationType: 'guidance', evidenceStatus: 'needs_review', climateContext: 'Temperature and moisture affect emergence.', status: 'published' },
             { id: 'moringa-cuttings', parentId: 'propagation', title: 'Cuttings', preview: 'Vegetative start', body: 'Cuttings are another propagation pathway.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-cutting-establishment', parentId: 'moringa-cuttings', title: 'Cutting establishment', preview: 'Monitor stability and new growth', body: 'Protect a new cutting from movement while roots establish. Record new growth, water response and stability before treating it as an established tree.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-botanical-name', parentId: 'scientific-information', title: 'Botanical name', preview: 'Moringa oleifera', body: 'Moringa oleifera', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
             { id: 'moringa-family', parentId: 'scientific-information', title: 'Family', preview: 'Moringaceae', body: 'Moringaceae', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
             { id: 'moringa-growth-form', parentId: 'scientific-information', title: 'Growth form', preview: 'Fast-growing small tree', body: 'A fast-growing small tree.', informationType: 'fact', evidenceStatus: 'sourced', status: 'published' },
+            { id: 'moringa-leaf-form', parentId: 'moringa-growth-form', title: 'Leaf form', preview: 'Compound leaves with small leaflets', body: 'The foliage is made of compound leaves carrying many small leaflets. Use several features together when identifying a plant rather than relying on leaves alone.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-flowering', parentId: 'moringa-growth-form', title: 'Flowering and pods', preview: 'Flowers followed by long pods', body: 'Flowering and pod development vary with plant age, season, water and management. Dated local observations make this general pattern useful in a real place.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-origin', parentId: 'historical-data', title: 'Origin', preview: 'South Asia', body: 'Documented origin in South Asia.', informationType: 'historical_record', evidenceStatus: 'sourced', status: 'published' },
+            { id: 'moringa-origin-sources', parentId: 'moringa-origin', title: 'Origin sources', preview: 'Keep historical claims traceable', body: 'Retain the publication, date, region and wording used for an origin claim. This allows later reviewers to distinguish evidence from repeated summaries.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-food-cultures', parentId: 'historical-data', title: 'Food cultures', preview: 'Tropical cultivation', body: 'Cultivated through many tropical regions.', informationType: 'historical_record', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-local-names', parentId: 'moringa-food-cultures', title: 'Local names and practices', preview: 'Record language and place', body: 'Record a local name with its language, place, contributor and the plant part or practice it refers to. Similar names can carry different meanings in different regions.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named contributor or community should accompany each local record.', status: 'published' },
             { id: 'moringa-climate', parentId: 'cultivation', title: 'Climate', preview: 'Tropical and subtropical', body: 'Adapted to tropical and subtropical growing conditions.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-care', parentId: 'cultivation', title: 'Growing care', preview: 'Sun, drainage, pruning', body: 'Grow in full sun and free-draining soil, with regular pruning where appropriate.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' }
+            { id: 'moringa-seasonal-response', parentId: 'moringa-climate', title: 'Seasonal response', preview: 'Observe heat, rain and cool periods', body: 'Track leaf growth, flowering, pod set and stress through local wet, dry, hot and cool periods. The record is more useful than a climate label alone.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
+            { id: 'moringa-care', parentId: 'cultivation', title: 'Growing care', preview: 'Sun, drainage, pruning', body: 'Grow in full sun and free-draining soil, with regular pruning where appropriate.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-soil-drainage', parentId: 'moringa-care', title: 'Soil and drainage', preview: 'Avoid prolonged saturation', body: 'Establishment is generally more reliable where excess water can drain. Observe the actual soil after heavy rain before deciding how often to water.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-establishment-water', parentId: 'moringa-care', title: 'Establishment water', preview: 'Support roots, then reassess', body: 'Provide appropriate moisture while roots establish, then adjust watering to rainfall, soil drainage, season and the condition of the plant.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-pruning-cycle', parentId: 'moringa-care', title: 'Pruning cycle', preview: 'Height, harvest and regrowth', body: 'Pruning can keep foliage reachable and produce mulch material. Record the cut date, severity and regrowth response so the cycle can be adapted rather than repeated blindly.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
+            { id: 'moringa-health-observation', parentId: 'moringa-care', title: 'Plant health observation', preview: 'Notice change before treatment', body: 'Record where symptoms occur, when they began, recent weather, watering and management changes before choosing a response. Photographs over time can help distinguish damage from normal seasonal change.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' }
         ])
     })
 });
@@ -840,7 +861,7 @@ function showDemoAction(nextStage) {
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice === 'continue') armDemoPlacement(nextStage,{explained:nextStage==='note'});
-    });
+    },{nextGuide:nextStage==='note'?'':undefined});
 }
 
 function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
@@ -883,8 +904,6 @@ function closeDemoVirtualTag(record) {
             stage.removeAttribute('aria-hidden');
         }
         demoWebModeOpen = false;
-        record.demoExpanded = false;
-        refreshDemoRecord(record);
         if (record.tutorialStage === 'plant2') showDemoAction('note');
         else armDemoPlacement('plant2');
     }, 320);
@@ -904,8 +923,6 @@ function openDemoVirtualTag(record) {
 function advancePastVirtualTag(record) {
     if (!record) return;
     setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PLACEMENT);
-    record.demoExpanded = false;
-    refreshDemoRecord(record);
     if (record.tutorialStage === 'plant2') showDemoAction('note');
     else armDemoPlacement('plant2');
 }
@@ -952,8 +969,6 @@ function continueAfterDemoPim(record) {
     record.demoProfileReady = false;
     if (record.tutorialStage === 'plant2') inviteVirtualTag(record);
     else if (record.tutorialStage === 'plant') {
-        record.demoExpanded=false;
-        refreshDemoRecord(record);
         clearLimSelection();
         limMeshVisible=false;
         activePimLimBridge=null;
@@ -1036,8 +1051,6 @@ function openPimLimBridge(context) {
     const record=context?.record;
     if(!bridge || !record)return false;
     record.demoProfileInteracted=true;
-    record.demoExpanded=false;
-    refreshDemoRecord(record);
     setDemoJourneyStage('apply');
     activePimLimBridge={bridge,record};
     infoPanel?.setLearningModules(learningModuleBoard());
@@ -1184,7 +1197,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     controls.forEach(control => panel.append(control));
     prepareTutorialBoard(panel);
     const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
-    setIntroBoardNextGuide(options.nextGuide || (choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
+    setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
@@ -1406,7 +1419,7 @@ function showPersistentPimPrompt(record) {
         skipDemoNarration=()=>{record.demoProfileInteracted=true;showDemoAction('plant2');};
         return;
     }
-    if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information is ready. Use Continue below for the next demo step.`);return;}
+    if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information remains open for exploration.`);return;}
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Explore this plant');
     const body = record?.tutorialStage==='plant'
@@ -1981,10 +1994,7 @@ function guidePlantConversion(record) {
         pointer?.setAttribute('hidden', '');
         pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
-        infoPanel?.focusPlant(record,moringa ? MORINGA_PIM : PIGEON_PEA_PIM,moringa
-            ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
-            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'});
-        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb to open its Plant Information Mesh.`);
+        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb to open its Plant Profile.`);
         infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
@@ -2189,7 +2199,7 @@ function showLinkedTotemsIntroduction() {
             'A link creates a visitor route between Areas. Here it connects the Botanical Garden with Rainforest Walk without mixing their information.',
             'In a project, the destination sign helps visitors understand where the route leads before they move to the next Area.'
         ],
-        'Connect PIMO to LIMO',
+        'Connect plant knowledge to learning',
         showLimoLearningModes
     );
 }
@@ -2213,13 +2223,13 @@ function fadeMappedSceneForLimo() {
 
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
-    showDemoTutorialMedia('connection','Connect PIMO to LIMO','PIMO explains a plant. LIMO turns that knowledge into questions and learning pathways, on site or as a standalone experience.');
+    showDemoTutorialMedia('connection','Connect plant knowledge to learning','A Plant Profile explains a plant. Learning pathways turn that knowledge into questions and practical exploration, on site or as a standalone experience.');
     showIntroBoard(
         'Learn here or as a standalone experience',
         [
-            'A Learning Information Mesh — LIMO — can guide someone on the spot in AR, where questions and actions stay connected to the living place in front of them.',
-            'The same LIMO can also work as a standalone learning experience before a visit, in a classroom or when reflecting afterwards.',
-            'A Plant Information Mesh — PIMO — explains the plant. Connecting PIMO to LIMO turns those facts into pathways: what to notice, how the plant relates to its place, why it matters and what someone could try next.'
+            'A learning pathway can guide someone on the spot in AR, where questions and actions stay connected to the living place in front of them.',
+            'The same pathway can also work as a standalone learning experience before a visit, in a classroom or when reflecting afterwards.',
+            'A Plant Profile explains the plant. Connecting that knowledge to learning turns facts into pathways: what to notice, how the plant relates to its place, why it matters and what someone could try next.'
         ],
         'Show pathway archetypes',
         showLimoArchetypes,
@@ -2251,7 +2261,7 @@ function showLimoArchetypes() {
         [
             'The scene is quiet now so the learning pathways can take focus. Totems and Notes remain anchored, but fade into the background.',
             'Select any archetype to explore. Each pathway opens a different way to read the place, understand living relationships, design with them or shape an outcome.',
-            'A pathway can begin from a plant’s PIMO, from something observed on site or as a standalone learning journey.'
+            'A pathway can begin from a Plant Profile, from something observed on site or as a standalone learning journey.'
         ],
         'Continue after exploring',
         showAudienceValue,
@@ -2619,14 +2629,11 @@ function renderSimulatedTotem(record, index, anchor) {
     const content = demoContentFor(record);
     const cards = demoTotemCards(record);
     const style = DEMO_TOTEM_STYLES.find(item => item.id === (record.demoTotemStyle || 'basic')) || DEMO_TOTEM_STYLES[0];
-    const styleControl = record.tutorialStage === 'totem2'
-        ? `<button type="button" class="tryit-sim-totem-model-toggle" data-demo-totem-style-toggle aria-label="Change second Totem model">Model: ${style.label}<small>Tap to change</small></button>`
-        : '';
     const linkLabel = record.demoLinkVisible
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
     const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}${styleControl}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${record.name || 'Area'} Totem Marker information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards.slice(0,3),record.totemSelectedCard)}${linkLabel}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -2635,19 +2642,16 @@ function toggleDemoPlantProfile(record) {
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;
-    if(opening){
-        markers.filter(candidate=>candidate!==record && candidate.demoType==='plant' && candidate.demoExpanded).forEach(candidate=>{
-            candidate.demoExpanded=false;
-            refreshDemoRecord(candidate);
-        });
-    }
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
         activePimLimBridge=null;
         if(record.tutorialStage==='plant')setDemoJourneyStage('know');
         clearLimSelection();
-        infoPanel?.focusPlant(record,demoOrbKnowledge(record).document);
+        const moringa=record.demoPlantPreset==='moringa';
+        infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,moringa
+            ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
+            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'});
         setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
         record.profileRevealStarted = performance.now();
@@ -4837,27 +4841,26 @@ function drawMarker(view) {
             });
             return;
         }
-        const crownRadius=.14,bodyHalfWidth=.25,bodyHalfDepth=.09,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES-crownRadius*.35,rotationY=demoTotemRotationY(record);
+        const bodyHalfWidth=.20,bodyHalfDepth=.14,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES,rotationY=demoTotemRotationY(record);
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
             halfWidth: bodyHalfWidth,
             halfHeight: bodyHalfHeight,
             halfDepth: bodyHalfDepth,
             color: totemColour,
             topColor: totemHighlight,
-            topTaper: .9,
+            topTaper: .96,
             alpha: record.demoTotemFaded ? .18 : .98,
             rotationY
         });
-        drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
-            ...record.position,
-            y:groundBaseY+bodyHalfHeight*2
-        }, crownRadius, {
-            color:totemColour,
-            alpha:record.demoTotemFaded ? .18 : .98,
-            emissive:.035,
-            scale:{x:1,y:.7,z:.5},
-            rotationY
-        });
+        if(record.demoTotemSignsVisible && !record.demoTotemFaded){
+            const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
+            for(const [x,y] of [[-.42,1.30],[.42,1.02],[-.42,.74]]){
+                const direction=Math.sign(x)||1;
+                const start={x:record.position.x+right.x*direction*bodyHalfWidth*.88+front.x*(bodyHalfDepth+.012),y:groundBaseY+y,z:record.position.z+right.z*direction*bodyHalfWidth*.88+front.z*(bodyHalfDepth+.012)};
+                const end={x:record.position.x+right.x*(x-direction*.29)+front.x*(bodyHalfDepth+.018),y:groundBaseY+y,z:record.position.z+right.z*(x-direction*.29)+front.z*(bodyHalfDepth+.018)};
+                drawSpatialTether(gl,tetherRenderer,view,start,end,{segments:2,width:.012,curve:0,lift:0,color:[.66,.70,.69,.9]});
+            }
+        }
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)

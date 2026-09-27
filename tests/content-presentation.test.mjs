@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import { createPimDocument, pimToArKnowledge } from '../app/services/pimModel.js';
 import { LIM_INTRO_BRANCHES, limLearningContent } from '../app/services/limLearning.js';
+import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -152,16 +153,17 @@ test('Area Totem examples show distinct colours and welcoming, orientation, inte
     assert.match(demo, /demoTotemColor:'#526d7a'/);
 });
 
-test('Areas hand the journey to PIMO-connected LIMO pathways and quiet mapped objects', () => {
+test('Areas hand the journey to public learning pathways and quiet mapped objects', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(demo, /'Connect PIMO to LIMO',\s*showLimoLearningModes/);
+    assert.match(demo, /'Connect plant knowledge to learning',\s*showLimoLearningModes/);
     assert.match(demo, /'Learn here or as a standalone experience'/);
     assert.match(demo, /'Show pathway archetypes',\s*showLimoArchetypes/);
     assert.match(demo, /record\.demoTotemFaded=true;[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(demo, /record\.demoType==='note'[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(styles, /\.tryit-sim-marker-note\.is-narrative-faded/);
     assert.match(styles, /\.nlxr-totem-system\.is-narrative-faded \.nlxr-totem-controls/);
+    assert.doesNotMatch(demo, /['"][^'"\n]*(?:PIMO|LIMO)[^'"\n]*['"]/);
 });
 
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {
@@ -201,7 +203,9 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(panel, /identityImage=document\?\.identity\?\.image/);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
     assert.match(demo, /new URL\('\.\.\/assets\/moringa-oleifera\.jpg', import\.meta\.url\)/);
-    assert.match(demo, /focusPlant\(record,moringa \? MORINGA_PIM/);
+    assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,moringa/);
+    const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showSceneContinue'));
+    assert.doesNotMatch(conversion,/focusPlant\(/);
     assert.match(creator, /infoPanel\?\.focusPlant\(record,creatorKnowledgeDocument\(record\)\)/);
     assert.match(styles, /\.nlxr-plant-preview img\s*\{[^}]*object-fit:contain/);
     assert.match(pimStyles, /\.pim-web-plant-visual\s*\{[^}]*width: min\(100%, 320px\)/);
@@ -210,6 +214,18 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(editorStyles, /\.plant-photo-space\s*\{[^}]*height: clamp\(320px, 38vw, 480px\)/);
     assert.ok(statSync(new URL('../app/assets/moringa-oleifera.jpg', import.meta.url)).size < 500_000,
         'optimized Moringa asset should remain suitable for a mobile/headset download');
+});
+
+test('Pigeon Pea and Moringa provide deep template branches for demonstration', () => {
+    const pigeonById=new Map(PIGEON_PEA_PIM.nodes.map(node=>[node.id,node]));
+    assert.ok(PIGEON_PEA_PIM.nodes.length>=70);
+    for(const id of ['pollinator-resource','culinary-record','germination-check','leaf-identification','local-introduction-record','soil-observation','pruning-response','health-check']){
+        assert.ok(pigeonById.get(id)?.body.length>70,`missing enriched Pigeon Pea cell ${id}`);
+    }
+    const demo=read('app/screens/temporaryArDemo.js');
+    for(const id of ['moringa-canopy-management','moringa-biomass-cycle','moringa-leaf-harvest','moringa-food-context','moringa-germination','moringa-leaf-form','moringa-local-names','moringa-pruning-cycle','moringa-health-observation']){
+        assert.match(demo,new RegExp(`id: '${id}'`),`missing enriched Moringa cell ${id}`);
+    }
 });
 
 test('Spatial device wording is used in preparation and runtime status while Quest stays technical', () => {

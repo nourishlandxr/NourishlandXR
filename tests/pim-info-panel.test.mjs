@@ -177,6 +177,9 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.match(styles,/\.is-media-collapsed :is\(\.nlxr-plant-preview,\.nlxr-media-empty\) \{ display:none; \}/);
     assert.match(styles,/:not\(\.is-media-collapsed\) \.nlxr-media-wing \{ position:absolute/);
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
+    assert.match(panel,/mediaDockSide='left'/);
+    assert.match(panel,/!settingsOpen && !mediaCollapsed && preview\?\.image/);
+    assert.match(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
 });
 
 test('cell selection updates reading content and remounts only when companion media changes',()=>{

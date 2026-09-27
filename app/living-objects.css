@@ -542,7 +542,7 @@
     background:linear-gradient(145deg,#e6f4bd,#b6d990 62%,#8fbd74);
     color:#193629;
     box-shadow:0 10px 24px rgba(9,31,18,.3),inset 0 1px rgba(255,255,255,.85);
-    font-size:clamp(.9rem,1.3vw,1.08rem);
+    font-size:clamp(calc(.9rem + 2pt),calc(1.3vw + 2pt),calc(1.08rem + 2pt));
     font-weight:850;
     letter-spacing:.015em;
 }
@@ -580,12 +580,12 @@
     padding:18px 22px 20px;
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board h2 {
-    font-size:clamp(1.55rem,4.4vw,2.6rem);
+    font-size:clamp(1.3rem,2.8vw,1.85rem);
     line-height:1.08;
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board p {
-    font-size:clamp(1.02rem,2.2vw,1.32rem);
-    line-height:1.38;
+    font-size:clamp(.9rem,1.45vw,1.05rem);
+    line-height:1.44;
 }
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
     min-height:0;
@@ -1217,10 +1217,10 @@
 /* Elemental Totem: shape and broad light define the material. The surface is
    intentionally clean, with no simulated timber grain or realistic texture. */
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
-    left:41%;
-    top:20%;
-    width:18%;
-    height:78%;
+    left:39%;
+    top:24%;
+    width:22%;
+    height:74%;
     border:1px solid color-mix(in srgb,var(--demo-totem-color,#715a46),#f3eadc 22%);
     border-radius:44% 44% 9px 9px / 18px 18px 9px 9px;
     background:linear-gradient(100deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 30%),var(--demo-totem-color,#715a46) 34%,color-mix(in srgb,var(--demo-totem-color,#715a46),#f0e5d6 13%) 55%,var(--demo-totem-color,#715a46) 76%,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 26%));
@@ -1228,28 +1228,12 @@
     transition:opacity .35s ease,filter .35s ease;
 }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::before {
-    left:19%;
-    top:4%;
-    width:18%;
-    height:88%;
-    border-radius:999px;
-    clip-path:none;
-    background:linear-gradient(180deg,rgba(255,247,234,.13),rgba(255,247,234,.025) 64%,transparent);
-    box-shadow:none;
+    display:none;
 }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::after {
-    display:block;
-    left:12%;
-    top:auto;
-    bottom:-4px;
-    width:76%;
-    height:6px;
-    border-radius:50%;
-    clip-path:none;
-    background:rgba(22,18,16,.28);
-    filter:blur(2px);
+    display:none;
 }
-.nlxr-totem-controls { position:absolute; z-index:8; left:41%; top:20%; width:18%; height:78%; pointer-events:none; }
+.nlxr-totem-controls { position:absolute; z-index:8; left:39%; top:24%; width:22%; height:74%; pointer-events:none; }
 .nlxr-totem-controls button {
     position:absolute;
     left:50%;
@@ -1278,6 +1262,7 @@
 .nlxr-totem-controls button > small { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .nlxr-totem-system:not(.is-signs-open) .nlxr-totem-cards,
 .nlxr-totem-system.is-totem-faded .nlxr-totem-cards { display:none; }
+.nlxr-totem-system .nlxr-totem-cards > button::after { width:28px; height:2px; background:rgba(181,190,188,.9); box-shadow:0 1px rgba(12,18,17,.28); }
 .nlxr-totem-system.is-totem-faded .tryit-sim-totem-pillar { opacity:.18; filter:saturate(.45); }
 .nlxr-totem-system.is-totem-faded .nlxr-totem-controls button { opacity:1; box-shadow:inset 0 2px 3px rgba(255,247,231,.28),0 0 0 4px rgba(239,214,160,.1),0 0 16px rgba(239,214,160,.24); }
 .nlxr-totem-system.is-narrative-faded .nlxr-totem-controls { opacity:.12; pointer-events:none; transition:opacity .55s ease; }
