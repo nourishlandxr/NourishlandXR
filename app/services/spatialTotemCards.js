@@ -1,9 +1,9 @@
 import { drawSpatialSphere } from './spatialSphereRenderer.js';
 import { totemHeightPreset } from './totemAppearance.js';
 
-const TOTEM_BUTTON_WIDTH = .055;
-const TOTEM_BUTTON_RADIUS = .028;
-const TOTEM_BUTTON_FACE_RADIUS = .025;
+const TOTEM_BUTTON_WIDTH = .104;
+const TOTEM_BUTTON_RADIUS = .052;
+const TOTEM_BUTTON_FACE_RADIUS = .046;
 
 function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9) {
     const localY = Math.max(-1, Math.min(1, (y - bodyHalfHeight) / bodyHalfHeight));
@@ -17,7 +17,7 @@ export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035
     const rotationY = Math.atan2(-right.z, right.x);
     return [
         { id: '__signs', y: .78, symbol: '↔', title: 'SIGNS' },
-        { id: '__fade', y: .51, symbol: '◐', title: 'FADE' }
+        { id: '__fade', y: .47, symbol: '◐', title: 'FADE' }
     ].map(button => {
         const face = totemFaceDepth(button.y, bodyHalfDepth, bodyHalfHeight, topTaper);
         const centerOffset = face + .002;
@@ -176,7 +176,11 @@ export function createSpatialTotemCards(gl, options = {}) {
         draw(view, record, position, cards, selectedId) {
             const m=view.transform.inverse.matrix,rightLength=Math.hypot(m[0],m[8])||1;
             const isTotem=record?.demoType==='zone' || record?.marker?.type==='area_checkpoint';
-            const rotationY=(Number(record?.rotationDegrees) || 24)*Math.PI/180;
+            const towardViewerX=m[12]-position.x,towardViewerZ=m[14]-position.z;
+            const viewerYaw=Math.atan2(towardViewerX,towardViewerZ);
+            const rotationY=isTotem && options.faceTotemToViewer && Number.isFinite(viewerYaw)
+                ? viewerYaw
+                : (Number(record?.rotationDegrees) || 24)*Math.PI/180;
             const right=isTotem
                 ? (record.spatialCardRight={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)})
                 : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});

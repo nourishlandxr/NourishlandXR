@@ -82,6 +82,7 @@ let hitMatrix = null;
 let latestControllerRay = null;
 let latestHandState = null;
 let latestTrackedHandStates = [];
+let demoHandMode = 'pointer';
 let spatialPointerInputSeen = false;
 let handPinchActive = false;
 let demoControllerDepthAt = 0;
@@ -352,7 +353,7 @@ const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
 // keeps the same real-world proportions at 88% so it reads as a nearby Note,
 // without turning into a flyaway presentation board.
 const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
-const DEMO_TOTEM_HALF_HEIGHT_METRES = .76;
+const DEMO_TOTEM_HALF_HEIGHT_METRES = .82;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to Nourishland XR.',
@@ -582,6 +583,7 @@ function clearSessionState() {
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
+    demoHandMode = 'pointer';
     spatialPointerInputSeen = false;
     groundYEstimate = null;
     marker = null;
@@ -1400,8 +1402,8 @@ function showPersistentPimPrompt(record) {
         panel.hidden=false;panel.classList.add('is-welcome-board','is-copy-ready','is-persistent-demo-board');
         introBoardTitle=title;introBoardBody=body;introBoardVisibleBody=body;introBoardTextureDirty=true;introBoardVisible=true;
         continueButton.textContent='Continue';continueButton.hidden=!complete;
-        continueButton.onclick=complete?()=>{suppressSessionSelectUntil=performance.now()+700;record.demoExpanded=false;refreshDemoRecord(record);showDemoAction('plant2');}:null;
-        skipDemoNarration=()=>{record.demoProfileInteracted=true;record.demoExpanded=false;refreshDemoRecord(record);showDemoAction('plant2');};
+        continueButton.onclick=complete?()=>{suppressSessionSelectUntil=performance.now()+700;showDemoAction('plant2');}:null;
+        skipDemoNarration=()=>{record.demoProfileInteracted=true;showDemoAction('plant2');};
         return;
     }
     if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information is ready. Use Continue below for the next demo step.`);return;}
@@ -3429,6 +3431,19 @@ function demoRecordRayHit(record) {
         const normal={x:matrix[8],y:matrix[9],z:matrix[10]};
         return spatialDashboardRayHit({origin,direction:ray},{center:record.position,right,up,normal,width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y},{width:1024,height:384});
     }
+    if(record.demoType==='zone'){
+        const rotationY=demoTotemRotationY(record),right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
+        const ground=Number(record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES),centerY=ground+DEMO_TOTEM_HALF_HEIGHT_METRES;
+        const denominator=ray.x*front.x+ray.y*front.y+ray.z*front.z;
+        if(Math.abs(denominator)<1e-6)return null;
+        const distance=((record.position.x-origin.x)*front.x+(centerY-origin.y)*front.y+(record.position.z-origin.z)*front.z)/denominator;
+        if(distance<=0)return null;
+        const point={x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance};
+        const offset={x:point.x-record.position.x,y:point.y-centerY,z:point.z-record.position.z};
+        const localX=offset.x*right.x+offset.z*right.z;
+        if(Math.abs(localX)>.28 || point.y<ground-.04 || point.y>ground+DEMO_TOTEM_HALF_HEIGHT_METRES*2+.04)return null;
+        return {distance,point,position:point,localX,localY:point.y-centerY,radius:.28};
+    }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
     const along=offset.x*ray.x+offset.y*ray.y+offset.z*ray.z;
     if(along<=0)return null;
@@ -3439,6 +3454,12 @@ function demoRecordRayHit(record) {
     if(perpendicularSquared>interactionRadius*interactionRadius)return null;
     const distance=along-Math.sqrt(Math.max(0,interactionRadius*interactionRadius-perpendicularSquared));
     return {distance,point:{x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance},radius:interactionRadius};
+}
+
+function demoTotemRotationY(record){
+    if(!record?.position || !viewerMatrix)return Math.PI/7;
+    const towardViewerX=viewerMatrix[12]-record.position.x,towardViewerZ=viewerMatrix[14]-record.position.z;
+    return Math.hypot(towardViewerX,towardViewerZ)>.001?Math.atan2(towardViewerX,towardViewerZ):Math.PI/7;
 }
 
 function demoRecordAtPointer() {
@@ -3757,7 +3778,7 @@ function renderInterface(simulated) {
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,handMode:demoHandMode,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -3917,7 +3938,7 @@ function setupRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
-    totemCardsRenderer = createSpatialTotemCards(gl);
+    totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:true});
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
@@ -4816,16 +4837,16 @@ function drawMarker(view) {
             });
             return;
         }
-        const crownRadius=.07,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES-crownRadius*.35;
+        const crownRadius=.14,bodyHalfWidth=.25,bodyHalfDepth=.09,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES-crownRadius*.35,rotationY=demoTotemRotationY(record);
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
-            halfWidth: crownRadius,
+            halfWidth: bodyHalfWidth,
             halfHeight: bodyHalfHeight,
-            halfDepth: crownRadius*.5,
+            halfDepth: bodyHalfDepth,
             color: totemColour,
             topColor: totemHighlight,
             topTaper: .9,
             alpha: record.demoTotemFaded ? .18 : .98,
-            rotationY: Math.PI / 7
+            rotationY
         });
         drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
             ...record.position,
@@ -4835,10 +4856,10 @@ function drawMarker(view) {
             alpha:record.demoTotemFaded ? .18 : .98,
             emissive:.035,
             scale:{x:1,y:.7,z:.5},
-            rotationY:Math.PI/7
+            rotationY
         });
-        drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},Math.PI/7,{
-            bodyHalfWidth:crownRadius,bodyHalfDepth:crownRadius*.5,bodyHalfHeight,
+        drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
+            bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)
         });
     });
@@ -4950,12 +4971,13 @@ function drawMarker(view) {
 
 function drawDemoControllerPointer(view) {
     if (!tetherRenderer) return;
-    if (latestTrackedHandStates.length) {
+    if (latestTrackedHandStates.length && demoHandMode==='outline') {
         for (const { state } of latestTrackedHandStates) {
             if (!state?.joints) continue;
+            const engaged=Boolean(state.pinch || demoHeldIndex>=0 || handPinchActive);
             for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
                 const from=state.joints.get(fromName),to=state.joints.get(toName);
-                if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:3,width:.009,curve:0,lift:0,color:[.72,1,.34,.82]});
+                if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:2,width:engaged ? .0038 : .0025,curve:0,lift:0,color:[.82,.89,.92,engaged ? .40 : .24]});
             }
         }
         return;
@@ -4999,12 +5021,12 @@ function drawDemoControllerPointer(view) {
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
-        width: XR_LASER_POINTER_CONFIG.width,
+        width:latestTrackedHandStates.length ? .0032 : XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
-        color: [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
+        color:latestTrackedHandStates.length ? [.78,.91,.96,handPinchActive ? .76 : .54] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    if(surface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.016,{color:[.82,1,.56],alpha:1,emissive:.8});
+    if(surface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.013,{color:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:.65});
 }
 
 async function startImmersive() {

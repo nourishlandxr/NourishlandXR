@@ -34,9 +34,10 @@ export function handTrackingState(frame, source, referenceSpace) {
     const wrist = joints.get('wrist');
     if (!index || !wrist) return { joints, connections: XR_HAND_JOINT_CONNECTIONS, pinch: false, pointer: null };
     const pinchDistance = thumb && Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
-    const dx = index.x - wrist.x;
-    const dy = index.y - wrist.y;
-    const dz = index.z - wrist.z;
+    const indexBase=joints.get('index-finger-metacarpal') || wrist;
+    const dx = index.x - indexBase.x;
+    const dy = index.y - indexBase.y;
+    const dz = index.z - indexBase.z;
     const length = Math.hypot(dx, dy, dz) || 1;
     return {
         joints,

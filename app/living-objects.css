@@ -1448,3 +1448,47 @@
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="left"]:not(.is-media-collapsed) > .nlxr-media-wing,
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="right"]:not(.is-media-collapsed) > .nlxr-media-wing { width:100%!important; height:min(36vh,330px)!important; }
 }
+
+/* Demo control surfaces: reduce bulk while preserving comfortable targets. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) {
+    width:min(318px,calc(100vw - 20px));
+    height:min(66dvh,480px);
+    grid-template-columns:98px minmax(0,1fr);
+    gap:0 12px;
+    padding-right:12px;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header { padding:9px 0 7px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header h2 { margin:5px 0 2px; font-size:18px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs { padding:10px 6px; gap:5px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { min-height:40px; padding:6px 7px; font-size:11px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) h3 { margin:7px 0 4px; font-size:16px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body { max-width:52ch; margin:8px 0; font-size:14px; line-height:1.43; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-hint { margin:6px 0 8px; padding:5px 8px; border-left:2px solid rgba(166,231,250,.48); color:#bad0d8; font:italic 11px/1.35 system-ui,sans-serif; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-trail,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-identity,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview figcaption { font-size:12px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-actions,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities { gap:4px; margin-top:5px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-actions button,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities button,
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-pathway-context button { min-height:38px; padding:6px 7px; font-size:10px; }
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel { width:min(318px,calc(100vw - 20px)); height:min(66dvh,480px); grid-template-columns:98px minmax(0,1fr); gap:0 12px; padding-right:12px; }
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-tabs button { min-height:40px; font-size:11px; }
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-info-body { font-size:14px; line-height:1.43; }
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-info-hint { margin:6px 0 8px; padding:5px 8px; border-left:2px solid rgba(166,231,250,.48); color:#bad0d8; font:italic 11px/1.35 system-ui,sans-serif; }
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-control-utilities button,
+.tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel .nlxr-tools-dock button { min-height:38px; font-size:10px; }
+
+/* A broader, rounded demo Totem gives the two physical controls room to read. */
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar { left:34%; top:18%; width:32%; height:80%; border-radius:28% 28% 14px 14px / 12px 12px 14px 14px; background:linear-gradient(100deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 30%),var(--demo-totem-color,#715a46) 36%,color-mix(in srgb,var(--demo-totem-color,#715a46),#e1d7c8 15%) 55%,var(--demo-totem-color,#715a46) 75%,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 26%)); }
+.nlxr-totem-controls { left:34%; top:18%; width:32%; height:80%; }
+.nlxr-totem-controls button { width:36px; min-width:36px; height:36px; min-height:36px; }
+.nlxr-totem-controls button:first-child { top:38%; }
+.nlxr-totem-controls button:last-child { top:53%; }
+@media(max-width:600px) {
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) { width:min(288px,calc(100vw - 16px)); height:min(38dvh,270px); max-height:38dvh; grid-template-columns:74px minmax(0,1fr); gap:0 8px; padding-right:8px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs button { min-height:36px; padding:5px; font-size:10px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body { font-size:12px; line-height:1.38; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-hint { font-size:10px; }
+    .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel { width:min(288px,calc(100vw - 16px)); height:min(38dvh,270px); grid-template-columns:74px minmax(0,1fr); gap:0 8px; padding-right:8px; }
+}
