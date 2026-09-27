@@ -53,14 +53,17 @@ export function createUvSphereGeometry(latitudeBands = 12, longitudeBands = 16) 
     };
 }
 
-export function sphereModelMatrix(position, radius, scale = {}) {
+export function sphereModelMatrix(position, radius, scale = {}, rotationY = 0) {
     const scaleX = Number.isFinite(Number(scale?.x)) ? Number(scale.x) : 1;
     const scaleY = Number.isFinite(Number(scale?.y)) ? Number(scale.y) : 1;
     const scaleZ = Number.isFinite(Number(scale?.z)) ? Number(scale.z) : 1;
+    const angle = Number.isFinite(Number(rotationY)) ? Number(rotationY) : 0;
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
     return new Float32Array([
-        radius * scaleX, 0, 0, 0,
+        radius * scaleX * cosine, 0, -radius * scaleX * sine, 0,
         0, radius * scaleY, 0, 0,
-        0, 0, radius * scaleZ, 0,
+        radius * scaleZ * sine, 0, radius * scaleZ * cosine, 0,
         Number(position?.x) || 0,
         Number(position?.y) || 0,
         Number(position?.z) || 0,
@@ -179,7 +182,7 @@ export function createSpatialSphereRenderer(gl) {
 
 export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, position, radius, material = {}) {
     if (!renderer || !projectionMatrix || !viewMatrix || !position || !Number.isFinite(Number(radius))) return;
-    const model = sphereModelMatrix(position, Number(radius), material.scale);
+    const model = sphereModelMatrix(position, Number(radius), material.scale, material.rotationY);
     if (material.billboard) {
         for (let column=0;column<3;column++) for (let row=0;row<3;row++) model[column*4+row]=viewMatrix[row*4+column]*radius;
     }

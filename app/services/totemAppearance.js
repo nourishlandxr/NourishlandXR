@@ -1,7 +1,7 @@
 export const DEFAULT_TOTEM_COLOR = '#715a46';
 
 export const TOTEM_STYLES = Object.freeze([
-    Object.freeze({ id: 'basic', label: 'Simple Totem', description: 'Simple upright post' }),
+    Object.freeze({ id: 'basic', label: 'Elemental Totem', description: 'Slim softly rounded post' }),
     Object.freeze({ id: 'organic', label: 'Light Bulb', description: 'Round orb marker' }),
     Object.freeze({ id: 'flat-disc', label: 'Disk Totem', description: 'Flat round marker' })
 ]);

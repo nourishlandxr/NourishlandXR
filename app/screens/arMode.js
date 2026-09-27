@@ -281,9 +281,9 @@ function markerShape(type) {
 function markerDimensions(marker) {
     const factor = markerSizeFactor(marker);
     return ({
-        // WebXR model scales are half-extents. The Totem body is a slender
-        // 0.22m post; its separate base completes the grounded silhouette.
-        area_checkpoint: [.11 * factor, totemHeightPreset(marker).halfHeightMetres * factor],
+        // WebXR model scales are half-extents. The standard Totem is a slim
+        // 0.14m elemental post; height presets remain unchanged.
+        area_checkpoint: [.07 * factor, totemHeightPreset(marker).halfHeightMetres * factor],
         intro_checkpoint: [.42 * factor, .805 * factor],
         // Notes are readable spatial signs rather than tiny object labels.
         note: [.94 * factor, .345 * factor],
@@ -4069,22 +4069,27 @@ function drawSpatialMarkers(view) {
                 });
                 return;
             }
-            const baseHalfHeight = .04 * markerSizeFactor(record.marker);
+            const rotationY=(Number(record.rotationDegrees) || 24) * Math.PI / 180;
+            const crownRadius=halfWidth,bodyHalfHeight=Math.max(.12,halfHeight-crownRadius*.35);
+            const totemHighlight=totemColor.map(channel=>Math.min(.92,channel*.74+.18));
             drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
-                halfWidth: halfWidth * 1.62,
-                halfHeight: baseHalfHeight,
-                halfDepth: halfWidth * 1.62,
-                color: [.16, .38, .31],
-                topColor: [.48, .78, .64],
-                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
-            });
-            drawSpatialPrism(gl, prismRenderer, view, { ...groundPosition, y: groundPosition.y + baseHalfHeight * 2 }, {
                 halfWidth,
-                halfHeight,
-                halfDepth: halfWidth * .92,
+                halfHeight: bodyHalfHeight,
+                halfDepth: halfWidth * .5,
                 color: totemColor,
-                topColor: [.68, .95, .87],
-                rotationY: (Number(record.rotationDegrees) || 24) * Math.PI / 180
+                topColor: totemHighlight,
+                topTaper: .9,
+                rotationY
+            });
+            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
+                ...groundPosition,
+                y:groundPosition.y+bodyHalfHeight*2
+            }, crownRadius, {
+                color:totemColor,
+                alpha:.98,
+                emissive:.035,
+                scale:{x:1,y:.7,z:.5},
+                rotationY
             });
             return;
         }

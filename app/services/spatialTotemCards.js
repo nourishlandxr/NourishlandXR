@@ -9,9 +9,9 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const legacySimplified=typeof state==='boolean' ? state : false;
     const signsVisible=typeof state==='object' ? Boolean(state.signsVisible) : !legacySimplified;
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
-    const signs={id:'__signs',title:'SIGNS',control:true,pressed:signsVisible && !faded};
-    const fade={id:'__fade',title:faded?'WAKE':'FADE',control:true,pressed:faded};
-    const surfaces=[place(0,.78,.16,.16,signs),place(0,.51,.16,.16,fade),...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])];
+    const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
+    const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
+    const surfaces=[place(0,.78,.075,.075,signs),place(0,.51,.075,.075,fade),...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])];
     const selected=cards.find(card=>card.id===selectedId);
     if(selected && signsVisible && !faded) surfaces.push(place(0,2.02,1.08,.58,selected,true));
     return surfaces;
@@ -65,10 +65,10 @@ function cardCanvas(card, detail, selected) {
     const ctx=canvas.getContext('2d');
     if(card.control){
         const face=ctx.createRadialGradient(142,116,18,200,200,176);face.addColorStop(0,'rgba(191,184,168,.98)');face.addColorStop(.58,'rgba(103,91,78,.98)');face.addColorStop(1,'rgba(48,42,38,.99)');
-        ctx.fillStyle='rgba(22,19,18,.58)';ctx.beginPath();ctx.arc(200,216,164,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle=face;ctx.beginPath();ctx.arc(200,196,158,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(22,19,18,.64)';ctx.beginPath();ctx.arc(200,214,160,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=face;ctx.beginPath();ctx.arc(200,194,154,0,Math.PI*2);ctx.fill();
         ctx.strokeStyle=card.pressed?'#f0d49a':'rgba(231,220,202,.72)';ctx.lineWidth=card.pressed?10:6;ctx.stroke();
-        ctx.fillStyle='#f8f1e4';ctx.font='700 54px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.title,200,196,300);
+        ctx.fillStyle='#f8f1e4';ctx.font='700 116px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.symbol || '●',200,194,230);
         return canvas;
     }
     const gradient=ctx.createLinearGradient(0,0,768,canvas.height);

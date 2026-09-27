@@ -1214,53 +1214,68 @@
 .demo-connection-resolving{position:absolute;left:64%;top:39%;transform:translate(-50%,-50%);padding:7px 11px;border-radius:999px;background:rgba(16,55,44,.94);color:#efffc9;font:700 11px/1.1 system-ui,sans-serif}
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
 
-/* The revised Totem keeps its mass narrow and makes the post itself the
-   interface. Two stamped physical controls reveal signs or lower presence. */
+/* Elemental Totem: shape and broad light define the material. The surface is
+   intentionally clean, with no simulated timber grain or realistic texture. */
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
     left:41%;
-    top:22%;
+    top:20%;
     width:18%;
-    height:76%;
-    border-radius:9px 9px 6px 6px;
-    background:linear-gradient(90deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#211b19 42%),color-mix(in srgb,var(--demo-totem-color,#715a46),#e5d7c5 24%) 34%,var(--demo-totem-color,#715a46) 62%,color-mix(in srgb,var(--demo-totem-color,#715a46),#241d1a 38%));
-    box-shadow:inset 1px 0 rgba(250,237,218,.24),inset -2px 0 rgba(25,18,15,.36),0 16px 23px rgba(23,17,14,.3);
+    height:78%;
+    border:1px solid color-mix(in srgb,var(--demo-totem-color,#715a46),#f3eadc 22%);
+    border-radius:44% 44% 9px 9px / 18px 18px 9px 9px;
+    background:linear-gradient(100deg,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 30%),var(--demo-totem-color,#715a46) 34%,color-mix(in srgb,var(--demo-totem-color,#715a46),#f0e5d6 13%) 55%,var(--demo-totem-color,#715a46) 76%,color-mix(in srgb,var(--demo-totem-color,#715a46),#28231f 26%));
+    box-shadow:inset 1px 0 rgba(255,248,238,.16),inset -2px 0 rgba(25,20,17,.22),0 18px 28px rgba(23,17,14,.24);
     transition:opacity .35s ease,filter .35s ease;
 }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::before {
-    left:7%;
-    top:-7px;
-    width:92%;
-    height:8px;
+    left:19%;
+    top:4%;
+    width:18%;
+    height:88%;
+    border-radius:999px;
+    clip-path:none;
+    background:linear-gradient(180deg,rgba(255,247,234,.13),rgba(255,247,234,.025) 64%,transparent);
+    box-shadow:none;
+}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::after {
+    display:block;
+    left:12%;
+    top:auto;
+    bottom:-4px;
+    width:76%;
+    height:6px;
     border-radius:50%;
     clip-path:none;
-    background:color-mix(in srgb,var(--demo-totem-color,#715a46),#eadfce 26%);
+    background:rgba(22,18,16,.28);
+    filter:blur(2px);
 }
-.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar::after { display:none; }
-.nlxr-totem-controls { position:absolute; z-index:8; left:41%; top:22%; width:18%; height:76%; pointer-events:none; }
+.nlxr-totem-controls { position:absolute; z-index:8; left:41%; top:20%; width:18%; height:78%; pointer-events:none; }
 .nlxr-totem-controls button {
     position:absolute;
     left:50%;
     display:grid;
     place-items:center;
-    width:34px;
-    min-width:34px;
-    height:34px;
-    min-height:34px;
+    width:28px;
+    min-width:28px;
+    height:28px;
+    min-height:28px;
     padding:0;
     transform:translateX(-50%);
-    border:2px solid rgba(231,220,202,.68);
+    border:1px solid rgba(42,38,35,.92);
     border-radius:50%;
-    background:radial-gradient(circle at 34% 28%,#a99a86,#675a4b 58%,#312925);
-    color:#fff8ec;
-    box-shadow:inset 0 2px 3px rgba(255,247,231,.28),inset 0 -5px 8px rgba(27,20,17,.42),0 3px 0 #2f2824,0 6px 10px rgba(24,18,16,.32);
+    background:radial-gradient(circle at 36% 30%,#9a9288,#5f5953 62%,#302d2a);
+    color:#f8f3ea;
+    box-shadow:0 0 0 2px rgba(31,28,26,.34),inset 0 1px rgba(255,255,255,.2),0 3px 5px rgba(18,15,13,.34);
     pointer-events:auto;
     cursor:pointer;
+    transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;
 }
-.nlxr-totem-controls button:first-child { top:38%; }
-.nlxr-totem-controls button:last-child { top:55%; }
-.nlxr-totem-controls button[aria-pressed="true"] { transform:translate(-50%,3px); border-color:#efd6a0; box-shadow:inset 0 4px 8px rgba(25,18,15,.5),0 1px 0 #2f2824; }
-.nlxr-totem-controls button > span { font:700 15px/1 system-ui; }
-.nlxr-totem-controls button > small { position:absolute; top:37px; width:max-content; color:rgba(244,230,210,.78); font:700 7px/1 system-ui; letter-spacing:.1em; text-transform:uppercase; text-shadow:0 1px rgba(26,18,15,.8); }
+.nlxr-totem-controls button:first-child { top:39%; }
+.nlxr-totem-controls button:last-child { top:52%; }
+.nlxr-totem-controls button:is(:hover,:focus-visible) { border-color:#fffaf0; outline:none; box-shadow:0 0 0 3px rgba(255,248,235,.16),0 0 14px rgba(255,248,235,.38),inset 0 1px rgba(255,255,255,.25); }
+.nlxr-totem-controls button[aria-pressed="true"] { transform:translate(-50%,2px); border-color:#f3e2bd; box-shadow:0 0 0 2px rgba(31,28,26,.3),inset 0 3px 5px rgba(25,21,18,.56),0 1px rgba(255,255,255,.14); }
+.nlxr-totem-controls button > span { font:700 13px/1 system-ui; }
+.nlxr-totem-controls button > small { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .nlxr-totem-system:not(.is-signs-open) .nlxr-totem-cards,
 .nlxr-totem-system.is-totem-faded .nlxr-totem-cards { display:none; }
 .nlxr-totem-system.is-totem-faded .tryit-sim-totem-pillar { opacity:.18; filter:saturate(.45); }

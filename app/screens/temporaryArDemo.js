@@ -4749,14 +4749,26 @@ function drawMarker(view) {
             });
             return;
         }
+        const crownRadius=.07,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES-crownRadius*.35;
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
-            halfWidth: .085,
-            halfHeight: DEMO_TOTEM_HALF_HEIGHT_METRES,
-            halfDepth: .075,
+            halfWidth: crownRadius,
+            halfHeight: bodyHalfHeight,
+            halfDepth: crownRadius*.5,
             color: totemColour,
             topColor: totemHighlight,
+            topTaper: .9,
             alpha: record.demoTotemFaded ? .18 : .98,
             rotationY: Math.PI / 7
+        });
+        drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
+            ...record.position,
+            y:groundBaseY+bodyHalfHeight*2
+        }, crownRadius, {
+            color:totemColour,
+            alpha:record.demoTotemFaded ? .18 : .98,
+            emissive:.035,
+            scale:{x:1,y:.7,z:.5},
+            rotationY:Math.PI/7
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);

@@ -85,12 +85,15 @@ export function createSpatialPrismRenderer(gl) {
         uniform mat4 projection;
         uniform mat4 modelView;
         uniform vec3 inverseScale;
+        uniform float topTaper;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
         varying vec3 localPosition;
         void main() {
             localPosition=position;
-            vec4 viewPosition = modelView * vec4(position, 1.0);
+            float taper=mix(1.0,topTaper,smoothstep(-.35,1.0,position.y));
+            vec3 shapedPosition=vec3(position.x*taper,position.y,position.z*taper);
+            vec4 viewPosition = modelView * vec4(shapedPosition, 1.0);
             surfaceNormal = normalize((modelView * vec4(normal * inverseScale * inverseScale, 0.0)).xyz);
             viewDirection = normalize(-viewPosition.xyz);
             gl_Position = projection * viewPosition;
@@ -148,6 +151,7 @@ export function createSpatialPrismRenderer(gl) {
         projectionLocation: gl.getUniformLocation(program, 'projection'),
         modelViewLocation: gl.getUniformLocation(program, 'modelView'),
         inverseScaleLocation: gl.getUniformLocation(program, 'inverseScale'),
+        topTaperLocation: gl.getUniformLocation(program, 'topTaper'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         topColorLocation: gl.getUniformLocation(program, 'topColor'),
         alphaLocation: gl.getUniformLocation(program, 'alpha')
@@ -176,6 +180,7 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.uniformMatrix4fv(renderer.projectionLocation, false, view.projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
     gl.uniform3fv(renderer.inverseScaleLocation, [1/(Number(options.halfWidth)||.14),1/(Number(options.halfHeight)||.72),1/(Number(options.halfDepth)||Number(options.halfWidth)||.14)]);
+    gl.uniform1f(renderer.topTaperLocation, Number.isFinite(options.topTaper) ? options.topTaper : 1);
     gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
     gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
     gl.uniform1f(renderer.alphaLocation, alpha);
