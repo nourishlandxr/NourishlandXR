@@ -11,11 +11,11 @@ export const XR_LASER_POINTER_CONFIG = Object.freeze({
 });
 
 export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
-    ['wrist', 'thumb-metacarpal'], ['thumb-metacarpal', 'thumb-phalanx proximal'], ['thumb-phalanx proximal', 'thumb-phalanx distal'], ['thumb-phalanx distal', 'thumb-tip'],
-    ['wrist', 'index-finger-metacarpal'], ['index-finger-metacarpal', 'index-finger-phalanx proximal'], ['index-finger-phalanx proximal', 'index-finger-phalanx intermediate'], ['index-finger-phalanx intermediate', 'index-finger-phalanx distal'], ['index-finger-phalanx distal', 'index-finger-tip'],
-    ['wrist', 'middle-finger-metacarpal'], ['middle-finger-metacarpal', 'middle-finger-phalanx proximal'], ['middle-finger-phalanx proximal', 'middle-finger-phalanx intermediate'], ['middle-finger-phalanx intermediate', 'middle-finger-phalanx distal'], ['middle-finger-phalanx distal', 'middle-finger-tip'],
-    ['wrist', 'ring-finger-metacarpal'], ['ring-finger-metacarpal', 'ring-finger-phalanx proximal'], ['ring-finger-phalanx proximal', 'ring-finger-phalanx intermediate'], ['ring-finger-phalanx intermediate', 'ring-finger-phalanx distal'], ['ring-finger-phalanx distal', 'ring-finger-tip'],
-    ['wrist', 'pinky-finger-metacarpal'], ['pinky-finger-metacarpal', 'pinky-finger-phalanx proximal'], ['pinky-finger-phalanx proximal', 'pinky-finger-phalanx intermediate'], ['pinky-finger-phalanx intermediate', 'pinky-finger-phalanx distal'], ['pinky-finger-phalanx distal', 'pinky-finger-tip']
+    ['wrist', 'thumb-metacarpal'], ['thumb-metacarpal', 'thumb-phalanx-proximal'], ['thumb-phalanx-proximal', 'thumb-phalanx-distal'], ['thumb-phalanx-distal', 'thumb-tip'],
+    ['wrist', 'index-finger-metacarpal'], ['index-finger-metacarpal', 'index-finger-phalanx-proximal'], ['index-finger-phalanx-proximal', 'index-finger-phalanx-intermediate'], ['index-finger-phalanx-intermediate', 'index-finger-phalanx-distal'], ['index-finger-phalanx-distal', 'index-finger-tip'],
+    ['wrist', 'middle-finger-metacarpal'], ['middle-finger-metacarpal', 'middle-finger-phalanx-proximal'], ['middle-finger-phalanx-proximal', 'middle-finger-phalanx-intermediate'], ['middle-finger-phalanx-intermediate', 'middle-finger-phalanx-distal'], ['middle-finger-phalanx-distal', 'middle-finger-tip'],
+    ['wrist', 'ring-finger-metacarpal'], ['ring-finger-metacarpal', 'ring-finger-phalanx-proximal'], ['ring-finger-phalanx-proximal', 'ring-finger-phalanx-intermediate'], ['ring-finger-phalanx-intermediate', 'ring-finger-phalanx-distal'], ['ring-finger-phalanx-distal', 'ring-finger-tip'],
+    ['wrist', 'pinky-finger-metacarpal'], ['pinky-finger-metacarpal', 'pinky-finger-phalanx-proximal'], ['pinky-finger-phalanx-proximal', 'pinky-finger-phalanx-intermediate'], ['pinky-finger-phalanx-intermediate', 'pinky-finger-phalanx-distal'], ['pinky-finger-phalanx-distal', 'pinky-finger-tip']
 ]);
 
 export function handTrackingState(frame, source, referenceSpace) {

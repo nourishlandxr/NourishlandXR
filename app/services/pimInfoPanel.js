@@ -195,8 +195,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && (selection.sketchImage || selection.image)
-        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:`${selection.title} · LIMO sketch`}
-        : identity?.media?.image ? {...identity.media,caption:identity.plant} : null;
+        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false}
+        : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
@@ -258,11 +258,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function refreshMediaWing(media){
         if(!media)return;
         const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
-        media.setAttribute('aria-label',selection?.mesh==='lim'?'LIMO cell sketch':'Plant media');
+        media.setAttribute('aria-label',preview?.plant?'Plant image':'Illustration');
         if(preview?.image){
-            if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';figure.querySelector('figcaption').textContent=preview.caption;}
-            else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;next.append(image,caption);empty?.replaceWith(next);}
-        }else if(figure){const next=document.createElement('p');next.className='nlxr-media-empty';next.textContent='Plant imagery appears here when available for the selected item.';figure.replaceWith(next);}
+            if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';const caption=figure.querySelector('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;}
+            else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;next.append(image,caption);empty?.replaceWith(next);}
+        }else if(figure){const next=document.createElement('div');next.className='nlxr-media-empty';next.setAttribute('aria-hidden','true');figure.replaceWith(next);}
     }
     function createMediaWing({floating=false}={}){
         const media=document.createElement('aside');media.className='nlxr-media-wing'+(floating?' nlxr-media-floating':'');
@@ -273,8 +273,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         handle.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<ignoreMediaClickUntil)return;if(mediaDetached)dockMediaPanel();else detachMediaPanel();});
         toolbar.append(handle);media.append(toolbar);
         const preview=previewMedia();
-        if(preview?.image){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;figure.append(image,caption);media.append(figure);}
-        else{const empty=document.createElement('p');empty.className='nlxr-media-empty';empty.textContent='Plant imagery appears here when available for the selected item.';media.append(empty);}
+        if(preview?.image){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;figure.append(image,caption);media.append(figure);}
+        else{const empty=document.createElement('div');empty.className='nlxr-media-empty';empty.setAttribute('aria-hidden','true');media.append(empty);}
         if(floating)bindMediaPanelMove(handle);
         return media;
     }
@@ -545,13 +545,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
-            ctx.fillStyle='#dfff9b';ctx.font='700 22px system-ui';ctx.fillText(card.mediaLabel || 'PLANT MEDIA',48,34,810);
-            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='700 42px system-ui';ctx.fillText(card.title,48,72,810);}
             ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(884,20,70,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 34px system-ui';ctx.textAlign='center';ctx.fillText('✋',919,30,56);ctx.textAlign='left';
-            const imageX=48,imageY=card.title?142:104,imageWidth=904,imageHeight=c.height-(card.title?212:174);
+            const imageX=48,imageY=96,imageWidth=904,imageHeight=c.height-(card.caption?166:126);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
             if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight),w=card.image.naturalWidth*scale,h=card.image.naturalHeight*scale;ctx.drawImage(card.image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);}
-            ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.textAlign=card.centerCaption?'center':'left';ctx.fillText(card.caption || card.title || 'Selected plant',card.centerCaption?500:48,c.height-48,904);ctx.textAlign='left';
+            if(card.caption){ctx.fillStyle='#d2e0e8';ctx.font='600 23px system-ui';ctx.textAlign='center';ctx.fillText(card.caption,500,c.height-48,904);ctx.textAlign='left';}
             return c;
         }
             if(card.settings){
@@ -755,7 +753,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':'Your exploration guide'),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls()};
-            const preview=previewMedia(),mediaCard={id:'media',media:true,mediaLabel:selection?.mesh==='lim'?'LIMO CELL SKETCH':'PLANT MEDIA',height:760,title:plantMedia?'':identity?.plant || selection?.title || selection?.plant || 'Plant',image:mediaImage,caption:preview?.caption || identity?.plant || selection?.title || selection?.plant || 'Selected plant',centerCaption:plantMedia};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,caption:plantMedia?(identity?.plant || ''):''};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,

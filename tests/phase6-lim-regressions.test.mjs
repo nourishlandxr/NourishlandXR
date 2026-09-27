@@ -13,7 +13,7 @@ test('Phase 6 welcome copy is bounded to the compact note and scrolls only in th
     assert.match(demoSource, /const titleWidth = 900/);
     assert.ok(demoSource.indexOf('const titleWidth = 900') < demoSource.indexOf('if(openingElapsed!==null)'), 'opening copy initializes its title bounds before drawing');
     assert.match(demoSource, /ctx\.fillText\(introBoardTitle, contentCenter, 420, titleWidth\)/);
-    assert.match(demoSource, /NourishlandXR is a learning tool for exploring how plants, knowledge and real places connect/);
+    assert.match(demoSource, /Explore a living place through its plants, observations and connected knowledge/);
     assert.doesNotMatch(demoSource, /drawWrappedTextureText\(ctx, introBoardTitle/);
     assert.doesNotMatch(demoSource, /↙ Control panel/);
     assert.match(demoSource, /ctx\.textAlign = 'left'/);

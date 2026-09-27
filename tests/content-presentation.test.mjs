@@ -44,12 +44,14 @@ test('guided discovery connects plant information to two curated learning ideas'
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
 });
 
-test('demo opens with the knowledge problem before defining the product', () => {
+test('demo introduces the Control panel before explaining scattered plant information', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
-    assert.ok(opening.indexOf('Every living place holds knowledge') < opening.indexOf('living, explorable map'));
-    assert.ok(opening.indexOf('knowledge is often scattered') < opening.indexOf('Plants, observations, stories and guidance'));
-    assert.match(demo, /'Welcome to Nourishland XR\.'[\s\S]*Living places hold useful knowledge, but it is often scattered[\s\S]*NourishlandXR creates an explorable map/);
+    const orientation = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('const POST_PLACEMENT_AREA_STEP'));
+    assert.doesNotMatch(opening, /scattered/);
+    assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
+    assert.ok(orientation.indexOf('information is often scattered') < orientation.indexOf("title:'A project represents a whole place'"));
+    assert.match(demo, /'Welcome to Nourishland XR\.'[\s\S]*Explore a living place through its plants, observations and connected knowledge/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
@@ -63,7 +65,7 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
-    assert.match(demo, /if\(index<=1\)setDemoJourneyStage\('why'\)/);
+    assert.match(demo, /if\(index<=2\)setDemoJourneyStage\('why'\)/);
 });
 
 test('plant exploration no longer auto-opens LIM or forces the old cell script',()=>{
@@ -74,16 +76,16 @@ test('plant exploration no longer auto-opens LIM or forces the old cell script',
     assert.doesNotMatch(demo,/Add current knowledge|Clear selected knowledge|Connect selected ideas/);
 });
 
-test('the first-time journey introduces the guide before four practical learning lenses', () => {
+test('the first-time journey introduces the Control panel before four practical learning lenses', () => {
     const demo=read('app/screens/temporaryArDemo.js');
     const panel=read('app/services/pimInfoPanel.js');
     const styles=read('app/living-objects.css');
-    assert.match(demo,/at:18000,text:demoLocalizedText\('Explore one plant/);
+    assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information'/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
-    assert.match(demo,/title:'Imagine arriving in a garden'[\s\S]*title:'Meet your Control panel',art:'companion'/);
+    assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
-    assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.suspend\(true\);[\s\S]*if\(step\?\.art\)[\s\S]*if\(index===1\)infoPanel\?\.setIntroduction\(true\)/);
+    assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.suspend\(false\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
     assert.match(demo,/Read what is here[\s\S]*Understand how it works[\s\S]*Connect information to purpose[\s\S]*Choose, observe and learn/);
     assert.match(demo,/Why does this matter\?/);
@@ -118,7 +120,7 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     assert.match(styles, /\.tryit-sim-orb\.is-plant::after\s*\{\s*content:none;/);
 });
 
-test('each archetype keeps its ordered illustration while plant media remains PIMO-specific', () => {
+test('each archetype keeps its ordered illustration while media labels stay plant-only', () => {
     const ordered = [
         ['lim-intro-analysis', 'archetype-read-nature.jpg'],
         ['lim-intro-literacy', 'archetype-understand-land.jpg'],
@@ -135,7 +137,9 @@ test('each archetype keeps its ordered illustration while plant media remains PI
     assert.match(panel, /selection\?\.mesh==='lim' && \(selection\.sketchImage \|\| selection\.image\)/);
     assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
-    assert.match(panel, /LIMO cell sketch/);
+    assert.doesNotMatch(panel, /LIMO cell sketch|LIMO CELL SKETCH|PLANT MEDIA/);
+    assert.match(panel, /caption:'',plant:false/);
+    assert.match(panel, /caption:plantMedia\?\(identity\?\.plant \|\| ''\):''/);
 });
 
 test('Area Totem examples show distinct colours and welcoming, orientation, interpretation and safety roles', () => {

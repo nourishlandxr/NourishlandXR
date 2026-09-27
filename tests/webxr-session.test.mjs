@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { isQuestHeadsetBrowser, selectWebXRSessionMode } from '../app/services/webxrSession.js';
-import { controllerRayEnd, controllerRayFromPose, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
 
 test('WebXR prefers passthrough AR and falls back to native 6DoF immersive mode', () => {
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': true, 'immersive-vr': true }), 'immersive-ar');
@@ -55,4 +55,20 @@ test('Quest laser pointer configuration is shared by immersive modes', () => {
     assert.equal(subjectEnd.distance, 1.75);
     assert.equal(subjectEnd.z, 1.25);
     assert.equal(controllerRayEnd(ray, []).distance, 5);
+});
+
+test('WebXR hand tracking uses standard joint names and produces a visible hand pointer', () => {
+    const names = [...new Set(XR_HAND_JOINT_CONNECTIONS.flat())];
+    assert.ok(names.every(name => !name.includes(' ')));
+    assert.ok(names.includes('index-finger-phalanx-proximal'));
+    const source = { handedness:'right', hand:{ get:name => names.includes(name) ? name : null } };
+    const frame = { getJointPose(name){
+        const point = name === 'wrist' ? [0,0,0] : name === 'index-finger-tip' ? [0,0,-.2] : name === 'thumb-tip' ? [.08,0,-.2] : [0,0,-.1];
+        return { radius:.01, transform:{ matrix:[1,0,0,0,0,1,0,0,0,0,1,0,...point,1] } };
+    } };
+    const state = handTrackingState(frame, source, {});
+    assert.equal(state.joints.size, names.length);
+    assert.deepEqual(state.pointer.origin, { x:0, y:0, z:-.2, radius:.01 });
+    assert.deepEqual(state.pointer.direction, { x:0, y:0, z:-1 });
+    assert.equal(state.pinch, false);
 });

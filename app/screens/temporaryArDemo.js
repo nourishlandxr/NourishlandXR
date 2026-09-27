@@ -81,6 +81,8 @@ let latestDemoView = null;
 let hitMatrix = null;
 let latestControllerRay = null;
 let latestHandState = null;
+let latestTrackedHandStates = [];
+let spatialPointerInputSeen = false;
 let handPinchActive = false;
 let demoControllerDepthAt = 0;
 let marker = null;
@@ -354,8 +356,8 @@ const DEMO_TOTEM_HALF_HEIGHT_METRES = .76;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to Nourishland XR.',
-    'Living places hold useful knowledge, but it is often scattered across signs, documents, websites and people.',
-    'NourishlandXR creates an explorable map of a place and connects plants, observations, stories and guidance to where they belong.'
+    'Explore a living place through its plants, observations and connected knowledge.',
+    'A short guided demonstration will introduce the controls before the journey continues.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
@@ -372,11 +374,7 @@ const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
 const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:demoLocalizedText('Every living place holds knowledge.'),accent:'#dfff9b'}),
-    Object.freeze({at:4500,text:demoLocalizedText('But that knowledge is often scattered, hidden or difficult to use.'),accent:'#b9ddff'}),
-    Object.freeze({at:9000,text:demoLocalizedText('NourishlandXR turns a real place into a living, explorable map.'),accent:'#9ff3bd'}),
-    Object.freeze({at:13500,text:demoLocalizedText('Plants, observations, stories and guidance become available where they belong.'),accent:'#ffd38a'}),
-    Object.freeze({at:18000,text:demoLocalizedText('Explore one plant. Follow what it means. See how the place connects.'),accent:'#dfff9b'})
+    Object.freeze({at:0,text:demoLocalizedText('Explore plants, observations and knowledge in the place where they belong.'),accent:'#dfff9b'})
 ]);
 export const welcomeNarrative=elapsed=>{
     const index=WELCOME_NARRATIVE.findLastIndex(item=>elapsed>=item.at);
@@ -385,11 +383,11 @@ export const welcomeNarrative=elapsed=>{
     const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
     return {...item,alpha};
 };
-const DEMO_WELCOME_OPENING_MS=31500;
-const DEMO_WELCOME_TITLE_HOLD_MS=3500;
-const DEMO_WELCOME_DESCRIPTION_HOLD_MS=7600;
-const DEMO_WELCOME_NARRATIVE_START_MS=9000;
-const DEMO_WELCOME_CONTINUE_MS=21000;
+const DEMO_WELCOME_OPENING_MS=12000;
+const DEMO_WELCOME_TITLE_HOLD_MS=2800;
+const DEMO_WELCOME_DESCRIPTION_HOLD_MS=10000;
+const DEMO_WELCOME_NARRATIVE_START_MS=12000;
+const DEMO_WELCOME_CONTINUE_MS=12000;
 export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
 const DEMO_ARCHETYPE_START_MS=20500;
@@ -582,6 +580,9 @@ function clearSessionState() {
     latestDemoView = null;
     hitMatrix = null;
     latestControllerRay = null;
+    latestHandState = null;
+    latestTrackedHandStates = [];
+    spatialPointerInputSeen = false;
     groundYEstimate = null;
     marker = null;
     markerType = 'marker';
@@ -1882,22 +1883,25 @@ function selectWelcomeCell() {
 function showDemoTutorialMedia(key,title,body) {
     const art=DEMO_TUTORIAL_ART[key];
     if(!art)return;
-    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title,body,image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'',body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Imagine arriving in a garden',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'Meet your Control panel',button:'Continue',nextGuide:'',paragraphs:[
+        'This Control panel helps you interact with the demonstration and responds to what you select.'
+    ]},
+    {title:'Every plant holds information',art:'references',button:'Continue',nextGuide:'',paragraphs:[
+        'Every plant holds useful information, but that information is often scattered across books, signs, websites, phones and people.',
+        'NourishlandXR brings it together in the place where it becomes useful.'
+    ]},
+    {title:'Imagine arriving in a garden',art:'curiosity',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
         'You pause, look closely and wonder what it is, how it belongs here and what it might teach you.'
     ]},
-    {title:'Meet your Control panel',art:'companion',button:'Continue',nextGuide:'',paragraphs:[
-        'This is your companion panel. It gives you one place to read what you select while the garden stays at the centre of the experience.',
-        'Its media area will illustrate the step you are exploring. The panel appears when it is useful and stays out of the way when it is not.'
-    ]},
-    {title:'A project represents a whole place',art:'references',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'A project represents a whole place',art:'area',button:'Continue',nextGuide:'',paragraphs:[
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
-        'Without a shared map, a visitor may need to juggle books, a phone, compass and manuals. NourishlandXR keeps useful information connected to the place it describes.'
+        'It keeps useful information connected to the place it describes.'
     ]},
     {title:'One place, one clear structure',art:'area',button:'Continue',nextGuide:'',paragraphs:[
         'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
@@ -1920,28 +1924,28 @@ const POST_PLACEMENT_AREA_STEP = {
 
 function runArWelcomeTutorial(index=0) {
     demoOrientationStep=index;
-    if(index<=1)setDemoJourneyStage('why');
+    if(index<=2)setDemoJourneyStage('why');
     else setDemoJourneyStage('map');
-    if(index>=3 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
+    if(index>=4 && !Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
     limMeshVisible=false;
     introBoardTextureDirty=true;
     syncDemoPanelActions();
-    infoPanel?.setGuided(index>=2);
+    infoPanel?.setGuided(index>=1);
     const step=DEMO_ORIENTATION_STEPS[index];
     if(index===0){
-        infoPanel?.setIntroduction(false);
-        infoPanel?.suspend(true);
+        infoPanel?.setCompact(true);
+        infoPanel?.setMediaCollapsed(true);
+        infoPanel?.setIntroduction(true);
+        infoPanel?.suspend(false);
     }
     if(step?.art){
         infoPanel?.setCompact(false);
         showDemoTutorialMedia(step.art,step.title,step.paragraphs.join('\n\n'));
-        if(index===1)infoPanel?.setIntroduction(true);
     }
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
-        if(index===1)infoPanel?.setIntroduction(false);
-        if(index===0){introBoardTextureDirty=true;runArWelcomeTutorial(index+1);return;}
+        if(index===0)infoPanel?.setIntroduction(false);
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
@@ -3310,8 +3314,25 @@ export function demoPointerScreenPoint(rect, viewportWidth = globalThis.innerWid
         : { x: Number(viewportWidth) / 2, y: Number(viewportHeight) / 2 };
 }
 
+export function demoViewerPointerFallbackAllowed({ simulated = false, hasScreenInput = false, spatialInputSeen = false, headsetBrowser = false, mode = 'immersive-ar' } = {}) {
+    if (simulated || hasScreenInput) return true;
+    return !spatialInputSeen && !headsetBrowser && mode !== 'immersive-vr';
+}
+
+function demoViewerPointerFallbackActive() {
+    const sources = [...(session?.inputSources || [])];
+    return demoViewerPointerFallbackAllowed({
+        simulated: simulatedMode,
+        hasScreenInput: sources.some(source => source.targetRayMode === 'screen'),
+        spatialInputSeen: spatialPointerInputSeen,
+        headsetBrowser: isQuestHeadsetBrowser(),
+        mode: sessionMode
+    });
+}
+
 function demoPointerWorldRay() {
     if (latestControllerRay) return latestControllerRay.direction;
+    if (!demoViewerPointerFallbackActive()) return null;
     if (!viewerMatrix || !latestDemoView?.projectionMatrix) return null;
     const pointer = appRoot?.querySelector('[data-tryit-place]');
     const rect = pointer?.getBoundingClientRect();
@@ -3335,6 +3356,7 @@ function demoPointerWorldRay() {
 
 function demoPointerWorldOrigin() {
     if (latestControllerRay?.origin) return latestControllerRay.origin;
+    if (!demoViewerPointerFallbackActive()) return null;
     return viewerMatrix
         ? { x: viewerMatrix[12], y: viewerMatrix[13], z: viewerMatrix[14] }
         : null;
@@ -3903,7 +3925,7 @@ function setupRenderer() {
 
 function demoControllerInputSource() {
     const sources = [...(session?.inputSources || [])];
-    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer');
+    const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer' && !source.hand);
     return trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
         || trackedControllers.find(source => source.handedness === 'right')
         || trackedControllers.find(source => source.gamepad)
@@ -3914,14 +3936,26 @@ function demoControllerInputSource() {
 
 function updateDemoControllerRay(frame) {
     latestControllerRay = null;
-    const source = demoControllerInputSource();
-    if (!source || !referenceSpace) return;
-    if (source.hand) {
-        latestHandState = handTrackingState(frame, source, referenceSpace);
-        latestControllerRay = latestHandState?.pointer || null;
+    latestHandState = null;
+    latestTrackedHandStates = [];
+    const sources = [...(session?.inputSources || [])];
+    if (sources.some(source => source.hand || source.targetRayMode === 'tracked-pointer')) spatialPointerInputSeen = true;
+    if (!referenceSpace) return;
+    latestTrackedHandStates = sources.filter(source => source.hand)
+        .map(source => ({ source, state: handTrackingState(frame, source, referenceSpace) }))
+        .filter(entry => entry.state?.joints?.size);
+    const activeHand = latestTrackedHandStates.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
+        || latestTrackedHandStates.find(entry => entry.state.pointer)
+        || latestTrackedHandStates.find(entry => entry.source.handedness === 'right')
+        || latestTrackedHandStates[0]
+        || null;
+    if (activeHand) {
+        latestHandState = activeHand.state;
+        latestControllerRay = activeHand.state.pointer || null;
         return;
     }
-    latestHandState = null;
+    const source = demoControllerInputSource();
+    if (!source) return;
     const controllerSpace = source.targetRaySpace || source.gripSpace;
     const pose = controllerSpace ? frame.getPose(controllerSpace, referenceSpace) : null;
     latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
@@ -4166,8 +4200,8 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_NARRATIVE_START_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_NARRATIVE_START_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='760 92px Georgia, serif';ctx.fillText(demoLocalizedText('Welcome to Nourishland XR'),contentCenter,450,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NourishlandXR is a learning tool for exploring how plants, knowledge and real places connect.'),contentCenter,570,760,54,3);}
+            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='780 88px Inter, Aptos, Segoe UI, system-ui, sans-serif';ctx.fillText(demoLocalizedText('Welcome to Nourishland XR'),contentCenter,450,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px Inter, Aptos, Segoe UI, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore a living place through its plants, observations and connected knowledge.'),contentCenter,570,760,54,3);}
         }else{
             const narrative=welcomeNarrative(openingElapsed-DEMO_WELCOME_NARRATIVE_START_MS);ctx.globalAlpha*=narrative.alpha;ctx.fillStyle='#ffffff';ctx.font='580 50px system-ui, sans-serif';drawWrappedTextureText(ctx,narrative.text,contentCenter,520,780,62,4);
         }
@@ -4915,18 +4949,22 @@ function drawMarker(view) {
 }
 
 function drawDemoControllerPointer(view) {
+    if (!tetherRenderer) return;
+    if (latestTrackedHandStates.length) {
+        for (const { state } of latestTrackedHandStates) {
+            if (!state?.joints) continue;
+            for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
+                const from=state.joints.get(fromName),to=state.joints.get(toName);
+                if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:3,width:.009,curve:0,lift:0,color:[.72,1,.34,.82]});
+            }
+        }
+        return;
+    }
     const pointerSource = demoControllerInputSource();
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.
-    if (!latestControllerRay || !tetherRenderer || pointerSource?.targetRayMode === 'screen') return;
-    if (latestHandState?.joints) {
-        for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
-            const from=latestHandState.joints.get(fromName),to=latestHandState.joints.get(toName);
-            if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:3,width:.009,curve:0,lift:0,color:[.72,1,.34,.76]});
-        }
-        return;
-    }
+    if (!latestControllerRay || pointerSource?.targetRayMode === 'screen') return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
