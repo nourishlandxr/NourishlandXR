@@ -178,11 +178,14 @@ export function createSpatialTotemCards(gl, options = {}) {
             const isTotem=record?.demoType==='zone' || record?.marker?.type==='area_checkpoint';
             const towardViewerX=m[12]-position.x,towardViewerZ=m[14]-position.z;
             const viewerYaw=Math.atan2(towardViewerX,towardViewerZ);
-            const rotationY=isTotem && options.faceTotemToViewer && Number.isFinite(viewerYaw)
-                ? viewerYaw
-                : (Number(record?.rotationDegrees) || 24)*Math.PI/180;
+            const storedRotation=Number(record?.rotationY);
+            const rotationY=isTotem && Number.isFinite(storedRotation)
+                ? storedRotation
+                : isTotem && options.faceTotemToViewer && Number.isFinite(viewerYaw)
+                    ? viewerYaw
+                    : (Number(record?.rotationDegrees) || 24)*Math.PI/180;
             const right=isTotem
-                ? (record.spatialCardRight={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)})
+                ? {x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)}
                 : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
             const size=record?.marker?.appearance?.size || record?.appearance?.size || 'medium';
             const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;

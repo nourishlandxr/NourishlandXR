@@ -353,6 +353,14 @@ function groundedTotemPosition(position) {
     };
 }
 
+function totemRotationDegreesForPosition(position, viewer = latestViewerMatrix) {
+    if (!position || !viewer) return 0;
+    const towardViewerX = Number(viewer[12]) - Number(position.x);
+    const towardViewerZ = Number(viewer[14]) - Number(position.z);
+    if (Math.hypot(towardViewerX, towardViewerZ) <= .001) return 0;
+    return Math.atan2(towardViewerX, towardViewerZ) * 180 / Math.PI;
+}
+
 function isGardenStakePlacement(type = readyPlacementType) {
     return type === 'plant' && markerAppearanceShape(placementPreviewMarker('plant')) === 'plate';
 }
@@ -5484,7 +5492,12 @@ async function quickPlace(type) {
                         appearance: { ...(bagRecord.marker.appearance || {}), ...placementAppearance }
                     })
                     : bagRecord.marker;
-                const bagPlacementRecord = { ...bagRecord, marker: updatedBagMarker, position };
+                const bagPlacementRecord = {
+                    ...bagRecord,
+                    marker: updatedBagMarker,
+                    position,
+                    ...(type === 'area_checkpoint' ? { rotationDegrees: totemRotationDegreesForPosition(position) } : {})
+                };
                 const bagAnchor = spatialAnchorForRecord(bagPlacementRecord, operation);
                 if (bagRecord.areaId !== operation.areaId) {
                     bagAnchor.coordinate_space = 'session-local';
@@ -5570,9 +5583,10 @@ async function quickPlace(type) {
             marker = { ...draft, ...(response.marker || response) };
         }
         if (!operationIsCurrent() || !marker) return;
-        await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation, 0));
+        const rotationDegrees = type === 'area_checkpoint' ? totemRotationDegreesForPosition(position) : 0;
+        await saveMarkerAnchor(operation.projectId, operation.siteId, operation.areaId, marker.id, spatialAnchor(position, operation, rotationDegrees));
         if (!operationIsCurrent()) return;
-        const record = { marker, position, rotationDegrees: 0, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName, areaDescription: activeAreaDescription, spawnedAt: performance.now() };
+        const record = { marker, position, rotationDegrees, siteId: operation.siteId, areaId: operation.areaId, areaName: operation.areaName, areaDescription: activeAreaDescription, spawnedAt: performance.now() };
         sessionMarkers.push(record);
         renderSessionMarkers();
         if (type === 'area_checkpoint') {

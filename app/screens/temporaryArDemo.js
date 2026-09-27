@@ -2047,6 +2047,11 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
     const sourceAnchor = source?.simulatedAnchor || { x: 50, y: 56 };
     const groundBaseY = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY;
+    const position = placedPosition ? {...placedPosition,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES} : {
+        x: sourcePosition.x + .72,
+        y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
+        z: sourcePosition.z + .12
+    };
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Totem',
@@ -2055,11 +2060,8 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
         // Spatial prisms are positioned from their centre. Raising the centre
         // by one half-height keeps the Totem's base exactly on the detected or
         // estimated ground plane, upright from the ground rather than at gaze.
-        position: placedPosition ? {...placedPosition,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES} : {
-            x: sourcePosition.x + .72,
-            y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
-            z: sourcePosition.z + .12
-        },
+        position,
+        rotationY: demoTotemRotationForPosition(position),
         groundBaseY,
         type: 'area_checkpoint',
         demoType: 'zone',
@@ -2097,16 +2099,18 @@ function createDemoSecondTotem() {
     const sourceAnchor = first?.simulatedAnchor || source?.simulatedAnchor || { x: 50, y: 56 };
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY;
+    const position = {
+        x: sourcePosition.x - 1.15,
+        y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
+        z: sourcePosition.z + .1
+    };
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Totem',
             description: 'Welcome to this area.'
         }),
-        position: {
-            x: sourcePosition.x - 1.15,
-            y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
-            z: sourcePosition.z + .1
-        },
+        position,
+        rotationY: demoTotemRotationForPosition(position),
         groundBaseY,
         type: 'area_checkpoint',
         demoType: 'zone',
@@ -3462,15 +3466,22 @@ export function demoPlacementPosition(matrix, ray, origin = null, distanceMetres
     };
 }
 
-export function demoGroundBaseY(hitPoseMatrix, cameraMatrix, previousGroundY = null) {
+function isDemoFloorHit(hitPoseMatrix, cameraMatrix) {
     const hitY = Number(hitPoseMatrix?.[13]);
     const hitNormalY = Math.abs(Number(hitPoseMatrix?.[5]));
     const cameraY = Number(cameraMatrix?.[13]);
     const hasCameraY = Number.isFinite(cameraY);
-    const floorLikeHit = Number.isFinite(hitY)
+    return Number.isFinite(hitY)
         && Number.isFinite(hitNormalY)
         && hitNormalY >= .65
         && (!hasCameraY || cameraY - hitY >= .7);
+}
+
+export function demoGroundBaseY(hitPoseMatrix, cameraMatrix, previousGroundY = null) {
+    const hitY = Number(hitPoseMatrix?.[13]);
+    const cameraY = Number(cameraMatrix?.[13]);
+    const hasCameraY = Number.isFinite(cameraY);
+    const floorLikeHit = isDemoFloorHit(hitPoseMatrix, cameraMatrix);
     if (floorLikeHit) return hitY;
     if (previousGroundY !== null && previousGroundY !== undefined && Number.isFinite(Number(previousGroundY))) return Number(previousGroundY);
     if (hasCameraY) return cameraY - DEMO_STABLE_EYE_HEIGHT_METRES;
@@ -3485,7 +3496,15 @@ function totemPlacementPosition() {
     const position=placementPosition();
     if(!position)return null;
     const floorY=demoGroundBaseY(hitMatrix,viewerMatrix,groundYEstimate);
-    return {x:Number(hitMatrix?.[12])||position.x,y:floorY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:Number(hitMatrix?.[14])||position.z};
+    const floorHit=isDemoFloorHit(hitMatrix,viewerMatrix);
+    return {
+        // Only use the hit pose's horizontal position when it is actually a
+        // floor hit. A wall/table hit can still help aim placement, but must
+        // never pull the Totem off the floor plane.
+        x:floorHit ? Number(hitMatrix?.[12]) : position.x,
+        y:floorY+DEMO_TOTEM_HALF_HEIGHT_METRES,
+        z:floorHit ? Number(hitMatrix?.[14]) : position.z
+    };
 }
 
 function pointerDistanceToRecord(record) {
@@ -3542,10 +3561,16 @@ function demoRecordRayHit(record) {
     return {distance,point:{x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance},radius:interactionRadius};
 }
 
-function demoTotemRotationY(record){
-    if(!record?.position || !viewerMatrix)return Math.PI/7;
-    const towardViewerX=viewerMatrix[12]-record.position.x,towardViewerZ=viewerMatrix[14]-record.position.z;
+function demoTotemRotationForPosition(position, viewer=viewerMatrix){
+    if(!position || !viewer)return Math.PI/7;
+    const towardViewerX=viewer[12]-position.x,towardViewerZ=viewer[14]-position.z;
     return Math.hypot(towardViewerX,towardViewerZ)>.001?Math.atan2(towardViewerX,towardViewerZ):Math.PI/7;
+}
+
+function demoTotemRotationY(record){
+    return Number.isFinite(Number(record?.rotationY))
+        ? Number(record.rotationY)
+        : Math.PI/7;
 }
 
 function demoRecordAtPointer() {
@@ -4023,7 +4048,9 @@ function setupRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
-    totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:true});
+    // Totem cards share the Totem's placement heading. They must not turn with
+    // the viewer after the buttons have been aimed during placement.
+    totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false});
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);

@@ -1609,7 +1609,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(source, /totemCardsMarkup\(cards\.slice\(0,3\),record\.totemSelectedCard\)/);
-    assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:true\}\)/);
+    assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:false\}\)/);
+    assert.match(source, /rotationY: demoTotemRotationForPosition\(position\)/);
+    assert.match(source, /function demoTotemRotationY\(record\)\{[\s\S]*record\?\.rotationY/);
     assert.match(styles, /\.tryit-sim-totem-pillar/);
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
@@ -1635,6 +1637,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
     assert.match(source, /groundBaseY = demoGroundBaseY\(hitMatrix, viewerMatrix, groundYEstimate\)/);
     assert.match(source, /y: groundBaseY \+ DEMO_TOTEM_HALF_HEIGHT_METRES/);
+    assert.match(read('app/screens/arMode.js'), /function totemRotationDegreesForPosition\(position, viewer = latestViewerMatrix\)/);
+    assert.match(read('app/screens/arMode.js'), /type === 'area_checkpoint' \? totemRotationDegreesForPosition\(position\) : 0/);
     assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);
     assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea'/);
     assert.match(source, /demoOrbShape: type === 'plant' \? 'orb'/);
