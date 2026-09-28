@@ -8,6 +8,7 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards, drawSpatialTotemButtons } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
+import {drawArWelcomeRoots,welcomeRootsAreGrowing} from '../services/arWelcomeRoots.js';
 import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
@@ -4315,6 +4316,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.clearRect(0, 0, label.width, label.height);
     if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
+    drawArWelcomeRoots(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
 }
@@ -4564,7 +4566,7 @@ function drawIntroSpatial(view) {
     const now = performance.now();
     if(arWelcomeShowcaseActive){
         arWelcomeClock.tick(Date.now(),session?.visibilityState==='visible');
-        if(limRevealIsAnimating() || (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS))introBoardTextureDirty=true;
+        if(limRevealIsAnimating() || welcomeRootsAreGrowing(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches) || (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS))introBoardTextureDirty=true;
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const textureInterval=limActivation?.active || textIsTyping ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;

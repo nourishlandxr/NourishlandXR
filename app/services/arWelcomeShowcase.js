@@ -1,4 +1,5 @@
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
+import {drawArWelcomeRoots} from './arWelcomeRoots.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
@@ -498,6 +499,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
  if(options.drawPanel!==false){
  drawArWelcomePanel(ctx);
+ drawArWelcomeRoots(ctx,elapsed,reducedMotion);
  if(options.drawContent){options.drawContent(ctx);}else{
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.globalAlpha=reducedMotion?1:smooth(elapsed,500,3000);ctx.fillStyle='#dcef95';ctx.font='750 30px system-ui';ctx.fillText('A LIVING WORLD OF KNOWLEDGE',700,412);
