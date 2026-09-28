@@ -2,9 +2,9 @@ import {WELCOME_SHAPE,WELCOME_SHAPE_POINTS} from './arWelcomePanel.js';
 
 // Roots live on the welcome surface, never in the copy's central reading area.
 // The paths are fixed once so re-rendering a canvas texture cannot make them jump.
-const ROOT_START_MS=1800;
-const ROOT_GROWTH_MS=35000;
-const ROOT_STAGGER_MS=1400;
+const ROOT_START_MS=600;
+const ROOT_GROWTH_MS=14000;
+const ROOT_STAGGER_MS=450;
 const EDGE_ORDER=[0,8,3,12,5,14,1,10,6,15,4,9];
 export const WELCOME_ROOTS_SETTLED_MS=ROOT_START_MS+ROOT_GROWTH_MS+(EDGE_ORDER.length-1)*ROOT_STAGGER_MS;
 
@@ -23,32 +23,32 @@ function rootedPath(edgeIndex,order){
  const anchor={x:a.x+(b.x-a.x)*edgeT,y:a.y+(b.y-a.y)*edgeT};
  const radius=distance(anchor,{x:WELCOME_SHAPE.cx,y:WELCOME_SHAPE.cy}),dx=(WELCOME_SHAPE.cx-anchor.x)/radius,dy=(WELCOME_SHAPE.cy-anchor.y)/radius;
  const normal={x:-dy,y:dx};
- const depth=125+25*jitter(edgeIndex+42);
+ const depth=190+45*jitter(edgeIndex+42);
  const points=[anchor];
  for(let step=1;step<=20;step++){
   const t=step/20;
-  const bend=(Math.sin(t*5.3+edgeIndex*.8)-Math.sin(edgeIndex*.8))*6*t
-   +Math.sin(t*12+edgeIndex*1.7)*3*t;
+  const bend=(Math.sin(t*5.3+edgeIndex*.8)-Math.sin(edgeIndex*.8))*15*t
+   +Math.sin(t*12+edgeIndex*1.7)*6*t;
   const point={x:anchor.x+dx*depth*t+normal.x*bend,y:anchor.y+dy*depth*t+normal.y*bend};
   if(keepout(point))break;
   points.push(point);
  }
  const branches=[];
- for(let fork=0;fork<3;fork++){
-  const attachIndex=Math.min(points.length-2,5+fork*4);
-  if(attachIndex<2)continue;
+ for(let fork=0;fork<4;fork++){
+  const attachIndex=Math.min(points.length-2,4+fork*4);
+  if(attachIndex<2 || branches.some(branch=>branch.attachIndex===attachIndex))continue;
   const origin=points[attachIndex],side=(fork%2?1:-1)*(order%2?1:-1);
-  const length=30+20*jitter(edgeIndex*7+fork+11);
+  const length=45+25*jitter(edgeIndex*7+fork+11);
   const branch=[origin];
   for(let step=1;step<=8;step++){
    const t=step/8;
    const drift=length*t;
-   const point={x:origin.x+normal.x*side*drift+dx*drift*.25+normal.x*side*Math.sin(t*6+fork)*2*t,
-    y:origin.y+normal.y*side*drift+dy*drift*.25+normal.y*side*Math.sin(t*6+fork)*2*t};
+   const point={x:origin.x+normal.x*side*drift+dx*drift*.25+normal.x*side*Math.sin(t*6+fork)*5*t,
+    y:origin.y+normal.y*side*drift+dy*drift*.25+normal.y*side*Math.sin(t*6+fork)*5*t};
    if(keepout(point))break;
    branch.push(point);
   }
-  if(branch.length>1)branches.push({points:branch,attach:attachIndex/(points.length-1)});
+  if(branch.length>1)branches.push({points:branch,attach:attachIndex/(points.length-1),attachIndex});
  }
  return {points,branches,order};
 }
@@ -86,7 +86,7 @@ export function welcomeRootsAreGrowing(elapsed,reducedMotion=false){
 
 function drawTaperedPath(ctx,points,fullCount,baseWidth,opacity){
  if(points.length<2)return;
- ctx.strokeStyle=`rgba(149, 188, 115, ${opacity})`;
+ ctx.strokeStyle=`rgba(173, 209, 132, ${opacity})`;
  ctx.lineCap='round';ctx.lineJoin='round';
  const segments=fullCount-1,first=Math.max(1,Math.floor(segments*.48)),second=Math.max(first+1,Math.floor(segments*.78));
  for(const [start,end,taper] of [[0,first,1],[first,second,.72],[second,segments,.46]]){
@@ -104,12 +104,12 @@ export function drawArWelcomeRoots(ctx,elapsed,reducedMotion=false){
  ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>index?ctx.lineTo(point.x,point.y):ctx.moveTo(point.x,point.y));
  ctx.closePath();ctx.clip();
  roots.forEach((root,index)=>{
-  drawTaperedPath(ctx,root.points,ROOTS[index].points.length,2.2,.4);
-  root.branches.forEach((branch,branchIndex)=>drawTaperedPath(ctx,branch,ROOTS[index].branches[branchIndex].points.length,1.15,.27));
+  drawTaperedPath(ctx,root.points,ROOTS[index].points.length,6.2,.7);
+  root.branches.forEach((branch,branchIndex)=>drawTaperedPath(ctx,branch,ROOTS[index].branches[branchIndex].points.length,3.2,.52));
   // A tiny living tip follows the continuous line. Nothing flashes over the copy.
   if(!reducedMotion && index%4===0 && root.progress>.08 && root.progress<.98){
    const tip=root.points.at(-1);
-   if(tip){ctx.beginPath();ctx.arc(tip.x,tip.y,1.35,0,Math.PI*2);ctx.fillStyle='rgba(204, 229, 151, .42)';ctx.fill();}
+   if(tip){ctx.beginPath();ctx.arc(tip.x,tip.y,2.5,0,Math.PI*2);ctx.fillStyle='rgba(220, 239, 167, .74)';ctx.fill();}
   }
  });
  ctx.restore();

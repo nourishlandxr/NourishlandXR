@@ -17,10 +17,10 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     const placement = demo.slice(demo.indexOf('function placeMarker'), demo.indexOf('function pressPlacementPointer'));
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function createDemoTotemExample'));
     assert.match(guide, /Plants inside a Nourishland Project can have information connected to their real-world location/);
-    assert.match(guide, /A Project represents the whole place/);
-    assert.match(guide, /Areas organise meaningful parts of it/);
+    assert.match(guide, /Each Area holds plants, observations and guidance for one part of the place/);
+    assert.match(guide, /We’ll begin with one plant/);
     assert.match(area, /This is the Plant Orb/);
-    assert.ok(guide.indexOf('One place, one clear structure') < guide.indexOf('Begin with one plant'));
+    assert.ok(guide.indexOf('Areas help you find your way') < guide.indexOf('Begin with one plant'));
     assert.match(placement, /markers\.push\(marker\);[\s\S]*if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
     assert.match(conversion, /POST_PLACEMENT_AREA_STEP/);
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
@@ -52,12 +52,12 @@ test('post-LIMO discovery offers two plant-to-learning combinations and an optio
 
 test('demo introduces the Control panel before explaining scattered plant information', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    const opening = demo.slice(demo.indexOf('const WELCOME_NARRATIVE'), demo.indexOf('const welcomeNarrative'));
+    const opening = demo.slice(demo.indexOf('const WELCOME_BOARD_PARAGRAPHS'), demo.indexOf('const DEMO_WELCOME_OPENING_MS'));
     const orientation = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('const POST_PLACEMENT_AREA_STEP'));
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
     assert.ok(orientation.indexOf('information is often scattered') < orientation.indexOf("title:'A project represents a whole place'"));
-    assert.match(demo, /'Welcome to Nourishland XR\.'[\s\S]*Explore a living place through its plants, observations and connected knowledge/);
+    assert.match(demo, /'Welcome to NourishlandXR'[\s\S]*Explore how plants, places and knowledge connect/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
@@ -65,11 +65,13 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
     assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
-    assert.match(greeting, /A spatial learning platform connecting plants, places and knowledge/);
+    assert.match(greeting, /Explore how plants, places and knowledge connect/);
     assert.doesNotMatch(greeting, /Take a moment to settle in|designed to be explored at your own pace/);
-    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Welcome to NourishlandXR'\)/);
+    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Look closer'\)/);
+    assert.match(greeting, /Follow one plant to see how it connects to this place/);
+    assert.match(greeting, /!openingTyping && welcomeAutoAdvanceReady/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
-    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the journey'\)/);
+    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Continue'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
     assert.match(demo, /if\(index<=2\)setDemoJourneyStage\('why'\)/);
@@ -89,7 +91,7 @@ test('the first-time journey introduces the Control panel before four practical 
     const styles=read('app/living-objects.css');
     assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information'/);
     assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
-    assert.match(demo,/const alpha=Math\.max\(0,Math\.min\(1,/);
+    assert.doesNotMatch(demo,/welcomeNarrative\(openingElapsed/);
     assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
     assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.suspend\(false\)/);

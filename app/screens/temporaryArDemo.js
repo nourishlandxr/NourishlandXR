@@ -283,8 +283,8 @@ const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
 const DEMO_TOTEM_HALF_HEIGHT_METRES = .82;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to Nourishland XR.',
-    'Explore a living place through its plants, observations and connected knowledge.',
+    'Welcome to NourishlandXR',
+    'Explore how plants, places and knowledge connect.',
     'A short guided demonstration will introduce the controls before the journey continues.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
@@ -301,20 +301,9 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
-const WELCOME_NARRATIVE = Object.freeze([
-    Object.freeze({at:0,text:demoLocalizedText('Explore plants, observations and knowledge in the place where they belong.'),accent:'#dfff9b'})
-]);
-export const welcomeNarrative=elapsed=>{
-    const index=WELCOME_NARRATIVE.findLastIndex(item=>elapsed>=item.at);
-    const item=WELCOME_NARRATIVE[Math.max(0,index)];
-    const nextAt=WELCOME_NARRATIVE[index+1]?.at;
-    const alpha=Math.max(0,Math.min(1,(elapsed-item.at)/900,nextAt===undefined?1:(nextAt-elapsed)/900));
-    return {...item,alpha};
-};
 const DEMO_WELCOME_OPENING_MS=12000;
 const DEMO_WELCOME_TITLE_HOLD_MS=2800;
 const DEMO_WELCOME_DESCRIPTION_HOLD_MS=10000;
-const DEMO_WELCOME_NARRATIVE_START_MS=12000;
 const DEMO_WELCOME_CONTINUE_MS=12000;
 export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
 export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
@@ -1717,7 +1706,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='';
     introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody=demoLocalizedText('A spatial learning platform connecting plants, places and knowledge.\n\nContinue when you’re ready to explore.');
+    introBoardBody=demoLocalizedText('Explore how plants, places and knowledge connect.');
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1766,8 +1755,8 @@ function showArWelcomeShowcase() {
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
-        introBoardTitle=demoLocalizedText('Welcome to NourishlandXR');
-        introBoardBody=demoLocalizedText('A spatial learning platform connecting plants, places and knowledge.\n\nContinue when you’re ready to explore.');
+        introBoardTitle=demoLocalizedText('Look closer');
+        introBoardBody=demoLocalizedText('Follow one plant to see how it connects to this place.');
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -1833,7 +1822,7 @@ function showArWelcomeShowcase() {
         setIntroBoardNextGuide('');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
-            continueButton.textContent=demoLocalizedText('Start the journey');
+            continueButton.textContent=demoLocalizedText('Continue');
             continueButton.hidden=false;
             continueButton.disabled=false;
             continueButton.onclick=()=>{
@@ -1847,13 +1836,13 @@ function showArWelcomeShowcase() {
     };
     const unlockWelcome=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
-        if(!arWelcomeOpeningActive && welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+        if(!arWelcomeOpeningActive && !openingTyping && welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
             advanceWelcome();return;
         }
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    setGuide('Welcome to NourishlandXR. A spatial learning platform connecting plants, places and knowledge. Continue when you’re ready to explore.');
+    setGuide(`${demoLocalizedText('Welcome to NourishlandXR')}. ${demoLocalizedText('Explore how plants, places and knowledge connect.')}`);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1899,9 +1888,9 @@ const DEMO_ORIENTATION_STEPS = [
         'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
         'It keeps useful information connected to the place it describes.'
     ]},
-    {title:'One place, one clear structure',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
-        'A Project represents the whole place. Areas organise meaningful parts of it, such as a school garden, rainforest walk or food forest.',
-        'Plants, observations, stories and visitor guidance become access points inside those Areas. We will begin with one plant.'
+    {title:'Areas help you find your way',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
+        'Each Area holds plants, observations and guidance for one part of the place.',
+        'We’ll begin with one plant.'
     ]},
     {title:'Begin with one plant',art:'orb',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
         'Plants inside a Nourishland Project can have information connected to their real-world location.',
@@ -4347,23 +4336,22 @@ function drawIntroNoteContent(ctx) {
     }
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
-        if(openingElapsed<DEMO_WELCOME_NARRATIVE_START_MS){
-            const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_NARRATIVE_START_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='780 88px Inter, Aptos, Segoe UI, system-ui, sans-serif';ctx.fillText(demoLocalizedText('Welcome to Nourishland XR'),contentCenter,450,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px Inter, Aptos, Segoe UI, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore a living place through its plants, observations and connected knowledge.'),contentCenter,570,760,54,3);}
-        }else{
-            const narrative=welcomeNarrative(openingElapsed-DEMO_WELCOME_NARRATIVE_START_MS);ctx.globalAlpha*=narrative.alpha;ctx.fillStyle='#ffffff';ctx.font='580 50px system-ui, sans-serif';drawWrappedTextureText(ctx,narrative.text,contentCenter,520,780,62,4);
+        if(openingElapsed<DEMO_WELCOME_OPENING_MS){
+            const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
+            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='760 88px Inter, Aptos, Segoe UI, system-ui, sans-serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px Inter, Aptos, Segoe UI, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore how plants, places and knowledge connect.'),contentCenter,570,760,54,3);}
         }
         ctx.restore();return;
     }
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    let titleSize = 92;
-    ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
+    let titleSize = arWelcomeIntroPending ? 88 : 92;
+    const titleFont = arWelcomeIntroPending ? 'Inter, Aptos, Segoe UI, system-ui, sans-serif' : 'system-ui, sans-serif';
+    ctx.font = `760 ${titleSize}px ${titleFont}`;
     while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
-        ctx.font = `760 ${titleSize}px system-ui, sans-serif`;
+        ctx.font = `760 ${titleSize}px ${titleFont}`;
     }
     ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
     if (introBoardVisibleBody) {

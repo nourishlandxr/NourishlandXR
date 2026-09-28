@@ -91,7 +91,7 @@ test('desktop primary action stays on its rendered surface while phone preview u
     assert.match(demo, /const phoneFooterAction=simulatedMode && !desktopPreview/);
     assert.match(demo, /mainScreen && desktopPreview\)mainScreen\.append\(trigger\)/);
     assert.match(read('app/style.css'), /\.tryit-context-trigger\.is-phone-footer-action/);
-    assert.match(demo, /demoLocalizedText\('Start the journey'\)/);
+    assert.match(demo, /demoLocalizedText\('Continue'\)/);
     assert.doesNotMatch(demo, /Begin with why/i);
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
     assert.match(styles, /bottom:38px/);

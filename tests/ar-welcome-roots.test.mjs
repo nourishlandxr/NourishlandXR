@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WELCOME_ROOTS_SETTLED_MS,welcomeRootFrame,welcomeRootsAreGrowing,drawArWelcomeRoots} from '../app/services/arWelcomeRoots.js';
+import {readFileSync} from 'node:fs';
 
 const length=points=>points.slice(1).reduce((sum,point,index)=>sum+Math.hypot(point.x-points[index].x,point.y-points[index].y),0);
 const inReadingArea=point=>((point.x-700)/430)**2+((point.y-550)/315)**2<1;
@@ -15,6 +16,14 @@ test('welcome roots extend continuously without changing their anchor points',()
   assert.ok(length(later[index].points)>=length(early[index].points));
  }
  assert.ok(settled.every(root=>root.progress===1));
+});
+
+test('visible roots begin developing on the first screen and remain undimmed on phones',()=>{
+ const opening=welcomeRootFrame(12000);
+ assert.ok(opening.filter(root=>root.progress>.25).length>=8);
+ assert.ok(opening.some(root=>root.branches.some(branch=>branch.length>1)));
+ const styles=readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
+ assert.match(styles,/\[data-lim-surface="true"\] \.tryit-live-welcome canvas \{ opacity:1; \}/);
 });
 
 test('roots and their smaller branches preserve a clear central reading area',()=>{

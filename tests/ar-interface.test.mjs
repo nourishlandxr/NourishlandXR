@@ -15,7 +15,6 @@ import {
     preservePlacedDemoPlants,
     selectDemoPlantRecord,
     selectGuidedDemoOrb,
-    welcomeNarrative,
     demoRainProgress,
     welcomeAutoAdvanceReady
 } from '../app/screens/temporaryArDemo.js';
@@ -37,9 +36,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('welcome stays concise and spatial controllers never fall back to head movement', () => {
-    assert.match(welcomeNarrative(0).text, /Explore plants, observations and knowledge/);
-    assert.equal(welcomeNarrative(0).text, welcomeNarrative(90000).text);
-    assert.equal(welcomeNarrative(90000).alpha, 1);
+    assert.match(read('app/screens/temporaryArDemo.js'), /Explore how plants, places and knowledge connect/);
     assert.equal(demoViewerPointerFallbackAllowed({ simulated:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ hasScreenInput:true, spatialInputSeen:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ spatialInputSeen:true }), false);
@@ -1222,14 +1219,14 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A project represents a whole place',art:'area'[\s\S]*title:'One place, one clear structure',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A project represents a whole place',art:'area'[\s\S]*title:'Areas help you find your way',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /structure:\{image:new URL\('\.\.\/assets\/demo-tutorial-art\/04b-one-place-clear-structure\.png'/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /Learning module · \$\{learningModuleStep/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to Nourishland/);
-    assert.match(source, /Explore a living place through its plants, observations and connected knowledge/);
+    assert.match(source, /Explore how plants, places and knowledge connect/);
     assert.match(source, /Every plant holds useful information, but that information is often scattered/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
     assert.match(source, /nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.'/);
@@ -1294,7 +1291,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\);[\s\S]*if\(step\?\.art\)/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
-    assert.match(source, /A Project represents the whole place\. Areas organise meaningful parts of it/);
+    assert.match(source, /Each Area holds plants, observations and guidance for one part of the place/);
     assert.match(source, /Pigeon Pea now has a location in this scene/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /Moringa now has its own Plant Profile/);
@@ -1427,7 +1424,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
-    assert.match(source, /Explore a living place through its plants, observations and connected knowledge/);
+    assert.match(source, /Explore how plants, places and knowledge connect/);
     assert.match(source, /demoViewerPointerFallbackAllowed/);
     assert.match(source, /button:'Place Pigeon Pea'/);
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
