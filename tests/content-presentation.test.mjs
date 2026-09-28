@@ -67,8 +67,9 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
     assert.match(greeting, /Explore how plants, places and knowledge connect/);
     assert.doesNotMatch(greeting, /Take a moment to settle in|designed to be explored at your own pace/);
-    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Look closer'\)/);
-    assert.match(greeting, /Follow one plant to see how it connects to this place/);
+    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Explore a living learning space'\)/);
+    assert.match(greeting, /Begin with ideas you can open and explore\. Then meet a plant and see how its story connects\./);
+    assert.doesNotMatch(greeting, /Follow one plant to see how it connects to this place/);
     assert.match(greeting, /!openingTyping && welcomeAutoAdvanceReady/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
     assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Continue'\)/);

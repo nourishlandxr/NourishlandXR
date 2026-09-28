@@ -14,7 +14,7 @@ test('Quest Control panel keeps its navigation rail and Continue reachable', () 
     assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
     assert.equal(folded.find(item=>item.action==='MovePanel').label,'✋');
-    assert.equal(spatialPanelControls({hidden:true})[0].label,'Restore panel');
+    assert.equal(spatialPanelControls({hidden:true})[0].label,'Control panel');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
 import { createPimHold, bindSpatialPimHold } from '../app/services/pimActivationHold.js';
@@ -177,7 +177,8 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.match(styles,/\.is-media-collapsed :is\(\.nlxr-plant-preview,\.nlxr-media-empty\) \{ display:none; \}/);
     assert.match(styles,/:not\(\.is-media-collapsed\) \.nlxr-media-wing \{ position:absolute/);
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
-    assert.match(panel,/mediaDockSide='left'/);
+    assert.match(panel,/mediaDockSide='top'/);
+    assert.match(styles,/\[data-media-dock-side="top"\]:not\(\.is-media-collapsed\) > \.nlxr-media-wing/);
     assert.match(panel,/!settingsOpen && !mediaCollapsed && preview\?\.image/);
     assert.match(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
 });

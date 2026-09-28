@@ -86,15 +86,16 @@ export function welcomeRootsAreGrowing(elapsed,reducedMotion=false){
 
 function drawTaperedPath(ctx,points,fullCount,baseWidth,opacity){
  if(points.length<2)return;
- ctx.strokeStyle=`rgba(173, 209, 132, ${opacity})`;
  ctx.lineCap='round';ctx.lineJoin='round';
  const segments=fullCount-1,first=Math.max(1,Math.floor(segments*.48)),second=Math.max(first+1,Math.floor(segments*.78));
  for(const [start,end,taper] of [[0,first,1],[first,second,.72],[second,segments,.46]]){
   if(start>=points.length-1)continue;
   ctx.beginPath();ctx.moveTo(points[start].x,points[start].y);
   for(let index=start+1;index<=Math.min(end,points.length-1);index++)ctx.lineTo(points[index].x,points[index].y);
-  ctx.lineWidth=Math.max(.45,baseWidth*taper);
-  ctx.stroke();
+  ctx.strokeStyle=`rgba(101, 160, 118, ${opacity*.48})`;
+  ctx.lineWidth=Math.max(.8,baseWidth*taper*1.8);ctx.stroke();
+  ctx.strokeStyle=`rgba(215, 238, 197, ${opacity})`;
+  ctx.lineWidth=Math.max(.45,baseWidth*taper*.46);ctx.stroke();
  }
 }
 
@@ -104,12 +105,14 @@ export function drawArWelcomeRoots(ctx,elapsed,reducedMotion=false){
  ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>index?ctx.lineTo(point.x,point.y):ctx.moveTo(point.x,point.y));
  ctx.closePath();ctx.clip();
  roots.forEach((root,index)=>{
-  drawTaperedPath(ctx,root.points,ROOTS[index].points.length,6.2,.7);
-  root.branches.forEach((branch,branchIndex)=>drawTaperedPath(ctx,branch,ROOTS[index].branches[branchIndex].points.length,3.2,.52));
-  // A tiny living tip follows the continuous line. Nothing flashes over the copy.
-  if(!reducedMotion && index%4===0 && root.progress>.08 && root.progress<.98){
-   const tip=root.points.at(-1);
-   if(tip){ctx.beginPath();ctx.arc(tip.x,tip.y,2.5,0,Math.PI*2);ctx.fillStyle='rgba(220, 239, 167, .74)';ctx.fill();}
+  drawTaperedPath(ctx,root.points,ROOTS[index].points.length,4.2,.68);
+  root.branches.forEach((branch,branchIndex)=>drawTaperedPath(ctx,branch,ROOTS[index].branches[branchIndex].points.length,2.1,.5));
+  // A restrained travelling glint keeps established roots alive without
+  // changing their geometry, pace, or the protected central reading area.
+  if(!reducedMotion && index%3===0 && root.progress>.08 && root.points.length>2){
+   const point=root.points[Math.min(root.points.length-1,Math.floor((.25+.5*(.5+.5*Math.sin(elapsed/1750+index)))*(root.points.length-1)))];
+   const alpha=.16+.18*(.5+.5*Math.sin(elapsed/1300+index));
+   ctx.beginPath();ctx.arc(point.x,point.y,1.7,0,Math.PI*2);ctx.fillStyle=`rgba(232, 248, 220, ${alpha})`;ctx.fill();
   }
  });
  ctx.restore();

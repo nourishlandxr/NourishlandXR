@@ -40,5 +40,6 @@ test('homepage AR introduction checks the remembered preference before starting 
     const entry = source.slice(source.indexOf('export function openTemporaryArDemoWindow'), source.indexOf('export async function startTemporaryArDemo'));
     assert.match(entry, /shouldSkipArIntroductionPreparation\(\)/);
     assert.match(entry, /renderArIntroductionPreparation/);
+    assert.ok(entry.indexOf('isDesktopLearningBookTarget()') < entry.indexOf('shouldSkipArIntroductionPreparation()'));
     assert.ok(entry.indexOf('shouldSkipArIntroductionPreparation()') < entry.indexOf('startTemporaryArDemo(app)'));
 });

@@ -104,7 +104,7 @@ export function panelCenterFromGrab(ray, grab, axes) {
 
 // Shared rectangles are used by the spatial artwork and its ray hit testing.
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
-    if(hidden)return [{action:'Restore',label:'Restore panel',x:150,y:28,width:700,height:104}];
+    if(hidden)return [{action:'Restore',label:'Control panel',x:150,y:28,width:700,height:104}];
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue');
     const menuUtilities=utilities.filter(item=>['close','lim-visibility'].includes(item.id));
     const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item));
@@ -132,7 +132,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 // The headset uses the same actions as the screen panel, but lays them out in
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
-    if(hidden)return [{action:'Restore',label:'Restore panel',x:150,y:28,width:700,height:104}];
+    if(hidden)return [{action:'Restore',label:'Control panel',x:150,y:28,width:700,height:104}];
     const rail=164,media=0;
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
@@ -180,7 +180,7 @@ let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, handMode='pointer', onHandMode=()=>{}, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='left',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
@@ -381,7 +381,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function dockMediaPanel(side=null){
         const main=element.getBoundingClientRect(),panel=mediaFloating?.getBoundingClientRect();
         if(!side && panel){const distances=[['right',Math.abs(panel.left-main.right)],['left',Math.abs(panel.right-main.left)],['bottom',Math.abs(panel.top-main.bottom)],['top',Math.abs(panel.bottom-main.top)]];side=distances.sort((a,b)=>a[1]-b[1])[0][0];}
-        mediaDockSide=side || 'left';mediaDetached=false;mediaPosition=null;mediaCollapsed=false;render(true);
+        mediaDockSide=side || 'top';mediaDetached=false;mediaPosition=null;mediaCollapsed=false;render(true);
     }
     function bindMediaPanelMove(handle){
         handle.addEventListener('pointerdown',event=>{
@@ -745,7 +745,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ].filter(candidate=>candidate.error<=.18 && candidate.overlap).sort((a,b)=>a.error-b.error);
         return candidates[0] || null;
     }
-    function dockSpatialMedia(side){mediaDockSide=side || 'left';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
+    function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};

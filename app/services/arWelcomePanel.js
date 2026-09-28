@@ -11,14 +11,23 @@ function outline(ctx) {
  ctx.closePath();
 }
 export function drawArWelcomePanel(ctx) {
- const glass=ctx.createLinearGradient(250,300,1150,800);
- glass.addColorStop(0,'rgba(10,28,20,.94)');
- glass.addColorStop(.52,'rgba(5,19,13,.93)');
- glass.addColorStop(1,'rgba(2,10,7,.92)');
+ ctx.save();
+ const glass=ctx.createLinearGradient(190,110,1210,990);
+ glass.addColorStop(0,'rgba(71,91,76,.72)');
+ glass.addColorStop(.46,'rgba(27,51,41,.76)');
+ glass.addColorStop(1,'rgba(12,32,28,.79)');
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
- ctx.strokeStyle='rgba(223,255,155,.34)';ctx.lineWidth=3;ctx.stroke();
- ctx.save();outline(ctx);ctx.clip();
- const light=ctx.createRadialGradient(360,290,20,470,350,420);
- light.addColorStop(0,'rgba(223,255,195,.055)');light.addColorStop(1,'rgba(255,255,255,0)');
- ctx.fillStyle=light;ctx.fillRect(80,110,1240,880);ctx.restore();
+ ctx.strokeStyle='rgba(239,249,234,.36)';ctx.lineWidth=1.7;ctx.stroke();
+ outline(ctx);ctx.clip();
+ const light=ctx.createRadialGradient(400,210,18,490,370,670);
+ light.addColorStop(0,'rgba(244,255,234,.20)');
+ light.addColorStop(.42,'rgba(218,239,209,.055)');
+ light.addColorStop(1,'rgba(255,255,255,0)');
+ ctx.fillStyle=light;ctx.fillRect(80,70,1240,990);
+ const readingWash=ctx.createRadialGradient(700,555,150,700,555,570);
+ readingWash.addColorStop(0,'rgba(5,30,25,.36)');
+ readingWash.addColorStop(.7,'rgba(5,30,25,.12)');
+ readingWash.addColorStop(1,'rgba(5,30,25,0)');
+ ctx.fillStyle=readingWash;ctx.fillRect(160,70,1080,1000);
+ ctx.restore();
 }

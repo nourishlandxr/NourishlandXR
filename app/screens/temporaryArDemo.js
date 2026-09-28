@@ -28,6 +28,8 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
+import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
+import { renderDesktopLearningBook } from './desktopLearningBook.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
@@ -1755,8 +1757,8 @@ function showArWelcomeShowcase() {
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
-        introBoardTitle=demoLocalizedText('Look closer');
-        introBoardBody=demoLocalizedText('Follow one plant to see how it connects to this place.');
+        introBoardTitle=demoLocalizedText('Explore a living learning space');
+        introBoardBody=demoLocalizedText('Begin with ideas you can open and explore. Then meet a plant and see how its story connects.');
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -4206,7 +4208,7 @@ function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     for (let fontSize = 60; fontSize >= 26; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
-        ctx.font = `650 ${fontSize}px system-ui, sans-serif`;
+        ctx.font = `520 ${fontSize}px system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
         const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, paragraphLines.length - 1) * paragraphGap;
@@ -4324,39 +4326,39 @@ function drawIntroNoteContent(ctx) {
         const elapsed=arWelcomeClock?.elapsed || 0;
         ctx.globalAlpha*=.72+.28*(.5+.5*Math.sin(elapsed/2400));
     }
-    ctx.shadowColor = 'rgba(0,0,0,.35)';
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(0,20,18,.38)';
+    ctx.shadowBlur = 8;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     if(arWelcomeSettleStage)ctx.globalAlpha*=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-arWelcomeSettleStartedAt)/850));
     if(!arWelcomeIntroPending){
-        ctx.fillStyle = '#dcef95';
-        ctx.font = '750 46px system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(232,246,225,.7)';
+        ctx.font = '650 29px "Segoe UI Variable", Inter, system-ui, sans-serif';
         ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     }
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#dcef95';ctx.font='760 88px Inter, Aptos, Segoe UI, system-ui, sans-serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f4f8ee';ctx.font='560 42px Inter, Aptos, Segoe UI, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore how plants, places and knowledge connect.'),contentCenter,570,760,54,3);}
+            ctx.globalAlpha*=fade;ctx.fillStyle='#f5f8f2';ctx.font='660 78px "Segoe UI Variable", Inter, system-ui, sans-serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='rgba(245,250,242,.87)';ctx.font='480 42px "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore how plants, places and knowledge connect.'),contentCenter,570,760,54,3);}
         }
         ctx.restore();return;
     }
     ctx.fillStyle = '#fff';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    let titleSize = arWelcomeIntroPending ? 88 : 92;
-    const titleFont = arWelcomeIntroPending ? 'Inter, Aptos, Segoe UI, system-ui, sans-serif' : 'system-ui, sans-serif';
-    ctx.font = `760 ${titleSize}px ${titleFont}`;
+    let titleSize = arWelcomeIntroPending ? 78 : 80;
+    const titleFont = '"Segoe UI Variable", Inter, system-ui, sans-serif';
+    ctx.font = `660 ${titleSize}px ${titleFont}`;
     while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
-        ctx.font = `760 ${titleSize}px ${titleFont}`;
+        ctx.font = `660 ${titleSize}px ${titleFont}`;
     }
     ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
     if (introBoardVisibleBody) {
-    ctx.strokeStyle = 'rgba(220,239,149,.56)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(241,249,237,.25)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(contentLeft, 478);
     ctx.lineTo(contentLeft + contentWidth, 478);
@@ -4374,8 +4376,8 @@ function drawIntroNoteContent(ctx) {
     // Accent colours illuminate the surface, while the copy stays bright and
     // neutral so blue and orange narrative stages remain equally readable.
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,12,7,.94)';
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0,20,17,.52)';
+    ctx.shadowBlur = 4;
     const typedBody = narrative?.text || (introBoardVisibleBody
         ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
         : '▌');
@@ -4386,7 +4388,7 @@ function drawIntroNoteContent(ctx) {
     const bodyTop = 498;
     const bodyBottom = introBoardNextGuide ? 710 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
-    ctx.font = `${isOpeningStatement ? 400 : 650} ${bodyLayout.fontSize}px system-ui, sans-serif`;
+    ctx.font = `${isOpeningStatement ? 400 : 520} ${bodyLayout.fontSize}px "Segoe UI Variable", Inter, system-ui, sans-serif`;
     const bodyX = isOpeningStatement ? contentCenter : contentLeft;
     let paragraphY = bodyTop;
     let clipped = false;
@@ -4409,10 +4411,10 @@ function drawIntroNoteContent(ctx) {
     ctx.restore();
     }
     if(introBoardNextGuideVisible && introBoardNextGuide){
-        ctx.strokeStyle='rgba(220,239,149,.45)';ctx.lineWidth=2;
+        ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(contentLeft,724);ctx.lineTo(contentLeft+contentWidth,724);ctx.stroke();
         ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
-        ctx.font='italic 30px Georgia, serif';
+        ctx.font='500 30px "Segoe UI Variable", Inter, system-ui, sans-serif';
         const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
         guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentLeft,736+index*29));
     }
@@ -5243,6 +5245,7 @@ async function startImmersive() {
 }
 
 export function openTemporaryArDemoWindow(app) {
+    if (isDesktopLearningBookTarget()) return renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()});
     if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
         onContinue: () => startTemporaryArDemo(app),
@@ -5251,6 +5254,7 @@ export function openTemporaryArDemoWindow(app) {
 }
 
 export async function startTemporaryArDemo(app) {
+    if (isDesktopLearningBookTarget()) return renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()});
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
